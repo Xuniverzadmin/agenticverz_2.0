@@ -75,19 +75,35 @@ class PlanStep:
 
 @dataclass
 class PlanMetadata:
-    """Metadata about plan generation."""
+    """
+    Metadata about plan generation.
+
+    DETERMINISM NOTE:
+    - generated_at is EXCLUDED from deterministic comparison
+    - Only deterministic_fields are compared during replay
+    - cache_key is computed from deterministic inputs only
+    """
     planner: str
     planner_version: str
     model: Optional[str] = None
     input_tokens: int = 0
     output_tokens: int = 0
     cost_cents: int = 0
-    generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     deterministic: bool = False
     cache_key: Optional[str] = None
+    # Non-deterministic field - excluded from replay comparison
+    # Set to fixed sentinel for deterministic planners, actual timestamp for non-deterministic
+    _generated_at: Optional[str] = field(default=None, repr=False)
+
+    @property
+    def generated_at(self) -> str:
+        """Get generation timestamp (non-deterministic, for logging only)."""
+        if self._generated_at is None:
+            return datetime.now(timezone.utc).isoformat()
+        return self._generated_at
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize to dictionary."""
+        """Serialize to dictionary (includes non-deterministic fields)."""
         return {
             "planner": self.planner,
             "planner_version": self.planner_version,
@@ -95,9 +111,23 @@ class PlanMetadata:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "cost_cents": self.cost_cents,
-            "generated_at": self.generated_at,
+            "deterministic": self.deterministic,
+            "cache_key": self.cache_key,
+            "generated_at": self.generated_at  # Non-deterministic, excluded from hash
+        }
+
+    def to_deterministic_dict(self) -> Dict[str, Any]:
+        """Serialize only deterministic fields (for replay comparison)."""
+        return {
+            "planner": self.planner,
+            "planner_version": self.planner_version,
+            "model": self.model,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "cost_cents": self.cost_cents,
             "deterministic": self.deterministic,
             "cache_key": self.cache_key
+            # generated_at intentionally excluded
         }
 
 
@@ -107,34 +137,40 @@ class PlannerOutput:
     Structured planner output.
 
     Contains the execution plan plus metadata about generation.
+
+    DETERMINISM CONTRACT:
+    - Steps and their ordering are deterministic
+    - Metadata (excluding generated_at) is deterministic
+    - Use to_deterministic_dict() for replay comparison
+    - Use to_dict() for full serialization including timestamps
     """
     steps: List[PlanStep]
     metadata: PlanMetadata
     warnings: List[str] = field(default_factory=list)
 
-    @property
-    def plan(self) -> Dict[str, Any]:
-        """Get plan as dictionary (for backwards compatibility)."""
-        return {
-            "steps": [s.to_dict() for s in self.steps],
-            "metadata": self.metadata.to_dict()
-        }
-
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize to dictionary."""
+        """Serialize to dictionary (includes non-deterministic fields)."""
         return {
             "steps": [s.to_dict() for s in self.steps],
             "metadata": self.metadata.to_dict(),
             "warnings": self.warnings
         }
 
+    def to_deterministic_dict(self) -> Dict[str, Any]:
+        """Serialize only deterministic fields (for replay comparison)."""
+        return {
+            "steps": [s.to_dict() for s in self.steps],
+            "metadata": self.metadata.to_deterministic_dict(),
+            "warnings": self.warnings
+        }
+
     def to_canonical_json(self) -> str:
-        """Return canonical JSON representation for replay testing."""
-        return _canonical_json(self.to_dict())
+        """Return canonical JSON representation for replay testing (deterministic only)."""
+        return _canonical_json(self.to_deterministic_dict())
 
     def content_hash(self) -> str:
-        """Compute deterministic content hash of the plan."""
-        return _content_hash(self.to_dict())
+        """Compute deterministic content hash of the plan (excludes timestamps)."""
+        return _content_hash(self.to_deterministic_dict())
 
     @property
     def plan(self) -> Dict[str, Any]:

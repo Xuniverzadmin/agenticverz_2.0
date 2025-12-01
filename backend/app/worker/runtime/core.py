@@ -18,7 +18,7 @@ Design principles (from PIN-005):
 
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Optional, Mapping, Callable, Coroutine, List
+from typing import Any, Dict, Optional, Mapping, Callable, Coroutine, List, Union
 from enum import Enum
 import asyncio
 import uuid
@@ -118,16 +118,20 @@ class StructuredOutcome:
 
     @classmethod
     def failure(cls, call_id: str, code: str, message: str,
-                category: ErrorCategory = ErrorCategory.PERMANENT,
+                category: Union[ErrorCategory, str] = ErrorCategory.PERMANENT,
                 retryable: bool = False,
+                details: Optional[Dict[str, Any]] = None,
                 meta: Optional[Dict[str, Any]] = None) -> "StructuredOutcome":
         """Factory for failed outcome with structured error."""
+        cat_value = category.value if isinstance(category, ErrorCategory) else category
         error = {
             "code": code,
             "message": message,
-            "category": category.value,
+            "category": cat_value,
             "retryable": retryable
         }
+        if details:
+            error["details"] = details
         return cls(id=call_id, ok=False, error=error, meta=meta or {})
 
 
@@ -142,32 +146,45 @@ class SkillDescriptor:
         skill_id: Unique skill identifier
         name: Human-readable name
         version: Semantic version string
-        inputs_schema_version: Input schema version
-        outputs_schema_version: Output schema version
-        stable_fields: Field -> stability rule mapping
+        description: Human-readable description
+        inputs_schema: JSON Schema for inputs
+        outputs_schema: JSON Schema for outputs
+        stable_fields: List of deterministic output fields
+        idempotent: Whether the skill is idempotent
         cost_model: Cost estimation model
-        failure_modes: Known failure modes with categories
+        failure_modes: Known failure mode codes
         constraints: Execution constraints (timeout, limits)
     """
     skill_id: str
     name: str
     version: str = "1.0.0"
+    description: str = ""
+    inputs_schema: Dict[str, Any] = field(default_factory=dict)
+    outputs_schema: Dict[str, Any] = field(default_factory=dict)
     inputs_schema_version: str = "1.0"
     outputs_schema_version: str = "1.0"
-    stable_fields: Mapping[str, str] = field(default_factory=dict)
+    stable_fields: Union[List[str], Mapping[str, str]] = field(default_factory=list)
+    idempotent: bool = True
     cost_model: Dict[str, Any] = field(default_factory=lambda: {"base_cents": 0})
-    failure_modes: List[Dict[str, str]] = field(default_factory=list)
+    failure_modes: List[Any] = field(default_factory=list)
     constraints: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dict for JSON serialization."""
+        stable = self.stable_fields
+        if isinstance(stable, list):
+            stable = {f: "deterministic" for f in stable}
         return {
             "skill_id": self.skill_id,
             "name": self.name,
             "version": self.version,
+            "description": self.description,
+            "inputs_schema": self.inputs_schema,
+            "outputs_schema": self.outputs_schema,
             "inputs_schema_version": self.inputs_schema_version,
             "outputs_schema_version": self.outputs_schema_version,
-            "stable_fields": dict(self.stable_fields),
+            "stable_fields": dict(stable) if isinstance(stable, Mapping) else stable,
+            "idempotent": self.idempotent,
             "cost_model": self.cost_model,
             "failure_modes": list(self.failure_modes),
             "constraints": self.constraints

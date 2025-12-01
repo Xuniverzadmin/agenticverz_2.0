@@ -1,0 +1,298 @@
+# json_transform Skill Contract
+# Version: 1.0.0
+# Status: ACTIVE
+
+skill_id: skill.json_transform
+name: JSON Transform
+version: "1.0.0"
+description: |
+  Performs deterministic JSON transformations using JSONPath-like expressions.
+  Supports extraction, mapping, filtering, and merging operations.
+  All outputs are canonicalized (sorted keys, no whitespace) for determinism.
+
+# Input Schema
+inputs:
+  type: object
+  required:
+    - data
+    - operation
+  properties:
+    data:
+      description: The input JSON data to transform
+      oneOf:
+        - type: object
+        - type: array
+        - type: string  # JSON string to parse
+    operation:
+      description: The transformation operation to perform
+      type: string
+      enum:
+        - extract   # Extract value at path
+        - map       # Map array elements
+        - filter    # Filter array by condition
+        - pick      # Pick specific keys
+        - omit      # Omit specific keys
+        - merge     # Merge objects
+        - flatten   # Flatten nested arrays
+        - sort      # Sort array
+    path:
+      description: JSONPath expression for extraction (required for extract, map)
+      type: string
+      pattern: "^\\$[\\w.\\[\\]\\*]+$"
+    keys:
+      description: Keys to pick or omit (required for pick, omit)
+      type: array
+      items:
+        type: string
+    condition:
+      description: Filter condition expression (for filter operation)
+      type: object
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+          enum: [eq, ne, gt, gte, lt, lte, contains, startswith, endswith, exists]
+        value:
+          description: Value to compare against
+    merge_with:
+      description: Object to merge with (for merge operation)
+      type: object
+    sort_key:
+      description: Key to sort by (for sort operation)
+      type: string
+    sort_order:
+      description: Sort order (default: asc)
+      type: string
+      enum: [asc, desc]
+
+# Output Schema
+outputs:
+  type: object
+  required:
+    - result
+    - result_hash
+    - canonical
+  properties:
+    result:
+      description: The transformed data
+      # Type depends on operation
+    result_hash:
+      description: SHA256 hash of canonical result (first 16 chars)
+      type: string
+      pattern: "^[a-f0-9]{16}$"
+    canonical:
+      description: Whether output is in canonical JSON form
+      type: boolean
+      const: true
+    operation:
+      description: The operation that was performed
+      type: string
+    input_size:
+      description: Size of input data in bytes
+      type: integer
+    output_size:
+      description: Size of output data in bytes
+      type: integer
+
+# Stable Fields (deterministic across replays)
+stable_fields:
+  - result
+  - result_hash
+  - operation
+
+# Cost Model
+cost_model:
+  base_cents: 0
+  per_kb_cents: 0.001  # Cost per KB of input data
+
+# Constraints
+constraints:
+  max_input_size_bytes: 10485760  # 10MB
+  max_depth: 100
+  max_array_length: 100000
+  allowed_operations:
+    - extract
+    - map
+    - filter
+    - pick
+    - omit
+    - merge
+    - flatten
+    - sort
+  forbidden_operations:
+    - eval
+    - exec
+    - __import__
+
+# Failure Modes
+failure_modes:
+  - code: ERR_JSON_INVALID
+    category: VALIDATION
+    retryable: false
+    description: Input is not valid JSON
+
+  - code: ERR_JSON_PATH_INVALID
+    category: VALIDATION
+    retryable: false
+    description: JSONPath expression is invalid
+
+  - code: ERR_JSON_PATH_NOT_FOUND
+    category: CLIENT_ERROR
+    retryable: false
+    description: Path does not exist in data
+
+  - code: ERR_JSON_SCHEMA_MISMATCH
+    category: VALIDATION
+    retryable: false
+    description: Result doesn't match expected schema
+
+  - code: ERR_JSON_TRANSFORM_FAILED
+    category: PERMANENT
+    retryable: false
+    description: Transformation failed for unknown reason
+
+  - code: ERR_JSON_DEPTH_EXCEEDED
+    category: VALIDATION
+    retryable: false
+    description: Input exceeds max_depth constraint
+
+  - code: ERR_JSON_SIZE_EXCEEDED
+    category: VALIDATION
+    retryable: false
+    description: Input exceeds max_input_size_bytes constraint
+
+  - code: ERR_JSON_OPERATION_INVALID
+    category: VALIDATION
+    retryable: false
+    description: Unsupported or forbidden operation
+
+# Canonicalization Rules
+canonicalization:
+  # Key ordering
+  key_order: sorted_ascending
+
+  # Numeric representation
+  numeric_format: preserve_type  # Don't convert int to float
+
+  # String encoding
+  string_encoding: utf-8
+
+  # Whitespace
+  whitespace: none  # No pretty printing
+
+  # Array order
+  array_order: preserve  # Don't reorder arrays unless explicit sort
+
+  # Null handling
+  null_handling: preserve  # Keep null values, don't remove
+
+# Security Rules
+security:
+  # No arbitrary code execution
+  no_eval: true
+  no_exec: true
+  no_import: true
+
+  # Path validation
+  validate_paths: true
+
+  # Input sanitization
+  sanitize_strings: false  # Don't modify string content
+
+  # Output size limit
+  max_output_size_bytes: 10485760  # 10MB
+
+# Examples
+examples:
+  - name: Extract nested value
+    input:
+      data:
+        user:
+          name: Alice
+          age: 30
+      operation: extract
+      path: "$.user.name"
+    expected_output:
+      result: Alice
+      result_hash: "a1b2c3d4e5f6g7h8"
+      canonical: true
+      operation: extract
+
+  - name: Pick specific keys
+    input:
+      data:
+        id: 1
+        name: Alice
+        secret: hidden
+        timestamp: "2025-01-01"
+      operation: pick
+      keys: ["id", "name"]
+    expected_output:
+      result:
+        id: 1
+        name: Alice
+      canonical: true
+      operation: pick
+
+  - name: Filter array
+    input:
+      data:
+        - id: 1
+          status: active
+        - id: 2
+          status: inactive
+        - id: 3
+          status: active
+      operation: filter
+      condition:
+        field: status
+        operator: eq
+        value: active
+    expected_output:
+      result:
+        - id: 1
+          status: active
+        - id: 3
+          status: active
+      canonical: true
+      operation: filter
+
+# Test Cases (for golden file generation)
+test_cases:
+  - id: extract_simple
+    input:
+      data: {"a": {"b": 1}}
+      operation: extract
+      path: "$.a.b"
+    deterministic_fields:
+      - result
+      - result_hash
+
+  - id: pick_keys
+    input:
+      data: {"a": 1, "b": 2, "c": 3}
+      operation: pick
+      keys: ["a", "c"]
+    deterministic_fields:
+      - result
+      - result_hash
+
+  - id: omit_keys
+    input:
+      data: {"a": 1, "b": 2, "c": 3}
+      operation: omit
+      keys: ["b"]
+    deterministic_fields:
+      - result
+      - result_hash
+
+  - id: error_invalid_json
+    input:
+      data: "not valid json {"
+      operation: extract
+      path: "$.x"
+    expected_error:
+      code: ERR_JSON_INVALID
+      category: VALIDATION
+      retryable: false

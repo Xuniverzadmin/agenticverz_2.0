@@ -32,6 +32,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-008](PIN-008-v1-milestone-plan-full.md) | **v1 Milestone Plan (Full Detail)** | Architecture / Specification | **PRIMARY** | 2025-12-01 |
 | [PIN-009](PIN-009-m0-finalization-report.md) | **M0 Finalization Report** | Milestone / Finalization | **FINALIZED** | 2025-12-01 |
 | [PIN-010](PIN-010-m2-completion-report.md) | **M2 Completion Report** | Milestone / Completion | **COMPLETE** | 2025-12-01 |
+| [PIN-011](PIN-011-m2.5-hardening-report.md) | **M2.5 Hardening Report** | Milestone / Hardening | **COMPLETE** | 2025-12-01 |
 
 ---
 
@@ -39,9 +40,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 
 | Serial | Title | Category | Priority |
 |--------|-------|----------|----------|
-| PIN-011 | Planner Architecture Deep Dive | Technical Spec | HIGH |
 | PIN-012 | Agent Definition Schema | Technical Spec | Medium |
 | PIN-013 | Deployment Guide | Operations | Low |
+| PIN-014 | Planner Architecture Deep Dive | Technical Spec | HIGH |
 
 ---
 
@@ -83,7 +84,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 - ✅ Phase 5: Budget Protection + Prompt-Injection Gate
 - ✅ 65 tests passing (97%)
 
-### M2.5 Status — COMPLETE (2025-12-01)
+### M2.5 Status — COMPLETE + HARDENED (2025-12-01)
 
 | Deliverable | Status | Location |
 |-------------|--------|----------|
@@ -97,6 +98,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | Version-Gating + Contract Diffing | ✅ Done | `backend/app/skills/registry_v2.py` |
 | INFRA-001 Fix (CLOSE_WAIT) | ✅ Done | `backend/app/worker/runner.py` |
 | Planner tests (35) | ✅ Done | `backend/tests/planner/test_interface.py` |
+| **Contract Compatibility Matrix** | ✅ Done | `backend/app/specs/contract_compatibility.md` |
+| **Planner Stress Tests (16)** | ✅ Done | `backend/tests/planner/test_determinism_stress.py` |
+| **Planner Golden Files** | ✅ Done | `backend/tests/golden/planner_*.json` |
+| **Canonical JSON in PlannerOutput** | ✅ Done | `backend/app/planner/interface.py` |
+| **ErrorCategory.is_retryable()** | ✅ Done | `backend/app/worker/runtime/core.py` |
 
 ### M2 Status — COMPLETE (2025-12-01)
 
@@ -184,7 +190,7 @@ See `backend/app/specs/determinism_and_replay.md` for full details:
 - **Budget:** Multi-layer enforcement (per-run, per-day, per-model, total)
 - **Security:** Prompt injection detection, URL sanitization
 - **Skills:** http_call, llm_invoke, json_transform, postgres_query, calendar_write
-- **Tests:** 113 tests passing (M1:27 + M2:51 + M2.5:35)
+- **Tests:** 246 tests passing (M1:27 + M2:51 + M2.5:35 + Hardening:133)
 
 ---
 
@@ -207,6 +213,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-01 | M2.5 Hardening COMPLETE - 246 tests total passing (PIN-011) |
+| 2025-12-01 | Added Contract Compatibility Matrix, Planner Stress Tests, Golden Files |
+| 2025-12-01 | Fixed A1-A4 blockers: is_retryable(), ResourceContract, status_code, lazy imports |
 | 2025-12-01 | M2.5 Planner Abstraction COMPLETE - 113 tests total passing |
 | 2025-12-01 | Added PlannerInterface, StubPlanner, canonical JSON, version-gating |
 | 2025-12-01 | Fixed INFRA-001 (CLOSE_WAIT leak), added runtime invariants tests |
