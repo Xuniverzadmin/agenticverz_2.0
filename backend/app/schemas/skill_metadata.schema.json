@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SkillMetadata",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Metadata describing a skill usable by the runtime and planner.",
+  "properties": {
+    "skill_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_\\-\\.]+$",
+      "description": "Unique skill identifier (namespace-friendly)."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human readable name."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9\\.]+)?$",
+      "description": "Semver-like version string (use tags for releases)."
+    },
+    "description": {
+      "type": "string"
+    },
+    "input_schema": {
+      "type": "object",
+      "description": "JSON Schema (draft-07 fragment) describing expected inputs for the skill.",
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "description": "JSON Schema describing canonical outputs (should align with StructuredOutcome.details for structured skills).",
+      "additionalProperties": true
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Recommended per-call timeout in milliseconds."
+    },
+    "retry_policy": {
+      "type": "object",
+      "description": "Declarative retry hints used by runtime (not an enforcement — runtime must implement actual policy).",
+      "properties": {
+        "max_attempts": {"type": "integer", "minimum": 0},
+        "backoff_ms": {"type": "integer", "minimum": 0},
+        "retry_on": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "permissions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Set of permission labels required to invoke the skill (e.g., 'external_http', 'smtp_send')."
+    },
+    "cost_estimate_cents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Conservative typical cost estimate per call (planner uses for simulation)."
+    },
+    "side_effects": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Declared side-effects (e.g., 'send_email', 'db_write'). Used for policy and audit."
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "owner": {
+      "type": "string",
+      "description": "Team or owner alias (for operational contact)."
+    },
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "required": ["skill_id", "name", "version", "input_schema", "output_schema", "timeout_ms", "cost_estimate_cents"]
+}

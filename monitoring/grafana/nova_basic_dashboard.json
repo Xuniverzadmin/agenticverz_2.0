@@ -1,0 +1,76 @@
+{
+  "title": "NOVA Basic Dashboard",
+  "uid": "nova-basic",
+  "version": 1,
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Runs",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(nova_runs_total)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Failed Runs",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "nova_runs_failed_total", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Worker Pool Size",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "nova_worker_pool_size", "refId": "A" }]
+    },
+    {
+      "id": 4,
+      "type": "graph",
+      "title": "Skill Duration (p95)",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(nova_skill_duration_seconds_bucket[5m])) by (le, skill))", "refId": "A", "legendFormat": "{{skill}}" }]
+    },
+    {
+      "id": 5,
+      "type": "graph",
+      "title": "Skill Attempts Rate",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum(rate(nova_skill_attempts_total[5m])) by (skill)", "refId": "A", "legendFormat": "{{skill}}" }]
+    },
+    {
+      "id": 6,
+      "type": "graph",
+      "title": "Runs by Status",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "targets": [{ "expr": "sum(rate(nova_runs_total[5m])) by (status)", "refId": "A", "legendFormat": "{{status}}" }]
+    }
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "10s"
+}

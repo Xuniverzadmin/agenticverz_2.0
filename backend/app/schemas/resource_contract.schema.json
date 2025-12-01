@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ResourceContract",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Declarative contract describing resource usage and quotas for an agent or tenant.",
+  "properties": {
+    "contract_id": {"type": "string"},
+    "principal": {"type": "string", "description": "Agent id, tenant id or user id this contract applies to."},
+    "currency": {"type": "string", "description": "Currency for cost_cents (e.g., INR, USD)."},
+    "budget_cents": {"type": "integer", "minimum": 0, "description": "Total budget available for the covered period."},
+    "period": {"type": "string", "pattern": "^[0-9]+(d|h|m)$", "description": "Budget period (e.g., '30d', '24h')."},
+    "quotas": {
+      "type": "object",
+      "description": "Per-resource quotas.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "limit": {"type": "integer", "minimum": 0},
+          "window": {"type": "string"},
+          "per": {"type": "string"}
+        },
+        "required": ["limit"]
+      }
+    },
+    "allowed_operations": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Allowed high-level ops (e.g., 'http_call', 'llm_invoke', 'email_send')."
+    },
+    "cost_model": {
+      "type": "object",
+      "description": "Optional cost model hints (per-call multipliers, tiered pricing).",
+      "additionalProperties": true
+    },
+    "policy": {
+      "type": "object",
+      "description": "Policy constraints (e.g., max_tokens_per_day, disallowed_skills).",
+      "additionalProperties": true
+    },
+    "created_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": ["string", "null"], "format": "date-time"}
+  },
+  "required": ["contract_id", "principal", "budget_cents", "period", "allowed_operations"]
+}

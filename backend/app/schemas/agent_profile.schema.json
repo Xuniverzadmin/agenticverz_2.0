@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Profile describing agent capabilities, planner preferences, and runtime constraints.",
+  "properties": {
+    "agent_id": {"type": "string"},
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "planner": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"}
+      },
+      "required": ["name"]
+    },
+    "default_resource_contract_id": {"type": "string"},
+    "permissions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "memory_policy": {
+      "type": "object",
+      "description": "How memory is used in planning and execution.",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "retriever": {"type": "string"},
+        "max_tokens": {"type": "integer"},
+        "recency_weight": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
+    "safety": {
+      "type": "object",
+      "description": "Safety-related constraints and allowed behaviors.",
+      "properties": {
+        "disallowed_side_effects": {"type": "array", "items": {"type": "string"}},
+        "max_external_calls_per_run": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default runtime hints (timeout overrides, preferred_model).",
+      "additionalProperties": true
+    },
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "required": ["agent_id", "name", "planner", "default_resource_contract_id"]
+}

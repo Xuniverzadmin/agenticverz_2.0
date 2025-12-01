@@ -1,0 +1,67 @@
+{
+  "skill_id": "http_call",
+  "version": "1.0.0",
+  "name": "HTTP Call",
+  "description": "Make HTTP requests to external APIs with configurable method, headers, and body",
+  "deterministic": false,
+  "side_effects": ["network"],
+  "required_permissions": ["network:outbound"],
+  "cost_estimate_cents": 0,
+  "avg_latency_ms": 500,
+  "max_latency_ms": 30000,
+  "input_schema": {
+    "type": "object",
+    "required": ["url", "method"],
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "description": "Target URL for the HTTP request"
+      },
+      "method": {
+        "type": "string",
+        "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        "description": "HTTP method"
+      },
+      "headers": {
+        "type": "object",
+        "description": "Request headers"
+      },
+      "body": {
+        "type": ["object", "string", "null"],
+        "description": "Request body (for POST, PUT, PATCH)"
+      },
+      "timeout_ms": {
+        "type": "integer",
+        "default": 5000,
+        "minimum": 100,
+        "maximum": 30000,
+        "description": "Request timeout in milliseconds"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "status_code": {"type": "integer"},
+      "headers": {"type": "object"},
+      "body": {"type": ["object", "string", "null"]},
+      "latency_ms": {"type": "integer"}
+    }
+  },
+  "retry": {
+    "max_retries": 3,
+    "backoff_base_ms": 100,
+    "backoff_multiplier": 2.0,
+    "retryable_codes": ["ERR_HTTP_503", "ERR_HTTP_502", "ERR_HTTP_504", "ERR_HTTP_TIMEOUT", "ERR_DNS_FAILURE"]
+  },
+  "resource_contract": {
+    "network": {
+      "outbound": true,
+      "allowed_domains": ["*"]
+    }
+  },
+  "tags": ["network", "http", "api"],
+  "created_at": "2025-12-01T00:00:00Z",
+  "updated_at": "2025-12-01T00:00:00Z"
+}

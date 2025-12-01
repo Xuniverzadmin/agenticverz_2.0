@@ -1,0 +1,176 @@
+services:
+  db:
+    image: postgres:15
+    container_name: nova_db
+    environment:
+      POSTGRES_USER: nova
+      POSTGRES_PASSWORD: novapass
+      POSTGRES_DB: nova_aos
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nova -d nova_aos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    image: nova_agent_manager
+    container_name: nova_agent_manager
+    # NOTE: network_mode: host required on this VPS due to systemd-resolved + Tailscale
+    # blocking Docker's embedded DNS resolver. See PROJECT_NOTES.md for details.
+    # On environments without this issue, remove network_mode and use bridge networking.
+    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+      REDIS_URL: redis://localhost:6379/0
+      AOS_API_KEY: ${AOS_API_KEY}
+      # SECURITY: Bind to localhost only - access via SSH tunnel or Tailscale
+      HOST: 127.0.0.1
+      PORT: "8000"
+      # Tenancy (set to false for dev, true for production)
+      ENFORCE_TENANCY: "false"
+      # LLM Planner Configuration
+      PLANNER_BACKEND: anthropic
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import httpx; r=httpx.get('http://localhost:8000/health'); exit(0 if r.status_code==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Worker service - separate process for run execution
+  worker:
+    image: nova_agent_manager
+    container_name: nova_worker
+    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+      REDIS_URL: redis://localhost:6379/0
+      WORKER_CONCURRENCY: "4"
+      WORKER_POLL_INTERVAL: "2.0"
+      RUN_MAX_ATTEMPTS: "5"
+      EVENT_PUBLISHER: logging
+      # LLM Planner Configuration
+      PLANNER_BACKEND: anthropic
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Tenancy (set to false for dev, true for production)
+      ENFORCE_TENANCY: "false"
+    command: ["python", "-m", "app.worker.pool"]
+    restart: unless-stopped
+
+  # Redis for rate limiting and concurrent runs tracking
+  # NOTE: Using system Redis (already running on localhost:6379)
+  # Uncomment below if you need containerized Redis
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: nova_redis
+  #   ports:
+  #     - "127.0.0.1:6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   restart: unless-stopped
+
+  # Optional NATS service (commented by default; enable only for local dev with care)
+  # nats:
+  #   image: nats:2.10.3
+  #   container_name: nova_nats
+  #   ports:
+  #     - "127.0.0.1:4222:4222"
+  #   command: ["-DV"]
+  #   restart: unless-stopped
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: nova_prometheus
+    # NOTE: Using host network to scrape backend at localhost:8000
+    network_mode: host
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.listen-address=127.0.0.1:9090'
+    restart: unless-stopped
+
+  # Alertmanager for alert notifications
+  # Supports two modes:
+  #   1. Simple mode (current): uses config.yml directly
+  #   2. Secrets mode: uses entrypoint.sh + config.yml.tmpl with Docker secrets
+  # To enable secrets mode, uncomment the secrets section and entrypoint below
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: nova_alertmanager
+    network_mode: host
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager:ro
+      - alertmanager_data:/alertmanager
+    # Uncomment for secrets-based config (requires secrets files in ./secrets/)
+    # entrypoint: ["/bin/sh", "/etc/alertmanager/entrypoint.sh"]
+    # secrets:
+    #   - alert_slack_webhook
+    #   - alert_smtp_smarthost
+    #   - alert_smtp_user
+    #   - alert_smtp_pass
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.listen-address=127.0.0.1:9093'
+    restart: unless-stopped
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: nova_grafana
+    # NOTE: Using host network for consistency with other services
+    network_mode: host
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_HTTP_ADDR=127.0.0.1
+      - GF_SERVER_HTTP_PORT=3000
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+
+# Uncomment to enable Docker secrets for Alertmanager
+# secrets:
+#   alert_slack_webhook:
+#     file: ./secrets/alert_slack_webhook.txt
+#   alert_smtp_smarthost:
+#     file: ./secrets/alert_smtp_smarthost.txt
+#   alert_smtp_user:
+#     file: ./secrets/alert_smtp_user.txt
+#   alert_smtp_pass:
+#     file: ./secrets/alert_smtp_pass.txt

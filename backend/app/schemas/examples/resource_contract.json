@@ -1,0 +1,66 @@
+{
+  "contract_id": "rc-http-call-v1",
+  "skill_id": "http_call",
+  "skill_version": "1.0.0",
+  "resources": {
+    "network": {
+      "type": "network",
+      "direction": "outbound",
+      "required": true,
+      "description": "Outbound HTTP/HTTPS connections",
+      "constraints": {
+        "allowed_protocols": ["http", "https"],
+        "allowed_ports": [80, 443, 8080, 8443],
+        "max_connections": 10,
+        "timeout_ms": 30000
+      }
+    },
+    "memory": {
+      "type": "memory",
+      "required": true,
+      "description": "Memory for request/response buffering",
+      "constraints": {
+        "max_request_size_bytes": 10485760,
+        "max_response_size_bytes": 52428800
+      }
+    },
+    "cpu": {
+      "type": "cpu",
+      "required": true,
+      "description": "CPU for JSON parsing and request construction",
+      "constraints": {
+        "max_execution_ms": 5000
+      }
+    }
+  },
+  "permissions": [
+    {
+      "permission_id": "network:outbound",
+      "description": "Make outbound network requests",
+      "required": true,
+      "grant_reason": "Required to call external HTTP APIs"
+    }
+  ],
+  "cost_model": {
+    "base_cost_cents": 0,
+    "per_request_cost_cents": 0,
+    "per_kb_transferred_cents": 0,
+    "notes": "HTTP calls have no direct cost; external API may charge"
+  },
+  "side_effects": [
+    {
+      "effect_type": "network_request",
+      "description": "Makes HTTP request to external service",
+      "reversible": false,
+      "idempotent_methods": ["GET", "HEAD", "OPTIONS"],
+      "non_idempotent_methods": ["POST", "PUT", "PATCH", "DELETE"]
+    }
+  ],
+  "audit": {
+    "log_requests": true,
+    "log_responses": true,
+    "redact_headers": ["Authorization", "X-API-Key", "Cookie"],
+    "retention_days": 90
+  },
+  "created_at": "2025-12-01T00:00:00Z"
+}

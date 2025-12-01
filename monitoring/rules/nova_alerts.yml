@@ -1,0 +1,113 @@
+groups:
+  - name: nova-alerts
+    interval: 30s
+    rules:
+      # Alert when run failure rate exceeds 10% over 5 minutes
+      - alert: HighRunFailureRate
+        expr: |
+          (
+            rate(nova_runs_total{status="failed"}[5m])
+            /
+            (rate(nova_runs_total{status="failed"}[5m]) + rate(nova_runs_total{status="succeeded"}[5m]))
+          ) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High run failure rate detected"
+          description: "Run failure rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/HighRunFailureRate.md"
+
+      # Alert when failure rate is critical (>30%)
+      - alert: CriticalRunFailureRate
+        expr: |
+          (
+            rate(nova_runs_total{status="failed"}[5m])
+            /
+            (rate(nova_runs_total{status="failed"}[5m]) + rate(nova_runs_total{status="succeeded"}[5m]))
+          ) > 0.3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical run failure rate"
+          description: "Run failure rate is {{ $value | humanizePercentage }} - immediate attention required"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/HighRunFailureRate.md"
+
+      # Alert when no runs have been processed in 15 minutes
+      - alert: NoRunsProcessed
+        expr: |
+          sum(increase(nova_runs_total[15m])) == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No runs processed recently"
+          description: "No runs have been processed in the last 15 minutes"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/NoRunsProcessed.md"
+
+      # Alert when skill execution is taking too long
+      - alert: SlowSkillExecution
+        expr: |
+          histogram_quantile(0.95, rate(nova_skill_duration_seconds_bucket[5m])) > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow skill execution detected"
+          description: "95th percentile skill execution time is {{ $value | humanizeDuration }}"
+
+      # Alert when worker pool size is 0
+      - alert: WorkerPoolDown
+        expr: nova_worker_pool_size == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Worker pool is down"
+          description: "No workers available to process runs"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/WorkerPoolDown.md"
+
+      # Alert when queue depth is building up (warning)
+      - alert: QueueDepthWarning
+        expr: nova_runs_queued > 20
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Queue depth above 20 for 15 minutes"
+          description: "nova_runs_queued = {{ $value }} - runs are backing up"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/QueueDepthCritical.md"
+
+      # Alert when queue depth is critical (page)
+      - alert: QueueDepthCritical
+        expr: nova_runs_queued > 50
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Queue depth critical - immediate attention required"
+          description: "nova_runs_queued = {{ $value }} - severe backlog"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/QueueDepthCritical.md"
+
+      # Alert when queue is growing rapidly
+      - alert: QueueGrowthRapid
+        expr: |
+          (nova_runs_queued - nova_runs_queued offset 5m) > 20
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Queue growing rapidly"
+          description: "Queue increased by {{ $value }} runs in 5 minutes"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/QueueDepthCritical.md"
+
+      # Alert when backend is not scraped
+      - alert: BackendDown
+        expr: up{job="nova-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NOVA backend is down"
+          description: "Cannot scrape metrics from the NOVA backend"

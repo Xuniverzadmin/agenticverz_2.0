@@ -1,0 +1,87 @@
+{
+  "$comment": "Canonical replay assertion fixture - contains all fields needed for determinism verification",
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "step_id": "step-003",
+  "status": "failure",
+  "code": "ERR_HTTP_503",
+  "message": "HTTP request failed after retries: Service Unavailable",
+  "details": {
+    "status_code": 503,
+    "upstream_error": "Service temporarily unavailable",
+    "retry_after": 30,
+    "final_attempt": true
+  },
+  "cost_cents": 0,
+  "latency_ms": 15234,
+  "retryable": true,
+  "side_effects": [
+    {
+      "type": "http_request",
+      "target": "api.example.com",
+      "method": "GET",
+      "attempt": 1,
+      "timestamp": "2025-12-01T06:30:00.000Z"
+    },
+    {
+      "type": "http_request",
+      "target": "api.example.com",
+      "method": "GET",
+      "attempt": 2,
+      "timestamp": "2025-12-01T06:30:05.100Z"
+    },
+    {
+      "type": "http_request",
+      "target": "api.example.com",
+      "method": "GET",
+      "attempt": 3,
+      "timestamp": "2025-12-01T06:30:10.300Z"
+    }
+  ],
+  "metadata": {
+    "skill_id": "http_call",
+    "skill_version": "1.0.0",
+    "endpoint": "https://api.example.com/data",
+    "retry_policy": {
+      "max_retries": 3,
+      "backoff_base_ms": 100,
+      "backoff_multiplier": 2.0
+    }
+  },
+  "observability": {
+    "trace_id": "abc123def456789",
+    "span_id": "span-003",
+    "backend_retries": 3,
+    "total_attempts": 3
+  },
+  "timestamp": "2025-12-01T06:30:15.234Z",
+  "_replay_assertion": {
+    "$comment": "Fields used for replay assertions - these MUST match between original and replay",
+    "deterministic_fields": {
+      "status": "failure",
+      "code": "ERR_HTTP_503",
+      "cost_cents": 0,
+      "retryable": true,
+      "metadata.skill_id": "http_call",
+      "metadata.skill_version": "1.0.0",
+      "observability.backend_retries": 3,
+      "side_effects.length": 3,
+      "side_effects[*].type": "http_request",
+      "side_effects[*].target": "api.example.com"
+    },
+    "ignored_fields": [
+      "timestamp",
+      "latency_ms",
+      "observability.trace_id",
+      "observability.span_id",
+      "side_effects[*].timestamp",
+      "details.response_body"
+    ],
+    "notes": [
+      "Retry count (3) is deterministic - same error sequence produces same retry count",
+      "Side-effect order is deterministic - same execution order guaranteed",
+      "Error code mapping is deterministic - HTTP 503 always maps to ERR_HTTP_503",
+      "Cost calculation is deterministic - same parameters produce same cost",
+      "Timestamps are NOT compared - they always differ between runs"
+    ]
+  }
+}

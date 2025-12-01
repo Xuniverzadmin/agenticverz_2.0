@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StructuredOutcome",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Canonical runtime result returned by runtime.execute(). Always returned (never throws).",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Correlation id for the entire agent run (UUID or ULID)."
+    },
+    "step_id": {
+      "type": "string",
+      "description": "Optional id of the step that produced this outcome."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "failure", "partial", "skipped"],
+      "description": "High-level outcome for the call."
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_\\-]+$",
+      "description": "Machine-friendly error or success code (use error taxonomy codes for failures)."
+    },
+    "message": {
+      "type": "string",
+      "description": "Short human-friendly summary of the outcome."
+    },
+    "details": {
+      "type": ["object", "null"],
+      "description": "Arbitrary structured details suitable for debugging (must be JSON-serializable).",
+      "additionalProperties": true
+    },
+    "cost_cents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total cost in cents incurred by the step (zero when not applicable)."
+    },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Observed latency in milliseconds for the step."
+    },
+    "retryable": {
+      "type": "boolean",
+      "description": "Whether runtime should consider retrying this step automatically (guided by failure catalog)."
+    },
+    "side_effects": {
+      "type": "array",
+      "description": "List of recorded side-effect descriptors (e.g., webhook_sent, email_queued).",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Opaque metadata (agent-specific). Should include at minimum 'skill_id' and 'skill_version' when applicable."
+    },
+    "observability": {
+      "type": "object",
+      "description": "Fields useful for observability/tracing (span_id, trace_id, backend_retries, remote_status).",
+      "properties": {
+        "trace_id": {"type": "string"},
+        "span_id": {"type": "string"},
+        "backend_retries": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": true
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO8601 timestamp when the outcome was recorded."
+    }
+  },
+  "required": ["status", "code", "message", "timestamp", "cost_cents", "latency_ms"]
+}

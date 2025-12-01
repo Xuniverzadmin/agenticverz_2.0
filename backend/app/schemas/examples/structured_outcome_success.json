@@ -1,0 +1,29 @@
+{
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "step_id": "step-001",
+  "status": "success",
+  "code": "OK_HTTP_CALL",
+  "message": "HTTP GET request completed successfully",
+  "details": {
+    "status_code": 200,
+    "response_size_bytes": 1024,
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "cost_cents": 0,
+  "latency_ms": 245,
+  "retryable": false,
+  "side_effects": [],
+  "metadata": {
+    "skill_id": "http_call",
+    "skill_version": "1.0.0",
+    "endpoint": "https://api.example.com/data"
+  },
+  "observability": {
+    "trace_id": "abc123def456",
+    "span_id": "span-001",
+    "backend_retries": 0
+  },
+  "timestamp": "2025-12-01T06:30:00.000Z"
+}

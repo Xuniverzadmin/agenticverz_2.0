@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: 'nova-dashboards'
+    orgId: 1
+    folder: 'NOVA'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/files

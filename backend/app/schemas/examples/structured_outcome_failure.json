@@ -1,0 +1,29 @@
+{
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "step_id": "step-002",
+  "status": "failure",
+  "code": "ERR_HTTP_503",
+  "message": "HTTP request failed: Service Unavailable",
+  "details": {
+    "status_code": 503,
+    "upstream_error": "Service temporarily unavailable",
+    "retry_after": 30
+  },
+  "cost_cents": 0,
+  "latency_ms": 5023,
+  "retryable": true,
+  "side_effects": [],
+  "metadata": {
+    "skill_id": "http_call",
+    "skill_version": "1.0.0",
+    "endpoint": "https://api.example.com/data",
+    "attempt": 3,
+    "max_retries": 3
+  },
+  "observability": {
+    "trace_id": "abc123def456",
+    "span_id": "span-002",
+    "backend_retries": 3
+  },
+  "timestamp": "2025-12-01T06:30:15.023Z"
+}

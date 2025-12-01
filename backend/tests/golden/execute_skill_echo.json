@@ -1,0 +1,26 @@
+{
+  "_description": "Golden file for runtime.execute() on skill.echo",
+  "_purpose": "Verify StructuredOutcome shape and deterministic fields",
+  "_replay_assertion": {
+    "compare_fields": ["ok", "error"],
+    "ignore_fields": ["id", "meta.started_at", "meta.ended_at", "meta.duration_s", "meta.call_id"],
+    "deterministic_result": true
+  },
+  "id": "{{UUID}}",
+  "ok": true,
+  "result": {
+    "echo": {
+      "input_key": "test_value"
+    }
+  },
+  "error": null,
+  "meta": {
+    "call_id": "{{UUID}}",
+    "skill_id": "skill.echo",
+    "started_at": "{{TIMESTAMP}}",
+    "ended_at": "{{TIMESTAMP}}",
+    "duration_s": "{{FLOAT}}",
+    "inputs_hash": "{{INT}}",
+    "cost_cents": 0
+  }
+}

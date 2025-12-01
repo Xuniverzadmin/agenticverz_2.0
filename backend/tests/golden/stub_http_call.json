@@ -1,0 +1,1 @@
+{"_meta":{"created_at":"2025-12-01T00:00:00Z","description":"HTTP call stub determinism test","deterministic_fields":["body_hash","status_code"],"version":"1.0.0"},"expected_output":{"body_hash":"deterministic_hash","headers":{"content-type":"application/json"},"status_code":200},"input":{"method":"GET","url":"https://api.example.com/test"}}

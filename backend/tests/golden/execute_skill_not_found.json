@@ -1,0 +1,26 @@
+{
+  "_description": "Golden file for runtime.execute() with missing skill",
+  "_purpose": "Verify error structure for ERR_SKILL_NOT_FOUND",
+  "_replay_assertion": {
+    "compare_fields": ["ok", "error.code", "error.category", "error.retryable"],
+    "ignore_fields": ["id", "meta.started_at", "meta.ended_at", "meta.duration_s", "meta.call_id", "error.message"],
+    "deterministic_result": true
+  },
+  "id": "{{UUID}}",
+  "ok": false,
+  "result": null,
+  "error": {
+    "code": "ERR_SKILL_NOT_FOUND",
+    "message": "Skill not found: skill.nonexistent",
+    "category": "PERMANENT",
+    "retryable": false
+  },
+  "meta": {
+    "call_id": "{{UUID}}",
+    "skill_id": "skill.nonexistent",
+    "started_at": "{{TIMESTAMP}}",
+    "ended_at": "{{TIMESTAMP}}",
+    "duration_s": "{{FLOAT}}",
+    "inputs_hash": 0
+  }
+}

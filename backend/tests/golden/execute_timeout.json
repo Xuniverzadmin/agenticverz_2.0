@@ -1,0 +1,26 @@
+{
+  "_description": "Golden file for runtime.execute() timeout",
+  "_purpose": "Verify error structure for ERR_TIMEOUT",
+  "_replay_assertion": {
+    "compare_fields": ["ok", "error.code", "error.category", "error.retryable"],
+    "ignore_fields": ["id", "meta.started_at", "meta.ended_at", "meta.duration_s", "meta.call_id", "error.message"],
+    "deterministic_result": true
+  },
+  "id": "{{UUID}}",
+  "ok": false,
+  "result": null,
+  "error": {
+    "code": "ERR_TIMEOUT",
+    "message": "Execution timed out after 0.01s",
+    "category": "TRANSIENT",
+    "retryable": true
+  },
+  "meta": {
+    "call_id": "{{UUID}}",
+    "skill_id": "skill.slow",
+    "started_at": "{{TIMESTAMP}}",
+    "ended_at": "{{TIMESTAMP}}",
+    "duration_s": "{{FLOAT}}",
+    "inputs_hash": 0
+  }
+}
