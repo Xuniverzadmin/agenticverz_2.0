@@ -102,10 +102,9 @@ def runtime_with_contract(runtime):
     """Runtime with a resource contract registered."""
     contract = ResourceContract(
         resource_id="test-resource",
-        budget={"total_cents": 500, "remaining_cents": 500, "per_step_max_cents": 50},
-        rate_limits={"skill.echo": {"remaining": 100, "resets_at": "2025-12-01T12:00:00Z"}},
-        concurrency={"max_parallel_steps": 5, "current_running": 0},
-        time={"max_run_duration_ms": 60000, "elapsed_ms": 0, "remaining_ms": 60000}
+        budget_cents=500,
+        rate_limit_per_min=100,
+        max_concurrent=5
     )
     runtime.register_resource_contract(contract)
     return runtime
@@ -349,7 +348,7 @@ class TestGetResourceContract:
         assert contract is not None
         assert isinstance(contract, ResourceContract)
         assert contract.resource_id == "test-resource"
-        assert contract.budget["total_cents"] == 500
+        assert contract.budget_cents == 500
 
     def test_get_missing_contract(self, runtime):
         """get_resource_contract should return None for unregistered resource."""
@@ -360,11 +359,9 @@ class TestGetResourceContract:
         """ResourceContract should have all required fields."""
         contract = runtime_with_contract.get_resource_contract("test-resource")
 
-        assert "total_cents" in contract.budget
-        assert "remaining_cents" in contract.budget
-        assert "per_step_max_cents" in contract.budget
-        assert "max_parallel_steps" in contract.concurrency
-        assert "max_run_duration_ms" in contract.time
+        assert hasattr(contract, 'budget_cents')
+        assert hasattr(contract, 'rate_limit_per_min')
+        assert hasattr(contract, 'max_concurrent')
 
     def test_contract_to_dict(self, runtime_with_contract):
         """ResourceContract.to_dict() should serialize correctly."""
@@ -372,10 +369,9 @@ class TestGetResourceContract:
         d = contract.to_dict()
 
         assert d["resource_id"] == "test-resource"
-        assert "budget" in d
-        assert "rate_limits" in d
-        assert "concurrency" in d
-        assert "time" in d
+        assert "budget_cents" in d
+        assert "rate_limit_per_min" in d
+        assert "max_concurrent" in d
 
 
 # ============================================================================

@@ -15,6 +15,29 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Protocol, Union
+import json
+import hashlib
+
+
+def _canonical_json(obj: Any) -> str:
+    """Canonical JSON serialization for deterministic outputs."""
+    def _serializer(o: Any) -> Any:
+        if hasattr(o, 'to_dict'):
+            return o.to_dict()
+        if hasattr(o, '__dict__'):
+            return o.__dict__
+        if isinstance(o, Enum):
+            return o.value
+        if isinstance(o, datetime):
+            return o.isoformat()
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+    return json.dumps(obj, sort_keys=True, separators=(',', ':'), default=_serializer)
+
+
+def _content_hash(obj: Any, length: int = 16) -> str:
+    """Compute deterministic content hash."""
+    canonical = _canonical_json(obj).encode('utf-8')
+    return hashlib.sha256(canonical).hexdigest()[:length]
 
 
 class DeterminismMode(str, Enum):
@@ -104,6 +127,19 @@ class PlannerOutput:
             "metadata": self.metadata.to_dict(),
             "warnings": self.warnings
         }
+
+    def to_canonical_json(self) -> str:
+        """Return canonical JSON representation for replay testing."""
+        return _canonical_json(self.to_dict())
+
+    def content_hash(self) -> str:
+        """Compute deterministic content hash of the plan."""
+        return _content_hash(self.to_dict())
+
+    @property
+    def plan(self) -> Dict[str, Any]:
+        """Alias for to_dict() for backwards compatibility."""
+        return self.to_dict()
 
 
 @dataclass

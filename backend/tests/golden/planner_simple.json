@@ -1,0 +1,34 @@
+{
+  "description": "Simple single-step plan (echo)",
+  "input": {
+    "agent_id": "test-agent",
+    "goal": "echo hello world",
+    "tool_manifest": [
+      {"skill_id": "skill.echo", "name": "Echo"}
+    ]
+  },
+  "expected_output": {
+    "steps": [
+      {
+        "step_id": "s1",
+        "skill": "skill.echo",
+        "params": {"message": "echo hello world"},
+        "depends_on": [],
+        "on_error": "abort",
+        "retry_count": 3
+      }
+    ],
+    "metadata": {
+      "planner": "stub",
+      "planner_version": "1.0.0",
+      "deterministic": true,
+      "cost_cents": 0
+    }
+  },
+  "deterministic_fields": [
+    "steps.0.step_id",
+    "steps.0.skill",
+    "metadata.planner",
+    "metadata.deterministic"
+  ]
+}

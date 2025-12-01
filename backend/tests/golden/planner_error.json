@@ -1,0 +1,22 @@
+{
+  "description": "Planner error response (empty goal)",
+  "input": {
+    "agent_id": "test-agent",
+    "goal": "   ",
+    "tool_manifest": []
+  },
+  "expected_output": {
+    "code": "PLANNER_INVALID_GOAL",
+    "message": "Goal cannot be empty",
+    "retryable": false,
+    "details": {}
+  },
+  "deterministic_fields": [
+    "code",
+    "retryable"
+  ],
+  "notes": [
+    "Empty/whitespace goals produce INVALID_GOAL error",
+    "Error is not retryable"
+  ]
+}

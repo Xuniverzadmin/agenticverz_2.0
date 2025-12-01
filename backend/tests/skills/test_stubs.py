@@ -59,7 +59,7 @@ class TestHttpCallStub:
         """Default response is returned for unknown URLs."""
         result = await stub.execute({"url": "https://unknown.example.com"})
 
-        assert result["status"] == 200
+        assert result["status_code"] == 200
         assert result["body"]["stub"] is True
         assert "x-stub" in result["headers"]
 
@@ -67,14 +67,14 @@ class TestHttpCallStub:
     async def test_custom_response(self, stub):
         """Custom response is returned for configured URL."""
         stub.add_response("https://api.example.com/data", MockResponse(
-            status=200,
+            status_code=200,
             body={"key": "value"},
             latency_ms=100
         ))
 
         result = await stub.execute({"url": "https://api.example.com/data"})
 
-        assert result["status"] == 200
+        assert result["status_code"] == 200
         assert result["body"]["key"] == "value"
         assert result["latency_ms"] == 100
 
@@ -82,13 +82,13 @@ class TestHttpCallStub:
     async def test_prefix_matching(self, stub):
         """URL prefix matching works."""
         stub.add_response("https://api.example.com", MockResponse(
-            status=201,
+            status_code=201,
             body={"matched": "prefix"}
         ))
 
         result = await stub.execute({"url": "https://api.example.com/any/path"})
 
-        assert result["status"] == 201
+        assert result["status_code"] == 201
         assert result["body"]["matched"] == "prefix"
 
     @pytest.mark.asyncio
@@ -315,13 +315,13 @@ class TestGlobalStubs:
         # Configure global stub
         stub = HttpCallStub()
         stub.add_response("https://global.test", MockResponse(
-            status=202,
+            status_code=202,
             body={"global": True}
         ))
         configure_http_call_stub(stub)
 
         result = await http_call_stub_handler({"url": "https://global.test"})
-        assert result["status"] == 202
+        assert result["status_code"] == 202
 
     @pytest.mark.asyncio
     async def test_llm_invoke_stub_handler(self):

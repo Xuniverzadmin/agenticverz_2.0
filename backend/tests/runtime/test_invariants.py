@@ -23,12 +23,16 @@ from typing import Dict, Any, List
 from dataclasses import dataclass
 import json
 
-# Add runtime path to allow direct imports
+# Add backend to path for imports
+_backend_path = str(Path(__file__).parent.parent.parent)
+_app_path = str(Path(__file__).parent.parent.parent / "app")
 _runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
-if _runtime_path not in sys.path:
-    sys.path.insert(0, _runtime_path)
 
-from core import (
+for p in [_backend_path, _app_path, _runtime_path]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from app.worker.runtime.core import (
     Runtime,
     StructuredOutcome,
     SkillDescriptor,
@@ -131,8 +135,6 @@ class TestRuntimeExecuteInvariants:
             return {"status": "ok"}
 
         rt.register_skill(
-            "test.success",
-            success_handler,
             SkillDescriptor(
                 skill_id="test.success",
                 name="Success Test",
@@ -143,12 +145,11 @@ class TestRuntimeExecuteInvariants:
                 cost_model={},
                 failure_modes=[],
                 constraints={}
-            )
+            ),
+            success_handler
         )
 
         rt.register_skill(
-            "test.fail",
-            failing_handler,
             SkillDescriptor(
                 skill_id="test.fail",
                 name="Failing Test",
@@ -161,12 +162,11 @@ class TestRuntimeExecuteInvariants:
                     {"code": "ERR_INTENTIONAL", "category": "PERMANENT"}
                 ],
                 constraints={}
-            )
+            ),
+            failing_handler
         )
 
         rt.register_skill(
-            "test.timeout",
-            timeout_handler,
             SkillDescriptor(
                 skill_id="test.timeout",
                 name="Timeout Test",
@@ -179,7 +179,8 @@ class TestRuntimeExecuteInvariants:
                     {"code": "ERR_TIMEOUT", "category": "TRANSIENT"}
                 ],
                 constraints={}
-            )
+            ),
+            timeout_handler
         )
 
         return rt
@@ -212,7 +213,7 @@ class TestRuntimeExecuteInvariants:
         assert isinstance(outcome, StructuredOutcome)
         assert outcome.ok is False
         assert outcome.error is not None
-        assert outcome.error["code"] == "TIMEOUT"
+        assert outcome.error["code"] == "ERR_TIMEOUT"
 
     @pytest.mark.asyncio
     async def test_execute_unknown_skill_returns_outcome(self, runtime):
@@ -420,7 +421,8 @@ class TestQueryInvariants:
 
     @pytest.fixture
     def runtime(self):
-        return Runtime()
+        rt = Runtime()
+        return rt
 
     @pytest.mark.asyncio
     async def test_query_budget_returns_dict(self, runtime):

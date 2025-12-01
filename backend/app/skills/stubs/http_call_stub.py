@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
 
 import sys
@@ -61,7 +61,7 @@ HTTP_CALL_STUB_DESCRIPTOR = SkillDescriptor(
 @dataclass
 class MockResponse:
     """Configurable mock response for http_call stub."""
-    status: int = 200
+    status_code: int = 200
     headers: Dict[str, str] = field(default_factory=dict)
     body: Any = None
     latency_ms: int = 50
@@ -85,14 +85,22 @@ class HttpCallStub:
     responses: Dict[str, MockResponse] = field(default_factory=dict)
     # Default response for unmatched URLs
     default_response: MockResponse = field(default_factory=lambda: MockResponse(
-        status=200,
+        status_code=200,
         body={"stub": True, "message": "Default stub response"}
     ))
     # Record of calls for verification
     call_history: List[Dict[str, Any]] = field(default_factory=list)
 
-    def add_response(self, url_pattern: str, response: MockResponse) -> None:
+    def add_response(self, url_pattern: str, response: Union[MockResponse, Dict[str, Any]]) -> None:
         """Add a mock response for a URL pattern."""
+        if isinstance(response, dict):
+            response = MockResponse(
+                status_code=response.get("status_code", 200),
+                headers=response.get("headers", {}),
+                body=response.get("body"),
+                latency_ms=response.get("latency_ms", 50),
+                error=response.get("error")
+            )
         self.responses[url_pattern] = response
 
     def add_error(self, url_pattern: str, error_code: str, message: str) -> None:
@@ -104,9 +112,9 @@ class HttpCallStub:
         # Exact match
         if url in self.responses:
             return self.responses[url]
-        # Prefix match
+        # Host-based match (pattern can be just the hostname)
         for pattern, response in self.responses.items():
-            if url.startswith(pattern):
+            if pattern in url:
                 return response
         return self.default_response
 
@@ -148,7 +156,7 @@ class HttpCallStub:
 
         # Build deterministic response
         result = {
-            "status": response.status,
+            "status_code": response.status_code,
             "headers": {
                 "content-type": "application/json",
                 "x-stub": "true",

@@ -95,10 +95,9 @@ def runtime_with_contract(runtime):
     """Runtime with a resource contract registered."""
     contract = ResourceContract(
         resource_id="test-resource",
-        budget={"total_cents": 500, "remaining_cents": 500, "per_step_max_cents": 50},
-        rate_limits={"skill.echo": {"remaining": 100, "resets_at": "2025-12-01T12:00:00Z"}},
-        concurrency={"max_parallel_steps": 5, "current_running": 0},
-        time={"max_run_duration_ms": 60000, "elapsed_ms": 0, "remaining_ms": 60000}
+        budget_cents=500,
+        rate_limit_per_min=100,
+        max_concurrent=5
     )
     runtime.register_resource_contract(contract)
     return runtime
@@ -298,7 +297,7 @@ class TestGetResourceContract:
         assert contract is not None
         assert isinstance(contract, ResourceContract)
         assert contract.resource_id == "test-resource"
-        assert contract.budget["total_cents"] == 500
+        assert contract.budget_cents == 500
 
     def test_get_missing_contract(self, runtime):
         """get_resource_contract should return None for unregistered resource."""

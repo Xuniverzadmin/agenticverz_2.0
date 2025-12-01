@@ -23,6 +23,31 @@ from enum import Enum
 import asyncio
 import uuid
 import time
+import json
+import hashlib
+
+
+def _canonical_json(obj: Any) -> str:
+    """
+    Canonical JSON serialization for deterministic outputs.
+    Keys sorted, no whitespace, UTF-8.
+    """
+    def _serializer(o: Any) -> Any:
+        if hasattr(o, 'to_dict'):
+            return o.to_dict()
+        if hasattr(o, '__dict__'):
+            return o.__dict__
+        if isinstance(o, Enum):
+            return o.value
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+    return json.dumps(obj, sort_keys=True, separators=(',', ':'), default=_serializer)
+
+
+def _content_hash(obj: Any, length: int = 16) -> str:
+    """Compute deterministic content hash."""
+    canonical = _canonical_json(obj).encode('utf-8')
+    return hashlib.sha256(canonical).hexdigest()[:length]
 
 
 class ErrorCategory(str, Enum):
@@ -32,6 +57,10 @@ class ErrorCategory(str, Enum):
     RESOURCE = "RESOURCE"        # Budget/rate limit
     PERMISSION = "PERMISSION"    # Not allowed
     VALIDATION = "VALIDATION"    # Bad input
+
+    def is_retryable(self) -> bool:
+        """Whether this error category is retryable."""
+        return self in (ErrorCategory.TRANSIENT, ErrorCategory.RESOURCE)
 
 
 @dataclass(frozen=True)
@@ -65,6 +94,22 @@ class StructuredOutcome:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dict for JSON serialization and golden file comparison."""
         return asdict(self)
+
+    def to_canonical_json(self) -> str:
+        """Return canonical JSON representation for replay testing."""
+        return _canonical_json(self.to_dict())
+
+    def content_hash(self, exclude_fields: Optional[set] = None) -> str:
+        """
+        Compute deterministic content hash.
+
+        Args:
+            exclude_fields: Fields to exclude (e.g. {'meta'} for timing-invariant hash)
+        """
+        data = self.to_dict()
+        if exclude_fields:
+            data = {k: v for k, v in data.items() if k not in exclude_fields}
+        return _content_hash(data)
 
     @classmethod
     def success(cls, call_id: str, result: Any, meta: Optional[Dict[str, Any]] = None) -> "StructuredOutcome":
@@ -138,42 +183,25 @@ class ResourceContract:
 
     Fields:
         resource_id: Unique resource identifier
-        budget: Budget constraints (total, remaining, per_step_max)
-        rate_limits: Rate limit info per skill
-        concurrency: Concurrency limits
-        time: Time constraints (max duration, elapsed, remaining)
+        budget_cents: Budget in cents
+        rate_limit_per_min: Rate limit per minute
+        max_concurrent: Max concurrent executions
         schema_version: Contract schema version
-        provenance: Origin metadata
     """
     resource_id: str
-    budget: Dict[str, Any] = field(default_factory=lambda: {
-        "total_cents": 1000,
-        "remaining_cents": 1000,
-        "per_step_max_cents": 100
-    })
-    rate_limits: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    concurrency: Dict[str, int] = field(default_factory=lambda: {
-        "max_parallel_steps": 3,
-        "current_running": 0
-    })
-    time: Dict[str, Any] = field(default_factory=lambda: {
-        "max_run_duration_ms": 300000,
-        "elapsed_ms": 0,
-        "remaining_ms": 300000
-    })
+    budget_cents: int = 1000
+    rate_limit_per_min: int = 60
+    max_concurrent: int = 5
     schema_version: str = "1.0"
-    provenance: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dict for JSON serialization."""
         return {
             "resource_id": self.resource_id,
-            "budget": self.budget,
-            "rate_limits": self.rate_limits,
-            "concurrency": self.concurrency,
-            "time": self.time,
-            "schema_version": self.schema_version,
-            "provenance": self.provenance
+            "budget_cents": self.budget_cents,
+            "rate_limit_per_min": self.rate_limit_per_min,
+            "max_concurrent": self.max_concurrent,
+            "schema_version": self.schema_version
         }
 
 

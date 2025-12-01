@@ -1,0 +1,64 @@
+{
+  "description": "Multi-step plan with dependencies (analyze)",
+  "input": {
+    "agent_id": "test-agent",
+    "goal": "analyze user data",
+    "tool_manifest": [
+      {"skill_id": "skill.http_call", "name": "HTTP Call"},
+      {"skill_id": "skill.json_transform", "name": "JSON Transform"},
+      {"skill_id": "skill.llm_invoke", "name": "LLM Invoke"}
+    ]
+  },
+  "expected_output": {
+    "steps": [
+      {
+        "step_id": "s1",
+        "skill": "skill.http_call",
+        "params": {"url": "{{url}}", "method": "GET"},
+        "depends_on": [],
+        "description": "Fetch data"
+      },
+      {
+        "step_id": "s2",
+        "skill": "skill.json_transform",
+        "params": {
+          "data": "{{s1.body}}",
+          "operation": "extract",
+          "path": "$.data"
+        },
+        "depends_on": ["s1"],
+        "description": "Extract data"
+      },
+      {
+        "step_id": "s3",
+        "skill": "skill.llm_invoke",
+        "params": {"prompt": "Analyze: {{s2.output}}"},
+        "depends_on": ["s2"],
+        "description": "Analyze data"
+      }
+    ],
+    "metadata": {
+      "planner": "stub",
+      "planner_version": "1.0.0",
+      "deterministic": true,
+      "cost_cents": 0
+    }
+  },
+  "deterministic_fields": [
+    "steps.0.step_id",
+    "steps.0.skill",
+    "steps.1.step_id",
+    "steps.1.skill",
+    "steps.1.depends_on",
+    "steps.2.step_id",
+    "steps.2.skill",
+    "steps.2.depends_on",
+    "metadata.planner",
+    "metadata.deterministic"
+  ],
+  "notes": [
+    "Dependencies form a chain: s1 <- s2 <- s3",
+    "Params contain placeholder references ({{s1.body}})",
+    "Each step has a description"
+  ]
+}
