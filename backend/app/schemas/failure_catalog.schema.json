@@ -1,0 +1,189 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aos.dev/schemas/failure_catalog.schema.json",
+  "title": "AOS Failure Catalog Schema",
+  "description": "Schema for structured error codes and recovery strategies in AOS",
+  "version": "0.1.0",
+  "type": "object",
+  "required": ["version", "categories", "errors"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of the failure catalog"
+    },
+    "categories": {
+      "type": "object",
+      "description": "Error category definitions",
+      "additionalProperties": {
+        "$ref": "#/definitions/ErrorCategory"
+      }
+    },
+    "errors": {
+      "type": "object",
+      "description": "Individual error code definitions",
+      "additionalProperties": {
+        "$ref": "#/definitions/ErrorDefinition"
+      }
+    },
+    "recovery_modes": {
+      "type": "object",
+      "description": "Recovery mode definitions",
+      "additionalProperties": {
+        "$ref": "#/definitions/RecoveryMode"
+      }
+    }
+  },
+  "definitions": {
+    "ErrorCategory": {
+      "type": "object",
+      "required": ["name", "description", "is_retryable", "default_recovery"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Category name (e.g., TRANSIENT, PERMANENT)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable category description"
+        },
+        "is_retryable": {
+          "type": "boolean",
+          "description": "Whether errors in this category are generally retryable"
+        },
+        "default_recovery": {
+          "type": "string",
+          "description": "Default recovery mode for this category"
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Maximum retry attempts for this category"
+        },
+        "base_delay_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Base delay in milliseconds before retry"
+        },
+        "backoff_multiplier": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 5.0,
+          "description": "Exponential backoff multiplier"
+        }
+      }
+    },
+    "ErrorDefinition": {
+      "type": "object",
+      "required": ["code", "category", "message", "severity"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,31}$",
+          "description": "Unique error code (e.g., HTTP_TIMEOUT, BUDGET_EXCEEDED)"
+        },
+        "category": {
+          "type": "string",
+          "description": "Reference to category name"
+        },
+        "message": {
+          "type": "string",
+          "description": "Default error message template"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "description": "Error severity level"
+        },
+        "is_retryable": {
+          "type": "boolean",
+          "description": "Override category retryable setting"
+        },
+        "recovery_mode": {
+          "type": "string",
+          "description": "Override category recovery mode"
+        },
+        "recovery_suggestions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Human-readable recovery suggestions"
+        },
+        "metrics_labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Labels for Prometheus metrics"
+        },
+        "http_status": {
+          "type": "integer",
+          "description": "Associated HTTP status code if applicable"
+        },
+        "exit_code": {
+          "type": "integer",
+          "description": "Associated process exit code if applicable"
+        }
+      }
+    },
+    "RecoveryMode": {
+      "type": "object",
+      "required": ["name", "description", "strategy"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Recovery mode name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description"
+        },
+        "strategy": {
+          "type": "string",
+          "enum": [
+            "RETRY_IMMEDIATE",
+            "RETRY_EXPONENTIAL",
+            "RETRY_WITH_JITTER",
+            "FALLBACK",
+            "CIRCUIT_BREAKER",
+            "SKIP",
+            "ABORT",
+            "ESCALATE",
+            "CHECKPOINT_RESTORE",
+            "MANUAL_INTERVENTION"
+          ],
+          "description": "Recovery strategy type"
+        },
+        "config": {
+          "type": "object",
+          "description": "Strategy-specific configuration",
+          "properties": {
+            "max_retries": {
+              "type": "integer"
+            },
+            "base_delay_ms": {
+              "type": "integer"
+            },
+            "max_delay_ms": {
+              "type": "integer"
+            },
+            "jitter_factor": {
+              "type": "number"
+            },
+            "fallback_value": {
+              "type": "string"
+            },
+            "circuit_breaker_threshold": {
+              "type": "integer"
+            },
+            "circuit_breaker_reset_ms": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}

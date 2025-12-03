@@ -1,0 +1,1002 @@
+{
+  "$schema": "../schemas/failure_catalog.schema.json",
+  "version": "1.0.0",
+  "categories": {
+    "TRANSIENT": {
+      "name": "TRANSIENT",
+      "description": "Temporary failures that may resolve with retry",
+      "is_retryable": true,
+      "default_recovery": "RETRY_EXPONENTIAL",
+      "max_retries": 3,
+      "base_delay_ms": 1000,
+      "backoff_multiplier": 2.0
+    },
+    "PERMANENT": {
+      "name": "PERMANENT",
+      "description": "Failures that will not resolve with retry",
+      "is_retryable": false,
+      "default_recovery": "ABORT",
+      "max_retries": 0,
+      "base_delay_ms": 0,
+      "backoff_multiplier": 1.0
+    },
+    "RESOURCE": {
+      "name": "RESOURCE",
+      "description": "Budget, quota, or rate limit exhaustion",
+      "is_retryable": false,
+      "default_recovery": "ESCALATE",
+      "max_retries": 0,
+      "base_delay_ms": 0,
+      "backoff_multiplier": 1.0
+    },
+    "PERMISSION": {
+      "name": "PERMISSION",
+      "description": "Authorization or access control failures",
+      "is_retryable": false,
+      "default_recovery": "ESCALATE",
+      "max_retries": 0,
+      "base_delay_ms": 0,
+      "backoff_multiplier": 1.0
+    },
+    "VALIDATION": {
+      "name": "VALIDATION",
+      "description": "Input validation or schema failures",
+      "is_retryable": false,
+      "default_recovery": "ABORT",
+      "max_retries": 0,
+      "base_delay_ms": 0,
+      "backoff_multiplier": 1.0
+    },
+    "INFRASTRUCTURE": {
+      "name": "INFRASTRUCTURE",
+      "description": "System-level connectivity or storage failures",
+      "is_retryable": true,
+      "default_recovery": "RETRY_EXPONENTIAL",
+      "max_retries": 3,
+      "base_delay_ms": 1000,
+      "backoff_multiplier": 2.0
+    },
+    "PLANNER": {
+      "name": "PLANNER",
+      "description": "Planning phase failures",
+      "is_retryable": true,
+      "default_recovery": "RETRY_WITH_JITTER",
+      "max_retries": 2,
+      "base_delay_ms": 2000,
+      "backoff_multiplier": 1.5
+    },
+    "SKILL": {
+      "name": "SKILL",
+      "description": "Skill execution failures",
+      "is_retryable": false,
+      "default_recovery": "ABORT",
+      "max_retries": 0,
+      "base_delay_ms": 0,
+      "backoff_multiplier": 1.0
+    },
+    "DATA": {
+      "name": "DATA",
+      "description": "Data integrity or availability failures",
+      "is_retryable": false,
+      "default_recovery": "ABORT",
+      "max_retries": 0,
+      "base_delay_ms": 0,
+      "backoff_multiplier": 1.0
+    },
+    "SECURITY": {
+      "name": "SECURITY",
+      "description": "Security violations or tamper detection",
+      "is_retryable": false,
+      "default_recovery": "ABORT",
+      "max_retries": 0,
+      "base_delay_ms": 0,
+      "backoff_multiplier": 1.0
+    },
+    "CHECKPOINT": {
+      "name": "CHECKPOINT",
+      "description": "Checkpoint and state management failures",
+      "is_retryable": true,
+      "default_recovery": "CHECKPOINT_RESTORE",
+      "max_retries": 3,
+      "base_delay_ms": 500,
+      "backoff_multiplier": 2.0
+    }
+  },
+  "errors": {
+    "TIMEOUT": {
+      "code": "TIMEOUT",
+      "category": "TRANSIENT",
+      "message": "Operation timed out",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Retry with exponential backoff",
+        "Consider increasing timeout threshold",
+        "Check network connectivity"
+      ],
+      "http_status": 504,
+      "metrics_labels": {"error_type": "timeout", "category": "transient"}
+    },
+    "DNS_FAILURE": {
+      "code": "DNS_FAILURE",
+      "category": "TRANSIENT",
+      "message": "DNS resolution failed",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Retry after brief delay",
+        "Verify hostname spelling",
+        "Check DNS server availability"
+      ],
+      "http_status": 503,
+      "metrics_labels": {"error_type": "dns", "category": "transient"}
+    },
+    "CONNECTION_RESET": {
+      "code": "CONNECTION_RESET",
+      "category": "TRANSIENT",
+      "message": "Connection was reset by peer",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Retry connection",
+        "Check server availability",
+        "Verify network stability"
+      ],
+      "http_status": 503,
+      "metrics_labels": {"error_type": "connection_reset", "category": "transient"}
+    },
+    "SERVICE_UNAVAILABLE": {
+      "code": "SERVICE_UNAVAILABLE",
+      "category": "TRANSIENT",
+      "message": "Service temporarily unavailable",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Retry with backoff",
+        "Check service health endpoint",
+        "Verify service is not in maintenance"
+      ],
+      "http_status": 503,
+      "metrics_labels": {"error_type": "service_unavailable", "category": "transient"}
+    },
+    "GATEWAY_TIMEOUT": {
+      "code": "GATEWAY_TIMEOUT",
+      "category": "TRANSIENT",
+      "message": "Gateway timeout waiting for upstream",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Retry with longer timeout",
+        "Check upstream service health",
+        "Consider caching if available"
+      ],
+      "http_status": 504,
+      "metrics_labels": {"error_type": "gateway_timeout", "category": "transient"}
+    },
+    "SKILL_NOT_FOUND": {
+      "code": "SKILL_NOT_FOUND",
+      "category": "PERMANENT",
+      "message": "Requested skill not found in registry",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Verify skill ID spelling",
+        "Register skill before use",
+        "Check available skills via /skills endpoint"
+      ],
+      "http_status": 404,
+      "metrics_labels": {"error_type": "skill_not_found", "category": "permanent"}
+    },
+    "INVALID_SKILL": {
+      "code": "INVALID_SKILL",
+      "category": "PERMANENT",
+      "message": "Skill implementation is invalid",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix skill implementation",
+        "Check skill manifest",
+        "Verify skill version compatibility"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "invalid_skill", "category": "permanent"}
+    },
+    "STEP_FAILED": {
+      "code": "STEP_FAILED",
+      "category": "PERMANENT",
+      "message": "Workflow step execution failed",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Check step inputs",
+        "Verify skill behavior",
+        "Review step logs"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "step_failed", "category": "permanent"}
+    },
+    "EXECUTION_ERROR": {
+      "code": "EXECUTION_ERROR",
+      "category": "PERMANENT",
+      "message": "General execution error",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Check execution logs",
+        "Review stack trace",
+        "Investigate root cause"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "execution_error", "category": "permanent"}
+    },
+    "UNKNOWN_ERROR": {
+      "code": "UNKNOWN_ERROR",
+      "category": "PERMANENT",
+      "message": "Unknown error occurred",
+      "severity": "CRITICAL",
+      "is_retryable": false,
+      "recovery_mode": "ESCALATE",
+      "recovery_suggestions": [
+        "Collect diagnostic information",
+        "Report to engineering team",
+        "Check system logs"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "unknown", "category": "permanent"}
+    },
+    "WORKFLOW_ABORTED": {
+      "code": "WORKFLOW_ABORTED",
+      "category": "PERMANENT",
+      "message": "Workflow was intentionally aborted",
+      "severity": "LOW",
+      "is_retryable": false,
+      "recovery_mode": "SKIP",
+      "recovery_suggestions": [
+        "Review abort reason",
+        "Check if abort was expected",
+        "Restart workflow if needed"
+      ],
+      "http_status": 499,
+      "metrics_labels": {"error_type": "aborted", "category": "permanent"}
+    },
+    "BUDGET_EXCEEDED": {
+      "code": "BUDGET_EXCEEDED",
+      "category": "RESOURCE",
+      "message": "Budget limit exceeded",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Increase budget allocation",
+        "Reduce step costs",
+        "Use cheaper skill alternatives"
+      ],
+      "http_status": 402,
+      "metrics_labels": {"error_type": "budget_exceeded", "category": "resource"}
+    },
+    "STEP_CEILING_EXCEEDED": {
+      "code": "STEP_CEILING_EXCEEDED",
+      "category": "RESOURCE",
+      "message": "Step cost ceiling exceeded",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Reduce step complexity",
+        "Increase step ceiling",
+        "Split into multiple steps"
+      ],
+      "http_status": 402,
+      "metrics_labels": {"error_type": "step_ceiling", "category": "resource"}
+    },
+    "WORKFLOW_CEILING_EXCEEDED": {
+      "code": "WORKFLOW_CEILING_EXCEEDED",
+      "category": "RESOURCE",
+      "message": "Workflow cost ceiling exceeded",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Reduce workflow complexity",
+        "Increase workflow ceiling",
+        "Optimize expensive steps"
+      ],
+      "http_status": 402,
+      "metrics_labels": {"error_type": "workflow_ceiling", "category": "resource"}
+    },
+    "AGENT_BUDGET_EXCEEDED": {
+      "code": "AGENT_BUDGET_EXCEEDED",
+      "category": "RESOURCE",
+      "message": "Agent budget exhausted",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ESCALATE",
+      "recovery_suggestions": [
+        "Request budget increase",
+        "Wait for budget reset",
+        "Contact administrator"
+      ],
+      "http_status": 402,
+      "metrics_labels": {"error_type": "agent_budget", "category": "resource"}
+    },
+    "RATE_LIMITED": {
+      "code": "RATE_LIMITED",
+      "category": "RESOURCE",
+      "message": "Rate limit exceeded",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Wait for rate limit reset",
+        "Implement client-side throttling",
+        "Request higher rate limit"
+      ],
+      "http_status": 429,
+      "metrics_labels": {"error_type": "rate_limited", "category": "resource"}
+    },
+    "QUOTA_EXHAUSTED": {
+      "code": "QUOTA_EXHAUSTED",
+      "category": "RESOURCE",
+      "message": "Usage quota exhausted",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ESCALATE",
+      "recovery_suggestions": [
+        "Request quota increase",
+        "Wait for quota reset period",
+        "Contact sales for upgrade"
+      ],
+      "http_status": 429,
+      "metrics_labels": {"error_type": "quota_exhausted", "category": "resource"}
+    },
+    "PERMISSION_DENIED": {
+      "code": "PERMISSION_DENIED",
+      "category": "PERMISSION",
+      "message": "Permission denied for operation",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Request appropriate permissions",
+        "Use authorized credentials",
+        "Contact administrator"
+      ],
+      "http_status": 403,
+      "metrics_labels": {"error_type": "permission_denied", "category": "permission"}
+    },
+    "UNAUTHORIZED": {
+      "code": "UNAUTHORIZED",
+      "category": "PERMISSION",
+      "message": "Authentication required",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Provide valid API key",
+        "Refresh expired tokens",
+        "Check authentication configuration"
+      ],
+      "http_status": 401,
+      "metrics_labels": {"error_type": "unauthorized", "category": "permission"}
+    },
+    "FORBIDDEN_SKILL": {
+      "code": "FORBIDDEN_SKILL",
+      "category": "PERMISSION",
+      "message": "Skill not allowed for agent",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Use allowed skills only",
+        "Request skill permission",
+        "Check agent profile capabilities"
+      ],
+      "http_status": 403,
+      "metrics_labels": {"error_type": "forbidden_skill", "category": "permission"}
+    },
+    "TENANT_SUSPENDED": {
+      "code": "TENANT_SUSPENDED",
+      "category": "PERMISSION",
+      "message": "Tenant account suspended",
+      "severity": "CRITICAL",
+      "is_retryable": false,
+      "recovery_mode": "ESCALATE",
+      "recovery_suggestions": [
+        "Contact support",
+        "Resolve billing issues",
+        "Check suspension reason"
+      ],
+      "http_status": 403,
+      "metrics_labels": {"error_type": "tenant_suspended", "category": "permission"}
+    },
+    "INVALID_INPUT": {
+      "code": "INVALID_INPUT",
+      "category": "VALIDATION",
+      "message": "Invalid input data",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix input data format",
+        "Check expected schema",
+        "Validate before submission"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "invalid_input", "category": "validation"}
+    },
+    "SCHEMA_VALIDATION_FAILED": {
+      "code": "SCHEMA_VALIDATION_FAILED",
+      "category": "VALIDATION",
+      "message": "Schema validation failed",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Match input to expected schema",
+        "Check field types",
+        "Remove unexpected fields"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "schema_validation", "category": "validation"}
+    },
+    "MISSING_REQUIRED_FIELD": {
+      "code": "MISSING_REQUIRED_FIELD",
+      "category": "VALIDATION",
+      "message": "Required field missing",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Provide all required fields",
+        "Check API documentation",
+        "Review error details for missing field"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "missing_field", "category": "validation"}
+    },
+    "INVALID_REFERENCE": {
+      "code": "INVALID_REFERENCE",
+      "category": "VALIDATION",
+      "message": "Invalid step or data reference",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix reference format",
+        "Check referenced step exists",
+        "Use correct reference syntax"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "invalid_reference", "category": "validation"}
+    },
+    "INVALID_SPEC": {
+      "code": "INVALID_SPEC",
+      "category": "VALIDATION",
+      "message": "Invalid workflow specification",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix workflow spec",
+        "Validate against schema",
+        "Check step dependencies"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "invalid_spec", "category": "validation"}
+    },
+    "DB_CONNECTION_FAILED": {
+      "code": "DB_CONNECTION_FAILED",
+      "category": "INFRASTRUCTURE",
+      "message": "Database connection failed",
+      "severity": "CRITICAL",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Check database server status",
+        "Verify connection string",
+        "Check network connectivity"
+      ],
+      "http_status": 503,
+      "metrics_labels": {"error_type": "db_connection", "category": "infrastructure"}
+    },
+    "REDIS_CONNECTION_FAILED": {
+      "code": "REDIS_CONNECTION_FAILED",
+      "category": "INFRASTRUCTURE",
+      "message": "Redis connection failed",
+      "severity": "HIGH",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Check Redis server status",
+        "Verify Redis URL",
+        "Check network connectivity"
+      ],
+      "http_status": 503,
+      "metrics_labels": {"error_type": "redis_connection", "category": "infrastructure"}
+    },
+    "CHECKPOINT_SAVE_FAILED": {
+      "code": "CHECKPOINT_SAVE_FAILED",
+      "category": "CHECKPOINT",
+      "message": "Failed to save checkpoint",
+      "severity": "HIGH",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_WITH_JITTER",
+      "recovery_suggestions": [
+        "Retry checkpoint save",
+        "Check storage availability",
+        "Verify checkpoint format"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "checkpoint_save", "category": "checkpoint"}
+    },
+    "CHECKPOINT_LOAD_FAILED": {
+      "code": "CHECKPOINT_LOAD_FAILED",
+      "category": "CHECKPOINT",
+      "message": "Failed to load checkpoint",
+      "severity": "HIGH",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_WITH_JITTER",
+      "recovery_suggestions": [
+        "Retry checkpoint load",
+        "Check checkpoint exists",
+        "Verify checkpoint integrity"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "checkpoint_load", "category": "checkpoint"}
+    },
+    "GOLDEN_WRITE_FAILED": {
+      "code": "GOLDEN_WRITE_FAILED",
+      "category": "INFRASTRUCTURE",
+      "message": "Failed to write golden file",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_IMMEDIATE",
+      "recovery_suggestions": [
+        "Check golden file storage",
+        "Verify write permissions",
+        "Check disk space"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "golden_write", "category": "infrastructure"}
+    },
+    "PLANNER_TIMEOUT": {
+      "code": "PLANNER_TIMEOUT",
+      "category": "PLANNER",
+      "message": "Planner timed out",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_WITH_JITTER",
+      "recovery_suggestions": [
+        "Retry with simpler prompt",
+        "Reduce context size",
+        "Increase planner timeout"
+      ],
+      "http_status": 504,
+      "metrics_labels": {"error_type": "planner_timeout", "category": "planner"}
+    },
+    "PLANNER_ERROR": {
+      "code": "PLANNER_ERROR",
+      "category": "PLANNER",
+      "message": "Planner error",
+      "severity": "HIGH",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_WITH_JITTER",
+      "recovery_suggestions": [
+        "Check planner configuration",
+        "Review prompt format",
+        "Verify LLM availability"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "planner_error", "category": "planner"}
+    },
+    "INVALID_PLAN": {
+      "code": "INVALID_PLAN",
+      "category": "PLANNER",
+      "message": "Invalid plan generated",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix planner output format",
+        "Check plan schema",
+        "Review planner prompt"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "invalid_plan", "category": "planner"}
+    },
+    "PLAN_TOO_EXPENSIVE": {
+      "code": "PLAN_TOO_EXPENSIVE",
+      "category": "PLANNER",
+      "message": "Plan exceeds budget constraints",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Constrain to cheaper operations",
+        "Increase budget",
+        "Simplify goal"
+      ],
+      "http_status": 402,
+      "metrics_labels": {"error_type": "plan_expensive", "category": "planner"}
+    },
+    "HTTP_4XX": {
+      "code": "HTTP_4XX",
+      "category": "SKILL",
+      "message": "HTTP client error",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix request parameters",
+        "Check URL and headers",
+        "Verify request body"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "http_4xx", "category": "skill"}
+    },
+    "HTTP_5XX": {
+      "code": "HTTP_5XX",
+      "category": "SKILL",
+      "message": "HTTP server error",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Retry request",
+        "Check server status",
+        "Use fallback endpoint if available"
+      ],
+      "http_status": 502,
+      "metrics_labels": {"error_type": "http_5xx", "category": "skill"}
+    },
+    "LLM_ERROR": {
+      "code": "LLM_ERROR",
+      "category": "SKILL",
+      "message": "LLM call failed",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_EXPONENTIAL",
+      "recovery_suggestions": [
+        "Retry LLM call",
+        "Check LLM service status",
+        "Verify API credentials"
+      ],
+      "http_status": 502,
+      "metrics_labels": {"error_type": "llm_error", "category": "skill"}
+    },
+    "LLM_CONTEXT_EXCEEDED": {
+      "code": "LLM_CONTEXT_EXCEEDED",
+      "category": "SKILL",
+      "message": "LLM context window exceeded",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Reduce input context size",
+        "Summarize context",
+        "Use model with larger context"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "llm_context", "category": "skill"}
+    },
+    "TRANSFORM_ERROR": {
+      "code": "TRANSFORM_ERROR",
+      "category": "SKILL",
+      "message": "JSON transformation failed",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix transformation expression",
+        "Check input data format",
+        "Verify JSONPath syntax"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "transform_error", "category": "skill"}
+    },
+    "DATA_NOT_FOUND": {
+      "code": "DATA_NOT_FOUND",
+      "category": "DATA",
+      "message": "Requested data not found",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Check data source",
+        "Verify data identifier",
+        "Check data availability"
+      ],
+      "http_status": 404,
+      "metrics_labels": {"error_type": "data_not_found", "category": "data"}
+    },
+    "DATA_CORRUPT": {
+      "code": "DATA_CORRUPT",
+      "category": "DATA",
+      "message": "Data integrity check failed",
+      "severity": "CRITICAL",
+      "is_retryable": false,
+      "recovery_mode": "ESCALATE",
+      "recovery_suggestions": [
+        "Restore from backup",
+        "Verify data source",
+        "Report to engineering"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "data_corrupt", "category": "data"}
+    },
+    "SERIALIZATION_ERROR": {
+      "code": "SERIALIZATION_ERROR",
+      "category": "DATA",
+      "message": "Data serialization failed",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Fix data format",
+        "Check for circular references",
+        "Verify data types"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "serialization", "category": "data"}
+    },
+    "DESERIALIZATION_ERROR": {
+      "code": "DESERIALIZATION_ERROR",
+      "category": "DATA",
+      "message": "Data deserialization failed",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Check stored data format",
+        "Verify schema version",
+        "Fix corrupted data"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "deserialization", "category": "data"}
+    },
+    "INJECTION_DETECTED": {
+      "code": "INJECTION_DETECTED",
+      "category": "SECURITY",
+      "message": "Potential injection attack detected",
+      "severity": "CRITICAL",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Remove malicious input",
+        "Report to security team",
+        "Review input validation"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "injection", "category": "security"}
+    },
+    "SANDBOX_REJECTION": {
+      "code": "SANDBOX_REJECTION",
+      "category": "SECURITY",
+      "message": "Operation rejected by sandbox",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Remove forbidden operations",
+        "Review sandbox policy",
+        "Use allowed operations only"
+      ],
+      "http_status": 403,
+      "metrics_labels": {"error_type": "sandbox_rejection", "category": "security"}
+    },
+    "SIGNATURE_INVALID": {
+      "code": "SIGNATURE_INVALID",
+      "category": "SECURITY",
+      "message": "Invalid signature",
+      "severity": "CRITICAL",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Re-sign with correct key",
+        "Verify signing algorithm",
+        "Check key expiration"
+      ],
+      "http_status": 401,
+      "metrics_labels": {"error_type": "signature_invalid", "category": "security"}
+    },
+    "TAMPER_DETECTED": {
+      "code": "TAMPER_DETECTED",
+      "category": "SECURITY",
+      "message": "Data tampering detected",
+      "severity": "CRITICAL",
+      "is_retryable": false,
+      "recovery_mode": "ESCALATE",
+      "recovery_suggestions": [
+        "Restore from verified backup",
+        "Report to security team",
+        "Investigate tampering source"
+      ],
+      "http_status": 403,
+      "metrics_labels": {"error_type": "tamper_detected", "category": "security"}
+    },
+    "CHECKPOINT_VERSION_CONFLICT": {
+      "code": "CHECKPOINT_VERSION_CONFLICT",
+      "category": "CHECKPOINT",
+      "message": "Checkpoint version conflict",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_WITH_JITTER",
+      "recovery_suggestions": [
+        "Reload checkpoint and retry",
+        "Check for concurrent updates",
+        "Use optimistic locking"
+      ],
+      "http_status": 409,
+      "metrics_labels": {"error_type": "version_conflict", "category": "checkpoint"}
+    },
+    "CHECKPOINT_STALE": {
+      "code": "CHECKPOINT_STALE",
+      "category": "CHECKPOINT",
+      "message": "Checkpoint is stale",
+      "severity": "MEDIUM",
+      "is_retryable": true,
+      "recovery_mode": "CHECKPOINT_RESTORE",
+      "recovery_suggestions": [
+        "Reload fresh checkpoint",
+        "Restart from latest state",
+        "Check checkpoint age"
+      ],
+      "http_status": 409,
+      "metrics_labels": {"error_type": "checkpoint_stale", "category": "checkpoint"}
+    },
+    "RESUME_FAILED": {
+      "code": "RESUME_FAILED",
+      "category": "CHECKPOINT",
+      "message": "Failed to resume from checkpoint",
+      "severity": "HIGH",
+      "is_retryable": true,
+      "recovery_mode": "RETRY_WITH_JITTER",
+      "recovery_suggestions": [
+        "Check checkpoint integrity",
+        "Verify workflow state",
+        "Restart workflow if needed"
+      ],
+      "http_status": 500,
+      "metrics_labels": {"error_type": "resume_failed", "category": "checkpoint"}
+    },
+    "POLICY_VIOLATION": {
+      "code": "POLICY_VIOLATION",
+      "category": "PERMISSION",
+      "message": "Policy violation",
+      "severity": "HIGH",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Review policy requirements",
+        "Adjust operation to comply",
+        "Request policy exception"
+      ],
+      "http_status": 403,
+      "metrics_labels": {"error_type": "policy_violation", "category": "permission"}
+    },
+    "EMERGENCY_STOP": {
+      "code": "EMERGENCY_STOP",
+      "category": "PERMISSION",
+      "message": "Emergency stop activated",
+      "severity": "CRITICAL",
+      "is_retryable": false,
+      "recovery_mode": "MANUAL_INTERVENTION",
+      "recovery_suggestions": [
+        "Wait for emergency stop to clear",
+        "Contact operator",
+        "Check system status"
+      ],
+      "http_status": 503,
+      "metrics_labels": {"error_type": "emergency_stop", "category": "permission"}
+    },
+    "IDEMPOTENCY_REQUIRED": {
+      "code": "IDEMPOTENCY_REQUIRED",
+      "category": "VALIDATION",
+      "message": "Idempotency key required",
+      "severity": "MEDIUM",
+      "is_retryable": false,
+      "recovery_mode": "ABORT",
+      "recovery_suggestions": [
+        "Add idempotency_key to request",
+        "Use deterministic key generation",
+        "Check step configuration"
+      ],
+      "http_status": 400,
+      "metrics_labels": {"error_type": "idempotency_required", "category": "validation"}
+    }
+  },
+  "recovery_modes": {
+    "RETRY_IMMEDIATE": {
+      "name": "RETRY_IMMEDIATE",
+      "description": "Retry immediately without delay",
+      "strategy": "RETRY_IMMEDIATE",
+      "config": {
+        "max_retries": 1,
+        "base_delay_ms": 0,
+        "max_delay_ms": 0,
+        "jitter_factor": 0
+      }
+    },
+    "RETRY_EXPONENTIAL": {
+      "name": "RETRY_EXPONENTIAL",
+      "description": "Retry with exponential backoff",
+      "strategy": "RETRY_EXPONENTIAL",
+      "config": {
+        "max_retries": 3,
+        "base_delay_ms": 1000,
+        "max_delay_ms": 30000,
+        "jitter_factor": 0.1
+      }
+    },
+    "RETRY_WITH_JITTER": {
+      "name": "RETRY_WITH_JITTER",
+      "description": "Retry with exponential backoff and randomized jitter",
+      "strategy": "RETRY_WITH_JITTER",
+      "config": {
+        "max_retries": 3,
+        "base_delay_ms": 500,
+        "max_delay_ms": 15000,
+        "jitter_factor": 0.25
+      }
+    },
+    "FALLBACK": {
+      "name": "FALLBACK",
+      "description": "Use fallback value or alternative path",
+      "strategy": "FALLBACK",
+      "config": {
+        "fallback_value": null
+      }
+    },
+    "CIRCUIT_BREAKER": {
+      "name": "CIRCUIT_BREAKER",
+      "description": "Open circuit after threshold failures",
+      "strategy": "CIRCUIT_BREAKER",
+      "config": {
+        "circuit_breaker_threshold": 5,
+        "circuit_breaker_reset_ms": 60000
+      }
+    },
+    "SKIP": {
+      "name": "SKIP",
+      "description": "Skip operation and continue",
+      "strategy": "SKIP",
+      "config": {}
+    },
+    "ABORT": {
+      "name": "ABORT",
+      "description": "Abort workflow immediately",
+      "strategy": "ABORT",
+      "config": {}
+    },
+    "ESCALATE": {
+      "name": "ESCALATE",
+      "description": "Escalate to operator or support",
+      "strategy": "ESCALATE",
+      "config": {}
+    },
+    "CHECKPOINT_RESTORE": {
+      "name": "CHECKPOINT_RESTORE",
+      "description": "Restore from last checkpoint and retry",
+      "strategy": "CHECKPOINT_RESTORE",
+      "config": {
+        "max_retries": 2,
+        "base_delay_ms": 1000
+      }
+    },
+    "MANUAL_INTERVENTION": {
+      "name": "MANUAL_INTERVENTION",
+      "description": "Require manual intervention",
+      "strategy": "MANUAL_INTERVENTION",
+      "config": {}
+    }
+  }
+}

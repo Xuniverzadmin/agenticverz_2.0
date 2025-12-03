@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "description": "Runtime feature flags for staged rollout. All flags default to false for safety.",
+  "flags": {
+    "failure_catalog_runtime_integration": {
+      "enabled": false,
+      "description": "Wire FailureCatalog to errors.classify_exception for enriched recovery suggestions",
+      "requires_m4_signoff": true,
+      "added": "2025-12-03",
+      "owner": "platform"
+    },
+    "cost_simulator_runtime_integration": {
+      "enabled": false,
+      "description": "Wire CostSimulator to runtime.simulate() for pre-execution cost checks",
+      "requires_m4_signoff": true,
+      "added": "2025-12-03",
+      "owner": "platform"
+    },
+    "capability_enforcement_soft": {
+      "enabled": false,
+      "description": "Enable soft capability enforcement (log violations but don't block)",
+      "requires_m4_signoff": false,
+      "added": "2025-12-03",
+      "owner": "security"
+    },
+    "golden_replay_v2": {
+      "enabled": false,
+      "description": "Use v2 golden replay with enhanced determinism checks",
+      "requires_m4_signoff": true,
+      "added": "2025-12-03",
+      "owner": "platform"
+    }
+  },
+  "environments": {
+    "development": {
+      "failure_catalog_runtime_integration": false,
+      "cost_simulator_runtime_integration": false,
+      "capability_enforcement_soft": true,
+      "golden_replay_v2": false
+    },
+    "staging": {
+      "failure_catalog_runtime_integration": false,
+      "cost_simulator_runtime_integration": false,
+      "capability_enforcement_soft": true,
+      "golden_replay_v2": false
+    },
+    "production": {
+      "failure_catalog_runtime_integration": false,
+      "cost_simulator_runtime_integration": false,
+      "capability_enforcement_soft": false,
+      "golden_replay_v2": false
+    }
+  }
+}
