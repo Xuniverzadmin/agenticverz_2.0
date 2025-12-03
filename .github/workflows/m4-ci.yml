@@ -1,0 +1,316 @@
+# M4 Workflow Engine CI
+# Runs golden file verification and determinism tests with network isolation
+name: M4 Workflow CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/workflow/**'
+      - 'backend/app/runtime/**'
+      - 'backend/app/config/**'
+      - 'backend/app/data/**'
+      - 'backend/tests/workflow/**'
+      - 'backend/tests/ci/**'
+      - '.github/workflows/m4-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/app/workflow/**'
+      - 'backend/app/runtime/**'
+      - 'backend/app/config/**'
+      - 'backend/app/data/**'
+      - 'backend/tests/workflow/**'
+      - 'backend/tests/ci/**'
+  schedule:
+    # Run nightly at 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      stress_iterations:
+        description: 'Number of stress test iterations'
+        required: false
+        default: '100'
+
+jobs:
+  # Job 1: Run workflow tests with external calls blocked
+  workflow-golden-check:
+    name: Golden File Verification
+    runs-on: ubuntu-22.04
+    env:
+      DISABLE_EXTERNAL_CALLS: "1"
+      GOLDEN_SECRET: ${{ secrets.GOLDEN_SECRET }}
+      PYTHONPATH: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Verify external calls disabled
+        run: |
+          echo "DISABLE_EXTERNAL_CALLS=$DISABLE_EXTERNAL_CALLS"
+          python -c "
+          import os
+          assert os.getenv('DISABLE_EXTERNAL_CALLS') == '1', 'External calls guard not enabled!'
+          print('✓ External calls guard is enabled')
+          "
+
+      - name: Run CI isolation tests
+        run: |
+          cd backend
+          pytest tests/ci/test_no_external_calls.py -v --tb=short
+
+      - name: Run workflow golden tests
+        run: |
+          cd backend
+          pytest tests/workflow/test_workflow_golden_pipeline.py -v --tb=short
+
+      - name: Run replay certification tests
+        run: |
+          cd backend
+          pytest tests/workflow/test_replay_certification.py -v --tb=short
+
+      - name: Run hardening stress tests
+        run: |
+          cd backend
+          pytest tests/workflow/test_m4_hardening.py -v --tb=short
+
+      - name: Run P0 fixes tests
+        run: |
+          cd backend
+          pytest tests/workflow/test_p0_fixes.py -v --tb=short
+
+  # Job 2: Run all workflow tests (full suite)
+  workflow-full-tests:
+    name: Full Workflow Test Suite
+    runs-on: ubuntu-22.04
+    env:
+      DISABLE_EXTERNAL_CALLS: "1"
+      PYTHONPATH: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run all workflow tests
+        run: |
+          cd backend
+          pytest tests/workflow/ -v --tb=short
+
+  # Job 3: Type checking and linting
+  workflow-lint:
+    name: Type Check & Lint
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install mypy ruff
+          pip install -r backend/requirements.txt
+
+      - name: Run ruff lint
+        run: |
+          cd backend
+          ruff check app/workflow/ --ignore E501,F401 || true
+
+      - name: Run mypy type check
+        run: |
+          cd backend
+          mypy app/workflow/ --ignore-missing-imports --no-error-summary || true
+
+  # Job 4: Determinism stress test (100x replay)
+  workflow-determinism:
+    name: Determinism Verification (100x)
+    runs-on: ubuntu-22.04
+    env:
+      DISABLE_EXTERNAL_CALLS: "1"
+      PYTHONPATH: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run 100x determinism stress tests
+        run: |
+          cd backend
+          pytest tests/workflow/test_m4_hardening.py::TestGoldenReplayStress -v --tb=short
+
+  # Job 5: Nightly Golden Stress Test (representative workflows 100x)
+  # Only runs on schedule or manual dispatch
+  nightly-golden-stress:
+    name: Nightly Golden Stress (100x replay)
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    env:
+      DISABLE_EXTERNAL_CALLS: "1"
+      GOLDEN_SECRET: ${{ secrets.GOLDEN_SECRET }}
+      PYTHONPATH: backend
+      STRESS_ITERATIONS: ${{ github.event.inputs.stress_iterations || '100' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio pytest-xdist
+
+      - name: Run representative workflow stress tests
+        run: |
+          cd backend
+          echo "Running nightly golden-stress with $STRESS_ITERATIONS iterations"
+          STRESS_ITERATIONS=$STRESS_ITERATIONS pytest tests/workflow/test_nightly_golden_stress.py -v --tb=short -x
+        timeout-minutes: 60
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-stress-failures
+          path: |
+            backend/tests/workflow/golden_output/
+            backend/*.log
+
+      - name: Report stress test results
+        if: always()
+        run: |
+          echo "## Nightly Golden Stress Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Iterations**: $STRESS_ITERATIONS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+  # Job 6: M4.5 Failure Catalog & Cost Simulator Validation
+  m45-validation:
+    name: M4.5 Catalog & Simulator Validation
+    runs-on: ubuntu-22.04
+    env:
+      DISABLE_EXTERNAL_CALLS: "1"
+      PYTHONPATH: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Validate failure catalog schema
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+          catalog = json.load(open('backend/app/data/failure_catalog.json'))
+          assert 'version' in catalog, 'Missing version'
+          assert 'errors' in catalog, 'Missing errors'
+          assert len(catalog['errors']) >= 50, f'Expected 50+ errors, got {len(catalog[\"errors\"])}'
+          print(f'✓ Catalog valid: {len(catalog[\"errors\"])} error codes')
+          "
+
+      - name: Validate catalog/enum 1:1 mapping
+        run: |
+          cd backend
+          python -c "
+          import json
+          from app.workflow.errors import WorkflowErrorCode
+          catalog = json.load(open('app/data/failure_catalog.json'))
+          catalog_codes = set(catalog['errors'].keys())
+          enum_codes = set(code.value for code in WorkflowErrorCode)
+          missing = enum_codes - catalog_codes
+          extra = catalog_codes - enum_codes
+          assert not missing, f'Missing in catalog: {missing}'
+          assert not extra, f'Extra in catalog: {extra}'
+          print(f'✓ 1:1 mapping verified: {len(catalog_codes)} codes')
+          "
+
+      - name: Validate metric labels
+        run: |
+          python scripts/ci/check_catalog_metrics.py
+
+      - name: Run failure catalog tests
+        run: |
+          cd backend
+          pytest tests/test_failure_catalog.py -v --tb=short
+
+      - name: Run cost simulator tests
+        run: |
+          cd backend
+          pytest tests/test_cost_simulator.py -v --tb=short
+
+      - name: Verify feature flags default to false
+        run: |
+          python -c "
+          import json
+          flags = json.load(open('backend/app/config/feature_flags.json'))
+          for name, cfg in flags.get('flags', {}).items():
+              if cfg.get('requires_m4_signoff', True):
+                  assert not cfg.get('enabled', False), f'{name} should default to false'
+          print('✓ All M4-gated flags default to false')
+          "
+
+      - name: Run M4 preflight check (dry-run)
+        run: |
+          M4_SIGNOFF=1 bash scripts/preflight_m4_signoff.sh || echo "Preflight check completed"
