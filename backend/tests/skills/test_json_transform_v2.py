@@ -9,31 +9,22 @@ import pytest
 import sys
 from pathlib import Path
 
-# Path setup - direct import to avoid skills/__init__.py import chain
+# Path setup
 _backend = Path(__file__).parent.parent.parent
-_app = _backend / "app"
 if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
-if str(_app) not in sys.path:
-    sys.path.insert(0, str(_app))
 
-# Direct import from module to avoid import chain
-import importlib.util
-spec = importlib.util.spec_from_file_location(
-    "json_transform_v2",
-    _app / "skills" / "json_transform_v2.py"
+# Direct import from the module (skills/__init__.py now uses lazy loading)
+from app.skills.json_transform_v2 import (
+    json_transform_execute,
+    json_transform_handler,
+    JSON_TRANSFORM_DESCRIPTOR,
+    _canonical_json,
+    _content_hash,
+    _parse_jsonpath,
+    _measure_depth,
+    OPERATIONS,
 )
-json_transform_v2 = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(json_transform_v2)
-
-json_transform_execute = json_transform_v2.json_transform_execute
-json_transform_handler = json_transform_v2.json_transform_handler
-JSON_TRANSFORM_DESCRIPTOR = json_transform_v2.JSON_TRANSFORM_DESCRIPTOR
-_canonical_json = json_transform_v2._canonical_json
-_content_hash = json_transform_v2._content_hash
-_parse_jsonpath = json_transform_v2._parse_jsonpath
-_measure_depth = json_transform_v2._measure_depth
-OPERATIONS = json_transform_v2.OPERATIONS
 
 
 class TestCanonicalJson:

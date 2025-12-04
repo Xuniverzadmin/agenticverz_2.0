@@ -1,0 +1,62 @@
+{{- if .Values.canaryJob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "aos.fullname" . }}-canary
+  labels:
+    {{- include "aos.labels" . | nindent 4 }}
+    app.kubernetes.io/component: canary
+spec:
+  schedule: {{ .Values.canaryJob.schedule | quote }}
+  concurrencyPolicy: {{ .Values.canaryJob.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.canaryJob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.canaryJob.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "aos.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: canary
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: {{ include "aos.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: canary
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - python3
+                - -m
+                - app.costsim.canary
+                - --sample-count={{ .Values.costsim.canary.sampleCount }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "aos.fullname" . }}-config
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.database.existingSecret }}
+                      key: {{ .Values.database.secretKey }}
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+              volumeMounts:
+                - name: data
+                  mountPath: {{ .Values.persistence.mountPath }}
+          volumes:
+            - name: data
+              {{- if .Values.persistence.enabled }}
+              persistentVolumeClaim:
+                claimName: {{ include "aos.fullname" . }}-data
+              {{- else }}
+              emptyDir: {}
+              {{- end }}
+{{- end }}

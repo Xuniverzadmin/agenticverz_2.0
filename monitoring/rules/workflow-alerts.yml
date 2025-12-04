@@ -1,0 +1,266 @@
+# Workflow Engine Alert Rules
+# M4 Hardening - Production Observability
+#
+# Deploy to Prometheus/Alertmanager:
+#   cp workflow-alerts.yml /etc/prometheus/rules/
+#   promtool check rules workflow-alerts.yml
+#   systemctl reload prometheus
+
+groups:
+  - name: workflow.critical
+    rules:
+      # ============== Replay Failures (Critical) ==============
+      - alert: WorkflowReplayFailure
+        expr: increase(workflow_replay_verifications_total{status="failed"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          runbook: "https://docs.internal/runbooks/workflow-recovery#replay-failure"
+        annotations:
+          summary: "Workflow golden replay failure detected"
+          description: |
+            Golden replay verification failed in the last 5 minutes.
+            This indicates non-deterministic behavior or data corruption.
+
+            Affected spec_id: {{ $labels.spec_id }}
+            Failure type: {{ $labels.failure_type }}
+
+            Actions:
+            1. Run: aos workflow inspect --run <run_id>
+            2. Check golden diff for unexpected changes
+            3. Verify no external calls leaked through guard
+
+      # ============== Checkpoint Failures (Critical) ==============
+      - alert: WorkflowCheckpointSaveFailure
+        expr: increase(workflow_checkpoint_operations_total{operation="save", status="failure"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+          runbook: "https://docs.internal/runbooks/workflow-recovery#checkpoint-failure"
+        annotations:
+          summary: "Workflow checkpoint save failures detected"
+          description: |
+            Checkpoint save operations are failing.
+            This can cause workflow state loss on restart.
+
+            Failed saves in last 5m: {{ $value }}
+
+            Actions:
+            1. Check database connectivity: psql -h localhost -d nova_aos
+            2. Verify disk space: df -h
+            3. Check for blocking queries: SELECT * FROM pg_stat_activity WHERE state = 'active'
+
+      # ============== Budget Exceeded (Warning) ==============
+      - alert: WorkflowBudgetExceeded
+        expr: increase(workflow_failures_total{error_code=~"BUDGET_EXCEEDED|STEP_CEILING_EXCEEDED|WORKFLOW_CEILING_EXCEEDED"}[15m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Multiple workflow budget exceeded errors"
+          description: |
+            More than 5 budget exceeded errors in the last 15 minutes.
+
+            Affected spec_id: {{ $labels.spec_id }}
+            Error code: {{ $labels.error_code }}
+
+            Actions:
+            1. Review workflow cost estimates
+            2. Check if budget ceilings need adjustment
+            3. Investigate potentially runaway workflows
+
+  - name: workflow.latency
+    rules:
+      # ============== Checkpoint Latency (Warning) ==============
+      - alert: WorkflowCheckpointLatencyHigh
+        expr: histogram_quantile(0.99, sum(rate(workflow_checkpoint_duration_seconds_bucket[5m])) by (le, operation)) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Checkpoint save p99 latency > 200ms"
+          description: |
+            Checkpoint operations are taking longer than expected.
+            p99 latency: {{ $value | printf "%.3f" }}s
+
+            Actions:
+            1. Check database load: SELECT * FROM pg_stat_activity
+            2. Review checkpoint payload sizes
+            3. Consider enabling batch checkpointing
+
+      - alert: WorkflowCheckpointLatencyCritical
+        expr: histogram_quantile(0.99, sum(rate(workflow_checkpoint_duration_seconds_bucket[5m])) by (le, operation)) > 1.0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          runbook: "https://docs.internal/runbooks/workflow-recovery#checkpoint-slow"
+        annotations:
+          summary: "Checkpoint save p99 latency > 1s (CRITICAL)"
+          description: |
+            Checkpoint operations are critically slow.
+            p99 latency: {{ $value | printf "%.3f" }}s
+
+            Immediate actions:
+            1. Check for database locks
+            2. Scale database resources if needed
+            3. Consider emergency workflow pause
+
+      # ============== Step Execution Latency ==============
+      - alert: WorkflowStepLatencyHigh
+        expr: histogram_quantile(0.99, sum(rate(workflow_step_duration_seconds_bucket[5m])) by (le, skill_id)) > 30
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Workflow step p99 latency > 30s"
+          description: |
+            Step execution is slower than expected.
+            Skill: {{ $labels.skill_id }}
+            p99 latency: {{ $value | printf "%.1f" }}s
+
+  - name: workflow.failures
+    rules:
+      # ============== High Failure Rate ==============
+      - alert: WorkflowFailureRateHigh
+        expr: |
+          sum(rate(workflow_failures_total[5m])) by (spec_id)
+          /
+          (sum(rate(workflow_failures_total[5m])) by (spec_id) + sum(rate(workflow_step_duration_seconds_count{status="success"}[5m])) by (spec_id))
+          > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Workflow failure rate > 10%"
+          description: |
+            More than 10% of workflows are failing for spec_id: {{ $labels.spec_id }}
+
+            Actions:
+            1. Check top error codes: aos workflow stats --spec {{ $labels.spec_id }}
+            2. Review recent deployments
+            3. Check external service health
+
+      # ============== Transient Error Spike ==============
+      - alert: WorkflowTransientErrorSpike
+        expr: increase(workflow_failures_total{error_code=~"TIMEOUT|DNS_FAILURE|CONNECTION_RESET|SERVICE_UNAVAILABLE"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Spike in transient workflow errors"
+          description: |
+            Increased transient errors detected. These are usually network/service issues.
+
+            Error code: {{ $labels.error_code }}
+            Count in 5m: {{ $value }}
+
+            Actions:
+            1. Check network connectivity
+            2. Verify dependent services are healthy
+            3. Review retry configuration
+
+      # ============== Permanent Error Detection ==============
+      - alert: WorkflowPermanentErrors
+        expr: increase(workflow_failures_total{error_code=~"INVALID_INPUT|SCHEMA_VALIDATION_FAILED|PERMISSION_DENIED"}[15m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Permanent workflow errors detected"
+          description: |
+            Non-retryable errors are occurring. These require investigation.
+
+            Error code: {{ $labels.error_code }}
+            Spec: {{ $labels.spec_id }}
+
+            Actions:
+            1. Review workflow inputs for validation errors
+            2. Check permission configurations
+            3. Review recent schema changes
+
+  - name: workflow.capacity
+    rules:
+      # ============== Active Runs Limit ==============
+      - alert: WorkflowActiveRunsHigh
+        expr: sum(workflow_active_runs) > 100
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High number of active workflow runs"
+          description: |
+            Currently running {{ $value }} workflows.
+            This may indicate backlog or stuck workflows.
+
+            Actions:
+            1. Check for long-running workflows
+            2. Review queue depth metrics
+            3. Scale worker capacity if needed
+
+      # ============== Emergency Stop Active ==============
+      - alert: WorkflowEmergencyStopActive
+        expr: workflow_failures_total{error_code="EMERGENCY_STOP"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+          runbook: "https://docs.internal/runbooks/workflow-recovery#emergency-stop"
+        annotations:
+          summary: "Workflow emergency stop is ACTIVE"
+          description: |
+            Emergency stop has been triggered. All new workflows are blocked.
+
+            Actions:
+            1. Identify root cause of emergency stop
+            2. Follow emergency runbook procedures
+            3. Re-enable only after verification
+
+  - name: workflow.slo
+    rules:
+      # ============== SLO: Replay Success Rate ==============
+      - alert: WorkflowReplaySLOBreach
+        expr: |
+          (
+            sum(workflow_replay_verifications_total{status="passed"})
+            /
+            sum(workflow_replay_verifications_total)
+          ) < 0.999
+        for: 30m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Workflow replay SLO breach (< 99.9%)"
+          description: |
+            Replay success rate has dropped below 99.9% SLO.
+            Current rate: {{ $value | printf "%.4f" }}
+
+            This indicates potential determinism issues.
+
+      # ============== SLO: Checkpoint Success Rate ==============
+      - alert: WorkflowCheckpointSLOBreach
+        expr: |
+          (
+            sum(workflow_checkpoint_operations_total{status="success"})
+            /
+            sum(workflow_checkpoint_operations_total)
+          ) < 0.999
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Workflow checkpoint SLO breach (< 99.9%)"
+          description: |
+            Checkpoint success rate has dropped below 99.9% SLO.
+            Current rate: {{ $value | printf "%.4f" }}

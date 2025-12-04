@@ -1,0 +1,19 @@
+---
+# ConfigMap for webhook receiver configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook-receiver-config
+  namespace: aos-staging
+  labels:
+    app.kubernetes.io/name: webhook-receiver
+    app.kubernetes.io/part-of: aos
+data:
+  # Retention policy (days)
+  RETENTION_DAYS: "30"
+
+  # Maximum request body size (bytes)
+  MAX_BODY_SIZE: "1048576"
+
+  # Rate limit: requests per minute per IP/tenant
+  RATE_LIMIT_RPM: "100"

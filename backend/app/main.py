@@ -3,7 +3,7 @@ import json
 import os
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
@@ -33,6 +33,7 @@ from .utils.rate_limiter import RateLimiter
 from .utils.concurrent_runs import ConcurrentRunsLimiter
 from .utils.budget_tracker import BudgetTracker, enforce_budget
 from .utils.input_sanitizer import sanitize_goal
+from .middleware.tenant import TenantMiddleware
 
 # Initialize utilities
 rate_limiter = RateLimiter()
@@ -158,6 +159,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Include API routers
+from .api.health import router as health_router
+from .api.policy import router as policy_router
+from .api.runtime import router as runtime_router
+from .api.status_history import router as status_history_router
+from .api.costsim import router as costsim_router
+
+app.include_router(health_router)
+app.include_router(policy_router)
+app.include_router(runtime_router)
+app.include_router(status_history_router)
+app.include_router(costsim_router)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -166,6 +180,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Tenant context middleware (M6)
+# Extracts tenant_id from X-Tenant-ID header and propagates through request lifecycle
+app.add_middleware(TenantMiddleware)
 
 
 @app.middleware("http")
@@ -208,7 +226,7 @@ async def _execute_run_inner(run_id: str):
 
         # Mark as running
         run.status = "running"
-        run.started_at = datetime.utcnow()
+        run.started_at = datetime.now(timezone.utc)
         run.attempts = 1
         session.add(run)
         session.commit()
@@ -276,7 +294,7 @@ async def _execute_run_inner(run_id: str):
                     "skill": skill_name,
                     "request": step.get("params", {}),
                     "response": {"status": "error", "error": f"Skill '{skill_name}' not found"},
-                    "ts": datetime.utcnow().isoformat()
+                    "ts": datetime.now(timezone.utc).isoformat()
                 }
                 tool_calls.append(tool_call)
                 final_status = "failed"
@@ -306,7 +324,7 @@ async def _execute_run_inner(run_id: str):
                 "response": result.get("result", {}),
                 "side_effects": result.get("side_effects", {}),
                 "duration": result.get("duration"),
-                "ts": datetime.utcnow().isoformat()
+                "ts": datetime.now(timezone.utc).isoformat()
             }
             tool_calls.append(tool_call)
 
@@ -350,7 +368,7 @@ async def _execute_run_inner(run_id: str):
                 session.commit()
 
     # Update run with results
-    completed_at = datetime.utcnow()
+    completed_at = datetime.now(timezone.utc)
     with Session(engine) as session:
         run = session.get(Run, run_id)
         run.status = final_status

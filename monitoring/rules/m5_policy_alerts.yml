@@ -1,0 +1,307 @@
+# M5 Policy & Capability Alert Rules
+# Deploy to Prometheus Alertmanager
+#
+# These alerts monitor:
+# - Capability violations and contract breaches
+# - Policy decision patterns (deny ratio, escalations)
+# - Approval workflow health
+# - Cost simulation drift
+# - Webhook delivery failures
+
+groups:
+  - name: m5_capability_violations
+    interval: 30s
+    rules:
+      # CRITICAL: Capability violation spike
+      - alert: CapabilityViolationSpike
+        expr: increase(nova_capability_violations_total[5m]) > 50
+        for: 0m
+        labels:
+          severity: critical
+          team: platform
+          runbook: docs/runbooks/m5-capability-violations.md
+        annotations:
+          summary: "CRITICAL: High capability violation rate"
+          description: "{{ $value }} capability violations in last 5m. Investigate skill attempting unauthorized operations."
+          action: "Check nova_capability_violations_total by skill_id and tenant_id labels"
+
+      # Sustained capability violations (lower threshold, longer duration)
+      - alert: SustainedCapabilityViolations
+        expr: rate(nova_capability_violations_total[15m]) * 60 > 5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Sustained capability violations detected"
+          description: "{{ $value }} violations/min over 15m. Review skill capabilities and contracts."
+
+      # Single skill causing most violations
+      - alert: SkillCapabilityViolationHotspot
+        expr: |
+          (
+            sum by (skill_id) (increase(nova_capability_violations_total[15m]))
+            /
+            sum(increase(nova_capability_violations_total[15m]))
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Single skill causing >50% of violations"
+          description: "Skill {{ $labels.skill_id }} responsible for {{ $value | humanizePercentage }} of violations."
+
+  - name: m5_policy_decisions
+    interval: 30s
+    rules:
+      # High policy deny ratio
+      - alert: HighPolicyDenyRatio
+        expr: |
+          (
+            sum(rate(nova_policy_decisions_total{decision="deny"}[5m]))
+            /
+            (sum(rate(nova_policy_decisions_total[5m])) + 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Policy deny ratio exceeds 5%"
+          description: "{{ $value | humanizePercentage }} of policy checks are denying. Review budget limits or capability contracts."
+
+      # Sudden increase in denials (compared to baseline)
+      - alert: PolicyDenialSpike
+        expr: |
+          (
+            sum(rate(nova_policy_decisions_total{decision="deny"}[5m]))
+            /
+            (sum(rate(nova_policy_decisions_total{decision="deny"}[1h] offset 1h)) + 0.001)
+          ) > 3
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Policy denial rate 3x baseline"
+          description: "Denial rate increased {{ $value }}x from baseline. Check for new policy changes or attack."
+
+      # Emergency stop enabled (should always alert)
+      - alert: EmergencyStopEnabled
+        expr: nova_policy_emergency_stop_enabled == 1
+        for: 0m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "WORKFLOW ENGINE EMERGENCY STOP ENABLED"
+          description: "All workflow executions are blocked. This is intentional safety measure - verify reason."
+
+  - name: m5_budget_enforcement
+    interval: 30s
+    rules:
+      # High budget rejection rate
+      - alert: HighBudgetRejectionRate
+        expr: |
+          (
+            sum(rate(nova_resource_budget_rejections_total[5m]))
+            /
+            (sum(rate(nova_policy_decisions_total[5m])) + 0.001)
+          ) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Budget rejection rate exceeds 10%"
+          description: "{{ $value | humanizePercentage }} of requests failing budget checks. Review budget allocation."
+
+      # Workflow ceiling breaches
+      - alert: WorkflowCeilingBreaches
+        expr: increase(nova_budget_breach_total{breach_type="workflow_ceiling"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Multiple workflow ceiling breaches"
+          description: "{{ $value }} workflows exceeded ceiling in 5m. Consider increasing workflow budget or optimizing costs."
+
+      # Step ceiling breaches (usually indicates misconfigured skills)
+      - alert: StepCeilingBreaches
+        expr: increase(nova_budget_breach_total{breach_type="step_ceiling"}[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High step ceiling breach rate"
+          description: "{{ $value }} step ceiling breaches in 5m. Check skill cost estimates accuracy."
+
+  - name: m5_approval_workflow
+    interval: 30s
+    rules:
+      # Approval request backlog growing
+      - alert: ApprovalBacklogGrowing
+        expr: sum(nova_approval_requests_pending) > 50
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Approval request backlog > 50"
+          description: "{{ $value }} pending approval requests. Review approval capacity or escalation settings."
+
+      # High escalation rate (approvers not responding)
+      - alert: HighEscalationRate
+        expr: |
+          (
+            sum(rate(nova_approval_escalations_total[15m]))
+            /
+            (sum(rate(nova_approval_requests_total[15m])) + 0.001)
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High approval escalation rate"
+          description: "{{ $value | humanizePercentage }} of requests being escalated. Approvers may need notification."
+
+      # Approval request expiration rate
+      - alert: HighApprovalExpirationRate
+        expr: |
+          (
+            sum(rate(nova_approval_actions_total{result="expired"}[15m]))
+            /
+            (sum(rate(nova_approval_requests_total[15m])) + 0.001)
+          ) > 0.2
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High approval expiration rate"
+          description: "{{ $value | humanizePercentage }} of requests expiring. Consider increasing timeout or capacity."
+
+  - name: m5_cost_simulation
+    interval: 60s
+    rules:
+      # High cost simulation drift (P95)
+      - alert: CostSimulationDriftP95
+        expr: histogram_quantile(0.95, sum(rate(nova_cost_simulation_drift_cents_bucket[5m])) by (le)) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Cost simulation drift P95 > 1000 cents"
+          description: "P95 drift is {{ $value }} cents. Simulation accuracy degrading - review baselines."
+
+      # Sustained high drift (auto-disable threshold)
+      - alert: SustainedCostDrift
+        expr: histogram_quantile(0.95, sum(rate(nova_cost_simulation_drift_cents_bucket[1h])) by (le)) > 500
+        for: 1h
+        labels:
+          severity: critical
+          team: platform
+          runbook: docs/runbooks/m5-cost-drift-auto-protect.md
+        annotations:
+          summary: "CRITICAL: Sustained cost drift - auto-protect triggered"
+          description: "P95 drift >500 cents for 1h. Auto-approvals should be disabled. Verify baseline recalibration."
+          action: "Run: python -m app.workflow.cost_sim --recalibrate"
+
+      # Cost underestimation (actual > simulated consistently)
+      - alert: CostUnderestimation
+        expr: |
+          (
+            sum(rate(nova_cost_actual_cents_total[5m]))
+            -
+            sum(rate(nova_cost_simulated_cents_total[5m]))
+          ) / (sum(rate(nova_cost_simulated_cents_total[5m])) + 0.001) > 0.2
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Cost underestimation detected"
+          description: "Actual costs {{ $value | humanizePercentage }} higher than simulated. Update cost models."
+
+  - name: m5_webhook_delivery
+    interval: 30s
+    rules:
+      # Webhook delivery failures
+      - alert: WebhookDeliveryFailures
+        expr: increase(nova_webhook_fallback_writes_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Webhook delivery failures detected"
+          description: "{{ $value }} webhook callbacks failed and were written to fallback. Check network/endpoint availability."
+
+      # Sustained webhook failures
+      - alert: SustainedWebhookFailures
+        expr: sum(increase(nova_webhook_fallback_writes_total[15m])) > 10
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Sustained webhook delivery failures"
+          description: "{{ $value }} webhook failures in 15m. Approval callbacks not being delivered."
+
+  - name: m5_feature_flags
+    interval: 60s
+    rules:
+      # Policy feature flag drift (file vs DB mismatch)
+      - alert: FeatureFlagDrift
+        expr: nova_feature_flag_drift_detected == 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Feature flag file/DB drift detected"
+          description: "Feature flag configuration differs between file and database. Run sync or investigate."
+
+      # Signoff required but missing
+      - alert: PolicyFlagWithoutSignoff
+        expr: |
+          nova_feature_flag_enabled{flag=~"policy_.*|capability_.*|approval_.*"} == 1
+          unless
+          nova_m5_signoff_present == 1
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "M5 policy flag enabled without signoff"
+          description: "Feature flag {{ $labels.flag }} enabled but signoff not present. ROLLBACK."
+
+  - name: m5_observability
+    interval: 60s
+    rules:
+      # Metrics endpoint down
+      - alert: MetricsEndpointDown
+        expr: up{job="nova-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Nova API metrics endpoint down"
+          description: "Cannot scrape metrics from nova-api for 2m. Check service health."
+
+      # Metric cardinality explosion
+      - alert: MetricCardinalityHigh
+        expr: count(nova_policy_decisions_total) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High metric cardinality detected"
+          description: "Policy decisions metric has {{ $value }} series. Consider reducing label cardinality."

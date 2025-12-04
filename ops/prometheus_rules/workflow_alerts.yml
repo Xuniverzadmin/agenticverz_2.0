@@ -1,0 +1,198 @@
+# AOS Workflow Engine Prometheus Alert Rules (M4)
+# Version: 1.0.0
+# Last Updated: 2025-12-01
+
+groups:
+  - name: aos_workflow_determinism
+    interval: 30s
+    rules:
+      - alert: WorkflowReplayFailures
+        expr: increase(nova_workflow_replay_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Workflow replay failures detected"
+          description: "{{ $value }} replay failures in the last 5 minutes. Determinism may be compromised."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+      - alert: WorkflowGoldenFileMismatch
+        expr: nova_workflow_golden_mismatches_total > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Workflow golden file mismatch"
+          description: "Workflow {{ $labels.workflow_id }} output doesn't match golden file."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+      - alert: WorkflowSeedDrift
+        expr: increase(nova_workflow_seed_drift_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Workflow seed drift detected"
+          description: "Same seed produced different outputs. This breaks replay guarantees."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+  - name: aos_workflow_execution
+    interval: 30s
+    rules:
+      - alert: WorkflowFailureRateHigh
+        expr: rate(nova_workflow_runs_total{status="failed"}[5m]) / rate(nova_workflow_runs_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High workflow failure rate"
+          description: "{{ $value | humanizePercentage }} of workflows are failing."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+      - alert: WorkflowBudgetExceeded
+        expr: increase(nova_workflow_budget_exceeded_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Workflow budget exceeded"
+          description: "{{ $value }} workflows exceeded budget in the last 5 minutes."
+          runbook: "docs/runbooks/budget-exceeded.md"
+
+      - alert: WorkflowTimeoutRate
+        expr: rate(nova_workflow_runs_total{status="timeout"}[5m]) / rate(nova_workflow_runs_total[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High workflow timeout rate"
+          description: "{{ $value | humanizePercentage }} of workflows are timing out."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+  - name: aos_workflow_checkpoint
+    interval: 30s
+    rules:
+      - alert: CheckpointSaveLatencyHigh
+        expr: histogram_quantile(0.99, rate(nova_workflow_checkpoint_save_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Checkpoint save latency high"
+          description: "p99 checkpoint save latency is {{ $value | humanizeDuration }}."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+      - alert: CheckpointSaveFailures
+        expr: increase(nova_workflow_checkpoint_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Checkpoint save failures"
+          description: "{{ $value }} checkpoint saves failed in the last 5 minutes."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+      - alert: StaleRunningWorkflows
+        expr: nova_workflow_running_age_seconds > 3600
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Stale running workflow detected"
+          description: "Workflow {{ $labels.run_id }} has been running for over 1 hour."
+          runbook: "docs/runbooks/workflow-recovery.md"
+
+  - name: aos_workflow_sandbox
+    interval: 30s
+    rules:
+      - alert: PlannerSandboxRejections
+        expr: increase(nova_workflow_sandbox_rejections_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High planner sandbox rejection rate"
+          description: "{{ $value }} plans rejected by sandbox in the last 5 minutes."
+          runbook: "docs/runbooks/planner-sandbox.md"
+
+      - alert: ForbiddenSkillAttempts
+        expr: increase(nova_workflow_forbidden_skill_attempts_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Forbidden skill execution attempt"
+          description: "Attempt to execute forbidden skill {{ $labels.skill_id }}."
+          runbook: "docs/runbooks/security-incident.md"
+
+  - name: aos_workflow_performance
+    interval: 30s
+    rules:
+      - alert: WorkflowLatencyHigh
+        expr: histogram_quantile(0.95, rate(nova_workflow_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Workflow latency high"
+          description: "p95 workflow latency is {{ $value | humanizeDuration }}."
+          runbook: "docs/runbooks/workflow-perf.md"
+
+      - alert: StepLatencyHigh
+        expr: histogram_quantile(0.95, rate(nova_workflow_step_duration_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Workflow step latency high"
+          description: "p95 step {{ $labels.skill_id }} latency is {{ $value | humanizeDuration }}."
+          runbook: "docs/runbooks/workflow-perf.md"
+
+      - alert: WorkflowQueueBacklog
+        expr: nova_workflow_queue_depth > 100
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Workflow queue backlog"
+          description: "{{ $value }} workflows waiting in queue."
+          runbook: "docs/runbooks/worker-saturation.md"
+
+  - name: aos_workflow_cost
+    interval: 30s
+    rules:
+      - alert: WorkflowCostSpike
+        expr: increase(nova_workflow_cost_cents_total[1h]) > 5000
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Workflow cost spike"
+          description: "Workflow costs increased by ${{ $value | humanize }} in the last hour."
+          runbook: "docs/runbooks/budget-exceeded.md"
+
+      - alert: StepCostAnomaly
+        expr: nova_workflow_step_cost_cents > 100
+        for: 1m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Step cost anomaly"
+          description: "Step {{ $labels.step_id }} cost {{ $value }}c exceeds threshold."
+          runbook: "docs/runbooks/budget-exceeded.md"

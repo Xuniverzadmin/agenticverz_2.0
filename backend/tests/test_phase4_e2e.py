@@ -8,12 +8,18 @@ Tests for:
 4. New skills (json_transform, postgres_query)
 
 Run with: pytest tests/test_phase4_e2e.py -v
+
+For server-based tests (requires docker compose up):
+    pytest tests/test_phase4_e2e.py -v -m e2e
 """
 import json
 import os
 import uuid
 
 import pytest
+
+# Custom markers for test categorization
+pytestmark = pytest.mark.e2e
 
 # Set environment before imports
 os.environ.setdefault("DATABASE_URL", "postgresql://nova:novapass@localhost:5433/nova_aos")
@@ -299,6 +305,10 @@ class TestMultiStepExecution:
         assert response.status_code == 201
         return response.json()["agent_id"]
 
+    @pytest.mark.skipif(
+        not os.environ.get("RUN_E2E_TESTS"),
+        reason="Requires running server - set RUN_E2E_TESTS=1 with docker compose up"
+    )
     def test_http_skill_execution(self, api_key, test_agent):
         """HTTP skill executes correctly."""
         import httpx
@@ -344,6 +354,10 @@ class TestMultiStepExecution:
             assert data.get("plan") is not None
             assert len(data.get("tool_calls", [])) > 0
 
+    @pytest.mark.skipif(
+        not os.environ.get("RUN_E2E_TESTS"),
+        reason="Skills require running server - set RUN_E2E_TESTS=1 with docker compose up"
+    )
     def test_skills_registered(self, api_key):
         """New skills are registered."""
         import httpx
@@ -365,7 +379,8 @@ class TestSkillRegistry:
 
     def test_all_skills_registered(self):
         """All expected skills are registered."""
-        from app.skills import list_skills
+        from app.skills import list_skills, load_all_skills
+        load_all_skills()
 
         skills = list_skills()
         skill_names = [s["name"] for s in skills]

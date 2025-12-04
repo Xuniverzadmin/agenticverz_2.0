@@ -3,7 +3,7 @@
 
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from pydantic import ValidationError
@@ -12,6 +12,17 @@ from .registry import get_skill_entry, create_skill_instance, SkillEntry
 from ..schemas.skill import SkillStatus, SkillOutputBase
 from ..schemas.plan import PlanStep, StepStatus, OnErrorPolicy
 from ..schemas.retry import RetryPolicy
+from ..observability.cost_tracker import (
+    get_cost_tracker,
+    CostEnforcementResult,
+)
+from ..workflow.metrics import (
+    record_capability_violation,
+    record_policy_decision,
+    record_budget_rejection,
+    record_step_duration,
+    record_cost_simulation_drift,
+)
 
 logger = logging.getLogger("nova.skills.executor")
 
@@ -53,11 +64,39 @@ class SkillValidationError(SkillExecutionError):
         self.is_input = is_input
 
 
+class BudgetExceededError(SkillExecutionError):
+    """Budget limit exceeded - skill execution blocked.
+
+    This is a HARD ceiling that cannot be bypassed. The request must be
+    rejected to protect cost constraints.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        skill_name: str,
+        enforcement_result: CostEnforcementResult,
+        tenant_id: str,
+        estimated_cost_cents: float,
+        step_id: Optional[str] = None,
+    ):
+        super().__init__(
+            message=message,
+            skill_name=skill_name,
+            step_id=step_id,
+            is_retryable=False,  # Budget errors are NOT retryable
+        )
+        self.enforcement_result = enforcement_result
+        self.tenant_id = tenant_id
+        self.estimated_cost_cents = estimated_cost_cents
+
+
 class SkillExecutor:
     """Executes skills with input/output validation.
 
     This is the boundary layer between the runner and skills.
     It handles:
+    - Cost enforcement (hard ceilings)
     - Input validation against skill schema
     - Skill instantiation via factory
     - Output validation
@@ -65,11 +104,23 @@ class SkillExecutor:
     - Execution timing and logging
     """
 
+    # Estimated cost per skill type (in cents)
+    # Used for pre-execution budget checks
+    SKILL_COST_ESTIMATES = {
+        "llm_invoke": 5.0,      # ~5c per LLM call (varies by model)
+        "http_call": 0.0,       # No cost
+        "json_transform": 0.0,  # No cost
+        "postgres_query": 0.0,  # No cost
+        "calendar_write": 0.0,  # No cost
+    }
+    DEFAULT_COST_ESTIMATE = 1.0  # 1c default for unknown skills
+
     def __init__(
         self,
         validate_input: bool = True,
         validate_output: bool = True,
         strict_mode: bool = False,
+        enforce_budget: bool = True,
     ):
         """Initialize executor.
 
@@ -77,10 +128,13 @@ class SkillExecutor:
             validate_input: Whether to validate input params
             validate_output: Whether to validate output
             strict_mode: If True, validation errors are fatal
+            enforce_budget: If True, check cost limits before execution
         """
         self.validate_input = validate_input
         self.validate_output = validate_output
         self.strict_mode = strict_mode
+        self.enforce_budget = enforce_budget
+        self._cost_tracker = get_cost_tracker()
 
     async def execute_step(
         self,
@@ -118,6 +172,8 @@ class SkillExecutor:
         params: Dict[str, Any],
         step_id: Optional[str] = None,
         skill_config: Optional[Dict[str, Any]] = None,
+        tenant_id: Optional[str] = None,
+        workflow_id: Optional[str] = None,
     ) -> Tuple[Dict[str, Any], StepStatus]:
         """Execute a skill with validation.
 
@@ -126,12 +182,84 @@ class SkillExecutor:
             params: Parameters to pass to skill
             step_id: Optional step ID for logging
             skill_config: Configuration for skill
+            tenant_id: Tenant ID for cost tracking (required if enforce_budget=True)
+            workflow_id: Workflow ID for workflow-level budget limits
 
         Returns:
             Tuple of (result dict, step status)
+
+        Raises:
+            BudgetExceededError: If cost limits would be exceeded
+            SkillExecutionError: If execution fails
+            SkillValidationError: If validation fails
         """
         start_time = time.time()
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
+
+        # Estimate cost for this skill
+        estimated_cost = self.SKILL_COST_ESTIMATES.get(
+            skill_name, self.DEFAULT_COST_ESTIMATE
+        )
+
+        # HARD COST ENFORCEMENT - Check budget BEFORE execution
+        if self.enforce_budget and tenant_id:
+            result, reason = self._cost_tracker.check_can_spend(
+                tenant_id=tenant_id,
+                estimated_cost_cents=estimated_cost,
+                workflow_id=workflow_id,
+            )
+
+            if result == CostEnforcementResult.BUDGET_EXCEEDED:
+                logger.warning(
+                    "skill_execution_blocked_budget",
+                    extra={
+                        "skill": skill_name,
+                        "step_id": step_id,
+                        "tenant_id": tenant_id,
+                        "workflow_id": workflow_id,
+                        "estimated_cost_cents": estimated_cost,
+                        "reason": reason,
+                    }
+                )
+                raise BudgetExceededError(
+                    message=f"Budget exceeded: {reason}",
+                    skill_name=skill_name,
+                    enforcement_result=result,
+                    tenant_id=tenant_id,
+                    estimated_cost_cents=estimated_cost,
+                    step_id=step_id,
+                )
+
+            if result == CostEnforcementResult.REQUEST_TOO_EXPENSIVE:
+                logger.warning(
+                    "skill_execution_blocked_too_expensive",
+                    extra={
+                        "skill": skill_name,
+                        "step_id": step_id,
+                        "tenant_id": tenant_id,
+                        "estimated_cost_cents": estimated_cost,
+                        "reason": reason,
+                    }
+                )
+                raise BudgetExceededError(
+                    message=f"Request too expensive: {reason}",
+                    skill_name=skill_name,
+                    enforcement_result=result,
+                    tenant_id=tenant_id,
+                    estimated_cost_cents=estimated_cost,
+                    step_id=step_id,
+                )
+
+            if result == CostEnforcementResult.BUDGET_WARNING:
+                logger.info(
+                    "skill_execution_budget_warning",
+                    extra={
+                        "skill": skill_name,
+                        "step_id": step_id,
+                        "tenant_id": tenant_id,
+                        "reason": reason,
+                    }
+                )
 
         logger.info(
             "skill_execution_start",
@@ -198,7 +326,7 @@ class SkillExecutor:
             result = self._validate_output(skill_name, result, entry.output_schema)
 
         duration = time.time() - start_time
-        completed_at = datetime.utcnow()
+        completed_at = datetime.now(timezone.utc)
 
         # Determine status from result
         status = self._determine_status(result)
@@ -404,6 +532,7 @@ class SkillExecutor:
             KeyError,
             AttributeError,
             SkillValidationError,
+            BudgetExceededError,
         )
 
         if isinstance(error, non_retryable):
@@ -433,6 +562,7 @@ default_executor = SkillExecutor(
     validate_input=True,
     validate_output=False,  # Output validation optional for now
     strict_mode=False,
+    enforce_budget=True,   # Cost enforcement enabled by default
 )
 
 
@@ -441,6 +571,8 @@ async def execute_skill(
     params: Dict[str, Any],
     step_id: Optional[str] = None,
     skill_config: Optional[Dict[str, Any]] = None,
+    tenant_id: Optional[str] = None,
+    workflow_id: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], StepStatus]:
     """Convenience function to execute a skill with default executor.
 
@@ -449,13 +581,20 @@ async def execute_skill(
         params: Parameters to pass to skill
         step_id: Optional step ID for logging
         skill_config: Configuration for skill
+        tenant_id: Tenant ID for cost tracking
+        workflow_id: Workflow ID for workflow-level budget limits
 
     Returns:
         Tuple of (result dict, step status)
+
+    Raises:
+        BudgetExceededError: If cost limits would be exceeded
     """
     return await default_executor.execute(
         skill_name=skill_name,
         params=params,
         step_id=step_id,
         skill_config=skill_config,
+        tenant_id=tenant_id,
+        workflow_id=workflow_id,
     )

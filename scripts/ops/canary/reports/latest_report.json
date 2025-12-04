@@ -1,0 +1,53 @@
+{
+  "name": "m4-failure-catalog-canary",
+  "start_time": "2025-12-03T13:46:37.399645+00:00",
+  "end_time": "2025-12-03T13:51:37.921486+00:00",
+  "config_path": "scripts/ops/canary/configs/m4_canary.yaml",
+  "dry_run": false,
+  "git_sha": "efec21239e4c",
+  "git_branch": "feature/m4.5-failure-catalog-integration",
+  "config_hash": "d2549b4bea159ef3",
+  "hostname": "vmi2788299",
+  "user": "root",
+  "flags_enabled": [
+    "failure_catalog_runtime_integration",
+    "cost_simulator_runtime_integration"
+  ],
+  "flag_enable_status": "success",
+  "flag_enable_error": "",
+  "smoke_script": "./scripts/ops/canary_smoke_test.sh",
+  "smoke_returncode": 0,
+  "smoke_stdout": "\u001b[0;32m[SMOKE]\u001b[0m \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\u001b[0;32m[SMOKE]\u001b[0m          M4.5 Canary Smoke Test\n\u001b[0;32m[SMOKE]\u001b[0m \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\u001b[0;32m[SMOKE]\u001b[0m Target: http://127.0.0.1:8000\n\u001b[0;32m[SMOKE]\u001b[0m Auto-rollback: false\n\u001b[0;32m[SMOKE]\u001b[0m Watch mode: 0s\n\n\u001b[0;34m[CHECK]\u001b[0m Checking /healthz...\n\u001b[0;32m[SMOKE]\u001b[0m \u2705 /healthz returns 200\n\u001b[0;34m[CHECK]\u001b[0m Checking readiness...\n\u001b[0;32m[SMOKE]\u001b[0m \u2705 /health returns 200\n\u001b[0;34m[CHECK]\u001b[0m Checking /metrics...\n\u001b[0;32m[SMOKE]\u001b[0m \u2705 /metrics returns nova_* metrics\n\u001b[0;34m[CHECK]\u001b[0m Checking golden mismatch count...\n\u001b[0;32m[SMOKE]\u001b[0m \u2705 Golden mismatch: 0 (metric not present)\n\u001b[0;34m[CHECK]\u001b[0m Checking error rate...\n\u001b[0;32m[SMOKE]\u001b[0m \u2705 Error rate: 0 (metric not present)\n\u001b[0;34m[CHECK]\u001b[0m Checking feature flags...\n\u001b[0;32m[SMOKE]\u001b[0m \u2705 Feature flags configured correctly\n\n\u001b[0;32m[SMOKE]\u001b[0m \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\u001b[0;32m[SMOKE]\u001b[0m          SMOKE TEST SUMMARY\n\u001b[0;32m[SMOKE]\u001b[0m \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n\u001b[0;32m[SMOKE]\u001b[0m Target: http://127.0.0.1:8000\n\u001b[0;32m[SMOKE]\u001b[0m Time: 2025-12-03 13:46:37 UTC\n\n  \u2705 /healthz returns 200\n  \u2705 /health returns 200\n  \u2705 /metrics returns nova_* metrics\n  \u2705 Golden mismatch: 0 (metric not present)\n  \u2705 Error rate: 0 (metric not present)\n  \u2705 Feature flags configured correctly\n\n\u001b[0;32m[SMOKE]\u001b[0m Results: 6 passed, 0 failed\n\n\u001b[0;32m[SMOKE]\u001b[0m \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\u001b[0;32m[SMOKE]\u001b[0m          \u2705 ALL CHECKS PASSED\n\u001b[0;32m[SMOKE]\u001b[0m \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n",
+  "smoke_stderr": "",
+  "smoke_duration_seconds": 0.19742035865783691,
+  "prometheus_url": "http://127.0.0.1:9090",
+  "metrics_baseline": {
+    "golden_mismatch": 0.0,
+    "error_rate": 0.0,
+    "latency_p95": 0.0,
+    "active_workflows": 0.0,
+    "skill_errors": 0.0
+  },
+  "metrics_current": {
+    "golden_mismatch": 0.0,
+    "error_rate": 0.0,
+    "latency_p95": 0.0,
+    "active_workflows": 0.0,
+    "skill_errors": 0.0
+  },
+  "metrics_delta": {
+    "golden_mismatch": 0.0,
+    "error_rate": 0.0,
+    "latency_p95": 0.0,
+    "active_workflows": 0.0,
+    "skill_errors": 0.0
+  },
+  "baseline_window_seconds": 300,
+  "rollback_triggered": false,
+  "rollback_reason": "",
+  "rollback_status": "",
+  "alert_sent": false,
+  "alert_error": "",
+  "success": true,
+  "errors": []
+}

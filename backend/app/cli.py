@@ -3,12 +3,20 @@
 CLI adapter for AOS - unified execution from command line.
 
 Usage:
-    python -m app.cli run --agent-id <id> --goal "your goal here"
-    python -m app.cli list-agents
-    python -m app.cli get-run <run_id>
+    aos run --agent-id <id> --goal "your goal here"
+    aos list-agents
+    aos list-skills
+    aos get-run <run_id>
+    aos demo           # Run 60-second demo
+    aos demo --quick   # Run quick demo (30s)
 
 This provides a command-line interface that uses the same execution path
 as the API endpoints, ensuring consistency.
+
+M3.5 CLI (Machine-Native SDK Demo):
+- Quick 60-second demo showing core capabilities
+- Skill listing with cost/constraint info
+- Budget tracking visibility
 """
 import argparse
 import asyncio
@@ -16,23 +24,34 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
-from sqlmodel import Session, select
+# Lazy imports for database-dependent modules (avoid requiring DATABASE_URL for demo)
+def _get_db_imports():
+    """Lazy import database-dependent modules."""
+    from sqlmodel import Session, select
+    from .db import Agent, Run, engine, init_db
+    from .planners import get_planner
+    from .worker.runner import RunRunner
+    from .events import get_publisher
+    return Session, select, Agent, Run, engine, init_db, get_planner, RunRunner, get_publisher
 
-from .db import Agent, Run, engine, init_db
-from .planners import get_planner
-from .skills import get_skill_manifest
-from .worker.runner import RunRunner
-from .events import get_publisher
-from .logging_config import setup_logging
+# These don't require database
+from .skills import get_skill_manifest, list_skills, load_all_skills
+from .observability.cost_tracker import get_cost_tracker
 
-logger = setup_logging()
+# Setup logging (doesn't need DB)
+def _get_logger():
+    from .logging_config import setup_logging
+    return setup_logging()
+
+logger = None  # Lazy init
 
 
 def create_agent(name: str) -> str:
     """Create a new agent and return its ID."""
+    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
     with Session(engine) as session:
         agent = Agent(name=name, status="active")
         session.add(agent)
@@ -43,6 +62,7 @@ def create_agent(name: str) -> str:
 
 def list_agents() -> list:
     """List all agents."""
+    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
     with Session(engine) as session:
         agents = session.exec(select(Agent)).all()
         return [
@@ -58,6 +78,7 @@ def list_agents() -> list:
 
 def get_run(run_id: str) -> Optional[dict]:
     """Get run status and details."""
+    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
     with Session(engine) as session:
         run = session.get(Run, run_id)
         if not run:
@@ -80,6 +101,7 @@ def get_run(run_id: str) -> Optional[dict]:
 
 def create_run(agent_id: str, goal: str) -> str:
     """Create a new run for an agent and return its ID."""
+    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
         if not agent:
@@ -108,6 +130,7 @@ def execute_run_sync(run_id: str, wait: bool = True, poll_interval: float = 1.0)
     Returns:
         Final run status dict
     """
+    _, _, _, _, _, _, _, RunRunner, _ = _get_db_imports()
     runner = RunRunner(run_id)
     runner.run()  # This runs the async execute in a new event loop
 
@@ -135,6 +158,8 @@ def run_goal(agent_id: str, goal: str, wait: bool = True, verbose: bool = False)
     Returns:
         Final run status dict
     """
+    Session, select, Agent, Run, engine, init_db, _, _, _ = _get_db_imports()
+
     if verbose:
         print(f"Creating run for agent {agent_id}...")
         print(f"Goal: {goal}")
@@ -149,7 +174,7 @@ def run_goal(agent_id: str, goal: str, wait: bool = True, verbose: bool = False)
     with Session(engine) as session:
         run = session.get(Run, run_id)
         run.status = "running"
-        run.started_at = datetime.utcnow()
+        run.started_at = datetime.now(timezone.utc)
         run.attempts = 1
         session.add(run)
         session.commit()
@@ -166,12 +191,149 @@ def run_goal(agent_id: str, goal: str, wait: bool = True, verbose: bool = False)
     return result
 
 
+def show_skills(as_json: bool = False) -> None:
+    """List all registered skills with their capabilities."""
+    load_all_skills()
+    skills = list_skills()
+
+    if as_json:
+        print(json.dumps(skills, indent=2))
+        return
+
+    print("\n=== AOS Registered Skills ===\n")
+    for skill in skills:
+        name = skill.get("name", "unknown")
+        version = skill.get("version", "1.0.0")
+        desc = skill.get("description", "No description")[:60]
+        print(f"  {name} (v{version})")
+        print(f"    {desc}")
+        print()
+
+
+def run_demo(quick: bool = False) -> None:
+    """
+    Run 60-second demo showcasing AOS capabilities.
+
+    Demonstrates:
+    1. Skill discovery and listing
+    2. Agent creation
+    3. Budget tracking
+    4. Skill execution (json_transform)
+    5. Cost enforcement
+    """
+    print("\n" + "=" * 60)
+    print("   AOS Machine-Native SDK Demo")
+    print("   Version: M3.5 | Runtime: Deterministic")
+    print("=" * 60)
+
+    start_time = time.time()
+
+    # Step 1: Load and show skills
+    print("\n[1/5] Loading skills...")
+    load_all_skills()
+    skills = list_skills()
+    print(f"      Loaded {len(skills)} skills:")
+    for s in skills[:5]:
+        print(f"        - {s.get('name')}")
+    if len(skills) > 5:
+        print(f"        ... and {len(skills) - 5} more")
+
+    if not quick:
+        time.sleep(1)
+
+    # Step 2: Show budget tracking
+    print("\n[2/5] Budget tracking status...")
+    tracker = get_cost_tracker()
+    print(f"      Daily limit: {tracker.quota.daily_limit_cents}c")
+    print(f"      Hourly limit: {tracker.quota.hourly_limit_cents}c")
+    print(f"      Per-request limit: {tracker.quota.per_request_limit_cents}c")
+    print(f"      Hard enforcement: {'ENABLED' if tracker.quota.enforce_hard_limit else 'disabled'}")
+
+    if not quick:
+        time.sleep(1)
+
+    # Step 3: Execute json_transform skill
+    print("\n[3/5] Executing json_transform skill...")
+    from .skills.json_transform import JsonTransformSkill
+
+    skill = JsonTransformSkill()
+    test_data = {
+        "user": "demo_user",
+        "action": "test",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+    async def run_skill():
+        result = await skill.execute({
+            "data": test_data,
+            "operation": "identity"
+        })
+        return result
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    result = loop.run_until_complete(run_skill())
+    loop.close()
+
+    print(f"      Input: {json.dumps(test_data)[:50]}...")
+    print(f"      Output status: {result.get('status', 'unknown')}")
+    print(f"      Deterministic: Yes (same input -> same output)")
+
+    if not quick:
+        time.sleep(1)
+
+    # Step 4: Demonstrate cost tracking
+    print("\n[4/5] Recording cost event...")
+    alerts = tracker.record_cost(
+        tenant_id="demo-tenant",
+        workflow_id="demo-workflow",
+        skill_id="json_transform",
+        cost_cents=0.1,
+        input_tokens=50,
+        output_tokens=50,
+        model="demo"
+    )
+    spend = tracker.get_spend("demo-tenant", "daily")
+    print(f"      Recorded: 0.1c for json_transform")
+    print(f"      Tenant daily spend: {spend:.2f}c")
+    print(f"      Alerts triggered: {len(alerts)}")
+
+    if not quick:
+        time.sleep(1)
+
+    # Step 5: Summary
+    elapsed = time.time() - start_time
+    print("\n[5/5] Demo complete!")
+    print(f"      Elapsed time: {elapsed:.1f}s")
+    print("\n" + "=" * 60)
+    print("   AOS Core Capabilities Demonstrated:")
+    print("   - Skill registration and discovery")
+    print("   - Deterministic skill execution")
+    print("   - Cost tracking and enforcement")
+    print("   - Budget alerting system")
+    print("=" * 60 + "\n")
+
+    print("Next steps:")
+    print("  aos create-agent --name my-agent")
+    print("  aos run --agent-id <id> --goal 'your goal'")
+    print("  aos list-skills --json")
+    print()
+
+
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="AOS CLI - Run agents from the command line"
+        description="AOS CLI - Machine-Native Agent Operating System"
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # demo command (M3.5)
+    demo_parser = subparsers.add_parser("demo", help="Run 60-second capability demo")
+    demo_parser.add_argument("--quick", action="store_true", help="Quick demo (30s)")
+
+    # list-skills command (M3.5)
+    skills_parser = subparsers.add_parser("list-skills", help="List registered skills")
+    skills_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     # run command
     run_parser = subparsers.add_parser("run", help="Run a goal on an agent")
@@ -201,7 +363,17 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    # Initialize database
+    # Handle commands that don't need database
+    if args.command == "demo":
+        run_demo(quick=args.quick)
+        return
+
+    if args.command == "list-skills":
+        show_skills(as_json=args.json)
+        return
+
+    # Initialize database for other commands
+    _, _, _, _, _, init_db, _, _, _ = _get_db_imports()
     init_db()
 
     try:

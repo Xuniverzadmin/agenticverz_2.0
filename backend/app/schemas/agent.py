@@ -1,10 +1,15 @@
 # Agent Schemas
 # Pydantic models for Agent capabilities and configuration
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+def _utc_now() -> datetime:
+    """Return timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 from .retry import RetryPolicy
 
@@ -65,9 +70,8 @@ class PlannerConfig(BaseModel):
         default=None,
         description="Few-shot examples for planning"
     )
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "planner_type": "anthropic",
                 "model": "claude-sonnet-4-20250514",
@@ -75,6 +79,7 @@ class PlannerConfig(BaseModel):
                 "max_steps": 10
             }
         }
+    )
 
 
 class RateLimitConfig(BaseModel):
@@ -213,18 +218,8 @@ class AgentCapabilities(BaseModel):
             return skill_name in self.allowed_skills
         return True
 
-    def can_access_domain(self, domain: str) -> bool:
-        """Check if agent can access a domain."""
-        if not self.allow_external_http:
-            return False
-        if domain in self.blocked_domains:
-            return False
-        if self.allowed_domains is not None:
-            return domain in self.allowed_domains
-        return True
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "allowed_skills": ["http_call", "llm_invoke", "json_transform"],
                 "allow_external_http": True,
@@ -234,6 +229,17 @@ class AgentCapabilities(BaseModel):
                 "allow_database": False
             }
         }
+    )
+
+    def can_access_domain(self, domain: str) -> bool:
+        """Check if agent can access a domain."""
+        if not self.allow_external_http:
+            return False
+        if domain in self.blocked_domains:
+            return False
+        if self.allowed_domains is not None:
+            return domain in self.allowed_domains
+        return True
 
 
 class AgentConfig(BaseModel):
@@ -293,16 +299,15 @@ class AgentConfig(BaseModel):
 
     # Metadata
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=_utc_now,
         description="Creation timestamp"
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=_utc_now,
         description="Last update timestamp"
     )
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "agent_id": "agent-abc123",
                 "name": "Data Fetcher",
@@ -321,3 +326,4 @@ class AgentConfig(BaseModel):
                 }
             }
         }
+    )

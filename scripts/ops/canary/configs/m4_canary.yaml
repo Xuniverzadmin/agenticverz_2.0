@@ -1,0 +1,65 @@
+# M4.5 Failure Catalog Canary Configuration
+# Use with: python scripts/ops/canary/canary_runner.py --config scripts/ops/canary/configs/m4_canary.yaml
+
+name: m4-failure-catalog-canary
+environment: staging
+
+# Feature flags to enable during canary
+# These will be toggled in backend/app/config/feature_flags.json
+feature_flags:
+  - failure_catalog_runtime_integration
+  - cost_simulator_runtime_integration
+
+# Smoke test configuration
+smoke:
+  script: ./scripts/ops/canary_smoke_test.sh
+  timeout_seconds: 120
+
+# Prometheus configuration
+prometheus:
+  url: http://127.0.0.1:9090
+
+  # Baseline averaging window (seconds) - uses avg_over_time for stable comparison
+  baseline_window_seconds: 300  # 5 minutes
+
+  # Risk mitigation options
+  require_metric_uptime: true   # Check Prometheus has been up long enough
+  wait_for_metric_uptime: true  # Wait for uptime instead of failing (risk 4.2)
+
+  # Metrics to query (baseline vs current comparison)
+  metrics:
+    # Golden replay mismatches - any increase = immediate rollback
+    golden_mismatch: sum(nova_golden_mismatch_total) or vector(0)
+
+    # Workflow error rate (per minute)
+    error_rate: sum(rate(nova_workflow_error_total[1m])) or vector(0)
+
+    # Request latency p95 (milliseconds)
+    latency_p95: histogram_quantile(0.95, sum(rate(nova_http_request_duration_seconds_bucket[5m])) by (le)) * 1000 or vector(0)
+
+    # Active workflows
+    active_workflows: sum(nova_workflow_active) or vector(0)
+
+    # Skill execution errors
+    skill_errors: sum(rate(nova_skill_error_total[1m])) or vector(0)
+
+# Rollback thresholds
+thresholds:
+  # Rollback if error rate increases by more than this percentage
+  error_rate_delta_pct: 50.0
+
+  # Rollback if p95 latency increases by more than this (milliseconds)
+  latency_p95_delta_ms: 500.0
+
+  # Note: golden_mismatch is always fatal - any increase triggers rollback
+
+# Alerting configuration (optional)
+# Set CANARY_WEBHOOK_URL env var or configure here
+alerting:
+  # Slack/Discord/Teams webhook URL for rollback alerts
+  webhook_url: ""  # e.g., https://hooks.slack.com/services/xxx/yyy/zzz
+
+# Report output
+report:
+  path: ./scripts/ops/canary/reports/m4_canary_report.json
+  keep_history: true

@@ -1,0 +1,175 @@
+# http_call Skill Contract
+# Version: 0.2.0
+# Last Updated: 2025-12-01
+
+skill_id: http_call
+version: "0.2.0"
+name: HTTP Call
+description: Make HTTP requests to external APIs with retry support
+
+# Determinism Classification
+determinism:
+  classification: NON_DETERMINISTIC
+  reason: "External network calls produce variable responses"
+  stable_fields:
+    - skill
+    - skill_version
+    - result.status  # 'ok', 'error', 'stubbed'
+  non_deterministic_fields:
+    - result.body
+    - result.headers
+    - duration
+    - side_effects.response_hash
+
+# Input Schema
+inputs:
+  url:
+    type: string
+    required: false
+    default: "https://api.github.com/zen"
+    description: "Target URL for the HTTP request"
+  method:
+    type: string
+    required: false
+    default: "GET"
+    enum: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+  body:
+    type: object
+    required: false
+    description: "Request body for POST/PUT/PATCH"
+  headers:
+    type: object
+    required: false
+    default: {}
+  timeout:
+    type: number
+    required: false
+    default: 5.0
+    description: "Request timeout in seconds"
+  max_retries:
+    type: integer
+    required: false
+    default: 3
+
+# Output Schema
+outputs:
+  skill:
+    type: string
+    value: "http_call"
+  skill_version:
+    type: string
+  result:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: ["ok", "error", "stubbed", "forbidden"]
+      code:
+        type: integer
+        description: "HTTP status code or error code"
+      body:
+        type: any
+      headers:
+        type: object
+  duration:
+    type: number
+  side_effects:
+    type: object
+
+# URL Behavior Contract
+url_behavior:
+  # LOCAL URLs (localhost, 127.0.0.1, *.local)
+  local_urls:
+    when_allow_external_true:
+      action: EXECUTE
+      description: "Attempt real HTTP call to local URL"
+    when_allow_external_false:
+      action: FORBIDDEN
+      result:
+        status: "forbidden"
+        code: 403
+        body:
+          error: "LOCAL_URL_FORBIDDEN"
+          message: "Local URLs are forbidden when external calls disabled"
+      reason: >
+        When external calls are disabled, the skill is in "stub mode" for testing.
+        Local URLs should not be attempted because:
+        1. They may not exist in the test environment
+        2. They create non-deterministic behavior
+        3. They could expose internal services
+  
+  # EXTERNAL URLs (anything not local)
+  external_urls:
+    when_allow_external_true:
+      action: EXECUTE
+      description: "Attempt real HTTP call"
+    when_allow_external_false:
+      action: STUBBED
+      result:
+        status: "stubbed"
+        code: 501
+        body:
+          note: "External calls disabled in skill configuration"
+
+  # FORBIDDEN URLs (always blocked)
+  forbidden_urls:
+    patterns:
+      - "169.254.169.254"  # AWS metadata
+      - "metadata.google.internal"  # GCP metadata
+      - "100.100.100.200"  # Alibaba metadata
+    action: FORBIDDEN
+    result:
+      status: "forbidden"
+      code: 403
+      body:
+        error: "FORBIDDEN_URL"
+        message: "URL targets a forbidden endpoint"
+
+# Failure Modes
+failure_modes:
+  - code: ERR_TIMEOUT
+    category: TRANSIENT
+    retryable: true
+    description: "Request timed out"
+  
+  - code: ERR_CONNECTION
+    category: TRANSIENT
+    retryable: true
+    description: "Connection failed"
+  
+  - code: ERR_DNS
+    category: TRANSIENT
+    retryable: true
+    description: "DNS resolution failed"
+  
+  - code: ERR_HTTP_4XX
+    category: PERMANENT
+    retryable: false
+    description: "Client error (4xx status)"
+  
+  - code: ERR_HTTP_5XX
+    category: TRANSIENT
+    retryable: true
+    description: "Server error (5xx status)"
+  
+  - code: LOCAL_URL_FORBIDDEN
+    category: PERMANENT
+    retryable: false
+    description: "Local URL attempted when external calls disabled"
+  
+  - code: FORBIDDEN_URL
+    category: PERMANENT
+    retryable: false
+    description: "URL targets forbidden endpoint"
+
+# Cost Model
+cost_model:
+  base_cents: 0
+  per_call_cents: 0
+  notes: "HTTP calls have no direct cost but consume network resources"
+
+# Constraints
+constraints:
+  max_body_size_bytes: 10485760  # 10MB
+  max_timeout_seconds: 300
+  max_retries: 10

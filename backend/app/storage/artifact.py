@@ -7,7 +7,7 @@ import logging
 import os
 import shutil
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 from urllib.parse import urlparse
@@ -30,7 +30,7 @@ class StoredArtifact(BaseModel):
     checksum: str = Field(description="SHA256 checksum")
     content_type: str = Field(description="MIME content type")
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ArtifactStore(ABC):
@@ -109,7 +109,7 @@ class ArtifactStore(ABC):
 
     def _generate_id(self, run_id: str, filename: str) -> str:
         """Generate a unique artifact ID."""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         content = f"{run_id}:{filename}:{timestamp}"
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
@@ -177,7 +177,7 @@ class LocalArtifactStore(ArtifactStore):
             checksum=self._compute_checksum(content_bytes),
             content_type=self._infer_content_type(filename, artifact_type),
             metadata=metadata or {},
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
         # Store metadata
@@ -386,7 +386,7 @@ class S3ArtifactStore(ArtifactStore):
             checksum=self._compute_checksum(content_bytes),
             content_type=content_type,
             metadata=metadata or {},
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
         client.put_object(

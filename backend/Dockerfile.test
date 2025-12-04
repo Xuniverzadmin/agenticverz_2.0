@@ -1,0 +1,38 @@
+# Dockerfile.test - Integration Test Runner
+# Mirrors production environment with all dependencies
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for caching
+COPY requirements.txt requirements-test.txt* ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install test dependencies if separate file exists
+RUN if [ -f requirements-test.txt ]; then pip install --no-cache-dir -r requirements-test.txt; fi
+
+# Install additional test dependencies
+RUN pip install --no-cache-dir \
+    pytest \
+    pytest-asyncio \
+    pytest-cov \
+    httpx
+
+# Copy application code
+COPY . .
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Default command runs all tests
+CMD ["python", "-m", "pytest", "tests/", "-v", "--tb=short"]

@@ -1,0 +1,205 @@
+# M4.5 Failure Catalog & Cost Simulator Alert Rules
+# Deploy to Prometheus Alertmanager
+#
+# CRITICAL: These alerts are designed for canary monitoring.
+# Any firing alert should trigger immediate investigation.
+
+groups:
+  - name: m45_critical
+    interval: 30s
+    rules:
+      # CRITICAL: Golden mismatch - IMMEDIATE ROLLBACK
+      - alert: GoldenMismatchDetected
+        expr: increase(nova_golden_mismatch_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: platform
+          runbook: docs/runbooks/m4-safety-failure-catalog.md
+        annotations:
+          summary: "CRITICAL: Golden replay mismatch detected"
+          description: "Golden mismatch count increased by {{ $value }} in last 5m. IMMEDIATE ROLLBACK REQUIRED."
+          action: "Run: bash scripts/rollback_failure_catalog.sh --force"
+
+      # CRITICAL: Health endpoint down
+      - alert: HealthCheckFailed
+        expr: up{job="nova-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "nova-api health check failing"
+          description: "API health endpoint has been down for 1m. Check service status."
+
+  - name: m45_error_rate
+    interval: 30s
+    rules:
+      # Error rate spike (>10% increase from baseline)
+      - alert: ErrorRateSpike
+        expr: |
+          (
+            sum(rate(nova_workflow_error_total[5m]))
+            /
+            (sum(rate(nova_workflow_error_total[1h] offset 1h)) + 0.001)
+          ) > 1.1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Error rate increased >10% from baseline"
+          description: "Current error rate is {{ $value | humanizePercentage }} of baseline. Investigate catalog integration."
+
+      # High error rate absolute threshold
+      - alert: HighErrorRate
+        expr: sum(rate(nova_workflow_error_total[5m])) * 60 > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High error rate: {{ $value }} errors/min"
+          description: "Error rate exceeds 10/min threshold. Check error distribution by category."
+
+      # Unknown error code spike (catalog not matching)
+      - alert: UnknownErrorCodeSpike
+        expr: increase(nova_workflow_error_total{error_code="UNKNOWN_ERROR"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Increase in UNKNOWN_ERROR codes"
+          description: "{{ $value }} unknown errors in 5m. Catalog may be missing error codes."
+
+  - name: m45_latency
+    interval: 30s
+    rules:
+      # P95 latency spike (>20% increase)
+      - alert: LatencySpike
+        expr: |
+          (
+            histogram_quantile(0.95, sum(rate(nova_workflow_step_duration_seconds_bucket[5m])) by (le))
+            /
+            (histogram_quantile(0.95, sum(rate(nova_workflow_step_duration_seconds_bucket[1h] offset 1h)) by (le)) + 0.001)
+          ) > 1.2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "P95 latency increased >20%"
+          description: "Current P95 is {{ $value | humanizePercentage }} of baseline. Check for performance regression."
+
+      # Absolute P95 threshold
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum(rate(nova_workflow_step_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "P95 latency exceeds 5s"
+          description: "Workflow step P95 latency is {{ $value }}s. Investigate slow operations."
+
+  - name: m45_catalog
+    interval: 30s
+    rules:
+      # Low catalog match rate
+      - alert: LowCatalogMatchRate
+        expr: |
+          sum(rate(nova_failure_catalog_match_total{match_type="exact"}[5m]))
+          /
+          (sum(rate(nova_failure_catalog_match_total[5m])) + 0.001) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Catalog exact match rate below 80%"
+          description: "Only {{ $value | humanizePercentage }} of errors matched exactly. Review catalog coverage."
+
+      # Catalog load failure
+      - alert: CatalogLoadFailure
+        expr: nova_failure_catalog_load_errors_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Failure catalog failed to load"
+          description: "Catalog load errors detected. Check file path and JSON validity."
+
+  - name: m45_cost_simulator
+    interval: 30s
+    rules:
+      # High budget rejection rate
+      - alert: HighBudgetRejectionRate
+        expr: |
+          sum(rate(nova_cost_simulation_total{feasibility="budget_exceeded"}[5m]))
+          /
+          (sum(rate(nova_cost_simulation_total[5m])) + 0.001) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Budget rejection rate exceeds 30%"
+          description: "{{ $value | humanizePercentage }} of simulations failing on budget. Review cost estimates or budgets."
+
+      # Permission denial spike
+      - alert: PermissionDenialSpike
+        expr: increase(nova_cost_simulation_total{feasibility="permission_denied"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Permission denials spiking"
+          description: "{{ $value }} permission denials in 5m. Check skill allowlists configuration."
+
+  - name: m45_resources
+    interval: 30s
+    rules:
+      # Memory spike
+      - alert: MemorySpike
+        expr: |
+          (process_resident_memory_bytes{job="nova-api"} / 1024 / 1024)
+          >
+          (avg_over_time(process_resident_memory_bytes{job="nova-api"}[1h] offset 1h) / 1024 / 1024 * 1.5)
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Memory usage increased >50%"
+          description: "Current memory {{ $value }}MB exceeds 150% of baseline. Check for memory leaks."
+
+      # CPU spike
+      - alert: CPUSpike
+        expr: rate(process_cpu_seconds_total{job="nova-api"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "CPU usage exceeds 80%"
+          description: "API CPU at {{ $value }}%. Check for runaway processes or inefficient code paths."
+
+  - name: m45_feature_flags
+    interval: 60s
+    rules:
+      # Feature flag enabled without signoff (should never happen)
+      - alert: FeatureFlagEnabledWithoutSignoff
+        expr: |
+          nova_feature_flag_enabled{flag=~"failure_catalog.*|cost_simulator.*"} == 1
+          unless
+          nova_m4_signoff_present == 1
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "M4 feature flag enabled without signoff"
+          description: "Feature flag {{ $labels.flag }} is enabled but .m4_signoff not present. ROLLBACK IMMEDIATELY."

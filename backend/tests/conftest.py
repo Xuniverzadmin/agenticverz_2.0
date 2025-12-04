@@ -91,14 +91,14 @@ def sample_skill_metadata():
 @pytest.fixture
 def sample_structured_outcome():
     """Sample StructuredOutcome for testing."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     return {
         "status": "success",
         "code": "OK_HTTP_CALL",
         "message": "HTTP call completed successfully",
         "cost_cents": 0,
         "latency_ms": 250,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "retryable": False,
         "details": {"status_code": 200},
         "side_effects": [],
@@ -115,3 +115,4 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "security: Security tests")
     config.addinivalue_line("markers", "slow: Slow tests (>5s)")
     config.addinivalue_line("markers", "determinism: Determinism validation tests")
+    config.addinivalue_line("markers", "chaos: Chaos tests (resource stress, failure injection)")

@@ -4,7 +4,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -76,7 +76,11 @@ def check_idempotency(
 
     # Check if expired
     if run.created_at:
-        age = datetime.utcnow() - run.created_at
+        # Handle timezone-naive datetime from PostgreSQL
+        created_at = run.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - created_at
         if age.total_seconds() > IDEMPOTENCY_TTL_SECONDS:
             logger.info(
                 "idempotency_key_expired",

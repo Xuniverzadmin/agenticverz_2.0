@@ -1,0 +1,278 @@
+name: Nightly Profiling
+
+on:
+  schedule:
+    # Run at 2am UTC daily
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      run_live_tests:
+        description: 'Run live adapter tests'
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.11"
+  DATABASE_URL: "postgresql://nova:novapass@localhost:5433/nova_aos"
+  REDIS_URL: "redis://localhost:6379/0"
+
+jobs:
+  profiling:
+    name: Performance Profiling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-benchmark py-spy memory_profiler
+
+      - name: Run registry benchmark (50x)
+        run: |
+          cd backend
+          python -c "
+          import json
+          import time
+          import statistics
+          import sys
+          sys.path.insert(0, '.')
+
+          from app.skills.registry_v2 import SkillRegistry
+          from app.worker.runtime.core import SkillDescriptor
+
+          ITERATIONS = 50
+          NUM_SKILLS = 1000
+          results = []
+
+          print(f'=== Registry Performance Profiling ({ITERATIONS}x, {NUM_SKILLS} skills) ===')
+          print()
+
+          for i in range(ITERATIONS):
+              registry = SkillRegistry(':memory:')
+              start = time.perf_counter()
+
+              for j in range(NUM_SKILLS):
+                  descriptor = SkillDescriptor(
+                      skill_id=f'skill.synthetic_{j}',
+                      name=f'Synthetic Skill {j}',
+                      version='1.0.0',
+                      description=f'Test skill {j}',
+                      inputs_schema={'type': 'object'},
+                      outputs_schema={'type': 'object'},
+                      stable_fields=['result'],
+                      idempotent=True,
+                      cost_model={'base_cents': 0},
+                      failure_modes=['ERR_TEST'],
+                      constraints={'max_input_size': 1000}
+                  )
+                  registry.register(descriptor, lambda params: {'ok': True}, is_stub=True)
+
+              end = time.perf_counter()
+              duration_ms = (end - start) * 1000
+              results.append(duration_ms)
+              print(f'  Run {i+1:2d}: {duration_ms:7.2f}ms')
+
+          # Calculate statistics
+          p50 = statistics.median(results)
+          p90 = statistics.quantiles(results, n=10)[8]
+          p99 = statistics.quantiles(results, n=100)[98] if len(results) >= 100 else max(results)
+          mean = statistics.mean(results)
+          stdev = statistics.stdev(results)
+
+          print()
+          print(f'=== Statistics ===')
+          print(f'  p50:  {p50:7.2f}ms')
+          print(f'  p90:  {p90:7.2f}ms')
+          print(f'  p99:  {p99:7.2f}ms')
+          print(f'  mean: {mean:7.2f}ms')
+          print(f'  std:  {stdev:7.2f}ms')
+
+          # Export results
+          with open('nightly_benchmark.json', 'w') as f:
+              json.dump({
+                  'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                  'iterations': ITERATIONS,
+                  'num_skills': NUM_SKILLS,
+                  'results_ms': results,
+                  'stats': {
+                      'p50_ms': p50,
+                      'p90_ms': p90,
+                      'p99_ms': p99,
+                      'mean_ms': mean,
+                      'stdev_ms': stdev
+                  }
+              }, f, indent=2)
+
+          # Regression check
+          THRESHOLD_P99 = 50.0  # 50ms threshold
+          if p99 > THRESHOLD_P99:
+              print()
+              print(f'⚠️ WARNING: p99 ({p99:.2f}ms) exceeds threshold ({THRESHOLD_P99}ms)')
+              print('   Performance regression detected!')
+              # Don\\'t fail, just warn
+          else:
+              print()
+              print(f'✓ Performance within threshold (p99 < {THRESHOLD_P99}ms)')
+          "
+
+      - name: Run skill execution profiling
+        run: |
+          cd backend
+          python -c "
+          import asyncio
+          import time
+          import statistics
+          import sys
+          sys.path.insert(0, '.')
+
+          from app.skills.json_transform_v2 import json_transform_execute
+
+          async def profile_json_transform():
+              ITERATIONS = 100
+              results = []
+
+              params = {
+                  'input': {'users': [{'name': 'Alice', 'age': 30}, {'name': 'Bob', 'age': 25}]},
+                  'operation': 'filter',
+                  'path': 'users',
+                  'condition': 'age > 26'
+              }
+
+              print(f'=== JSON Transform Profiling ({ITERATIONS}x) ===')
+
+              for i in range(ITERATIONS):
+                  start = time.perf_counter()
+                  result = await json_transform_execute(params)
+                  end = time.perf_counter()
+                  duration_ms = (end - start) * 1000
+                  results.append(duration_ms)
+
+              p50 = statistics.median(results)
+              p99 = max(results) if len(results) < 100 else statistics.quantiles(results, n=100)[98]
+
+              print(f'  p50: {p50:.3f}ms')
+              print(f'  p99: {p99:.3f}ms')
+
+              if p99 > 10.0:
+                  print(f'  ⚠️ p99 exceeds 10ms threshold')
+              else:
+                  print(f'  ✓ Performance OK')
+
+          asyncio.run(profile_json_transform())
+          "
+
+      - name: Upload nightly benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-benchmark-${{ github.run_id }}
+          path: backend/nightly_benchmark.json
+          retention-days: 90
+
+  live-adapter-test:
+    name: Live Adapter Smoke Test
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.run_live_tests == 'true' || github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run live adapter tests
+        if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          cd backend
+          python -m pytest tests/live/ -v --tb=short -x
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        timeout-minutes: 5
+
+      - name: Skip notice (no API key)
+        if: ${{ secrets.ANTHROPIC_API_KEY == '' }}
+        run: |
+          echo "⚠️ ANTHROPIC_API_KEY not configured - skipping live tests"
+          echo "   To enable: Settings > Secrets > Actions > ANTHROPIC_API_KEY"
+
+  cost-tracking:
+    name: Cost Tracking Summary
+    runs-on: ubuntu-latest
+    needs: [live-adapter-test]
+    if: always() && (github.event.inputs.run_live_tests == 'true' || github.event_name == 'schedule')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate cost report
+        run: |
+          echo "=== Nightly Cost Report ==="
+          echo ""
+          echo "Date: $(date -u +%Y-%m-%d)"
+          echo ""
+          echo "Live tests run: ${{ needs.live-adapter-test.result }}"
+          echo ""
+          echo "Cost tracking requires integration with:"
+          echo "  - Anthropic usage dashboard"
+          echo "  - Internal cost observability (P1 TODO)"
+          echo ""
+          echo "Estimated nightly test budget: ~$0.05"
+
+  regression-alert:
+    name: Regression Alerting
+    runs-on: ubuntu-latest
+    needs: [profiling]
+    if: failure()
+    steps:
+      - name: Create alert issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `⚠️ Nightly Profiling Regression - ${new Date().toISOString().split('T')[0]}`;
+            const body = `
+            ## Performance Regression Detected
+
+            The nightly profiling run detected a potential regression.
+
+            **Run:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+
+            **Action Required:**
+            1. Review the profiling logs
+            2. Check recent commits for performance-impacting changes
+            3. Run local benchmarks to confirm
+
+            cc @${context.actor}
+            `;
+
+            // Check for existing open issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'regression,performance'
+            });
+
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['regression', 'performance', 'automated']
+              });
+            }

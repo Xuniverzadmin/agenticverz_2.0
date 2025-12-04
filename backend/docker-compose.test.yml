@@ -1,0 +1,55 @@
+version: '3.8'
+
+# Docker Compose for Integration Testing
+# Usage: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+
+services:
+  # PostgreSQL for integration tests
+  test-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: nova_test
+      POSTGRES_PASSWORD: nova_test_pass
+      POSTGRES_DB: nova_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nova_test -d nova_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    tmpfs:
+      - /var/lib/postgresql/data  # Use tmpfs for speed
+
+  # Redis for integration tests
+  test-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Integration test runner
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DATABASE_URL: postgresql://nova_test:nova_test_pass@test-db:5432/nova_test
+      REDIS_URL: redis://test-redis:6379/0
+      AOS_API_KEY: test_api_key_for_integration
+      PYTHONPATH: /app
+      # Disable live external calls in integration tests
+      DISABLE_LIVE_ADAPTERS: "true"
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '=== Running Integration Tests ===' &&
+        python -m pytest tests/ -v --tb=short -x --ignore=tests/live/ &&
+        echo '=== Integration Tests Complete ==='
+      "
+    volumes:
+      - ./test-results:/app/test-results

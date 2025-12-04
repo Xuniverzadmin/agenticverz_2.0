@@ -1,0 +1,32 @@
+---
+# Ingress for webhook receiver (optional)
+# Requires an ingress controller (nginx, traefik, etc.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webhook-receiver
+  namespace: aos-staging
+  labels:
+    app.kubernetes.io/name: webhook-receiver
+    app.kubernetes.io/part-of: aos
+  annotations:
+    # Adjust for your ingress controller
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: webhook.staging.your-domain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: webhook-receiver
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - webhook.staging.your-domain.com
+      secretName: webhook-tls

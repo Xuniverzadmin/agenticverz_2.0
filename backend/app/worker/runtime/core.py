@@ -25,6 +25,18 @@ import uuid
 import time
 import json
 import hashlib
+import logging
+
+# M6: Import metrics recording functions
+try:
+    from app.workflow.metrics import record_step_duration, record_cost_simulation_drift
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    record_step_duration = None
+    record_cost_simulation_drift = None
+
+logger = logging.getLogger("nova.runtime.core")
 
 
 def _canonical_json(obj: Any) -> str:
@@ -366,6 +378,10 @@ class Runtime:
 
             outcome = StructuredOutcome.success(call_id, result, meta)
             self._record_execution(skill_id, inputs, outcome)
+
+            # M6: Record metrics for observability
+            self._record_metrics(skill_id, meta["duration_s"], True, estimated_cost, estimated_cost)
+
             return outcome
 
         except asyncio.TimeoutError:
@@ -380,6 +396,10 @@ class Runtime:
                 meta=meta
             )
             self._record_execution(skill_id, inputs, outcome)
+
+            # M6: Record metrics for observability
+            self._record_metrics(skill_id, meta["duration_s"], False, estimated_cost, 0)
+
             return outcome
 
         except Exception as exc:
@@ -394,6 +414,10 @@ class Runtime:
                 meta={**meta, "exception_type": type(exc).__name__}
             )
             self._record_execution(skill_id, inputs, outcome)
+
+            # M6: Record metrics for observability
+            self._record_metrics(skill_id, meta["duration_s"], False, estimated_cost, 0)
+
             return outcome
 
     def describe_skill(self, skill_id: str) -> Optional[SkillDescriptor]:
@@ -517,6 +541,44 @@ class Runtime:
             "call_id": outcome.id,
             "timestamp": time.time()
         })
+
+    def _record_metrics(
+        self,
+        skill_id: str,
+        duration_seconds: float,
+        success: bool,
+        simulated_cents: int,
+        actual_cents: int,
+    ) -> None:
+        """
+        Record execution metrics for M6 observability.
+
+        Records:
+        - Step duration to Prometheus histogram
+        - Cost drift (simulated vs actual) to Prometheus histogram
+
+        Args:
+            skill_id: The skill that was executed
+            duration_seconds: How long execution took
+            success: Whether execution succeeded
+            simulated_cents: Pre-execution cost estimate
+            actual_cents: Actual cost incurred
+        """
+        if not METRICS_AVAILABLE:
+            return
+
+        try:
+            # Record step duration
+            if record_step_duration is not None:
+                record_step_duration(skill_id, duration_seconds, success)
+
+            # Record cost drift (simulated vs actual)
+            if record_cost_simulation_drift is not None and simulated_cents > 0:
+                record_cost_simulation_drift(skill_id, simulated_cents, actual_cents)
+
+        except Exception as e:
+            # Don't let metrics failures break execution
+            logger.warning(f"Failed to record metrics for {skill_id}: {e}")
 
     def set_budget(self, total_cents: int, spent_cents: int = 0) -> None:
         """Configure budget for testing."""

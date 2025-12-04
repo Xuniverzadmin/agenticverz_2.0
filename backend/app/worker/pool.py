@@ -11,7 +11,7 @@ import logging
 import signal
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlmodel import Session, select, col
@@ -94,7 +94,7 @@ class WorkerPool:
                 .where(Run.status.in_(["queued", "retry"]))
                 .where(
                     (Run.next_attempt_at == None) |
-                    (Run.next_attempt_at <= datetime.utcnow())
+                    (Run.next_attempt_at <= datetime.now(timezone.utc))
                 )
                 .order_by(Run.created_at.asc())
                 .limit(MAX_BATCH)
@@ -108,7 +108,7 @@ class WorkerPool:
             run = session.get(Run, run_id)
             if run:
                 run.status = "running"
-                run.started_at = datetime.utcnow()
+                run.started_at = datetime.now(timezone.utc)
                 run.attempts = (run.attempts or 0) + 1
                 session.add(run)
                 session.commit()

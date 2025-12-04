@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aos.fullname" . }}-config
+  labels:
+    {{- include "aos.labels" . | nindent 4 }}
+data:
+  # Environment
+  ENVIRONMENT: {{ .Values.global.environment | quote }}
+
+  # Database
+  DB_HOST: {{ .Values.database.host | quote }}
+  DB_PORT: {{ .Values.database.port | quote }}
+  DB_NAME: {{ .Values.database.name | quote }}
+  DB_USER: {{ .Values.database.user | quote }}
+
+  # Redis
+  REDIS_HOST: {{ .Values.redis.host | quote }}
+  REDIS_PORT: {{ .Values.redis.port | quote }}
+
+  # CostSim V2 Configuration
+  COSTSIM_V2_SANDBOX: {{ .Values.costsim.v2.sandbox | quote }}
+  COSTSIM_V2_AUTO_DISABLE: {{ .Values.costsim.v2.autoDisable | quote }}
+  COSTSIM_DRIFT_THRESHOLD: {{ .Values.costsim.v2.driftThreshold | quote }}
+  COSTSIM_DRIFT_WARNING_THRESHOLD: {{ .Values.costsim.v2.driftWarningThreshold | quote }}
+  COSTSIM_SCHEMA_ERROR_THRESHOLD: {{ .Values.costsim.v2.schemaErrorThreshold | quote }}
+
+  # CostSim Provenance
+  COSTSIM_PROVENANCE_ENABLED: {{ .Values.costsim.provenance.enabled | quote }}
+  COSTSIM_PROVENANCE_COMPRESS: {{ .Values.costsim.provenance.compress | quote }}
+  COSTSIM_ARTIFACTS_DIR: {{ .Values.costsim.provenance.artifactsDir | quote }}
+
+  # CostSim Canary
+  COSTSIM_CANARY_ENABLED: {{ .Values.costsim.canary.enabled | quote }}
+  COSTSIM_CANARY_SAMPLE_COUNT: {{ .Values.costsim.canary.sampleCount | quote }}
+
+  # CostSim Circuit Breaker
+  COSTSIM_USE_DB_CB: {{ .Values.costsim.circuitBreaker.useDbState | quote }}
+  COSTSIM_FAILURE_THRESHOLD: {{ .Values.costsim.circuitBreaker.failureThreshold | quote }}
+  COSTSIM_AUTO_RECOVER: {{ .Values.costsim.circuitBreaker.autoRecoverEnabled | quote }}
+  COSTSIM_DISABLE_TTL_HOURS: {{ .Values.costsim.circuitBreaker.defaultDisableTtlHours | quote }}
+  # Legacy paths (for backward compatibility)
+  COSTSIM_DISABLE_FILE: {{ .Values.costsim.circuitBreaker.disableFilePath | quote }}
+  COSTSIM_INCIDENT_DIR: {{ .Values.costsim.circuitBreaker.incidentDir | quote }}
+
+  # Alertmanager Integration
+  {{- if .Values.costsim.alertmanager.url }}
+  ALERTMANAGER_URL: {{ .Values.costsim.alertmanager.url | quote }}
+  {{- end }}
+  ALERTMANAGER_TIMEOUT: {{ .Values.costsim.alertmanager.timeoutSeconds | quote }}
+  ALERTMANAGER_RETRY_ATTEMPTS: {{ .Values.costsim.alertmanager.retryAttempts | quote }}
+  ALERTMANAGER_RETRY_DELAY: {{ .Values.costsim.alertmanager.retryDelaySeconds | quote }}
+
+  # Instance identification
+  {{- if .Values.instance.id }}
+  INSTANCE_ID: {{ .Values.instance.id | quote }}
+  {{- end }}
+
+  # Observability
+  METRICS_ENABLED: {{ .Values.observability.metrics.enabled | quote }}
+  TRACING_ENABLED: {{ .Values.observability.tracing.enabled | quote }}
+  {{- if .Values.observability.tracing.endpoint }}
+  TRACING_ENDPOINT: {{ .Values.observability.tracing.endpoint | quote }}
+  {{- end }}

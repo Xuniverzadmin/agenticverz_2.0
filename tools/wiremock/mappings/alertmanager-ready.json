@@ -1,0 +1,11 @@
+{
+  "name": "Alertmanager ready check",
+  "request": {
+    "method": "GET",
+    "url": "/-/ready"
+  },
+  "response": {
+    "status": 200,
+    "body": "OK"
+  }
+}

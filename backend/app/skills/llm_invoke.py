@@ -4,7 +4,7 @@
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from ..schemas.skill import (
@@ -142,7 +142,7 @@ class LLMInvokeSkill:
         Returns:
             Result dict with response and usage metrics
         """
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         start_time = time.time()
 
         # Parse input
@@ -201,7 +201,7 @@ class LLMInvokeSkill:
                 "status": SkillStatus.ERROR.value,
                 "duration_seconds": round(duration, 3),
                 "started_at": started_at.isoformat(),
-                "completed_at": datetime.utcnow().isoformat(),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
                 "error": str(e)[:500],
                 "result": {
                     "response_text": "",
@@ -215,7 +215,7 @@ class LLMInvokeSkill:
             }
 
         duration = time.time() - start_time
-        completed_at = datetime.utcnow()
+        completed_at = datetime.now(timezone.utc)
 
         # Calculate cost if tracking enabled
         cost_cents = None

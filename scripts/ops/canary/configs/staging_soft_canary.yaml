@@ -1,0 +1,31 @@
+# Staging Soft Canary - Low-risk capability enforcement
+# Use for testing capability_enforcement_soft flag
+# Does NOT require .m4_signoff
+
+name: staging-soft-capability-canary
+environment: staging
+
+feature_flags:
+  - capability_enforcement_soft
+
+smoke:
+  script: ./scripts/ops/canary_smoke_test.sh
+  timeout_seconds: 60
+
+prometheus:
+  url: http://127.0.0.1:9090
+  baseline_window_seconds: 300  # 5 minutes
+  require_metric_uptime: false  # Disable for testing (Prometheus may have just started)
+
+  metrics:
+    golden_mismatch: sum(nova_golden_mismatch_total) or vector(0)
+    error_rate: sum(rate(nova_workflow_error_total[1m])) or vector(0)
+    capability_violations: sum(rate(nova_capability_violation_total[1m])) or vector(0)
+
+thresholds:
+  error_rate_delta_pct: 25.0
+  latency_p95_delta_ms: 200.0
+
+# Optional alerting
+alerting:
+  webhook_url: ""

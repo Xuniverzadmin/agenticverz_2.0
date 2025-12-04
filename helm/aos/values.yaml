@@ -1,0 +1,226 @@
+# AOS Helm Chart Values
+# Default configuration for AOS deployment
+
+# Global settings
+global:
+  environment: staging
+  namespace: aos-system
+
+# Image configuration
+image:
+  repository: aos/backend
+  tag: "2.0.0"
+  pullPolicy: IfNotPresent
+
+# Replicas and scaling
+replicaCount: 2
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Resource limits
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+  metricsPort: 8001
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: aos.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Database configuration
+database:
+  host: postgres
+  port: 5432
+  name: aos
+  user: aos
+  existingSecret: aos-db-secret
+  secretKey: password
+
+# Redis configuration
+redis:
+  host: redis
+  port: 6379
+  existingSecret: ""
+
+# CostSim V2 Configuration (M6)
+costsim:
+  v2:
+    enabled: false  # Enable via feature flag
+    sandbox: false
+    autoDisable: true
+    driftThreshold: 0.2
+    driftWarningThreshold: 0.15
+    schemaErrorThreshold: 5
+
+  provenance:
+    enabled: true
+    compress: true
+    artifactsDir: /var/lib/aos/costsim_artifacts
+
+  canary:
+    enabled: true
+    schedule: "0 3 * * *"  # Daily at 3 AM
+    sampleCount: 100
+
+  circuitBreaker:
+    # DB-backed circuit breaker (replaces file-based)
+    useDbState: true
+    failureThreshold: 3
+    autoRecoverEnabled: true
+    defaultDisableTtlHours: 24
+    # Legacy paths (for backward compatibility / fallback)
+    disableFilePath: /var/lib/aos/costsim_v2_disabled
+    incidentDir: /var/lib/aos/costsim_incidents
+
+  # Alertmanager integration
+  alertmanager:
+    # URL for Alertmanager API (required for alerts)
+    url: ""  # e.g., "http://alertmanager:9093/api/v2/alerts"
+    # Timeout for HTTP requests
+    timeoutSeconds: 10
+    # Retry configuration
+    retryAttempts: 3
+    retryDelaySeconds: 1.0
+
+# Instance identification (for alerts and metrics)
+instance:
+  id: ""  # Auto-detected from HOSTNAME if empty
+
+# Observability
+observability:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      path: /metrics
+
+  alerts:
+    enabled: true
+    rules:
+      - costsim_v2_drift
+      - costsim_v2_circuit_breaker
+      - costsim_v2_canary
+      - costsim_v2_performance
+
+  tracing:
+    enabled: false
+    endpoint: ""
+
+# Probes
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readiness:
+    enabled: true
+    path: /health/ready
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  startup:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  readOnlyRootFilesystem: true
+
+podSecurityContext:
+  fsGroup: 1000
+
+# Node selection
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Service account
+serviceAccount:
+  create: true
+  name: aos
+  annotations: {}
+
+# Secrets
+secrets:
+  apiKey:
+    existingSecret: aos-api-key
+    key: api-key
+  anthropicKey:
+    existingSecret: aos-anthropic-key
+    key: api-key
+
+# Persistent volumes
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /var/lib/aos
+
+# Extra environment variables
+extraEnv: []
+
+# Extra volumes and mounts
+extraVolumes: []
+extraVolumeMounts: []
+
+# Worker configuration
+worker:
+  enabled: true
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: "1"
+      memory: 2Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Canary cron job
+canaryJob:
+  enabled: true
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3

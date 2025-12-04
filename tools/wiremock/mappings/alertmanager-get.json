@@ -1,0 +1,15 @@
+{
+  "name": "Alertmanager GET /api/v2/alerts",
+  "request": {
+    "method": "GET",
+    "urlPattern": "/api/v2/alerts.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "[]"
+  },
+  "priority": 1
+}

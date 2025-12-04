@@ -1,0 +1,9 @@
+---
+# Namespace for staging webhook receiver
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aos-staging
+  labels:
+    app.kubernetes.io/name: aos-staging
+    app.kubernetes.io/part-of: aos

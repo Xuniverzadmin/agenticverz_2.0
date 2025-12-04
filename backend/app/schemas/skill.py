@@ -4,7 +4,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 
 class SkillStatus(str, Enum):
@@ -22,9 +22,7 @@ class SkillInputBase(BaseModel):
     All skill-specific inputs should inherit from this.
     Provides common validation and serialization.
     """
-
-    class Config:
-        extra = "forbid"  # Reject unknown fields for strict validation
+    model_config = ConfigDict(extra="forbid")  # Reject unknown fields for strict validation
 
 
 class SkillOutputBase(BaseModel):
@@ -32,6 +30,8 @@ class SkillOutputBase(BaseModel):
 
     Provides consistent structure for all skill results.
     """
+    model_config = ConfigDict(extra="allow")  # Allow skill-specific output fields
+
     skill: str = Field(description="Skill name that produced this output")
     skill_version: str = Field(description="Version of the skill")
     status: SkillStatus = Field(description="Execution status")
@@ -39,9 +39,6 @@ class SkillOutputBase(BaseModel):
     started_at: datetime = Field(description="When execution started")
     completed_at: datetime = Field(description="When execution completed")
     error: Optional[str] = Field(default=None, description="Error message if failed")
-
-    class Config:
-        extra = "allow"  # Allow skill-specific output fields
 
 
 # ====================
@@ -181,9 +178,7 @@ class LLMInvokeOutput(SkillOutputBase):
         ge=0,
         description="Estimated cost in cents"
     )
-
-    class Config:
-        populate_by_name = True  # Allow both llm_model and model_used
+    model_config = ConfigDict(populate_by_name=True)  # Allow both llm_model and model_used
 
 
 # ====================

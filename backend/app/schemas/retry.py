@@ -3,7 +3,7 @@
 
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BackoffStrategy(str, Enum):
@@ -71,6 +71,18 @@ class RetryPolicy(BaseModel):
 
         return min(delay, self.max_delay_seconds)
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "max_attempts": 3,
+                "backoff_strategy": "exponential",
+                "initial_delay_seconds": 1.0,
+                "max_delay_seconds": 60.0,
+                "jitter": True
+            }
+        }
+    )
+
     @staticmethod
     def _fibonacci(n: int) -> int:
         """Calculate nth fibonacci number."""
@@ -80,14 +92,3 @@ class RetryPolicy(BaseModel):
         for _ in range(n - 1):
             a, b = b, a + b
         return b
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "max_attempts": 3,
-                "backoff_strategy": "exponential",
-                "initial_delay_seconds": 1.0,
-                "max_delay_seconds": 60.0,
-                "jitter": True
-            }
-        }

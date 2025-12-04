@@ -209,22 +209,10 @@ class TestMultiSkillWorkflow:
             }
         )
 
-        # Register stubs
-        rt.register_skill(
-            HTTP_CALL_STUB_DESCRIPTOR.skill_id,
-            http_call_stub_handler,
-            HTTP_CALL_STUB_DESCRIPTOR
-        )
-        rt.register_skill(
-            JSON_TRANSFORM_STUB_DESCRIPTOR.skill_id,
-            json_transform_stub_handler,
-            JSON_TRANSFORM_STUB_DESCRIPTOR
-        )
-        rt.register_skill(
-            LLM_INVOKE_STUB_DESCRIPTOR.skill_id,
-            llm_invoke_stub_handler,
-            LLM_INVOKE_STUB_DESCRIPTOR
-        )
+        # Register stubs (descriptor, handler)
+        rt.register_skill(HTTP_CALL_STUB_DESCRIPTOR, http_call_stub_handler)
+        rt.register_skill(JSON_TRANSFORM_STUB_DESCRIPTOR, json_transform_stub_handler)
+        rt.register_skill(LLM_INVOKE_STUB_DESCRIPTOR, llm_invoke_stub_handler)
 
         return rt
 

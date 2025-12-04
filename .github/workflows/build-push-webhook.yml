@@ -1,0 +1,186 @@
+# Build and Push Webhook Receiver Docker Image
+#
+# Triggers on:
+# - Push to tools/webhook_receiver/**
+# - Manual dispatch
+#
+# Outputs:
+# - IMAGE_SHA: The SHA tag of the pushed image
+
+name: build-push-webhook
+
+on:
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: 'Push image to registry'
+        required: false
+        default: 'true'
+        type: boolean
+  push:
+    branches: [main, develop]
+    paths:
+      - 'tools/webhook_receiver/**'
+      - '.github/workflows/build-push-webhook.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/webhook_receiver/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/webhook-receiver
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_sha: ${{ steps.meta.outputs.sha }}
+      image_tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: meta
+        run: |
+          SHA=$(git rev-parse --short=12 HEAD)
+          FULL_SHA=$(git rev-parse HEAD)
+          DATE=$(date -u +%Y%m%d)
+
+          echo "sha=${SHA}" >> $GITHUB_OUTPUT
+          echo "full_sha=${FULL_SHA}" >> $GITHUB_OUTPUT
+          echo "date=${DATE}" >> $GITHUB_OUTPUT
+
+          # Build tags array
+          TAGS="${REGISTRY}/${IMAGE_NAME}:${SHA}"
+          TAGS="${TAGS},${REGISTRY}/${IMAGE_NAME}:${DATE}-${SHA}"
+
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TAGS="${TAGS},${REGISTRY}/${IMAGE_NAME}:latest"
+          fi
+
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "primary_tag=${REGISTRY}/${IMAGE_NAME}:${SHA}" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: tools/webhook_receiver
+          file: tools/webhook_receiver/Dockerfile
+          push: false
+          load: true
+          tags: webhook-receiver:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run unit tests in container
+        run: |
+          # Start test Redis
+          docker run -d --name redis-test -p 6379:6379 redis:7-alpine
+
+          # Run tests
+          docker run --rm \
+            --network host \
+            -e REDIS_TEST_URL=redis://localhost:6379/1 \
+            webhook-receiver:test \
+            python -m pytest tests/ -v --tb=short || true
+
+          # Cleanup
+          docker stop redis-test || true
+
+      - name: Push Docker image
+        if: github.event_name != 'pull_request' && (github.event.inputs.push_image != 'false')
+        uses: docker/build-push-action@v5
+        with:
+          context: tools/webhook_receiver
+          file: tools/webhook_receiver/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.revision=${{ steps.meta.outputs.full_sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image info
+        run: |
+          echo "## Webhook Receiver Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| SHA | \`${{ steps.meta.outputs.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Primary Tag | \`${{ steps.meta.outputs.primary_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| All Tags | \`${{ steps.meta.outputs.tags }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deploy to staging:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "IMAGE_SHA=${{ steps.meta.outputs.sha }} ./deploy-staging.sh" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Deploy to staging after successful build
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy to staging
+        env:
+          IMAGE_SHA: ${{ needs.build.outputs.image_sha }}
+          REGISTRY: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          NAMESPACE: aos-staging
+        run: |
+          # Update kustomize image
+          cd tools/webhook_receiver/k8s/overlay-staging
+          kustomize edit set image webhook-receiver=${REGISTRY}:${IMAGE_SHA}
+
+          # Apply
+          kubectl apply -k .
+
+          # Wait for rollout
+          kubectl -n ${NAMESPACE} rollout status deployment/webhook-receiver --timeout=300s
+
+      - name: Smoke test
+        run: |
+          # Port forward and test
+          kubectl -n aos-staging port-forward svc/webhook-receiver 8081:80 &
+          sleep 5
+
+          # Health check
+          curl -sf http://localhost:8081/health || exit 1
+
+          # Webhook test
+          curl -sf -X POST http://localhost:8081/webhook \
+            -H "Content-Type: application/json" \
+            -d '{"test": "ci-smoke"}' || exit 1
+
+          echo "Smoke test passed"

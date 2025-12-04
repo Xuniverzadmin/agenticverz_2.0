@@ -5,7 +5,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 import uuid
 
@@ -114,7 +114,7 @@ class BudgetTracker:
     def _get_today_spent(self, session: Session, agent_id: str) -> int:
         """Get total spent today from llm_costs table."""
         try:
-            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
             query = text("""
                 SELECT COALESCE(SUM(cost_cents), 0) as total
                 FROM llm_costs
@@ -388,7 +388,7 @@ class BudgetTracker:
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
                     "cost_cents": cost_cents,
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                 })
                 session.commit()
 

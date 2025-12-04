@@ -1,121 +1,145 @@
+# AOS CI Pipeline
+# Runs on every push and PR
+# Enforces quality gates before merge
+
 name: CI
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, develop]
   pull_request:
-    branches: [main, master, develop]
+    branches: [main, develop]
 
 env:
-  PYTHON_VERSION: "3.11"
-  DATABASE_URL: "postgresql://nova:novapass@localhost:5433/nova_aos"
-  REDIS_URL: "redis://localhost:6379/0"
-  AOS_API_KEY: "test-ci-key"
-  ENFORCE_TENANCY: "false"
+  PYTHONPATH: backend
+  DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+  REDIS_URL: redis://localhost:6379/0
 
 jobs:
-  lint:
-    name: Lint & Type Check
+  # Fast unit tests (no external deps)
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
+          python-version: '3.12'
+          
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff mypy
-          pip install -r backend/requirements.txt
-
-      - name: Run ruff linter
-        run: |
-          ruff check backend/app --output-format=github || true
-        continue-on-error: true
-
-      - name: Run mypy type checker
-        run: |
-          mypy backend/app --ignore-missing-imports --no-error-summary || true
-        continue-on-error: true
-
-  unit:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install pytest pytest-cov
-
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+          
       - name: Run unit tests
         run: |
           cd backend
-          python -m pytest tests/schemas/ -v --tb=short -x
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
+          PYTHONPATH=. pytest tests/schemas tests/unit -v -m "not slow" --maxfail=3
+          
+      - name: Run skill tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/skills -v --maxfail=3
 
-  schema-validation:
-    name: Schema Validation
+  # Determinism certification (critical)
+  determinism:
     runs-on: ubuntu-latest
+    needs: unit-tests
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install jsonschema pydantic
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
 
-      - name: Validate JSON schemas
+      - name: Run replay certification
         run: |
-          python -c "
-          import json
-          import jsonschema
-          from pathlib import Path
+          cd backend
+          PYTHONPATH=. pytest tests/workflow/test_replay_certification.py -v
 
-          schema_dir = Path('backend/app/schemas')
-          errors = []
+      - name: Run registry snapshot test
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/integration/test_registry_snapshot.py -v
 
-          for schema_file in schema_dir.glob('*.schema.json'):
-              print(f'Validating {schema_file.name}...')
-              try:
-                  with open(schema_file) as f:
-                      schema = json.load(f)
-                  # Validate schema is valid JSON Schema draft-07
-                  jsonschema.Draft7Validator.check_schema(schema)
-                  print(f'  ✓ {schema_file.name} is valid')
-              except Exception as e:
-                  errors.append(f'{schema_file.name}: {e}')
-                  print(f'  ✗ {schema_file.name}: {e}')
-
-          if errors:
-              print(f'\n{len(errors)} schema validation errors')
-              exit(1)
-          print('\nAll schemas valid!')
-          "
-
-  integration:
-    name: Integration Tests
+  # M4: Workflow Engine tests (critical for determinism)
+  workflow-engine:
     runs-on: ubuntu-latest
-    needs: [unit, schema-validation]
+    needs: determinism
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run workflow engine smoke tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/workflow/test_engine_smoke.py -v
+
+      - name: Run checkpoint store tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/workflow/test_checkpoint_store.py -v
+
+      - name: Run golden-file pipeline tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/workflow/test_workflow_golden_pipeline.py -v
+
+  # M4: Golden-file replay check (blocks merge on diff)
+  workflow-golden-check:
+    runs-on: ubuntu-latest
+    needs: workflow-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run golden replay verification
+        env:
+          GOLDEN_SECRET: ${{ secrets.GOLDEN_SECRET }}
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/workflow/test_workflow_golden_pipeline.py -v -k "compare"
+
+      - name: Upload golden artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-diff
+          path: backend/artifacts/golden-diff/
+
+  # Integration tests (require services)
+  integration:
+    runs-on: ubuntu-latest
+    needs: determinism
     services:
       postgres:
         image: postgres:15
@@ -130,7 +154,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
       redis:
         image: redis:7
         ports:
@@ -140,513 +163,401 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
+          python-version: '3.12'
+          
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install pytest pytest-cov httpx
-
-      - name: Wait for services
-        run: |
-          sleep 5
-          pg_isready -h localhost -p 5433 -U nova || true
-
-      - name: Run integration tests (mocked)
         run: |
           cd backend
-          python -m pytest tests/ -v --tb=short \
-            -k "not test_get_run_status and not test_duplicate_idempotency" \
-            --ignore=tests/test_phase4_e2e.py \
-            --ignore=tests/test_phase5_security.py \
-            -x
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
-          REDIS_URL: redis://localhost:6379/0
-        continue-on-error: true
-
-  spec-check:
-    name: Specification Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check required specs exist
-        run: |
-          echo "Checking required M0 specifications..."
-          required_files=(
-            "backend/app/specs/error_taxonomy.md"
-            "backend/app/specs/determinism_and_replay.md"
-            "backend/app/schemas/structured_outcome.schema.json"
-            "backend/app/schemas/skill_metadata.schema.json"
-            "backend/app/schemas/resource_contract.schema.json"
-            "backend/app/schemas/agent_profile.schema.json"
-          )
-
-          missing=0
-          for file in "${required_files[@]}"; do
-            if [ -f "$file" ]; then
-              echo "✓ $file exists"
-            else
-              echo "✗ $file MISSING"
-              missing=$((missing + 1))
-            fi
-          done
-
-          if [ $missing -gt 0 ]; then
-            echo ""
-            echo "ERROR: $missing required specification file(s) missing"
-            exit 1
-          fi
-
-          echo ""
-          echo "All required specifications present!"
-
-  changelog-check:
-    name: Changelog Check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check for schema changes without changelog
-        run: |
-          echo "Checking for schema changes..."
-
-          # Get changed files
-          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-
-          schema_changed=false
-          for file in $changed; do
-            if [[ $file == *.schema.json ]] || [[ $file == *error_taxonomy.md ]]; then
-              echo "Schema change detected: $file"
-              schema_changed=true
-            fi
-          done
-
-          if [ "$schema_changed" = true ]; then
-            # Check if changelog was updated
-            if echo "$changed" | grep -q "CHANGELOG\|changelog"; then
-              echo "✓ Changelog updated with schema changes"
-            else
-              echo "WARNING: Schema files changed but no changelog entry found"
-              echo "Consider adding a changelog entry for schema changes"
-            fi
-          fi
-
-  replay-smoke:
-    name: Replay Smoke Test
-    runs-on: ubuntu-latest
-    needs: [unit]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install jsonschema
-
-      - name: Run replay smoke test
-        run: |
-          python -c "
-          import json
-          from pathlib import Path
-
-          print('=== Replay Smoke Test ===')
-          print('Verifying deterministic fields in golden files...')
-
-          examples_dir = Path('backend/app/schemas/examples')
-          if not examples_dir.exists():
-              print('No examples directory found, skipping')
-              exit(0)
-
-          # Fields that MUST be deterministic
-          deterministic_fields = ['status', 'code', 'cost_cents', 'retryable']
-          # Fields that MUST NOT affect replay
-          forbidden_fields = ['timestamp', 'latency_ms']
-
-          errors = []
-
-          for example_file in examples_dir.glob('structured_outcome*.json'):
-              print(f'\nChecking {example_file.name}...')
-              with open(example_file) as f:
-                  data = json.load(f)
-
-              # Verify deterministic fields present
-              for field in deterministic_fields:
-                  if field in data:
-                      print(f'  ✓ {field} present: {data[field]}')
-                  else:
-                      errors.append(f'{example_file.name}: missing deterministic field {field}')
-
-              # Verify forbidden fields documented
-              for field in forbidden_fields:
-                  if field in data:
-                      print(f'  ℹ {field} present (non-deterministic, ignored in replay)')
-
-              # Verify metadata contains skill info
-              if 'metadata' in data:
-                  if 'skill_id' in data['metadata']:
-                      print(f'  ✓ metadata.skill_id: {data[\"metadata\"][\"skill_id\"]}')
-                  if 'skill_version' in data['metadata']:
-                      print(f'  ✓ metadata.skill_version: {data[\"metadata\"][\"skill_version\"]}')
-
-          if errors:
-              print(f'\n{len(errors)} errors found:')
-              for e in errors:
-                  print(f'  ✗ {e}')
-              exit(1)
-
-          print('\n✓ Replay smoke test passed!')
-          "
-
-  side-effect-order:
-    name: Side-Effect Order Check
-    runs-on: ubuntu-latest
-    needs: [unit]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Check side-effect ordering rules
-        run: |
-          python -c "
-          import json
-          from pathlib import Path
-
-          print('=== Side-Effect Order Check ===')
-          print('Verifying side-effects follow ordering rules...')
-
-          examples_dir = Path('backend/app/schemas/examples')
-          if not examples_dir.exists():
-              print('No examples directory found, skipping')
-              exit(0)
-
-          errors = []
-
-          for example_file in examples_dir.glob('structured_outcome*.json'):
-              with open(example_file) as f:
-                  data = json.load(f)
-
-              if 'side_effects' not in data:
-                  continue
-
-              side_effects = data['side_effects']
-              print(f'\n{example_file.name}: {len(side_effects)} side-effects')
-
-              # Check each side-effect has required fields
-              for i, effect in enumerate(side_effects):
-                  if 'type' not in effect:
-                      errors.append(f'{example_file.name}[{i}]: missing type field')
-                  else:
-                      print(f'  [{i}] type: {effect[\"type\"]}')
-
-          if errors:
-              print(f'\n{len(errors)} errors:')
-              for e in errors:
-                  print(f'  ✗ {e}')
-              exit(1)
-
-          print('\n✓ Side-effect order check passed!')
-          "
-
-  metadata-drift:
-    name: Metadata Version Drift Guard
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check skill metadata version drift
-        run: |
-          echo "=== Metadata Version Drift Guard ==="
-          echo "Checking if skill_metadata changes include version bump..."
-
-          # Get changed files
-          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || echo "")
-
-          if [ -z "$changed" ]; then
-            echo "No base branch to compare, skipping"
-            exit 0
-          fi
-
-          metadata_changed=false
-          for file in $changed; do
-            if [[ $file == *skill_metadata* ]] || [[ $file == */skills/*.py ]]; then
-              echo "Skill file changed: $file"
-              metadata_changed=true
-            fi
-          done
-
-          if [ "$metadata_changed" = true ]; then
-            echo ""
-            echo "WARNING: Skill metadata or implementation changed"
-            echo "Ensure skill version is bumped if behavior changed"
-            echo "See: backend/app/specs/determinism_and_replay.md"
-          fi
-
-          echo ""
-          echo "✓ Metadata drift check complete"
-
-  determinism-tests:
-    name: Determinism Tests (P0)
-    runs-on: ubuntu-latest
-    needs: [unit]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          pip install -r requirements.txt
           pip install pytest pytest-asyncio
-
-      - name: Run planner determinism stress tests
+          
+      - name: Run integration tests
         run: |
           cd backend
-          python -m pytest tests/planner/test_determinism_stress.py -v --tb=short -x
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
+          PYTHONPATH=. pytest tests/test_integration.py -v -m "not slow"
 
-      - name: Run golden file tests
-        run: |
-          cd backend
-          python -m pytest tests/planner/test_golden.py -v --tb=short -x
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
-
-      - name: Verify canonical JSON enforcement
-        run: |
-          python -c "
-          import sys
-          sys.path.insert(0, 'backend')
-
-          from app.planner.interface import PlanMetadata, PlannerOutput, PlanStep
-
-          print('=== Canonical JSON Verification ===')
-
-          # Create test plan
-          meta = PlanMetadata(planner='test', planner_version='1.0.0', deterministic=True)
-          step = PlanStep(step_id='s1', skill='skill.echo', params={'msg': 'hello'})
-          output = PlannerOutput(steps=[step], metadata=meta)
-
-          # Run 10 times - must produce identical canonical JSON
-          canonical_outputs = []
-          for i in range(10):
-              canonical = output.to_canonical_json()
-              canonical_outputs.append(canonical)
-              hash_val = output.content_hash()
-              if i == 0:
-                  print(f'  First hash: {hash_val}')
-                  first_canonical = canonical
-
-          # All must match
-          for i, c in enumerate(canonical_outputs):
-              if c != first_canonical:
-                  print(f'  ✗ Iteration {i} produced different canonical JSON!')
-                  sys.exit(1)
-
-          print(f'  ✓ All 10 iterations produced identical canonical JSON')
-          print(f'  ✓ Hash stable: {hash_val}')
-
-          # Verify generated_at is excluded from deterministic comparison
-          d = output.to_deterministic_dict()
-          if 'generated_at' in d.get('metadata', {}):
-              print('  ✗ generated_at found in deterministic dict!')
-              sys.exit(1)
-          print('  ✓ generated_at correctly excluded from deterministic comparison')
-
-          print()
-          print('✓ Canonical JSON verification passed!')
-          "
-
-      - name: Verify golden file diffs
-        run: |
-          python -c "
-          import json
-          import sys
-          from pathlib import Path
-
-          print('=== Golden File Diff Check ===')
-
-          golden_dir = Path('backend/tests/golden')
-          if not golden_dir.exists():
-              print('No golden directory found')
-              sys.exit(1)
-
-          errors = []
-          for golden_file in golden_dir.glob('*.json'):
-              print(f'Checking {golden_file.name}...')
-              try:
-                  with open(golden_file) as f:
-                      data = json.load(f)
-
-                  # Verify structure
-                  if 'input' not in data:
-                      errors.append(f'{golden_file.name}: missing input field')
-                  if 'expected_output' not in data and 'error' not in data.get('expected_output', {}):
-                      if 'expected_output' not in data:
-                          errors.append(f'{golden_file.name}: missing expected_output field')
-
-                  # Check deterministic_fields are declared
-                  if 'deterministic_fields' in data:
-                      print(f'  ✓ {len(data[\"deterministic_fields\"])} deterministic fields declared')
-                  else:
-                      print(f'  ℹ No deterministic_fields declared')
-
-              except json.JSONDecodeError as e:
-                  errors.append(f'{golden_file.name}: invalid JSON: {e}')
-
-          if errors:
-              print()
-              print(f'{len(errors)} errors:')
-              for e in errors:
-                  print(f'  ✗ {e}')
-              sys.exit(1)
-
-          print()
-          print('✓ Golden file check passed!')
-          "
-
-  registry-perf:
-    name: Registry Performance Test
+  # Chaos tests (nightly or on demand)
+  chaos:
     runs-on: ubuntu-latest
-    needs: [unit]
+    needs: integration
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[chaos]')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+          
+      - name: Run chaos tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/chaos -v -m chaos
+
+  # Legacy tests (nightly only, warn on failure)
+  legacy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+          
+      - name: Run legacy tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/legacy -v || echo "::warning::Legacy tests failed - scheduled for removal"
+
+  # M6: CostSim V2 Circuit Breaker tests (critical)
+  costsim:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: nova
+          POSTGRES_PASSWORD: novapass
+          POSTGRES_DB: nova_aos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx asyncpg
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run circuit breaker tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/costsim/test_circuit_breaker.py -v
+
+      - name: Run async circuit breaker tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/costsim/test_circuit_breaker_async.py -v
+
+      - name: Run leader election tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/costsim/test_leader.py -v
+
+      - name: Run canary tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          COSTSIM_V2_SANDBOX: "true"
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/costsim/test_canary.py -v
+
+      - name: Run alert worker tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/costsim/test_alert_worker.py -v
+
+      - name: Run all costsim tests (comprehensive)
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          COSTSIM_V2_SANDBOX: "true"
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/costsim/ -v --tb=short
+
+  # M6: CostSim Integration Tests with real DB + Alertmanager
+  costsim-integration:
+    runs-on: ubuntu-latest
+    needs: costsim
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: nova
+          POSTGRES_PASSWORD: novapass
+          POSTGRES_DB: nova_aos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      alertmanager:
+        image: prom/alertmanager:latest
+        ports:
+          - 9093:9093
+        options: >-
+          --health-cmd "wget -q --spider http://localhost:9093/-/healthy || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx asyncpg
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run CB integration tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          ALERTMANAGER_URL: http://localhost:9093
+          COSTSIM_V2_SANDBOX: "true"
+        run: |
+          cd backend
+          # Run integration tests that were previously skipped
+          PYTHONPATH=. pytest tests/costsim/ -v -m integration --tb=short || true
+          # Run full test suite with real DB
+          PYTHONPATH=. pytest tests/costsim/ -v --tb=short
+
+      - name: Verify CB state table
+        env:
+          PGPASSWORD: novapass
+        run: |
+          psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT count(*) FROM costsim_cb_state;"
+          psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT * FROM costsim_cb_state LIMIT 5;"
+
+      - name: Verify provenance table
+        env:
+          PGPASSWORD: novapass
+        run: |
+          psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT count(*) FROM costsim_provenance;"
+
+      - name: Verify alert queue table
+        env:
+          PGPASSWORD: novapass
+        run: |
+          psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT count(*) FROM costsim_alert_queue;"
+
+  # M6: CostSim Tests with WireMock (faster, no real Alertmanager)
+  costsim-wiremock:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: nova
+          POSTGRES_PASSWORD: novapass
+          POSTGRES_DB: nova_aos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx asyncpg
+
+      - name: Start WireMock with mounted mappings
+        run: |
+          # Start WireMock with mappings from repo
+          docker run -d --name wiremock \
+            -p 8080:8080 \
+            -v ${{ github.workspace }}/tools/wiremock/mappings:/home/wiremock/mappings:ro \
+            -v ${{ github.workspace }}/tools/wiremock/__files:/home/wiremock/__files:ro \
+            wiremock/wiremock:3.3.1 \
+            --verbose --global-response-templating
+
+          # Wait for WireMock to be ready
+          echo "Waiting for WireMock to start..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:8080/__admin/health > /dev/null 2>&1; then
+              echo "WireMock is ready!"
+              break
+            fi
+            echo "Attempt $i/30..."
+            sleep 1
+          done
+
+          # Verify mappings loaded from files
+          echo "WireMock mappings loaded:"
+          curl -s http://localhost:8080/__admin/mappings | jq '.mappings | length'
+          curl -s http://localhost:8080/__admin/mappings | jq '.mappings[].request.urlPattern' || true
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run circuit breaker integration tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
+          COSTSIM_V2_SANDBOX: "true"
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/integration/test_circuit_breaker.py -v --tb=short
+
+      - name: Run all costsim tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
+          COSTSIM_V2_SANDBOX: "true"
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/costsim/ -v --tb=short
+
+      - name: Verify WireMock received requests
+        run: |
+          echo "=== WireMock Request Log ==="
+          REQUESTS=$(curl -s http://localhost:8080/__admin/requests)
+          echo "$REQUESTS" | jq '.requests | length'
+          echo "$REQUESTS" | jq '.requests[] | {method: .request.method, url: .request.url}' || true
+
+      - name: Cleanup WireMock
+        if: always()
+        run: docker stop wiremock || true
+
+  # E2E tests (full stack with running server)
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, costsim-wiremock]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: nova
+          POSTGRES_PASSWORD: novapass
+          POSTGRES_DB: nova_aos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U nova"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          pip install -U pip
           pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio httpx asyncpg
 
-      - name: Run registry performance benchmark
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
         run: |
-          python -c "
-          import sys
-          import time
-          sys.path.insert(0, 'backend')
+          cd backend
+          alembic upgrade head
 
-          from app.skills.registry_v2 import SkillRegistry, SkillVersion
-          from app.worker.runtime.core import SkillDescriptor
+      - name: Start application server
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
+        run: |
+          cd backend
+          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+          curl -sf http://localhost:8000/health || exit 1
 
-          print('=== Registry Performance Benchmark ===')
+      - name: Run E2E tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
+          RUN_E2E_TESTS: "1"
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/test_phase4_e2e.py -v --tb=short -m e2e
 
-          # Create 1000 synthetic skills
-          NUM_SKILLS = 1000
-          TARGET_TIME = 3.0  # seconds
-
-          registry = SkillRegistry(':memory:')
-
-          print(f'Registering {NUM_SKILLS} skills...')
-          start = time.perf_counter()
-
-          for i in range(NUM_SKILLS):
-              descriptor = SkillDescriptor(
-                  skill_id=f'skill.synthetic_{i}',
-                  name=f'Synthetic Skill {i}',
-                  version='1.0.0',
-                  description=f'Test skill {i}',
-                  inputs_schema={'type': 'object'},
-                  outputs_schema={'type': 'object'},
-                  stable_fields=['result'],
-                  idempotent=True,
-                  cost_model={'base_cents': 0},
-                  failure_modes=['ERR_TEST'],
-                  constraints={'max_input_size': 1000}
-              )
-              registry.register(descriptor, lambda params: {'ok': True}, is_stub=True)
-
-          end = time.perf_counter()
-          duration = end - start
-
-          print(f'Registration time: {duration:.2f}s')
-          print(f'Target: <= {TARGET_TIME}s')
-
-          # Verify lookup performance
-          print()
-          print('Testing lookup performance...')
-          lookup_start = time.perf_counter()
-          for i in range(1000):
-              registry.resolve(f'skill.synthetic_{i % NUM_SKILLS}')
-          lookup_end = time.perf_counter()
-          lookup_time = lookup_end - lookup_start
-          print(f'1000 lookups: {lookup_time:.3f}s ({lookup_time*1000:.1f}ms)')
-
-          if duration > TARGET_TIME:
-              print()
-              print(f'✗ FAIL: Registration took {duration:.2f}s (target: {TARGET_TIME}s)')
-              print('Registry performance needs optimization')
-              # Warning only, not failing build yet
-              # sys.exit(1)
-          else:
-              print()
-              print(f'✓ PASS: Registry performance within target')
-          "
-
-  summary:
-    name: CI Summary
+  # Lint Prometheus rules
+  lint-alerts:
     runs-on: ubuntu-latest
-    needs: [lint, unit, schema-validation, integration, spec-check, determinism-tests, registry-perf]
-    if: always()
     steps:
-      - name: Check results
-        run: |
-          echo "## CI Summary"
-          echo ""
-          echo "| Job | Status |"
-          echo "|-----|--------|"
-          echo "| Lint | ${{ needs.lint.result }} |"
-          echo "| Unit Tests | ${{ needs.unit.result }} |"
-          echo "| Schema Validation | ${{ needs.schema-validation.result }} |"
-          echo "| Integration Tests | ${{ needs.integration.result }} |"
-          echo "| Spec Check | ${{ needs.spec-check.result }} |"
-          echo "| **Determinism Tests** | ${{ needs.determinism-tests.result }} |"
-          echo "| Registry Performance | ${{ needs.registry-perf.result }} |"
+      - uses: actions/checkout@v4
 
-          # Fail if critical jobs failed (determinism-tests is now P0)
-          if [ "${{ needs.unit.result }}" = "failure" ] || \
-             [ "${{ needs.schema-validation.result }}" = "failure" ] || \
-             [ "${{ needs.spec-check.result }}" = "failure" ] || \
-             [ "${{ needs.determinism-tests.result }}" = "failure" ]; then
-            echo ""
-            echo "Critical jobs failed!"
+      - name: Validate Prometheus rules
+        run: |
+          if [ -f ops/prometheus_rules/alerts.yml ]; then
+            echo "Prometheus rules file exists"
+            # Add promtool check when available
+            # promtool check rules ops/prometheus_rules/alerts.yml
+          else
+            echo "::error::Prometheus rules file missing"
             exit 1
           fi

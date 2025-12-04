@@ -4,7 +4,7 @@
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Type
 
 import httpx
@@ -82,7 +82,7 @@ class HttpCallSkill:
         timeout = params.get("timeout", self.timeout)
         max_retries = params.get("max_retries", self.max_retries)
 
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         start_time = time.time()
 
         logger.info(
@@ -90,24 +90,48 @@ class HttpCallSkill:
             extra={"skill": "http_call", "url": url, "method": method}
         )
 
-        # Check if external calls are allowed
-        if not self.allow_external and not self._is_local_url(url):
+        # Check if external calls are allowed (contract: url_behavior)
+        if not self.allow_external:
             duration = time.time() - start_time
-            logger.info(
-                "skill_execution_stubbed",
-                extra={"skill": "http_call", "url": url, "reason": "external_calls_disabled"}
-            )
-            return {
-                "skill": "http_call",
-                "skill_version": self.VERSION,
-                "result": {
-                    "status": "stubbed",
-                    "code": 501,
-                    "body": {"note": "External calls disabled in skill configuration"}
-                },
-                "duration": duration,
-                "side_effects": {}
-            }
+
+            if self._is_local_url(url):
+                # Contract: local_urls.when_allow_external_false = FORBIDDEN
+                # Local URLs forbidden when in stub mode to ensure determinism
+                logger.info(
+                    "skill_execution_forbidden",
+                    extra={"skill": "http_call", "url": url, "reason": "local_url_forbidden_in_stub_mode"}
+                )
+                return {
+                    "skill": "http_call",
+                    "skill_version": self.VERSION,
+                    "result": {
+                        "status": "forbidden",
+                        "code": 403,
+                        "body": {
+                            "error": "LOCAL_URL_FORBIDDEN",
+                            "message": "Local URLs are forbidden when external calls disabled"
+                        }
+                    },
+                    "duration": duration,
+                    "side_effects": {}
+                }
+            else:
+                # Contract: external_urls.when_allow_external_false = STUBBED
+                logger.info(
+                    "skill_execution_stubbed",
+                    extra={"skill": "http_call", "url": url, "reason": "external_calls_disabled"}
+                )
+                return {
+                    "skill": "http_call",
+                    "skill_version": self.VERSION,
+                    "result": {
+                        "status": "stubbed",
+                        "code": 501,
+                        "body": {"note": "External calls disabled in skill configuration"}
+                    },
+                    "duration": duration,
+                    "side_effects": {}
+                }
 
         # Execute with retries
         attempts = 0
@@ -130,7 +154,7 @@ class HttpCallSkill:
                         response = await client.request(method, url, json=body, headers=headers)
 
                     duration = time.time() - start_time
-                    completed_at = datetime.utcnow()
+                    completed_at = datetime.now(timezone.utc)
 
                     # Check for server errors (5xx) - retry these
                     if response.status_code >= 500:

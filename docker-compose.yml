@@ -29,7 +29,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+      # NOTE: Using PgBouncer (6432) for connection pooling instead of direct PostgreSQL (5433)
+      DATABASE_URL: postgresql://nova:novapass@localhost:6432/nova_aos
       REDIS_URL: redis://localhost:6379/0
       AOS_API_KEY: ${AOS_API_KEY}
       # SECURITY: Bind to localhost only - access via SSH tunnel or Tailscale
@@ -40,6 +41,11 @@ services:
       # LLM Planner Configuration
       PLANNER_BACKEND: anthropic
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # RBAC Configuration (M5)
+      RBAC_ENABLED: ${RBAC_ENABLED:-false}
+      # Webhook Key Versioning (M5)
+      WEBHOOK_KEY_VERSION: ${WEBHOOK_KEY_VERSION:-v1}
+      WEBHOOK_KEY_GRACE_VERSIONS: ${WEBHOOK_KEY_GRACE_VERSIONS:-}
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import httpx; r=httpx.get('http://localhost:8000/health'); exit(0 if r.status_code==200 else 1)\""]
       interval: 10s
@@ -59,7 +65,8 @@ services:
       backend:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+      # NOTE: Using PgBouncer (6432) for connection pooling instead of direct PostgreSQL (5433)
+      DATABASE_URL: postgresql://nova:novapass@localhost:6432/nova_aos
       REDIS_URL: redis://localhost:6379/0
       WORKER_CONCURRENCY: "4"
       WORKER_POLL_INTERVAL: "2.0"
@@ -71,6 +78,37 @@ services:
       # Tenancy (set to false for dev, true for production)
       ENFORCE_TENANCY: "false"
     command: ["python", "-m", "app.worker.pool"]
+    restart: unless-stopped
+
+  # PgBouncer for connection pooling (M5)
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: nova_pgbouncer
+    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASES_HOST: 127.0.0.1
+      DATABASES_PORT: "5433"
+      DATABASES_USER: nova
+      DATABASES_PASSWORD: novapass
+      DATABASES_DBNAME: nova_aos
+      PGBOUNCER_LISTEN_PORT: "6432"
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: "200"
+      PGBOUNCER_DEFAULT_POOL_SIZE: "20"
+      PGBOUNCER_RESERVE_POOL_SIZE: "5"
+      PGBOUNCER_MAX_DB_CONNECTIONS: "50"
+      PGBOUNCER_SERVER_IDLE_TIMEOUT: "600"
+      PGBOUNCER_QUERY_TIMEOUT: "300"
+      PGBOUNCER_AUTH_TYPE: any
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 6432 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # Redis for rate limiting and concurrent runs tracking
@@ -114,6 +152,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.listen-address=127.0.0.1:9090'
+      - '--web.enable-lifecycle'
     restart: unless-stopped
 
   # Alertmanager for alert notifications

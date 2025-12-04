@@ -1,0 +1,344 @@
+{
+  "title": "NOVA M4 Workflow Engine",
+  "uid": "nova-workflow-m4",
+  "version": 1,
+  "schemaVersion": 38,
+  "tags": ["nova", "workflow", "m4"],
+  "description": "M4 Workflow Engine metrics: checkpoints, budget, golden files, policies",
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Workflow Runs Overview",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Running Workflows",
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(nova_workflow_status{status=\"running\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Completed (24h)",
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(increase(nova_workflow_completed_total[24h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Failed (24h)",
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(increase(nova_workflow_failed_total[24h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          },
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Budget Breaches (24h)",
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(increase(nova_budget_exceeded_total[24h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Version Conflicts (24h)",
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(increase(nova_checkpoint_version_conflict_total[24h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Workflow Success Rate",
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(rate(nova_workflow_completed_total[1h])) / (sum(rate(nova_workflow_completed_total[1h])) + sum(rate(nova_workflow_failed_total[1h]))) * 100", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 90 },
+              { "color": "green", "value": 99 }
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Checkpoint Store",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 9,
+      "type": "graph",
+      "title": "Checkpoint Operations Rate",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(nova_checkpoint_save_total[5m]))", "refId": "A", "legendFormat": "saves" },
+        { "expr": "sum(rate(nova_checkpoint_load_total[5m]))", "refId": "B", "legendFormat": "loads" }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "graph",
+      "title": "Checkpoint Latency (p95)",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(nova_checkpoint_save_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "save p95" },
+        { "expr": "histogram_quantile(0.95, sum(rate(nova_checkpoint_load_duration_seconds_bucket[5m])) by (le))", "refId": "B", "legendFormat": "load p95" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Budget Tracking",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 12,
+      "type": "gauge",
+      "title": "Budget Utilization",
+      "gridPos": { "x": 0, "y": 15, "w": 8, "h": 6 },
+      "targets": [{ "expr": "avg(nova_workflow_budget_used_cents / nova_workflow_budget_ceiling_cents * 100)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "graph",
+      "title": "Budget Consumption Over Time",
+      "gridPos": { "x": 8, "y": 15, "w": 16, "h": 6 },
+      "targets": [
+        { "expr": "sum(rate(nova_workflow_cost_cents_total[5m])) by (workflow_id)", "refId": "A", "legendFormat": "{{workflow_id}}" }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Policy Enforcement",
+      "gridPos": { "x": 0, "y": 21, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 15,
+      "type": "graph",
+      "title": "Policy Check Rate",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(nova_policy_check_total{result=\"allowed\"}[5m]))", "refId": "A", "legendFormat": "allowed" },
+        { "expr": "sum(rate(nova_policy_check_total{result=\"denied\"}[5m]))", "refId": "B", "legendFormat": "denied" }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "graph",
+      "title": "Policy Violations by Type",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(nova_policy_violation_total[5m])) by (policy)", "refId": "A", "legendFormat": "{{policy}}" }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "Golden File Pipeline",
+      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Golden Files Created (24h)",
+      "gridPos": { "x": 0, "y": 31, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(increase(nova_golden_file_created_total[24h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "Replay Mismatches (24h)",
+      "gridPos": { "x": 6, "y": 31, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(increase(nova_golden_replay_mismatch_total[24h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "graph",
+      "title": "Golden File Operations",
+      "gridPos": { "x": 12, "y": 31, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(nova_golden_file_created_total[5m]))", "refId": "A", "legendFormat": "created" },
+        { "expr": "sum(rate(nova_golden_replay_total[5m]))", "refId": "B", "legendFormat": "replays" },
+        { "expr": "sum(rate(nova_golden_replay_mismatch_total[5m]))", "refId": "C", "legendFormat": "mismatches" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Step Execution",
+      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 22,
+      "type": "graph",
+      "title": "Step Duration by Skill (p95)",
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(nova_step_duration_seconds_bucket[5m])) by (le, skill_id))", "refId": "A", "legendFormat": "{{skill_id}}" }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "graph",
+      "title": "Step Success Rate by Skill",
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(nova_step_success_total[5m])) by (skill_id) / (sum(rate(nova_step_success_total[5m])) by (skill_id) + sum(rate(nova_step_failure_total[5m])) by (skill_id)) * 100", "refId": "A", "legendFormat": "{{skill_id}}" }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "row",
+      "title": "Error Classification",
+      "gridPos": { "x": 0, "y": 48, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 25,
+      "type": "graph",
+      "title": "Errors by Category",
+      "gridPos": { "x": 0, "y": 49, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(nova_error_total[5m])) by (category)", "refId": "A", "legendFormat": "{{category}}" }
+      ]
+    },
+    {
+      "id": 26,
+      "type": "graph",
+      "title": "Top Error Codes",
+      "gridPos": { "x": 12, "y": 49, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "topk(10, sum(rate(nova_error_total[5m])) by (error_code))", "refId": "A", "legendFormat": "{{error_code}}" }
+      ]
+    }
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "templating": {
+    "list": [
+      {
+        "name": "tenant_id",
+        "type": "query",
+        "datasource": "prometheus",
+        "query": "label_values(nova_workflow_status, tenant_id)",
+        "multi": true,
+        "includeAll": true
+      }
+    ]
+  }
+}

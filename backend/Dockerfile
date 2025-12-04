@@ -18,6 +18,13 @@ COPY app /app/app
 # Copy tests (for integration testing)
 COPY tests /app/tests
 
+# Copy alembic migrations
+COPY alembic /app/alembic
+COPY alembic.ini /app/alembic.ini
+
+# Copy scripts
+COPY scripts /app/scripts
+
 # Change ownership to non-root user
 RUN chown -R nova:nova /app
 

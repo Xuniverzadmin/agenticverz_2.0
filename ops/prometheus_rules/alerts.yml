@@ -1,0 +1,319 @@
+# AOS Prometheus Alert Rules
+# Version: 1.0.0
+# Last Updated: 2025-12-01
+
+groups:
+  - name: aos_determinism
+    interval: 30s
+    rules:
+      - alert: DeterminismReplayDrift
+        expr: increase(nova_determinism_violations_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Determinism violation detected"
+          description: "{{ $value }} determinism violations in the last 5 minutes. Replay certification may be compromised."
+          runbook: "docs/runbooks/determinism-drift.md"
+
+      - alert: GoldenFileMismatch
+        expr: nova_golden_file_mismatches_total > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Golden file mismatch detected"
+          description: "Skill {{ $labels.skill }} output doesn't match golden file."
+          runbook: "docs/runbooks/golden-file-mismatch.md"
+
+  - name: aos_cost
+    interval: 30s
+    rules:
+      - alert: WorkflowBudgetExceeded
+        expr: increase(nova_budget_exceeded_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Workflow budget exceeded"
+          description: "{{ $value }} budget exceeded events in the last 5 minutes for tenant {{ $labels.tenant_id }}."
+          runbook: "docs/runbooks/budget-exceeded.md"
+
+      - alert: TenantDailyBudgetCritical
+        expr: (nova_tenant_daily_spend_cents / nova_tenant_daily_limit_cents) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Tenant approaching daily budget limit"
+          description: "Tenant {{ $labels.tenant_id }} has used {{ $value | humanizePercentage }} of daily budget."
+          runbook: "docs/runbooks/budget-exceeded.md"
+
+      - alert: LLMCostSpike
+        expr: increase(nova_llm_cost_cents_total[1h]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "LLM cost spike detected"
+          description: "LLM costs increased by ${{ $value | humanize }} in the last hour."
+          runbook: "docs/runbooks/llm-cost-spike.md"
+
+  - name: aos_performance
+    interval: 30s
+    rules:
+      - alert: RegistryLatencyHigh
+        expr: histogram_quantile(0.99, rate(nova_registry_operation_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Registry operation latency high"
+          description: "p99 registry latency is {{ $value | humanizeDuration }}."
+          runbook: "docs/runbooks/registry-perf.md"
+
+      - alert: SkillExecutionSlow
+        expr: histogram_quantile(0.95, rate(nova_skill_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Skill execution latency high"
+          description: "p95 skill {{ $labels.skill }} latency is {{ $value | humanizeDuration }}."
+          runbook: "docs/runbooks/skill-perf.md"
+
+      - alert: WorkerPoolSaturation
+        expr: nova_worker_pool_active / nova_worker_pool_size > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Worker pool near saturation"
+          description: "Worker pool is {{ $value | humanizePercentage }} utilized."
+          runbook: "docs/runbooks/worker-saturation.md"
+
+      - alert: WorkerPoolExhausted
+        expr: nova_worker_pool_active >= nova_worker_pool_size
+        for: 2m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Worker pool exhausted"
+          description: "All workers are busy. New runs will be queued."
+          runbook: "docs/runbooks/worker-saturation.md"
+
+  - name: aos_errors
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(nova_runs_failed_total[5m]) / rate(nova_runs_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High run failure rate"
+          description: "{{ $value | humanizePercentage }} of runs are failing."
+          runbook: "docs/runbooks/high-error-rate.md"
+
+      - alert: UnhandledExceptions
+        expr: increase(nova_unhandled_exceptions_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Unhandled exception detected"
+          description: "{{ $value }} unhandled exceptions in the last 5 minutes."
+          runbook: "docs/runbooks/unhandled-exception.md"
+
+      - alert: SkillExecutionErrors
+        expr: increase(nova_skill_attempts_total{status="error"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Skill execution errors increasing"
+          description: "Skill {{ $labels.skill }} has {{ $value }} errors in the last 5 minutes."
+          runbook: "docs/runbooks/skill-errors.md"
+
+  - name: aos_infrastructure
+    interval: 30s
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: nova_db_pool_available == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "No available database connections."
+          runbook: "docs/runbooks/db-pool-exhausted.md"
+
+      - alert: RedisConnectionError
+        expr: nova_redis_connection_errors_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Redis connection errors"
+          description: "{{ $value }} Redis connection errors."
+          runbook: "docs/runbooks/redis-errors.md"
+
+      - alert: ServiceDown
+        expr: up{job="aos-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "AOS backend service down"
+          description: "AOS backend is not responding to health checks."
+          runbook: "docs/runbooks/service-down.md"
+
+  - name: aos_chaos
+    interval: 1m
+    rules:
+      - alert: ChaosTestFailure
+        expr: increase(nova_chaos_test_failures_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Chaos test failure detected"
+          description: "Chaos test {{ $labels.test }} failed."
+          runbook: "docs/runbooks/chaos-failure.md"
+
+      - alert: ResilienceRegression
+        expr: nova_chaos_recovery_time_seconds > nova_chaos_recovery_baseline_seconds * 1.5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Resilience regression detected"
+          description: "Recovery time {{ $value | humanizeDuration }} exceeds baseline by 50%."
+          runbook: "docs/runbooks/resilience-regression.md"
+
+  # ============================================================
+  # CostSim V2 Circuit Breaker Alerts (M6)
+  # ============================================================
+  - name: costsim_v2_alerts
+    interval: 30s
+    rules:
+      # P1: High drift - auto-disable V2
+      - alert: CostSimV2HighDrift
+        expr: histogram_quantile(0.95, rate(costsim_v2_drift_score_bucket[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: backend
+        annotations:
+          summary: "CostSim V2 high drift detected"
+          description: "V2 drift score p95 > 0.2 for 5 minutes. Auto-disable triggered."
+          runbook: "docs/runbooks/costsim-circuit-breaker.md"
+
+      # P2: Warning drift
+      - alert: CostSimV2DriftWarning
+        expr: histogram_quantile(0.95, rate(costsim_v2_drift_score_bucket[15m])) > 0.15
+        for: 15m
+        labels:
+          severity: warning
+          priority: P2
+          team: backend
+        annotations:
+          summary: "CostSim V2 drift warning"
+          description: "V2 drift score p95 > 0.15 for 15 minutes. Investigation recommended."
+          runbook: "docs/runbooks/costsim-circuit-breaker.md"
+
+      # Circuit breaker open
+      - alert: CostSimV2CircuitBreakerOpen
+        expr: costsim_v2_circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: critical
+          priority: P1
+          team: backend
+        annotations:
+          summary: "CostSim V2 circuit breaker is OPEN"
+          description: "V2 simulation is disabled due to drift. Manual reset required."
+          runbook: "docs/runbooks/costsim-circuit-breaker.md"
+
+      # Canary failure
+      - alert: CostSimV2CanaryFailure
+        expr: increase(costsim_v2_canary_runs_total{status="fail"}[24h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+          team: backend
+        annotations:
+          summary: "CostSim V2 canary run failed"
+          description: "Daily canary validation failed. Check artifacts for details."
+          runbook: "docs/runbooks/costsim-canary.md"
+
+      # Alert queue backing up
+      - alert: CostSimAlertQueueBacklog
+        expr: costsim_cb_alert_queue_depth > 10
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+          team: backend
+        annotations:
+          summary: "CostSim alert queue backlog"
+          description: "More than 10 alerts pending in queue. Check Alertmanager connectivity."
+          runbook: "docs/runbooks/costsim-alert-queue.md"
+
+      # Repeated alert send failures
+      - alert: CostSimAlertSendFailures
+        expr: increase(costsim_cb_alert_send_failures_total[1h]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+          team: sre
+        annotations:
+          summary: "CostSim alert send failures"
+          description: "Multiple alert send failures in the last hour. Check Alertmanager."
+          runbook: "docs/runbooks/costsim-alert-queue.md"
+
+      # Rapid circuit breaker trips
+      - alert: CostSimRapidCBTrips
+        expr: increase(costsim_cb_disabled_total[1h]) > 3
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: backend
+        annotations:
+          summary: "Rapid circuit breaker trips"
+          description: "Circuit breaker tripped more than 3 times in 1 hour. Investigate drift cause."
+          runbook: "docs/runbooks/costsim-circuit-breaker.md"
+
+      # High consecutive failures (approaching threshold)
+      - alert: CostSimHighConsecutiveFailures
+        expr: costsim_cb_consecutive_failures > 2
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+          team: backend
+        annotations:
+          summary: "High consecutive drift failures"
+          description: "Consecutive drift failures approaching threshold. Circuit breaker may trip soon."
+          runbook: "docs/runbooks/costsim-circuit-breaker.md"

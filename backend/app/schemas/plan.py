@@ -1,10 +1,15 @@
 # Plan Schemas
 # Pydantic models for Plan and PlanStep definitions
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _utc_now() -> datetime:
+    """Return timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 from .retry import RetryPolicy
 
@@ -137,20 +142,8 @@ class PlanStep(BaseModel):
         description="Error message if failed"
     )
 
-    @field_validator("fallback_skill")
-    @classmethod
-    def validate_fallback(cls, v, info):
-        """Validate fallback_skill requires on_error=fallback."""
-        if v is not None:
-            on_error = info.data.get("on_error")
-            if on_error != OnErrorPolicy.FALLBACK:
-                raise ValueError(
-                    "fallback_skill requires on_error='fallback'"
-                )
-        return v
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "step_id": "fetch_page",
                 "skill": "http_call",
@@ -166,6 +159,19 @@ class PlanStep(BaseModel):
                 }
             }
         }
+    )
+
+    @field_validator("fallback_skill")
+    @classmethod
+    def validate_fallback(cls, v, info):
+        """Validate fallback_skill requires on_error=fallback."""
+        if v is not None:
+            on_error = info.data.get("on_error")
+            if on_error != OnErrorPolicy.FALLBACK:
+                raise ValueError(
+                    "fallback_skill requires on_error='fallback'"
+                )
+        return v
 
 
 class PlanMetadata(BaseModel):
@@ -173,7 +179,7 @@ class PlanMetadata(BaseModel):
     planner: str = Field(description="Planner that created this plan")
     planner_version: str = Field(description="Version of the planner")
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=_utc_now,
         description="When plan was created"
     )
     model: Optional[str] = Field(
@@ -305,8 +311,8 @@ class Plan(BaseModel):
                 ready.append(step)
         return ready
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "plan_id": "plan-abc123",
                 "goal": "Fetch a webpage and summarize it",
@@ -332,3 +338,4 @@ class Plan(BaseModel):
                 }
             }
         }
+    )

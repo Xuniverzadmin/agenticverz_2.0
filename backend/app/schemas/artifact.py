@@ -1,10 +1,15 @@
 # Artifact Schemas
 # Pydantic models for run outputs and artifacts
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+def _utc_now() -> datetime:
+    """Return timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 
 class ArtifactType(str, Enum):
@@ -102,7 +107,7 @@ class Artifact(BaseModel):
 
     # Timestamps
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=_utc_now,
         description="Creation timestamp"
     )
     expires_at: Optional[datetime] = Field(
@@ -124,16 +129,8 @@ class Artifact(BaseModel):
             self.storage_path is not None
         )
 
-    def get_inline_content(self) -> Optional[Any]:
-        """Get inline content if available."""
-        if self.content_json is not None:
-            return self.content_json
-        if self.content_text is not None:
-            return self.content_text
-        return None
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "artifact_id": "art-abc123",
                 "run_id": "run-xyz789",
@@ -147,6 +144,15 @@ class Artifact(BaseModel):
                 "tags": ["api", "response"]
             }
         }
+    )
+
+    def get_inline_content(self) -> Optional[Any]:
+        """Get inline content if available."""
+        if self.content_json is not None:
+            return self.content_json
+        if self.content_text is not None:
+            return self.content_text
+        return None
 
 
 class ArtifactReference(BaseModel):
@@ -160,7 +166,7 @@ class ArtifactReference(BaseModel):
     artifact_type: ArtifactType = Field(description="Type")
     name: str = Field(description="Name")
     size_bytes: Optional[int] = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
 
     @classmethod
     def from_artifact(cls, artifact: Artifact) -> "ArtifactReference":

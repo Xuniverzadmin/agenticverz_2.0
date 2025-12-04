@@ -48,7 +48,7 @@ class CalendarWriteSkill:
         # Extract event details
         title = params.get("title") or params.get("description") or "Untitled Event"
         description = params.get("description", "")
-        start = params.get("start") or datetime.utcnow().isoformat() + "Z"
+        start = params.get("start") or datetime.now(timezone.utc).isoformat()
         end = params.get("end")
         attendees = params.get("attendees", [])
         location = params.get("location")

@@ -1,0 +1,316 @@
+# http_call Skill Contract
+# Version: 2.0.0
+# Status: ACTIVE
+
+skill_id: skill.http_call
+name: HTTP Call
+version: "2.0.0"
+description: |
+  Makes HTTP requests with deterministic retry behavior, error mapping,
+  and idempotency enforcement. All responses are canonicalized for replay.
+
+# Input Schema
+inputs:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      description: The URL to request
+      type: string
+      format: uri
+    method:
+      description: HTTP method (default GET)
+      type: string
+      enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
+      default: GET
+    headers:
+      description: Request headers
+      type: object
+      additionalProperties:
+        type: string
+    body:
+      description: Request body (for POST, PUT, PATCH)
+      oneOf:
+        - type: object
+        - type: string
+    params:
+      description: Query parameters
+      type: object
+      additionalProperties:
+        type: string
+    timeout_ms:
+      description: Request timeout in milliseconds
+      type: integer
+      default: 30000
+      minimum: 100
+      maximum: 300000
+    idempotency_key:
+      description: |
+        Required for non-GET/HEAD/OPTIONS requests.
+        Used to ensure retry safety for mutating operations.
+      type: string
+    retry_config:
+      description: Retry configuration (optional override)
+      type: object
+      properties:
+        max_retries:
+          type: integer
+          default: 3
+        initial_delay_ms:
+          type: integer
+          default: 100
+        max_delay_ms:
+          type: integer
+          default: 5000
+        backoff_multiplier:
+          type: number
+          default: 2.0
+        retry_seed:
+          description: Seed for deterministic jitter (optional)
+          type: integer
+
+# Output Schema
+outputs:
+  type: object
+  required:
+    - status_code
+    - headers_hash
+    - body_hash
+  properties:
+    status_code:
+      description: HTTP status code
+      type: integer
+    headers:
+      description: Response headers (canonicalized)
+      type: object
+    headers_hash:
+      description: Hash of canonicalized headers
+      type: string
+    body:
+      description: Response body (parsed if JSON)
+    body_hash:
+      description: Hash of response body
+      type: string
+    latency_ms:
+      description: Request latency (non-deterministic)
+      type: integer
+    retries:
+      description: Number of retries attempted
+      type: integer
+    idempotency_key:
+      description: The idempotency key used (if any)
+      type: string
+
+# Stable Fields (deterministic across replays with recorded responses)
+stable_fields:
+  - status_code
+  - headers_hash
+  - body_hash
+  - retries
+
+# Non-Deterministic Fields (excluded from replay comparison)
+non_deterministic_fields:
+  - latency_ms
+  - headers  # Full headers may contain timestamps
+
+# Cost Model
+cost_model:
+  base_cents: 0
+  per_request_cents: 0.001
+
+# Constraints
+constraints:
+  max_response_bytes: 10485760  # 10MB
+  blocked_hosts:
+    - localhost
+    - 127.0.0.1
+    - "*.internal"
+  allowed_schemes:
+    - https
+    - http
+
+# Idempotency Rules
+idempotency:
+  required_for:
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+  not_required_for:
+    - GET
+    - HEAD
+    - OPTIONS
+  key_format: "{operation}-{resource_id}-attempt-{n}"
+  cache_ttl_seconds: 86400  # 24 hours
+
+# Retry Policy (from error_contract.md)
+retry_policy:
+  max_retries: 3
+  retryable_status_codes:
+    - 408  # Request Timeout
+    - 429  # Too Many Requests
+    - 500  # Internal Server Error
+    - 502  # Bad Gateway
+    - 503  # Service Unavailable
+    - 504  # Gateway Timeout
+  non_retryable_status_codes:
+    - 400  # Bad Request
+    - 401  # Unauthorized
+    - 403  # Forbidden
+    - 404  # Not Found
+    - 405  # Method Not Allowed
+    - 422  # Unprocessable Entity
+  backoff:
+    initial_delay_ms: 100
+    max_delay_ms: 5000
+    multiplier: 2.0
+    jitter: deterministic  # Uses retry_seed if provided
+
+# Error Mappings (HTTP Status -> ErrorCategory)
+error_mappings:
+  # Client Errors (4xx) - mostly non-retryable
+  400:
+    code: ERR_HTTP_400_BAD_REQUEST
+    category: CLIENT_ERROR
+    retryable: false
+  401:
+    code: ERR_HTTP_401_UNAUTHORIZED
+    category: AUTH_FAIL
+    retryable: false
+  403:
+    code: ERR_HTTP_403_FORBIDDEN
+    category: AUTH_FAIL
+    retryable: false
+  404:
+    code: ERR_HTTP_404_NOT_FOUND
+    category: CLIENT_ERROR
+    retryable: false
+  408:
+    code: ERR_HTTP_408_TIMEOUT
+    category: TIMEOUT
+    retryable: true
+  409:
+    code: ERR_HTTP_409_CONFLICT
+    category: CLIENT_ERROR
+    retryable: false
+  422:
+    code: ERR_HTTP_422_UNPROCESSABLE
+    category: VALIDATION
+    retryable: false
+  429:
+    code: ERR_HTTP_429_RATE_LIMITED
+    category: RATE_LIMIT
+    retryable: true
+    extract_retry_after: true
+
+  # Server Errors (5xx) - mostly retryable
+  500:
+    code: ERR_HTTP_500_SERVER_ERROR
+    category: SERVER_ERROR
+    retryable: true
+  502:
+    code: ERR_HTTP_502_BAD_GATEWAY
+    category: SERVER_ERROR
+    retryable: true
+  503:
+    code: ERR_HTTP_503_UNAVAILABLE
+    category: TRANSIENT
+    retryable: true
+  504:
+    code: ERR_HTTP_504_GATEWAY_TIMEOUT
+    category: TIMEOUT
+    retryable: true
+
+# Network Error Mappings
+network_errors:
+  timeout:
+    code: ERR_TIMEOUT
+    category: TIMEOUT
+    retryable: true
+  connection_refused:
+    code: ERR_CONNECTION_REFUSED
+    category: NETWORK
+    retryable: true
+  dns_failure:
+    code: ERR_DNS_FAILURE
+    category: NETWORK
+    retryable: true
+  ssl_error:
+    code: ERR_SSL_ERROR
+    category: NETWORK
+    retryable: false
+
+# Failure Modes
+failure_modes:
+  - code: ERR_HTTP_400_BAD_REQUEST
+    category: CLIENT_ERROR
+    retryable: false
+  - code: ERR_HTTP_401_UNAUTHORIZED
+    category: AUTH_FAIL
+    retryable: false
+  - code: ERR_HTTP_403_FORBIDDEN
+    category: AUTH_FAIL
+    retryable: false
+  - code: ERR_HTTP_404_NOT_FOUND
+    category: CLIENT_ERROR
+    retryable: false
+  - code: ERR_HTTP_429_RATE_LIMITED
+    category: RATE_LIMIT
+    retryable: true
+  - code: ERR_HTTP_500_SERVER_ERROR
+    category: SERVER_ERROR
+    retryable: true
+  - code: ERR_HTTP_503_UNAVAILABLE
+    category: TRANSIENT
+    retryable: true
+  - code: ERR_TIMEOUT
+    category: TIMEOUT
+    retryable: true
+  - code: ERR_CONNECTION_REFUSED
+    category: NETWORK
+    retryable: true
+  - code: ERR_DNS_FAILURE
+    category: NETWORK
+    retryable: true
+  - code: ERR_MISSING_IDEMPOTENCY_KEY
+    category: VALIDATION
+    retryable: false
+  - code: ERR_BLOCKED_HOST
+    category: VALIDATION
+    retryable: false
+
+# Test Cases
+test_cases:
+  - id: get_success
+    input:
+      url: "https://api.example.com/data"
+      method: GET
+    expected:
+      status_code: 200
+    deterministic_fields:
+      - status_code
+      - body_hash
+
+  - id: post_requires_idempotency
+    input:
+      url: "https://api.example.com/create"
+      method: POST
+      body: {"name": "test"}
+    expected_error:
+      code: ERR_MISSING_IDEMPOTENCY_KEY
+      category: VALIDATION
+      retryable: false
+
+  - id: rate_limit_retryable
+    input:
+      url: "https://api.example.com/data"
+      method: GET
+    mock_response:
+      status_code: 429
+      headers:
+        Retry-After: "60"
+    expected_error:
+      code: ERR_HTTP_429_RATE_LIMITED
+      category: RATE_LIMIT
+      retryable: true

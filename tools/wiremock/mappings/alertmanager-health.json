@@ -1,0 +1,11 @@
+{
+  "name": "Alertmanager health check",
+  "request": {
+    "method": "GET",
+    "url": "/-/healthy"
+  },
+  "response": {
+    "status": 200,
+    "body": "OK"
+  }
+}

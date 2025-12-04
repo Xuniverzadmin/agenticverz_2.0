@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from sqlmodel import Session
@@ -375,7 +375,7 @@ class RunRunner:
                     "response": result.get("result", {}) if result else {},
                     "side_effects": result.get("side_effects", {}) if result else {},
                     "duration": round(step_duration, 3),
-                    "ts": datetime.utcnow().isoformat(),
+                    "ts": datetime.now(timezone.utc).isoformat(),
                     "status": step_status.value if hasattr(step_status, 'value') else str(step_status) if step_status else "unknown",
                     "attempts": step_attempts,
                     "on_error": on_error,
@@ -418,7 +418,7 @@ class RunRunner:
 
             # Success
             duration_ms = (time.time() - start_time) * 1000
-            completed_at = datetime.utcnow()
+            completed_at = datetime.now(timezone.utc)
 
             self._update_run(
                 status="succeeded",
@@ -470,7 +470,7 @@ class RunRunner:
                     status="failed",
                     attempts=attempts,
                     error_message=str(exc)[:500],
-                    completed_at=datetime.utcnow()
+                    completed_at=datetime.now(timezone.utc)
                 )
                 self.publisher.publish("run.failed", {
                     "run_id": self.run_id,
@@ -487,7 +487,7 @@ class RunRunner:
             else:
                 # Schedule retry with exponential backoff (capped at 1 hour)
                 backoff_seconds = min(60 * (2 ** (attempts - 1)), 3600)
-                next_attempt_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
+                next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=backoff_seconds)
 
                 self._update_run(
                     status="retry",

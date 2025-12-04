@@ -6,7 +6,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from .registry import skill
 
@@ -57,8 +57,9 @@ class PostgresQueryInput(BaseModel):
         description="Override database URL (must be pre-approved)"
     )
 
-    @validator("query")
-    def validate_query_safety(cls, v):
+    @field_validator("query")
+    @classmethod
+    def validate_query_safety(cls, v: str) -> str:
         """Check query doesn't contain forbidden patterns."""
         query_upper = v.upper()
         for pattern in FORBIDDEN_PATTERNS:

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: aos
+description: Agentic Operating System - Machine-Native Agent SDK
+type: application
+version: 0.6.0
+appVersion: "2.0.0"
+
+keywords:
+  - agents
+  - ai
+  - llm
+  - machine-native
+
+home: https://github.com/agenticverz/aos
+
+maintainers:
+  - name: AOS Team
+    email: platform@aos.internal
+
+annotations:
+  category: AI/ML

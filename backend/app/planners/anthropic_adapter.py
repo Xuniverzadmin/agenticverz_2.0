@@ -6,7 +6,7 @@ import logging
 import os
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("nova.planners.anthropic")
@@ -299,7 +299,7 @@ You MUST output a valid JSON object with this exact structure:
                 "planner": "anthropic",
                 "planner_version": "1.0.0",
                 "model": self.model,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "reasoning": parsed.get("reasoning"),
                 "input_tokens": api_response.usage.input_tokens,
                 "output_tokens": api_response.usage.output_tokens,
@@ -339,7 +339,7 @@ You MUST output a valid JSON object with this exact structure:
                 "planner": "anthropic",
                 "planner_version": "1.0.0",
                 "model": self.model,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "reasoning": "Fallback plan due to parsing error",
                 "input_tokens": api_response.usage.input_tokens if api_response else 0,
                 "output_tokens": api_response.usage.output_tokens if api_response else 0,
@@ -388,7 +388,7 @@ You MUST output a valid JSON object with this exact structure:
                 "planner": "anthropic",
                 "planner_version": "1.0.0",
                 "model": self.model,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "reasoning": "Stub plan - no API key configured",
                 "input_tokens": 0,
                 "output_tokens": 0,

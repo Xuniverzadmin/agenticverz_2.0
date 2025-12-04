@@ -1,0 +1,28 @@
+# WireMock for CI and integration testing
+#
+# Usage:
+#   docker compose up -d
+#
+# Access:
+#   Admin UI:    http://localhost:8080/__admin/
+#   Mappings:    http://localhost:8080/__admin/mappings
+#   Requests:    http://localhost:8080/__admin/requests
+#   Alertmanager: http://localhost:8080/api/v2/alerts
+
+services:
+  wiremock:
+    image: wiremock/wiremock:3.3.1
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./mappings:/home/wiremock/mappings:ro
+      - ./__files:/home/wiremock/__files:ro
+    command:
+      - "--verbose"
+      - "--global-response-templating"
+      - "--permitted-system-keys=.*"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/__admin/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

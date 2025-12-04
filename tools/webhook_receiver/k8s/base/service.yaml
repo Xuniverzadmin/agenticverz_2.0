@@ -1,0 +1,29 @@
+---
+# Service for webhook receiver
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-receiver
+  namespace: aos-staging
+  labels:
+    app.kubernetes.io/name: webhook-receiver
+    app.kubernetes.io/part-of: aos
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: webhook-receiver
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+---
+# ServiceAccount for webhook receiver
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: webhook-receiver
+  namespace: aos-staging
+  labels:
+    app.kubernetes.io/name: webhook-receiver
+    app.kubernetes.io/part-of: aos

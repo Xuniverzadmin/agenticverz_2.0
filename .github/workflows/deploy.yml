@@ -1,0 +1,84 @@
+# AOS Deploy Pipeline
+# Deploys to staging/production with mandatory smoke tests
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to ${{ github.event.inputs.environment }}
+        run: |
+          echo "Deploying to ${{ github.event.inputs.environment }}..."
+          # Add actual deployment commands here
+          # e.g., kubectl apply, docker push, etc.
+          
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 30
+
+  # MANDATORY: Smoke tests after deploy
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: deploy
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+          
+      - name: Run smoke tests
+        env:
+          API_BASE: ${{ vars.API_BASE }}
+        run: |
+          chmod +x scripts/smoke_release.sh
+          ./scripts/smoke_release.sh
+          
+      - name: Verify replay certification
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/workflow/test_replay_certification.py -q --tb=short
+          
+      - name: Verify registry snapshot
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/integration/test_registry_snapshot.py -q --tb=short
+
+  # Rollback on smoke failure
+  rollback:
+    runs-on: ubuntu-latest
+    needs: smoke-test
+    if: failure()
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Trigger rollback
+        run: |
+          echo "::error::Smoke tests failed! Initiating rollback..."
+          # Add rollback commands here
+          # e.g., kubectl rollout undo, restore previous image, etc.
+          exit 1

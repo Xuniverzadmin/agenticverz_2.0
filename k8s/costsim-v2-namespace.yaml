@@ -1,0 +1,60 @@
+# CostSim V2 Sandbox Namespace (M6)
+# Isolated namespace for V2 sandbox testing
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aos-costsim-sandbox
+  labels:
+    app.kubernetes.io/name: aos
+    app.kubernetes.io/component: costsim-v2
+    environment: sandbox
+  annotations:
+    description: "Isolated namespace for CostSim V2 sandbox evaluation"
+---
+# Resource quota for sandbox namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: costsim-sandbox-quota
+  namespace: aos-costsim-sandbox
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "4"
+    limits.memory: 8Gi
+    pods: "10"
+    persistentvolumeclaims: "5"
+---
+# Network policy for sandbox isolation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: costsim-sandbox-policy
+  namespace: aos-costsim-sandbox
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from aos-system namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: aos
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow to aos-system namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: aos

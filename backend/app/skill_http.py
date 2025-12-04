@@ -1,6 +1,6 @@
 import asyncio
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 # Default configuration
@@ -23,13 +23,13 @@ async def run_http_skill(
     timeout = params.get("timeout", timeout)
     max_retries = params.get("max_retries", max_retries)
 
-    started_at = datetime.utcnow()
+    started_at = datetime.now(timezone.utc)
     attempts = 0
     last_error = None
 
     for attempt in range(max_retries):
         attempts = attempt + 1
-        attempt_started = datetime.utcnow()
+        attempt_started = datetime.now(timezone.utc)
 
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
@@ -38,7 +38,7 @@ async def run_http_skill(
                 else:
                     response = await client.request(method, url)
 
-                completed_at = datetime.utcnow()
+                completed_at = datetime.now(timezone.utc)
                 duration_ms = (completed_at - started_at).total_seconds() * 1000
 
                 # Check for server errors (5xx) - retry these
@@ -90,7 +90,7 @@ async def run_http_skill(
             await asyncio.sleep(backoff)
 
     # All retries exhausted
-    completed_at = datetime.utcnow()
+    completed_at = datetime.now(timezone.utc)
     duration_ms = (completed_at - started_at).total_seconds() * 1000
 
     return {

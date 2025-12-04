@@ -1,0 +1,163 @@
+# CostSim V2 Drift Detection Alert Rules (M6)
+# These alerts monitor CostSim V2 sandbox for drift and schema errors.
+
+groups:
+  - name: costsim_v2_drift
+    rules:
+      # P1: High drift - triggers auto-disable
+      - alert: CostSimV2HighDrift
+        expr: histogram_quantile(0.95, rate(costsim_v2_drift_score_bucket[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 high drift detected"
+          description: "V2 drift score p95 {{ $value | printf \"%.4f\" }} > 0.2 for 5 minutes. Circuit breaker will auto-disable V2."
+          runbook_url: "https://docs.aos.internal/runbooks/costsim-v2-drift"
+
+      # P2: Warning drift - needs investigation
+      - alert: CostSimV2DriftWarning
+        expr: histogram_quantile(0.95, rate(costsim_v2_drift_score_bucket[15m])) > 0.15
+        for: 15m
+        labels:
+          severity: warning
+          priority: P2
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 drift warning"
+          description: "V2 drift score p95 {{ $value | printf \"%.4f\" }} > 0.15 for 15 minutes. Investigation recommended."
+
+      # P3: Schema validation errors
+      - alert: CostSimV2SchemaErrors
+        expr: increase(costsim_v2_schema_errors_total[1h]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          priority: P3
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 schema validation errors"
+          description: "{{ $value }} schema errors in the last hour. Check V2 adapter input/output validation."
+
+  - name: costsim_v2_circuit_breaker
+    rules:
+      # Circuit breaker open - V2 is disabled
+      - alert: CostSimV2CircuitBreakerOpen
+        expr: costsim_v2_circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: critical
+          priority: P1
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 circuit breaker is OPEN"
+          description: "V2 simulation is disabled due to drift. Manual reset required via /costsim/v2/reset endpoint."
+          runbook_url: "https://docs.aos.internal/runbooks/costsim-v2-circuit-breaker"
+
+      # Circuit breaker was recently tripped
+      - alert: CostSimV2CircuitBreakerTripped
+        expr: changes(costsim_v2_circuit_breaker_state[1h]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          priority: P2
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 circuit breaker state changed"
+          description: "Circuit breaker state changed in the last hour. Check /var/lib/aos/costsim_incidents/ for details."
+
+  - name: costsim_v2_canary
+    rules:
+      # Canary run failed
+      - alert: CostSimV2CanaryFailed
+        expr: increase(costsim_v2_canary_runs_total{status="fail"}[24h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 daily canary failed"
+          description: "Canary validation failed {{ $value }} times in the last 24h. Check artifacts at /var/lib/aos/costsim_artifacts/canary/"
+
+      # Canary not running
+      - alert: CostSimV2CanaryNotRunning
+        expr: increase(costsim_v2_canary_runs_total[25h]) == 0
+        for: 5m
+        labels:
+          severity: warning
+          priority: P3
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 canary not running"
+          description: "No canary runs detected in the last 25 hours. Check systemd timer or cron job."
+
+      # High KL divergence from canary
+      - alert: CostSimV2HighKLDivergence
+        expr: costsim_v2_kl_divergence > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 high KL divergence"
+          description: "KL divergence {{ $value | printf \"%.4f\" }} > 0.3 indicates significant distribution shift between V1 and V2."
+
+  - name: costsim_v2_performance
+    rules:
+      # V2 simulation latency high
+      - alert: CostSimV2HighLatency
+        expr: histogram_quantile(0.95, rate(costsim_v2_simulation_duration_ms_bucket[5m])) > 500
+        for: 10m
+        labels:
+          severity: warning
+          priority: P3
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 high simulation latency"
+          description: "V2 simulation p95 latency {{ $value | printf \"%.0f\" }}ms > 500ms for 10 minutes."
+
+      # V2 simulation errors
+      - alert: CostSimV2SimulationErrors
+        expr: rate(costsim_v2_simulations_total{status="error"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 simulation errors elevated"
+          description: "V2 simulation error rate {{ $value | printf \"%.2f\" }}/s is elevated."
+
+  - name: costsim_v2_cost_drift
+    rules:
+      # High cost delta between V1 and V2
+      - alert: CostSimV2HighCostDelta
+        expr: histogram_quantile(0.90, rate(costsim_v2_cost_delta_cents_bucket[15m])) > 50
+        for: 15m
+        labels:
+          severity: warning
+          priority: P2
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 high cost delta"
+          description: "V2 vs V1 cost delta p90 {{ $value | printf \"%.0f\" }} cents > 50 cents. Model coefficients may need adjustment."
+
+      # Consistent cost underestimate
+      - alert: CostSimV2ConsistentUnderestimate
+        expr: |
+          (
+            sum(rate(costsim_v2_comparison_verdict_total{verdict="minor_drift"}[1h])) +
+            sum(rate(costsim_v2_comparison_verdict_total{verdict="major_drift"}[1h]))
+          ) / sum(rate(costsim_v2_comparison_verdict_total[1h])) > 0.3
+        for: 30m
+        labels:
+          severity: info
+          priority: P3
+          component: costsim_v2
+        annotations:
+          summary: "CostSim V2 consistent drift pattern"
+          description: "More than 30% of comparisons show drift. V2 model may need recalibration."

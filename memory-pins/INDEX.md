@@ -1,14 +1,15 @@
 # AgenticVerz 2.0 Memory Pins Index
 
-> Last Updated: 2025-12-01
-> Current Milestone: M1 (Runtime Interfaces)
+> Last Updated: 2025-12-04
+> Current Milestone: M5 GA (Policy & Observability)
 
 ## Memory Pin Files
 
-| File | Purpose |
-|------|---------|
-| [CLAUDE.md](./CLAUDE.md) | Main memory pin - project overview, milestones, architecture |
-| [M0_FINALIZATION.md](./M0_FINALIZATION.md) | M0 completion report and deliverables |
+| File | Purpose | Status |
+|------|---------|--------|
+| [CLAUDE.md](./CLAUDE.md) | Main memory pin - project overview, milestones, architecture | Active |
+| [M0_FINALIZATION.md](./M0_FINALIZATION.md) | M0 completion report and deliverables | Complete |
+| [PIN-009-EXTERNAL-ROLLOUT-PENDING.md](./PIN-009-EXTERNAL-ROLLOUT-PENDING.md) | **Pending items for external/production rollout** | **ACTIVE** |
 
 ---
 

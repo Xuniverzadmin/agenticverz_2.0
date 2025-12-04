@@ -1,0 +1,14 @@
+M5 GA Signoff
+=============
+Deployed: 2025-12-04T04:59:59+01:00
+Version: 1.0.0
+Components:
+  - RBAC: enabled
+  - PgBouncer: deployed
+  - Webhook Keys: initialized
+  - Rate Limiter: enabled
+  - Migrations: applied
+  - Alerts: deployed
+
+Operator: root
+Host: vmi2788299
