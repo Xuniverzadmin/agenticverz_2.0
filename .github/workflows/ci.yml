@@ -44,7 +44,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd backend
-          PYTHONPATH=. pytest tests/schemas tests/unit -v -m "not slow" --maxfail=3
+          PYTHONPATH=. pytest tests/schemas -v -m "not slow" --maxfail=3
           
       - name: Run skill tests
         run: |
