@@ -21,29 +21,23 @@ pytestmark = [
         not os.environ.get("DATABASE_URL"),
         reason="DATABASE_URL not set - skipping real DB tests"
     ),
-    pytest.mark.asyncio,
+    pytest.mark.asyncio(loop_scope="module"),
     pytest.mark.integration,
 ]
 
 pytest.importorskip("asyncpg")
 
 
-# Use session-scoped event loop to avoid connection pool issues
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop that persists across all tests in the session."""
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(autouse=True, scope="session")
+# Module-scoped engine disposal to properly clean up connections
+@pytest.fixture(scope="module")
 async def dispose_engine_at_end():
-    """Properly dispose of the async engine at the end of the test session."""
+    """Properly dispose of the async engine at the end of the test module."""
     yield
-    from app.db_async import async_engine
-    await async_engine.dispose()
+    try:
+        from app.db_async import async_engine
+        await async_engine.dispose()
+    except Exception:
+        pass  # Engine may not be initialized if tests were skipped
 
 
 async def cleanup_test_data():
