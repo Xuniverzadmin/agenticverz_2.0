@@ -1,0 +1,108 @@
+{
+  "version": "1.0.0",
+  "description": "RBAC policy matrix for AOS platform. Hot-reloadable via /api/v1/rbac/reload endpoint.",
+  "updated_at": "2025-12-04",
+  "matrix": {
+    "infra": {
+      "memory_pin": ["read", "write", "delete", "admin"],
+      "prometheus": ["reload", "query"],
+      "costsim": ["read", "write", "admin"],
+      "policy": ["read", "write", "approve"],
+      "rbac": ["reload", "read"],
+      "chaos": ["execute", "read"],
+      "memory": ["read", "write", "admin"]
+    },
+    "admin": {
+      "memory_pin": ["read", "write", "delete", "admin"],
+      "prometheus": ["reload", "query"],
+      "costsim": ["read", "write", "admin"],
+      "policy": ["read", "write", "approve"],
+      "rbac": ["reload", "read"],
+      "chaos": ["execute", "read"],
+      "memory": ["read", "write", "admin"]
+    },
+    "machine": {
+      "memory_pin": ["read", "write"],
+      "prometheus": ["reload"],
+      "costsim": ["read"],
+      "policy": ["read"],
+      "rbac": ["read"],
+      "chaos": ["read"],
+      "memory": ["read", "write"]
+    },
+    "dev": {
+      "memory_pin": ["read"],
+      "prometheus": ["query"],
+      "costsim": ["read"],
+      "policy": ["read"],
+      "rbac": ["read"],
+      "chaos": ["read"],
+      "memory": ["read"]
+    },
+    "readonly": {
+      "memory_pin": ["read"],
+      "prometheus": ["query"],
+      "costsim": ["read"],
+      "policy": ["read"],
+      "rbac": ["read"],
+      "chaos": [],
+      "memory": ["read"]
+    }
+  },
+  "path_mappings": [
+    {
+      "pattern": "/api/v1/memory/pins/cleanup",
+      "methods": ["POST"],
+      "resource": "memory_pin",
+      "action": "admin"
+    },
+    {
+      "pattern": "/api/v1/memory/pins",
+      "methods": ["GET"],
+      "resource": "memory_pin",
+      "action": "read"
+    },
+    {
+      "pattern": "/api/v1/memory/pins",
+      "methods": ["POST", "PUT", "PATCH"],
+      "resource": "memory_pin",
+      "action": "write"
+    },
+    {
+      "pattern": "/api/v1/memory/pins/*",
+      "methods": ["DELETE"],
+      "resource": "memory_pin",
+      "action": "delete"
+    },
+    {
+      "pattern": "/api/v1/rbac/reload",
+      "methods": ["POST"],
+      "resource": "rbac",
+      "action": "reload"
+    },
+    {
+      "pattern": "/api/v1/rbac/*",
+      "methods": ["GET"],
+      "resource": "rbac",
+      "action": "read"
+    },
+    {
+      "pattern": "/-/reload",
+      "methods": ["POST"],
+      "resource": "prometheus",
+      "action": "reload"
+    },
+    {
+      "pattern": "/api/observability/prom-reload",
+      "methods": ["POST"],
+      "resource": "prometheus",
+      "action": "reload"
+    }
+  ],
+  "audit": {
+    "enabled": true,
+    "retention_days": 90,
+    "log_allowed": false,
+    "log_denied": true
+  }
+}
