@@ -594,6 +594,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check secrets availability
+        run: |
+          echo "=== Secrets Check ==="
+          if [ -n "${{ secrets.NEON_DATABASE_URL }}" ]; then
+            echo "✓ NEON_DATABASE_URL is set"
+          else
+            echo "⚠ NEON_DATABASE_URL not set (using Docker Postgres fallback)"
+          fi
+          if [ -n "${{ secrets.UPSTASH_REDIS_URL }}" ]; then
+            echo "✓ UPSTASH_REDIS_URL is set"
+          else
+            echo "⚠ UPSTASH_REDIS_URL not set (using Docker Redis fallback)"
+          fi
+          if [ -n "${{ secrets.AOS_API_KEY }}" ]; then
+            echo "✓ AOS_API_KEY is set"
+          else
+            echo "⚠ AOS_API_KEY not set (using test-e2e-key fallback)"
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -618,21 +637,30 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
+          # Fail-open for non-critical services in CI
+          MEMORY_FAIL_OPEN_OVERRIDE: "true"
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
           COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
           COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
-          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
           echo "Waiting for server to start..."
           for i in {1..30}; do
             if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
               echo "Server is ready!"
               exit 0
             fi
+            # Show server logs if startup is taking too long
+            if [ $i -eq 15 ]; then
+              echo "=== Server startup logs (debugging slow startup) ==="
+              cat server.log 2>/dev/null || true
+            fi
             echo "Attempt $i/30..."
             sleep 2
           done
+          echo "=== Final server logs ==="
+          cat server.log 2>/dev/null || true
           echo "Server failed to start"
           exit 1
 
@@ -648,6 +676,14 @@ jobs:
         run: |
           cd backend
           PYTHONPATH=. pytest tests/test_phase4_e2e.py -v --tb=short -m e2e
+
+      - name: Upload server logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-server-logs
+          path: backend/server.log
+          if-no-files-found: ignore
 
   # Lint Prometheus rules
   lint-alerts:

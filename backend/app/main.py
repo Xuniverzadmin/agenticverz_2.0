@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -34,6 +34,7 @@ from .utils.concurrent_runs import ConcurrentRunsLimiter
 from .utils.budget_tracker import BudgetTracker, enforce_budget
 from .utils.input_sanitizer import sanitize_goal
 from .middleware.tenant import TenantMiddleware
+from .auth.rbac_middleware import RBACMiddleware
 
 # Initialize utilities
 rate_limiter = RateLimiter()
@@ -137,7 +138,80 @@ async def update_queue_depth():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifespan - start background tasks."""
+    """Manage application lifespan - start background tasks and initialize services."""
+    # M7: Check if memory features are enabled
+    memory_context_injection = os.getenv("MEMORY_CONTEXT_INJECTION", "false").lower() == "true"
+    memory_post_update = os.getenv("MEMORY_POST_UPDATE", "false").lower() == "true"
+    drift_detection_enabled = os.getenv("DRIFT_DETECTION_ENABLED", "false").lower() == "true"
+    memory_fail_open_override = os.getenv("MEMORY_FAIL_OPEN_OVERRIDE", "false").lower() == "true"
+    memory_features_enabled = memory_context_injection or memory_post_update or drift_detection_enabled
+
+    # Initialize M7 services - FAIL-FAST if memory features are enabled but modules unavailable
+    try:
+        from .auth.rbac_engine import init_rbac_engine
+        from .memory.memory_service import init_memory_service
+        from .memory.update_rules import init_update_rules_engine
+        from .db import get_session
+
+        # Initialize RBAC engine with DB session factory
+        init_rbac_engine(db_session_factory=get_session)
+        logger.info("rbac_engine_initialized")
+
+        # Initialize update rules engine
+        update_rules = init_update_rules_engine()
+        logger.info("update_rules_engine_initialized")
+
+        # Initialize memory service (with optional Redis)
+        redis_client = None
+        redis_url = os.getenv("REDIS_URL")
+        if redis_url:
+            try:
+                import redis
+                redis_client = redis.from_url(redis_url)
+                redis_client.ping()  # Test connection
+                logger.info("redis_connected", extra={"url": redis_url.split("@")[-1]})
+            except Exception as e:
+                logger.warning(f"Redis connection failed, continuing without cache: {e}")
+                redis_client = None
+
+        init_memory_service(
+            db_session_factory=get_session,
+            redis_client=redis_client,
+            update_rules=update_rules
+        )
+        logger.info("memory_service_initialized")
+
+        # M8: Initialize Redis idempotency store for traces
+        # NOTE: This MUST fail-open - missing Redis should NOT crash the server
+        idempotency_store = None
+        try:
+            from .traces.idempotency import get_idempotency_store
+            idempotency_store = await get_idempotency_store()
+            logger.info("idempotency_store_initialized", extra={
+                "type": type(idempotency_store).__name__,
+                "redis_available": bool(redis_url)
+            })
+        except Exception as e:
+            logger.warning("Idempotency store initialization failed (continuing without).", exc_info=True)
+            idempotency_store = None
+
+    except ImportError as e:
+        if memory_features_enabled and not memory_fail_open_override:
+            # FAIL-FAST: Memory features enabled but modules not available
+            raise RuntimeError(
+                f"Memory features enabled (MEMORY_CONTEXT_INJECTION={memory_context_injection}, "
+                f"MEMORY_POST_UPDATE={memory_post_update}, DRIFT_DETECTION_ENABLED={drift_detection_enabled}) "
+                f"but M7 modules failed to import: {e}. "
+                f"Set MEMORY_FAIL_OPEN_OVERRIDE=true to bypass (NOT recommended)."
+            ) from e
+        else:
+            logger.warning(f"M7 services not fully available: {e}")
+    except Exception as e:
+        if memory_features_enabled and not memory_fail_open_override:
+            raise RuntimeError(f"Failed to initialize M7 services: {e}") from e
+        else:
+            logger.error(f"Failed to initialize M7 services: {e}")
+
     # Start queue depth updater
     task = asyncio.create_task(update_queue_depth())
     logger.info("queue_depth_updater_started")
@@ -165,12 +239,18 @@ from .api.policy import router as policy_router
 from .api.runtime import router as runtime_router
 from .api.status_history import router as status_history_router
 from .api.costsim import router as costsim_router
+from .api.memory_pins import router as memory_pins_router
+from .api.rbac_api import router as rbac_router
+from .api.traces import router as traces_router
 
 app.include_router(health_router)
 app.include_router(policy_router)
 app.include_router(runtime_router)
 app.include_router(status_history_router)
 app.include_router(costsim_router)
+app.include_router(memory_pins_router)
+app.include_router(rbac_router)
+app.include_router(traces_router, prefix="/api/v1")
 
 # CORS middleware
 app.add_middleware(
@@ -184,6 +264,10 @@ app.add_middleware(
 # Tenant context middleware (M6)
 # Extracts tenant_id from X-Tenant-ID header and propagates through request lifecycle
 app.add_middleware(TenantMiddleware)
+
+# RBAC enforcement middleware (M7)
+# Evaluates PolicyObject patterns for protected paths
+app.add_middleware(RBACMiddleware)
 
 
 @app.middleware("http")
@@ -476,6 +560,18 @@ async def version():
 async def healthz():
     """Kubernetes-style health check."""
     return {"ok": True, "service": "nova_agent_manager"}
+
+
+@app.get("/openapi-download")
+async def download_openapi():
+    """Download OpenAPI spec as JSON file."""
+    openapi_spec = app.openapi()
+    return JSONResponse(
+        content=openapi_spec,
+        headers={
+            "Content-Disposition": "attachment; filename=openapi.json"
+        }
+    )
 
 
 @app.get("/healthz/worker_pool")
