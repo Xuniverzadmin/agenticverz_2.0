@@ -303,6 +303,10 @@ jobs:
       - name: Run circuit breaker tests
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          # Override default /var/lib/aos paths for CI (no write perms)
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_circuit_breaker.py -v --tb=long
@@ -310,6 +314,9 @@ jobs:
       - name: Run async circuit breaker tests
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_circuit_breaker_async.py -v
@@ -317,6 +324,9 @@ jobs:
       - name: Run leader election tests
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_leader.py -v
@@ -325,6 +335,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           COSTSIM_V2_SANDBOX: "true"
+          # Override default /var/lib/aos paths for CI (no write perms)
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_canary.py -v
@@ -332,6 +346,9 @@ jobs:
       - name: Run alert worker tests
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_alert_worker.py -v
@@ -340,6 +357,9 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           COSTSIM_V2_SANDBOX: "true"
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/ -v --tb=short
@@ -397,6 +417,9 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:9093
           COSTSIM_V2_SANDBOX: "true"
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           # Run integration tests that were previously skipped
@@ -477,6 +500,9 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/integration/test_circuit_breaker.py -v --tb=short
@@ -486,6 +512,9 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/ -v --tb=short
