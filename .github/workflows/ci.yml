@@ -490,14 +490,16 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          # Use Docker postgres for isolation (Neon is shared across jobs)
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
         run: |
           cd backend
           alembic upgrade head
 
       - name: Run circuit breaker integration tests
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          # Use Docker postgres for isolation (avoid Neon conflicts with parallel jobs)
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
@@ -509,7 +511,8 @@ jobs:
 
       - name: Run all costsim tests
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          # Use Docker postgres for isolation
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
@@ -534,7 +537,7 @@ jobs:
   # E2E tests (full stack with running server)
   e2e-tests:
     runs-on: ubuntu-latest
-    needs: [unit-tests, costsim-wiremock]
+    needs: [unit-tests]
     services:
       postgres:
         image: postgres:15
