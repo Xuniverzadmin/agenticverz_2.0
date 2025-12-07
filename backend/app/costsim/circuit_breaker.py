@@ -180,7 +180,19 @@ class CircuitBreaker:
         self.incident_dir = Path(config.incident_dir)
 
         # Ensure incident directory exists (for legacy file-based audit)
-        self.incident_dir.mkdir(parents=True, exist_ok=True)
+        # Fail gracefully if directory cannot be created (e.g., in containers/CI)
+        try:
+            self.incident_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, FileNotFoundError, OSError):
+            # Fall back to /tmp for containers without /var/lib/aos access
+            # FileNotFoundError can occur when parent path traversal fails
+            # OSError covers other filesystem issues
+            import logging
+            logger = logging.getLogger("nova.costsim.circuit_breaker")
+            fallback_dir = Path("/tmp/aos_costsim_incidents")
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            self.incident_dir = fallback_dir
+            logger.warning(f"Cannot create {config.incident_dir}, using fallback: {fallback_dir}")
 
     def _get_session(self) -> Session:
         """Get a database session."""
