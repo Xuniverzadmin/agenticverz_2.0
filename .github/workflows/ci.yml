@@ -685,17 +685,26 @@ jobs:
           COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
           COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
           PYTHONPATH: .
+          # Force unbuffered Python output for logs
+          PYTHONUNBUFFERED: "1"
         run: |
           cd backend
-          nohup python -m app.worker.pool > worker.log 2>&1 &
-          echo "Worker started (PID: $!)"
-          sleep 3
-          if ps aux | grep -v grep | grep "app.worker.pool" > /dev/null; then
-            echo "Worker is running"
+          # Start worker with unbuffered output
+          nohup python -u -m app.worker.pool > worker.log 2>&1 &
+          WORKER_PID=$!
+          echo "Worker started (PID: $WORKER_PID)"
+
+          # Wait and verify worker is running
+          sleep 5
+          if ps -p $WORKER_PID > /dev/null 2>&1; then
+            echo "Worker is running (PID: $WORKER_PID)"
+            echo "=== Worker startup logs ==="
+            cat worker.log | head -20
           else
-            echo "=== Worker logs ==="
+            echo "=== Worker logs (process died) ==="
             cat worker.log 2>/dev/null || true
-            echo "WARNING: Worker may not have started correctly"
+            echo "ERROR: Worker process $WORKER_PID is not running!"
+            exit 1
           fi
 
       - name: Run E2E tests
