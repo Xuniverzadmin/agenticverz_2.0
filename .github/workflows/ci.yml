@@ -6,9 +6,15 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'feature/*']
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      skip_slow_tests:
+        description: 'Skip slow tests'
+        required: false
+        default: 'false'
 
 env:
   PYTHONPATH: backend
