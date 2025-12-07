@@ -176,6 +176,15 @@ def main():
         logger.error("DATABASE_URL environment variable is required")
         sys.exit(1)
 
+    # Initialize skills registry (required for skill execution)
+    from ..skills import load_all_skills, list_skills
+    load_all_skills()
+    registered_skills = [s["name"] for s in list_skills()]
+    logger.info("skills_initialized", extra={
+        "count": len(registered_skills),
+        "skills": registered_skills
+    })
+
     pool = WorkerPool()
     _pool_instance = pool
 
