@@ -20,6 +20,31 @@ class ConcurrentRunsLimiter:
     Automatically expires slots after timeout.
     """
 
+    # Lua script for atomic acquire - prevents race conditions
+    # Returns 1 if acquired, 0 if limit reached
+    ACQUIRE_SCRIPT = """
+    local slot_key = KEYS[1]
+    local token = ARGV[1]
+    local now = tonumber(ARGV[2])
+    local max_slots = tonumber(ARGV[3])
+    local expire_before = tonumber(ARGV[4])
+    local key_ttl = tonumber(ARGV[5])
+
+    -- Clean up expired slots
+    redis.call('ZREMRANGEBYSCORE', slot_key, 0, expire_before)
+
+    -- Check current count
+    local current = redis.call('ZCARD', slot_key)
+    if current >= max_slots then
+        return 0
+    end
+
+    -- Add new slot atomically
+    redis.call('ZADD', slot_key, now, token)
+    redis.call('EXPIRE', slot_key, key_ttl)
+    return 1
+    """
+
     def __init__(
         self,
         redis_url: Optional[str] = None,
@@ -37,6 +62,7 @@ class ConcurrentRunsLimiter:
         self.slot_timeout = slot_timeout
         self.fail_open = fail_open
         self._client = None
+        self._acquire_script = None
 
     def _get_client(self):
         """Lazy-load Redis client."""
@@ -44,6 +70,8 @@ class ConcurrentRunsLimiter:
             try:
                 import redis
                 self._client = redis.from_url(self.redis_url)
+                # Register Lua script for atomic acquire
+                self._acquire_script = self._client.register_script(self.ACQUIRE_SCRIPT)
                 logger.info("concurrent_limiter_connected")
             except ImportError:
                 raise ImportError("redis package required: pip install redis")
@@ -75,32 +103,35 @@ class ConcurrentRunsLimiter:
 
             # Use sorted set with timestamp for auto-expiry
             now = int(uuid.uuid1().time)
+            expire_before = now - (self.slot_timeout * 10_000_000)
+            key_ttl = self.slot_timeout * 2
 
-            # Clean up expired slots first
-            client.zremrangebyscore(slot_key, 0, now - (self.slot_timeout * 10_000_000))
+            # Atomic acquire using Lua script - prevents race conditions
+            acquired = self._acquire_script(
+                keys=[slot_key],
+                args=[token, now, max_slots, expire_before, key_ttl]
+            )
 
-            # Check current count
-            current_count = client.zcard(slot_key)
-            if current_count >= max_slots:
+            if not acquired:
                 logger.warning(
                     "concurrent_limit_reached",
-                    extra={"key": key, "max_slots": max_slots, "current": current_count}
+                    extra={"key": key, "max_slots": max_slots}
                 )
                 return None
 
-            # Add new slot
-            client.zadd(slot_key, {token: now})
-            client.expire(slot_key, self.slot_timeout * 2)
-
             logger.debug(
                 "slot_acquired",
-                extra={"key": key, "token": token[:8], "count": current_count + 1}
+                extra={"key": key, "token": token[:8]}
             )
 
             return token
 
         except Exception as e:
-            logger.error("concurrent_limiter_error", extra={"error": str(e), "key": key})
+            import traceback
+            logger.error(
+                "concurrent_limiter_error",
+                extra={"error": str(e), "key": key, "traceback": traceback.format_exc()}
+            )
             return token if self.fail_open else None
 
     def release(self, key: str, token: str) -> bool:
