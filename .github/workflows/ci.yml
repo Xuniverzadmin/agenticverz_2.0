@@ -24,6 +24,39 @@ env:
   REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
 
 jobs:
+  # Migration drift guard - verifies all migrations are committed
+  migration-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for uncommitted migrations
+        run: |
+          echo "=== Migration Drift Guard ==="
+          ALEMBIC_DIR="backend/alembic/versions"
+
+          # Check for uncommitted migration files
+          UNCOMMITTED=$(git ls-files --others --exclude-standard "$ALEMBIC_DIR" 2>/dev/null | grep -v "__pycache__" || true)
+          MODIFIED=$(git diff --name-only "$ALEMBIC_DIR" 2>/dev/null | grep -v "__pycache__" || true)
+
+          if [[ -n "$UNCOMMITTED" ]]; then
+            echo "::error::Uncommitted migration files found!"
+            echo "$UNCOMMITTED"
+            exit 1
+          fi
+
+          if [[ -n "$MODIFIED" ]]; then
+            echo "::error::Modified migration files not staged!"
+            echo "$MODIFIED"
+            exit 1
+          fi
+
+          # List committed migrations
+          echo "Migration files in repository:"
+          ls -1 "$ALEMBIC_DIR"/*.py 2>/dev/null | grep -v "__pycache__" | xargs -I {} basename {} | sort
+          echo ""
+          echo "OK: All migrations committed"
+
   # Fast unit tests (no external deps)
   unit-tests:
     runs-on: ubuntu-latest

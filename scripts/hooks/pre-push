@@ -1,0 +1,41 @@
+#!/bin/bash
+# Pre-push hook: Verify no uncommitted migrations before push
+#
+# To install:
+#   ln -sf ../../scripts/hooks/pre-push .git/hooks/pre-push
+#   chmod +x .git/hooks/pre-push
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+ALEMBIC_DIR="$REPO_ROOT/backend/alembic/versions"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo "Pre-push: Checking for uncommitted migrations..."
+
+# Check for uncommitted migration files
+UNCOMMITTED=$(git ls-files --others --exclude-standard "$ALEMBIC_DIR" 2>/dev/null | grep -v "__pycache__" || true)
+MODIFIED=$(git diff --name-only "$ALEMBIC_DIR" 2>/dev/null | grep -v "__pycache__" || true)
+
+if [[ -n "$UNCOMMITTED" ]]; then
+    echo -e "${RED}ERROR: Uncommitted migration files found!${NC}"
+    echo "$UNCOMMITTED"
+    echo ""
+    echo "Please commit these files before pushing:"
+    echo "  git add backend/alembic/versions/"
+    echo "  git commit -m 'chore: add migration files'"
+    exit 1
+fi
+
+if [[ -n "$MODIFIED" ]]; then
+    echo -e "${RED}ERROR: Modified migration files not staged!${NC}"
+    echo "$MODIFIED"
+    echo ""
+    echo "Please stage and commit these changes before pushing."
+    exit 1
+fi
+
+echo -e "${GREEN}OK: All migrations committed${NC}"
+exit 0
