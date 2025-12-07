@@ -545,7 +545,16 @@ jobs:
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U nova"
+          --health-cmd "pg_isready -U nova -d nova_aos"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -576,6 +585,9 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
@@ -587,6 +599,9 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
           RUN_E2E_TESTS: "1"
         run: |
           cd backend
