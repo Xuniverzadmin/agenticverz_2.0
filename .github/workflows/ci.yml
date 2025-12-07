@@ -229,10 +229,21 @@ jobs:
             echo "Using Docker PostgreSQL (ephemeral)"
           fi
 
+      - name: Verify Redis connectivity
+        run: |
+          # Test Docker Redis is accessible
+          timeout 5 bash -c 'until echo PING | nc -q 1 localhost 6379 | grep -q PONG; do sleep 1; done' || {
+            echo "Docker Redis not responding on localhost:6379"
+            exit 1
+          }
+          echo "Docker Redis is accessible"
+
       - name: Run integration tests
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
+          # Use Docker Redis for integration tests (more reliable in CI)
+          # Upstash is used only for e2e-tests that need production-like setup
+          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           PYTHONPATH=. pytest tests/test_integration.py -v -m "not slow"

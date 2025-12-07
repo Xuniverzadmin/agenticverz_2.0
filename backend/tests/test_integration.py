@@ -333,26 +333,11 @@ class TestRateLimiting:
             assert limiter.allow(test_key, rate_per_min=100) is True
 
 
-def _check_redis_available():
-    """Check if Redis is available for testing."""
-    try:
-        import redis
-        import os
-        client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
-        client.ping()
-        return True
-    except Exception:
-        return False
-
-
 class TestConcurrencyLimiting:
-    """Tests for concurrent runs limiting."""
+    """Tests for concurrent runs limiting.
 
-    @pytest.fixture(autouse=True)
-    def require_redis(self):
-        """Skip tests if Redis is not available."""
-        if not _check_redis_available():
-            pytest.skip("Redis not available")
+    Requires Redis to be running (CI uses Docker Redis on localhost:6379).
+    """
 
     def test_concurrent_limiter_acquires_and_releases(self):
         """Can acquire and release concurrency slots."""
@@ -364,7 +349,7 @@ class TestConcurrencyLimiting:
 
         # Acquire a slot
         token = limiter.acquire(test_key, max_slots=5)
-        assert token is not None
+        assert token is not None, "Failed to acquire slot - check REDIS_URL and Redis connectivity"
 
         # Release the slot
         released = limiter.release(test_key, token)
@@ -383,10 +368,10 @@ class TestConcurrencyLimiting:
         # Acquire all slots
         for _ in range(max_slots):
             token = limiter.acquire(test_key, max_slots=max_slots)
-            assert token is not None, "Failed to acquire slot - Redis may have issues"
+            assert token is not None, "Failed to acquire slot - check REDIS_URL and Redis connectivity"
             tokens.append(token)
 
-        # Next acquire should fail
+        # Next acquire should fail (all slots taken)
         extra_token = limiter.acquire(test_key, max_slots=max_slots)
         assert extra_token is None, "Should be None when max_slots reached"
 
