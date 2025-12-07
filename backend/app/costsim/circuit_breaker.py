@@ -184,12 +184,14 @@ class CircuitBreaker:
         try:
             self.incident_dir.mkdir(parents=True, exist_ok=True)
         except (PermissionError, FileNotFoundError, OSError):
-            # Fall back to /tmp for containers without /var/lib/aos access
+            # Fall back to COSTSIM_INCIDENT_DIR or /tmp for containers without /var/lib/aos access
             # FileNotFoundError can occur when parent path traversal fails
             # OSError covers other filesystem issues
             import logging
+            import os
             logger = logging.getLogger("nova.costsim.circuit_breaker")
-            fallback_dir = Path("/tmp/aos_costsim_incidents")
+            fallback_path = os.environ.get("COSTSIM_INCIDENT_DIR", "/tmp/aos_costsim_incidents")
+            fallback_dir = Path(fallback_path)
             fallback_dir.mkdir(parents=True, exist_ok=True)
             self.incident_dir = fallback_dir
             logger.warning(f"Cannot create {config.incident_dir}, using fallback: {fallback_dir}")

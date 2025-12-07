@@ -18,13 +18,20 @@ Design Principles (from PIN-005):
 """
 
 import logging
+import os
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from pydantic import BaseModel, Field
 
+from app.middleware.rate_limit import rate_limit_dependency
+
 logger = logging.getLogger("nova.api.runtime")
+
+# Configurable workspace root - defaults to /var/lib/aos/workspace in production
+# Use AOS_WORKSPACE_ROOT environment variable to override
+AOS_WORKSPACE_ROOT = os.environ.get("AOS_WORKSPACE_ROOT", "/var/lib/aos/workspace")
 
 router = APIRouter(prefix="/api/v1/runtime", tags=["runtime"])
 
@@ -45,6 +52,10 @@ class SimulateRequest(BaseModel):
     budget_cents: int = Field(default=1000, description="Available budget in cents")
     agent_id: Optional[str] = Field(default=None, description="Agent ID for permission checking")
     tenant_id: Optional[str] = Field(default=None, description="Tenant ID for isolation")
+    # Determinism fields (v1.1)
+    seed: Optional[int] = Field(default=42, description="Random seed for deterministic simulation")
+    timestamp: Optional[str] = Field(default=None, description="Frozen timestamp (ISO8601) for determinism")
+    save_trace: bool = Field(default=False, description="Whether to save trace to DB")
 
 
 class SimulateResponse(BaseModel):
@@ -60,6 +71,10 @@ class SimulateResponse(BaseModel):
     step_estimates: List[Dict[str, Any]]
     alternatives: List[Dict[str, Any]]
     warnings: List[str]
+    # Determinism fields (v1.1)
+    trace_id: Optional[str] = None
+    root_hash: Optional[str] = None
+    seed: Optional[int] = None
 
 
 class QueryRequest(BaseModel):
@@ -195,7 +210,7 @@ DEFAULT_SKILL_METADATA = {
             {"code": "FILE_NOT_FOUND", "category": "PERMANENT", "probability": 0.05},
             {"code": "PERMISSION_DENIED", "category": "PERMISSION", "probability": 0.02},
         ],
-        "constraints": {"workspace_root": "/tmp/aos_workspace", "max_file_size_bytes": 10485760},
+        "constraints": {"workspace_root": AOS_WORKSPACE_ROOT, "max_file_size_bytes": 10485760},
         "composition_hints": {
             "often_followed_by": ["llm_invoke", "json_transform"],
             "often_preceded_by": ["fs_write"],
@@ -209,7 +224,7 @@ DEFAULT_SKILL_METADATA = {
             {"code": "PERMISSION_DENIED", "category": "PERMISSION", "probability": 0.05},
             {"code": "DISK_FULL", "category": "RESOURCE", "probability": 0.01},
         ],
-        "constraints": {"workspace_root": "/tmp/aos_workspace", "max_file_size_bytes": 10485760},
+        "constraints": {"workspace_root": AOS_WORKSPACE_ROOT, "max_file_size_bytes": 10485760},
         "composition_hints": {
             "often_followed_by": ["fs_read"],
             "often_preceded_by": ["llm_invoke", "http_call"],
@@ -252,7 +267,11 @@ DEFAULT_SKILL_METADATA = {
 # =============================================================================
 
 @router.post("/simulate", response_model=SimulateResponse)
-async def simulate_plan(request: SimulateRequest):
+async def simulate_plan(
+    request: SimulateRequest,
+    http_request: Request = None,
+    _rate_limited: bool = Depends(rate_limit_dependency),
+):
     """
     Simulate a plan before execution.
 
@@ -707,6 +726,7 @@ class ReplayResponse(BaseModel):
 async def replay_run(
     run_id: str,
     request: ReplayRequest = ReplayRequest(),
+    _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """
     Replay a stored plan and optionally verify determinism parity.
@@ -785,9 +805,9 @@ async def list_traces(
         List of trace summaries
     """
     try:
-        from app.traces.store import SQLiteTraceStore
+        from app.runtime.replay import get_trace_store
 
-        store = SQLiteTraceStore()
+        store = get_trace_store()
         traces = await store.list_traces(
             tenant_id=tenant_id,
             limit=limit,
@@ -829,9 +849,9 @@ async def get_trace(run_id: str):
         Full trace record with all steps
     """
     try:
-        from app.traces.store import SQLiteTraceStore
+        from app.runtime.replay import get_trace_store
 
-        store = SQLiteTraceStore()
+        store = get_trace_store()
         trace = await store.get_trace(run_id)
 
         if trace is None:
