@@ -42,6 +42,7 @@ def get_async_database_url() -> str:
     Get async database URL from environment.
 
     Tries DATABASE_URL_ASYNC first, then converts DATABASE_URL to async format.
+    Handles sslmode parameter conversion for asyncpg compatibility.
     """
     async_url = os.getenv("DATABASE_URL_ASYNC")
     if async_url:
@@ -56,13 +57,19 @@ def get_async_database_url() -> str:
 
     # Convert postgresql:// to postgresql+asyncpg://
     if sync_url.startswith("postgresql://"):
-        return sync_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        result = sync_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     elif sync_url.startswith("postgres://"):
-        return sync_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        result = sync_url.replace("postgres://", "postgresql+asyncpg://", 1)
     else:
         raise RuntimeError(
             f"Unsupported database URL format: {sync_url[:20]}..."
         )
+
+    # asyncpg uses 'ssl' instead of 'sslmode', convert the parameter
+    # sslmode=require -> ssl=require (asyncpg interprets this correctly)
+    result = result.replace("sslmode=", "ssl=")
+
+    return result
 
 
 # Async engine configuration
