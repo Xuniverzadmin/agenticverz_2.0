@@ -291,12 +291,21 @@ jobs:
           cd backend
           alembic upgrade head
 
+      - name: Debug - Check environment
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+        run: |
+          echo "DATABASE_URL set: $(if [ -n "$DATABASE_URL" ]; then echo 'YES (hidden)'; else echo 'NO'; fi)"
+          echo "Python version: $(python --version)"
+          cd backend
+          python -c "import os; print('DB URL prefix:', os.environ.get('DATABASE_URL', 'NOT SET')[:30] + '...')"
+
       - name: Run circuit breaker tests
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
-          PYTHONPATH=. pytest tests/costsim/test_circuit_breaker.py -v
+          PYTHONPATH=. pytest tests/costsim/test_circuit_breaker.py -v --tb=long
 
       - name: Run async circuit breaker tests
         env:
