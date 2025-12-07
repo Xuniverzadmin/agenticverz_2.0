@@ -664,6 +664,29 @@ jobs:
           echo "Server failed to start"
           exit 1
 
+      - name: Start worker (required for run execution)
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
+          AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
+          MEMORY_FAIL_OPEN_OVERRIDE: "true"
+          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
+          PYTHONPATH: .
+        run: |
+          cd backend
+          nohup python -m app.worker.pool > worker.log 2>&1 &
+          echo "Worker started (PID: $!)"
+          sleep 3
+          if ps aux | grep -v grep | grep "app.worker.pool" > /dev/null; then
+            echo "Worker is running"
+          else
+            echo "=== Worker logs ==="
+            cat worker.log 2>/dev/null || true
+            echo "WARNING: Worker may not have started correctly"
+          fi
+
       - name: Run E2E tests
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
@@ -677,12 +700,14 @@ jobs:
           cd backend
           PYTHONPATH=. pytest tests/test_phase4_e2e.py -v --tb=short -m e2e
 
-      - name: Upload server logs on failure
+      - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-server-logs
-          path: backend/server.log
+          name: e2e-logs
+          path: |
+            backend/server.log
+            backend/worker.log
           if-no-files-found: ignore
 
   # Lint Prometheus rules
