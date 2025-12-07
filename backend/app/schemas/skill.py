@@ -299,6 +299,80 @@ class JsonTransformOutput(SkillOutputBase):
 
 
 # ====================
+# Email Send Skill I/O (Resend)
+# ====================
+
+class EmailSendInput(SkillInputBase):
+    """Input schema for email_send skill."""
+    to: Union[str, List[str]] = Field(
+        description="Recipient email address(es)"
+    )
+    subject: str = Field(
+        min_length=1,
+        max_length=998,  # RFC 5321 limit
+        description="Email subject line"
+    )
+    body: str = Field(
+        description="Email body content (plain text or HTML)"
+    )
+    from_address: Optional[str] = Field(
+        default=None,
+        description="Sender email (defaults to configured address)"
+    )
+    reply_to: Optional[str] = Field(
+        default=None,
+        description="Reply-to email address"
+    )
+    cc: Optional[Union[str, List[str]]] = Field(
+        default=None,
+        description="CC recipient(s)"
+    )
+    bcc: Optional[Union[str, List[str]]] = Field(
+        default=None,
+        description="BCC recipient(s)"
+    )
+    html: bool = Field(
+        default=False,
+        description="If True, body is treated as HTML"
+    )
+    tags: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Custom tags for tracking"
+    )
+
+    @field_validator("to", "cc", "bcc", mode="before")
+    @classmethod
+    def normalize_recipients(cls, v):
+        """Ensure recipients are always a list."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [v]
+        return v
+
+
+class EmailSendOutput(SkillOutputBase):
+    """Output schema for email_send skill."""
+    message_id: Optional[str] = Field(
+        default=None,
+        description="Unique message ID from email provider"
+    )
+    recipients: List[str] = Field(
+        description="List of recipients email was sent to"
+    )
+    accepted: int = Field(
+        default=0,
+        ge=0,
+        description="Number of accepted recipients"
+    )
+    rejected: int = Field(
+        default=0,
+        ge=0,
+        description="Number of rejected recipients"
+    )
+
+
+# ====================
 # Skill Metadata Schema (for registry)
 # ====================
 

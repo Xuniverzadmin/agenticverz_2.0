@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from .llm_invoke import LLMInvokeSkill
     from .json_transform import JsonTransformSkill
     from .postgres_query import PostgresQuerySkill
+    from .email_send import EmailSendSkill
 
 
 # Skill module paths for lazy loading
@@ -45,6 +46,7 @@ _SKILL_MODULES = {
     "LLMInvokeSkill": ".llm_invoke",
     "JsonTransformSkill": ".json_transform",
     "PostgresQuerySkill": ".postgres_query",
+    "EmailSendSkill": ".email_send",
 }
 
 _loaded_skills = {}
@@ -128,4 +130,5 @@ __all__ = [
     "LLMInvokeSkill",
     "JsonTransformSkill",
     "PostgresQuerySkill",
+    "EmailSendSkill",
 ]

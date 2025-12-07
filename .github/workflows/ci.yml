@@ -12,8 +12,10 @@ on:
 
 env:
   PYTHONPATH: backend
-  DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
-  REDIS_URL: redis://localhost:6379/0
+  # Use Neon if available (via secret), otherwise fall back to local Docker Postgres
+  # Set NEON_DATABASE_URL in GitHub Secrets for managed DB testing
+  DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+  REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
 
 jobs:
   # Fast unit tests (no external deps)
@@ -137,10 +139,12 @@ jobs:
           path: backend/artifacts/golden-diff/
 
   # Integration tests (require services)
+  # Uses Neon if NEON_DATABASE_URL secret is set, otherwise Docker Postgres
   integration:
     runs-on: ubuntu-latest
     needs: determinism
     services:
+      # Docker Postgres - only used when NEON_DATABASE_URL is not set
       postgres:
         image: postgres:15
         env:
@@ -154,6 +158,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      # Docker Redis - only used when UPSTASH_REDIS_URL is not set
       redis:
         image: redis:7
         ports:
@@ -165,19 +170,30 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          
+
       - name: Install dependencies
         run: |
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
-          
+
+      - name: Check database source
+        run: |
+          if [ -n "${{ secrets.NEON_DATABASE_URL }}" ]; then
+            echo "Using Neon PostgreSQL (managed)"
+          else
+            echo "Using Docker PostgreSQL (ephemeral)"
+          fi
+
       - name: Run integration tests
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
         run: |
           cd backend
           PYTHONPATH=. pytest tests/test_integration.py -v -m "not slow"
@@ -264,35 +280,35 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           alembic upgrade head
 
       - name: Run circuit breaker tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_circuit_breaker.py -v
 
       - name: Run async circuit breaker tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_circuit_breaker_async.py -v
 
       - name: Run leader election tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_leader.py -v
 
       - name: Run canary tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           COSTSIM_V2_SANDBOX: "true"
         run: |
           cd backend
@@ -300,14 +316,14 @@ jobs:
 
       - name: Run alert worker tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_alert_worker.py -v
 
       - name: Run all costsim tests (comprehensive)
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           COSTSIM_V2_SANDBOX: "true"
         run: |
           cd backend
@@ -356,14 +372,14 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           alembic upgrade head
 
       - name: Run CB integration tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:9093
           COSTSIM_V2_SANDBOX: "true"
         run: |
@@ -373,20 +389,23 @@ jobs:
           # Run full test suite with real DB
           PYTHONPATH=. pytest tests/costsim/ -v --tb=short
 
-      - name: Verify CB state table
+      - name: Verify CB state table (Docker only)
+        if: ${{ !secrets.NEON_DATABASE_URL }}
         env:
           PGPASSWORD: novapass
         run: |
           psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT count(*) FROM costsim_cb_state;"
           psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT * FROM costsim_cb_state LIMIT 5;"
 
-      - name: Verify provenance table
+      - name: Verify provenance table (Docker only)
+        if: ${{ !secrets.NEON_DATABASE_URL }}
         env:
           PGPASSWORD: novapass
         run: |
           psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT count(*) FROM costsim_provenance;"
 
-      - name: Verify alert queue table
+      - name: Verify alert queue table (Docker only)
+        if: ${{ !secrets.NEON_DATABASE_URL }}
         env:
           PGPASSWORD: novapass
         run: |
@@ -452,14 +471,14 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           alembic upgrade head
 
       - name: Run circuit breaker integration tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
         run: |
@@ -468,7 +487,7 @@ jobs:
 
       - name: Run all costsim tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
         run: |
@@ -521,14 +540,15 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           alembic upgrade head
 
       - name: Start application server
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
         run: |
           cd backend
@@ -538,7 +558,8 @@ jobs:
 
       - name: Run E2E tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
           RUN_E2E_TESTS: "1"
         run: |
