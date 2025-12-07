@@ -2,7 +2,7 @@
 RBAC (Role-Based Access Control) Integration for Policy API
 
 This module provides authorization checks for approval workflows.
-It integrates with the auth service to validate approver permissions.
+It integrates with Clerk (primary) or legacy auth service for role validation.
 
 Usage:
     from app.auth.rbac import check_approver_permission, RBACError
@@ -17,6 +17,7 @@ Usage:
         raise HTTPException(status_code=403, detail=str(e))
 """
 
+import asyncio
 import logging
 import os
 from dataclasses import dataclass
@@ -31,6 +32,14 @@ logger = logging.getLogger("nova.auth.rbac")
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 AUTH_SERVICE_TIMEOUT = float(os.getenv("AUTH_SERVICE_TIMEOUT", "5.0"))
 RBAC_ENABLED = os.getenv("RBAC_ENABLED", "false").lower() == "true"
+RBAC_ENFORCE = os.getenv("RBAC_ENFORCE", "false").lower() == "true"
+
+# Clerk configuration (M8 - preferred auth provider)
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "")
+USE_CLERK_AUTH = bool(CLERK_SECRET_KEY)
+
+# Production safety: fail-closed when enforcement is enabled
+FAIL_CLOSED_ON_AUTH_ERROR = RBAC_ENFORCE
 
 
 class ApprovalLevel(IntEnum):
@@ -67,9 +76,9 @@ class RBACError(Exception):
         super().__init__(message)
 
 
-def _get_user_roles(approver_id: str, tenant_id: Optional[str] = None) -> dict:
+async def _get_user_roles_async(approver_id: str, tenant_id: Optional[str] = None) -> dict:
     """
-    Fetch user roles from auth service.
+    Fetch user roles from Clerk or legacy auth service (async version).
 
     Args:
         approver_id: User ID to check
@@ -82,8 +91,16 @@ def _get_user_roles(approver_id: str, tenant_id: Optional[str] = None) -> dict:
         RBACError: If auth service is unavailable or user not found
     """
     if not RBAC_ENABLED:
-        # Return mock response when RBAC is disabled
-        logger.debug(f"RBAC disabled, returning mock roles for {approver_id}")
+        if RBAC_ENFORCE:
+            # Fail-closed: RBAC enforcement requires RBAC to be enabled
+            logger.error(f"RBAC_ENFORCE=true but RBAC_ENABLED=false - configuration error")
+            raise RBACError(
+                "RBAC enforcement enabled but RBAC not configured",
+                approver_id,
+                0,
+            )
+        # Return mock response when RBAC is disabled (dev/test only)
+        logger.warning(f"RBAC disabled, returning mock roles for {approver_id} - NOT FOR PRODUCTION")
         return {
             "user_id": approver_id,
             "roles": ["team_member"],
@@ -91,10 +108,24 @@ def _get_user_roles(approver_id: str, tenant_id: Optional[str] = None) -> dict:
             "tenant_id": tenant_id,
         }
 
+    # Use Clerk if configured (M8+)
+    if USE_CLERK_AUTH:
+        try:
+            from app.auth.clerk_provider import get_user_roles_from_clerk
+            return await get_user_roles_from_clerk(approver_id, tenant_id)
+        except Exception as e:
+            logger.error(f"Clerk auth error: {e}")
+            raise RBACError(
+                f"Clerk authorization failed: {e}",
+                approver_id,
+                0,
+            )
+
+    # Fall back to legacy auth service
     try:
-        with httpx.Client(timeout=AUTH_SERVICE_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=AUTH_SERVICE_TIMEOUT) as client:
             params = {"tenant_id": tenant_id} if tenant_id else {}
-            response = client.get(
+            response = await client.get(
                 f"{AUTH_SERVICE_URL}/api/v1/users/{approver_id}/roles",
                 params=params,
             )
@@ -117,6 +148,33 @@ def _get_user_roles(approver_id: str, tenant_id: Optional[str] = None) -> dict:
             approver_id,
             0,
         )
+
+
+def _get_user_roles(approver_id: str, tenant_id: Optional[str] = None) -> dict:
+    """
+    Fetch user roles from auth service (sync wrapper).
+
+    This is a synchronous wrapper around _get_user_roles_async for
+    backward compatibility with existing sync code.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If we're already in an async context, create a new task
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    _get_user_roles_async(approver_id, tenant_id)
+                )
+                return future.result(timeout=AUTH_SERVICE_TIMEOUT + 1)
+        else:
+            return loop.run_until_complete(
+                _get_user_roles_async(approver_id, tenant_id)
+            )
+    except RuntimeError:
+        # No event loop, create one
+        return asyncio.run(_get_user_roles_async(approver_id, tenant_id))
 
 
 def _role_to_level(roles: list) -> int:

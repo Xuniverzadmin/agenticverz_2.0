@@ -1,0 +1,123 @@
+name: Publish Python SDK to PyPI
+
+on:
+  push:
+    tags:
+      - 'python-sdk-v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        default: 'false'
+
+jobs:
+  build-and-publish:
+    name: Build and Publish to PyPI
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write  # Required for PyPI trusted publishing
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/python-sdk-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/python-sdk-v}"
+          else
+            VERSION="0.0.0.dev$(date +%Y%m%d%H%M%S)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Update version in pyproject.toml
+        working-directory: sdk/python
+        run: |
+          sed -i "s/version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" pyproject.toml
+          sed -i "s/__version__ = \".*\"/__version__ = \"${{ steps.version.outputs.version }}\"/" aos_sdk/__init__.py
+          cat pyproject.toml | grep version
+
+      - name: Build package
+        working-directory: sdk/python
+        run: python -m build
+
+      - name: Check package
+        working-directory: sdk/python
+        run: |
+          twine check dist/*
+          ls -la dist/
+
+      - name: Test installation in clean venv
+        working-directory: sdk/python
+        run: |
+          python -m venv test_env
+          source test_env/bin/activate
+          pip install dist/*.whl
+          python -c "from aos_sdk import AOSClient, __version__; print(f'Installed aos-sdk {__version__}')"
+          aos version || echo "CLI not available in test"
+          deactivate
+
+      - name: Publish to TestPyPI (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        working-directory: sdk/python
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: |
+          twine upload --repository testpypi dist/* --verbose || echo "TestPyPI upload skipped (no token)"
+
+      - name: Publish to PyPI
+        if: github.event.inputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/')
+        working-directory: sdk/python
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: twine upload dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sdk-dist
+          path: sdk/python/dist/
+
+  test-install:
+    name: Test Installation
+    needs: build-and-publish
+    if: github.event.inputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Wait for PyPI propagation
+        run: sleep 60
+
+      - name: Install from PyPI
+        run: |
+          pip install aos-sdk
+          python -c "from aos_sdk import AOSClient, __version__; print(f'Successfully installed aos-sdk {__version__}')"
+
+      - name: Test CLI
+        run: |
+          aos version

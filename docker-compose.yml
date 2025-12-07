@@ -28,13 +28,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      # Mount auth module for hot-reload during development
+      - ./backend/app/auth:/app/app/auth:ro
     environment:
-      # NOTE: Using PgBouncer (6432) for connection pooling instead of direct PostgreSQL (5433)
-      DATABASE_URL: postgresql://nova:novapass@localhost:6432/nova_aos
-      REDIS_URL: redis://localhost:6379/0
+      # NOTE: Using Neon PostgreSQL (managed, pooled) - M8 migration
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       AOS_API_KEY: ${AOS_API_KEY}
-      # SECURITY: Bind to localhost only - access via SSH tunnel or Tailscale
-      HOST: 127.0.0.1
+      # Clerk Auth (M8)
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      CLERK_ISSUER_URL: ${CLERK_ISSUER_URL:-}
+      # SECURITY: Bind to all interfaces - publicly accessible
+      HOST: 0.0.0.0
       PORT: "8000"
       # Tenancy (set to false for dev, true for production)
       ENFORCE_TENANCY: "false"
@@ -43,9 +49,27 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       # RBAC Configuration (M5)
       RBAC_ENABLED: ${RBAC_ENABLED:-false}
+      RBAC_ENFORCE: ${RBAC_ENFORCE:-false}
+      MACHINE_SECRET_TOKEN: ${MACHINE_SECRET_TOKEN:-}
       # Webhook Key Versioning (M5)
       WEBHOOK_KEY_VERSION: ${WEBHOOK_KEY_VERSION:-v1}
       WEBHOOK_KEY_GRACE_VERSIONS: ${WEBHOOK_KEY_GRACE_VERSIONS:-}
+      # OIDC Configuration (Clerk - Production)
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://suitable-quail-68.clerk.accounts.dev}
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:-https://suitable-quail-68.clerk.accounts.dev/.well-known/jwks.json}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-aos-backend}
+      OIDC_VERIFY_SSL: ${OIDC_VERIFY_SSL:-true}
+      # OpenAI Embeddings (M9+)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
+      EMBEDDING_DAILY_QUOTA: ${EMBEDDING_DAILY_QUOTA:-10000}
+      # Trace Storage (M8)
+      USE_POSTGRES_TRACES: "true"
+      # GitHub Integration (M8 - Mismatch Issue Automation)
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPO: ${GITHUB_REPO:-}
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import httpx; r=httpx.get('http://localhost:8000/health'); exit(0 if r.status_code==200 else 1)\""]
       interval: 10s
@@ -65,9 +89,9 @@ services:
       backend:
         condition: service_healthy
     environment:
-      # NOTE: Using PgBouncer (6432) for connection pooling instead of direct PostgreSQL (5433)
-      DATABASE_URL: postgresql://nova:novapass@localhost:6432/nova_aos
-      REDIS_URL: redis://localhost:6379/0
+      # NOTE: Using Neon PostgreSQL (managed, pooled) - M8 migration
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       WORKER_CONCURRENCY: "4"
       WORKER_POLL_INTERVAL: "2.0"
       RUN_MAX_ATTEMPTS: "5"

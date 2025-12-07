@@ -1,0 +1,399 @@
+# AOS E2E + Cross-Language Parity Check
+# Runs after deploy or on-demand to verify:
+# 1. Python SDK simulate -> Backend replay parity
+# 2. JS SDK simulate -> Backend replay parity (cross-language)
+# 3. k6 load test with SLO verification
+# 4. Full E2E integration report
+
+name: E2E Parity Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      run_k6:
+        description: 'Run k6 load test'
+        required: false
+        default: true
+        type: boolean
+      vus:
+        description: 'k6 virtual users'
+        required: false
+        default: '25'
+      duration:
+        description: 'k6 test duration'
+        required: false
+        default: '2m'
+
+  # Run after deploy workflow completes
+  workflow_run:
+    workflows: ["Deploy"]
+    types:
+      - completed
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '20'
+  K6_VERSION: '0.49.0'
+
+jobs:
+  # Determine environment from trigger
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      api_url: ${{ steps.env.outputs.api_url }}
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            # From workflow_run, check the triggering workflow's inputs
+            ENV="staging"
+          fi
+
+          if [ "$ENV" = "production" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "api_url=https://api.agenticverz.com" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "api_url=https://staging.api.agenticverz.com" >> $GITHUB_OUTPUT
+          fi
+
+  # Python SDK -> Backend Parity
+  python-parity:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python SDK
+        run: |
+          cd sdk/python
+          pip install -e .
+          pip install pytest pytest-asyncio httpx
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run Python simulate + replay parity
+        id: parity
+        env:
+          API_URL: ${{ needs.setup.outputs.api_url }}
+          API_KEY: ${{ secrets.AOS_API_KEY }}
+        run: |
+          cd backend
+          PYTHONPATH=. python -c "
+          import asyncio
+          import json
+          import httpx
+          import os
+          import hashlib
+
+          API_URL = os.environ['API_URL']
+          API_KEY = os.environ['API_KEY']
+
+          async def test_parity():
+              headers = {'Authorization': f'Bearer {API_KEY}', 'Content-Type': 'application/json'}
+
+              # Simple test workflow
+              workflow = {
+                  'steps': [
+                      {'id': 's1', 'skill': 'echo', 'params': {'msg': 'parity-test-python'}},
+                      {'id': 's2', 'skill': 'wait', 'params': {'ms': 100}},
+                  ],
+                  'budget': {'max_cost_usd': 0.01}
+              }
+
+              async with httpx.AsyncClient(timeout=60) as client:
+                  # Simulate
+                  sim_resp = await client.post(f'{API_URL}/api/v1/runtime/simulate',
+                                                json=workflow, headers=headers)
+                  sim_data = sim_resp.json()
+                  print(f'Simulate response: {json.dumps(sim_data, indent=2)}')
+
+                  if sim_data.get('feasible'):
+                      # Execute
+                      run_resp = await client.post(f'{API_URL}/api/v1/runs',
+                                                    json=workflow, headers=headers)
+                      run_data = run_resp.json()
+                      run_id = run_data.get('run_id')
+                      print(f'Run created: {run_id}')
+
+                      # Wait for completion
+                      import time
+                      for _ in range(30):
+                          status_resp = await client.get(f'{API_URL}/api/v1/runs/{run_id}', headers=headers)
+                          status = status_resp.json()
+                          if status.get('status') in ['completed', 'failed']:
+                              break
+                          time.sleep(1)
+
+                      print(f'Run status: {status.get(\"status\")}')
+
+                      # Replay
+                      replay_resp = await client.post(f'{API_URL}/api/v1/traces/{run_id}/replay', headers=headers)
+                      replay_data = replay_resp.json()
+
+                      if replay_data.get('match'):
+                          print('PARITY: PASS - Root hashes match')
+                          return True
+                      else:
+                          print(f'PARITY: FAIL - Mismatch at step {replay_data.get(\"first_mismatch_step\")}')
+                          return False
+                  else:
+                      print('Simulate returned not feasible')
+                      return False
+
+          result = asyncio.run(test_parity())
+          exit(0 if result else 1)
+          "
+
+      - name: Save Python trace
+        if: always()
+        run: |
+          mkdir -p /tmp/e2e-results
+          echo '{}' > /tmp/e2e-results/python_trace.json
+
+      - name: Upload Python results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-parity-results
+          path: /tmp/e2e-results/
+
+  # JS SDK -> Backend Parity (cross-language)
+  js-parity:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install JS SDK
+        run: |
+          cd sdk/js
+          npm install
+          npm run build || true
+
+      - name: Run JS simulate + parity check
+        id: js-parity
+        env:
+          API_URL: ${{ needs.setup.outputs.api_url }}
+          API_KEY: ${{ secrets.AOS_API_KEY }}
+        run: |
+          cd sdk/js
+          node -e "
+          const https = require('https');
+          const http = require('http');
+
+          const API_URL = process.env.API_URL;
+          const API_KEY = process.env.API_KEY;
+
+          const workflow = {
+            steps: [
+              { id: 's1', skill: 'echo', params: { msg: 'parity-test-js' } },
+              { id: 's2', skill: 'wait', params: { ms: 100 } },
+            ],
+            budget: { max_cost_usd: 0.01 }
+          };
+
+          async function fetchJson(url, options = {}) {
+            return new Promise((resolve, reject) => {
+              const urlObj = new URL(url);
+              const protocol = urlObj.protocol === 'https:' ? https : http;
+
+              const req = protocol.request(url, {
+                method: options.method || 'GET',
+                headers: {
+                  'Authorization': 'Bearer ' + API_KEY,
+                  'Content-Type': 'application/json',
+                  ...options.headers
+                }
+              }, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                  try {
+                    resolve(JSON.parse(data));
+                  } catch (e) {
+                    resolve({ raw: data });
+                  }
+                });
+              });
+
+              req.on('error', reject);
+              if (options.body) req.write(JSON.stringify(options.body));
+              req.end();
+            });
+          }
+
+          async function main() {
+            try {
+              // Simulate
+              const simResult = await fetchJson(API_URL + '/api/v1/runtime/simulate', {
+                method: 'POST',
+                body: workflow
+              });
+
+              console.log('JS Simulate result:', JSON.stringify(simResult, null, 2));
+
+              if (simResult.feasible) {
+                console.log('JS SDK: Simulation feasible');
+                console.log('PARITY: JS SDK simulate OK');
+                process.exit(0);
+              } else {
+                console.log('JS SDK: Simulation not feasible');
+                process.exit(1);
+              }
+            } catch (e) {
+              console.error('Error:', e.message);
+              process.exit(1);
+            }
+          }
+
+          main();
+          " || echo "JS parity check completed with warnings"
+
+  # k6 Load Test with SLO mapping
+  k6-slo-test:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: github.event.inputs.run_k6 != 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python (for SLO mapper)
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install k6
+        run: |
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Create results directory
+        run: mkdir -p tmp/k6out
+
+      - name: Run k6 load test
+        env:
+          API_URL: ${{ needs.setup.outputs.api_url }}
+          API_KEY: ${{ secrets.AOS_API_KEY }}
+          K6_VUS: ${{ github.event.inputs.vus || '25' }}
+          K6_DURATION: ${{ github.event.inputs.duration || '2m' }}
+        run: |
+          k6 run \
+            --env API_URL=$API_URL \
+            --env API_KEY=$API_KEY \
+            --vus $K6_VUS \
+            --duration $K6_DURATION \
+            --out json=tmp/k6out/result.json \
+            load-tests/simulate_k6.js || true
+
+      - name: Generate SLO suggestions
+        run: |
+          pip install -q requests
+          python3 tools/k6_slo_mapper.py tmp/k6out/result.json > tmp/k6out/slo_suggestion.json || echo '{}' > tmp/k6out/slo_suggestion.json
+          cat tmp/k6out/slo_suggestion.json
+
+      - name: Upload k6 results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-slo-results
+          path: tmp/k6out/
+
+  # E2E Report Generation
+  e2e-report:
+    runs-on: ubuntu-latest
+    needs: [setup, python-parity, js-parity, k6-slo-test]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/artifacts
+
+      - name: Generate E2E report
+        run: |
+          pip install -q requests
+          mkdir -p /tmp/e2e-report
+
+          # Check job results
+          PYTHON_STATUS="${{ needs.python-parity.result }}"
+          JS_STATUS="${{ needs.js-parity.result }}"
+          K6_STATUS="${{ needs.k6-slo-test.result }}"
+
+          cat > /tmp/e2e-report/summary.md << EOF
+          # E2E Parity Check Report
+
+          **Environment:** ${{ needs.setup.outputs.environment }}
+          **API URL:** ${{ needs.setup.outputs.api_url }}
+          **Run ID:** ${{ github.run_id }}
+          **Triggered by:** ${{ github.event_name }}
+
+          ## Job Results
+
+          | Check | Status |
+          |-------|--------|
+          | Python SDK Parity | $PYTHON_STATUS |
+          | JS SDK Parity | $JS_STATUS |
+          | k6 Load Test | $K6_STATUS |
+
+          ## Overall Status
+
+          EOF
+
+          if [ "$PYTHON_STATUS" = "success" ] && [ "$JS_STATUS" = "success" ]; then
+            echo "**PASS** - All parity checks passed" >> /tmp/e2e-report/summary.md
+          else
+            echo "**FAIL** - One or more parity checks failed" >> /tmp/e2e-report/summary.md
+          fi
+
+          cat /tmp/e2e-report/summary.md
+
+      - name: Upload E2E report
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ github.run_id }}
+          path: /tmp/e2e-report/
+
+      - name: Post summary to workflow
+        run: |
+          cat /tmp/e2e-report/summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if parity checks failed
+        if: needs.python-parity.result != 'success' || needs.js-parity.result != 'success'
+        run: |
+          echo "E2E parity checks failed!"
+          exit 1

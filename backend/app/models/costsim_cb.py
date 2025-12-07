@@ -201,6 +201,90 @@ class CostSimProvenanceModel(Base):
         }
 
 
+class CostSimCanaryReportModel(Base):
+    """
+    Canary run reports for CostSim V2 validation.
+
+    Stores results from daily canary runs for audit and trend analysis.
+    """
+    __tablename__ = "costsim_canary_reports"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    run_id = Column(Text, nullable=False, unique=True, index=True)
+    timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+    )
+    status = Column(Text, nullable=False)  # pass, fail, error, skipped
+
+    # Sample stats
+    total_samples = Column(Integer, nullable=False, default=0)
+    matching_samples = Column(Integer, nullable=False, default=0)
+    minor_drift_samples = Column(Integer, nullable=False, default=0)
+    major_drift_samples = Column(Integer, nullable=False, default=0)
+
+    # Metrics
+    median_cost_diff = Column(Float, nullable=True)
+    p90_cost_diff = Column(Float, nullable=True)
+    kl_divergence = Column(Float, nullable=True)
+    outlier_count = Column(Integer, nullable=True)
+
+    # Verdict
+    passed = Column(Boolean, nullable=False, default=True)
+    failure_reasons_json = Column(Text, nullable=True)
+
+    # Artifacts and golden comparison
+    artifact_paths_json = Column(Text, nullable=True)
+    golden_comparison_json = Column(Text, nullable=True)
+
+    # Metadata
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        Index("idx_costsim_canary_status", "status"),
+        Index("idx_costsim_canary_passed", "passed"),
+    )
+
+    def get_failure_reasons(self) -> list:
+        """Parse failure reasons JSON."""
+        if self.failure_reasons_json:
+            return json.loads(self.failure_reasons_json)
+        return []
+
+    def get_artifact_paths(self) -> list:
+        """Parse artifact paths JSON."""
+        if self.artifact_paths_json:
+            return json.loads(self.artifact_paths_json)
+        return []
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "run_id": self.run_id,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "status": self.status,
+            "total_samples": self.total_samples,
+            "matching_samples": self.matching_samples,
+            "minor_drift_samples": self.minor_drift_samples,
+            "major_drift_samples": self.major_drift_samples,
+            "median_cost_diff": self.median_cost_diff,
+            "p90_cost_diff": self.p90_cost_diff,
+            "kl_divergence": self.kl_divergence,
+            "outlier_count": self.outlier_count,
+            "passed": self.passed,
+            "failure_reasons": self.get_failure_reasons(),
+            "artifact_paths": self.get_artifact_paths(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class CostSimAlertQueueModel(Base):
     """
     Alert queue for reliable alert delivery.

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Runtime feature flags for staged rollout. All flags default to false for safety.",
   "flags": {
     "failure_catalog_runtime_integration": {
@@ -29,6 +29,38 @@
       "requires_m4_signoff": true,
       "added": "2025-12-03",
       "owner": "platform"
+    },
+    "memory_pins_enabled": {
+      "enabled": true,
+      "description": "Enable memory pins API for structured key-value storage",
+      "requires_m4_signoff": false,
+      "added": "2025-12-04",
+      "owner": "platform",
+      "milestone": "M7"
+    },
+    "rbac_enforce": {
+      "enabled": false,
+      "description": "Enforce RBAC middleware for protected endpoints",
+      "requires_m4_signoff": false,
+      "added": "2025-12-04",
+      "owner": "security",
+      "milestone": "M7"
+    },
+    "chaos_allowed": {
+      "enabled": false,
+      "description": "Allow chaos experiments to run (staging only)",
+      "requires_m4_signoff": false,
+      "added": "2025-12-04",
+      "owner": "infra",
+      "milestone": "M7"
+    },
+    "memory_context_injection": {
+      "enabled": false,
+      "description": "Inject memory context into LLM prompts",
+      "requires_m4_signoff": true,
+      "added": "2025-12-04",
+      "owner": "platform",
+      "milestone": "M7"
     }
   },
   "environments": {
@@ -36,19 +68,31 @@
       "failure_catalog_runtime_integration": false,
       "cost_simulator_runtime_integration": false,
       "capability_enforcement_soft": true,
-      "golden_replay_v2": false
+      "golden_replay_v2": false,
+      "memory_pins_enabled": true,
+      "rbac_enforce": false,
+      "chaos_allowed": false,
+      "memory_context_injection": false
     },
     "staging": {
       "failure_catalog_runtime_integration": true,
       "cost_simulator_runtime_integration": true,
       "capability_enforcement_soft": true,
-      "golden_replay_v2": false
+      "golden_replay_v2": false,
+      "memory_pins_enabled": true,
+      "rbac_enforce": true,
+      "chaos_allowed": true,
+      "memory_context_injection": false
     },
     "production": {
       "failure_catalog_runtime_integration": false,
       "cost_simulator_runtime_integration": false,
       "capability_enforcement_soft": false,
-      "golden_replay_v2": false
+      "golden_replay_v2": false,
+      "memory_pins_enabled": false,
+      "rbac_enforce": false,
+      "chaos_allowed": false,
+      "memory_context_injection": false
     }
   }
 }

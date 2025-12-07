@@ -1,0 +1,124 @@
+name: k6 Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      vus:
+        description: 'Number of virtual users'
+        required: false
+        default: '25'
+      duration:
+        description: 'Test duration (e.g., 2m, 5m)'
+        required: false
+        default: '2m'
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+  pull_request:
+    paths:
+      - 'backend/app/api/**'
+      - 'backend/app/traces/**'
+      - 'load-tests/**'
+
+env:
+  K6_VERSION: '0.49.0'
+
+jobs:
+  k6-load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Set environment URLs
+        id: env-urls
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+            echo "API_URL=https://api.agenticverz.com" >> $GITHUB_OUTPUT
+          else
+            echo "API_URL=https://staging.api.agenticverz.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create results directory
+        run: mkdir -p load-tests/results
+
+      - name: Run k6 load test
+        env:
+          API_URL: ${{ steps.env-urls.outputs.API_URL }}
+          API_KEY: ${{ secrets.AOS_API_KEY }}
+          K6_VUS: ${{ github.event.inputs.vus || '10' }}
+          K6_DURATION: ${{ github.event.inputs.duration || '1m' }}
+        run: |
+          k6 run \
+            --env API_URL=$API_URL \
+            --env API_KEY=$API_KEY \
+            --out json=load-tests/results/k6_results.json \
+            load-tests/simulate_k6.js
+
+      - name: Upload k6 results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-results-${{ github.run_id }}
+          path: |
+            load-tests/results/
+          retention-days: 30
+
+      - name: Post summary to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summaryPath = 'load-tests/results/simulate_summary.json';
+
+            if (fs.existsSync(summaryPath)) {
+              const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+
+              const body = `## k6 Load Test Results
+
+              | Metric | Value |
+              |--------|-------|
+              | Duration | ${summary.duration_seconds.toFixed(2)}s |
+              | Max VUs | ${summary.vus_max} |
+              | Iterations | ${summary.iterations} |
+              | **p50 Latency** | ${summary.simulate_latency_p50.toFixed(2)}ms |
+              | **p95 Latency** | ${summary.simulate_latency_p95.toFixed(2)}ms |
+              | **p99 Latency** | ${summary.simulate_latency_p99.toFixed(2)}ms |
+              | Success Rate | ${(summary.success_rate * 100).toFixed(2)}% |
+              | Errors | ${summary.error_count} |
+              | Parity Failures | ${summary.parity_failures} |
+              | **Thresholds** | ${summary.thresholds_passed ? 'PASSED' : 'FAILED'} |
+              `;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+      - name: Check thresholds
+        run: |
+          if [ -f load-tests/results/simulate_summary.json ]; then
+            PASSED=$(jq -r '.thresholds_passed' load-tests/results/simulate_summary.json)
+            if [ "$PASSED" != "true" ]; then
+              echo "Load test thresholds failed!"
+              exit 1
+            fi
+          fi

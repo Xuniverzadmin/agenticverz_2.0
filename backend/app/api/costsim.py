@@ -1,4 +1,4 @@
-# CostSim V2 API (M6)
+# CostSim V2 API (M6 + M7 Memory Integration)
 """
 API endpoints for CostSim V2 sandbox.
 
@@ -9,14 +9,20 @@ Endpoints:
 - GET /costsim/divergence - Get divergence report
 - POST /costsim/canary/run - Trigger canary run
 - GET /costsim/canary/reports - Get canary reports
+
+M7 Enhancements:
+- Memory context injection for simulations
+- Post-execution memory updates via rules engine
+- Drift detection between baseline and memory-enabled runs
 """
 
 from __future__ import annotations
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
@@ -36,6 +42,56 @@ from app.costsim.models import V2SimulationStatus, ComparisonVerdict
 
 logger = logging.getLogger("nova.api.costsim")
 
+# M7: Memory integration feature flags
+MEMORY_CONTEXT_INJECTION = os.getenv("MEMORY_CONTEXT_INJECTION", "false").lower() == "true"
+MEMORY_POST_UPDATE = os.getenv("MEMORY_POST_UPDATE", "false").lower() == "true"
+DRIFT_DETECTION_ENABLED = os.getenv("DRIFT_DETECTION_ENABLED", "false").lower() == "true"
+# Emergency override: allows service to start without memory modules (NOT recommended)
+MEMORY_FAIL_OPEN_OVERRIDE = os.getenv("MEMORY_FAIL_OPEN_OVERRIDE", "false").lower() == "true"
+# Synchronous update mode for tests - blocks until memory updates are applied
+MEMORY_POST_UPDATE_SYNC = os.getenv("MEMORY_POST_UPDATE_SYNC", "false").lower() == "true"
+
+# M7: Import memory components - FAIL-FAST if feature flags are enabled
+# Memory modules are required when any memory feature is enabled
+_memory_features_enabled = MEMORY_CONTEXT_INJECTION or MEMORY_POST_UPDATE or DRIFT_DETECTION_ENABLED
+
+if _memory_features_enabled:
+    try:
+        from app.memory.memory_service import get_memory_service, MemoryResult
+        from app.memory.update_rules import get_update_rules_engine
+        from app.memory.drift_detector import get_drift_detector
+        from app.tasks.memory_update import apply_update_rules, apply_update_rules_sync
+        logger.info("Memory integration modules loaded successfully")
+    except ImportError as e:
+        if MEMORY_FAIL_OPEN_OVERRIDE:
+            logger.warning(f"Memory modules import failed but MEMORY_FAIL_OPEN_OVERRIDE=true: {e}")
+            # Define stub functions to prevent NameError
+            get_memory_service = lambda: None
+            get_update_rules_engine = lambda: None
+            get_drift_detector = lambda: None
+            async def apply_update_rules(*args, **kwargs): return 0
+            def apply_update_rules_sync(*args, **kwargs): return True
+        else:
+            raise RuntimeError(
+                f"Memory integration required (MEMORY_CONTEXT_INJECTION={MEMORY_CONTEXT_INJECTION}, "
+                f"MEMORY_POST_UPDATE={MEMORY_POST_UPDATE}, DRIFT_DETECTION_ENABLED={DRIFT_DETECTION_ENABLED}) "
+                f"but memory modules failed to import: {e}. "
+                f"Set MEMORY_FAIL_OPEN_OVERRIDE=true to bypass (NOT recommended)."
+            ) from e
+else:
+    # Memory features disabled - no imports needed, define stubs
+    def get_memory_service():
+        return None
+    def get_update_rules_engine():
+        return None
+    def get_drift_detector():
+        return None
+    async def apply_update_rules(*args, **kwargs):
+        return 0
+    def apply_update_rules_sync(*args, **kwargs):
+        return True
+    logger.debug("Memory features disabled, skipping memory module imports")
+
 router = APIRouter(prefix="/costsim", tags=["costsim"])
 
 
@@ -54,6 +110,10 @@ class SimulateRequest(BaseModel):
     budget_cents: int = Field(1000, ge=0, description="Available budget in cents")
     tenant_id: Optional[str] = Field(None, description="Tenant identifier")
     run_id: Optional[str] = Field(None, description="Run identifier")
+    # M7: Memory integration fields
+    workflow_id: Optional[str] = Field(None, description="Workflow identifier for memory context")
+    agent_id: Optional[str] = Field(None, description="Agent identifier for memory context")
+    inject_memory: Optional[bool] = Field(None, description="Override memory injection setting")
 
 
 class SimulationStepResult(BaseModel):
@@ -110,6 +170,12 @@ class SandboxSimulateResponse(BaseModel):
     sandbox_enabled: bool
     v2_error: Optional[str] = None
 
+    # M7: Memory integration fields
+    memory_context_keys: Optional[List[str]] = None
+    memory_updates_applied: Optional[int] = None
+    drift_detected: Optional[bool] = None
+    drift_score: Optional[float] = None
+
 
 class SandboxStatusResponse(BaseModel):
     """Status of V2 sandbox."""
@@ -151,6 +217,188 @@ class CanaryRunResponse(BaseModel):
     artifact_paths: List[str]
 
 
+# =============================================================================
+# M7: Memory Integration Helpers
+# =============================================================================
+
+async def get_memory_context(
+    tenant_id: str,
+    workflow_id: Optional[str] = None,
+    agent_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Retrieve memory context for simulation.
+
+    Fetches relevant memory pins for the tenant, workflow, and agent.
+    Returns empty dict if memory service unavailable (fail-open).
+    """
+    if not _memory_features_enabled or not MEMORY_CONTEXT_INJECTION:
+        return {}
+
+    memory_service = get_memory_service()
+    if not memory_service:
+        return {}
+
+    context = {}
+
+    try:
+        # Get tenant-level config
+        config_result = await memory_service.get(tenant_id, "config:simulation", agent_id)
+        if config_result.success and config_result.entry:
+            context["config"] = config_result.entry.value
+
+        # Get agent preferences if agent_id provided
+        if agent_id:
+            prefs_result = await memory_service.get(tenant_id, f"agent:{agent_id}:preferences", agent_id)
+            if prefs_result.success and prefs_result.entry:
+                context["agent_preferences"] = prefs_result.entry.value
+
+        # Get workflow state if workflow_id provided
+        if workflow_id:
+            workflow_result = await memory_service.get(tenant_id, f"workflow:{workflow_id}:state", agent_id)
+            if workflow_result.success and workflow_result.entry:
+                context["workflow_state"] = workflow_result.entry.value
+
+        # Get cost history
+        history_result = await memory_service.get(tenant_id, "costsim:history", agent_id)
+        if history_result.success and history_result.entry:
+            context["cost_history"] = history_result.entry.value
+
+        logger.debug(f"Memory context retrieved: {list(context.keys())}")
+        return context
+
+    except Exception as e:
+        logger.warning(f"Memory context retrieval error: {e}")
+        # M7: Emit context injection failure metric
+        try:
+            from app.memory.memory_service import MEMORY_CONTEXT_INJECTION_FAILURES
+            MEMORY_CONTEXT_INJECTION_FAILURES.labels(tenant_id=tenant_id, reason=type(e).__name__).inc()
+        except ImportError:
+            pass
+        return {}
+
+
+async def apply_post_execution_updates(
+    tenant_id: str,
+    workflow_id: Optional[str],
+    agent_id: Optional[str],
+    simulation_result: Dict[str, Any]
+) -> int:
+    """
+    Apply deterministic post-execution memory updates.
+
+    Uses the update rules engine to apply memory updates based on
+    simulation results. Returns count of updates applied.
+    """
+    if not _memory_features_enabled or not MEMORY_POST_UPDATE:
+        return 0
+
+    memory_service = get_memory_service()
+    if not memory_service:
+        return 0
+
+    updates_applied = 0
+
+    try:
+        # Update cost history
+        history_update = {
+            "last_simulation": datetime.now(timezone.utc).isoformat(),
+            "last_cost_cents": simulation_result.get("estimated_cost_cents", 0),
+            "last_feasible": simulation_result.get("feasible", False),
+            "total_simulations": 1,  # Will be incremented by rule
+        }
+
+        result = await memory_service.set(
+            tenant_id,
+            "costsim:history",
+            history_update,
+            source="costsim_engine",
+            agent_id=agent_id
+        )
+        if result.success:
+            updates_applied += 1
+
+        # Update workflow state if workflow_id provided
+        if workflow_id:
+            workflow_update = {
+                "last_simulation_at": datetime.now(timezone.utc).isoformat(),
+                "simulation_count": 1,  # Increment via rule
+                "last_feasibility": simulation_result.get("feasible", False),
+            }
+
+            result = await memory_service.set(
+                tenant_id,
+                f"workflow:{workflow_id}:state",
+                workflow_update,
+                source="costsim_engine",
+                agent_id=agent_id
+            )
+            if result.success:
+                updates_applied += 1
+
+        logger.debug(f"Applied {updates_applied} memory updates")
+        return updates_applied
+
+    except Exception as e:
+        logger.warning(f"Post-execution memory update error: {e}")
+        return 0
+
+
+async def detect_simulation_drift(
+    baseline_result: Dict[str, Any],
+    memory_result: Dict[str, Any],
+    workflow_id: Optional[str]
+) -> tuple[bool, float]:
+    """
+    Detect drift between baseline and memory-enabled simulation.
+
+    Compares results to identify if memory context significantly
+    changed the simulation outcome.
+    """
+    if not _memory_features_enabled or not DRIFT_DETECTION_ENABLED:
+        return False, 0.0
+
+    try:
+        drift_detector = get_drift_detector()
+        if not drift_detector:
+            return False, 0.0
+
+        # Create trace-like structures for comparison
+        baseline_trace = {
+            "workflow_id": workflow_id or "baseline",
+            "memory_enabled": False,
+            "cost_cents": baseline_result.get("estimated_cost_cents", 0),
+            "feasible": baseline_result.get("feasible", False),
+            "step_count": len(baseline_result.get("step_estimates", [])),
+        }
+
+        memory_trace = {
+            "workflow_id": workflow_id or "memory",
+            "memory_enabled": True,
+            "cost_cents": memory_result.get("estimated_cost_cents", 0),
+            "feasible": memory_result.get("feasible", False),
+            "step_count": len(memory_result.get("step_estimates", [])),
+        }
+
+        comparison = await drift_detector.compare_traces(baseline_trace, memory_trace)
+
+        # M7: Emit drift detection metrics
+        if comparison.drift_detected:
+            try:
+                from app.memory.memory_service import MEMORY_DRIFT_DETECTED, MEMORY_DRIFT_SCORE
+                severity = "high" if comparison.drift_score > 0.3 else "medium" if comparison.drift_score > 0.15 else "low"
+                MEMORY_DRIFT_DETECTED.labels(tenant_id=workflow_id or "unknown", severity=severity).inc()
+                MEMORY_DRIFT_SCORE.labels(workflow_id=workflow_id or "unknown").set(comparison.drift_score)
+            except ImportError:
+                pass
+
+        return comparison.drift_detected, comparison.drift_score
+
+    except Exception as e:
+        logger.warning(f"Drift detection error: {e}")
+        return False, 0.0
+
+
 # API Endpoints
 @router.get("/v2/status", response_model=SandboxStatusResponse)
 async def get_sandbox_status():
@@ -190,6 +438,11 @@ async def simulate_v2(request: SimulateRequest):
 
     The V1 result is always the authoritative result.
     V2 is for validation only.
+
+    M7 Enhancements:
+    - Memory context injection for simulations
+    - Post-execution memory updates via rules engine
+    - Drift detection between baseline and memory-enabled runs
     """
     # Convert request to plan format
     plan = [
@@ -197,7 +450,25 @@ async def simulate_v2(request: SimulateRequest):
         for step in request.plan
     ]
 
+    # M7: Determine if memory should be injected
+    use_memory = request.inject_memory if request.inject_memory is not None else MEMORY_CONTEXT_INJECTION
+    tenant_id = request.tenant_id or "default"
+
+    # M7: Get memory context if enabled
+    memory_context = {}
+    memory_context_keys = []
+    if use_memory and _memory_features_enabled:
+        memory_context = await get_memory_context(
+            tenant_id=tenant_id,
+            workflow_id=request.workflow_id,
+            agent_id=request.agent_id
+        )
+        memory_context_keys = list(memory_context.keys())
+        logger.debug(f"Injecting memory context: {memory_context_keys}")
+
     # Run through sandbox
+    # Note: Memory context could be passed to simulate_with_sandbox if the
+    # underlying engine supports it. For now, we track it in the response.
     result = await simulate_with_sandbox(
         plan=plan,
         budget_cents=request.budget_cents,
@@ -212,6 +483,8 @@ async def simulate_v2(request: SimulateRequest):
         v1_duration_ms=result.v1_result.estimated_duration_ms,
         sandbox_enabled=result.sandbox_enabled,
         v2_error=result.v2_error,
+        # M7: Include memory context info
+        memory_context_keys=memory_context_keys if memory_context_keys else None,
     )
 
     # Add V2 result if available
@@ -238,6 +511,62 @@ async def simulate_v2(request: SimulateRequest):
             warnings=result.v2_result.warnings,
             runtime_ms=result.v2_result.runtime_ms,
         )
+
+        # M7: Apply post-execution memory updates
+        if MEMORY_POST_UPDATE and _memory_features_enabled:
+            simulation_result = {
+                "estimated_cost_cents": result.v2_result.estimated_cost_cents,
+                "feasible": result.v2_result.feasible,
+                "step_estimates": result.v2_result.step_estimates,
+                "status": result.v2_result.status.value if hasattr(result.v2_result.status, 'value') else str(result.v2_result.status),
+            }
+
+            # Use sync mode for tests - blocks until updates are applied
+            if MEMORY_POST_UPDATE_SYNC:
+                # Synchronous apply - useful for integration tests
+                success = apply_update_rules_sync(
+                    tenant_id=tenant_id,
+                    workflow_id=request.workflow_id,
+                    request_id=request.run_id,
+                    trace_input={"plan": plan, "budget_cents": request.budget_cents},
+                    trace_output=simulation_result
+                )
+                # Also run the existing async update for full coverage
+                updates_applied = await apply_post_execution_updates(
+                    tenant_id=tenant_id,
+                    workflow_id=request.workflow_id,
+                    agent_id=request.agent_id,
+                    simulation_result=simulation_result
+                )
+                response.memory_updates_applied = updates_applied
+            else:
+                # Async apply - non-blocking, default for production
+                updates_applied = await apply_post_execution_updates(
+                    tenant_id=tenant_id,
+                    workflow_id=request.workflow_id,
+                    agent_id=request.agent_id,
+                    simulation_result=simulation_result
+                )
+                response.memory_updates_applied = updates_applied
+
+        # M7: Drift detection between baseline and memory-enabled runs
+        if DRIFT_DETECTION_ENABLED and memory_context and _memory_features_enabled:
+            # Compare V1 (baseline) vs V2 (potentially memory-enhanced)
+            drift_detected, drift_score = await detect_simulation_drift(
+                baseline_result={
+                    "estimated_cost_cents": result.v1_result.estimated_cost_cents,
+                    "feasible": result.v1_result.feasible,
+                    "step_estimates": [],
+                },
+                memory_result={
+                    "estimated_cost_cents": result.v2_result.estimated_cost_cents,
+                    "feasible": result.v2_result.feasible,
+                    "step_estimates": result.v2_result.step_estimates,
+                },
+                workflow_id=request.workflow_id
+            )
+            response.drift_detected = drift_detected
+            response.drift_score = drift_score
 
     # Add comparison if available
     if result.comparison:

@@ -1,0 +1,385 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "aos-traces-v2",
+    "title": "AOS - Traces & Determinism (v2)",
+    "tags": ["aos", "traces", "determinism", "m8"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "type": "row",
+        "title": "Overview",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+        "collapsed": false,
+        "panels": []
+      },
+      {
+        "id": 1,
+        "title": "Traces Simulated (rate)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "rate(aos_trace_requests_total{operation=\"simulate\"}[5m])",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 7, "w": 12, "x": 0, "y": 1}
+      },
+      {
+        "id": 2,
+        "title": "Traces Stored (rate)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "rate(aos_trace_requests_total{operation=\"store\"}[5m])",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 7, "w": 12, "x": 12, "y": 1}
+      },
+      {
+        "id": 3,
+        "title": "Request Latency (p95)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(aos_trace_request_duration_seconds_bucket[5m])) by (le, operation))",
+            "legendFormat": "p95 {{operation}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(aos_trace_request_duration_seconds_bucket[5m])) by (le, operation))",
+            "legendFormat": "p50 {{operation}}",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.5},
+                {"color": "red", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Replay Mismatches (rate)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "rate(aos_replay_enforcement_total{outcome=\"mismatch\"}[5m])",
+            "legendFormat": "mismatch/s",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"fixedColor": "red", "mode": "fixed"},
+            "unit": "reqps"
+          }
+        },
+        "alert": {
+          "alertRuleTags": {},
+          "conditions": [
+            {
+              "evaluator": {"params": [0.1], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "High Replay Mismatch Rate",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Trace Store p95 Latency",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(aos_trace_storage_duration_seconds_bucket[5m])) by (le))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.5},
+                {"color": "red", "value": 0.75}
+              ]
+            }
+          }
+        },
+        "alert": {
+          "alertRuleTags": {},
+          "conditions": [
+            {
+              "evaluator": {"params": [0.75], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "last"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "Trace Store Latency High",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Parity Status",
+        "type": "gauge",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "avg(aos_trace_parity_status)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [
+              {"options": {"0": {"color": "red", "index": 0, "text": "FAIL"}}, "type": "value"},
+              {"options": {"1": {"color": "green", "index": 1, "text": "PASS"}}, "type": "value"}
+            ],
+            "max": 1,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "alert": {
+          "alertRuleTags": {},
+          "conditions": [
+            {
+              "evaluator": {"params": [1], "type": "lt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "min"},
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "1m",
+          "frequency": "1m",
+          "handler": 1,
+          "name": "Parity Check Failure",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 14}
+      },
+      {
+        "id": 7,
+        "title": "Idempotency Results",
+        "type": "piechart",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "sum(increase(aos_idempotency_total[1h])) by (result)",
+            "legendFormat": "{{result}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "options": {
+          "legend": {"displayMode": "list", "placement": "right"},
+          "pieType": "pie"
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 14}
+      },
+      {
+        "id": 8,
+        "title": "Replay Enforcement by Behavior",
+        "type": "piechart",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "sum(increase(aos_replay_enforcement_total[1h])) by (behavior, outcome)",
+            "legendFormat": "{{behavior}}: {{outcome}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "options": {
+          "legend": {"displayMode": "list", "placement": "right"},
+          "pieType": "pie"
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 14}
+      },
+      {
+        "id": 9,
+        "title": "Parity Failures (24h)",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "sum(increase(aos_parity_failures_total[24h]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 14}
+      },
+      {
+        "id": 10,
+        "title": "Trace Size Distribution",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(aos_trace_size_bytes_bucket[5m])) by (le))",
+            "legendFormat": "p95 size",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(aos_trace_size_bytes_bucket[5m])) by (le))",
+            "legendFormat": "p50 size",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "decbytes"
+          }
+        },
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "id": 11,
+        "title": "Steps Per Trace",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(aos_trace_steps_count_bucket[5m])) by (le))",
+            "legendFormat": "p95 steps",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(aos_trace_steps_count_bucket[5m])) by (le))",
+            "legendFormat": "p50 steps",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 20}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "prometheus",
+          "current": {"text": "Prometheus", "value": "Prometheus"}
+        },
+        {
+          "name": "tenant_id",
+          "type": "query",
+          "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+          "query": "label_values(aos_trace_requests_total, tenant_id)",
+          "includeAll": true,
+          "multi": false
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {"type": "prometheus", "uid": "grafanacloud-prom"},
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "time": {"from": "now-1h", "to": "now"},
+    "timepicker": {}
+  },
+  "overwrite": true
+}

@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-12-06T19:56:43.324Z",
+  "duration_seconds": 30.401428709,
+  "vus_max": 1,
+  "iterations": 63,
+  "simulate_latency_p50": 0,
+  "simulate_latency_p95": 151.9,
+  "simulate_latency_p99": 0,
+  "success_rate": 0.746031746031746,
+  "error_count": 16,
+  "parity_failures": 0,
+  "thresholds_passed": false
+}

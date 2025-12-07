@@ -1,0 +1,140 @@
+# Embedding and Vector Memory Alerts (M9+)
+# Created: 2025-12-07
+# Purpose: Monitor embedding API calls, quota limits, and backfill progress
+
+groups:
+  - name: embedding-alerts
+    interval: 30s
+    rules:
+      # Alert when embedding errors exceed 5 in 5 minutes (critical - page)
+      - alert: EmbeddingErrorRateHigh
+        expr: |
+          increase(aos_embedding_errors_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Embedding API error rate high"
+          description: "{{ $value }} embedding errors in the last 5 minutes. Provider: {{ $labels.provider }}, Error type: {{ $labels.error_type }}"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/EmbeddingErrors.md"
+
+      # Alert when daily quota is exceeded (critical)
+      - alert: EmbeddingQuotaExceeded
+        expr: aos_embedding_quota_exhausted_total > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Embedding daily quota exceeded"
+          description: "Embedding API calls blocked due to quota exhaustion. All vector search will fallback to keyword search."
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/EmbeddingQuotaExceeded.md"
+
+      # Alert when quota is approaching limit (warning - 80% used)
+      - alert: EmbeddingQuotaNearLimit
+        expr: |
+          (aos_embedding_daily_calls / 10000) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Embedding quota approaching limit"
+          description: "{{ $value | humanizePercentage }} of daily embedding quota used. Current calls: {{ $labels.aos_embedding_daily_calls }}"
+
+      # Alert when API latency is high (warning)
+      - alert: EmbeddingLatencyHigh
+        expr: |
+          histogram_quantile(0.95, rate(aos_embedding_api_latency_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Embedding API latency is high"
+          description: "95th percentile embedding API latency is {{ $value | humanizeDuration }} for provider {{ $labels.provider }}"
+
+      # Alert when rate limiting is happening (warning)
+      - alert: EmbeddingRateLimited
+        expr: |
+          increase(aos_embedding_errors_total{error_type="rate_limit"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Embedding API rate limiting detected"
+          description: "Rate limiting errors from {{ $labels.provider }} - consider reducing request rate"
+
+      # Alert when backfill has not progressed in 6 hours (critical)
+      - alert: BackfillStalled
+        expr: |
+          aos_memory_backfill_progress_total{status="pending"} > 0
+          and
+          (aos_memory_backfill_progress_total{status="success"} == aos_memory_backfill_progress_total{status="success"} offset 6h
+           or aos_memory_backfill_progress_total{status="success"} == 0)
+        for: 30m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Memory backfill has stalled"
+          description: "Backfill has not progressed in 6+ hours. Pending: {{ $value }}"
+          runbook_url: "https://github.com/agenticverz/nova/blob/main/docs/runbooks/BackfillStalled.md"
+
+      # Alert when backfill errors are high (warning)
+      - alert: BackfillErrorsHigh
+        expr: |
+          aos_memory_backfill_progress_total{status="failed"} > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory backfill has many failures"
+          description: "{{ $value }} memories failed to backfill"
+
+  - name: vector-search-alerts
+    interval: 30s
+    rules:
+      # Alert when vector search is disabled
+      - alert: VectorSearchDisabled
+        expr: |
+          increase(aos_vector_fallback_total{reason="disabled"}[5m]) > 0
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Vector search is disabled"
+          description: "Vector search feature flag is disabled - using keyword search fallback"
+
+      # Alert when vector search fallback rate is high
+      - alert: VectorSearchFallbackHigh
+        expr: |
+          (
+            rate(aos_vector_fallback_total[5m])
+            /
+            (rate(aos_vector_fallback_total[5m]) + rate(aos_vector_query_latency_seconds_count[5m]))
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High vector search fallback rate"
+          description: "{{ $value | humanizePercentage }} of vector searches are falling back to keyword search"
+
+      # Alert when vector query latency is high
+      - alert: VectorQueryLatencyHigh
+        expr: |
+          histogram_quantile(0.95, rate(aos_vector_query_latency_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Vector query latency is high"
+          description: "95th percentile vector query latency is {{ $value | humanizeDuration }}"
+
+      # Alert when vector index has many null embeddings
+      - alert: VectorIndexIncomplete
+        expr: |
+          aos_vector_index_null_count > 100
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Many memories without embeddings"
+          description: "{{ $value }} memories in the database do not have embeddings"

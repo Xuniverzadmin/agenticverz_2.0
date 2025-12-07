@@ -734,6 +734,136 @@ class StatusHistory(SQLModel, table=True):
         ]
 
 
+# ============== Failure Match (M9 - Failure Persistence) ==============
+
+class FailureMatch(SQLModel, table=True):
+    """
+    Persistent storage for failure catalog matches.
+
+    Tracks all failure events for:
+    - Learning from runtime errors
+    - Recovery suggestion engine (M10)
+    - Failure analytics dashboards
+    - Pattern aggregation for unknown errors
+
+    Every time failure_catalog.match() runs, a record is persisted here.
+    """
+    __tablename__ = "failure_matches"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    run_id: str = Field(index=True, description="Run that produced this failure")
+    tenant_id: Optional[str] = Field(default=None, index=True, description="Tenant scope")
+
+    # Error identification
+    error_code: str = Field(index=True, description="Error code (e.g., TIMEOUT, BUDGET_EXCEEDED)")
+    error_message: Optional[str] = Field(default=None, description="Full error message")
+
+    # Catalog match info
+    catalog_entry_id: Optional[str] = Field(
+        default=None,
+        index=True,
+        description="Matched catalog entry code (null if miss)"
+    )
+    match_type: str = Field(
+        default="unknown",
+        description="How match was found: exact, prefix, regex, code, unknown"
+    )
+    confidence_score: float = Field(
+        default=0.0,
+        description="Match confidence (1.0 = exact, 0.7 = prefix, 0 = miss)"
+    )
+
+    # Catalog entry details (denormalized for analytics)
+    category: Optional[str] = Field(default=None, description="TRANSIENT, PERMANENT, RESOURCE, etc.")
+    severity: Optional[str] = Field(default=None, description="LOW, MEDIUM, HIGH, CRITICAL")
+    is_retryable: bool = Field(default=False, description="Whether error is retryable")
+    recovery_mode: Optional[str] = Field(default=None, description="Recommended recovery strategy")
+    recovery_suggestion: Optional[str] = Field(default=None, description="Human-readable suggestion")
+
+    # Recovery tracking
+    recovery_attempted: bool = Field(default=False, description="Whether recovery was tried")
+    recovery_succeeded: bool = Field(default=False, description="Whether recovery worked")
+    recovered_at: Optional[datetime] = Field(default=None, description="When recovery completed")
+    recovered_by: Optional[str] = Field(default=None, description="User/system that marked recovery")
+    recovery_notes: Optional[str] = Field(default=None, description="Operator notes on recovery")
+
+    # Execution context
+    skill_id: Optional[str] = Field(default=None, description="Skill that failed")
+    step_index: Optional[int] = Field(default=None, description="Step in plan")
+    context_json: Optional[str] = Field(default=None, description="Additional context as JSON")
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+    def get_context(self) -> dict:
+        """Parse context JSON."""
+        import json
+        if self.context_json:
+            return json.loads(self.context_json)
+        return {}
+
+    def set_context(self, context: dict) -> None:
+        """Set context as JSON."""
+        import json
+        self.context_json = json.dumps(context)
+
+    def mark_recovery_attempted(self) -> None:
+        """Mark that recovery was attempted."""
+        self.recovery_attempted = True
+        self.updated_at = utc_now()
+
+    def mark_recovery_succeeded(self, by: Optional[str] = None, notes: Optional[str] = None) -> None:
+        """Mark that recovery succeeded."""
+        self.recovery_attempted = True
+        self.recovery_succeeded = True
+        self.recovered_at = utc_now()
+        if by:
+            self.recovered_by = by
+        if notes:
+            self.recovery_notes = notes
+        self.updated_at = utc_now()
+
+    def mark_recovery_failed(self, by: Optional[str] = None, notes: Optional[str] = None) -> None:
+        """Mark that recovery was attempted but failed."""
+        self.recovery_attempted = True
+        self.recovery_succeeded = False
+        self.recovered_at = utc_now()
+        if by:
+            self.recovered_by = by
+        if notes:
+            self.recovery_notes = notes
+        self.updated_at = utc_now()
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "run_id": self.run_id,
+            "tenant_id": self.tenant_id,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+            "catalog_entry_id": self.catalog_entry_id,
+            "match_type": self.match_type,
+            "confidence_score": self.confidence_score,
+            "category": self.category,
+            "severity": self.severity,
+            "is_retryable": self.is_retryable,
+            "recovery_mode": self.recovery_mode,
+            "recovery_suggestion": self.recovery_suggestion,
+            "recovery_attempted": self.recovery_attempted,
+            "recovery_succeeded": self.recovery_succeeded,
+            "recovered_at": self.recovered_at.isoformat() if self.recovered_at else None,
+            "recovered_by": self.recovered_by,
+            "recovery_notes": self.recovery_notes,
+            "skill_id": self.skill_id,
+            "step_index": self.step_index,
+            "context": self.get_context(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 def init_db():
     SQLModel.metadata.create_all(engine)
 

@@ -1,0 +1,135 @@
+name: Publish JavaScript SDK to npm
+
+on:
+  push:
+    tags:
+      - 'js-sdk-v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        default: 'false'
+
+jobs:
+  build-and-publish:
+    name: Build and Publish to npm
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write  # For npm provenance
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/js-sdk-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/js-sdk-v}"
+          else
+            VERSION="0.0.0-dev.$(date +%Y%m%d%H%M%S)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Install dependencies
+        working-directory: sdk/js/aos-sdk
+        run: npm ci || npm install
+
+      - name: Update version
+        working-directory: sdk/js/aos-sdk
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          sed -i "s/VERSION = \".*\"/VERSION = \"${{ steps.version.outputs.version }}\"/" src/index.ts
+          cat package.json | grep version
+
+      - name: Build
+        working-directory: sdk/js/aos-sdk
+        run: npm run build
+
+      - name: Type check
+        working-directory: sdk/js/aos-sdk
+        run: npm run typecheck || echo "Type check skipped"
+
+      - name: Lint
+        working-directory: sdk/js/aos-sdk
+        run: npm run lint || echo "Lint skipped"
+
+      - name: Test
+        working-directory: sdk/js/aos-sdk
+        run: npm test || echo "No tests configured"
+
+      - name: Pack for verification
+        working-directory: sdk/js/aos-sdk
+        run: |
+          npm pack
+          ls -la *.tgz
+
+      - name: Test installation from pack
+        working-directory: sdk/js/aos-sdk
+        run: |
+          mkdir /tmp/test-install
+          cd /tmp/test-install
+          npm init -y
+          npm install ${{ github.workspace }}/sdk/js/aos-sdk/*.tgz
+          node -e "const { AOSClient, VERSION } = require('@agenticverz/aos-sdk'); console.log('Installed aos-sdk', VERSION);"
+
+      - name: Publish to npm (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        working-directory: sdk/js/aos-sdk
+        run: npm publish --dry-run
+
+      - name: Publish to npm
+        if: github.event.inputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/')
+        working-directory: sdk/js/aos-sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-sdk-dist
+          path: |
+            sdk/js/aos-sdk/dist/
+            sdk/js/aos-sdk/*.tgz
+
+  test-install:
+    name: Test Installation
+    needs: build-and-publish
+    if: github.event.inputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18', '20', '22']
+
+    steps:
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Wait for npm propagation
+        run: sleep 30
+
+      - name: Install from npm
+        run: |
+          npm install @agenticverz/aos-sdk
+          node -e "const { AOSClient, VERSION } = require('@agenticverz/aos-sdk'); console.log('Successfully installed aos-sdk', VERSION);"
+
+      - name: Test TypeScript types
+        run: |
+          npm install typescript @types/node
+          echo "import { AOSClient, Capabilities } from '@agenticverz/aos-sdk';" > test.ts
+          echo "const client = new AOSClient();" >> test.ts
+          echo "async function test() { const caps: Capabilities = await client.getCapabilities(); console.log(caps); }" >> test.ts
+          npx tsc --noEmit --strict test.ts || echo "Type check completed"

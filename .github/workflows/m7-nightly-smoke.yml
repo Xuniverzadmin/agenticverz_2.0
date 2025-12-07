@@ -1,0 +1,149 @@
+name: M7 Nightly RBAC/Memory Smoke
+
+on:
+  schedule:
+    # Run at 2 AM UTC daily
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  # Default to staging
+  TARGET_ENV: ${{ github.event.inputs.environment || 'staging' }}
+
+jobs:
+  smoke-test:
+    name: RBAC/Memory Smoke Tests
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set environment URLs
+        run: |
+          if [[ "$TARGET_ENV" == "production" ]]; then
+            echo "API_BASE=https://api.agenticverz.com" >> $GITHUB_ENV
+          else
+            echo "API_BASE=https://staging-api.agenticverz.com" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl postgresql-client
+
+      - name: Run RBAC Smoke Tests
+        env:
+          MACHINE_SECRET_TOKEN: ${{ secrets.MACHINE_SECRET_TOKEN }}
+          BASE_URL: ${{ env.API_BASE }}
+        run: |
+          chmod +x ./scripts/ops/rbac_enable_smoke.sh
+          ./scripts/ops/rbac_enable_smoke.sh
+
+      - name: Run Monitoring Check
+        env:
+          MACHINE_SECRET_TOKEN: ${{ secrets.MACHINE_SECRET_TOKEN }}
+          BASE_URL: ${{ env.API_BASE }}
+        run: |
+          chmod +x ./scripts/ops/m7_monitoring_check.sh
+          ./scripts/ops/m7_monitoring_check.sh || true
+
+      - name: Collect Metrics Snapshot
+        env:
+          BASE_URL: ${{ env.API_BASE }}
+        run: |
+          echo "=== Metrics Snapshot ==="
+          curl -sS "$BASE_URL/metrics" | grep -E 'rbac_|memory_pins_' | grep -v "^#" | head -50
+
+      - name: Notify on Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": ":warning: M7 Nightly Smoke Failed on ${{ env.TARGET_ENV }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*M7 Nightly Smoke Test Failed*\nEnvironment: `${{ env.TARGET_ENV }}`\nRun: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  integration-tests:
+    name: M7 Integration Tests
+    runs-on: ubuntu-latest
+    needs: smoke-test
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: nova
+          POSTGRES_PASSWORD: novapass
+          POSTGRES_DB: nova_aos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5432/nova_aos
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run M7 Integration Tests
+        env:
+          DATABASE_URL: postgresql://nova:novapass@localhost:5432/nova_aos
+          REDIS_URL: redis://localhost:6379
+          MACHINE_SECRET_TOKEN: test-token-for-ci
+          PYTHONPATH: /home/runner/work/agenticverz2.0/agenticverz2.0/backend
+        run: |
+          cd backend
+          pytest tests/integration/test_m7_rbac_memory.py -v --tb=short

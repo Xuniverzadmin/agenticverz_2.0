@@ -242,6 +242,7 @@ from .api.costsim import router as costsim_router
 from .api.memory_pins import router as memory_pins_router
 from .api.rbac_api import router as rbac_router
 from .api.traces import router as traces_router
+from .api.failures import router as failures_router
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -251,6 +252,7 @@ app.include_router(costsim_router)
 app.include_router(memory_pins_router)
 app.include_router(rbac_router)
 app.include_router(traces_router, prefix="/api/v1")
+app.include_router(failures_router)
 
 # CORS middleware
 app.add_middleware(

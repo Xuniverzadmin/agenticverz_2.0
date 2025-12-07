@@ -1,0 +1,214 @@
+# =============================================================================
+# M7 RBAC & Memory Alerts
+# =============================================================================
+# Prometheus alert rules for RBAC enforcement and Memory integration
+# Install: Copy to Prometheus rules directory and reload
+# =============================================================================
+
+groups:
+  - name: m7_rbac_alerts
+    rules:
+      # =========================================================================
+      # RBAC Denial Alerts
+      # =========================================================================
+
+      # Critical: Excessive RBAC denials (may indicate attack or misconfiguration)
+      - alert: RBACDeniedAnomaly
+        expr: |
+          increase(rbac_engine_decisions_total{decision="denied"}[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          component: rbac
+        annotations:
+          summary: "Excessive RBAC denials detected"
+          description: "More than 5 RBAC denials in 5 minutes. Resource={{ $labels.resource }}, Action={{ $labels.action }}, Reason={{ $labels.reason }}"
+          runbook_url: "https://docs.agenticverz.com/runbooks/rbac-denials"
+
+      # Warning: RBAC policy load failures
+      - alert: RBACPolicyLoadFailed
+        expr: |
+          increase(rbac_policy_loads_total{status=~"error|parse_error"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: rbac
+        annotations:
+          summary: "RBAC policy load failed"
+          description: "RBAC policy file failed to load. Status={{ $labels.status }}. Check rbac_policies.json for syntax errors."
+          runbook_url: "https://docs.agenticverz.com/runbooks/rbac-policy-errors"
+
+      # Info: RBAC running in non-enforcing mode
+      - alert: RBACNotEnforced
+        expr: |
+          increase(rbac_engine_decisions_total{reason="rbac-disabled"}[5m]) > 0
+        for: 30m
+        labels:
+          severity: info
+          component: rbac
+        annotations:
+          summary: "RBAC running in non-enforcing mode"
+          description: "RBAC is configured but not enforcing. Set RBAC_ENFORCE=true to enable enforcement."
+
+      # Warning: High RBAC latency
+      - alert: RBACHighLatency
+        expr: |
+          histogram_quantile(0.95, rate(rbac_engine_latency_seconds_bucket[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: rbac
+        annotations:
+          summary: "RBAC decision latency is high"
+          description: "p95 RBAC decision latency is {{ $value | printf \"%.3f\" }}s (threshold: 50ms)"
+
+      # Critical: RBAC audit write failures
+      - alert: RBACAuditWriteFailed
+        expr: |
+          increase(rbac_audit_writes_total{status="error"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: rbac
+        annotations:
+          summary: "RBAC audit log write failures"
+          description: "Failed to write RBAC audit entries. Check database connectivity."
+
+  - name: m7_memory_alerts
+    rules:
+      # =========================================================================
+      # Memory Pins Alerts
+      # =========================================================================
+
+      # Warning: Memory pin operation failures
+      - alert: MemoryPinOperationFailed
+        expr: |
+          increase(memory_pins_operations_total{status="error"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Memory pin operation failures"
+          description: "Memory pin {{ $labels.operation }} operations failing. Check database connectivity."
+
+      # Warning: Memory pin latency high
+      - alert: MemoryPinHighLatency
+        expr: |
+          histogram_quantile(0.95, rate(memory_pins_latency_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Memory pin latency is high"
+          description: "p95 memory pin latency is {{ $value | printf \"%.3f\" }}s (threshold: 100ms)"
+
+      # Warning: Memory service cache miss rate high
+      - alert: MemoryCacheMissRateHigh
+        expr: |
+          rate(memory_cache_misses_total[5m]) /
+          (rate(memory_cache_hits_total[5m]) + rate(memory_cache_misses_total[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Memory cache miss rate is high"
+          description: "Cache miss rate is {{ $value | printf \"%.1f\" }}% - Redis may be unavailable or cache cold"
+
+      # =========================================================================
+      # Memory Context Injection Alerts
+      # =========================================================================
+
+      # Warning: Memory context injection failures
+      - alert: MemoryContextInjectionFailed
+        expr: |
+          increase(memory_service_operations_total{operation="get",status="error"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Memory context injection failures"
+          description: "Failed to retrieve memory context for simulations. Service will continue in fail-open mode."
+
+      # =========================================================================
+      # Drift Detection Alerts
+      # =========================================================================
+
+      # Warning: Drift detected between baseline and memory-enabled runs
+      - alert: MemoryDriftDetected
+        expr: |
+          increase(drift_detected_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Memory drift detected"
+          description: "Drift detected between baseline and memory-enabled simulations. Severity={{ $labels.severity }}, Component={{ $labels.component }}"
+
+      # Critical: High drift score
+      - alert: MemoryDriftScoreHigh
+        expr: |
+          drift_score_current > 0.3
+        for: 5m
+        labels:
+          severity: critical
+          component: memory
+        annotations:
+          summary: "High memory drift score"
+          description: "Drift score is {{ $value | printf \"%.2f\" }} (threshold: 0.3). Workflow={{ $labels.workflow_id }}"
+
+  - name: m7_ttl_alerts
+    rules:
+      # =========================================================================
+      # TTL Expiration Alerts
+      # =========================================================================
+
+      # Warning: Expired pins accumulating
+      - alert: ExpiredPinsAccumulating
+        expr: |
+          pg_stat_user_tables_n_live_tup{schemaname="system",relname="memory_pins"} > 10000
+          AND increase(memory_pins_operations_total{operation="cleanup"}[1h]) == 0
+        for: 6h
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Expired memory pins may be accumulating"
+          description: "No cleanup operations in 6 hours and memory_pins table is large. Check TTL expiration cron job."
+
+  - name: m7_operational_alerts
+    rules:
+      # =========================================================================
+      # Operational Health Alerts
+      # =========================================================================
+
+      # Critical: Memory module import failed (service in degraded mode)
+      - alert: MemoryModuleImportFailed
+        expr: |
+          up{job="nova_agent_manager"} == 1
+          AND absent(memory_service_operations_total)
+          AND on() (vector(1) and ignoring() (label_replace(vector(1), "feature", "memory_context_injection", "", "") == 1))
+        for: 5m
+        labels:
+          severity: critical
+          component: memory
+        annotations:
+          summary: "Memory module failed to load"
+          description: "Memory features are enabled but memory_service metrics are absent. Service may be in MEMORY_FAIL_OPEN_OVERRIDE mode."
+
+      # Warning: Database backup needed before RBAC enablement
+      - alert: PreRBACBackupReminder
+        expr: |
+          (time() - pg_stat_archiver_last_archive_time) > 86400
+          AND on() increase(rbac_policy_loads_total[1h]) > 0
+        for: 1h
+        labels:
+          severity: warning
+          component: operations
+        annotations:
+          summary: "Database backup may be stale before RBAC changes"
+          description: "Last archive was over 24 hours ago. Ensure backup before enabling RBAC_ENFORCE=true."

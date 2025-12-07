@@ -1,0 +1,146 @@
+groups:
+  - name: m9_failure_catalog_alerts
+    rules:
+      # High miss rate indicates catalog drift
+      - alert: FailureCatalogHighMissRate
+        expr: |
+          (
+            sum(rate(failure_match_misses_total[1h]))
+            /
+            (sum(rate(failure_match_hits_total[1h])) + sum(rate(failure_match_misses_total[1h])))
+          ) > 0.3
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "High failure catalog miss rate ({{ $value | humanizePercentage }})"
+          description: "More than 30% of failures are not matching catalog entries. Consider running aggregation job and expanding the catalog."
+          runbook_url: "https://docs.agenticverz.com/runbooks/failure-catalog-miss-rate"
+
+      # Critical miss rate - catalog needs immediate attention
+      - alert: FailureCatalogCriticalMissRate
+        expr: |
+          (
+            sum(rate(failure_match_misses_total[1h]))
+            /
+            (sum(rate(failure_match_hits_total[1h])) + sum(rate(failure_match_misses_total[1h])))
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "Critical failure catalog miss rate ({{ $value | humanizePercentage }})"
+          description: "More than 50% of failures are not matching catalog entries. Immediate attention required."
+          runbook_url: "https://docs.agenticverz.com/runbooks/failure-catalog-critical"
+
+      # Low recovery success rate
+      - alert: FailureRecoveryLowSuccessRate
+        expr: |
+          (
+            sum(rate(recovery_success_total[1h]))
+            /
+            (sum(rate(recovery_success_total[1h])) + sum(rate(recovery_failure_total[1h])))
+          ) < 0.5
+        for: 30m
+        labels:
+          severity: warning
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "Low recovery success rate ({{ $value | humanizePercentage }})"
+          description: "Less than 50% of recovery attempts are succeeding. Review recovery strategies."
+          runbook_url: "https://docs.agenticverz.com/runbooks/recovery-success-rate"
+
+      # Spike in specific error code
+      - alert: FailureCodeSpike
+        expr: |
+          sum by (error_code) (
+            rate(failure_match_hits_total[5m])
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "Spike in error code {{ $labels.error_code }}"
+          description: "Error code {{ $labels.error_code }} is occurring at {{ $value | humanize }} per second."
+          runbook_url: "https://docs.agenticverz.com/runbooks/error-spike"
+
+      # No failures being persisted (system may be down)
+      - alert: FailurePersistenceDown
+        expr: |
+          sum(increase(failure_match_hits_total[1h])) == 0
+          AND
+          sum(increase(failure_match_misses_total[1h])) == 0
+          AND
+          sum(increase(nova_runs_total[1h])) > 0
+        for: 30m
+        labels:
+          severity: critical
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "No failures being persisted while runs are active"
+          description: "Runs are executing but no failure matches are being recorded. Check persistence layer."
+          runbook_url: "https://docs.agenticverz.com/runbooks/failure-persistence"
+
+      # Aggregation job not running
+      - alert: FailureAggregationStale
+        expr: |
+          time() - max(failure_aggregation_last_run_timestamp) > 86400 * 2
+        for: 1h
+        labels:
+          severity: warning
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "Failure aggregation job has not run in 2+ days"
+          description: "The nightly failure aggregation job may have failed. Check systemd timer."
+          runbook_url: "https://docs.agenticverz.com/runbooks/aggregation-job"
+
+      # High volume of TRANSIENT errors (infrastructure issue)
+      - alert: HighTransientErrorVolume
+        expr: |
+          sum(rate(failure_match_hits_total{category="TRANSIENT"}[15m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "High volume of transient errors"
+          description: "Transient errors (network, timeout) are occurring at {{ $value | humanize }}/s. Check infrastructure."
+          runbook_url: "https://docs.agenticverz.com/runbooks/transient-errors"
+
+      # Permission/auth errors spike
+      - alert: PermissionErrorSpike
+        expr: |
+          sum(rate(failure_match_hits_total{category="PERMISSION"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+          milestone: m9
+        annotations:
+          summary: "Spike in permission errors"
+          description: "Permission/auth errors occurring at {{ $value | humanize }}/s. Check auth configuration."
+          runbook_url: "https://docs.agenticverz.com/runbooks/permission-errors"
+
+      # Budget/resource exhaustion
+      - alert: ResourceExhaustionErrors
+        expr: |
+          sum(rate(failure_match_hits_total{category="RESOURCE"}[15m])) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          milestone: m9
+        annotations:
+          summary: "Resource exhaustion errors detected"
+          description: "Budget or quota errors are occurring. Review resource allocation."
+          runbook_url: "https://docs.agenticverz.com/runbooks/resource-exhaustion"

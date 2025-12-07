@@ -7,6 +7,7 @@ and verify that the runtime behavior is deterministic.
 """
 
 import asyncio
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -24,6 +25,19 @@ from app.traces.store import (
     generate_correlation_id,
     generate_run_id,
 )
+
+# Check if we should use Postgres for trace storage
+USE_POSTGRES = os.getenv("USE_POSTGRES_TRACES", "false").lower() == "true"
+
+if USE_POSTGRES:
+    from app.traces.pg_store import PostgresTraceStore, get_postgres_trace_store
+
+
+def get_trace_store() -> TraceStore:
+    """Get the appropriate trace store based on configuration."""
+    if USE_POSTGRES:
+        return get_postgres_trace_store()
+    return SQLiteTraceStore()
 
 
 @dataclass
@@ -63,7 +77,7 @@ class ReplayEngine:
         trace_store: TraceStore | None = None,
         skill_executor: Any = None,  # Type hint would be SkillExecutor
     ):
-        self.trace_store = trace_store or SQLiteTraceStore()
+        self.trace_store = trace_store or get_trace_store()
         self.skill_executor = skill_executor
 
     async def replay_run(

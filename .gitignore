@@ -3,6 +3,12 @@
 .env.local
 .env.production
 
+# Secrets (NEVER COMMIT)
+secrets/*.env
+secrets/*.pem
+secrets/*.txt
+secrets/*.key
+
 # Python
 __pycache__/
 *.py[cod]

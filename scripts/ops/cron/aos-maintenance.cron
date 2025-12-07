@@ -1,0 +1,22 @@
+# AOS Maintenance Cron Jobs
+# Install with: crontab /root/agenticverz2.0/scripts/ops/cron/aos-maintenance.cron
+#
+# Or add individual entries with: crontab -e
+
+# Environment
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+DATABASE_URL=postgresql://nova:novapass@localhost:6432/nova_aos
+API_BASE=http://127.0.0.1:8000
+
+# Memory pins TTL cleanup - every hour
+0 * * * * /root/agenticverz2.0/scripts/ops/expire_memory_pins.sh >> /var/log/aos/expire_pins.log 2>&1
+
+# Golden file retention - daily at 3am
+0 3 * * * /root/agenticverz2.0/scripts/ops/golden_retention.sh >> /var/log/aos/golden_retention.log 2>&1
+
+# Prometheus rules reload check - every 15 minutes
+*/15 * * * * /root/agenticverz2.0/scripts/ops/prom_reload.sh --check-only >> /var/log/aos/prom_reload.log 2>&1
+
+# Context hygiene check - weekly on Sunday at 2am
+0 2 * * 0 /root/agenticverz2.0/scripts/ops/hygiene_check.sh --json >> /var/log/aos/hygiene_check.log 2>&1

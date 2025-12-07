@@ -1,0 +1,109 @@
+# CI Preflight Check - Runs consistency check before main CI
+# This catches configuration issues early before wasting CI minutes
+
+name: CI Preflight
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  preflight:
+    name: Consistency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run CI consistency check
+        run: |
+          chmod +x ./scripts/ops/ci_consistency_check.sh
+          ./scripts/ops/ci_consistency_check.sh --quick
+        env:
+          # Skip git checks in CI (already clean checkout)
+          CI: true
+
+      - name: Verify required files exist
+        run: |
+          echo "Checking required files..."
+
+          # CI workflow
+          test -f .github/workflows/ci.yml || { echo "ERROR: ci.yml missing"; exit 1; }
+
+          # Core application
+          test -f backend/app/main.py || { echo "ERROR: main.py missing"; exit 1; }
+
+          # Test infrastructure
+          test -f backend/tests/conftest.py || { echo "ERROR: conftest.py missing"; exit 1; }
+
+          # Concurrency limiter (must have atomic operations)
+          grep -q "ACQUIRE_SCRIPT\|Lua" backend/app/utils/concurrent_runs.py || {
+            echo "ERROR: Concurrency limiter missing atomic operations"
+            exit 1
+          }
+
+          echo "All required files present"
+
+      - name: Verify pgvector infrastructure
+        run: |
+          echo "Checking pgvector infrastructure..."
+
+          # Vector store must exist
+          test -f backend/app/memory/vector_store.py || {
+            echo "ERROR: vector_store.py missing"
+            exit 1
+          }
+
+          # Must have HNSW index reference
+          grep -q "hnsw\|HNSW" backend/app/memory/vector_store.py || {
+            echo "WARNING: vector_store.py should reference HNSW index"
+          }
+
+          # Embedding metrics must exist
+          test -f backend/app/memory/embedding_metrics.py || {
+            echo "ERROR: embedding_metrics.py missing"
+            exit 1
+          }
+
+          # Must have feature flags
+          grep -q "VECTOR_SEARCH_ENABLED" backend/app/memory/embedding_metrics.py || {
+            echo "ERROR: VECTOR_SEARCH_ENABLED flag missing"
+            exit 1
+          }
+
+          # Backfill script should exist
+          test -f backend/scripts/backfill_memory_embeddings.py || {
+            echo "WARNING: backfill script missing - embeddings may need manual backfill"
+          }
+
+          echo "pgvector infrastructure verified"
+
+      - name: Check for common CI anti-patterns
+        run: |
+          echo "Checking for anti-patterns..."
+
+          # Check for || true on pytest (silent failures)
+          if grep -r "pytest.*|| *true" .github/workflows/; then
+            echo "WARNING: Found '|| true' on pytest - failures may be silently ignored"
+          fi
+
+          # Check for missing PYTHONUNBUFFERED on worker processes
+          if grep -q "python.*worker" .github/workflows/ci.yml; then
+            if ! grep -q "PYTHONUNBUFFERED" .github/workflows/ci.yml; then
+              echo "WARNING: Worker processes should have PYTHONUNBUFFERED=1"
+            fi
+          fi
+
+          echo "Anti-pattern check complete"
+
+  # Gate for main CI - only runs if preflight passes
+  ci-gate:
+    name: CI Gate
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Preflight passed, CI can proceed"

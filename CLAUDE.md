@@ -1,16 +1,37 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-01
+**Last Updated:** 2025-12-05
+
+---
+
+## Session Start Protocol (MANDATORY)
+
+Before ANY work, run the hygiene check:
+
+```bash
+./scripts/ops/session_start.sh
+```
+
+This verifies:
+- Working environment exists
+- No stale checklists
+- Services are healthy
+- No blocking issues
+
+Then read in order:
+1. `agentiverz_mn/repo_snapshot.md` - Current state
+2. `agentiverz_mn/milestone_plan.md` - What we're building
+3. Pick the relevant checklist for your task
 
 ---
 
 ## Quick Start for AI Assistants
 
-When resuming work on this project, read these files in order:
-
-1. **Memory PIN Index:** `docs/memory-pins/INDEX.md`
-2. **Full Milestone Plan:** `docs/memory-pins/PIN-008-v1-milestone-plan-full.md` (PRIMARY)
-3. **Machine-Native Architecture:** `docs/memory-pins/PIN-005-machine-native-architecture.md`
+| Resource | Location | Purpose |
+|----------|----------|---------|
+| Memory PIN Index | `docs/memory-pins/INDEX.md` | Project status dashboard |
+| M8 Working Environment | `agentiverz_mn/` | Focused context files |
+| Current Roadmap | `docs/memory-pins/PIN-033-m8-m14-machine-native-realignment.md` | M8-M14 plan |
 
 ---
 
@@ -34,30 +55,28 @@ When resuming work on this project, read these files in order:
 
 ## Current Phase
 
-**Strategic Pivot:** Machine-Native SDK Build
+**M7 Complete → M8 Next**
 
-### v1 Milestone Progress (Target: ~5 months small team, ~8 months solo)
+### Milestone Status
 
-| Milestone | Status | Duration |
-|-----------|--------|----------|
-| M0: Foundations & Contracts | ⏳ Next | 1 week |
-| M1: Runtime Interfaces | Pending | 2 weeks |
-| M2: Skill Registration + Stubs | Pending | 2 weeks |
-| M2.5: Planner Abstraction | Pending | 1 week |
-| M3: Core Skills (http_call, llm_invoke, json_transform) | Pending | 4 weeks |
-| M3.5: CLI + Demo | Pending | 2 weeks |
-| M4: Internal Workflow Validation | Pending | 2 weeks |
-| M5: Failure Catalog v1 | Pending | 1 week |
-| M5.5: Simulation Engine v1 | Pending | 1.5 weeks |
-| M6: Feature Freeze + Observability | Pending | 2 weeks |
-| M7: Memory Integration | Pending | 1 week |
+| Milestone | Status |
+|-----------|--------|
+| M0-M7 | ✅ COMPLETE |
+| M8: Demo + SDK + Auth | ⏳ NEXT |
+| M9: Failure Persistence | Pending |
+| M10: Recovery Engine | Pending |
+| M11: Skill Expansion | Pending |
+| M12: Beta Rollout | Pending |
+| M13: Console UI | Pending |
+| M14+: Self-Improving | Future |
 
-**Total v1:** ~19.5 weeks
+### M8 Priorities (in order)
 
-### Completed Foundation (Pre-Pivot)
-- ✅ Phase 1: Runtime Foundation (worker, metrics, alerts)
-- ✅ Phase 2-5: Production hardening, security, budget protection
-- ✅ 65 tests passing (97%)
+1. **Auth Integration** - Wire real auth provider (BLOCKING)
+2. **SDK Packaging** - PyPI + npm publish
+3. **Demo Productionization** - Screencasts, examples
+
+See `agentiverz_mn/` for detailed checklists.
 
 ---
 
@@ -68,6 +87,7 @@ When resuming work on this project, read these files in order:
 - **Observability:** Prometheus + Alertmanager + Grafana
 - **Container:** Docker Compose with host networking
 - **LLM:** Anthropic Claude (claude-sonnet-4-20250514)
+- **Connection Pool:** PgBouncer (port 6432)
 
 ---
 
@@ -75,92 +95,62 @@ When resuming work on this project, read these files in order:
 
 ```
 /root/agenticverz2.0/
-├── backend/app/
-│   ├── main.py              # FastAPI application
-│   ├── db.py                # SQLModel models
-│   ├── worker/
-│   │   ├── pool.py          # Worker pool
-│   │   ├── runner.py        # Run executor
-│   │   └── runtime/         # [M1] Machine-native runtime interfaces
-│   ├── skills/
-│   │   ├── registry.py      # [M2] Skill registration
-│   │   ├── stubs/           # [M2] Stub implementations
-│   │   ├── http_call.py     # [M3] HTTP skill
-│   │   ├── llm_invoke.py    # [M3] LLM skill
-│   │   └── json_transform.py # [M3] Transform skill
-│   ├── planner/
-│   │   ├── interface.py     # [M2.5] PlannerInterface protocol
-│   │   ├── claude_adapter.py
-│   │   └── stub_planner.py  # [M2.5] Rule-based for tests
-│   ├── memory/
-│   │   ├── store.py         # PostgresMemoryStore
-│   │   └── retriever.py     # [M7] MemoryRetriever
-│   ├── schemas/
-│   │   ├── structured_outcome.py  # [M0] StructuredOutcome
-│   │   ├── skill_metadata.py      # [M0] SkillMetadata
-│   │   ├── resource_contract.py   # [M0] ResourceContract
-│   │   └── agent_profile.py       # [M0] AgentProfile
-│   ├── runtime/
-│   │   └── failure_catalog.py     # [M5] Failure catalog
-│   ├── utils/
-│   │   ├── plan_inspector.py
-│   │   ├── input_sanitizer.py
-│   │   ├── budget_tracker.py
-│   │   └── rate_limiter.py
-│   ├── specs/
-│   │   ├── error_taxonomy.md      # [M0] Error codes
-│   │   └── determinism_and_replay.md # [M0] Replay definition
-│   └── observability/
-│       └── prometheus_metrics.py  # [M6] Metrics
-├── backend/cli/                   # [M3.5] CLI tools
-│   └── aos.py
+├── agentiverz_mn/           # M8+ working environment (START HERE)
+│   ├── repo_snapshot.md     # Current state
+│   ├── milestone_plan.md    # M8-M14 roadmap
+│   ├── auth_blocker_notes.md
+│   ├── demo_checklist.md
+│   ├── sdk_packaging_checklist.md
+│   └── auth_integration_checklist.md
+├── backend/
+│   ├── app/
+│   │   ├── main.py          # FastAPI application
+│   │   ├── api/             # API routers
+│   │   ├── auth/            # RBAC (uses stub - needs real auth)
+│   │   ├── skills/          # 5 production skills
+│   │   ├── worker/runtime/  # Machine-native runtime
+│   │   ├── workflow/        # Workflow engine
+│   │   └── costsim/         # Cost simulation V2
+│   └── cli/aos.py           # CLI tool
+├── sdk/
+│   ├── python/              # Python SDK (10/10 tests, needs packaging)
+│   └── js/                  # JS SDK (needs types, machine-native methods)
 ├── docs/
-│   └── memory-pins/               # Project knowledge base (8 PINs)
-├── monitoring/
-└── scripts/
+│   ├── memory-pins/         # 33 PINs
+│   └── API_WORKFLOW_GUIDE.md
+├── scripts/
+│   └── ops/
+│       ├── session_start.sh  # Run before each session
+│       └── hygiene_check.sh  # Weekly automated check
+└── monitoring/
 ```
 
 ---
 
 ## Services
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| nova_agent_manager | 8000 | FastAPI backend |
+| Service | Port | Status |
+|---------|------|--------|
+| nova_agent_manager | 8000 | Backend API |
 | nova_worker | - | Run executor |
 | nova_db | 5433 | PostgreSQL |
+| nova_pgbouncer | 6432 | Connection pool |
 | nova_prometheus | 9090 | Metrics |
 | nova_alertmanager | 9093 | Alert routing |
 | nova_grafana | 3000 | Dashboards |
 
 ---
 
-## Machine-Native Runtime Interfaces (v1 Target)
+## Machine-Native APIs (Implemented)
 
 ```python
-# Core interfaces to implement (M1)
-runtime.execute(skill, params)      # Never throws, returns StructuredOutcome
-runtime.describe_skill(name)        # Returns SkillMetadata
-runtime.query(key, params)          # Query budget, state, history
-runtime.get_resource_contract(id)   # Returns ResourceContract
-runtime.simulate(plan)              # Pre-execution cost/feasibility check (M5.5)
-```
-
----
-
-## Error Taxonomy (M0 Deliverable)
-
-```
-Categories:
-- TRANSIENT    → retry might work
-- PERMANENT    → don't retry
-- RESOURCE     → budget/rate limit
-- PERMISSION   → not allowed
-- VALIDATION   → bad input
-
-Key Codes:
-TIMEOUT, DNS_FAILURE, HTTP_4XX, HTTP_5XX, RATE_LIMITED,
-BUDGET_EXCEEDED, PERMISSION_DENIED, INVALID_INPUT, SCHEMA_VALIDATION_FAILED
+# All implemented and working
+POST /api/v1/runtime/simulate      # Plan feasibility check
+POST /api/v1/runtime/query         # State queries
+GET  /api/v1/runtime/capabilities  # Skills, budget, rate limits
+GET  /api/v1/runtime/skills/{id}   # Skill details
+POST /api/v1/runs                  # Create run
+GET  /api/v1/runs/{id}             # Run status
 ```
 
 ---
@@ -168,90 +158,93 @@ BUDGET_EXCEEDED, PERMISSION_DENIED, INVALID_INPUT, SCHEMA_VALIDATION_FAILED
 ## Common Commands
 
 ```bash
+# Session start (ALWAYS RUN FIRST)
+./scripts/ops/session_start.sh
+
+# Weekly hygiene check
+./scripts/ops/hygiene_check.sh
+
 # Check services
 docker compose ps
 
 # View logs
 docker compose logs backend --tail 100
 
-# Check metrics
-curl -s http://127.0.0.1:8000/metrics | grep nova_
+# Check health
+curl http://localhost:8000/health
+
+# Check capabilities
+curl -H "X-API-Key: $AOS_API_KEY" http://localhost:8000/api/v1/runtime/capabilities
 
 # Run tests
-docker exec nova_agent_manager python -m pytest /app/tests/ -v
+cd backend && PYTHONPATH=. python -m pytest tests/ -v
 
 # Rebuild after changes
-DOCKER_BUILDKIT=1 docker build --network=host -t nova_agent_manager ./backend
-docker compose up -d backend worker
+docker compose up -d --build backend worker
 ```
 
 ---
 
-## API Key
+## Environment Variables
 
-```
+```bash
+# Key variables (in .env)
+DATABASE_URL=postgresql://nova:novapass@localhost:6432/nova_aos
+REDIS_URL=redis://localhost:6379/0
 AOS_API_KEY=edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf
+AUTH_SERVICE_URL=http://localhost:8001  # STUB - needs real auth for M8
+RBAC_ENABLED=true
+RBAC_ENFORCE=true
 ```
-
----
-
-## Next Immediate Actions (M0)
-
-1. Define `StructuredOutcome` Pydantic schema
-2. Define `SkillMetadata` Pydantic schema
-3. Define `ResourceContract` Pydantic schema
-4. Define `AgentProfile` Pydantic schema
-5. Create `error_taxonomy.md` with categories + codes
-6. Create `determinism_and_replay.md` spec
-7. Set up CI pipeline (`.github/workflows/ci.yml`)
 
 ---
 
 ## Key Memory PINs
 
-| PIN | Topic | Priority |
-|-----|-------|----------|
-| PIN-005 | Machine-Native Architecture Definition | PRIMARY |
-| PIN-006 | Execution Plan Review | Reference |
-| PIN-007 | v1 Milestone Plan (Summary) | Reference |
-| PIN-008 | v1 Milestone Plan (Full Detail) | PRIMARY |
+| PIN | Topic | Status |
+|-----|-------|--------|
+| PIN-033 | M8-M14 Machine-Native Realignment | ACTIVE (current roadmap) |
+| PIN-032 | M7 RBAC Enablement | ENFORCED |
+| PIN-009 | External Rollout (Auth Blocker) | BLOCKING M8 |
+| PIN-005 | Machine-Native Architecture | PRIMARY (vision) |
 
 ---
 
-## Vision Pillars (Must Verify Against)
+## Hygiene Scripts
 
-| # | Pillar | v1 Coverage |
-|---|--------|-------------|
-| 1 | Deterministic state | M1, M6 |
-| 2 | Replayable runs | M6 |
-| 3 | Budget & cost contracts | M0, M1, M3 |
-| 4 | Skill contracts | M0, M2, M3 |
-| 5 | System policies | M1, M5 |
-| 6 | Observability | M6 |
-| 7 | Planner modularity | M2.5 |
-| 8 | Zero silent failures | M0, M1, M5 |
-| 9 | Adaptive runtime | M13 (Phase 2) |
+### session_start.sh
+Run at the start of every session:
+- Checks working environment
+- Shows current phase
+- Lists blockers
+- Verifies services
+
+### hygiene_check.sh
+Run weekly (or via cron):
+- Detects stale files
+- Checks PIN count
+- Validates INDEX.md freshness
+- Flags completed checklists
+- `--fix` mode for auto-cleanup
+- `--json` mode for CI
 
 ---
 
-## Solo Developer Path
+## Session Workflow
 
-If working solo, use minimal path (~10 weeks):
-
-1. M0 (1 week) - Foundations
-2. M1 (2 weeks) - Runtime Interfaces
-3. M2 + M2.5 combined (2 weeks)
-4. M3: Only http_call + llm_invoke (3 weeks)
-5. M3.5: CLI + demo (1.5 weeks)
-
-**Stop. Ship. Iterate.**
+1. **Start:** `./scripts/ops/session_start.sh`
+2. **Read:** `agentiverz_mn/repo_snapshot.md`
+3. **Plan:** Check `milestone_plan.md`
+4. **Work:** Use relevant checklist
+5. **Update:** Mark checklist items complete
+6. **End:** Update `repo_snapshot.md` if major changes
 
 ---
 
 ## Notes
 
 - Host networking required (systemd-resolved + Tailscale)
-- All services bind to 127.0.0.1
-- Feature freeze at M6 (no new skills after)
-- Memory integration is runtime infra, not a skill
-- Demo uses mock notifier until M9
+- Backend publicly accessible on 0.0.0.0:8000
+- Auth currently uses STUB - must wire real provider before beta
+- PgBouncer on 6432, not direct Postgres on 5433
+- All sensitive tokens in `.env` (not committed)

@@ -1,0 +1,72 @@
+{
+  "description": "M7 Memory Pins Seed Data",
+  "version": "1.0.0",
+  "created": "2025-12-04",
+  "entries": [
+    {
+      "tenant_id": "global",
+      "source": "seed_script",
+      "ttl_seconds": null,
+      "pins": {
+        "system:config:rate_limits": {
+          "default_rpm": 100,
+          "burst_multiplier": 1.5,
+          "tenant_overrides": {}
+        },
+        "system:config:feature_flags": {
+          "memory_pins_enabled": true,
+          "rbac_enforce": false,
+          "chaos_allowed": false
+        },
+        "system:metadata:version": {
+          "api_version": "v1",
+          "schema_version": "1.0.0",
+          "last_migration": "009_create_memory_pins"
+        }
+      }
+    },
+    {
+      "tenant_id": "global",
+      "source": "seed_script",
+      "ttl_seconds": null,
+      "pins": {
+        "docs:index": {
+          "available_pins": [
+            "system:config:rate_limits",
+            "system:config:feature_flags",
+            "system:metadata:version"
+          ],
+          "last_updated": "2025-12-04T00:00:00Z"
+        }
+      }
+    },
+    {
+      "tenant_id": "staging",
+      "source": "seed_script",
+      "ttl_seconds": null,
+      "pins": {
+        "env:config": {
+          "environment": "staging",
+          "debug_enabled": true,
+          "log_level": "DEBUG"
+        },
+        "env:endpoints": {
+          "api_base": "https://staging.mobiverz.com",
+          "prometheus": "http://prometheus:9090",
+          "alertmanager": "http://alertmanager:9093"
+        }
+      }
+    },
+    {
+      "tenant_id": "test",
+      "source": "seed_script",
+      "ttl_seconds": 3600,
+      "pins": {
+        "test:ephemeral": {
+          "purpose": "Test pin with 1-hour TTL",
+          "created_by": "seed_script"
+        }
+      }
+    }
+  ]
+}

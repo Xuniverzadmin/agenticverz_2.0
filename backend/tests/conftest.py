@@ -28,6 +28,28 @@ os.environ.setdefault("DATABASE_URL", "postgresql://nova:novapass@localhost:5433
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("AOS_API_KEY", "test-key-for-testing")
 os.environ.setdefault("ENFORCE_TENANCY", "false")
+os.environ.setdefault("MACHINE_SECRET_TOKEN", "46bff817a6bb074b4322db92d5652905816597d741eea5b787ef990c1674c9ff")
+
+# Fix Prometheus duplicate metric registration in tests
+# This allows test re-imports without "Duplicated timeseries" errors
+from prometheus_client import REGISTRY
+
+def _clear_prometheus_registry():
+    """Clear all custom metrics from Prometheus registry for test isolation."""
+    collectors_to_remove = []
+    for name, collector in list(REGISTRY._names_to_collectors.items()):
+        # Skip default collectors (gc, platform, process)
+        if name.startswith(('python_', 'process_', 'gc_')):
+            continue
+        collectors_to_remove.append(collector)
+
+    for collector in collectors_to_remove:
+        try:
+            REGISTRY.unregister(collector)
+        except Exception:
+            pass
+
+_clear_prometheus_registry()
 
 
 @pytest.fixture(scope="session")

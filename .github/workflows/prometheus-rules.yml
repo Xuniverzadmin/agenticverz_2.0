@@ -1,0 +1,233 @@
+name: Validate & Reload Prometheus Rules
+
+on:
+  push:
+    paths:
+      - 'ops/prometheus_rules/**'
+      - 'monitoring/rules/**'
+  pull_request:
+    paths:
+      - 'ops/prometheus_rules/**'
+      - 'monitoring/rules/**'
+  workflow_dispatch:
+    inputs:
+      force_reload:
+        description: 'Force reload even if no rule changes'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  PROMETHEUS_VERSION: '2.48.0'
+
+jobs:
+  validate-rules:
+    name: Validate Prometheus Rules
+    runs-on: ubuntu-latest
+    outputs:
+      rules_valid: ${{ steps.validate.outputs.valid }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install promtool
+        run: |
+          curl -sLO https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+          tar -xzf prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+          sudo mv prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool /usr/local/bin/
+          promtool --version
+
+      - name: Find rule files
+        id: find-rules
+        run: |
+          echo "Searching for Prometheus rule files..."
+          RULE_FILES=$(find ops/prometheus_rules monitoring/rules -name '*.yml' -o -name '*.yaml' 2>/dev/null || echo "")
+          echo "Found files: $RULE_FILES"
+          echo "rule_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$RULE_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Validate rules with promtool
+        id: validate
+        run: |
+          set -e
+          ERRORS=0
+
+          echo "=== Validating Prometheus Rules ==="
+
+          # Validate ops/prometheus_rules
+          if [ -d "ops/prometheus_rules" ]; then
+            echo "Checking ops/prometheus_rules..."
+            for file in ops/prometheus_rules/*.yml ops/prometheus_rules/*.yaml; do
+              if [ -f "$file" ]; then
+                echo "Validating: $file"
+                if promtool check rules "$file"; then
+                  echo "✓ $file is valid"
+                else
+                  echo "✗ $file has errors"
+                  ERRORS=$((ERRORS + 1))
+                fi
+              fi
+            done
+          fi
+
+          # Validate monitoring/rules
+          if [ -d "monitoring/rules" ]; then
+            echo "Checking monitoring/rules..."
+            for file in monitoring/rules/*.yml monitoring/rules/*.yaml; do
+              if [ -f "$file" ]; then
+                echo "Validating: $file"
+                if promtool check rules "$file"; then
+                  echo "✓ $file is valid"
+                else
+                  echo "✗ $file has errors"
+                  ERRORS=$((ERRORS + 1))
+                fi
+              fi
+            done
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "::error::Found $ERRORS rule file(s) with errors"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "All rules validated successfully!"
+          echo "valid=true" >> $GITHUB_OUTPUT
+
+      - name: Upload validated rules
+        uses: actions/upload-artifact@v4
+        with:
+          name: prometheus-rules
+          path: |
+            ops/prometheus_rules/*.yml
+            ops/prometheus_rules/*.yaml
+            monitoring/rules/*.yml
+            monitoring/rules/*.yaml
+          if-no-files-found: warn
+
+  lint-rules:
+    name: Lint Rules (Best Practices)
+    runs-on: ubuntu-latest
+    needs: validate-rules
+    if: needs.validate-rules.outputs.rules_valid == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for common issues
+        run: |
+          echo "=== Checking for common rule issues ==="
+
+          # Check for alerts without severity label
+          echo "Checking for alerts without severity..."
+          for file in ops/prometheus_rules/*.yml monitoring/rules/*.yml 2>/dev/null; do
+            if [ -f "$file" ]; then
+              if grep -q "alert:" "$file" && ! grep -q "severity:" "$file"; then
+                echo "::warning file=$file::Alert(s) may be missing severity label"
+              fi
+            fi
+          done
+
+          # Check for alerts without runbook_url
+          echo "Checking for alerts without runbook_url..."
+          for file in ops/prometheus_rules/*.yml monitoring/rules/*.yml 2>/dev/null; do
+            if [ -f "$file" ]; then
+              if grep -q "alert:" "$file" && ! grep -q "runbook_url:" "$file"; then
+                echo "::notice file=$file::Consider adding runbook_url annotation"
+              fi
+            fi
+          done
+
+          # Check for very short 'for' durations
+          echo "Checking for very short 'for' durations..."
+          grep -rn "for: [0-9]s" ops/prometheus_rules monitoring/rules 2>/dev/null || true
+          grep -rn "for: 1m" ops/prometheus_rules monitoring/rules 2>/dev/null || true
+
+          echo "Lint checks complete"
+
+  reload-staging:
+    name: Reload Prometheus (Staging)
+    runs-on: ubuntu-latest
+    needs: [validate-rules, lint-rules]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.validate-rules.outputs.rules_valid == 'true'
+
+    environment:
+      name: staging
+      url: https://staging.mobiverz.com
+
+    steps:
+      - name: Trigger Prometheus reload
+        env:
+          PROM_RELOAD_URL: ${{ secrets.PROM_RELOAD_URL }}
+          PROM_RELOAD_TOKEN: ${{ secrets.PROM_RELOAD_TOKEN }}
+        run: |
+          if [ -z "$PROM_RELOAD_URL" ]; then
+            echo "::warning::PROM_RELOAD_URL not configured, skipping reload"
+            exit 0
+          fi
+
+          echo "Triggering Prometheus reload at staging..."
+
+          HTTP_CODE=$(curl -s -w '%{http_code}' -o /tmp/reload_response.txt \
+            -X POST "${PROM_RELOAD_URL}" \
+            -H "Authorization: Bearer ${PROM_RELOAD_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --max-time 30)
+
+          echo "Response code: $HTTP_CODE"
+          cat /tmp/reload_response.txt
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✓ Prometheus reload successful"
+          else
+            echo "::error::Prometheus reload failed with status $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Verify rules loaded
+        env:
+          PROM_QUERY_URL: ${{ secrets.PROM_QUERY_URL }}
+          PROM_RELOAD_TOKEN: ${{ secrets.PROM_RELOAD_TOKEN }}
+        run: |
+          if [ -z "$PROM_QUERY_URL" ]; then
+            echo "::warning::PROM_QUERY_URL not configured, skipping verification"
+            exit 0
+          fi
+
+          echo "Verifying rules are loaded..."
+
+          # Wait a moment for reload to complete
+          sleep 5
+
+          RULES_COUNT=$(curl -s \
+            -H "Authorization: Bearer ${PROM_RELOAD_TOKEN}" \
+            "${PROM_QUERY_URL}/api/v1/rules" \
+            | jq '.data.groups | length')
+
+          echo "Active rule groups: $RULES_COUNT"
+
+          if [ "$RULES_COUNT" -gt 0 ]; then
+            echo "✓ Rules verified"
+          else
+            echo "::warning::No rule groups found after reload"
+          fi
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [validate-rules]
+    if: failure()
+
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "::error::Prometheus rules validation failed!"
+          echo "Check the validate-rules job for details."
+          # Add Slack/email notification here if configured

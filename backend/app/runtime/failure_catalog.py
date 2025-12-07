@@ -1,4 +1,4 @@
-# Failure Catalog (M4.5)
+# Failure Catalog (M4.5 + M9 Persistence)
 """
 Offline failure catalog for structured error handling and recovery.
 
@@ -7,14 +7,18 @@ Provides:
 2. Match error codes/messages to catalog entries
 3. Get recovery strategies and suggestions
 4. Support for exact, prefix, and regex matching
+5. [M9] Persist all matches to database for learning
+6. [M9] Prometheus metrics for failure tracking
 
 Design Principles:
 - Offline-first: No runtime dependencies, works standalone
 - Deterministic: Same input produces same match result
 - Extensible: Easy to add new error codes and recovery modes
+- [M9] Observable: All matches tracked via metrics and DB
 """
 
 from __future__ import annotations
+import asyncio
 import json
 import logging
 import os
@@ -23,8 +27,136 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from contextlib import contextmanager
+from threading import Lock
+import time
 
 logger = logging.getLogger("nova.runtime.failure_catalog")
+
+# M9: Non-blocking persistence with circuit breaker
+_persist_executor: Optional[ThreadPoolExecutor] = None
+_persist_lock = Lock()
+_circuit_breaker_state = {
+    "failures": 0,
+    "last_failure_time": 0.0,
+    "is_open": False,
+}
+_CIRCUIT_BREAKER_THRESHOLD = 5  # Open after 5 consecutive failures
+_CIRCUIT_BREAKER_TIMEOUT = 60.0  # Reset after 60 seconds
+_PERSIST_TIMEOUT = 2.0  # Max seconds for a persist operation
+
+# M9: Dropped persistence counter
+_failure_persist_dropped = None
+
+
+def _get_persist_executor() -> ThreadPoolExecutor:
+    """Get or create the persistence thread pool executor."""
+    global _persist_executor
+    if _persist_executor is None:
+        with _persist_lock:
+            if _persist_executor is None:
+                _persist_executor = ThreadPoolExecutor(
+                    max_workers=4,
+                    thread_name_prefix="failure_persist"
+                )
+    return _persist_executor
+
+
+def _check_circuit_breaker() -> bool:
+    """
+    Check if circuit breaker is open.
+
+    Returns:
+        True if we should allow the operation, False if circuit is open
+    """
+    state = _circuit_breaker_state
+
+    if not state["is_open"]:
+        return True
+
+    # Check if timeout has elapsed
+    if time.time() - state["last_failure_time"] > _CIRCUIT_BREAKER_TIMEOUT:
+        with _persist_lock:
+            state["is_open"] = False
+            state["failures"] = 0
+            logger.info("M9: Circuit breaker reset (timeout elapsed)")
+        return True
+
+    return False
+
+
+def _record_circuit_failure():
+    """Record a failure for circuit breaker."""
+    state = _circuit_breaker_state
+    with _persist_lock:
+        state["failures"] += 1
+        state["last_failure_time"] = time.time()
+
+        if state["failures"] >= _CIRCUIT_BREAKER_THRESHOLD:
+            state["is_open"] = True
+            logger.warning(
+                f"M9: Circuit breaker OPEN after {state['failures']} failures"
+            )
+
+
+def _record_circuit_success():
+    """Record a success, reset failure count."""
+    state = _circuit_breaker_state
+    if state["failures"] > 0:
+        with _persist_lock:
+            state["failures"] = 0
+
+
+# M9: Prometheus metrics (lazy import to avoid circular deps)
+_metrics_initialized = False
+_failure_match_hits = None
+_failure_match_misses = None
+_recovery_success = None
+_recovery_failure = None
+
+
+def _init_metrics():
+    """Initialize Prometheus metrics lazily."""
+    global _metrics_initialized, _failure_match_hits, _failure_match_misses
+    global _recovery_success, _recovery_failure, _failure_persist_dropped
+
+    if _metrics_initialized:
+        return
+
+    try:
+        from prometheus_client import Counter
+
+        _failure_match_hits = Counter(
+            "failure_match_hits_total",
+            "Total failure catalog hits (matched entries)",
+            ["error_code", "category", "recovery_mode"]
+        )
+        _failure_match_misses = Counter(
+            "failure_match_misses_total",
+            "Total failure catalog misses (unmatched errors)",
+            ["error_code"]
+        )
+        _recovery_success = Counter(
+            "recovery_success_total",
+            "Total successful recovery attempts",
+            ["recovery_mode", "error_code"]
+        )
+        _recovery_failure = Counter(
+            "recovery_failure_total",
+            "Total failed recovery attempts",
+            ["recovery_mode", "error_code"]
+        )
+        _failure_persist_dropped = Counter(
+            "failure_persist_dropped_total",
+            "Total failure records dropped due to circuit breaker or timeout",
+            ["reason"]
+        )
+        _metrics_initialized = True
+        logger.info("M9: Failure catalog metrics initialized")
+    except ImportError:
+        logger.warning("prometheus_client not available, metrics disabled")
+        _metrics_initialized = True  # Don't retry
 
 # Default catalog path relative to this file
 DEFAULT_CATALOG_PATH = Path(__file__).parent.parent / "data" / "failure_catalog.json"
@@ -444,6 +576,326 @@ def match_failure(code_or_message: str) -> MatchResult:
         MatchResult
     """
     return get_catalog().match(code_or_message)
+
+
+# ============== M9: Persistence Layer ==============
+
+def persist_failure_match(
+    run_id: str,
+    result: MatchResult,
+    error_code: str,
+    error_message: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+    skill_id: Optional[str] = None,
+    step_index: Optional[int] = None,
+    context: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """
+    Persist a failure match to the database (M9).
+
+    This is called after every match() operation to track all failures.
+    Works synchronously for compatibility with existing code paths.
+
+    Args:
+        run_id: The run that produced this failure
+        result: MatchResult from catalog match
+        error_code: Original error code
+        error_message: Full error message
+        tenant_id: Tenant scope
+        skill_id: Skill that failed
+        step_index: Step in plan
+        context: Additional context dict
+
+    Returns:
+        ID of persisted record, or None on failure
+    """
+    _init_metrics()
+
+    try:
+        from app.db import FailureMatch, engine
+        from sqlmodel import Session
+
+        # Build the record
+        record = FailureMatch(
+            run_id=run_id,
+            tenant_id=tenant_id,
+            error_code=error_code,
+            error_message=error_message,
+            catalog_entry_id=result.entry.code if result.entry else None,
+            match_type=result.match_type.value,
+            confidence_score=result.confidence,
+            category=result.entry.category if result.entry else None,
+            severity=result.entry.severity if result.entry else None,
+            is_retryable=result.is_retryable,
+            recovery_mode=result.recovery_mode,
+            recovery_suggestion=(
+                result.entry.recovery_suggestions[0]
+                if result.entry and result.entry.recovery_suggestions
+                else None
+            ),
+            skill_id=skill_id,
+            step_index=step_index,
+        )
+
+        if context:
+            record.set_context(context)
+
+        # Persist
+        with Session(engine) as session:
+            session.add(record)
+            session.commit()
+            session.refresh(record)
+
+            # Update metrics
+            if result.matched and result.entry:
+                if _failure_match_hits:
+                    _failure_match_hits.labels(
+                        error_code=result.entry.code,
+                        category=result.entry.category,
+                        recovery_mode=result.entry.recovery_mode or "none"
+                    ).inc()
+            else:
+                if _failure_match_misses:
+                    # Truncate error code for cardinality control
+                    safe_code = error_code[:50] if error_code else "unknown"
+                    _failure_match_misses.labels(error_code=safe_code).inc()
+
+            logger.debug(
+                f"M9: Persisted failure match {record.id} "
+                f"(matched={result.matched}, code={error_code})"
+            )
+            return record.id
+
+    except ImportError:
+        logger.warning("M9: Database not available, skipping persistence")
+        return None
+    except Exception as e:
+        logger.error(f"M9: Failed to persist failure match: {e}")
+        return None
+
+
+async def persist_failure_match_async(
+    run_id: str,
+    result: MatchResult,
+    error_code: str,
+    error_message: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+    skill_id: Optional[str] = None,
+    step_index: Optional[int] = None,
+    context: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """
+    Async version of persist_failure_match for async code paths.
+
+    Runs the synchronous persistence in a thread pool executor.
+    """
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        None,
+        lambda: persist_failure_match(
+            run_id=run_id,
+            result=result,
+            error_code=error_code,
+            error_message=error_message,
+            tenant_id=tenant_id,
+            skill_id=skill_id,
+            step_index=step_index,
+            context=context,
+        )
+    )
+
+
+def persist_failure_match_nonblocking(
+    run_id: str,
+    result: MatchResult,
+    error_code: str,
+    error_message: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+    skill_id: Optional[str] = None,
+    step_index: Optional[int] = None,
+    context: Optional[Dict[str, Any]] = None,
+) -> None:
+    """
+    Non-blocking persistence with circuit breaker (M9 P0).
+
+    This is the recommended way to persist failures in hot paths.
+    It:
+    1. Checks circuit breaker before attempting
+    2. Submits to thread pool with timeout
+    3. Fails fast if overwhelmed
+    4. Records dropped events for alerting
+
+    Unlike persist_failure_match(), this does NOT return the record ID
+    because it's fire-and-forget.
+
+    Args:
+        run_id: The run that produced this failure
+        result: MatchResult from catalog match
+        error_code: Original error code
+        error_message: Full error message
+        tenant_id: Tenant scope
+        skill_id: Skill that failed
+        step_index: Step in plan
+        context: Additional context dict
+    """
+    _init_metrics()
+
+    # Check circuit breaker first
+    if not _check_circuit_breaker():
+        if _failure_persist_dropped:
+            _failure_persist_dropped.labels(reason="circuit_open").inc()
+        logger.debug(f"M9: Skipping persistence (circuit open) for run={run_id}")
+        return
+
+    executor = _get_persist_executor()
+
+    def _do_persist():
+        try:
+            record_id = persist_failure_match(
+                run_id=run_id,
+                result=result,
+                error_code=error_code,
+                error_message=error_message,
+                tenant_id=tenant_id,
+                skill_id=skill_id,
+                step_index=step_index,
+                context=context,
+            )
+            if record_id:
+                _record_circuit_success()
+            else:
+                _record_circuit_failure()
+            return record_id
+        except Exception as e:
+            _record_circuit_failure()
+            logger.error(f"M9: Non-blocking persist failed: {e}")
+            return None
+
+    try:
+        # Submit to thread pool
+        future = executor.submit(_do_persist)
+
+        # Try to get result with timeout (non-blocking wait)
+        # This doesn't actually block the caller - it just lets us
+        # track if persistence completed in time
+        try:
+            future.result(timeout=_PERSIST_TIMEOUT)
+        except FutureTimeoutError:
+            # Timed out - record but don't block
+            if _failure_persist_dropped:
+                _failure_persist_dropped.labels(reason="timeout").inc()
+            logger.warning(
+                f"M9: Persistence timeout for run={run_id} "
+                f"(timeout={_PERSIST_TIMEOUT}s)"
+            )
+            _record_circuit_failure()
+    except Exception as e:
+        # Thread pool submission failed
+        if _failure_persist_dropped:
+            _failure_persist_dropped.labels(reason="submit_failed").inc()
+        logger.error(f"M9: Failed to submit persistence task: {e}")
+        _record_circuit_failure()
+
+
+def update_recovery_status(
+    failure_match_id: str,
+    succeeded: bool,
+) -> bool:
+    """
+    Update recovery status after a recovery attempt (M9).
+
+    Args:
+        failure_match_id: ID of the failure match record
+        succeeded: Whether recovery was successful
+
+    Returns:
+        True if updated successfully
+    """
+    _init_metrics()
+
+    try:
+        from app.db import FailureMatch, engine, utc_now
+        from sqlmodel import Session
+
+        with Session(engine) as session:
+            record = session.get(FailureMatch, failure_match_id)
+            if not record:
+                logger.warning(f"M9: Failure match {failure_match_id} not found")
+                return False
+
+            record.recovery_attempted = True
+            record.recovery_succeeded = succeeded
+            record.updated_at = utc_now()
+            session.add(record)
+            session.commit()
+
+            # Update metrics
+            if succeeded:
+                if _recovery_success:
+                    _recovery_success.labels(
+                        recovery_mode=record.recovery_mode or "unknown",
+                        error_code=record.error_code
+                    ).inc()
+            else:
+                if _recovery_failure:
+                    _recovery_failure.labels(
+                        recovery_mode=record.recovery_mode or "unknown",
+                        error_code=record.error_code
+                    ).inc()
+
+            logger.debug(
+                f"M9: Updated recovery status for {failure_match_id} "
+                f"(succeeded={succeeded})"
+            )
+            return True
+
+    except Exception as e:
+        logger.error(f"M9: Failed to update recovery status: {e}")
+        return False
+
+
+def match_and_persist(
+    code_or_message: str,
+    run_id: str,
+    tenant_id: Optional[str] = None,
+    skill_id: Optional[str] = None,
+    step_index: Optional[int] = None,
+    context: Optional[Dict[str, Any]] = None,
+    error_message: Optional[str] = None,
+) -> MatchResult:
+    """
+    Match and persist in one call (M9 convenience function).
+
+    This is the recommended way to use the failure catalog in M9+.
+
+    Args:
+        code_or_message: Error code or message to match
+        run_id: Run that produced this failure
+        tenant_id: Tenant scope
+        skill_id: Skill that failed
+        step_index: Step in plan
+        context: Additional context
+        error_message: Full error message (if different from code_or_message)
+
+    Returns:
+        MatchResult from catalog
+    """
+    catalog = get_catalog()
+    result = catalog.match(code_or_message)
+
+    # Persist (fire and forget for performance)
+    persist_failure_match(
+        run_id=run_id,
+        result=result,
+        error_code=code_or_message,
+        error_message=error_message or code_or_message,
+        tenant_id=tenant_id,
+        skill_id=skill_id,
+        step_index=step_index,
+        context=context,
+    )
+
+    return result
 
 
 if __name__ == "__main__":

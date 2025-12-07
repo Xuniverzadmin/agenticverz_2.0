@@ -1,7 +1,8 @@
 """
 Auth module for AOS.
 
-Provides RBAC integration and authentication utilities.
+Provides RBAC integration, Clerk auth (M8+), OIDC/Keycloak (legacy),
+and authentication utilities.
 """
 
 import os
@@ -13,6 +14,35 @@ from .rbac import (
     RBACResult,
     check_approver_permission,
     require_approval_level,
+    USE_CLERK_AUTH,
+)
+
+from .clerk_provider import (
+    ClerkAuthProvider,
+    ClerkAuthError,
+    ClerkUser,
+    get_clerk_provider,
+    get_user_roles_from_clerk,
+)
+
+from .oidc_provider import (
+    OIDC_ENABLED,
+    OIDCError,
+    TokenValidationError,
+    get_roles_from_token,
+    get_user_info_from_token,
+    map_keycloak_roles_to_aos,
+    validate_and_extract,
+    validate_token,
+)
+
+from .jwt_auth import (
+    JWTConfig,
+    JWTAuthDependency,
+    get_jwt_auth,
+    verify_token as verify_jwt_token,
+    TokenPayload,
+    create_dev_token,
 )
 
 # API Key configuration
@@ -40,11 +70,36 @@ async def verify_api_key(x_aos_key: str = Header(..., alias="X-AOS-Key")):
 
 
 __all__ = [
+    # RBAC
     "ApprovalLevel",
     "RBACError",
     "RBACResult",
     "check_approver_permission",
     "require_approval_level",
+    "USE_CLERK_AUTH",
+    # Clerk Auth (M8+)
+    "ClerkAuthProvider",
+    "ClerkAuthError",
+    "ClerkUser",
+    "get_clerk_provider",
+    "get_user_roles_from_clerk",
+    # API Key
     "verify_api_key",
     "AOS_API_KEY",
+    # OIDC (Legacy - Keycloak)
+    "OIDC_ENABLED",
+    "OIDCError",
+    "TokenValidationError",
+    "validate_token",
+    "validate_and_extract",
+    "get_roles_from_token",
+    "get_user_info_from_token",
+    "map_keycloak_roles_to_aos",
+    # JWT Auth (M8)
+    "JWTConfig",
+    "JWTAuthDependency",
+    "get_jwt_auth",
+    "verify_jwt_token",
+    "TokenPayload",
+    "create_dev_token",
 ]

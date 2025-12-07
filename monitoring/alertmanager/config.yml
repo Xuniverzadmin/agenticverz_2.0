@@ -33,8 +33,8 @@ route:
 receivers:
   - name: 'team-slack'
     slack_configs:
-      - api_url: 'https://hooks.slack.com/services/REPLACE/WITH/YOUR/WEBHOOK'
-        channel: '#alerts'
+      - api_url: 'https://hooks.slack.com/services/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'
+        channel: '#test-1-aos'
         send_resolved: true
         title: '{{ .CommonLabels.alertname }}'
         text: |

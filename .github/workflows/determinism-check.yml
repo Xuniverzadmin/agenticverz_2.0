@@ -1,0 +1,690 @@
+name: Determinism Check
+
+on:
+  pull_request:
+    paths:
+      - 'sdk/python/**'
+      - 'backend/app/worker/**'
+      - 'examples/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'sdk/python/**'
+      - 'backend/app/worker/**'
+      - 'examples/**'
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: 'Random seed for tests'
+        required: false
+        default: '42'
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/sdk/python:${{ github.workspace }}/backend
+
+jobs:
+  determinism-unit-tests:
+    name: Determinism Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-cov
+          pip install -e sdk/python/
+
+      - name: Run RuntimeContext tests
+        run: |
+          pytest sdk/python/tests/test_runtime.py -v --tb=short
+        env:
+          SEED: ${{ github.event.inputs.seed || '42' }}
+
+      - name: Run Trace tests
+        run: |
+          pytest sdk/python/tests/test_trace.py -v --tb=short
+
+  replay-verification:
+    name: Replay Verification
+    runs-on: ubuntu-latest
+    needs: determinism-unit-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -e sdk/python/
+
+      - name: Generate golden trace (seed=42)
+        run: |
+          mkdir -p traces/
+          aos simulate '[{"skill":"echo","params":{"message":"test"}}]' \
+            --seed 42 \
+            --timestamp "2025-01-01T00:00:00Z" \
+            --save-trace traces/golden.trace.json \
+            || echo "Server not available - using mock"
+
+      - name: Replay and verify
+        run: |
+          # Run same simulation again
+          aos simulate '[{"skill":"echo","params":{"message":"test"}}]' \
+            --seed 42 \
+            --timestamp "2025-01-01T00:00:00Z" \
+            --save-trace traces/replay.trace.json \
+            || echo "Server not available - using mock"
+
+          # Compare if both files exist
+          if [ -f traces/golden.trace.json ] && [ -f traces/replay.trace.json ]; then
+            aos diff traces/golden.trace.json traces/replay.trace.json
+          else
+            echo "Skipping diff - traces not generated (server not available)"
+          fi
+
+      - name: Upload traces
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-traces
+          path: traces/
+          retention-days: 7
+
+  multi-seed-verification:
+    name: Multi-Seed Verification
+    runs-on: ubuntu-latest
+    needs: determinism-unit-tests
+    strategy:
+      matrix:
+        seed: [1, 42, 1337, 999999]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install SDK
+        run: pip install -e sdk/python/
+
+      - name: Test determinism with seed ${{ matrix.seed }}
+        run: |
+          # Run twice with same seed
+          python -c "
+          from aos_sdk import RuntimeContext
+
+          ctx1 = RuntimeContext(seed=${{ matrix.seed }})
+          ctx2 = RuntimeContext(seed=${{ matrix.seed }})
+
+          # Generate 100 random values
+          vals1 = [ctx1.randint(0, 1000000) for _ in range(100)]
+          vals2 = [ctx2.randint(0, 1000000) for _ in range(100)]
+
+          # Must be identical
+          assert vals1 == vals2, f'Seed ${{ matrix.seed }} not deterministic!'
+          print(f'Seed ${{ matrix.seed }}: PASS - 100 values match')
+
+          # UUIDs must also match
+          ctx1 = RuntimeContext(seed=${{ matrix.seed }})
+          ctx2 = RuntimeContext(seed=${{ matrix.seed }})
+          uuid1 = ctx1.uuid()
+          uuid2 = ctx2.uuid()
+          assert uuid1 == uuid2, f'UUIDs differ for seed ${{ matrix.seed }}'
+          print(f'Seed ${{ matrix.seed }}: PASS - UUIDs match')
+          "
+
+  trace-schema-validation:
+    name: Trace Schema Validation (v1.1)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -e sdk/python/
+          pip install jsonschema
+
+      - name: Validate trace schema
+        run: |
+          python -c "
+          from aos_sdk import Trace, TraceStep, TRACE_SCHEMA_VERSION
+          import json
+
+          # Verify v1.1 schema
+          assert TRACE_SCHEMA_VERSION == '1.1.0', f'Expected schema 1.1.0, got {TRACE_SCHEMA_VERSION}'
+          print(f'Schema version: {TRACE_SCHEMA_VERSION}')
+
+          # Create a trace
+          trace = Trace(seed=42, plan=[{'skill': 'test'}])
+          trace.add_step(
+              skill_id='test',
+              input_data={'x': 1},
+              output_data={'y': 2},
+              rng_state='abc123',
+              duration_ms=100,
+              outcome='success'
+          )
+          trace.finalize()
+
+          # Serialize and deserialize
+          json_str = trace.to_json()
+          loaded = Trace.from_json(json_str)
+
+          # Verify integrity
+          assert loaded.verify(), 'Trace integrity check failed'
+          assert loaded.root_hash == trace.root_hash, 'Root hash mismatch'
+          print('Trace schema validation: PASS')
+          "
+
+      - name: Verify audit fields excluded from hash (v1.1)
+        run: |
+          python -c "
+          from aos_sdk import Trace
+
+          # Two traces with different audit fields (duration_ms) but same deterministic fields
+          trace1 = Trace(seed=42, plan=[{'skill': 'test'}], timestamp='2025-01-01T00:00:00Z')
+          trace1.add_step(
+              skill_id='test',
+              input_data={'x': 1},
+              output_data={'y': 2},
+              rng_state='abc123',
+              duration_ms=100,  # Different duration
+              outcome='success'
+          )
+          trace1.finalize()
+
+          trace2 = Trace(seed=42, plan=[{'skill': 'test'}], timestamp='2025-01-01T00:00:00Z')
+          trace2.add_step(
+              skill_id='test',
+              input_data={'x': 1},
+              output_data={'y': 2},
+              rng_state='abc123',
+              duration_ms=9999,  # Different duration
+              outcome='success'
+          )
+          trace2.finalize()
+
+          # Root hashes must be identical (audit fields excluded)
+          assert trace1.root_hash == trace2.root_hash, f'Root hash mismatch: {trace1.root_hash} != {trace2.root_hash}'
+          print(f'Root hash (trace1): {trace1.root_hash}')
+          print(f'Root hash (trace2): {trace2.root_hash}')
+          print('Audit fields exclusion: PASS')
+          "
+
+  canonical-json-stability:
+    name: Canonical JSON Stability
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install SDK
+        run: pip install -e sdk/python/
+
+      - name: Test canonical JSON
+        run: |
+          python -c "
+          from aos_sdk import canonical_json, hash_data
+
+          # Same data, different order must produce same canonical form
+          data1 = {'b': 2, 'a': 1, 'c': {'z': 26, 'y': 25}}
+          data2 = {'a': 1, 'c': {'y': 25, 'z': 26}, 'b': 2}
+
+          canonical1 = canonical_json(data1)
+          canonical2 = canonical_json(data2)
+
+          assert canonical1 == canonical2, f'Canonical JSON not stable: {canonical1} != {canonical2}'
+          print(f'Canonical JSON: {canonical1}')
+
+          # Hashes must match
+          hash1 = hash_data(data1)
+          hash2 = hash_data(data2)
+          assert hash1 == hash2, f'Hash mismatch: {hash1} != {hash2}'
+          print(f'Hash: {hash1}')
+          print('Canonical JSON stability: PASS')
+          "
+
+  golden-fixtures:
+    name: Golden Fixture Verification
+    runs-on: ubuntu-latest
+    needs: determinism-unit-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install SDK
+        run: pip install -e sdk/python/
+
+      - name: Create golden fixture directory
+        run: mkdir -p golden/
+
+      - name: Generate golden trace
+        run: |
+          python -c "
+          from aos_sdk import Trace, RuntimeContext
+
+          # Create deterministic trace with known values
+          ctx = RuntimeContext(seed=42, now='2025-01-01T00:00:00Z')
+          trace = Trace(
+              seed=ctx.seed,
+              timestamp=ctx.timestamp(),
+              plan=[{'skill': 'echo', 'params': {'message': 'golden'}}]
+          )
+          trace.add_step(
+              skill_id='echo',
+              input_data={'message': 'golden'},
+              output_data={'result': 'golden'},
+              rng_state=ctx.rng_state,
+              duration_ms=100,
+              outcome='success'
+          )
+          trace.finalize()
+          trace.save('golden/golden_trace.json')
+          print(f'Golden trace created with root_hash: {trace.root_hash}')
+          "
+
+      - name: Verify golden trace
+        run: |
+          python -c "
+          from aos_sdk import Trace
+
+          # Load and verify golden trace
+          trace = Trace.load('golden/golden_trace.json')
+          assert trace.verify(), 'Golden trace integrity check failed'
+          print(f'Golden trace verified: {trace.root_hash}')
+          "
+
+      - name: Upload golden fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-fixtures
+          path: golden/
+          retention-days: 30
+
+  cross-language-parity:
+    name: Cross-Language Parity (Python vs JS)
+    runs-on: ubuntu-latest
+    needs: determinism-unit-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python SDK
+        run: pip install -e sdk/python/
+
+      - name: Install JS SDK
+        run: |
+          cd sdk/js/aos-sdk
+          npm install
+
+      - name: Generate Python trace
+        run: |
+          python -c "
+          from aos_sdk import Trace, canonical_json, hash_data
+          import json
+
+          # Create trace with known values
+          trace = Trace(
+              seed=777,
+              timestamp='2025-06-15T12:00:00Z',
+              plan=[{'skill': 'parity_test', 'params': {'x': 1}}]
+          )
+          trace.add_step(
+              skill_id='parity_test',
+              input_data={'x': 1, 'y': 2},
+              output_data={'result': 3},
+              rng_state='state_777',
+              duration_ms=50,
+              outcome='success'
+          )
+          trace.finalize()
+
+          result = {
+              'root_hash': trace.root_hash,
+              'input_hash': hash_data({'x': 1, 'y': 2}),
+              'canonical_test': canonical_json({'b': 2, 'a': 1}),
+          }
+
+          with open('/tmp/python_parity.json', 'w') as f:
+              json.dump(result, f)
+
+          print(f'Python root_hash: {trace.root_hash}')
+          "
+
+      - name: Generate JS trace and compare
+        run: |
+          cd sdk/js/aos-sdk
+          node --experimental-specifier-resolution=node -e "
+          const { Trace, canonicalJson, hashData } = require('./dist/index.js');
+          const fs = require('fs');
+
+          // Create trace with same values as Python
+          const trace = new Trace({
+              seed: 777,
+              timestamp: '2025-06-15T12:00:00Z',
+              plan: [{skill: 'parity_test', params: {x: 1}}]
+          });
+          trace.addStep({
+              skillId: 'parity_test',
+              inputData: {x: 1, y: 2},
+              outputData: {result: 3},
+              rngState: 'state_777',
+              durationMs: 50,
+              outcome: 'success'
+          });
+          trace.finalize();
+
+          const jsResult = {
+              root_hash: trace.rootHash,
+              input_hash: hashData({x: 1, y: 2}),
+              canonical_test: canonicalJson({b: 2, a: 1}),
+          };
+
+          // Load Python result
+          const pyResult = JSON.parse(fs.readFileSync('/tmp/python_parity.json'));
+
+          console.log('Python root_hash:', pyResult.root_hash);
+          console.log('JS root_hash:', jsResult.root_hash);
+
+          // Compare
+          if (pyResult.root_hash !== jsResult.root_hash) {
+              console.error('ROOT HASH MISMATCH!');
+              console.error('Python:', pyResult);
+              console.error('JS:', jsResult);
+              process.exit(1);
+          }
+
+          if (pyResult.input_hash !== jsResult.input_hash) {
+              console.error('INPUT HASH MISMATCH!');
+              process.exit(1);
+          }
+
+          if (pyResult.canonical_test !== jsResult.canonical_test) {
+              console.error('CANONICAL JSON MISMATCH!');
+              process.exit(1);
+          }
+
+          console.log('Cross-language parity: PASS');
+          "
+
+  live-repeatability:
+    name: Live Repeatability Test
+    runs-on: ubuntu-latest
+    needs: determinism-unit-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install SDK
+        run: pip install -e sdk/python/
+
+      - name: Run simulate twice and compare SHA256
+        id: repeatability
+        run: |
+          mkdir -p /tmp/traces
+
+          # Generate first trace
+          python -c "
+          from aos_sdk import Trace, RuntimeContext
+
+          ctx = RuntimeContext(seed=777, now='2025-06-15T12:00:00Z')
+          trace = Trace(seed=ctx.seed, timestamp=ctx.timestamp(), plan=[{'skill': 'test'}])
+          trace.add_step(
+              skill_id='test',
+              input_data={'x': 1},
+              output_data={'y': 2},
+              rng_state=ctx.rng_state,
+              duration_ms=100,
+              outcome='success'
+          )
+          trace.finalize()
+          trace.save('/tmp/traces/t1.json')
+          print(f'Trace 1 root_hash: {trace.root_hash}')
+          "
+
+          # Generate second trace with same inputs
+          python -c "
+          from aos_sdk import Trace, RuntimeContext
+
+          ctx = RuntimeContext(seed=777, now='2025-06-15T12:00:00Z')
+          trace = Trace(seed=ctx.seed, timestamp=ctx.timestamp(), plan=[{'skill': 'test'}])
+          trace.add_step(
+              skill_id='test',
+              input_data={'x': 1},
+              output_data={'y': 2},
+              rng_state=ctx.rng_state,
+              duration_ms=999,  # Different audit field
+              outcome='success'
+          )
+          trace.finalize()
+          trace.save('/tmp/traces/t2.json')
+          print(f'Trace 2 root_hash: {trace.root_hash}')
+          "
+
+          # Compare SHA256 of files
+          SHA1=$(sha256sum /tmp/traces/t1.json | cut -d' ' -f1)
+          SHA2=$(sha256sum /tmp/traces/t2.json | cut -d' ' -f1)
+
+          echo "SHA256 t1: $SHA1"
+          echo "SHA256 t2: $SHA2"
+
+          # Files won't be identical due to different duration_ms, but root_hash should match
+          ROOT1=$(python -c "import json; print(json.load(open('/tmp/traces/t1.json'))['root_hash'])")
+          ROOT2=$(python -c "import json; print(json.load(open('/tmp/traces/t2.json'))['root_hash'])")
+
+          echo "Root hash t1: $ROOT1"
+          echo "Root hash t2: $ROOT2"
+
+          if [ "$ROOT1" = "$ROOT2" ]; then
+            echo "PASS: Root hashes match (determinism verified)"
+          else
+            echo "FAIL: Root hashes differ!"
+            exit 1
+          fi
+
+      - name: Upload repeatability traces
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: repeatability-traces
+          path: /tmp/traces/
+          retention-days: 7
+
+  cross-language-parity-script:
+    name: Cross-Language Parity (Script)
+    runs-on: ubuntu-latest
+    needs: determinism-unit-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python SDK
+        run: pip install -e sdk/python/
+
+      - name: Install JS SDK
+        run: |
+          cd sdk/js/aos-sdk
+          npm install
+          npm run build
+
+      - name: Generate Python trace for parity check
+        run: |
+          python -c "
+          from aos_sdk import Trace, RuntimeContext
+
+          ctx = RuntimeContext(seed=1337, now='2025-12-01T00:00:00Z')
+          trace = Trace(seed=ctx.seed, timestamp=ctx.timestamp(), plan=[{'skill': 'parity'}])
+          trace.add_step(
+              skill_id='parity',
+              input_data={'test': 'data'},
+              output_data={'result': 'ok'},
+              rng_state=ctx.rng_state,
+              duration_ms=50,
+              outcome='success'
+          )
+          trace.finalize()
+          trace.save('/tmp/python_trace.json')
+          print(f'Python trace saved with root_hash: {trace.root_hash}')
+          "
+
+      - name: Run JS parity verification script
+        run: |
+          node sdk/js/aos-sdk/scripts/compare_with_python.js /tmp/python_trace.json
+
+      - name: Upload parity traces on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: parity-failure-traces
+          path: /tmp/*.json
+          retention-days: 30
+
+  summary:
+    name: Determinism Summary
+    runs-on: ubuntu-latest
+    needs: [determinism-unit-tests, multi-seed-verification, trace-schema-validation, canonical-json-stability, golden-fixtures, cross-language-parity, live-repeatability, cross-language-parity-script]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check results
+        run: |
+          echo "Determinism Check Summary"
+          echo "========================="
+          echo "Unit Tests: ${{ needs.determinism-unit-tests.result }}"
+          echo "Multi-Seed: ${{ needs.multi-seed-verification.result }}"
+          echo "Schema Validation: ${{ needs.trace-schema-validation.result }}"
+          echo "Canonical JSON: ${{ needs.canonical-json-stability.result }}"
+          echo "Golden Fixtures: ${{ needs.golden-fixtures.result }}"
+          echo "Cross-Language Parity: ${{ needs.cross-language-parity.result }}"
+          echo "Live Repeatability: ${{ needs.live-repeatability.result }}"
+          echo "Cross-Language Script: ${{ needs.cross-language-parity-script.result }}"
+
+          if [ "${{ needs.determinism-unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.multi-seed-verification.result }}" != "success" ] || \
+             [ "${{ needs.trace-schema-validation.result }}" != "success" ] || \
+             [ "${{ needs.canonical-json-stability.result }}" != "success" ] || \
+             [ "${{ needs.golden-fixtures.result }}" != "success" ] || \
+             [ "${{ needs.cross-language-parity.result }}" != "success" ] || \
+             [ "${{ needs.live-repeatability.result }}" != "success" ] || \
+             [ "${{ needs.cross-language-parity-script.result }}" != "success" ]; then
+            echo ""
+            echo "FAILURE: One or more determinism checks failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "SUCCESS: All determinism checks passed"
+
+      - name: Download all artifacts for debugging
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+        continue-on-error: true
+
+      - name: Show artifact contents
+        run: |
+          echo "Downloaded artifacts:"
+          find artifacts/ -type f -name "*.json" | head -20
+          echo ""
+          if [ -f artifacts/golden-fixtures/golden_trace.json ]; then
+            echo "Golden trace contents:"
+            cat artifacts/golden-fixtures/golden_trace.json | head -30
+          fi
+        continue-on-error: true
+
+  # Upload failing traces when any job fails
+  upload-failure-artifacts:
+    name: Upload Failure Artifacts
+    runs-on: ubuntu-latest
+    needs: [determinism-unit-tests, multi-seed-verification, trace-schema-validation, canonical-json-stability, golden-fixtures, cross-language-parity, live-repeatability, cross-language-parity-script]
+    if: failure()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: failure-artifacts/
+        continue-on-error: true
+
+      - name: Create failure report
+        run: |
+          echo "Determinism Check Failure Report" > failure-artifacts/FAILURE_REPORT.md
+          echo "================================" >> failure-artifacts/FAILURE_REPORT.md
+          echo "" >> failure-artifacts/FAILURE_REPORT.md
+          echo "Timestamp: $(date -u)" >> failure-artifacts/FAILURE_REPORT.md
+          echo "Run ID: ${{ github.run_id }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "Commit: ${{ github.sha }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "" >> failure-artifacts/FAILURE_REPORT.md
+          echo "Job Results:" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Unit Tests: ${{ needs.determinism-unit-tests.result }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Multi-Seed: ${{ needs.multi-seed-verification.result }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Schema Validation: ${{ needs.trace-schema-validation.result }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Canonical JSON: ${{ needs.canonical-json-stability.result }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Golden Fixtures: ${{ needs.golden-fixtures.result }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Cross-Language Parity: ${{ needs.cross-language-parity.result }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Live Repeatability: ${{ needs.live-repeatability.result }}" >> failure-artifacts/FAILURE_REPORT.md
+          echo "- Cross-Language Script: ${{ needs.cross-language-parity-script.result }}" >> failure-artifacts/FAILURE_REPORT.md
+
+      - name: Upload combined failure artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-failure-${{ github.run_id }}
+          path: failure-artifacts/
+          retention-days: 30

@@ -2,6 +2,18 @@ global:
   scrape_interval: 5s
   evaluation_interval: 5s
 
+# Remote write to Grafana Cloud
+remote_write:
+  - url: https://prometheus-prod-43-prod-ap-south-1.grafana.net/api/prom/push
+    basic_auth:
+      username: "2846553"
+      password: "glc_eyJvIjoiMTYxMDE5MiIsIm4iOiJhZ2VudGljdmVyei1tZXRyaWNzLWFnZW50aWN2ZXJ6LW1ldHJpY3MiLCJrIjoiMDF6UGMwR3NKSHEwamVvOUkxNjQxemc2IiwibSI6eyJyIjoicHJvZC1hcC1zb3V0aC0xIn19"
+    write_relabel_configs:
+      # Send AOS-related metrics to Grafana Cloud
+      - source_labels: [__name__]
+        regex: "aos_.*|nova_.*|rbac_.*|process_.*|python_.*|up"
+        action: keep
+
 # Alert rules
 rule_files:
   - /etc/prometheus/rules/*.yml
@@ -19,3 +31,25 @@ scrape_configs:
       - targets: ["127.0.0.1:8000"]
     metrics_path: /metrics
     scrape_interval: 5s
+    # M9: Cardinality safeguards - limit label explosion
+    metric_relabel_configs:
+      # Truncate long error_code labels to prevent cardinality explosion
+      - source_labels: [error_code]
+        regex: "(.{50}).*"
+        replacement: "${1}_truncated"
+        target_label: error_code
+        action: replace
+      # Drop metrics with very high cardinality labels
+      - source_labels: [__name__, error_code]
+        regex: "failure_match_(hits|misses)_total;.*[a-f0-9]{32}.*"
+        action: drop
+      # Limit tenant_id to known patterns
+      - source_labels: [tenant_id]
+        regex: "tenant-[0-9]{3}"
+        action: keep
+      # Hash unknown error codes for aggregation
+      - source_labels: [__name__, error_code]
+        regex: "failure_match_misses_total;(.+)"
+        target_label: error_code_group
+        replacement: "unknown_hash_${1}"
+        action: replace

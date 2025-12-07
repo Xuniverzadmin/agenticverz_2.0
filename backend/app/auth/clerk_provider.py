@@ -34,6 +34,9 @@ CLERK_ISSUER_URL = os.getenv("CLERK_ISSUER_URL", "")
 CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL", "")
 CLERK_API_URL = "https://api.clerk.com/v1"
 
+# Production safety
+RBAC_ENFORCE = os.getenv("RBAC_ENFORCE", "false").lower() == "true"
+
 
 @dataclass
 class ClerkUser:
@@ -256,8 +259,15 @@ class ClerkAuthProvider:
             ClerkAuthError: If user not found or API error
         """
         if not self.is_configured:
+            if RBAC_ENFORCE:
+                # Fail-closed: Production requires Clerk to be configured
+                logger.error("Clerk not configured but RBAC_ENFORCE=true")
+                raise ClerkAuthError(
+                    "Clerk auth required but not configured (set CLERK_SECRET_KEY and CLERK_ISSUER_URL)",
+                    user_id
+                )
             # Return mock for development when Clerk is not configured
-            logger.warning("Clerk not configured, returning mock roles")
+            logger.warning("Clerk not configured, returning mock roles - NOT FOR PRODUCTION")
             return ClerkUser(
                 user_id=user_id,
                 email=None,

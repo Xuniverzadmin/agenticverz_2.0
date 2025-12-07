@@ -1,0 +1,2 @@
+[console_scripts]
+aos = aos_sdk.cli:main

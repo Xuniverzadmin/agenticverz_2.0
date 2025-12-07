@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-04 (M6.5 Internal Validation - ✅ ALL TESTS PASS)
+**Last Updated:** 2025-12-07 (Stub Replacement & pgvector - All P0/P1 stubs replaced)
 
 ---
 
@@ -52,6 +52,37 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-028](PIN-028-m6-critical-gaps-fixes.md) | **M6 Critical Gaps & Fixes** | Milestone / Implementation | **COMPLETE** | 2025-12-04 |
 | [PIN-029](PIN-029-infra-hardening-ci-fixes.md) | **Infrastructure Hardening & CI Fixes** | Infrastructure / CI / Operations | **COMPLETE** (pending: deploy) | 2025-12-04 |
 | [PIN-030](PIN-030-m6.5-webhook-externalization.md) | **M6.5 Webhook Externalization** | Milestone / Implementation | **VALIDATED** | 2025-12-04 |
+| [PIN-031](PIN-031-m7-memory-integration.md) | **M7 Memory Integration** | Milestone / Implementation | **✅ COMPLETE** | 2025-12-04 |
+| [PIN-032](PIN-032-m7-rbac-enablement.md) | **M7 RBAC Enablement** | Operations / Security | **✅ ENFORCED** | 2025-12-05 |
+| [PIN-033](PIN-033-m8-m14-machine-native-realignment.md) | **M8-M14 Machine-Native Realignment Roadmap** | Planning / Strategic | **ACTIVE** | 2025-12-05 |
+| [PIN-034](PIN-034-vault-secrets-management.md) | **HashiCorp Vault Secrets Management** | Security / Infrastructure | **COMPLETE** | 2025-12-05 |
+| [PIN-035](PIN-035-sdk-package-registry.md) | **SDK Package Registry (PyPI + npm)** | SDK / Developer Experience | **PUBLISHED** | 2025-12-05 |
+| [PIN-036](PIN-036-infrastructure-pending.md) | **Infrastructure Pending Items** | Infrastructure / Planning | **ACTIVE** | 2025-12-06 |
+| [PIN-037](PIN-037-grafana-cloud-integration.md) | **Grafana Cloud Integration** | Infrastructure / Observability | **ACTIVE** | 2025-12-06 |
+| [PIN-038](PIN-038-upstash-redis-integration.md) | **Upstash Redis Integration** | Infrastructure / Data Store | **ACTIVE** | 2025-12-06 |
+| [PIN-039](PIN-039-m8-implementation-progress.md) | **M8 Implementation Progress** | Milestone / Implementation | **IN PROGRESS** | 2025-12-06 |
+| [PIN-040](PIN-040-rate-limit-middleware.md) | **Rate Limit Middleware** | Security / API Protection | **COMPLETE** (exclusive) | 2025-12-06 |
+| [PIN-041](PIN-041-mismatch-tracking-system.md) | **Mismatch Tracking System** | Observability / Incident Mgmt | **COMPLETE** (exclusive) | 2025-12-06 |
+| [PIN-042](PIN-042-alert-observability-tooling.md) | **Alert & Observability Tooling** | Operations / Observability | **COMPLETE** (exclusive) | 2025-12-06 |
+| [PIN-043](PIN-043-m8-infrastructure-session.md) | **M8 Infrastructure Session** | Infrastructure / Operations | **COMPLETE** | 2025-12-06 |
+| [PIN-044](PIN-044-e2e-test-harness-run.md) | **E2E Test Harness Run** | Testing / Validation | **COMPLETE** | 2025-12-06 |
+| [PIN-045](PIN-045-ci-infrastructure-fixes.md) | **CI Infrastructure Fixes** | Infrastructure / CI | **COMPLETE** | 2025-12-07 |
+| [PIN-046](PIN-046-stub-replacement-pgvector.md) | **Stub Replacement & pgvector Integration** | Infrastructure / Integration | **COMPLETE** | 2025-12-07 |
+| [PIN-047](PIN-047-pending-polishing-tasks.md) | **Pending Polishing Tasks** | Technical Debt / Polishing | **PENDING** | 2025-12-07 |
+
+---
+
+## Pending To-Do Index
+
+**Location:** [PENDING-TODO-INDEX.md](PENDING-TODO-INDEX.md)
+
+Quick reference for all pending polishing and tech debt tasks across PINs.
+
+| Priority | Count | Category Examples |
+|----------|-------|-------------------|
+| P1 | 8 | Vault secrets, Prometheus reload |
+| P2 | 6 | Quota API, Cost dashboard, Testing |
+| P3 | 4 | Voyage backup, Cache layer, HNSW tuning |
 
 ---
 
@@ -63,13 +94,144 @@ See also: PIN-023 for strategic context on "Operational GA" vs "Machine-Native G
 
 ---
 
+## M8 Working Environment
+
+**Location:** `/root/agenticverz2.0/agentiverz_mn/`
+
+Clean, focused context for M8-M14 implementation sessions.
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `README.md` | How to use this folder | Active |
+| `milestone_plan.md` | M8-M14 roadmap with acceptance criteria | Active |
+| `auth_blocker_notes.md` | PIN-009 auth integration blocker | ✅ **RESOLVED** |
+| `demo_checklist.md` | Demo productionization tasks | ✅ **COMPLETE** |
+| `sdk_packaging_checklist.md` | Python/JS SDK packaging tasks | ✅ **COMPLETE** |
+| `auth_integration_checklist.md` | Real auth provider setup | ✅ **COMPLETE** |
+| `repo_snapshot.md` | Current codebase state | Active |
+
+**Auth Integration Complete (2025-12-05):**
+- Keycloak deployed at auth-dev.xuniverz.com
+- OIDC provider wired to RBAC middleware
+- Test user `devuser` verified working with AOS API
+
+**SDK Packaging Complete (2025-12-05):**
+- Python SDK: `pip install aos-sdk` (v0.1.0)
+- JS/TS SDK: `npm install @agenticverz/aos-sdk` (v0.1.0)
+- CI workflows for tagged releases
+
+**Demo + Docs Complete (2025-12-06):**
+- 3 examples: `btc_price_slack`, `json_transform`, `http_retry`
+- Root README.md with install + quickstart
+- docs/QUICKSTART.md - zero to first run in 10 min
+- docs/AUTH_SETUP.md - Keycloak token acquisition
+- docs/DEMOS.md - demo index and troubleshooting
+
+**Session workflow:**
+1. Read `repo_snapshot.md` → current state
+2. Read `milestone_plan.md` → what we're building
+3. Work through `sdk_packaging_checklist.md` or `demo_checklist.md`
+4. Mark items complete as you go
+
+---
+
+## External Integrations (agenticverz.com)
+
+**Location:** `/var/www/agenticverz.com/memory-pins/`
+
+Completed 2025-12-06 - See PIN-036 for details.
+
+| Integration | Status | Details |
+|-------------|--------|---------|
+| Landing Page | ✅ LIVE | https://agenticverz.com |
+| YouTube | ✅ CREATED | @AgenticverzAdmin (UC9cR-k7YieBdlN82GYiW7aA) |
+| Loom | ✅ CREATED | Agenticverz-AOS workspace |
+| Slack App | ✅ WORKING | App ID: A0A1YTBENAE, webhook to #test-1-aos |
+| Grafana Cloud | ✅ INTEGRATED | agenticverz.grafana.net + dashboard + Slack alerts |
+| DNS/SSL | ✅ COMPLETE | Cloudflare Full Strict, Origin certs |
+| Email (SMTP) | ✅ WORKING | mail.xuniverz.com, DKIM signed |
+
+**Pending (Not Blocking M8):**
+- Email Provider (transactional) - needed for M11 `/notify/email` skill
+- S3/Object Storage - needed for M9 failure catalog persistence
+- Demo Screencast - nice-to-have for M8
+
+---
+
+## Secrets Management (Vault)
+
+**Location:** `/opt/vault/`
+**Address:** http://127.0.0.1:8200
+
+All secrets are now managed in HashiCorp Vault instead of plaintext `.env` files.
+
+| Path | Contents |
+|------|----------|
+| `agenticverz/app-prod` | AOS_API_KEY, MACHINE_SECRET_TOKEN, OIDC_CLIENT_SECRET |
+| `agenticverz/database` | POSTGRES_*, DATABASE_URL, KEYCLOAK_DB_* |
+| `agenticverz/external-apis` | ANTHROPIC_API_KEY, OPENAI_API_KEY |
+| `agenticverz/keycloak-admin` | KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD |
+
+**Quick commands:**
+```bash
+# Unseal Vault after restart
+./scripts/ops/vault/unseal_vault.sh
+
+# Load secrets to environment
+source scripts/ops/vault/vault_env.sh app-prod
+
+# Rotate a secret
+./scripts/ops/vault/rotate_secret.sh app-prod MACHINE_SECRET_TOKEN
+```
+
+**See:** `scripts/ops/vault/README.md` for full documentation.
+
+---
+
+## SDK Packages (LIVE)
+
+| Package | Install | PyPI/npm |
+|---------|---------|----------|
+| Python SDK | `pip install aos-sdk` | [pypi.org/project/aos-sdk](https://pypi.org/project/aos-sdk/) |
+| JS/TS SDK | `npm install @agenticverz/aos-sdk` | [npmjs.com/package/@agenticverz/aos-sdk](https://www.npmjs.com/package/@agenticverz/aos-sdk) |
+
+**Version:** 0.1.0 (Published 2025-12-05)
+
+**Future releases:**
+```bash
+# Python release (triggers CI publish)
+git tag python-sdk-v0.2.0 && git push origin python-sdk-v0.2.0
+
+# JS release (triggers CI publish)
+git tag js-sdk-v0.2.0 && git push origin js-sdk-v0.2.0
+```
+
+**Registry tokens:** Stored in Vault at `agenticverz/package-registry`
+
+---
+
 ## Planned PINs
 
 | Serial | Title | Category | Priority |
 |--------|-------|----------|----------|
-| PIN-030 | M7 Memory Integration Spec | Milestone / Spec | HIGH |
-| PIN-031 | SDK Repair & Validation | Technical / Integration | MEDIUM |
-| PIN-032 | API Versioning Strategy | Architecture / Spec | MEDIUM |
+| PIN-036 | Production Deployment Checklist | Operations / Deployment | HIGH |
+| PIN-037 | Failure Catalog v2 Persistence | Technical / Infrastructure | MEDIUM |
+
+---
+
+## Exclusive Components
+
+Some PINs describe **exclusive components** - implementations that must be singular to avoid conflicts. Do not create alternative implementations.
+
+| PIN | Component | Exclusivity Rule |
+|-----|-----------|------------------|
+| PIN-040 | Rate Limit Middleware | Single rate limit implementation for all endpoints |
+| PIN-041 | Mismatch Tracking System | Single source of truth for replay mismatches |
+| PIN-042 | Alert Tooling | Authoritative CLI tools for observability testing |
+| PIN-034 | Vault Secrets | Single secrets management system |
+| PIN-032 | RBAC Enforcement | Single authorization middleware |
+
+When extending these components, update the relevant PIN rather than creating alternatives.
 
 ---
 
@@ -95,7 +257,8 @@ See also: PIN-023 for strategic context on "Operational GA" vs "Machine-Native G
 ## Quick Reference
 
 ### Current Project Phase
-**M6.5 Webhook Externalization** → ✅ **COMPLETE (2025-12-04)**
+**M7 RBAC Enablement** → ✅ **ENFORCED (2025-12-05)**
+**Next Phase:** M8-M14 Machine-Native Realignment (see PIN-033)
 
 **v1 Timeline (~5 months small team, ~8 months solo):**
 - M0: Foundations & Contracts (1 week) — **COMPLETE**
@@ -108,7 +271,113 @@ See also: PIN-023 for strategic context on "Operational GA" vs "Machine-Native G
 - **M5.6: Observability Groundwork** — ✅ **COMPLETE (2025-12-04)** - Reclassified from early M6
 - **M6: CostSim V2 + Drift + Audit** — ✅ **COMPLETE (2025-12-04)** - See PIN-026
 - **M6.5: Webhook Externalization** — ✅ **COMPLETE (2025-12-04)** - See PIN-030
-- M7: Memory Integration — **NEXT** (after M6.5)
+- M7: Memory Integration — **✅ COMPLETE (2025-12-04)** - API + seed + audit + TTL job (PIN-031)
+- **M7: RBAC Enforcement** — **✅ ENFORCED (2025-12-05)** - Middleware + load test + smoke tests (PIN-032)
+
+### M8-M14 Machine-Native Realignment Roadmap (PIN-033)
+
+**Recovery from strategic drift detected in PIN-023. Restores machine-native vision.**
+
+| Milestone | Focus | Duration |
+|-----------|-------|----------|
+| M8 | Demo + SDK Packaging + Auth Integration | 2 weeks |
+| M9 | Failure Catalog v2 + Persistence | 2 weeks |
+| M10 | Recovery Suggestion Engine API+CLI | 1.5 weeks |
+| M11 | Skill Expansion (postgres_query, calendar_write production) | 3 weeks |
+| M12 | Beta Rollout (external users, feedback loop) | 2 weeks |
+| M13 | Console UI (React/Tailwind + WebSocket) | 4 weeks |
+| M14+ | Self-Improving Loop (requires 3+ months prod data) | 2-4 months |
+
+**Key Principles:**
+- Demo-first: SDK packaging and 60-second demo before new features
+- ~~Auth blocker: Must wire real auth provider (PIN-009 dependency)~~ ✅ **RESOLVED (2025-12-05)**
+- Failure-as-data: Catalog persistence before recovery engine
+- Self-improving: Deferred until sufficient production telemetry
+
+**See PIN-033 for full details, acceptance criteria, and risk register.**
+
+### M7 Completion Status
+
+**M7 Memory Integration → ✅ COMPLETE (2025-12-04)**
+**M7 RBAC Enforcement → ✅ ENFORCED (2025-12-05)**
+
+| Component | Status | Evidence |
+|-----------|--------|----------|
+| Database Migrations | ✅ COMPLETE | 009_mem_pins, 010_rbac_audit, 011_memory_audit |
+| Memory Pins API | ✅ VALIDATED | POST/GET/LIST/DELETE working |
+| RBAC Engine | ✅ COMPLETE | Hot-reload, audit, metrics |
+| RBAC Middleware | ✅ ENFORCED | Registered in main.py, blocking unauthorized |
+| Prometheus Metrics | ✅ VERIFIED | memory_pins_*, rbac_engine_*, rbac_decisions_* |
+| Seed Script | ✅ COMPLETE | `scripts/ops/seed_memory_pins.py` |
+| Seed Data | ✅ COMPLETE | 7 pins in `memory_pins_seed.json` |
+| Memory Audit | ✅ COMPLETE | Wired into API, entries in DB |
+| TTL Expiration | ✅ COMPLETE | `scripts/ops/expire_memory_pins.sh` |
+| Cron Config | ✅ COMPLETE | `scripts/ops/cron/aos-maintenance.cron` |
+| RBAC Enforcement | ✅ ENABLED | `enforce_mode: true` in production |
+| One-Click Script | ✅ COMPLETE | `scripts/ops/rbac_oneclick_enable.sh` |
+| PgBouncer Load Test | ✅ PASS | 50 clients, 400 TPS, 0 failures |
+| Smoke Tests | ✅ PASS | 12 passed, 0 failed |
+
+**RBAC Enablement Session 1 (2025-12-05):**
+
+| Issue | Fix |
+|-------|-----|
+| RBAC_ENFORCE not in container | Added to docker-compose.yml environment |
+| MACHINE_SECRET_TOKEN not in container | Added to docker-compose.yml environment |
+| RBACMiddleware not registered | Added `app.add_middleware(RBACMiddleware)` to main.py |
+
+**RBAC Enablement Session 2 (2025-12-05):**
+
+| Issue | Fix |
+|-------|-----|
+| RBAC audit write errors (3) | Fixed generator session handling in `rbac_engine.py:_audit()` |
+| Smoke script `enforce_mode: UNKNOWN` | Added machine token header to RBAC info calls |
+| One-click script blocks CI | Added `--non-interactive` and `--observe-time=N` flags |
+| Integration tests failing (11/20) | Added machine token to client fixture, fixed SQL syntax |
+
+**Session 2 Decisions:**
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Machine role delete permission | NO - Keep least privilege | Use TTL for automated cleanup |
+| Drift detection in prod | Deferred to post-M8 | Collect metrics, alerts disabled until tuned |
+
+**Session 2 New Files:**
+
+| File | Purpose |
+|------|---------|
+| `scripts/ops/m7_monitoring_check.sh` | Automated monitoring for 24-48h window |
+| `scripts/ops/chaos/kill_child.sh` | Chaos: process restart test |
+| `scripts/ops/chaos/redis_stall.sh` | Chaos: Redis pause test |
+| `scripts/ops/chaos/cpu_spike.sh` | Chaos: CPU load test |
+| `.github/workflows/m7-nightly-smoke.yml` | Nightly CI smoke tests |
+| `docs/runbooks/RBAC_INCIDENTS.md` | RBAC incident response playbook |
+| `docs/runbooks/MEMORY_PIN_CLEANUP.md` | Manual pin cleanup procedures |
+
+**Verification Results:**
+
+| Test | Result |
+|------|--------|
+| Unauthorized write blocked | HTTP 403 ✅ |
+| Machine token write allowed | HTTP 201 ✅ |
+| RBAC enforce_mode | true ✅ |
+| Load test (50 clients) | 400 TPS, 0 failures ✅ |
+| Integration tests | 18 passed, 2 skipped ✅ |
+| Smoke tests | 16 passed, 0 failed ✅ |
+| RBAC audit writes | 22 success, 0 error ✅ |
+| Memory ops | 41 success, 0 error ✅ |
+
+**M7 Tail Work Status:**
+
+| Task | Status |
+|------|--------|
+| 24-48h monitoring | In Progress (0h baseline done) |
+| Chaos experiments | Pending (after 6h stable) |
+| Prod enablement | Pending (after 24h + chaos) |
+
+**See PIN-031 for memory integration, PIN-032 for RBAC enablement.**
+
+---
 
 ### M6 Completion Status
 
@@ -152,7 +421,7 @@ All 8 mandatory deliverables implemented per authoritative PIN-025 specification
 **Current Status:** M5.6 Observability Groundwork COMPLETE. M6 NOT STARTED.
 
 **Remaining for GA:**
-1. Wire real auth service (RBAC stub deployed, needs real auth)
+1. ~~Wire real auth service~~ ✅ **DONE** - Keycloak OIDC integrated (2025-12-05)
 2. Complete operational checklist in PIN-009
 
 ### M4 Final Status (PIN-020)
@@ -351,14 +620,14 @@ See `backend/app/specs/determinism_and_replay.md` for full details:
 
 ### Next Immediate Actions
 
-**Priority 1: Begin M7 Memory Integration**
-With M6.5 complete, the system is ready for:
-- M7: Memory Integration (1 week estimated)
-- Production deployment with `COSTSIM_V2_SANDBOX=true` for shadow testing
-- Canary validation over 2+ weeks before V2 promotion
+**Priority 1: M7 Complete - Production Readiness**
+M7 is complete. For production rollout:
+- Install cron: `crontab scripts/ops/cron/aos-maintenance.cron`
+- Enable RBAC in staging: `RBAC_ENFORCE=true`
+- Monitor `/metrics` for memory_pins_* and rbac_engine_* metrics
 
 **Priority 2: Complete Operational GA (PIN-009)**
-1. Wire real auth service (AUTH_SERVICE_URL)
+1. ~~Wire real auth service~~ ✅ **DONE** - Keycloak OIDC at auth-dev.xuniverz.com
 2. Verify backup/restore procedure
 3. Run 30+ concurrent load test
 4. Complete webhook key security hardening
@@ -410,7 +679,7 @@ All internal validation steps passed:
 - **Security:** Prompt injection detection, URL sanitization
 - **Skills:** http_call, llm_invoke, json_transform, postgres_query, calendar_write
 - **Workflow:** WorkflowEngine, CheckpointStore, PolicyEnforcer, PlannerSandbox, GoldenRecorder
-- **Tests:** 599 tests passing, 0 xfailed, 20 skipped, 2 warnings (external)
+- **Tests:** 1,071 tests passing (99.3%), 8 failed, 28 skipped
 - **Observability:** 40 Prometheus alerts (25 core + 15 workflow), 3 Grafana dashboards
 - **CI/CD:** Automated pipelines with mandatory smoke tests
 
@@ -421,8 +690,9 @@ All internal validation steps passed:
 ### For AI Assistants
 When resuming work on this project:
 1. Read `INDEX.md` first
-2. Read relevant active PINs for context
-3. Check PIN status dates for freshness
+2. For M8+ work, use the working environment at `agentiverz_mn/`
+3. Read relevant active PINs for context
+4. Check PIN status dates for freshness
 
 ### For Developers
 1. Check INDEX for relevant specs before implementing
@@ -435,6 +705,120 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-07 | **PIN-047 Pending Polishing Tasks** - Created tech debt backlog with P1-P3 priorities |
+| 2025-12-07 | **PENDING-TODO-INDEX.md** - Created quick reference for all pending tasks across PINs |
+| 2025-12-07 | **P0 Security Hardening** - Created embedding Prometheus alerts (`monitoring/rules/embedding_alerts.yml`) |
+| 2025-12-07 | Added daily quota guard for embeddings - `EMBEDDING_DAILY_QUOTA` env var, midnight UTC reset |
+| 2025-12-07 | Added `OPENAI_API_KEY` to HashiCorp Vault at `agenticverz/external-apis` |
+| 2025-12-07 | Removed plaintext `OPENAI_API_KEY` from root `.env` file |
+| 2025-12-07 | **Embedding Backfill Complete** - 68/68 memories with embeddings, OpenAI API key secured in secrets |
+| 2025-12-07 | **asyncpg CAST Fix** - Fixed `::vector` syntax error with `CAST(:param AS vector)` in vector_store.py and backfill script |
+| 2025-12-07 | Created `secrets/openai.env` - OpenAI API key stored securely with other external service credentials |
+| 2025-12-07 | Created integration tests: `tests/integration/test_vector_search.py` for pgvector |
+| 2025-12-07 | Added pgvector infrastructure check to CI preflight workflow |
+| 2025-12-07 | **PIN-046 Stub Replacement & pgvector** - All P0/P1 stubs replaced, semantic memory search |
+| 2025-12-07 | Created VectorMemoryStore with HNSW index for fast similarity queries |
+| 2025-12-07 | Enabled pgvector extension in Neon, added embedding column to memories table |
+| 2025-12-07 | Added CostSimCanaryReportModel to costsim_cb.py |
+| 2025-12-07 | Added fail-closed behavior to Clerk auth (RBAC_ENFORCE flag) |
+| 2025-12-07 | **PIN-045 CI Infrastructure Fixes** - TOCTOU race fix, Redis config, worker buffering |
+| 2025-12-07 | Created RCA report: `docs/RCA-CI-FIXES-2025-12-07.md` |
+| 2025-12-07 | Created CI consistency checker: `scripts/ops/ci_consistency_check.sh` |
+| 2025-12-07 | All 11 CI jobs passing (run 20003884770) |
+| 2025-12-06 | **PIN-044 E2E Test Harness Run** - Full test suite: 1,071 passed, 8 failed, 99.3% pass rate |
+| 2025-12-06 | Fixed test infrastructure: MACHINE_SECRET_TOKEN in conftest, Prometheus registry cleanup, async fixture |
+| 2025-12-06 | Identified remaining failures: 6 PgBouncer/asyncpg, 2 memory integration mocks |
+| 2025-12-06 | k6 load test: 2,896 iterations, p95=293ms, rate limiting verified |
+| 2025-12-06 | **PIN-043 M8 Infrastructure Session** - Fixed nftables Docker network block, verified rate limiting, prepared reboot test |
+| 2025-12-06 | Created repair scripts: fix-nft-docker.sh, repair-claude-cli.sh, post-reboot-verify.sh |
+| 2025-12-06 | Created docs: STAGING_READINESS.md, DEPLOYMENT_GATE_POLICY.md |
+| 2025-12-06 | Created e2e-parity-check.yml GitHub workflow for E2E + parity + k6 SLO |
+| 2025-12-06 | Verified rate limiting: 60 allowed, 11 blocked at free tier, Redis connected |
+| 2025-12-06 | Fixed nftables forward chain - added docker0/br-* rules to /etc/nftables.conf |
+| 2025-12-06 | **PIN-042 Alert & Observability Tooling** - inject_synthetic_alert.py, k6_slo_mapper.py, e2e_results_parser.py |
+| 2025-12-06 | **PIN-041 Mismatch Tracking System** - Exclusive mismatch tracking with GitHub/Slack integration |
+| 2025-12-06 | **PIN-040 Rate Limit Middleware** - JWT-based per-tenant rate limiting (exclusive component) |
+| 2025-12-06 | **PIN-039 M8 Implementation Progress** - Tracking M8 production hardening deliverables |
+| 2025-12-06 | Created rate_limit.py middleware with tiers: free/dev/pro/enterprise/unlimited |
+| 2025-12-06 | Enhanced mismatch GitHub integration with bulk reporting and resolution comments |
+| 2025-12-06 | Created synthetic alert injector tool (Alertmanager API v2) |
+| 2025-12-06 | Created k6 SLO mapper with p95/p99/error-rate/availability thresholds |
+| 2025-12-06 | Created E2E results parser supporting pytest-json, JUnit XML, AOS harness |
+| 2025-12-06 | Wired rate_limit_dependency into /simulate and /replay endpoints |
+| 2025-12-06 | **PIN-038 Upstash Redis Integration** - Production Redis at on-sunbeam-19994.upstash.io |
+| 2025-12-06 | **PIN-037 Grafana Cloud Integration** - Dashboards + metrics at agenticverz.grafana.net |
+| 2025-12-06 | **PIN-036 Infrastructure Pending Items** - Tracking M9/M11 dependencies |
+| 2025-12-06 | **agenticverz.com Integrations Complete** - YouTube, Loom, Slack, Grafana Cloud |
+| 2025-12-06 | Updated sdk_packaging_checklist.md to COMPLETE |
+| 2025-12-06 | Added External Integrations section to INDEX.md |
+| 2025-12-06 | Grafana Cloud dashboard created with Slack alerting |
+| 2025-12-06 | Landing page live at https://agenticverz.com |
+| 2025-12-05 | **SDK Package Registry PUBLISHED** - aos-sdk v0.1.0 live on PyPI and npm |
+| 2025-12-05 | Created `sdk/python/aos_sdk/` with AOSClient, CLI, machine-native APIs |
+| 2025-12-05 | Created `sdk/js/aos-sdk/` with TypeScript types and full ESM/CJS support |
+| 2025-12-05 | Created CI workflows: `publish-python-sdk.yml`, `publish-js-sdk.yml` |
+| 2025-12-05 | Added Vault path `agenticverz/package-registry` for PyPI/npm tokens |
+| 2025-12-05 | Verified: Python SDK installs, CLI works (`aos version`), imports work |
+| 2025-12-05 | Verified: JS SDK builds, CJS/ESM dual build, TypeScript types included |
+| 2025-12-05 | **HashiCorp Vault Deployed** - Secrets management operational at 127.0.0.1:8200 |
+| 2025-12-05 | Migrated secrets to Vault KV v2: app-prod, database, external-apis, keycloak-admin |
+| 2025-12-05 | Created Vault client `backend/app/secrets/vault_client.py` for app integration |
+| 2025-12-05 | Created rotation script `scripts/ops/vault/rotate_secret.sh` - verified working |
+| 2025-12-05 | Updated `.env.example` - no plaintext secrets, references Vault paths |
+| 2025-12-05 | **RBAC + Keycloak VERIFIED** - Full integration test suite passed |
+| 2025-12-05 | Verified: Token acquisition, role extraction (admin), read/write auth, unauthorized blocked |
+| 2025-12-05 | Created test script `scripts/smoke/test_rbac_keycloak.sh` for RBAC verification |
+| 2025-12-05 | **M8 Auth Integration COMPLETE** - Keycloak live at auth-dev.xuniverz.com |
+| 2025-12-05 | Deployed Keycloak with PostgreSQL persistence (nova_db, keycloak database) |
+| 2025-12-05 | Created agentiverz-dev realm with aos-backend OIDC client |
+| 2025-12-05 | Implemented OIDC provider (`backend/app/auth/oidc_provider.py`) - JWKS validation |
+| 2025-12-05 | Wired OIDC to RBAC middleware - Keycloak tokens now work with AOS API |
+| 2025-12-05 | Added PyJWT + cryptography for RS256 signature verification |
+| 2025-12-05 | Created Apache vhost for auth-dev.xuniverz.com with TLS (Cloudflare Origin) |
+| 2025-12-05 | Verified Cloudflare proxy enabled (cf-ray header present) |
+| 2025-12-05 | **PIN-009 Auth Blocker RESOLVED** - Real auth provider now wired |
+| 2025-12-05 | Test user devuser created with admin role, API calls verified working |
+| 2025-12-05 | **Hygiene Automation** - Created session_start.sh, hygiene_check.sh, weekly cron |
+| 2025-12-05 | Updated CLAUDE.md with Session Start Protocol (MANDATORY) |
+| 2025-12-05 | **M8 Working Environment Created** - `agentiverz_mn/` with 7 focused context files |
+| 2025-12-05 | Created checklists: auth_integration, sdk_packaging, demo, repo_snapshot |
+| 2025-12-05 | Added M8 Working Environment section to INDEX.md |
+| 2025-12-05 | **PIN-033 M8-M14 Machine-Native Realignment Roadmap** - Created recovery roadmap addressing strategic drift |
+| 2025-12-05 | Updated INDEX.md with M8-M14 roadmap summary, revised planned PINs |
+| 2025-12-05 | ✅ **PIN-032 M7 RBAC Enablement** - ENFORCED |
+| 2025-12-05 | Fixed docker-compose.yml: added RBAC_ENFORCE, MACHINE_SECRET_TOKEN env vars |
+| 2025-12-05 | Fixed main.py: registered RBACMiddleware |
+| 2025-12-05 | Created one-click enablement script: `scripts/ops/rbac_oneclick_enable.sh` |
+| 2025-12-05 | Created Grafana M7 dashboard: `monitoring/dashboards/m7_rbac_memory_dashboard.json` |
+| 2025-12-05 | Created integration tests: `backend/tests/integration/test_m7_rbac_memory.py` |
+| 2025-12-05 | Added drift detection metrics to memory_service.py and costsim.py |
+| 2025-12-05 | PgBouncer load test: 50 clients, 400 TPS, 0 failures |
+| 2025-12-05 | Smoke tests: 12 passed, 0 failed, RBAC enforcement verified |
+| 2025-12-05 | RBAC_ENFORCE=true enabled in production |
+| 2025-12-05 | **Session 2:** Fixed RBAC audit write errors (generator session handling in rbac_engine.py) |
+| 2025-12-05 | **Session 2:** Fixed smoke script auth (uses machine token for RBAC info endpoint) |
+| 2025-12-05 | **Session 2:** Added --non-interactive mode to one-click script (for CI/CD) |
+| 2025-12-05 | **Session 2:** Fixed integration tests for RBAC enforcement (18 passed, 2 skipped) |
+| 2025-12-05 | **Session 2:** Created chaos scripts: kill_child.sh, redis_stall.sh, cpu_spike.sh |
+| 2025-12-05 | **Session 2:** Created GitHub Actions nightly smoke workflow (m7-nightly-smoke.yml) |
+| 2025-12-05 | **Session 2:** Created runbooks: RBAC_INCIDENTS.md, MEMORY_PIN_CLEANUP.md |
+| 2025-12-05 | **Session 2:** Created m7_monitoring_check.sh for 24-48h stabilization |
+| 2025-12-05 | **Session 2:** Decision: Machine role keeps least privilege (no delete permission) |
+| 2025-12-05 | **Session 2:** Decision: Drift detection deferred to post-M8 (collect metrics, alerts disabled) |
+| 2025-12-05 | **Session 2:** 0h monitoring baseline: audit_writes=22 success/0 error, memory_ops=41 success/0 error |
+| 2025-12-04 | ✅ **PIN-031 M7 Memory Integration** - COMPLETE |
+| 2025-12-04 | **Session 3:** Seed script, memory audit, TTL job, DELETE test - all complete |
+| 2025-12-04 | Created: seed_memory_pins.py, memory_pins_seed.json (7 pins), expire_memory_pins.sh |
+| 2025-12-04 | Wired memory audit logging into API, verified entries in system.memory_audit |
+| 2025-12-04 | Full test suite: 1038 passed, 2 flaky, 13 skipped |
+| 2025-12-04 | **Session 2 Fixes:** Migration chain (010 down_revision), PyJWT dep, SQL binding |
+| 2025-12-04 | Verified: POST/GET/LIST/DELETE memory pins, RBAC info/matrix/reload, Prometheus metrics |
+| 2025-12-04 | Database tables: system.memory_pins, rbac_audit, memory_audit |
+| 2025-12-04 | Created memory_pins migration (009), API, RBAC middleware, Prometheus CI |
+| 2025-12-04 | Created alert fuzzer, RBAC tests, replay parity tests |
+| 2025-12-04 | Updated feature flags: memory_pins_enabled, rbac_enforce, chaos_allowed |
+| 2025-12-04 | ✅ **PIN-030 M6.5 Live Runtime Validation** - Rate limit 429s confirmed, Prometheus metrics verified |
+| 2025-12-04 | ✅ Pushed to GitHub: `feature/m4.5-failure-catalog-integration` branch |
 | 2025-12-04 | ✅ **PIN-030 M6.5 Internal Validation COMPLETE** - 75 tests pass, K8s ready |
 | 2025-12-04 | Created 4 new test files: chaos, readiness probe, metric fuzzer, log correlation |
 | 2025-12-04 | Fixed asyncio deprecation: replaced `get_event_loop().run_until_complete()` with `asyncio.run()` |

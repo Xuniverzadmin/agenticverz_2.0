@@ -1,0 +1,113 @@
+{
+  "pins": [
+    {
+      "tenant_id": "global",
+      "key": "config:rate_limits",
+      "value": {
+        "default_rpm": 100,
+        "burst_limit": 150,
+        "concurrent_max": 5,
+        "per_tenant_override": {}
+      },
+      "source": "seed",
+      "ttl_seconds": null
+    },
+    {
+      "tenant_id": "global",
+      "key": "config:budget_defaults",
+      "value": {
+        "max_tokens_per_run": 100000,
+        "max_cost_per_run_usd": 1.00,
+        "max_daily_cost_usd": 50.00,
+        "warning_threshold_pct": 80
+      },
+      "source": "seed",
+      "ttl_seconds": null
+    },
+    {
+      "tenant_id": "global",
+      "key": "config:feature_flags",
+      "value": {
+        "memory_pins_enabled": true,
+        "rbac_enforce": false,
+        "chaos_allowed": false,
+        "memory_context_injection": false,
+        "memory_post_update": false,
+        "drift_detection_enabled": false,
+        "costsim_v2_sandbox": true
+      },
+      "source": "seed",
+      "ttl_seconds": null
+    },
+    {
+      "tenant_id": "global",
+      "key": "config:skill_registry",
+      "value": {
+        "enabled_skills": [
+          "http_call",
+          "llm_invoke",
+          "json_transform",
+          "postgres_query",
+          "calendar_write"
+        ],
+        "deprecated_skills": [],
+        "skill_timeouts": {
+          "http_call": 30,
+          "llm_invoke": 120,
+          "json_transform": 10,
+          "postgres_query": 60
+        }
+      },
+      "source": "seed",
+      "ttl_seconds": null
+    },
+    {
+      "tenant_id": "global",
+      "key": "config:retry_policy",
+      "value": {
+        "max_retries": 3,
+        "backoff_base_seconds": 1,
+        "backoff_max_seconds": 60,
+        "jitter_enabled": true,
+        "retryable_errors": [
+          "TRANSIENT",
+          "RATE_LIMITED",
+          "TIMEOUT"
+        ]
+      },
+      "source": "seed",
+      "ttl_seconds": null
+    },
+    {
+      "tenant_id": "global",
+      "key": "config:observability",
+      "value": {
+        "metrics_enabled": true,
+        "tracing_enabled": false,
+        "audit_retention_days": 90,
+        "log_level": "INFO",
+        "sample_rate": 1.0
+      },
+      "source": "seed",
+      "ttl_seconds": null
+    },
+    {
+      "tenant_id": "global",
+      "key": "system:version",
+      "value": {
+        "api_version": "v1",
+        "schema_version": "1.0.0",
+        "last_migration": "011_create_memory_audit",
+        "deployed_at": "2025-12-04T00:00:00Z"
+      },
+      "source": "seed",
+      "ttl_seconds": null
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Default memory pins for AOS M7",
+    "created": "2025-12-04",
+    "author": "aos-ops"
+  }
+}
