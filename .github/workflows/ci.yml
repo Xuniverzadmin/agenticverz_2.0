@@ -490,16 +490,14 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          # Use Docker postgres for isolation (Neon is shared across jobs)
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           alembic upgrade head
 
       - name: Run circuit breaker integration tests
         env:
-          # Use Docker postgres for isolation (avoid Neon conflicts with parallel jobs)
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
@@ -511,8 +509,7 @@ jobs:
 
       - name: Run all costsim tests
         env:
-          # Use Docker postgres for isolation
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
           COSTSIM_V2_SANDBOX: "true"
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
@@ -578,17 +575,15 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          # Use Docker postgres for isolation
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           alembic upgrade head
 
       - name: Start application server
         env:
-          # Use Docker postgres for isolation
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
           COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
@@ -610,8 +605,8 @@ jobs:
 
       - name: Run E2E tests
         env:
-          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
           COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
