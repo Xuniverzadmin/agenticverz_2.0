@@ -196,20 +196,18 @@ jobs:
           pip install pytest pytest-asyncio
 
       - name: Run live adapter tests
-        if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         run: |
-          cd backend
-          python -m pytest tests/live/ -v --tb=short -x
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "⚠️ ANTHROPIC_API_KEY not configured - skipping live tests"
+            echo "   To enable: Settings > Secrets > Actions > ANTHROPIC_API_KEY"
+          else
+            cd backend
+            python -m pytest tests/live/ -v --tb=short -x
+          fi
         env:
           PYTHONPATH: ${{ github.workspace }}/backend
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         timeout-minutes: 5
-
-      - name: Skip notice (no API key)
-        if: ${{ secrets.ANTHROPIC_API_KEY == '' }}
-        run: |
-          echo "⚠️ ANTHROPIC_API_KEY not configured - skipping live tests"
-          echo "   To enable: Settings > Secrets > Actions > ANTHROPIC_API_KEY"
 
   cost-tracking:
     name: Cost Tracking Summary
