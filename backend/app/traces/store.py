@@ -107,11 +107,16 @@ class SQLiteTraceStore(TraceStore):
                     tenant_id TEXT NOT NULL,
                     agent_id TEXT,
                     plan TEXT NOT NULL,
+                    plan_hash TEXT,
                     started_at TEXT NOT NULL,
                     completed_at TEXT,
                     status TEXT NOT NULL DEFAULT 'running',
                     metadata TEXT DEFAULT '{}',
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    -- v1.1 determinism fields
+                    seed INTEGER DEFAULT 42,
+                    frozen_timestamp TEXT,
+                    root_hash TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS trace_steps (
@@ -128,14 +133,29 @@ class SQLiteTraceStore(TraceStore):
                     duration_ms REAL NOT NULL,
                     retry_count INTEGER NOT NULL DEFAULT 0,
                     timestamp TEXT NOT NULL,
+                    -- v1.1 idempotency fields
+                    idempotency_key TEXT,
+                    replay_behavior TEXT DEFAULT 'execute',
+                    input_hash TEXT,
+                    output_hash TEXT,
+                    rng_state_before TEXT,
                     FOREIGN KEY (run_id) REFERENCES traces(run_id) ON DELETE CASCADE,
                     UNIQUE(run_id, step_index)
                 );
 
+                -- Existing indexes
                 CREATE INDEX IF NOT EXISTS idx_traces_tenant ON traces(tenant_id);
                 CREATE INDEX IF NOT EXISTS idx_traces_correlation ON traces(correlation_id);
                 CREATE INDEX IF NOT EXISTS idx_traces_started ON traces(started_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_steps_run ON trace_steps(run_id);
+
+                -- v1.1 indexes for query API
+                CREATE INDEX IF NOT EXISTS idx_traces_plan_hash ON traces(plan_hash);
+                CREATE INDEX IF NOT EXISTS idx_traces_root_hash ON traces(root_hash);
+                CREATE INDEX IF NOT EXISTS idx_traces_seed ON traces(seed);
+                CREATE INDEX IF NOT EXISTS idx_traces_agent ON traces(agent_id);
+                CREATE INDEX IF NOT EXISTS idx_traces_status ON traces(status);
+                CREATE INDEX IF NOT EXISTS idx_steps_idempotency ON trace_steps(idempotency_key);
             """)
             conn.commit()
 
@@ -381,6 +401,168 @@ class SQLiteTraceStore(TraceStore):
                 return cursor.rowcount
 
         return await asyncio.to_thread(_cleanup)
+
+    # =========================================================================
+    # v1.1 Query API Methods
+    # =========================================================================
+
+    async def search_traces(
+        self,
+        tenant_id: str | None = None,
+        agent_id: str | None = None,
+        root_hash: str | None = None,
+        plan_hash: str | None = None,
+        seed: int | None = None,
+        status: str | None = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[TraceSummary]:
+        """
+        Search traces with multiple filter criteria.
+
+        Args:
+            tenant_id: Filter by tenant
+            agent_id: Filter by agent
+            root_hash: Filter by deterministic root hash
+            plan_hash: Filter by plan hash
+            seed: Filter by random seed
+            status: Filter by status (running, completed, failed)
+            from_date: Filter by start date (ISO8601)
+            to_date: Filter by end date (ISO8601)
+            limit: Maximum results
+            offset: Pagination offset
+
+        Returns:
+            List of matching trace summaries
+        """
+        def _search():
+            conditions = []
+            params = []
+
+            if tenant_id:
+                conditions.append("t.tenant_id = ?")
+                params.append(tenant_id)
+
+            if agent_id:
+                conditions.append("t.agent_id = ?")
+                params.append(agent_id)
+
+            if root_hash:
+                conditions.append("t.root_hash = ?")
+                params.append(root_hash)
+
+            if plan_hash:
+                conditions.append("t.plan_hash = ?")
+                params.append(plan_hash)
+
+            if seed is not None:
+                conditions.append("t.seed = ?")
+                params.append(seed)
+
+            if status:
+                conditions.append("t.status = ?")
+                params.append(status)
+
+            if from_date:
+                conditions.append("t.started_at >= ?")
+                params.append(from_date)
+
+            if to_date:
+                conditions.append("t.started_at <= ?")
+                params.append(to_date)
+
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            with self._get_conn() as conn:
+                rows = conn.execute(
+                    f"""
+                    SELECT t.*,
+                           COUNT(s.id) as total_steps,
+                           SUM(CASE WHEN s.status = 'success' THEN 1 ELSE 0 END) as success_count,
+                           SUM(CASE WHEN s.status = 'failure' THEN 1 ELSE 0 END) as failure_count,
+                           SUM(s.cost_cents) as total_cost_cents,
+                           SUM(s.duration_ms) as total_duration_ms
+                    FROM traces t
+                    LEFT JOIN trace_steps s ON t.run_id = s.run_id
+                    WHERE {where_clause}
+                    GROUP BY t.run_id
+                    ORDER BY t.started_at DESC
+                    LIMIT ? OFFSET ?
+                    """,
+                    params + [limit, offset],
+                ).fetchall()
+
+                return [
+                    TraceSummary(
+                        run_id=row["run_id"],
+                        correlation_id=row["correlation_id"],
+                        tenant_id=row["tenant_id"],
+                        agent_id=row["agent_id"],
+                        total_steps=row["total_steps"] or 0,
+                        success_count=row["success_count"] or 0,
+                        failure_count=row["failure_count"] or 0,
+                        total_cost_cents=row["total_cost_cents"] or 0.0,
+                        total_duration_ms=row["total_duration_ms"] or 0.0,
+                        started_at=datetime.fromisoformat(row["started_at"]),
+                        completed_at=datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None,
+                        status=row["status"],
+                    )
+                    for row in rows
+                ]
+
+        return await asyncio.to_thread(_search)
+
+    async def get_trace_by_root_hash(self, root_hash: str) -> TraceRecord | None:
+        """Get a trace by its deterministic root hash."""
+        def _fetch():
+            with self._get_conn() as conn:
+                row = conn.execute(
+                    "SELECT run_id FROM traces WHERE root_hash = ? LIMIT 1",
+                    (root_hash,)
+                ).fetchone()
+                return row["run_id"] if row else None
+
+        run_id = await asyncio.to_thread(_fetch)
+        if run_id:
+            return await self.get_trace(run_id)
+        return None
+
+    async def find_matching_traces(
+        self,
+        plan_hash: str,
+        seed: int,
+    ) -> list[TraceSummary]:
+        """
+        Find traces with matching plan and seed (for replay verification).
+
+        Two traces with same plan_hash and seed should produce identical root_hash.
+        """
+        return await self.search_traces(plan_hash=plan_hash, seed=seed)
+
+    async def update_trace_determinism(
+        self,
+        run_id: str,
+        seed: int,
+        frozen_timestamp: str | None,
+        root_hash: str,
+        plan_hash: str,
+    ) -> None:
+        """Update determinism fields after trace finalization."""
+        def _update():
+            with self._get_conn() as conn:
+                conn.execute(
+                    """
+                    UPDATE traces
+                    SET seed = ?, frozen_timestamp = ?, root_hash = ?, plan_hash = ?
+                    WHERE run_id = ?
+                    """,
+                    (seed, frozen_timestamp, root_hash, plan_hash, run_id),
+                )
+                conn.commit()
+
+        await asyncio.to_thread(_update)
 
 
 class InMemoryTraceStore(TraceStore):

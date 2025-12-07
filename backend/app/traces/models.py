@@ -134,6 +134,11 @@ class TraceRecord:
     Complete trace record with all steps.
 
     Used for replay verification and debugging.
+
+    v1.1 Determinism fields:
+    - seed: Random seed for deterministic simulation
+    - frozen_timestamp: Frozen time for deterministic context
+    - root_hash: Merkle root of deterministic fields (for replay verification)
     """
     run_id: str
     correlation_id: str
@@ -145,6 +150,10 @@ class TraceRecord:
     completed_at: datetime | None
     status: str
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Determinism fields (v1.1)
+    seed: int = 42
+    frozen_timestamp: str | None = None
+    root_hash: str | None = None
 
     @property
     def total_cost_cents(self) -> float:
@@ -179,6 +188,10 @@ class TraceRecord:
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "status": self.status,
             "metadata": self.metadata,
+            # Determinism fields (v1.1)
+            "seed": self.seed,
+            "frozen_timestamp": self.frozen_timestamp,
+            "root_hash": self.root_hash,
         }
 
     @classmethod
@@ -195,6 +208,10 @@ class TraceRecord:
             completed_at=datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None,
             status=data["status"],
             metadata=data.get("metadata", {}),
+            # Determinism fields (v1.1)
+            seed=data.get("seed", 42),
+            frozen_timestamp=data.get("frozen_timestamp"),
+            root_hash=data.get("root_hash"),
         )
 
     def to_summary(self) -> TraceSummary:
