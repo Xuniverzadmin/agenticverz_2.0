@@ -333,14 +333,33 @@ class TestRateLimiting:
             assert limiter.allow(test_key, rate_per_min=100) is True
 
 
+def _check_redis_available():
+    """Check if Redis is available for testing."""
+    try:
+        import redis
+        import os
+        client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
+        client.ping()
+        return True
+    except Exception:
+        return False
+
+
 class TestConcurrencyLimiting:
     """Tests for concurrent runs limiting."""
+
+    @pytest.fixture(autouse=True)
+    def require_redis(self):
+        """Skip tests if Redis is not available."""
+        if not _check_redis_available():
+            pytest.skip("Redis not available")
 
     def test_concurrent_limiter_acquires_and_releases(self):
         """Can acquire and release concurrency slots."""
         from app.utils.concurrent_runs import ConcurrentRunsLimiter
 
-        limiter = ConcurrentRunsLimiter()
+        # Use fail_open=False to ensure Redis is actually working
+        limiter = ConcurrentRunsLimiter(fail_open=False)
         test_key = f"concurrency-test-{uuid.uuid4().hex[:8]}"
 
         # Acquire a slot
@@ -355,7 +374,8 @@ class TestConcurrencyLimiting:
         """Concurrent limiter respects max_slots."""
         from app.utils.concurrent_runs import ConcurrentRunsLimiter
 
-        limiter = ConcurrentRunsLimiter()
+        # Use fail_open=False to ensure Redis is actually working
+        limiter = ConcurrentRunsLimiter(fail_open=False)
         test_key = f"max-slots-test-{uuid.uuid4().hex[:8]}"
         max_slots = 2
 
@@ -363,12 +383,12 @@ class TestConcurrencyLimiting:
         # Acquire all slots
         for _ in range(max_slots):
             token = limiter.acquire(test_key, max_slots=max_slots)
-            assert token is not None
+            assert token is not None, "Failed to acquire slot - Redis may have issues"
             tokens.append(token)
 
         # Next acquire should fail
         extra_token = limiter.acquire(test_key, max_slots=max_slots)
-        assert extra_token is None
+        assert extra_token is None, "Should be None when max_slots reached"
 
         # Release one slot
         limiter.release(test_key, tokens[0])
