@@ -444,7 +444,7 @@ jobs:
         ports:
           - 5433:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U nova -d nova_aos"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -578,15 +578,17 @@ jobs:
 
       - name: Run Alembic migrations
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          # Use Docker postgres for isolation
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
         run: |
           cd backend
           alembic upgrade head
 
       - name: Start application server
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
+          # Use Docker postgres for isolation
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          REDIS_URL: redis://localhost:6379/0
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
           COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
@@ -594,13 +596,22 @@ jobs:
         run: |
           cd backend
           nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
-          curl -sf http://localhost:8000/health || exit 1
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30..."
+            sleep 2
+          done
+          echo "Server failed to start"
+          exit 1
 
       - name: Run E2E tests
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
+          DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+          REDIS_URL: redis://localhost:6379/0
           AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
           COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
           COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
