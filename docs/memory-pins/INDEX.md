@@ -95,6 +95,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-071](PIN-071-m15-budgetllm-a2a-integration.md) | **M15 BudgetLLM A2A Integration** | Feature / Integration | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-072](PIN-072-m15-1-sba-foundations.md) | **M15.1 SBA Foundations (Strategy-Bound Agents)** | Milestone / Governance | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-073](PIN-073-m15-1-1-sba-inspector-ui.md) | **M15.1.1 SBA Inspector UI + Fulfillment Heatmap** | Frontend / Governance UI | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-074](PIN-074-m16-strategybound-governance-console.md) | **M16 StrategyBound Governance Console** | Milestone / Specification | **PLANNED** | 2025-12-14 |
 
 ---
 
@@ -142,7 +143,22 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 - [ ] Grafana m12_* metrics dashboard
 - [ ] 7 production validation checks (see M12-PRODUCTION-ENABLEMENT.md)
 
-See PIN-062/063 for M12 status, PIN-072 for M15.1 SBA governance, PIN-073 for M15.1.1 SBA Inspector UI.
+See PIN-062/063 for M12 status, PIN-072/073 for M15.1 SBA governance + Inspector UI, PIN-074 for M16 StrategyBound roadmap.
+
+---
+
+## Naming Convention (M16+)
+
+**Brand Architecture (established in PIN-074):**
+
+| Term | Definition | Usage |
+|------|------------|-------|
+| **Strategy-Bound Agents (SBA)** | The methodology | Documentation, specs |
+| **StrategyBound Engine** | The governance engine | Internal code, APIs |
+| **SBA Inspector** | The UI layer | Console, dashboards |
+| **AgentGovern** | Enterprise capability cluster | Sales, enterprise |
+
+**Migration:** BudgetLLM → StrategyBound Engine (code can retain `budgetllm` for backwards compatibility).
 
 ---
 
