@@ -248,6 +248,202 @@ export async function negotiateSBAVersion(requestedVersion: string): Promise<Ver
 }
 
 // ============================================================================
+// M16 Activity APIs
+// ============================================================================
+
+export interface WorkerMetrics {
+  id: string;
+  name?: string;
+  cost: 'low' | 'medium' | 'high';
+  risk: number;
+  budget_used: number;
+}
+
+export interface ActivityCostsResponse {
+  agent_id: string;
+  workers: WorkerMetrics[];
+  total_cost_level: string;
+  total_risk: number;
+  timestamp: string;
+}
+
+export interface SpendingDataResponse {
+  agent_id: string;
+  actual: number[];
+  projected: number[];
+  budget_limit: number;
+  anomalies: Array<{ index: number; reason: string }>;
+  period: string;
+  timestamp: string;
+}
+
+export interface RetryEntry {
+  time: string;
+  reason: string;
+  attempt: number;
+  outcome: 'success' | 'failure' | 'pending';
+  risk_change?: number;
+}
+
+export interface ActivityRetriesResponse {
+  agent_id: string;
+  retries: RetryEntry[];
+  total_retries: number;
+  success_rate: number;
+  timestamp: string;
+}
+
+export interface BlockerEntry {
+  type: 'dependency' | 'api' | 'tool' | 'circular' | 'budget';
+  message: string;
+  since: string;
+  action?: string;
+  details?: string;
+}
+
+export interface ActivityBlockersResponse {
+  agent_id: string;
+  blockers: BlockerEntry[];
+  blocked: boolean;
+  timestamp: string;
+}
+
+/**
+ * Get worker cost and risk metrics for an agent
+ */
+export async function getActivityCosts(agentId: string): Promise<ActivityCostsResponse> {
+  try {
+    const { data } = await apiClient.get(`/api/v1/agents/${encodeURIComponent(agentId)}/activity/costs`);
+    return data;
+  } catch {
+    return {
+      agent_id: agentId,
+      workers: [],
+      total_cost_level: 'low',
+      total_risk: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Get spending data for budget burn chart
+ */
+export async function getActivitySpending(
+  agentId: string,
+  period: '1h' | '6h' | '24h' | '7d' = '24h'
+): Promise<SpendingDataResponse> {
+  try {
+    const params = new URLSearchParams({ period });
+    const { data } = await apiClient.get(
+      `/api/v1/agents/${encodeURIComponent(agentId)}/activity/spending?${params}`
+    );
+    return data;
+  } catch {
+    return {
+      agent_id: agentId,
+      actual: [],
+      projected: [],
+      budget_limit: 0,
+      anomalies: [],
+      period,
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Get retry log for an agent
+ */
+export async function getActivityRetries(
+  agentId: string,
+  limit = 50
+): Promise<ActivityRetriesResponse> {
+  try {
+    const params = new URLSearchParams({ limit: String(limit) });
+    const { data } = await apiClient.get(
+      `/api/v1/agents/${encodeURIComponent(agentId)}/activity/retries?${params}`
+    );
+    return data;
+  } catch {
+    return {
+      agent_id: agentId,
+      retries: [],
+      total_retries: 0,
+      success_rate: 1,
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Get current blockers for an agent
+ */
+export async function getActivityBlockers(agentId: string): Promise<ActivityBlockersResponse> {
+  try {
+    const { data } = await apiClient.get(
+      `/api/v1/agents/${encodeURIComponent(agentId)}/activity/blockers`
+    );
+    return data;
+  } catch {
+    return {
+      agent_id: agentId,
+      blockers: [],
+      blocked: false,
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// M16 Health API
+// ============================================================================
+
+export interface HealthCheckItem {
+  severity: 'error' | 'warning' | 'info';
+  code: string;
+  title: string;
+  message: string;
+  action?: string;
+}
+
+export interface HealthCheckResponse {
+  agent_id: string;
+  healthy: boolean;
+  errors: HealthCheckItem[];
+  warnings: HealthCheckItem[];
+  suggestions: HealthCheckItem[];
+  checked_at: string;
+}
+
+/**
+ * Run comprehensive health check for an agent
+ */
+export async function checkAgentHealth(agentId: string): Promise<HealthCheckResponse> {
+  try {
+    const { data } = await apiClient.post(
+      `/api/v1/agents/${encodeURIComponent(agentId)}/health/check`
+    );
+    return data;
+  } catch {
+    return {
+      agent_id: agentId,
+      healthy: false,
+      errors: [{
+        severity: 'error',
+        code: 'API_ERROR',
+        title: 'Health Check Failed',
+        message: 'Could not reach health check endpoint',
+        action: 'Try again',
+      }],
+      warnings: [],
+      suggestions: [],
+      checked_at: new Date().toISOString(),
+    };
+  }
+}
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 

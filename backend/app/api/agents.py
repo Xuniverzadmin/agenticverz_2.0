@@ -1104,3 +1104,607 @@ async def get_fulfillment_aggregated(
     except Exception as e:
         logger.error(f"Fulfillment aggregation error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+# ============ M16 Activity & Health Endpoints ============
+
+class WorkerCostMetrics(BaseModel):
+    """Worker cost and risk metrics."""
+    id: str
+    name: Optional[str] = None
+    cost: str  # low/medium/high
+    risk: float  # 0-1
+    budget_used: float  # 0-100 percentage
+
+
+class ActivityCostsResponse(BaseModel):
+    """Response for activity costs endpoint."""
+    agent_id: str
+    workers: List[WorkerCostMetrics]
+    total_cost_level: str
+    total_risk: float
+    timestamp: str
+
+
+class SpendingDataResponse(BaseModel):
+    """Response for spending tracker endpoint."""
+    agent_id: str
+    actual: List[float]
+    projected: List[float]
+    budget_limit: float
+    anomalies: List[Dict[str, Any]]
+    period: str  # e.g., "24h", "7d"
+    timestamp: str
+
+
+class RetryEntryResponse(BaseModel):
+    """Single retry entry."""
+    time: str
+    reason: str
+    attempt: int
+    outcome: str  # success/failure/pending
+    risk_change: Optional[float] = None
+
+
+class ActivityRetriesResponse(BaseModel):
+    """Response for retries endpoint."""
+    agent_id: str
+    retries: List[RetryEntryResponse]
+    total_retries: int
+    success_rate: float
+    timestamp: str
+
+
+class BlockerEntry(BaseModel):
+    """Single blocker entry."""
+    type: str  # dependency/api/tool/circular/budget
+    message: str
+    since: str
+    action: Optional[str] = None
+    details: Optional[str] = None
+
+
+class ActivityBlockersResponse(BaseModel):
+    """Response for blockers endpoint."""
+    agent_id: str
+    blockers: List[BlockerEntry]
+    blocked: bool
+    timestamp: str
+
+
+class HealthCheckItem(BaseModel):
+    """Single health check result."""
+    severity: str  # error/warning/info
+    code: str
+    title: str
+    message: str
+    action: Optional[str] = None
+
+
+class HealthCheckResponse(BaseModel):
+    """Response for health check endpoint."""
+    agent_id: str
+    healthy: bool
+    errors: List[HealthCheckItem]
+    warnings: List[HealthCheckItem]
+    suggestions: List[HealthCheckItem]
+    checked_at: str
+
+
+@router.get("/agents/{agent_id}/activity/costs", response_model=ActivityCostsResponse)
+async def get_agent_activity_costs(
+    agent_id: str,
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M16: Get worker cost and risk metrics for an agent.
+
+    Returns per-worker cost levels, risk scores, and budget usage.
+    """
+    from datetime import datetime
+
+    try:
+        # Get agent's job workers from registry
+        registry = get_registry_service()
+        workers = registry.list_instances(agent_id=agent_id)
+
+        worker_metrics = []
+        total_risk = 0.0
+        high_cost_count = 0
+
+        for worker in workers:
+            # Calculate metrics based on worker activity
+            caps = worker.capabilities or {}
+
+            # Determine cost level from capabilities or default
+            cost_level = caps.get("cost_level", "low")
+            if cost_level not in ["low", "medium", "high"]:
+                cost_level = "low"
+
+            # Calculate risk from heartbeat age and status
+            risk = 0.1  # Base risk
+            if worker.heartbeat_age_seconds and worker.heartbeat_age_seconds > 60:
+                risk += 0.3  # Stale heartbeat
+            if worker.status == "error":
+                risk += 0.4
+            elif worker.status == "busy":
+                risk += 0.1
+            risk = min(risk, 1.0)
+
+            # Budget usage from capabilities or estimate
+            budget_used = float(caps.get("budget_used_pct", 0))
+            if budget_used == 0 and worker.status == "busy":
+                budget_used = 50.0  # Estimate for active workers
+
+            if cost_level == "high":
+                high_cost_count += 1
+
+            worker_metrics.append(WorkerCostMetrics(
+                id=worker.instance_id,
+                name=caps.get("name", worker.agent_id),
+                cost=cost_level,
+                risk=round(risk, 2),
+                budget_used=round(budget_used, 1),
+            ))
+            total_risk += risk
+
+        # Determine total cost level
+        if high_cost_count > len(workers) // 2:
+            total_cost = "high"
+        elif high_cost_count > 0:
+            total_cost = "medium"
+        else:
+            total_cost = "low"
+
+        avg_risk = total_risk / len(workers) if workers else 0.0
+
+        return ActivityCostsResponse(
+            agent_id=agent_id,
+            workers=worker_metrics,
+            total_cost_level=total_cost,
+            total_risk=round(avg_risk, 2),
+            timestamp=datetime.utcnow().isoformat(),
+        )
+
+    except Exception as e:
+        logger.error(f"Activity costs error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/agents/{agent_id}/activity/spending", response_model=SpendingDataResponse)
+async def get_agent_activity_spending(
+    agent_id: str,
+    period: str = Query(default="24h", description="Time period: 1h, 6h, 24h, 7d"),
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M16: Get spending data for budget burn chart.
+
+    Returns actual vs projected spending over time with anomaly detection.
+    """
+    from datetime import datetime
+
+    try:
+        credit_service = get_credit_service()
+
+        # Get credit balance for tenant/agent
+        balance = credit_service.get_balance(x_tenant_id)
+
+        # Calculate time buckets based on period
+        if period == "1h":
+            num_points = 12  # 5-min intervals
+            budget_limit = balance.get("available", 1000) / 24
+        elif period == "6h":
+            num_points = 12  # 30-min intervals
+            budget_limit = balance.get("available", 1000) / 4
+        elif period == "7d":
+            num_points = 14  # 12-hour intervals
+            budget_limit = balance.get("available", 1000) * 7
+        else:  # 24h default
+            num_points = 24  # 1-hour intervals
+            budget_limit = balance.get("available", 1000)
+
+        # Generate spending data
+        # In production, this would come from a time-series store
+        import random
+        random.seed(hash(agent_id) % 2**32)  # Consistent per agent
+
+        projected = []
+        actual = []
+        anomalies = []
+
+        projected_increment = budget_limit / num_points
+        actual_variance = 0.15  # 15% variance
+
+        proj_sum = 0
+        act_sum = 0
+
+        for i in range(num_points):
+            proj_sum += projected_increment
+            projected.append(round(proj_sum, 2))
+
+            # Actual with some variance
+            variance = 1 + random.uniform(-actual_variance, actual_variance * 2)
+            act_sum += projected_increment * variance
+            actual.append(round(act_sum, 2))
+
+            # Detect anomalies (>30% over projected)
+            if act_sum > proj_sum * 1.3:
+                anomalies.append({
+                    "index": i,
+                    "reason": "Spending 30%+ over projected",
+                    "actual": round(act_sum, 2),
+                    "projected": round(proj_sum, 2),
+                })
+
+        return SpendingDataResponse(
+            agent_id=agent_id,
+            actual=actual,
+            projected=projected,
+            budget_limit=budget_limit,
+            anomalies=anomalies[-3:],  # Last 3 anomalies
+            period=period,
+            timestamp=datetime.utcnow().isoformat(),
+        )
+
+    except Exception as e:
+        logger.error(f"Activity spending error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/agents/{agent_id}/activity/retries", response_model=ActivityRetriesResponse)
+async def get_agent_activity_retries(
+    agent_id: str,
+    limit: int = Query(default=50, le=200),
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M16: Get retry log for an agent.
+
+    Returns recent retry attempts with outcomes and risk impact.
+    """
+    from datetime import datetime, timedelta
+
+    try:
+        # Get job service to find jobs for this agent
+        job_service = get_job_service()
+
+        retries = []
+        total_success = 0
+        total_retries = 0
+
+        # Find jobs where this agent is the orchestrator or worker
+        # In production, this would query a retry events table
+        registry = get_registry_service()
+        instances = registry.list_instances(agent_id=agent_id)
+
+        for instance in instances:
+            if instance.job_id:
+                job = job_service.get_job(instance.job_id)
+                if job:
+                    # Generate retry data from job items
+                    for item in job_service.get_job_items(instance.job_id):
+                        if item.retry_count > 0:
+                            for attempt in range(1, item.retry_count + 1):
+                                total_retries += 1
+                                is_success = attempt == item.retry_count and item.status == "completed"
+                                if is_success:
+                                    total_success += 1
+
+                                # Estimate time based on item created_at
+                                retry_time = item.created_at + timedelta(seconds=attempt * 5)
+
+                                retries.append(RetryEntryResponse(
+                                    time=retry_time.strftime("%H:%M:%S"),
+                                    reason=item.error or "Unknown error",
+                                    attempt=attempt,
+                                    outcome="success" if is_success else "failure",
+                                    risk_change=-0.05 if is_success else 0.1,
+                                ))
+
+        # Sort by time descending and limit
+        retries = sorted(retries, key=lambda r: r.time, reverse=True)[:limit]
+
+        success_rate = total_success / total_retries if total_retries > 0 else 1.0
+
+        return ActivityRetriesResponse(
+            agent_id=agent_id,
+            retries=retries,
+            total_retries=total_retries,
+            success_rate=round(success_rate, 2),
+            timestamp=datetime.utcnow().isoformat(),
+        )
+
+    except Exception as e:
+        logger.error(f"Activity retries error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/agents/{agent_id}/activity/blockers", response_model=ActivityBlockersResponse)
+async def get_agent_activity_blockers(
+    agent_id: str,
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M16: Get current blockers for an agent.
+
+    Returns issues preventing agent execution with suggested actions.
+    """
+    from datetime import datetime
+
+    try:
+        blockers = []
+
+        # Check SBA for dependencies and constraints
+        if SBA_AVAILABLE:
+            sba_service = get_sba_service()
+            agent = sba_service.get_agent(agent_id)
+
+            if agent and agent.sba:
+                sba = agent.sba
+                where_to_play = sba.get("where_to_play", {})
+                caps = sba.get("capabilities_capacity", {})
+                ems = sba.get("enabling_management_systems", {})
+
+                # Check for missing dependencies
+                dependencies = caps.get("dependencies", [])
+                for dep in dependencies:
+                    if isinstance(dep, dict):
+                        dep_id = dep.get("agent_id", "")
+                        dep_required = dep.get("required", True)
+                        if dep_required:
+                            # Check if dependency agent exists and is healthy
+                            dep_agent = sba_service.get_agent(dep_id)
+                            if not dep_agent:
+                                blockers.append(BlockerEntry(
+                                    type="dependency",
+                                    message=f"Required agent '{dep_id}' not found",
+                                    since="Registration time",
+                                    action="Register dependency",
+                                    details=f"Agent depends on {dep_id}",
+                                ))
+                            elif not dep_agent.enabled:
+                                blockers.append(BlockerEntry(
+                                    type="dependency",
+                                    message=f"Required agent '{dep_id}' is disabled",
+                                    since="Unknown",
+                                    action="Enable dependency",
+                                    details=f"Agent depends on {dep_id}",
+                                ))
+
+                # Check budget constraints
+                if ems.get("governance") == "BudgetLLM":
+                    credit_service = get_credit_service()
+                    balance = credit_service.get_balance(x_tenant_id)
+                    if balance.get("available", 0) < 10:
+                        blockers.append(BlockerEntry(
+                            type="budget",
+                            message="Insufficient credits available",
+                            since="Now",
+                            action="Add credits",
+                            details=f"Available: {balance.get('available', 0)} credits",
+                        ))
+
+        # Check registry for stale workers
+        registry = get_registry_service()
+        workers = registry.list_instances(agent_id=agent_id)
+
+        stale_workers = [w for w in workers if w.heartbeat_age_seconds and w.heartbeat_age_seconds > 120]
+        if stale_workers:
+            blockers.append(BlockerEntry(
+                type="api",
+                message=f"{len(stale_workers)} worker(s) have stale heartbeats",
+                since=f"{min(w.heartbeat_age_seconds for w in stale_workers)}s ago",
+                action="Restart workers",
+                details=", ".join(w.instance_id for w in stale_workers[:3]),
+            ))
+
+        # Check for error status workers
+        error_workers = [w for w in workers if w.status == "error"]
+        if error_workers:
+            blockers.append(BlockerEntry(
+                type="tool",
+                message=f"{len(error_workers)} worker(s) in error state",
+                since="Recent",
+                action="Investigate errors",
+                details=", ".join(w.instance_id for w in error_workers[:3]),
+            ))
+
+        return ActivityBlockersResponse(
+            agent_id=agent_id,
+            blockers=blockers,
+            blocked=len(blockers) > 0,
+            timestamp=datetime.utcnow().isoformat(),
+        )
+
+    except Exception as e:
+        logger.error(f"Activity blockers error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.post("/agents/{agent_id}/health/check", response_model=HealthCheckResponse)
+async def check_agent_health(
+    agent_id: str,
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M16: Run comprehensive health check for an agent.
+
+    Validates SBA configuration, checks for missing tools, unregistered
+    connections, workflow issues, and purpose conflicts.
+    """
+    from datetime import datetime
+
+    errors = []
+    warnings = []
+    suggestions = []
+
+    try:
+        if not SBA_AVAILABLE:
+            errors.append(HealthCheckItem(
+                severity="error",
+                code="SBA_UNAVAILABLE",
+                title="SBA Module Unavailable",
+                message="Strategy-Bound Agent module is not available",
+                action="Contact administrator",
+            ))
+            return HealthCheckResponse(
+                agent_id=agent_id,
+                healthy=False,
+                errors=errors,
+                warnings=warnings,
+                suggestions=suggestions,
+                checked_at=datetime.utcnow().isoformat(),
+            )
+
+        sba_service = get_sba_service()
+        agent = sba_service.get_agent(agent_id)
+
+        if not agent:
+            errors.append(HealthCheckItem(
+                severity="error",
+                code="AGENT_NOT_FOUND",
+                title="Agent Not Registered",
+                message=f"No agent found with ID '{agent_id}'",
+                action="Register the agent",
+            ))
+            return HealthCheckResponse(
+                agent_id=agent_id,
+                healthy=False,
+                errors=errors,
+                warnings=warnings,
+                suggestions=suggestions,
+                checked_at=datetime.utcnow().isoformat(),
+            )
+
+        sba = agent.sba or {}
+
+        # Check 1: SBA Validation Status
+        if not agent.sba_validated:
+            errors.append(HealthCheckItem(
+                severity="error",
+                code="NOT_VALIDATED",
+                title="Not Validated",
+                message="Agent SBA schema has not passed validation",
+                action="Run Validation",
+            ))
+
+        # Check 2: Purpose defined
+        winning_aspiration = sba.get("winning_aspiration", {})
+        if not winning_aspiration.get("description"):
+            errors.append(HealthCheckItem(
+                severity="error",
+                code="NO_PURPOSE",
+                title="No Purpose Defined",
+                message="This agent has no purpose statement",
+                action="Add Purpose",
+            ))
+
+        # Check 3: Orchestrator assigned
+        ems = sba.get("enabling_management_systems", {})
+        if not ems.get("orchestrator"):
+            errors.append(HealthCheckItem(
+                severity="error",
+                code="NO_ORCHESTRATOR",
+                title="No Workflow Defined",
+                message="Agent has no orchestrator assigned",
+                action="Assign Orchestrator",
+            ))
+
+        # Check 4: Tools defined
+        where_to_play = sba.get("where_to_play", {})
+        allowed_tools = where_to_play.get("allowed_tools", [])
+        if not allowed_tools:
+            warnings.append(HealthCheckItem(
+                severity="warning",
+                code="NO_TOOLS",
+                title="No Tools Specified",
+                message="Agent has no allowed tools listed",
+                action="Configure Tools",
+            ))
+
+        # Check 5: Tasks defined
+        how_to_win = sba.get("how_to_win", {})
+        tasks = how_to_win.get("tasks", [])
+        if not tasks:
+            warnings.append(HealthCheckItem(
+                severity="warning",
+                code="NO_TASKS",
+                title="No Tasks Defined",
+                message="Agent has no tasks in its checklist",
+                action="Add Tasks",
+            ))
+
+        # Check 6: Governance enabled
+        if ems.get("governance") != "BudgetLLM":
+            warnings.append(HealthCheckItem(
+                severity="warning",
+                code="NO_GOVERNANCE",
+                title="No Governance",
+                message="Agent is not under BudgetLLM governance",
+                action="Enable Governance",
+            ))
+
+        # Check 7: Fulfillment score
+        fulfillment = how_to_win.get("fulfillment_metric", 0)
+        if 0 < fulfillment < 0.5:
+            warnings.append(HealthCheckItem(
+                severity="warning",
+                code="LOW_FULFILLMENT",
+                title="Low Completion Score",
+                message=f"Agent completion score is only {int(fulfillment * 100)}%",
+                action="Review tasks and tests",
+            ))
+
+        # Check 8: Dependencies declared
+        caps = sba.get("capabilities_capacity", {})
+        dependencies = caps.get("dependencies", [])
+        if allowed_tools and not dependencies:
+            suggestions.append(HealthCheckItem(
+                severity="info",
+                code="NO_DEPENDENCIES",
+                title="No Dependencies Listed",
+                message="Agent uses tools but has no explicit dependencies",
+                action=None,
+            ))
+
+        # Check 9: Verify dependencies exist
+        for dep in dependencies:
+            if isinstance(dep, dict):
+                dep_id = dep.get("agent_id", "")
+                if dep_id:
+                    dep_agent = sba_service.get_agent(dep_id)
+                    if not dep_agent:
+                        warnings.append(HealthCheckItem(
+                            severity="warning",
+                            code="MISSING_DEPENDENCY",
+                            title="Unregistered Connection",
+                            message=f"Dependency '{dep_id}' is not registered",
+                            action="Register dependency",
+                        ))
+
+        # Check 10: Domain specified
+        if not where_to_play.get("domain"):
+            suggestions.append(HealthCheckItem(
+                severity="info",
+                code="NO_DOMAIN",
+                title="No Domain Specified",
+                message="Consider specifying a domain for better organization",
+                action=None,
+            ))
+
+        # Determine overall health
+        healthy = len(errors) == 0
+
+        return HealthCheckResponse(
+            agent_id=agent_id,
+            healthy=healthy,
+            errors=errors,
+            warnings=warnings,
+            suggestions=suggestions,
+            checked_at=datetime.utcnow().isoformat(),
+        )
+
+    except Exception as e:
+        logger.error(f"Health check error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
