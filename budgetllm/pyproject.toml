@@ -1,0 +1,53 @@
+[project]
+name = "budgetllm"
+version = "0.1.0"
+description = "Hard budget limits + prompt caching for LLM API calls. Your agent stops before you overspend."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Agenticverz", email = "hello@agenticverz.com"}
+]
+keywords = ["llm", "openai", "anthropic", "budget", "cost", "cache", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "openai>=1.0",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=5.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+all = ["redis>=5.0"]
+
+[project.urls]
+Homepage = "https://github.com/agenticverz/budgetllm"
+Documentation = "https://github.com/agenticverz/budgetllm#readme"
+Repository = "https://github.com/agenticverz/budgetllm"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["budgetllm", "budgetllm.core", "budgetllm.core.backends"]
+package-dir = {"budgetllm" = "."}
+
+[tool.setuptools.package-data]
+budgetllm = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
