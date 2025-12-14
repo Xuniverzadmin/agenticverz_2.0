@@ -502,6 +502,74 @@ src/pages/sba/
 
 ---
 
+## Implementation Summary
+
+### Commits
+
+| Commit | Description |
+|--------|-------------|
+| `14f059c` | M16 Console 3-tab layout (Profile, Activity, Health) |
+| `6c2fbe1` | Backend Activity and Health APIs |
+| `4d50cd9` | API fixes for CreditBalance and JobItem types |
+
+### Frontend Components (16 files)
+
+**Profile Tab:**
+- `PurposeCard.tsx` - Agent purpose with alignment score
+- `PermissionsPanel.tsx` - Domains, tools, limits, violations
+- `TaskChecklist.tsx` - Tasks and tests with checkmarks
+- `CompletionScore.tsx` - 0-100% score with breakdown pie chart
+
+**Activity Tab:**
+- `CostRiskOverview.tsx` - Worker cost/risk grid
+- `SpendingTracker.tsx` - Recharts budget burn chart
+- `RetryLog.tsx` - Retry timeline with outcomes
+- `IssuesBlockers.tsx` - Current blockers with actions
+
+**Health Tab:**
+- `HealthSummary.tsx` - Overall status with counts
+- `HealthWarning.tsx` - Individual warning/error cards
+
+### Backend APIs (5 endpoints)
+
+| Endpoint | Method | Tested |
+|----------|--------|--------|
+| `/api/v1/agents/{id}/activity/costs` | GET | ✅ |
+| `/api/v1/agents/{id}/activity/spending` | GET | ✅ |
+| `/api/v1/agents/{id}/activity/retries` | GET | ✅ |
+| `/api/v1/agents/{id}/activity/blockers` | GET | ✅ |
+| `/api/v1/agents/{id}/health/check` | POST | ✅ |
+
+### Health Checks Implemented (10 validations)
+
+1. SBA Validation Status
+2. Purpose defined (winning_aspiration)
+3. Orchestrator assigned
+4. Tools defined (allowed_tools)
+5. Tasks defined
+6. Governance enabled (BudgetLLM)
+7. Fulfillment score threshold
+8. Dependencies declared
+9. Dependencies exist
+10. Domain specified
+
+### Test Results
+
+```
+test_worker (with SBA):
+  - healthy: true
+  - errors: 0
+  - warnings: 0
+  - suggestions: 1 (No Dependencies Listed)
+
+minimal_agent (partial SBA):
+  - healthy: true
+  - errors: 0
+  - warnings: 2 (No Tools, Low Score 30%)
+```
+
+---
+
 ## Related PINs
 
 | PIN | Relationship |
