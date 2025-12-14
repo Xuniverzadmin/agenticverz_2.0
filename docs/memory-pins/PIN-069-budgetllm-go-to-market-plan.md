@@ -403,3 +403,4 @@ Additions:
 |------|--------|--------|
 | 2025-12-14 | Claude | Initial plan based on validation feedback |
 | 2025-12-14 | Claude | Phase 0 complete: OpenAI-compatible wrapper, 39 tests, PyPI-ready package |
+| 2025-12-14 | Claude | Comprehensive README for adoption: Why BudgetLLM, Budget/Cache behavior, Error handling, Redis backend, Common patterns |
