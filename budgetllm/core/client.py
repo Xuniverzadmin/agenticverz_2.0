@@ -1,7 +1,12 @@
 """
-OpenAI-compatible client wrapper with budget enforcement and caching.
+OpenAI-compatible client wrapper with budget enforcement, caching, and safety governance.
 
-Drop-in replacement for openai.OpenAI() with hard budget limits.
+Drop-in replacement for openai.OpenAI() with:
+- Hard budget limits
+- Prompt caching
+- Hallucination risk scoring
+- Parameter clamping
+- Safety enforcement
 
 Usage:
     # Switch from OpenAI to BudgetLLM by changing one line:
@@ -14,6 +19,7 @@ Usage:
         messages=[{"role": "user", "content": "Hello!"}]
     )
     print(response["choices"][0]["message"]["content"])
+    print(f"Risk score: {response['risk_score']}")  # NEW
 """
 
 import os
@@ -30,6 +36,7 @@ from budgetllm.core.budget import (
 from budgetllm.core.cache import PromptCache
 from budgetllm.core.backends.memory import MemoryBackend
 from budgetllm.core.backends.redis import RedisBackend
+from budgetllm.core.safety import SafetyController, HighRiskOutputError
 
 
 # Cost per 1M tokens (in cents) - approximate as of Dec 2024
@@ -152,17 +159,21 @@ class ChatNamespace:
 
 class Client:
     """
-    OpenAI-compatible client with budget enforcement and caching.
+    OpenAI-compatible client with budget enforcement, caching, and safety governance.
 
-    Drop-in replacement for openai.OpenAI() with hard budget limits.
+    Drop-in replacement for openai.OpenAI() with:
+    - Hard budget limits (daily, monthly, cumulative)
+    - Automatic kill-switch when limit exceeded
+    - Prompt caching for cost savings
+    - Hallucination risk scoring
+    - Parameter clamping (temperature, top_p, max_tokens)
+    - Safety enforcement (optional blocking)
 
     Features:
     - client.chat.completions.create() - exact OpenAI API match
     - client.chat("hi") - convenient shortcut
-    - Hard budget limits (daily, monthly, cumulative)
-    - Automatic kill-switch when limit exceeded
-    - Prompt caching for cost savings
-    - OpenAI-format responses
+    - risk_score in every response (0.0-1.0)
+    - risk_factors breakdown for transparency
 
     Example - OpenAI drop-in replacement:
         # Change this:
@@ -180,13 +191,15 @@ class Client:
         )
         print(response["choices"][0]["message"]["content"])
         print(f"Cost: {response['cost_cents']} cents")
+        print(f"Risk: {response['risk_score']}")
 
-    Example - Simple shortcut:
-        from budgetllm import Client
-
-        client = Client(budget_cents=1000)
-        response = client.chat("What is Python?")
-        print(response["choices"][0]["message"]["content"])
+    Example - With safety governance:
+        client = Client(
+            budget_cents=1000,
+            max_temperature=0.7,      # Clamp high temps
+            enforce_safety=True,       # Enable blocking
+            risk_threshold=0.6,        # Block if risk > 0.6
+        )
     """
 
     def __init__(
@@ -199,6 +212,13 @@ class Client:
         cache_ttl: int = 3600,
         redis_url: Optional[str] = None,
         auto_pause: bool = True,
+        # Safety governance parameters
+        max_temperature: float = 1.0,
+        max_top_p: float = 1.0,
+        max_completion_tokens: int = 4096,
+        enforce_safety: bool = False,
+        block_on_high_risk: bool = True,
+        risk_threshold: float = 0.6,
     ):
         """
         Initialize BudgetLLM client.
@@ -211,7 +231,15 @@ class Client:
             cache_enabled: Enable prompt caching (default: True)
             cache_ttl: Cache TTL in seconds (default: 3600)
             redis_url: Redis URL for shared cache/state (optional)
-            auto_pause: Raise exception when limit exceeded (default: True)
+            auto_pause: Raise exception when budget exceeded (default: True)
+
+            # Safety governance (opt-in)
+            max_temperature: Maximum temperature (default: 1.0, no clamping)
+            max_top_p: Maximum top_p (default: 1.0, no clamping)
+            max_completion_tokens: Maximum completion tokens (default: 4096)
+            enforce_safety: Enable safety enforcement (default: False)
+            block_on_high_risk: Block outputs exceeding risk_threshold (default: True)
+            risk_threshold: Risk score threshold for blocking (default: 0.6)
         """
         # Get API key
         self.api_key = openai_key or os.getenv("OPENAI_API_KEY")
@@ -254,6 +282,16 @@ class Client:
             default_ttl=cache_ttl,
         )
 
+        # Initialize safety controller
+        self.safety = SafetyController(
+            max_temperature=max_temperature,
+            max_top_p=max_top_p,
+            max_tokens=max_completion_tokens,
+            enforce_safety=enforce_safety,
+            block_on_high_risk=block_on_high_risk,
+            risk_threshold=risk_threshold,
+        )
+
         # Settings
         self._cache_enabled = cache_enabled
 
@@ -291,11 +329,15 @@ class Client:
         completion_tokens: int,
         cost_cents: float,
         cache_hit: bool = False,
+        risk_score: float = 0.0,
+        risk_factors: Optional[Dict[str, Any]] = None,
+        params_clamped: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Build OpenAI-compatible response format.
 
         Matches the exact structure returned by openai.chat.completions.create()
+        with BudgetLLM additions for cost, caching, and safety governance.
         """
         return {
             "id": response_id,
@@ -320,6 +362,10 @@ class Client:
             # BudgetLLM additions
             "cost_cents": cost_cents,
             "cache_hit": cache_hit,
+            # Safety governance additions
+            "risk_score": risk_score,
+            "risk_factors": risk_factors or {},
+            "params_clamped": params_clamped or {},
         }
 
     def _handle_chat_request(
@@ -328,6 +374,7 @@ class Client:
         model: str = "gpt-4o-mini",
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
         enable_cache: Optional[bool] = None,
         **kwargs,
     ) -> Dict[str, Any]:
@@ -335,17 +382,47 @@ class Client:
         Internal handler for chat completion requests.
 
         Flow:
-        1. Check cache
-        2. Enforce budget limits
-        3. Make OpenAI API call
-        4. Record cost
-        5. Cache response
-        6. Return OpenAI-format response
+        1. Classify prompt type
+        2. Clamp parameters (safety governance)
+        3. Check cache
+        4. Enforce budget limits
+        5. Make OpenAI API call
+        6. Analyze output for risk signals
+        7. Calculate risk score
+        8. Enforce safety (if enabled)
+        9. Record cost
+        10. Cache response
+        11. Return response with risk_score
         """
         # Determine cache usage
         use_cache = enable_cache if enable_cache is not None else self._cache_enabled
 
-        # 1. Check cache first
+        # 1. Classify prompt type (for risk weighting)
+        prompt_type, prompt_confidence = self.safety.classify_prompt(messages)
+
+        # 2. Clamp parameters (safety governance)
+        original_temp = temperature
+        original_top_p = top_p
+        original_max_tokens = max_tokens
+
+        clamped_temp, clamped_top_p, clamped_max_tokens = self.safety.clamp_params(
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=max_tokens,
+        )
+
+        # Track what was clamped
+        params_clamped = self.safety.was_clamped(
+            original_temp, original_top_p, original_max_tokens,
+            clamped_temp, clamped_top_p, clamped_max_tokens,
+        )
+
+        # Use clamped values
+        temperature = clamped_temp
+        top_p = clamped_top_p
+        max_tokens = clamped_max_tokens
+
+        # 3. Check cache first (with clamped parameters)
         if use_cache:
             cached = self._cache.get(
                 model=model,
@@ -355,6 +432,7 @@ class Client:
 
             if cached:
                 # Return cached response with cache_hit=True, cost=0
+                # Use cached risk data if available
                 return self._build_openai_response(
                     response_id=cached.get("id", f"chatcmpl-cached-{uuid.uuid4().hex[:8]}"),
                     model=model,
@@ -364,12 +442,15 @@ class Client:
                     completion_tokens=cached.get("completion_tokens", 0),
                     cost_cents=0.0,  # Free from cache!
                     cache_hit=True,
+                    risk_score=cached.get("risk_score", 0.0),
+                    risk_factors=cached.get("risk_factors", {}),
+                    params_clamped=params_clamped,
                 )
 
-        # 2. Check budget before making API call
+        # 4. Check budget before making API call
         self.budget.check_limits()
 
-        # 3. Build request parameters
+        # 5. Build request parameters
         request_params = {
             "model": model,
             "messages": messages,
@@ -379,21 +460,48 @@ class Client:
             request_params["temperature"] = temperature
         if max_tokens is not None:
             request_params["max_tokens"] = max_tokens
+        if top_p is not None:
+            request_params["top_p"] = top_p
 
-        # Pass through any additional kwargs (top_p, stop, etc.)
-        request_params.update(kwargs)
+        # Pass through any additional kwargs (stop, etc.)
+        # Remove our custom params that OpenAI doesn't understand
+        openai_kwargs = {k: v for k, v in kwargs.items() if k not in ("enable_cache",)}
+        request_params.update(openai_kwargs)
 
-        # 4. Make actual OpenAI API call
+        # 6. Make actual OpenAI API call
         response = self._openai.chat.completions.create(**request_params)
 
-        # 5. Extract response data
+        # 7. Extract response data
         choice = response.choices[0]
         content = choice.message.content or ""
         finish_reason = choice.finish_reason
         prompt_tokens = response.usage.prompt_tokens
         completion_tokens = response.usage.completion_tokens
 
-        # 6. Calculate and record cost
+        # 8. Analyze output for risk signals
+        output_signals = self.safety.analyze_output(content)
+
+        # 9. Calculate risk score
+        input_params = {
+            "temperature": temperature or 0.7,  # Default if not specified
+            "top_p": top_p or 1.0,
+            "max_tokens": max_tokens or completion_tokens,
+        }
+
+        risk_score, risk_factors = self.safety.score_risk(
+            prompt_type=prompt_type,
+            input_params=input_params,
+            output_signals=output_signals,
+            model=model,
+        )
+
+        # Add prompt classification to risk factors
+        risk_factors["prompt_confidence"] = prompt_confidence
+
+        # 10. Enforce safety (may raise HighRiskOutputError)
+        self.safety.enforce(risk_score, risk_factors)
+
+        # 11. Calculate and record cost
         cost_cents = self._estimate_cost(model, prompt_tokens, completion_tokens)
 
         # Record cost in budget tracker (convert to integer microcents for precision)
@@ -401,7 +509,7 @@ class Client:
         if cost_microcents > 0:
             self.budget.record_cost(cost_microcents)
 
-        # 7. Build OpenAI-compatible result
+        # 12. Build OpenAI-compatible result
         result = self._build_openai_response(
             response_id=response.id,
             model=response.model,
@@ -411,9 +519,12 @@ class Client:
             completion_tokens=completion_tokens,
             cost_cents=cost_cents,
             cache_hit=False,
+            risk_score=risk_score,
+            risk_factors=risk_factors,
+            params_clamped=params_clamped,
         )
 
-        # 8. Store in cache
+        # 13. Store in cache (include risk data)
         if use_cache:
             cache_data = {
                 "id": response.id,
@@ -421,6 +532,8 @@ class Client:
                 "finish_reason": finish_reason,
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
+                "risk_score": risk_score,
+                "risk_factors": risk_factors,
             }
             self._cache.set(
                 model=model,
