@@ -1,5 +1,7 @@
-# M17 - Cascade-Aware Routing Engine (CARE)
+# M17/M18 - Cascade-Aware Routing Engine (CARE) + Learning Layer
 # Strategic router that routes based on agent Strategy Cascade
+# M18: Learning router with reputation, quarantine, hysteresis
+# M18.2: Governor, Feedback Loop, SLA-aware scoring, Explainability
 
 from .care import (
     CAREEngine,
@@ -29,6 +31,60 @@ from .models import (
     SuccessMetric,
 )
 from .probes import CapabilityProber, get_capability_prober
+from .learning import (
+    AgentReputation,
+    QuarantineState,
+    LearningParameters,
+    HysteresisManager,
+    ReputationStore,
+    get_reputation_store,
+    get_hysteresis_manager,
+    get_learning_parameters,
+    # Configuration constants
+    REPUTATION_SUCCESS_WEIGHT,
+    REPUTATION_LATENCY_WEIGHT,
+    REPUTATION_VIOLATION_WEIGHT,
+    REPUTATION_CONSISTENCY_WEIGHT,
+    PROBATION_FAILURE_COUNT,
+    QUARANTINE_FAILURE_COUNT,
+    QUARANTINE_COOLOFF,
+    HYSTERESIS_THRESHOLD,
+    HYSTERESIS_WINDOW,
+)
+from .governor import (
+    Governor,
+    GovernorState,
+    RollbackReason,
+    AdjustmentRecord,
+    StabilityMetrics,
+    RollbackResult,
+    get_governor,
+    # Configuration
+    MAX_ADJUSTMENTS_PER_HOUR,
+    MAX_ADJUSTMENT_MAGNITUDE,
+    GLOBAL_FREEZE_THRESHOLD,
+    FREEZE_DURATION,
+    ROLLBACK_WINDOW,
+    MIN_IMPROVEMENT_REQUIRED,
+    AUTO_ROLLBACK_ENABLED,
+)
+from .feedback import (
+    FeedbackLoop,
+    FeedbackDirection,
+    TaskPriority,
+    TaskComplexity,
+    RoutingOutcomeSignal,
+    StrategyAdjustmentSignal,
+    SLAScore,
+    BatchLearningResult,
+    get_feedback_loop,
+    # Configuration
+    DEFAULT_SLA_TARGET,
+    CRITICAL_SLA_WEIGHT,
+    HIGH_SLA_WEIGHT,
+    BATCH_WINDOW,
+    MIN_SAMPLES_FOR_LEARNING,
+)
 
 __all__ = [
     # Engine
@@ -46,6 +102,55 @@ __all__ = [
     "CONFIDENCE_BLOCK_THRESHOLD",
     "CONFIDENCE_FALLBACK_THRESHOLD",
     "FAIRNESS_WINDOW",
+    # M18 - Learning Router
+    "AgentReputation",
+    "QuarantineState",
+    "LearningParameters",
+    "HysteresisManager",
+    "ReputationStore",
+    "get_reputation_store",
+    "get_hysteresis_manager",
+    "get_learning_parameters",
+    # M18 - Configuration
+    "REPUTATION_SUCCESS_WEIGHT",
+    "REPUTATION_LATENCY_WEIGHT",
+    "REPUTATION_VIOLATION_WEIGHT",
+    "REPUTATION_CONSISTENCY_WEIGHT",
+    "PROBATION_FAILURE_COUNT",
+    "QUARANTINE_FAILURE_COUNT",
+    "QUARANTINE_COOLOFF",
+    "HYSTERESIS_THRESHOLD",
+    "HYSTERESIS_WINDOW",
+    # M18.2 - Governor
+    "Governor",
+    "GovernorState",
+    "RollbackReason",
+    "AdjustmentRecord",
+    "StabilityMetrics",
+    "RollbackResult",
+    "get_governor",
+    "MAX_ADJUSTMENTS_PER_HOUR",
+    "MAX_ADJUSTMENT_MAGNITUDE",
+    "GLOBAL_FREEZE_THRESHOLD",
+    "FREEZE_DURATION",
+    "ROLLBACK_WINDOW",
+    "MIN_IMPROVEMENT_REQUIRED",
+    "AUTO_ROLLBACK_ENABLED",
+    # M18.2 - Feedback Loop
+    "FeedbackLoop",
+    "FeedbackDirection",
+    "TaskPriority",
+    "TaskComplexity",
+    "RoutingOutcomeSignal",
+    "StrategyAdjustmentSignal",
+    "SLAScore",
+    "BatchLearningResult",
+    "get_feedback_loop",
+    "DEFAULT_SLA_TARGET",
+    "CRITICAL_SLA_WEIGHT",
+    "HIGH_SLA_WEIGHT",
+    "BATCH_WINDOW",
+    "MIN_SAMPLES_FOR_LEARNING",
     # Core models
     "RoutingDecision",
     "RoutingRequest",

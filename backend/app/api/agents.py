@@ -2072,3 +2072,486 @@ async def get_routing_stats(
             "last_decision": None,
             "note": "Routing table not yet created - run migrations",
         }
+
+
+# ============================================================================
+# M18 Explainability Endpoints
+# ============================================================================
+
+# M18: CARE-L and SBA Evolution imports
+try:
+    from ..routing import (
+        get_reputation_store, get_hysteresis_manager, get_learning_parameters,
+        get_governor, get_feedback_loop,
+        AgentReputation, QuarantineState, StabilityMetrics,
+        SLAScore, BatchLearningResult,
+    )
+    from ..agents.sba import (
+        get_evolution_engine,
+        DriftType, DriftSignal, ViolationType, BoundaryViolation,
+        AdjustmentType, StrategyAdjustment,
+    )
+    M18_AVAILABLE = True
+except ImportError:
+    M18_AVAILABLE = False
+
+
+class ExplainRoutingResponse(BaseModel):
+    """Response explaining a routing decision."""
+    request_id: str
+    agent_id: str
+    explanation: Dict[str, Any]
+    factors: List[Dict[str, Any]]
+    recommendation: Optional[str] = None
+
+
+class EvolutionReportResponse(BaseModel):
+    """Response with agent evolution history."""
+    agent_id: str
+    drift_signals: List[Dict[str, Any]]
+    violations: List[Dict[str, Any]]
+    adjustments: List[Dict[str, Any]]
+    current_state: Dict[str, Any]
+    recommendations: List[str]
+
+
+class SystemStabilityResponse(BaseModel):
+    """Response with system-wide stability metrics."""
+    state: str
+    frozen: bool
+    freeze_until: Optional[str] = None
+    freeze_reason: Optional[str] = None
+    adjustments_this_hour: int
+    rollbacks_this_hour: int
+    oscillations_detected: int
+    affected_agents: List[str]
+
+
+@router.post("/routing/explain/{request_id}", response_model=ExplainRoutingResponse)
+async def explain_routing_decision(
+    request_id: str,
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M18: Explain why a routing decision was made.
+
+    Returns detailed explanation of all factors that influenced the decision,
+    including reputation scores, SLA adjustments, hysteresis effects, and
+    capability matching.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        from sqlalchemy import create_engine, text
+        import os
+        engine = create_engine(os.environ.get("DATABASE_URL"))
+
+        with engine.connect() as conn:
+            # Get the routing decision
+            result = conn.execute(
+                text("""
+                    SELECT
+                        request_id, selected_agent_id, routed, decision_reason,
+                        error, actionable_fix, total_latency_ms,
+                        confidence_score, agent_reputation_at_route,
+                        quarantine_state_at_route, decided_at
+                    FROM routing.routing_decisions
+                    WHERE request_id = :request_id
+                    AND tenant_id = :tenant_id
+                """),
+                {"request_id": request_id, "tenant_id": x_tenant_id}
+            )
+            row = result.fetchone()
+
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Decision not found: {request_id}")
+
+            agent_id = row[1] or "none"
+            routed = row[2]
+            decision_reason = row[3] or "Unknown"
+            error = row[4]
+            actionable_fix = row[5]
+            latency_ms = row[6] or 0
+            confidence = row[7] or 0
+            reputation_at_route = row[8] or 1.0
+            quarantine_state = row[9] or "active"
+
+            # Build explanation
+            explanation = {
+                "outcome": "routed" if routed else "blocked",
+                "primary_reason": decision_reason,
+                "latency_ms": round(latency_ms, 2),
+            }
+
+            if error:
+                explanation["error"] = error
+            if actionable_fix:
+                explanation["suggested_fix"] = actionable_fix
+
+            # Build factors list
+            factors = []
+
+            # Reputation factor
+            if agent_id != "none":
+                factors.append({
+                    "factor": "reputation",
+                    "value": round(reputation_at_route, 3),
+                    "impact": "positive" if reputation_at_route > 0.7 else "neutral" if reputation_at_route > 0.4 else "negative",
+                    "explanation": f"Agent reputation was {reputation_at_route:.1%} at routing time",
+                })
+
+                # Quarantine factor
+                factors.append({
+                    "factor": "quarantine_state",
+                    "value": quarantine_state,
+                    "impact": "positive" if quarantine_state == "active" else "negative",
+                    "explanation": f"Agent was in {quarantine_state} state",
+                })
+
+            # Confidence factor
+            if confidence:
+                factors.append({
+                    "factor": "confidence",
+                    "value": round(confidence, 3),
+                    "impact": "positive" if confidence > 0.7 else "neutral" if confidence > 0.4 else "negative",
+                    "explanation": f"Routing confidence was {confidence:.1%}",
+                })
+
+            # Get SLA score if available
+            feedback_loop = get_feedback_loop()
+            sla_score = await feedback_loop.get_sla_score(agent_id)
+            if sla_score:
+                factors.append({
+                    "factor": "sla_compliance",
+                    "value": round(sla_score.current_sla, 3),
+                    "impact": "positive" if sla_score.current_sla >= sla_score.sla_target else "negative",
+                    "explanation": f"SLA is {sla_score.current_sla:.1%} vs target {sla_score.sla_target:.1%}",
+                })
+
+            # Generate recommendation
+            recommendation = None
+            if not routed:
+                recommendation = actionable_fix or "Consider registering more capable agents"
+            elif reputation_at_route < 0.6:
+                recommendation = "Agent reputation is declining - monitor for drift"
+
+            return ExplainRoutingResponse(
+                request_id=request_id,
+                agent_id=agent_id,
+                explanation=explanation,
+                factors=factors,
+                recommendation=recommendation,
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Explain routing error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/agents/{agent_id}/evolution", response_model=EvolutionReportResponse)
+async def get_agent_evolution(
+    agent_id: str,
+    include_acknowledged: bool = Query(default=False, description="Include acknowledged drift signals"),
+    limit: int = Query(default=20, le=100, description="Max items per category"),
+):
+    """
+    M18: Get agent evolution history and current state.
+
+    Returns drift signals, boundary violations, strategy adjustments,
+    and recommendations for the agent.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        evolution_engine = get_evolution_engine()
+        reputation_store = get_reputation_store()
+        feedback_loop = get_feedback_loop()
+
+        # Get drift signals
+        drift_signals = evolution_engine.get_drift_signals(
+            agent_id,
+            unacknowledged_only=not include_acknowledged,
+        )
+
+        # Get violations
+        violations = evolution_engine.get_violations(agent_id)
+
+        # Get adjustments
+        adjustments = evolution_engine.get_adjustments(agent_id, limit=limit)
+
+        # Get current reputation
+        reputation = await reputation_store.get_reputation(agent_id)
+
+        # Get SLA score
+        sla_score = await feedback_loop.get_sla_score(agent_id)
+
+        # Get successor mapping
+        successors = await feedback_loop.get_successor_mapping(agent_id)
+
+        # Build current state
+        current_state = {
+            "reputation": {
+                "score": round(reputation.reputation_score, 3),
+                "success_rate": round(reputation.success_rate, 3),
+                "quarantine_state": reputation.quarantine_state.value,
+                "quarantine_until": reputation.quarantine_until.isoformat() if reputation.quarantine_until else None,
+                "violation_count": reputation.violation_count,
+                "total_routes": reputation.total_routes,
+                "is_routable": reputation.is_routable(),
+            },
+        }
+
+        if sla_score:
+            current_state["sla"] = {
+                "current": round(sla_score.current_sla, 3),
+                "target": round(sla_score.sla_target, 3),
+                "gap": round(sla_score.sla_gap, 3),
+            }
+
+        if successors:
+            current_state["successors"] = successors
+
+        # Generate recommendations
+        recommendations = []
+
+        # Check for unacknowledged drift
+        unack_drift = [d for d in drift_signals if not d.acknowledged]
+        if unack_drift:
+            recommendations.append(f"Review {len(unack_drift)} unacknowledged drift signal(s)")
+
+        # Check reputation
+        if reputation.reputation_score < 0.5:
+            recommendations.append("Reputation is low - consider strategy adjustment")
+
+        if reputation.quarantine_state != QuarantineState.ACTIVE:
+            recommendations.append(f"Agent is in {reputation.quarantine_state.value} state")
+
+        # Check SLA
+        if sla_score and sla_score.sla_gap > 0.1:
+            recommendations.append(f"SLA gap is {sla_score.sla_gap:.1%} - needs improvement")
+
+        # Check recent violations
+        recent_violations = [v for v in violations][-5:]
+        if len(recent_violations) >= 3:
+            recommendations.append("High violation rate - review boundaries")
+
+        return EvolutionReportResponse(
+            agent_id=agent_id,
+            drift_signals=[d.to_dict() for d in drift_signals[-limit:]],
+            violations=[v.to_dict() for v in violations[-limit:]],
+            adjustments=[a.to_dict() for a in adjustments],
+            current_state=current_state,
+            recommendations=recommendations,
+        )
+
+    except Exception as e:
+        logger.error(f"Get evolution error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/routing/stability", response_model=SystemStabilityResponse)
+async def get_system_stability():
+    """
+    M18: Get system-wide stability metrics.
+
+    Returns governor state, freeze status, adjustment counts,
+    and oscillation detection results.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        governor = get_governor()
+        metrics = await governor.get_stability_metrics()
+
+        return SystemStabilityResponse(
+            state=metrics.state.value,
+            frozen=metrics.state.value == "frozen",
+            freeze_until=metrics.freeze_until.isoformat() if metrics.freeze_until else None,
+            freeze_reason=metrics.freeze_reason,
+            adjustments_this_hour=metrics.adjustments_this_hour,
+            rollbacks_this_hour=metrics.rollbacks_this_hour,
+            oscillations_detected=metrics.oscillations_detected,
+            affected_agents=metrics.affected_agents,
+        )
+
+    except Exception as e:
+        logger.error(f"Get stability error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.post("/routing/stability/freeze")
+async def freeze_system(
+    duration_seconds: int = Query(default=900, ge=60, le=3600, description="Freeze duration"),
+    reason: str = Query(default="Manual freeze", description="Reason for freeze"),
+):
+    """
+    M18: Manually freeze the learning system.
+
+    Use this to prevent any parameter adjustments during investigation
+    or maintenance.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        governor = get_governor()
+        await governor.force_freeze(duration_seconds, reason)
+
+        return {
+            "frozen": True,
+            "duration_seconds": duration_seconds,
+            "reason": reason,
+        }
+
+    except Exception as e:
+        logger.error(f"Freeze system error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.post("/routing/stability/unfreeze")
+async def unfreeze_system():
+    """
+    M18: Manually unfreeze the learning system.
+
+    Resumes normal operation after a manual freeze.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        governor = get_governor()
+        await governor.unfreeze()
+
+        return {"frozen": False, "message": "System unfrozen"}
+
+    except Exception as e:
+        logger.error(f"Unfreeze system error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.post("/routing/batch-learning")
+async def trigger_batch_learning(
+    window_hours: int = Query(default=1, ge=1, le=24, description="Hours of data to process"),
+):
+    """
+    M18: Trigger batch learning process.
+
+    Runs offline learning over the specified window and returns
+    parameter adjustment recommendations.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        feedback_loop = get_feedback_loop()
+        result = await feedback_loop.run_batch_learning(window_hours)
+
+        return {
+            "batch_id": result.batch_id,
+            "window_start": result.window_start.isoformat(),
+            "window_end": result.window_end.isoformat(),
+            "total_outcomes": result.total_outcomes,
+            "successful_outcomes": result.successful_outcomes,
+            "failed_outcomes": result.failed_outcomes,
+            "success_rate": round(
+                result.successful_outcomes / max(result.total_outcomes, 1), 3
+            ),
+            "parameter_adjustments": result.parameter_adjustments,
+            "reputation_updates": result.reputation_updates,
+            "drift_signals_generated": result.drift_signals_generated,
+            "adjustments_recommended": result.adjustments_recommended,
+            "processed_at": result.processed_at.isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Batch learning error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/agents/{agent_id}/reputation")
+async def get_agent_reputation(agent_id: str):
+    """
+    M18: Get agent reputation details.
+
+    Returns full reputation breakdown including quarantine state.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        reputation_store = get_reputation_store()
+        reputation = await reputation_store.get_reputation(agent_id)
+
+        return reputation.to_dict()
+
+    except Exception as e:
+        logger.error(f"Get reputation error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/agents/{agent_id}/sla")
+async def get_agent_sla(agent_id: str):
+    """
+    M18: Get agent SLA score details.
+
+    Returns SLA compliance metrics and targets.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        feedback_loop = get_feedback_loop()
+        sla_score = await feedback_loop.get_sla_score(agent_id)
+
+        if not sla_score:
+            return {
+                "agent_id": agent_id,
+                "has_sla_data": False,
+                "message": "No SLA data available for this agent",
+            }
+
+        return {
+            "agent_id": sla_score.agent_id,
+            "has_sla_data": True,
+            "raw_score": round(sla_score.raw_score, 3),
+            "sla_adjusted_score": round(sla_score.sla_adjusted_score, 3),
+            "sla_target": round(sla_score.sla_target, 3),
+            "current_sla": round(sla_score.current_sla, 3),
+            "sla_gap": round(sla_score.sla_gap, 3),
+            "meeting_sla": sla_score.current_sla >= sla_score.sla_target,
+            "updated_at": sla_score.updated_at.isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Get SLA error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/agents/{agent_id}/successors")
+async def get_agent_successors(agent_id: str):
+    """
+    M18: Get successor mapping for agent failover.
+
+    Returns mapping of capabilities to recommended successor agents.
+    """
+    if not M18_AVAILABLE:
+        raise HTTPException(status_code=501, detail="M18 module not available")
+
+    try:
+        feedback_loop = get_feedback_loop()
+        successors = await feedback_loop.get_successor_mapping(agent_id)
+
+        return {
+            "agent_id": agent_id,
+            "successors": successors,
+            "has_successors": len(successors) > 0,
+        }
+
+    except Exception as e:
+        logger.error(f"Get successors error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")

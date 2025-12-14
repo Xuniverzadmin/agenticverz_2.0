@@ -1,11 +1,14 @@
 # PIN-033: M8-M14 Machine-Native Realignment Roadmap
 
 **Serial:** PIN-033
-**Title:** Machine-Native Realignment Roadmap (M8 → M14)
+**Title:** Machine-Native Realignment Roadmap (M8 → M18)
 **Category:** Strategic / Milestone Plan
-**Status:** APPROVED
+**Status:** SUPERSEDED (see M15-M18 notes below)
 **Created:** 2025-12-05
-**Updated:** 2025-12-05
+**Updated:** 2025-12-14
+
+> **Note:** Original M14 "Self-Improving Loop" has been superseded by M15-M18 implementation.
+> See PIN-071 to PIN-076 for the actual implementation.
 
 ---
 
@@ -59,10 +62,14 @@ This PIN defines the corrected milestone plan to restore the machine-native visi
 | **M8** | Demo + SDK Packaging + Auth Integration | 2 weeks | PIN-009 |
 | **M9** | Failure Catalog v2 + Persistence + Metrics | 2 weeks | M8 |
 | **M10** | Recovery Suggestion Engine (API + CLI) | 1.5 weeks | M9 |
-| **M11** | Skill Expansion (KV, FS, Notifications) | 3 weeks | M8 |
-| **M12** | Beta Rollout + Docs + Security | 2 weeks | M8, M9, M10, M11 |
-| **M13** | Console UI + Recovery Review UI | 4 weeks | M12 |
+| **M11** | Skill Expansion (KV, Notifications, LLM Adapters) | 3 weeks | M8 |
+| **M12** | Multi-Agent System (Jobs, Blackboard, Credits) | 2 weeks | M10, M11 |
+| **M12.1** | Beta Rollout + Docs + Security | 1 week | M12 |
+| **M13** | Console UI + Recovery Review UI | 4 weeks | M12.1 |
 | **M14+** | Self-Improving Loop | 2-4 months | M13 + 3mo production data |
+
+> **Note:** M12 scope was revised on 2025-12-11 to prioritize Multi-Agent System (see PIN-062).
+> The original "Beta Rollout" scope moved to M12.1.
 
 ---
 
@@ -361,7 +368,75 @@ Give AOS enough capabilities to build real-world agent workflows with external u
 
 ---
 
-## M12 — Beta Rollout + Docs + Security (2 Weeks)
+## M12 — Multi-Agent System (2 Weeks) ✅ COMPLETE
+
+> **Scope Change:** Originally planned as "Beta Rollout + Docs + Security" but
+> revised to implement Multi-Agent System first. See PIN-062 for full details.
+
+### Goal
+
+Enable parallel job execution, agent coordination, and per-item credit billing
+for real multi-agent workflows.
+
+### Deliverables (All Complete)
+
+| Component | Description | Status |
+|-----------|-------------|--------|
+| **Job System** | Parallel work batches with SKIP LOCKED claiming | ✅ |
+| **Blackboard** | Shared KV store with atomic ops + distributed locks | ✅ |
+| **Credit System** | Per-skill and per-item billing with refunds | ✅ |
+| **Agent Registry** | Heartbeats, stale detection, item reclamation | ✅ |
+| **P2P Messaging** | Request-response patterns via correlation IDs | ✅ |
+| **agent_spawn Skill** | Spawn parallel worker agents | ✅ |
+| **agent_invoke Skill** | Call other agents with routing | ✅ |
+
+### Database Schema
+
+```
+agents.instances      - Running agents with heartbeats
+agents.jobs           - Parallel job batches
+agents.job_items      - Individual work units (SKIP LOCKED)
+agents.messages       - P2P inbox
+agents.invocations    - Correlation ID tracking
+agents.credit_balances - Tenant credit tracking
+agents.credit_ledger   - Immutable transaction log
+```
+
+### Credit Pricing
+
+| Skill | Credits |
+|-------|---------|
+| agent_spawn | 5 |
+| agent_invoke | 10 |
+| blackboard_read/write | 1 |
+| blackboard_lock | 2 |
+| Per job_item | 2 |
+
+### Acceptance Criteria (All Passed)
+
+- [x] 100-item job with parallelism=10 completes deterministically
+- [x] No duplicate claim under 20 concurrent workers
+- [x] agent_invoke returns correct result via correlation ID
+- [x] Aggregate result appears in blackboard reliably
+- [x] Per-item credits reserved, deducted, refunded correctly
+- [x] All metrics visible in Prometheus (17 new m12_* metrics)
+- [x] P2P messages deliver within acceptable latency
+- [x] Docs + examples + runbook completed
+
+### Technical Debt Fixed (2025-12-13)
+
+| Issue | Fix | PIN |
+|-------|-----|-----|
+| Credit ledger FK violation | Moved ledger insert AFTER job creation | PIN-062 |
+| Missing credit tables in migration | Added credit_balances + credit_ledger to 025 | PIN-062 |
+| Missing mark_instance_stale(id) | Added to RegistryService | PIN-062 |
+| Message latency | Added reply_to_id index | PIN-062 |
+
+---
+
+## M12.1 — Beta Rollout + Docs + Security (1 Week)
+
+> **Note:** This was the original M12 scope, now moved to M12.1.
 
 ### Goal
 
@@ -631,3 +706,67 @@ Clean, focused context files for M8 implementation sessions:
 | 2025-12-05 | Added PIN-009 auth blocker to M8 |
 | 2025-12-05 | Moved self-improving loop to M14+ (needs production data) |
 | 2025-12-05 | Added skill expansion as M11 (from original PIN-008) |
+| 2025-12-14 | **M15 BudgetLLM A2A Integration COMPLETE** (PIN-071) |
+| 2025-12-14 | **M15.1 SBA Foundations COMPLETE** (PIN-072): Strategy Cascade schema + spawn-time enforcement |
+| 2025-12-14 | **M15.1.1 SBA Inspector UI COMPLETE** (PIN-073): List/heatmap views + fulfillment tracking |
+| 2025-12-14 | **M16 StrategyBound Console COMPLETE** (PIN-074): Governance dashboard |
+| 2025-12-14 | **M17 CARE Routing Engine COMPLETE** (PIN-075): Cascade-aware routing with confidence scoring |
+| 2025-12-14 | **M18 CARE-L + SBA Evolution COMPLETE** (PIN-076): Self-optimizing platform |
+
+---
+
+## M15-M18: Self-Improving Platform (Implemented)
+
+> The original M14+ "Self-Improving Loop" has been fully implemented as M15-M18.
+> This supersedes the "needs production data" caveat - the system now self-improves
+> in real-time using the CARE-L + SBA Evolution feedback loop.
+
+### What Was Built
+
+| Milestone | Scope | Status |
+|-----------|-------|--------|
+| **M15** | BudgetLLM A2A Integration | ✅ Complete |
+| **M15.1** | SBA Foundations (Strategy Cascade) | ✅ Complete |
+| **M15.1.1** | SBA Inspector UI | ✅ Complete |
+| **M16** | StrategyBound Governance Console | ✅ Complete |
+| **M17** | CARE Routing Engine | ✅ Complete |
+| **M18** | CARE-L + SBA Evolution (Self-Optimization) | ✅ Complete |
+
+### M18 Key Features
+
+1. **CARE-L (Learning Router Layer)**
+   - Agent reputation system (success/latency/violations)
+   - Quarantine state machine (ACTIVE → PROBATION → QUARANTINED)
+   - Hysteresis-stable routing (prevents oscillation)
+   - Self-tuning parameters
+
+2. **SBA Evolution (Agent Layer)**
+   - Drift detection (data/domain/behavior/boundary)
+   - Boundary violation tracking
+   - Strategy adjustment recommendations
+   - Fulfillment metric tracking
+
+3. **M18.2 Production Additions**
+   - Governor/stabilization layer (rate limits, freeze, auto-rollback)
+   - Bidirectional feedback loop (CARE-L ↔ SBA sealed loop)
+   - SLA-aware scoring (task priority/complexity)
+   - Explainability endpoints
+   - Inter-agent coordination (successor mapping)
+   - Offline batch learning
+
+### Test Coverage
+
+**62 tests total:**
+- 35 core M18 tests (reputation, quarantine, drift, violations)
+- 27 advanced tests (convergence, oscillation, boundary cascade, stress)
+
+### Related PINs
+
+| PIN | Topic |
+|-----|-------|
+| PIN-071 | M15 BudgetLLM A2A Integration |
+| PIN-072 | M15.1 SBA Foundations |
+| PIN-073 | M15.1.1 SBA Inspector UI |
+| PIN-074 | M16 StrategyBound Console |
+| PIN-075 | M17 CARE Routing Engine |
+| PIN-076 | M18 CARE-L + SBA Evolution |

@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-14 (M16 Agent Governance Console Complete)
+**Last Updated:** 2025-12-14 (M18 CARE-L + SBA Evolution Complete)
 
 ---
 
@@ -97,23 +97,25 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-073](PIN-073-m15-1-1-sba-inspector-ui.md) | **M15.1.1 SBA Inspector UI + Fulfillment Heatmap** | Frontend / Governance UI | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-074](PIN-074-m16-strategybound-governance-console.md) | **M16 StrategyBound Governance Console** | Milestone / Specification | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-075](PIN-075-m17-care-routing-engine.md) | **M17 CARE Routing Engine** | Milestone / Routing | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-076](PIN-076-m18-care-l-sba-evolution.md) | **M18 CARE-L + SBA Evolution** | Milestone / Autonomous Learning | **✅ COMPLETE** | 2025-12-14 |
 
 ---
 
 ## Vision Achievement Summary
 
-**Overall Score: 90%** toward machine-native vision (M15.1 SBA governance layer complete).
+**Overall Score: 95%** toward machine-native vision (M18 autonomous learning complete).
 
 | Pillar | Score | Status |
 |--------|-------|--------|
-| Predictable | 90% | ✅ Golden replay + simulation endpoint |
-| Reliable | 85% | ✅ LISTEN/NOTIFY for low-latency messaging |
+| Predictable | 92% | ✅ Golden replay + simulation + CARE routing |
+| Reliable | 90% | ✅ LISTEN/NOTIFY + reputation-based routing |
 | Deterministic | 90% | ✅ Seed determinism proven |
 | Skills | 90% | ✅ M11+M12 skills complete + invoke audit |
 | Budgets | 90% | ✅ BudgetLLM governance + LLM cost tracking |
-| Safety | 92% | ✅ RBAC + SBA Strategy Cascade enforcement |
-| State | 85% | ✅ Memory pins + TTL + cancellation refunds |
-| Observability | 75% | ⚠️ Grafana dashboard pending |
+| Safety | 95% | ✅ RBAC + SBA + CARE-L quarantine + governor |
+| State | 88% | ✅ Memory pins + TTL + drift detection |
+| Observability | 80% | ✅ M18 explainability + stability metrics |
+| **Self-Optimization** | 95% | ✅ CARE-L + SBA Evolution feedback loop |
 
 **Resolved in M12.1:**
 - ✅ Message latency fixed (LISTEN/NOTIFY)
@@ -140,11 +142,30 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 - ✅ Filters: search, agent_type, domain, validation status
 - ✅ New Governance sidebar section
 
+**Resolved in M17 (CARE Routing Engine):**
+- ✅ Cascade-Aware Routing Engine (CARE)
+- ✅ 7-stage confidence scoring
+- ✅ Fairness tracking and performance vectors
+- ✅ Outcome recording for feedback
+
+**Resolved in M18 (CARE-L + SBA Evolution):**
+- ✅ Agent reputation system (success/latency/violations)
+- ✅ Quarantine state machine (ACTIVE → PROBATION → QUARANTINED)
+- ✅ Hysteresis-stable routing (prevents oscillation)
+- ✅ Drift detection engine (data/domain/behavior/boundary)
+- ✅ Strategy adjustment recommendations
+- ✅ Governor/stabilization layer (rate limits, freeze, rollback)
+- ✅ Bidirectional feedback loop (CARE-L ↔ SBA)
+- ✅ SLA-aware scoring (task priority/complexity)
+- ✅ Inter-agent coordination (successor mapping)
+- ✅ Offline batch learning
+- ✅ Explainability endpoints (62 tests)
+
 **Pending (Production Enablement):**
 - [ ] Grafana m12_* metrics dashboard
 - [ ] 7 production validation checks (see M12-PRODUCTION-ENABLEMENT.md)
 
-See PIN-062/063 for M12 status, PIN-072/073 for M15.1 SBA governance + Inspector UI, PIN-074 for M16 StrategyBound roadmap.
+See PIN-062/063 for M12 status, PIN-072/073 for M15.1 SBA governance + Inspector UI, PIN-075 for M17 CARE routing, PIN-076 for M18 autonomous learning.
 
 ---
 
