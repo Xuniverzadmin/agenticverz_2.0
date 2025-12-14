@@ -1289,20 +1289,21 @@ async def get_agent_activity_spending(
 
         # Get credit balance for tenant/agent
         balance = credit_service.get_balance(x_tenant_id)
+        available = float(balance.available_credits) if balance else 1000.0
 
         # Calculate time buckets based on period
         if period == "1h":
             num_points = 12  # 5-min intervals
-            budget_limit = balance.get("available", 1000) / 24
+            budget_limit = available / 24
         elif period == "6h":
             num_points = 12  # 30-min intervals
-            budget_limit = balance.get("available", 1000) / 4
+            budget_limit = available / 4
         elif period == "7d":
             num_points = 14  # 12-hour intervals
-            budget_limit = balance.get("available", 1000) * 7
+            budget_limit = available * 7
         else:  # 24h default
             num_points = 24  # 1-hour intervals
-            budget_limit = balance.get("available", 1000)
+            budget_limit = available
 
         # Generate spending data
         # In production, this would come from a time-series store
@@ -1374,7 +1375,6 @@ async def get_agent_activity_retries(
         total_retries = 0
 
         # Find jobs where this agent is the orchestrator or worker
-        # In production, this would query a retry events table
         registry = get_registry_service()
         instances = registry.list_instances(agent_id=agent_id)
 
@@ -1382,25 +1382,30 @@ async def get_agent_activity_retries(
             if instance.job_id:
                 job = job_service.get_job(instance.job_id)
                 if job:
-                    # Generate retry data from job items
-                    for item in job_service.get_job_items(instance.job_id):
-                        if item.retry_count > 0:
-                            for attempt in range(1, item.retry_count + 1):
+                    # Check job items for failures (indicating potential retries)
+                    try:
+                        items = job_service.get_job_items(instance.job_id)
+                        for item in items:
+                            # Items with error_message indicate failures
+                            if item.error_message:
                                 total_retries += 1
-                                is_success = attempt == item.retry_count and item.status == "completed"
+                                is_success = item.status == "completed"
                                 if is_success:
                                     total_success += 1
 
-                                # Estimate time based on item created_at
-                                retry_time = item.created_at + timedelta(seconds=attempt * 5)
+                                # Use completed_at or claimed_at for timing
+                                retry_time = item.completed_at or item.claimed_at or datetime.utcnow()
 
                                 retries.append(RetryEntryResponse(
                                     time=retry_time.strftime("%H:%M:%S"),
-                                    reason=item.error or "Unknown error",
-                                    attempt=attempt,
+                                    reason=item.error_message[:100] if item.error_message else "Unknown error",
+                                    attempt=1,
                                     outcome="success" if is_success else "failure",
                                     risk_change=-0.05 if is_success else 0.1,
                                 ))
+                    except Exception:
+                        # Skip if we can't get job items
+                        pass
 
         # Sort by time descending and limit
         retries = sorted(retries, key=lambda r: r.time, reverse=True)[:limit]
@@ -1476,13 +1481,14 @@ async def get_agent_activity_blockers(
                 if ems.get("governance") == "BudgetLLM":
                     credit_service = get_credit_service()
                     balance = credit_service.get_balance(x_tenant_id)
-                    if balance.get("available", 0) < 10:
+                    available = float(balance.available_credits) if balance else 0
+                    if available < 10:
                         blockers.append(BlockerEntry(
                             type="budget",
                             message="Insufficient credits available",
                             since="Now",
                             action="Add credits",
-                            details=f"Available: {balance.get('available', 0)} credits",
+                            details=f"Available: {available} credits",
                         ))
 
         # Check registry for stale workers
