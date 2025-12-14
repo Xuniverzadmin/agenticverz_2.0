@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-08 (M10 Recovery Suggestion Engine COMPLETE)
+**Last Updated:** 2025-12-14 (M13 Prompt Caching + 68 PINs)
 
 ---
 
@@ -54,8 +54,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-030](PIN-030-m6.5-webhook-externalization.md) | **M6.5 Webhook Externalization** | Milestone / Implementation | **VALIDATED** | 2025-12-04 |
 | [PIN-031](PIN-031-m7-memory-integration.md) | **M7 Memory Integration** | Milestone / Implementation | **✅ COMPLETE** | 2025-12-04 |
 | [PIN-032](PIN-032-m7-rbac-enablement.md) | **M7 RBAC Enablement** | Operations / Security | **✅ ENFORCED** | 2025-12-05 |
-| [PIN-033](PIN-033-m8-m14-machine-native-realignment.md) | **M8-M14 Machine-Native Realignment Roadmap** | Planning / Strategic | **ACTIVE** | 2025-12-05 |
-| [PIN-034](PIN-034-vault-secrets-management.md) | **HashiCorp Vault Secrets Management** | Security / Infrastructure | **COMPLETE** | 2025-12-05 |
+| [PIN-033](PIN-033-m8-m14-machine-native-realignment.md) | **M8-M14 Machine-Native Realignment Roadmap** | Planning / Strategic | **UPDATED** | 2025-12-13 |
+| [PIN-034](PIN-034-vault-secrets-management.md) | **HashiCorp Vault Secrets Management** | Security / Infrastructure | **COMPLETE** | 2025-12-09 |
 | [PIN-035](PIN-035-sdk-package-registry.md) | **SDK Package Registry (PyPI + npm)** | SDK / Developer Experience | **PUBLISHED** | 2025-12-05 |
 | [PIN-036](PIN-036-infrastructure-pending.md) | **Infrastructure Pending Items** | Infrastructure / Planning | **ACTIVE** | 2025-12-06 |
 | [PIN-037](PIN-037-grafana-cloud-integration.md) | **Grafana Cloud Integration** | Infrastructure / Observability | **ACTIVE** | 2025-12-06 |
@@ -76,27 +76,50 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-052](PIN-052-data-ownership-embedding-risks.md) | **Data Ownership & Embedding Risks** | Legal / Security | **ACTIVE** | 2025-12-08 |
 | [PIN-053](PIN-053-mock-inventory-real-world-plugins.md) | **Mock Inventory & Real-World Plugins** | Architecture / Testing | **REFERENCE** | 2025-12-09 |
 | [PIN-054](PIN-054-engineering-audit-finops.md) | **Engineering Audit - Mock Wiring & FinOps** | SRE / FinOps | **REFERENCE** | 2025-12-09 |
+| [PIN-055](PIN-055-m11-store-factories-implementation.md) | **M11 Store Factories Implementation** | Implementation | **✅ COMPLETE** | 2025-12-09 |
+| [PIN-056](PIN-056-m11-production-hardening.md) | **M11 Production Hardening** | Implementation / Security | **✅ COMPLETE** | 2025-12-09 |
+| [PIN-057](PIN-057-m10-recovery-enhancement.md) | **M10 Recovery Enhancement (Phase 5 Leader Election)** | Implementation | **✅ COMPLETE** | 2025-12-09 |
+| [PIN-058](PIN-058-m10-simplification-analysis.md) | **M10 Simplification Analysis & Redo Report** | Architecture / Tech Debt | **✅ VERIFIED** | 2025-12-09 |
+| [PIN-059](PIN-059-m11-skill-expansion-blueprint.md) | **M11 Skill Expansion Blueprint** | Milestone / Implementation | **COMPLETE** | 2025-12-09 |
+| [PIN-060](PIN-060-m11-implementation-report.md) | **M11 Implementation Report** | Implementation / Post-Mortem | **COMPLETE** | 2025-12-09 |
+| [PIN-061](PIN-061-m10-test-verification.md) | **M10 Test Verification Report** | Testing / Verification | **RESOLVED** | 2025-12-11 |
+| [PIN-062](PIN-062-m12-multi-agent-system.md) | **M12 Multi-Agent System (AOS)** | Milestone / Completion | **✅ COMPLETE** | 2025-12-13 |
+| [PIN-063](PIN-063-m12.1-stabilization.md) | **M12.1 Stabilization** | Milestone / Stabilization | **✅ STABILIZED** | 2025-12-13 |
+| [PIN-064](PIN-064-m13-boundary-checklist.md) | **M13 Boundary Checklist** | Milestone / Planning | **READY** | 2025-12-13 |
+| [PIN-065](PIN-065-aos-system-reference.md) | **AOS System Reference (M12 + M12.1)** | Architecture / Reference | **REFERENCE** | 2025-12-13 |
+| [PIN-066](PIN-066-external-api-keys-integrations.md) | **External API Keys & Integrations** | Infrastructure / Security | **REFERENCE** | 2025-12-13 |
+| [PIN-067](PIN-067-m13-iterations-cost-fix.md) | **M13 Iterations Cost Calculator Fix** | Bug Fix / Feature | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-068](PIN-068-m13-prompt-caching.md) | **M13 Prompt Caching Implementation** | Feature / Cost Optimization | **✅ COMPLETE** | 2025-12-14 |
 
 ---
 
 ## Vision Achievement Summary
 
-**Overall Score: 81%** toward machine-native vision.
+**Overall Score: 88%** toward machine-native vision (M12 + M12.1 stabilized, production enablement pending).
 
 | Pillar | Score | Status |
 |--------|-------|--------|
-| Predictable | 85% | ✅ Golden replay working |
-| Reliable | 80% | ✅ M9+M10 failure handling |
+| Predictable | 90% | ✅ Golden replay + simulation endpoint |
+| Reliable | 85% | ✅ LISTEN/NOTIFY for low-latency messaging |
 | Deterministic | 90% | ✅ Seed determinism proven |
-| Skills | 70% | ⚠️ Needs M11 hardening |
-| Budgets | 75% | ✅ CostSim V2 |
+| Skills | 90% | ✅ M11+M12 skills complete + invoke audit |
+| Budgets | 85% | ✅ Pre-execution simulation added |
 | Safety | 85% | ✅ RBAC enforced |
-| State | 80% | ✅ Memory pins + TTL |
-| Observability | 85% | ✅ Prometheus/Grafana |
+| State | 85% | ✅ Memory pins + TTL + cancellation refunds |
+| Observability | 75% | ⚠️ Grafana dashboard pending |
 
-**Critical Gaps:** No external users (M12), Self-improving loop (M14)
+**Resolved in M12.1:**
+- ✅ Message latency fixed (LISTEN/NOTIFY)
+- ✅ Job cancellation with credit refunds
+- ✅ Invoke audit trail
+- ✅ Pre-execution simulation endpoint
+- ✅ Migration 025/026 verified
 
-See PIN-051 for full assessment.
+**Pending (Production Enablement):**
+- [ ] Grafana m12_* metrics dashboard
+- [ ] 7 production validation checks (see M12-PRODUCTION-ENABLEMENT.md)
+
+See PIN-062/063 for M12 complete status, PIN-064 for M13 readiness.
 
 ---
 
@@ -108,10 +131,23 @@ Quick reference for all pending polishing and tech debt tasks across PINs.
 
 | Priority | Count | Status |
 |----------|-------|--------|
-| P1 | ~~8~~ **0** | ✅ **ALL COMPLETE** (2025-12-08) |
-| P2 | 5 | Quota API, Cost dashboard, Testing, Deployment, M11 Email |
-| P3 | 4 | Voyage backup, Cache layer, HNSW tuning, Demo screencast |
-| **Total** | **9** | Deferred for polishing phase |
+| **P0** | **0** | ✅ All M12.1 blockers resolved |
+| P1 | 1 | Grafana metrics dashboard |
+| P2 | 2 | M13 architectural gaps (blackboard scale, message guarantees) |
+| **Total** | **3** | M12 + M12.1 Complete — Production Enablement Pending |
+
+**Production Checklist:** [M12-PRODUCTION-ENABLEMENT.md](../checklists/M12-PRODUCTION-ENABLEMENT.md)
+
+### P0 Production Blockers (M12.1) — ALL RESOLVED
+
+| Task | Status | Resolution |
+|------|--------|------------|
+| ✅ Fix message latency | DONE | LISTEN/NOTIFY implemented |
+| ✅ Run migration 025/026 on staging | DONE | Verified on Neon 2025-12-13 |
+| ✅ Add job cancellation with refunds | DONE | job_service.py:cancel_job |
+| ✅ Add invoke audit trail | DONE | invoke_audit_service.py |
+| ✅ Run 1000×50 concurrency test | DONE | test_m12_load.py passing |
+| ✅ Add pre-execution simulation | DONE | /api/v1/jobs/simulate |
 
 ---
 
@@ -200,6 +236,9 @@ All secrets are now managed in HashiCorp Vault instead of plaintext `.env` files
 | `agenticverz/database` | POSTGRES_*, DATABASE_URL, KEYCLOAK_DB_* |
 | `agenticverz/external-apis` | ANTHROPIC_API_KEY, OPENAI_API_KEY |
 | `agenticverz/keycloak-admin` | KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD |
+| `agenticverz/microsoft-oauth` | Azure AD client_id, client_secret, tenant_id (M11) |
+| `agenticverz/google-oauth` | Google client_id, client_secret, project_id (M11) |
+| `agenticverz/voyage-ai` | Voyage AI api_key for embeddings (M11) |
 
 **Quick commands:**
 ```bash
@@ -287,6 +326,12 @@ When extending these components, update the relevant PIN rather than creating al
 
 ### Current Project Phase
 **M10 Recovery Suggestion Engine** → ✅ **COMPLETE (2025-12-08)** - See PIN-050
+**M10 Phase 2: Production Hardening** → ✅ **COMPLETE (2025-12-09)** - See PIN-057
+**M10 Phase 3: Observability** → ✅ **COMPLETE (2025-12-09)** - Redis Streams, dead-letter, Grafana dashboard
+**M10 Phase 4: Production Hardening** → ✅ **COMPLETE (2025-12-09)** - DL reconciliation, exponential backoff, idempotent replay, chaos tests
+**M10 Phase 5: Leader Election & DB-Backed Idempotency** → ✅ **COMPLETE (2025-12-09)** - Distributed locks, replay_log table, DL archival, GC, Redis config check
+**M10 Phase 6.5: Simplification** → ✅ **VERIFIED + P1 COMPLETE** - Timers 5→1, alerts 23→7, CI 3→1, migration 023 deferred
+**P1 Verification:** All 9 tasks green - load test, alerts, backup, Redis, timer, Grafana, handbook, dead code
 **Next Phase:** M11 Skill Expansion (see PIN-033)
 
 **v1 Timeline (~5 months small team, ~8 months solo):**
@@ -734,6 +779,49 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-11 | **PIN-061 M10 Test Fixes RESOLVED** - Fixed 5 issues: (1) outbox status column removed, (2) ON CONFLICT changed to `failure_match_id`, (3) M10 metrics added to metrics.py, (4) enqueue_work args fixed, (5) Counter/Gauge handling. 22 passed, 1 skipped. |
+| 2025-12-10 | **PIN-061 M10 Test Verification** - Ran M10 tests with real Neon+Redis. Fixed SQL syntax `:payload::jsonb`→`CAST()`. 14 passed, 19 failed (missing unique index for ON CONFLICT). P0 fix pending. |
+| 2025-12-09 | **PIN-059 M11 Blueprint REFINED** - Consistency check: 5 skills (kv_store, slack_send, email_send, webhook_send, voyage_embed), leveraged existing infra (idempotency, replay, circuit breaker), aligned with PIN-005 vision |
+| 2025-12-09 | **PIN-034 Vault Updated** - Added 3 new secret paths: microsoft-oauth (Azure AD), google-oauth (Google Cloud), voyage-ai (embeddings) for M11 real-world integrations |
+| 2025-12-09 | **PIN-058 P7 Synthetic & Observability Validation Suite** - Synthetic data injection (Neon+Upstash), 8 validation scenarios (Cause→Effect→Expected vs Actual), Prometheus/PostHog/Alertmanager/Resend/Trigger.dev integrations, 6 M10 timers active |
+| 2025-12-09 | **PIN-058 P6 Production Services Deployed** - Backend/worker on Neon, metrics collector fixed (no watchdog), 48h health check timer (m10-48h-health.timer every 15min), all 7 checks passing |
+| 2025-12-09 | **PIN-058 P5 Production Database Migration** - Fixed Neon endpoint (ep-long-surf-a1n0hv91), ran migrations 001-022 on Neon, M10 schema deployed to production |
+| 2025-12-09 | **PIN-058 P4 Risk Mitigations** - Metrics collector service, 2 new alerts (archive growth, collector down), deploy checklist script, rollback procedures |
+| 2025-12-09 | **PIN-058 P3 Operational Discipline** - 5 principles (docs-first, gate-strict, no-silent-del, alert-tests, 48h-pager), metrics test, PR template, DEPLOY_OWNERSHIP.md |
+| 2025-12-09 | **PIN-058 P2 Operational Tooling** - Added 3 tools: synthetic traffic generator (30min), daily stats export (00:05 UTC), DL inspector CLI (`aos-dl`) |
+| 2025-12-09 | **PIN-058 P1 Verification COMPLETE** - All 9 tasks green: load test (200 events), alerts (7), backup, Redis durability, orchestrator timer, Grafana dashboard, M10_PROD_HANDBOOK.md, dead code cleanup |
+| 2025-12-09 | **PIN-058 M10 Pre-Production Verification** - Fixed 9 migration bugs, applied mig 017-022, Redis AOF enabled, lock functions verified |
+| 2025-12-09 | **Migration Fixes:** 017 UUID cast, 019 down_revision, 020 CONCURRENTLY, 021/022 partial unique syntax, 022 lock functions BOOLEAN→INTEGER, dl_msg_id nullable |
+| 2025-12-09 | **PIN-058 M10 Simplification Analysis** - External review, timer consolidation (5→1), alert reduction (23→7), CI merge (3→1), migration 023 deferred |
+| 2025-12-09 | **PIN-057 Phase 5: M10 Leader Election & DB-Backed Idempotency** - Distributed locks, replay_log table, DL archival, GC, Redis config check |
+| 2025-12-09 | Created migration 022 `m10_production_hardening.py` - distributed_locks, replay_log, dead_letter_archive, outbox tables |
+| 2025-12-09 | Updated `scripts/ops/reconcile_dl.py` - Added leader election with acquire_lock/release_lock |
+| 2025-12-09 | Updated `scripts/ops/refresh_matview.py` - Added per-view leader election |
+| 2025-12-09 | Updated `app/tasks/recovery_queue_stream.py` - DB-backed replay idempotency, DL archival, GC |
+| 2025-12-09 | Created `scripts/ops/check_redis_config.py` - Redis config enforcement check for CI |
+| 2025-12-09 | Created `tests/test_m10_leader_election.py` - 6 test classes for Phase 5 functionality |
+| 2025-12-09 | **PIN-057 Phase 4: M10 Production Hardening** - DL reconciliation, exponential backoff, idempotent replay, worker execution guard, chaos tests |
+| 2025-12-09 | Created `scripts/ops/reconcile_dl.py` - Dead-letter reconciliation job (XACK orphaned pending entries) |
+| 2025-12-09 | Created `scripts/ops/refresh_matview.py` - Matview refresh automation with status reporting |
+| 2025-12-09 | Created `deployment/systemd/m10-*.{service,timer}` - Systemd units for matview refresh and DL reconcile |
+| 2025-12-09 | Created `deployment/redis/redis-m10-durable.conf` - Redis production config (AOF, noeviction) |
+| 2025-12-09 | Created `tests/test_m10_recovery_chaos.py` - 7 test classes for concurrent upsert, DL idempotence, backoff, chaos |
+| 2025-12-09 | Updated `app/tasks/recovery_queue_stream.py` - Exponential backoff (1m, 2m, 4m... 24h max), idempotent replay |
+| 2025-12-09 | Updated `app/worker/recovery_evaluator.py` - Atomic execution guard (exactly-once side-effects) |
+| 2025-12-09 | **PIN-057 Phase 3: M10 Recovery Observability** - Redis Streams dead-letter, DB fallback queue, Grafana dashboard, 15 Prometheus alerts |
+| 2025-12-09 | Created `app/tasks/recovery_queue_stream.py` - Redis Streams with XCLAIM reclaim and dead-letter handling |
+| 2025-12-09 | Created `app/tasks/m10_metrics_collector.py` - Periodic Prometheus gauge updates for queue/matview metrics |
+| 2025-12-09 | Created `monitoring/rules/m10_recovery_alerts.yml` - 15 alert rules across 5 groups |
+| 2025-12-09 | Created `monitoring/grafana/provisioning/dashboards/files/m10_recovery_dashboard.json` - M10 Recovery dashboard |
+| 2025-12-09 | Added Redis HA/persistence documentation to `docs/runbooks/M10_RECOVERY_OPERATIONS.md` |
+| 2025-12-09 | Added `TestRedisOutageScenarios` and `TestMetricsCollection` test classes |
+| 2025-12-09 | **PIN-057 Phase 2: M10 Recovery Production Hardening** - Idempotent ingest, worker claim pattern, retention archive |
+| 2025-12-09 | Created migrations 019 (pgcrypto, idempotency_key, materialized view) and 020 (CONCURRENT indexes) |
+| 2025-12-09 | Created `app/api/recovery_ingest.py` - Idempotent ingest endpoint with IntegrityError handling |
+| 2025-12-09 | Created `app/worker/recovery_claim_worker.py` - FOR UPDATE SKIP LOCKED worker pattern |
+| 2025-12-09 | Created `scripts/ops/m10_retention_archive.py` - Retention archive job with dry-run support |
+| 2025-12-09 | Created `docs/runbooks/M10_RECOVERY_OPERATIONS.md` - Operations runbook |
+| 2025-12-09 | Added concurrent ingest & worker claim tests to `test_m10_recovery_enhanced.py` |
 | 2025-12-08 | **M10 Recovery Suggestion Engine COMPLETE** - PIN-050 created, all 4 acceptance criteria passed |
 | 2025-12-08 | Created `recovery_candidates` table with audit trail, indexes, context view |
 | 2025-12-08 | Implemented RecoveryMatcher service with weighted time-decay confidence scoring |
@@ -1017,3 +1105,4 @@ When resuming work on this project:
 | 2025-11-30 | Added PIN-004 Phase 4 & 5 Completion, updated Quick Reference |
 | 2025-11-30 | Added PIN-003 Phase 3 Completion |
 | 2025-11-30 | Created index with PIN-001 and PIN-002 |
+| 2025-12-11 | **M12 Multi-Agent System COMPLETE** - 49 tests passing, DoD validated |
