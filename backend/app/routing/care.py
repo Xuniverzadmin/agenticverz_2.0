@@ -22,15 +22,21 @@ from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as redis_async
 
 from .models import (
+    AgentPerformanceVector,
     CapabilityCheckResult,
+    CONFIDENCE_BLOCK_THRESHOLD,
+    CONFIDENCE_FALLBACK_THRESHOLD,
     DifficultyLevel,
+    FAIRNESS_WINDOW,
     OrchestratorMode,
     RiskPolicy,
     RouteEvaluationResult,
     RoutingConfig,
     RoutingDecision,
+    RoutingOutcome,
     RoutingRequest,
     RoutingStage,
+    STAGE_CONFIDENCE_WEIGHTS,
     StageResult,
     SuccessMetric,
     infer_orchestrator_mode,
@@ -129,6 +135,255 @@ def get_rate_limiter() -> RateLimiter:
         _rate_limiter = RateLimiter()
     return _rate_limiter
 
+
+class FairnessTracker:
+    """
+    Redis-based tracker for agent assignment fairness.
+
+    Tracks recent assignments per agent within FAIRNESS_WINDOW.
+    fairness_score = 1 / (1 + recent_assignments)
+    """
+
+    def __init__(self, redis_url: Optional[str] = None):
+        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self._redis: Optional[redis_async.Redis] = None
+
+    async def _get_redis(self) -> Optional[redis_async.Redis]:
+        """Get Redis connection (lazy init)."""
+        if self._redis is None:
+            try:
+                self._redis = redis_async.from_url(self.redis_url, decode_responses=True)
+                await self._redis.ping()
+            except Exception as e:
+                logger.debug(f"Fairness tracker Redis unavailable: {e}")
+                self._redis = None
+        return self._redis
+
+    async def record_assignment(self, agent_id: str, tenant_id: str = "default") -> int:
+        """
+        Record an assignment to an agent.
+
+        Returns the new assignment count.
+        """
+        r = await self._get_redis()
+        if not r:
+            return 0  # Can't track without Redis
+
+        key = f"care:fairness:{tenant_id}:{agent_id}"
+        try:
+            count = await r.incr(key)
+            if count == 1:
+                await r.expire(key, FAIRNESS_WINDOW)
+            return int(count)
+        except Exception as e:
+            logger.warning(f"Failed to record assignment: {e}")
+            return 0
+
+    async def get_recent_assignments(self, agent_id: str, tenant_id: str = "default") -> int:
+        """Get recent assignment count for an agent."""
+        r = await self._get_redis()
+        if not r:
+            return 0
+
+        key = f"care:fairness:{tenant_id}:{agent_id}"
+        try:
+            count = await r.get(key)
+            return int(count) if count else 0
+        except Exception:
+            return 0
+
+    async def get_fairness_scores(
+        self,
+        agent_ids: List[str],
+        tenant_id: str = "default",
+    ) -> Dict[str, float]:
+        """
+        Get fairness scores for multiple agents.
+
+        fairness_score = 1 / (1 + recent_assignments)
+        """
+        r = await self._get_redis()
+        if not r:
+            # Without Redis, all agents have equal fairness
+            return {agent_id: 1.0 for agent_id in agent_ids}
+
+        scores = {}
+        for agent_id in agent_ids:
+            key = f"care:fairness:{tenant_id}:{agent_id}"
+            try:
+                count = await r.get(key)
+                recent = int(count) if count else 0
+                scores[agent_id] = 1.0 / (1.0 + recent)
+            except Exception:
+                scores[agent_id] = 1.0
+
+        return scores
+
+
+class PerformanceStore:
+    """
+    Store for agent performance vectors.
+
+    Used for success metrics feedback loop.
+    Vectors are updated after each routing outcome.
+    """
+
+    def __init__(self, redis_url: Optional[str] = None):
+        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self._redis: Optional[redis_async.Redis] = None
+        # In-memory fallback if Redis unavailable
+        self._vectors: Dict[str, AgentPerformanceVector] = {}
+
+    async def _get_redis(self) -> Optional[redis_async.Redis]:
+        """Get Redis connection (lazy init)."""
+        if self._redis is None:
+            try:
+                self._redis = redis_async.from_url(self.redis_url, decode_responses=True)
+                await self._redis.ping()
+            except Exception:
+                self._redis = None
+        return self._redis
+
+    async def get_vector(self, agent_id: str) -> AgentPerformanceVector:
+        """Get performance vector for an agent."""
+        r = await self._get_redis()
+
+        if r:
+            try:
+                key = f"care:perf:{agent_id}"
+                data = await r.hgetall(key)
+                if data:
+                    return AgentPerformanceVector(
+                        agent_id=agent_id,
+                        avg_latency_ms=float(data.get("avg_latency_ms", 0)),
+                        p95_latency_ms=float(data.get("p95_latency_ms", 0)),
+                        latency_samples=int(data.get("latency_samples", 0)),
+                        total_routes=int(data.get("total_routes", 0)),
+                        successful_routes=int(data.get("successful_routes", 0)),
+                        success_rate=float(data.get("success_rate", 1.0)),
+                        risk_violation_count=int(data.get("risk_violation_count", 0)),
+                        risk_violation_rate=float(data.get("risk_violation_rate", 0)),
+                        fallback_count=int(data.get("fallback_count", 0)),
+                        fallback_rate=float(data.get("fallback_rate", 0)),
+                        primary_selection_count=int(data.get("primary_selection_count", 0)),
+                        recent_assignments=int(data.get("recent_assignments", 0)),
+                        fairness_score=float(data.get("fairness_score", 1.0)),
+                    )
+            except Exception as e:
+                logger.debug(f"Failed to get performance vector from Redis: {e}")
+
+        # Fallback to in-memory
+        if agent_id in self._vectors:
+            return self._vectors[agent_id]
+
+        return AgentPerformanceVector(agent_id=agent_id)
+
+    async def update_vector(
+        self,
+        agent_id: str,
+        outcome: RoutingOutcome,
+    ) -> AgentPerformanceVector:
+        """
+        Update performance vector based on routing outcome.
+
+        This is the feedback loop that makes CARE adaptive.
+        """
+        vector = await self.get_vector(agent_id)
+
+        # Update totals
+        vector.total_routes += 1
+        if outcome.success:
+            vector.successful_routes += 1
+        if outcome.risk_violated:
+            vector.risk_violation_count += 1
+        if outcome.was_fallback:
+            vector.fallback_count += 1
+        else:
+            vector.primary_selection_count += 1
+
+        # Update latency (exponential moving average)
+        if outcome.latency_ms > 0:
+            vector.latency_samples += 1
+            alpha = 0.1  # Smoothing factor
+            vector.avg_latency_ms = (
+                alpha * outcome.latency_ms +
+                (1 - alpha) * vector.avg_latency_ms
+            )
+            # Track p95 approximation (simple max tracking)
+            vector.p95_latency_ms = max(vector.p95_latency_ms, outcome.latency_ms)
+
+        # Recalculate rates
+        vector.update_success_rate()
+        vector.update_fallback_rate()
+        if vector.total_routes > 0:
+            vector.risk_violation_rate = vector.risk_violation_count / vector.total_routes
+
+        vector.last_routed_at = outcome.completed_at
+        if outcome.success:
+            vector.last_success_at = outcome.completed_at
+        vector.updated_at = datetime.now(timezone.utc)
+
+        # Persist to Redis
+        r = await self._get_redis()
+        if r:
+            try:
+                key = f"care:perf:{agent_id}"
+                await r.hset(key, mapping={
+                    "avg_latency_ms": str(vector.avg_latency_ms),
+                    "p95_latency_ms": str(vector.p95_latency_ms),
+                    "latency_samples": str(vector.latency_samples),
+                    "total_routes": str(vector.total_routes),
+                    "successful_routes": str(vector.successful_routes),
+                    "success_rate": str(vector.success_rate),
+                    "risk_violation_count": str(vector.risk_violation_count),
+                    "risk_violation_rate": str(vector.risk_violation_rate),
+                    "fallback_count": str(vector.fallback_count),
+                    "fallback_rate": str(vector.fallback_rate),
+                    "primary_selection_count": str(vector.primary_selection_count),
+                    "fairness_score": str(vector.fairness_score),
+                })
+                # Expire after 24 hours of inactivity
+                await r.expire(key, 86400)
+            except Exception as e:
+                logger.warning(f"Failed to persist performance vector: {e}")
+
+        # Update in-memory cache
+        self._vectors[agent_id] = vector
+
+        return vector
+
+    async def get_vectors_for_agents(
+        self,
+        agent_ids: List[str],
+    ) -> Dict[str, AgentPerformanceVector]:
+        """Get performance vectors for multiple agents."""
+        vectors = {}
+        for agent_id in agent_ids:
+            vectors[agent_id] = await self.get_vector(agent_id)
+        return vectors
+
+
+# Singletons
+_fairness_tracker: Optional[FairnessTracker] = None
+_performance_store: Optional[PerformanceStore] = None
+
+
+def get_fairness_tracker() -> FairnessTracker:
+    """Get singleton fairness tracker instance."""
+    global _fairness_tracker
+    if _fairness_tracker is None:
+        _fairness_tracker = FairnessTracker()
+    return _fairness_tracker
+
+
+def get_performance_store() -> PerformanceStore:
+    """Get singleton performance store instance."""
+    global _performance_store
+    if _performance_store is None:
+        _performance_store = PerformanceStore()
+    return _performance_store
+
+
 logger = logging.getLogger("nova.routing.care")
 
 
@@ -146,12 +401,22 @@ class CAREEngine:
     Every routing decision is logged with structured JSON for audit.
     """
 
-    def __init__(self, persist_decisions: bool = True, rate_limit_enabled: bool = True):
+    def __init__(
+        self,
+        persist_decisions: bool = True,
+        rate_limit_enabled: bool = True,
+        fairness_enabled: bool = True,
+        confidence_enabled: bool = True,
+    ):
         self.prober = get_capability_prober()
         self.persist_decisions = persist_decisions
         self.rate_limit_enabled = rate_limit_enabled
+        self.fairness_enabled = fairness_enabled
+        self.confidence_enabled = confidence_enabled
         self._db_url = os.environ.get("DATABASE_URL")
         self._rate_limiter = get_rate_limiter() if rate_limit_enabled else None
+        self._fairness_tracker = get_fairness_tracker() if fairness_enabled else None
+        self._performance_store = get_performance_store()
 
     async def _persist_decision(
         self,
@@ -210,6 +475,9 @@ class CAREEngine:
                             "decision_reason": decision.decision_reason,
                             "difficulty": request.difficulty.value,
                             "risk_tolerance": request.risk_tolerance.value,
+                            "confidence_score": decision.confidence_score,
+                            "confidence_blocked": decision.confidence_blocked,
+                            "confidence_enforced_fallback": decision.confidence_enforced_fallback,
                         }),
                         "tenant_id": request.tenant_id,
                         "decided_at": decision.decided_at,
@@ -247,6 +515,16 @@ class CAREEngine:
         start = time.time()
 
         aspiration = agent_sba.get("winning_aspiration", {})
+
+        # Handle malformed data - aspiration must be a dict
+        if not isinstance(aspiration, dict):
+            return StageResult(
+                stage=RoutingStage.ASPIRATION,
+                passed=False,
+                reason="Malformed winning_aspiration (expected dict)",
+                latency_ms=(time.time() - start) * 1000,
+            )
+
         description = aspiration.get("description", "")
 
         if not description:
@@ -724,6 +1002,116 @@ class CAREEngine:
 
         return min(1.0, max(0.0, score))
 
+    def _calculate_confidence_score(
+        self,
+        stage_results: List[StageResult],
+    ) -> float:
+        """
+        Calculate routing confidence score from stage results.
+
+        Uses weighted sum of stage pass rates:
+        confidence = sum(weight * pass_score for each stage)
+
+        Where pass_score = 1.0 if passed, 0.0 if failed
+        """
+        confidence = 0.0
+
+        for sr in stage_results:
+            weight = STAGE_CONFIDENCE_WEIGHTS.get(sr.stage, 0.0)
+            pass_score = 1.0 if sr.passed else 0.0
+
+            # Reduce confidence for stages that passed with warnings
+            if sr.passed and sr.details.get("low_fulfillment_warning"):
+                pass_score = 0.7  # Partial credit for low fulfillment
+            if sr.passed and sr.details.get("degraded"):
+                pass_score = 0.8  # Partial credit for degraded mode
+
+            confidence += weight * pass_score
+
+        return min(1.0, max(0.0, confidence))
+
+    def _apply_confidence_thresholds(
+        self,
+        confidence: float,
+        eligible_agents: List[RouteEvaluationResult],
+        fallback_agents: List[str],
+    ) -> tuple[bool, bool, List[str]]:
+        """
+        Apply confidence thresholds to routing decision.
+
+        Returns:
+            (blocked, enforce_fallback, updated_fallback_agents)
+        """
+        if not self.confidence_enabled:
+            return False, False, fallback_agents
+
+        # Very low confidence - block routing
+        if confidence < CONFIDENCE_BLOCK_THRESHOLD:
+            return True, False, fallback_agents
+
+        # Low confidence - enforce fallback if available
+        if confidence < CONFIDENCE_FALLBACK_THRESHOLD:
+            if fallback_agents:
+                return False, True, fallback_agents
+            # No fallback available, still allow routing with warning
+            return False, True, fallback_agents
+
+        return False, False, fallback_agents
+
+    async def _apply_fairness_adjustment(
+        self,
+        eligible: List[RouteEvaluationResult],
+        tenant_id: str,
+    ) -> List[RouteEvaluationResult]:
+        """
+        Adjust routing scores based on fairness.
+
+        Agents with many recent assignments get score penalties.
+        fairness_score = 1 / (1 + recent_assignments)
+        Final score = base_score * fairness_weight + fairness_score * (1 - fairness_weight)
+        """
+        if not self._fairness_tracker or not eligible:
+            return eligible
+
+        agent_ids = [e.agent_id for e in eligible]
+        fairness_scores = await self._fairness_tracker.get_fairness_scores(
+            agent_ids, tenant_id
+        )
+
+        # Apply fairness adjustment (20% weight on fairness)
+        fairness_weight = 0.2
+        for e in eligible:
+            fairness = fairness_scores.get(e.agent_id, 1.0)
+            # Blend fairness with base score
+            e.score = (e.score * (1 - fairness_weight)) + (fairness * fairness_weight)
+
+        # Re-sort by adjusted score
+        eligible.sort(key=lambda e: e.score, reverse=True)
+
+        return eligible
+
+    async def record_outcome(
+        self,
+        outcome: RoutingOutcome,
+    ) -> AgentPerformanceVector:
+        """
+        Record routing outcome for feedback loop.
+
+        This updates the agent's performance vector, making future
+        routing decisions adaptive based on actual results.
+        """
+        return await self._performance_store.update_vector(
+            outcome.agent_id,
+            outcome,
+        )
+
+    async def get_agent_performance(
+        self,
+        agent_id: str,
+    ) -> AgentPerformanceVector:
+        """Get performance vector for an agent."""
+        return await self._performance_store.get_vector(agent_id)
+
     async def route(self, request: RoutingRequest) -> RoutingDecision:
         """
         Route a task to the best available agent.
@@ -846,14 +1234,70 @@ class CAREEngine:
 
         selected = None
         fallback_agents = []
+        confidence_score = 0.0
+        confidence_blocked = False
+        confidence_enforced_fallback = False
+
         if eligible:
             # Sort by score descending
             eligible.sort(key=lambda e: e.score, reverse=True)
+
+            # Apply fairness adjustment (redistributes scores based on recent assignments)
+            eligible = await self._apply_fairness_adjustment(eligible, request.tenant_id)
+
             selected = eligible[0]
 
             # Build fallback chain (next best agents, up to 3)
             if len(eligible) > 1:
                 fallback_agents = [e.agent_id for e in eligible[1:4]]
+
+            # Calculate confidence score from stage results
+            confidence_score = self._calculate_confidence_score(selected.stage_results)
+
+            # Apply confidence thresholds
+            confidence_blocked, confidence_enforced_fallback, fallback_agents = \
+                self._apply_confidence_thresholds(
+                    confidence_score,
+                    eligible,
+                    fallback_agents,
+                )
+
+            # If confidence blocked, clear the selection
+            if confidence_blocked:
+                logger.warning(
+                    "care_confidence_blocked",
+                    extra={
+                        "request_id": request_id,
+                        "confidence": confidence_score,
+                        "threshold": CONFIDENCE_BLOCK_THRESHOLD,
+                        "selected_agent": selected.agent_id,
+                    }
+                )
+                selected = None
+
+            # If confidence enforced fallback, switch to first fallback
+            elif confidence_enforced_fallback and fallback_agents:
+                original_agent = selected.agent_id
+                # Find the fallback agent in eligible list
+                for e in eligible[1:4]:
+                    if e.agent_id == fallback_agents[0]:
+                        selected = e
+                        break
+                logger.info(
+                    "care_confidence_enforced_fallback",
+                    extra={
+                        "request_id": request_id,
+                        "confidence": confidence_score,
+                        "original_agent": original_agent,
+                        "fallback_agent": selected.agent_id,
+                    }
+                )
+
+            # Record assignment for fairness tracking
+            if selected and self._fairness_tracker:
+                await self._fairness_tracker.record_assignment(
+                    selected.agent_id, request.tenant_id
+                )
 
         # Check for degraded mode (any soft dependency failures)
         degraded = False
@@ -882,13 +1326,18 @@ class CAREEngine:
             degraded_reason=degraded_reason,
             rate_limited=False,
             rate_limit_remaining=rate_limit_remaining,
+            confidence_score=confidence_score,
+            confidence_blocked=confidence_blocked,
+            confidence_enforced_fallback=confidence_enforced_fallback,
             routed=selected is not None,
-            error=None if selected else self._build_no_agent_error(evaluated, request),
-            actionable_fix=None if selected else self._build_actionable_fix(evaluated, request),
+            error=None if selected else self._build_no_agent_error(evaluated, request, confidence_blocked),
+            actionable_fix=None if selected else self._build_actionable_fix(evaluated, request, confidence_blocked),
             total_latency_ms=total_latency,
             stage_latencies=stage_latencies,
             decided_at=datetime.now(timezone.utc),
-            decision_reason=self._build_decision_reason(selected, fallback_agents, degraded),
+            decision_reason=self._build_decision_reason(
+                selected, fallback_agents, degraded, confidence_score, confidence_enforced_fallback
+            ),
         )
 
         # Log decision
@@ -902,6 +1351,9 @@ class CAREEngine:
                 "evaluated_count": len(evaluated),
                 "latency_ms": total_latency,
                 "degraded": degraded,
+                "confidence_score": confidence_score,
+                "confidence_blocked": confidence_blocked,
+                "confidence_enforced_fallback": confidence_enforced_fallback,
             }
         )
 
@@ -914,8 +1366,12 @@ class CAREEngine:
         self,
         evaluated: List[RouteEvaluationResult],
         request: RoutingRequest,
+        confidence_blocked: bool = False,
     ) -> str:
         """Build descriptive error when no agent is eligible."""
+        if confidence_blocked:
+            return f"Routing blocked due to low confidence (<{CONFIDENCE_BLOCK_THRESHOLD:.0%})"
+
         if not evaluated:
             return "No agents in registry"
 
@@ -936,8 +1392,12 @@ class CAREEngine:
         self,
         evaluated: List[RouteEvaluationResult],
         request: RoutingRequest,
+        confidence_blocked: bool = False,
     ) -> str:
         """Build actionable fix instruction."""
+        if confidence_blocked:
+            return "Improve agent SBA schemas or add fallback agents; check capability probes for failures"
+
         fixes = []
 
         for e in evaluated:
@@ -960,12 +1420,17 @@ class CAREEngine:
         selected: Optional[RouteEvaluationResult],
         fallback_agents: List[str],
         degraded: bool,
+        confidence_score: float = 0.0,
+        confidence_enforced_fallback: bool = False,
     ) -> str:
         """Build human-readable decision reason."""
         if not selected:
             return "No eligible agent"
 
-        parts = [f"Selected {selected.agent_id} (score={selected.score:.2f})"]
+        parts = [f"Selected {selected.agent_id} (score={selected.score:.2f}, conf={confidence_score:.0%})"]
+
+        if confidence_enforced_fallback:
+            parts.append("FALLBACK ENFORCED (low confidence)")
 
         if fallback_agents:
             parts.append(f"fallbacks: {', '.join(fallback_agents)}")

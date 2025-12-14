@@ -223,6 +223,11 @@ class RoutingDecision(BaseModel):
     rate_limited: bool = False
     rate_limit_remaining: int = 0
 
+    # M17.2 - Routing confidence
+    confidence_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence_enforced_fallback: bool = False  # True if fallback was enforced due to low confidence
+    confidence_blocked: bool = False  # True if routing was blocked due to very low confidence
+
     # Routing metadata
     routed: bool = False
     error: Optional[str] = None
@@ -275,6 +280,124 @@ RATE_LIMITS: Dict[RiskPolicy, int] = {
 
 # Rate limit window in seconds
 RATE_LIMIT_WINDOW = 60
+
+
+# =============================================================================
+# M17.2 - Routing Confidence Configuration
+# =============================================================================
+
+# Stage weights for confidence calculation
+STAGE_CONFIDENCE_WEIGHTS: Dict[RoutingStage, float] = {
+    RoutingStage.ASPIRATION: 0.20,      # Stage 1: 20%
+    RoutingStage.DOMAIN_FILTER: 0.25,   # Stage 2: 25%
+    RoutingStage.STRATEGY: 0.20,        # Stage 3: 20%
+    RoutingStage.CAPABILITY: 0.25,      # Stage 4: 25%
+    RoutingStage.ORCHESTRATOR: 0.10,    # Stage 5: 10%
+}
+
+# Confidence thresholds
+CONFIDENCE_FALLBACK_THRESHOLD = 0.55   # Below this → enforce fallback
+CONFIDENCE_BLOCK_THRESHOLD = 0.35      # Below this → block routing
+
+# Fairness window (seconds) for recent assignment tracking
+FAIRNESS_WINDOW = 300  # 5 minutes
+
+
+# =============================================================================
+# M17.2 - Agent Performance Vector (Success Metrics Feedback)
+# =============================================================================
+
+class AgentPerformanceVector(BaseModel):
+    """
+    Performance metrics for an agent, updated after each routing outcome.
+
+    These metrics feed back into routing decisions, making CARE adaptive.
+    """
+    agent_id: str
+
+    # Latency metrics
+    avg_latency_ms: float = 0.0
+    p95_latency_ms: float = 0.0
+    latency_samples: int = 0
+
+    # Success/correctness metrics
+    total_routes: int = 0
+    successful_routes: int = 0
+    success_rate: float = 1.0  # Start optimistic
+
+    # Risk metrics
+    risk_violation_count: int = 0
+    risk_violation_rate: float = 0.0
+
+    # Fallback metrics
+    fallback_count: int = 0
+    fallback_rate: float = 0.0
+    primary_selection_count: int = 0
+
+    # Capacity fairness
+    recent_assignments: int = 0  # Assignments in fairness window
+    fairness_score: float = 1.0  # 1/(1+recent_assignments)
+
+    # Timestamps
+    last_routed_at: Optional[datetime] = None
+    last_success_at: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    def calculate_fairness_score(self) -> float:
+        """Calculate fairness score: 1/(1+recent_assignments)"""
+        self.fairness_score = 1.0 / (1.0 + self.recent_assignments)
+        return self.fairness_score
+
+    def update_success_rate(self) -> float:
+        """Recalculate success rate from totals."""
+        if self.total_routes > 0:
+            self.success_rate = self.successful_routes / self.total_routes
+        return self.success_rate
+
+    def update_fallback_rate(self) -> float:
+        """Recalculate fallback rate."""
+        if self.total_routes > 0:
+            self.fallback_rate = self.fallback_count / self.total_routes
+        return self.fallback_rate
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "agent_id": self.agent_id,
+            "avg_latency_ms": self.avg_latency_ms,
+            "p95_latency_ms": self.p95_latency_ms,
+            "success_rate": self.success_rate,
+            "risk_violation_rate": self.risk_violation_rate,
+            "fallback_rate": self.fallback_rate,
+            "fairness_score": self.fairness_score,
+            "total_routes": self.total_routes,
+            "recent_assignments": self.recent_assignments,
+        }
+
+
+class RoutingOutcome(BaseModel):
+    """
+    Outcome of a routing decision, used to update agent performance vectors.
+
+    Submit this after task completion to make CARE adaptive.
+    """
+    request_id: str
+    agent_id: str
+
+    # Outcome metrics
+    success: bool
+    latency_ms: float = 0.0
+
+    # Risk tracking
+    risk_violated: bool = False
+    risk_violation_type: Optional[str] = None
+
+    # Fallback tracking
+    was_fallback: bool = False  # True if this agent was a fallback, not primary
+
+    # Optional error info
+    error: Optional[str] = None
+
+    completed_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # =============================================================================

@@ -406,12 +406,117 @@ Now 34 tests covering:
 
 ---
 
+## M17.2 Strategic Adaptation Layer (2025-12-14)
+
+### Capacity Fairness Scoring
+
+Prevents agent starvation by distributing load fairly:
+
+```python
+fairness_score = 1 / (1 + recent_assignments)
+```
+
+| Recent Assignments | Fairness Score |
+|-------------------|----------------|
+| 0 | 1.0 |
+| 1 | 0.5 |
+| 4 | 0.2 |
+| 99 | 0.01 |
+
+Fairness is tracked per-agent in Redis with a 5-minute window (`FAIRNESS_WINDOW = 300`).
+
+Final routing score = `base_score * 0.8 + fairness_score * 0.2`
+
+### Routing Confidence Score
+
+Quantifies decision certainty using weighted stage results:
+
+```python
+STAGE_CONFIDENCE_WEIGHTS = {
+    ASPIRATION: 0.20,      # Stage 1: 20%
+    DOMAIN_FILTER: 0.25,   # Stage 2: 25%
+    STRATEGY: 0.20,        # Stage 3: 20%
+    CAPABILITY: 0.25,      # Stage 4: 25%
+    ORCHESTRATOR: 0.10,    # Stage 5: 10%
+}
+```
+
+**Confidence Thresholds:**
+
+| Threshold | Value | Action |
+|-----------|-------|--------|
+| `CONFIDENCE_BLOCK_THRESHOLD` | 0.35 | Block routing entirely |
+| `CONFIDENCE_FALLBACK_THRESHOLD` | 0.55 | Enforce fallback agent |
+
+### Success Metrics Feedback Loop
+
+Routing decisions improve over time via performance tracking:
+
+```python
+class AgentPerformanceVector:
+    avg_latency_ms: float
+    p95_latency_ms: float
+    success_rate: float        # 1.0 = optimistic default
+    risk_violation_rate: float
+    fallback_rate: float
+    fairness_score: float
+```
+
+**Recording Outcomes:**
+
+```bash
+curl -X POST /api/v1/routing/outcome \
+  -d '{
+    "request_id": "abc123",
+    "agent_id": "data_worker",
+    "success": true,
+    "latency_ms": 150.0,
+    "risk_violated": false,
+    "was_fallback": false
+  }'
+```
+
+Performance vectors are stored in Redis with 24-hour expiry.
+
+### New Routing Decision Fields
+
+```json
+{
+  "confidence_score": 0.85,
+  "confidence_blocked": false,
+  "confidence_enforced_fallback": false
+}
+```
+
+### Test Coverage
+
+Now 62 tests covering:
+
+| Category | Tests |
+|----------|-------|
+| Aspiration inference | 5 |
+| Orchestrator mode inference | 6 |
+| CARE engine stages | 9 |
+| Full pipeline | 2 |
+| Routing score | 1 |
+| Error handling | 2 |
+| Capability hardness | 4 |
+| Fallback chain | 3 |
+| Rate limiting | 2 |
+| Confidence score | 4 |
+| Fairness tracking | 4 |
+| Performance vector | 4 |
+| Adversarial scenarios | 8 |
+| Chaos scenarios | 8 |
+
+---
+
 ## Next Steps (M18+)
 
 1. ~~**Persist routing decisions** to database for analytics~~ DONE
-2. **WebSocket streaming** for live routing updates
-3. **Fulfillment feedback loop** - adjust routing based on outcomes
-4. **Agent capacity fairness scoring** - distribute load fairly
-5. **Routing confidence score** - quantify decision certainty
+2. ~~**Fulfillment feedback loop** - adjust routing based on outcomes~~ DONE (M17.2)
+3. ~~**Agent capacity fairness scoring** - distribute load fairly~~ DONE (M17.2)
+4. ~~**Routing confidence score** - quantify decision certainty~~ DONE (M17.2)
+5. **WebSocket streaming** for live routing updates
 6. **Multi-tenant routing policies**
 7. **A/B testing** for routing strategies
