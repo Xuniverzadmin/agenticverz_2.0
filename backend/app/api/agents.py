@@ -1714,3 +1714,361 @@ async def check_agent_health(
     except Exception as e:
         logger.error(f"Health check error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+# ============================================================================
+# M17 CARE Routing Endpoints
+# ============================================================================
+
+# M17: CARE imports
+try:
+    from ..routing import (
+        CAREEngine, get_care_engine,
+        RoutingDecision, RoutingRequest, RouteEvaluationResult,
+        SuccessMetric, OrchestratorMode, RiskPolicy, DifficultyLevel,
+    )
+    CARE_AVAILABLE = True
+except ImportError:
+    CARE_AVAILABLE = False
+
+
+class CascadeEvaluateRequest(BaseModel):
+    """Request for cascade evaluation."""
+    task_description: str = Field(..., min_length=1, description="Task to evaluate")
+    task_domain: Optional[str] = Field(default=None, description="Target domain")
+    required_tools: List[str] = Field(default_factory=list, description="Required tools")
+    difficulty: str = Field(default="medium", description="Task difficulty: low, medium, high")
+    risk_tolerance: str = Field(default="balanced", description="Risk tolerance: strict, balanced, fast")
+    prefer_metric: Optional[str] = Field(default=None, description="Preferred success metric")
+    agent_ids: Optional[List[str]] = Field(default=None, description="Specific agents to evaluate")
+
+
+class RoutingDispatchRequest(BaseModel):
+    """Request for routing dispatch."""
+    task_description: str = Field(..., min_length=1, description="Task to route")
+    task_domain: Optional[str] = Field(default=None, description="Target domain")
+    required_tools: List[str] = Field(default_factory=list, description="Required tools")
+    required_capabilities: List[str] = Field(default_factory=list, description="Required capabilities")
+    difficulty: str = Field(default="medium", description="Task difficulty")
+    risk_tolerance: str = Field(default="balanced", description="Risk tolerance")
+    prefer_metric: Optional[str] = Field(default=None, description="Preferred success metric")
+    max_agents: int = Field(default=10, ge=1, le=100, description="Max agents to evaluate")
+
+
+class RoutingConfigUpdate(BaseModel):
+    """Request to update agent routing config."""
+    success_metric: Optional[str] = Field(default=None, description="Success metric: cost, latency, accuracy, risk_min, balanced")
+    difficulty_threshold: Optional[str] = Field(default=None, description="Difficulty threshold: low, medium, high")
+    risk_policy: Optional[str] = Field(default=None, description="Risk policy: strict, balanced, fast")
+    orchestrator_mode: Optional[str] = Field(default=None, description="Orchestrator mode: parallel, hierarchical, blackboard, sequential")
+    max_parallel_tasks: Optional[int] = Field(default=None, ge=1, le=100)
+    escalation_enabled: Optional[bool] = Field(default=None)
+
+
+@router.post("/routing/cascade-evaluate")
+async def cascade_evaluate(
+    request: CascadeEvaluateRequest,
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M17: Evaluate agents through CARE pipeline without routing.
+
+    Returns ranked list of agents with evaluation details for each stage.
+    Use this to understand why agents are eligible or rejected.
+    """
+    if not CARE_AVAILABLE:
+        raise HTTPException(status_code=501, detail="CARE routing module not available")
+
+    try:
+        care = get_care_engine()
+
+        # Build routing request
+        routing_request = RoutingRequest(
+            task_description=request.task_description,
+            task_domain=request.task_domain,
+            required_tools=request.required_tools,
+            difficulty=DifficultyLevel(request.difficulty),
+            risk_tolerance=RiskPolicy(request.risk_tolerance),
+            prefer_metric=SuccessMetric(request.prefer_metric) if request.prefer_metric else None,
+            tenant_id=x_tenant_id,
+        )
+
+        # Evaluate agents
+        results = await care.evaluate_agents(routing_request, request.agent_ids)
+
+        # Sort by score
+        results.sort(key=lambda r: r.score, reverse=True)
+
+        return {
+            "evaluated_count": len(results),
+            "eligible_count": sum(1 for r in results if r.eligible),
+            "agents": [
+                {
+                    "agent_id": r.agent_id,
+                    "agent_name": r.agent_name,
+                    "eligible": r.eligible,
+                    "score": round(r.score, 3),
+                    "success_metric": r.success_metric.value,
+                    "orchestrator_mode": r.orchestrator_mode.value,
+                    "risk_policy": r.risk_policy.value,
+                    "rejection_reason": r.rejection_reason,
+                    "rejection_stage": r.rejection_stage.value if r.rejection_stage else None,
+                    "stages": [
+                        {
+                            "stage": sr.stage.value,
+                            "passed": sr.passed,
+                            "reason": sr.reason,
+                            "latency_ms": round(sr.latency_ms, 2),
+                        }
+                        for sr in r.stage_results
+                    ],
+                }
+                for r in results
+            ],
+        }
+
+    except Exception as e:
+        logger.error(f"Cascade evaluate error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:200]}")
+
+
+@router.post("/routing/dispatch")
+async def routing_dispatch(
+    request: RoutingDispatchRequest,
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M17: Execute full CARE routing pipeline and select best agent.
+
+    This is the main entry point for strategic routing.
+    Returns the selected agent and routing decision details.
+    """
+    if not CARE_AVAILABLE:
+        raise HTTPException(status_code=501, detail="CARE routing module not available")
+
+    try:
+        care = get_care_engine()
+
+        # Build routing request
+        routing_request = RoutingRequest(
+            task_description=request.task_description,
+            task_domain=request.task_domain,
+            required_tools=request.required_tools,
+            required_capabilities=request.required_capabilities,
+            difficulty=DifficultyLevel(request.difficulty),
+            risk_tolerance=RiskPolicy(request.risk_tolerance),
+            prefer_metric=SuccessMetric(request.prefer_metric) if request.prefer_metric else None,
+            max_agents=request.max_agents,
+            tenant_id=x_tenant_id,
+        )
+
+        # Execute routing
+        decision = await care.route(routing_request)
+
+        return {
+            "request_id": decision.request_id,
+            "routed": decision.routed,
+            "selected_agent_id": decision.selected_agent_id,
+            "selected_agent_name": decision.selected_agent_name,
+            "success_metric": decision.success_metric.value,
+            "orchestrator_mode": decision.orchestrator_mode.value,
+            "risk_policy": decision.risk_policy.value,
+            "eligible_agents": decision.eligible_agents,
+            "evaluated_count": len(decision.evaluated_agents),
+            "error": decision.error,
+            "actionable_fix": decision.actionable_fix,
+            "total_latency_ms": round(decision.total_latency_ms, 2),
+            "stage_latencies": {k: round(v, 2) for k, v in decision.stage_latencies.items()},
+            "decision_reason": decision.decision_reason,
+            "decided_at": decision.decided_at.isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Routing dispatch error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:200]}")
+
+
+@router.get("/agents/{agent_id}/strategy")
+async def get_agent_strategy(agent_id: str):
+    """
+    M17: Get agent's Strategy Cascade.
+
+    Returns the full SBA with routing configuration.
+    """
+    if not SBA_AVAILABLE:
+        raise HTTPException(status_code=501, detail="SBA module not available")
+
+    try:
+        sba_service = get_sba_service()
+        agent = sba_service.get_agent(agent_id)
+
+        if not agent:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+
+        if not agent.sba:
+            raise HTTPException(status_code=404, detail=f"Agent has no SBA: {agent_id}")
+
+        sba = agent.sba
+
+        return {
+            "agent_id": agent.agent_id,
+            "agent_name": agent.agent_name,
+            "agent_type": agent.agent_type,
+            "sba_version": agent.sba_version,
+            "sba_validated": agent.sba_validated,
+            "strategy": {
+                "winning_aspiration": sba.get("winning_aspiration", {}),
+                "where_to_play": sba.get("where_to_play", {}),
+                "how_to_win": sba.get("how_to_win", {}),
+                "capabilities_capacity": sba.get("capabilities_capacity", {}),
+                "enabling_management_systems": sba.get("enabling_management_systems", {}),
+            },
+            "routing_config": sba.get("routing_config", {}),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get strategy error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.post("/agents/{agent_id}/strategy/update")
+async def update_agent_strategy(
+    agent_id: str,
+    update: RoutingConfigUpdate,
+):
+    """
+    M17: Hot-swap agent's routing configuration.
+
+    Updates routing-specific settings without changing the full SBA.
+    """
+    if not SBA_AVAILABLE:
+        raise HTTPException(status_code=501, detail="SBA module not available")
+
+    try:
+        sba_service = get_sba_service()
+        agent = sba_service.get_agent(agent_id)
+
+        if not agent:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+
+        if not agent.sba:
+            raise HTTPException(status_code=404, detail=f"Agent has no SBA: {agent_id}")
+
+        # Get current routing config
+        routing_config = agent.sba.get("routing_config", {})
+
+        # Update fields
+        if update.success_metric:
+            routing_config["success_metric"] = update.success_metric
+        if update.difficulty_threshold:
+            routing_config["difficulty_threshold"] = update.difficulty_threshold
+        if update.risk_policy:
+            routing_config["risk_policy"] = update.risk_policy
+        if update.orchestrator_mode:
+            routing_config["orchestrator_mode"] = update.orchestrator_mode
+        if update.max_parallel_tasks is not None:
+            routing_config["max_parallel_tasks"] = update.max_parallel_tasks
+        if update.escalation_enabled is not None:
+            routing_config["escalation_enabled"] = update.escalation_enabled
+
+        # Update SBA with new routing config
+        updated_sba = dict(agent.sba)
+        updated_sba["routing_config"] = routing_config
+
+        # Save via raw SQL (SBA service update doesn't support partial updates easily)
+        import json
+        from sqlalchemy import create_engine, text
+        import os
+        engine = create_engine(os.environ.get("DATABASE_URL"))
+        with engine.connect() as conn:
+            conn.execute(
+                text("""
+                    UPDATE agents.agent_registry
+                    SET sba = CAST(:sba AS JSONB)
+                    WHERE agent_id = :agent_id
+                """),
+                {"agent_id": agent_id, "sba": json.dumps(updated_sba)}
+            )
+            conn.commit()
+
+        return {
+            "agent_id": agent_id,
+            "updated": True,
+            "routing_config": routing_config,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update strategy error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
+
+
+@router.get("/routing/stats")
+async def get_routing_stats(
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M17: Get routing statistics.
+
+    Returns aggregate stats on routing decisions.
+    """
+    try:
+        from sqlalchemy import create_engine, text
+        import os
+        engine = create_engine(os.environ.get("DATABASE_URL"))
+
+        with engine.connect() as conn:
+            # Get recent stats
+            result = conn.execute(
+                text("""
+                    SELECT
+                        COUNT(*) as total_decisions,
+                        COUNT(*) FILTER (WHERE routed = true) as successful_routes,
+                        AVG(total_latency_ms) as avg_latency_ms,
+                        COUNT(DISTINCT selected_agent_id) as unique_agents,
+                        MAX(decided_at) as last_decision
+                    FROM routing.routing_decisions
+                    WHERE tenant_id = :tenant_id
+                    AND decided_at > now() - interval '24 hours'
+                """),
+                {"tenant_id": x_tenant_id}
+            )
+            row = result.fetchone()
+
+            if row:
+                return {
+                    "period": "24h",
+                    "total_decisions": row[0] or 0,
+                    "successful_routes": row[1] or 0,
+                    "success_rate": round((row[1] or 0) / max(row[0] or 1, 1), 3),
+                    "avg_latency_ms": round(row[2] or 0, 2),
+                    "unique_agents_routed": row[3] or 0,
+                    "last_decision": row[4].isoformat() if row[4] else None,
+                }
+            else:
+                return {
+                    "period": "24h",
+                    "total_decisions": 0,
+                    "successful_routes": 0,
+                    "success_rate": 0,
+                    "avg_latency_ms": 0,
+                    "unique_agents_routed": 0,
+                    "last_decision": None,
+                }
+
+    except Exception as e:
+        # Table might not exist yet
+        logger.warning(f"Routing stats error (table may not exist): {e}")
+        return {
+            "period": "24h",
+            "total_decisions": 0,
+            "successful_routes": 0,
+            "success_rate": 0,
+            "avg_latency_ms": 0,
+            "unique_agents_routed": 0,
+            "last_decision": None,
+            "note": "Routing table not yet created - run migrations",
+        }

@@ -96,6 +96,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-072](PIN-072-m15-1-sba-foundations.md) | **M15.1 SBA Foundations (Strategy-Bound Agents)** | Milestone / Governance | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-073](PIN-073-m15-1-1-sba-inspector-ui.md) | **M15.1.1 SBA Inspector UI + Fulfillment Heatmap** | Frontend / Governance UI | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-074](PIN-074-m16-strategybound-governance-console.md) | **M16 StrategyBound Governance Console** | Milestone / Specification | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-075](PIN-075-m17-care-routing-engine.md) | **M17 CARE Routing Engine** | Milestone / Routing | **✅ COMPLETE** | 2025-12-14 |
 
 ---
 
