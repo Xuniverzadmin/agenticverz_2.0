@@ -14,8 +14,10 @@ import redis.asyncio as redis
 
 from .models import (
     CapabilityCheckResult,
+    CapabilityHardness,
     CapabilityProbeResult,
     ProbeType,
+    PROBE_HARDNESS,
 )
 
 logger = logging.getLogger("nova.routing.probes")
@@ -122,6 +124,7 @@ class CapabilityProber:
                 probe_type=ProbeType.SMTP,
                 name=f"{host}:{port}",
                 available=available,
+                hardness=PROBE_HARDNESS[ProbeType.SMTP],
                 latency_ms=latency,
                 error=None if available else f"Connection refused (code {result_code})",
                 fix_instruction=None if available else f"Ensure SMTP server is running on {host}:{port}",
@@ -132,6 +135,7 @@ class CapabilityProber:
                 probe_type=ProbeType.SMTP,
                 name=f"{host}:{port}",
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.SMTP],
                 latency_ms=latency,
                 error=str(e),
                 fix_instruction=f"Check network connectivity to SMTP server {host}:{port}",
@@ -155,6 +159,7 @@ class CapabilityProber:
                 probe_type=ProbeType.DNS,
                 name=hostname,
                 available=True,
+                hardness=PROBE_HARDNESS[ProbeType.DNS],
                 latency_ms=latency,
             )
         except socket.gaierror as e:
@@ -163,6 +168,7 @@ class CapabilityProber:
                 probe_type=ProbeType.DNS,
                 name=hostname,
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.DNS],
                 latency_ms=latency,
                 error=str(e),
                 fix_instruction="Check DNS configuration and network connectivity",
@@ -190,6 +196,7 @@ class CapabilityProber:
                 probe_type=ProbeType.API_KEY,
                 name=key_name,
                 available=is_valid,
+                hardness=PROBE_HARDNESS[ProbeType.API_KEY],
                 latency_ms=latency,
                 error=None if is_valid else f"API key {env_var} appears malformed",
                 fix_instruction=None if is_valid else f"Check {env_var} format",
@@ -200,6 +207,7 @@ class CapabilityProber:
                 probe_type=ProbeType.API_KEY,
                 name=key_name,
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.API_KEY],
                 latency_ms=latency,
                 error=f"Missing environment variable: {env_var}",
                 fix_instruction=f"Set {env_var} in environment or .env file",
@@ -229,9 +237,11 @@ class CapabilityProber:
                         probe_type=ProbeType.HTTP,
                         name=url,
                         available=available,
+                        hardness=PROBE_HARDNESS[ProbeType.HTTP],
                         latency_ms=latency,
                         error=None if available else f"HTTP {response.status}",
                         fix_instruction=None if available else f"Check endpoint {url}",
+                        fallback_available=True,  # HTTP endpoints may have fallbacks
                     )
         except Exception as e:
             latency = (time.time() - start) * 1000
@@ -239,9 +249,11 @@ class CapabilityProber:
                 probe_type=ProbeType.HTTP,
                 name=url,
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.HTTP],
                 latency_ms=latency,
                 error=str(e),
                 fix_instruction=f"Ensure {url} is reachable",
+                fallback_available=True,  # HTTP endpoints may have fallbacks
             )
 
         await self._set_cached(cache_key, result)
@@ -262,7 +274,9 @@ class CapabilityProber:
                 probe_type=ProbeType.REDIS,
                 name=url.split("@")[-1] if "@" in url else url,
                 available=True,
+                hardness=PROBE_HARDNESS[ProbeType.REDIS],  # SOFT - caching only
                 latency_ms=latency,
+                fallback_available=True,  # Can operate without cache (slower path)
             )
         except Exception as e:
             latency = (time.time() - start) * 1000
@@ -270,9 +284,11 @@ class CapabilityProber:
                 probe_type=ProbeType.REDIS,
                 name=url.split("@")[-1] if "@" in url else url,
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.REDIS],  # SOFT - won't block routing
                 latency_ms=latency,
                 error=str(e),
-                fix_instruction="Ensure Redis is running and REDIS_URL is correct",
+                fix_instruction="Ensure Redis is running (optional - system operates in degraded mode)",
+                fallback_available=True,  # Routing continues without caching
             )
 
         return result
@@ -285,6 +301,7 @@ class CapabilityProber:
                 probe_type=ProbeType.DATABASE,
                 name="database",
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.DATABASE],  # HARD - required
                 error="DATABASE_URL not set",
                 fix_instruction="Set DATABASE_URL environment variable",
             )
@@ -308,6 +325,7 @@ class CapabilityProber:
                 probe_type=ProbeType.DATABASE,
                 name=host,
                 available=True,
+                hardness=PROBE_HARDNESS[ProbeType.DATABASE],
                 latency_ms=latency,
             )
         except Exception as e:
@@ -316,6 +334,7 @@ class CapabilityProber:
                 probe_type=ProbeType.DATABASE,
                 name=host,
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.DATABASE],  # HARD - blocks routing
                 latency_ms=latency,
                 error=str(e),
                 fix_instruction="Check DATABASE_URL and database connectivity",
@@ -343,16 +362,20 @@ class CapabilityProber:
                     probe_type=ProbeType.AGENT,
                     name=agent_id,
                     available=True,
+                    hardness=PROBE_HARDNESS[ProbeType.AGENT],  # SOFT - may have fallbacks
                     latency_ms=latency,
+                    fallback_available=True,  # Other agents can handle task
                 )
             else:
                 result = CapabilityProbeResult(
                     probe_type=ProbeType.AGENT,
                     name=agent_id,
                     available=False,
+                    hardness=PROBE_HARDNESS[ProbeType.AGENT],  # SOFT - won't block
                     latency_ms=latency,
                     error="Agent not found or disabled" if not agent else "Agent disabled",
                     fix_instruction=f"Register agent {agent_id} or enable it",
+                    fallback_available=True,  # Try other agents
                 )
         except Exception as e:
             latency = (time.time() - start) * 1000
@@ -360,9 +383,11 @@ class CapabilityProber:
                 probe_type=ProbeType.AGENT,
                 name=agent_id,
                 available=False,
+                hardness=PROBE_HARDNESS[ProbeType.AGENT],  # SOFT
                 latency_ms=latency,
                 error=str(e),
                 fix_instruction=f"Check agent registry for {agent_id}",
+                fallback_available=True,
             )
 
         await self._set_cached(cache_key, result)
@@ -386,6 +411,10 @@ class CapabilityProber:
         """
         Check all required capabilities for an agent.
 
+        Hard vs Soft dependency handling:
+        - HARD failures (DATABASE, SMTP, DNS, API_KEY, S3) block routing
+        - SOFT failures (REDIS, HTTP, AGENT, SERVICE) allow degraded operation
+
         Args:
             dependencies: List of dependency dicts from SBA schema
             required_api_keys: List of API key names to check
@@ -397,20 +426,22 @@ class CapabilityProber:
         """
         probes: List[CapabilityProbeResult] = []
         failed: List[CapabilityProbeResult] = []
+        soft_failures: List[CapabilityProbeResult] = []
+        hard_failures: List[CapabilityProbeResult] = []
         total_latency = 0.0
 
         # Build probe tasks
         tasks = []
 
-        # Database probe
+        # Database probe (HARD dependency)
         if check_database:
             tasks.append(("database", self.probe_database()))
 
-        # Redis probe
+        # Redis probe (SOFT dependency - caching only)
         if check_redis:
             tasks.append(("redis", self.probe_redis()))
 
-        # API key probes
+        # API key probes (HARD dependencies)
         if required_api_keys:
             for key_name in required_api_keys:
                 tasks.append((f"api_key:{key_name}", self.probe_api_key(key_name)))
@@ -419,15 +450,14 @@ class CapabilityProber:
         for dep in dependencies:
             dep_type = dep.get("type", "service")
             dep_name = dep.get("name", "")
-            required = dep.get("required", True)
 
             if dep_type == "agent":
                 tasks.append((f"agent:{dep_name}", self.probe_agent(dep_name)))
             elif dep_type == "api":
-                # Check API key
+                # Check API key (HARD)
                 tasks.append((f"api_key:{dep_name}", self.probe_api_key(dep_name)))
             elif dep_type == "service":
-                # Check service health URL if provided
+                # Check service health URL if provided (SOFT)
                 health_url = dep.get("health_url")
                 if health_url:
                     tasks.append((f"service:{dep_name}", self.probe_http(health_url)))
@@ -445,7 +475,9 @@ class CapabilityProber:
                         probe_type=ProbeType.SERVICE,
                         name=tasks[i][0],
                         available=False,
+                        hardness=CapabilityHardness.SOFT,  # Unknown probes default to SOFT
                         error=str(result),
+                        fallback_available=True,
                     )
                 else:
                     probe_result = result
@@ -453,30 +485,39 @@ class CapabilityProber:
                 probes.append(probe_result)
                 total_latency += probe_result.latency_ms
 
+                # Classify failures by hardness
                 if not probe_result.available:
-                    # Check if this was a required dependency
-                    task_name = tasks[i][0]
-                    is_required = True
-                    for dep in dependencies:
-                        if dep.get("name") in task_name:
-                            is_required = dep.get("required", True)
-                            break
+                    failed.append(probe_result)
+                    if probe_result.is_blocking():
+                        hard_failures.append(probe_result)
+                    else:
+                        soft_failures.append(probe_result)
 
-                    if is_required or "database" in task_name or "redis" in task_name:
-                        failed.append(probe_result)
-
-        # Build error summary
+        # Build error summary (prioritize HARD failures)
         error_summary = None
-        if failed:
-            errors = [f"{p.name}: {p.error}" for p in failed]
+        if hard_failures:
+            errors = [f"[HARD] {p.name}: {p.error}" for p in hard_failures]
             error_summary = "; ".join(errors)
+        elif soft_failures:
+            errors = [f"[SOFT] {p.name}: {p.error}" for p in soft_failures]
+            error_summary = f"Degraded mode: {'; '.join(errors)}"
+
+        # Routing passes if no HARD failures (soft failures allowed)
+        routing_passed = len(hard_failures) == 0
+        degraded = routing_passed and len(soft_failures) > 0
+
+        if degraded:
+            logger.warning(f"CARE operating in degraded mode: {len(soft_failures)} soft dependencies unavailable")
 
         return CapabilityCheckResult(
-            passed=len(failed) == 0,
+            passed=routing_passed,
             probes=probes,
             failed_probes=failed,
+            soft_failures=soft_failures,
+            hard_failures=hard_failures,
             total_latency_ms=total_latency,
             error_summary=error_summary,
+            degraded=degraded,
         )
 
 

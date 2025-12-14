@@ -11,6 +11,8 @@ from .models import (
     RiskPolicy,
     DifficultyLevel,
     CapabilityProbeResult,
+    CapabilityHardness,
+    CapabilityCheckResult,
     RouteEvaluationResult,
 )
 from .probes import CapabilityProber, get_capability_prober
@@ -26,6 +28,8 @@ __all__ = [
     "RiskPolicy",
     "DifficultyLevel",
     "CapabilityProbeResult",
+    "CapabilityHardness",
+    "CapabilityCheckResult",
     "RouteEvaluationResult",
     "CapabilityProber",
     "get_capability_prober",

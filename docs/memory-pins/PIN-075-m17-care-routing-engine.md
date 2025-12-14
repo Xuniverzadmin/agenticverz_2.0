@@ -351,10 +351,67 @@ Cached probe results (for persistence):
 
 ---
 
+## M17.1 Enhancements (2025-12-14)
+
+### Hard vs Soft Dependencies
+
+Dependencies are now classified by hardness:
+
+| Hardness | Dependencies | Behavior |
+|----------|--------------|----------|
+| HARD | DATABASE, SMTP, DNS, API_KEY, S3 | Block routing on failure |
+| SOFT | REDIS, HTTP, AGENT, SERVICE | Degraded mode, routing continues |
+
+**Redis is now a SOFT dependency** - routing continues without caching if Redis is down.
+
+### Fallback Agent Chain
+
+Routing decisions now include fallback agents (up to 3 next-best agents):
+
+```json
+{
+  "selected_agent_id": "agent1",
+  "fallback_agents": ["agent2", "agent3", "agent4"],
+  "degraded": true,
+  "degraded_reason": "Soft dependencies unavailable: redis"
+}
+```
+
+### Routing Decision Persistence
+
+All routing decisions are persisted to `routing.routing_decisions` table:
+
+| Column | Added |
+|--------|-------|
+| fallback_agents | JSONB |
+| degraded | BOOLEAN |
+| degraded_reason | TEXT |
+
+### Rate Limiting per Risk Policy
+
+| Risk Policy | Requests/min | Use Case |
+|-------------|--------------|----------|
+| STRICT | 10 | Extra validation, sensitive tasks |
+| BALANCED | 30 | Standard operations |
+| FAST | 100 | High throughput, minimal validation |
+
+Rate limiting uses Redis with automatic fallback when unavailable.
+
+### Test Coverage
+
+Now 34 tests covering:
+- [x] Hard/Soft dependency classification (4 tests)
+- [x] Fallback agent chain (3 tests)
+- [x] Rate limiting (2 tests)
+
+---
+
 ## Next Steps (M18+)
 
-1. **Persist routing decisions** to database for analytics
+1. ~~**Persist routing decisions** to database for analytics~~ DONE
 2. **WebSocket streaming** for live routing updates
 3. **Fulfillment feedback loop** - adjust routing based on outcomes
-4. **Multi-tenant routing policies**
-5. **A/B testing** for routing strategies
+4. **Agent capacity fairness scoring** - distribute load fairly
+5. **Routing confidence score** - quantify decision certainty
+6. **Multi-tenant routing policies**
+7. **A/B testing** for routing strategies

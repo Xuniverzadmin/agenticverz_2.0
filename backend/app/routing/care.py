@@ -10,10 +10,16 @@
 
 import json
 import logging
+import os
 import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+
+import redis.asyncio as redis_async
 
 from .models import (
     CapabilityCheckResult,
@@ -29,8 +35,99 @@ from .models import (
     SuccessMetric,
     infer_orchestrator_mode,
     infer_success_metric,
+    RATE_LIMITS,
+    RATE_LIMIT_WINDOW,
 )
 from .probes import CapabilityProber, get_capability_prober
+
+
+class RateLimiter:
+    """
+    Redis-based rate limiter with per-policy limits.
+
+    Falls back to no-op if Redis unavailable (degraded mode).
+    """
+
+    def __init__(self, redis_url: Optional[str] = None):
+        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self._redis: Optional[redis_async.Redis] = None
+
+    async def _get_redis(self) -> Optional[redis_async.Redis]:
+        """Get Redis connection (lazy init)."""
+        if self._redis is None:
+            try:
+                self._redis = redis_async.from_url(self.redis_url, decode_responses=True)
+                await self._redis.ping()
+            except Exception as e:
+                logger.debug(f"Rate limiter Redis unavailable: {e}")
+                self._redis = None
+        return self._redis
+
+    async def check_rate_limit(
+        self,
+        tenant_id: str,
+        risk_policy: RiskPolicy,
+    ) -> tuple[bool, int, int]:
+        """
+        Check if request is within rate limits.
+
+        Returns:
+            (allowed, current_count, limit)
+        """
+        r = await self._get_redis()
+        if not r:
+            # Redis unavailable - allow all (degraded mode)
+            return True, 0, RATE_LIMITS.get(risk_policy, 30)
+
+        limit = RATE_LIMITS.get(risk_policy, 30)
+        key = f"care:ratelimit:{tenant_id}:{risk_policy.value}"
+
+        try:
+            # Sliding window counter
+            current = await r.incr(key)
+            if current == 1:
+                await r.expire(key, RATE_LIMIT_WINDOW)
+
+            remaining_ttl = await r.ttl(key)
+            if remaining_ttl == -1:
+                await r.expire(key, RATE_LIMIT_WINDOW)
+
+            allowed = current <= limit
+            return allowed, int(current), limit
+        except Exception as e:
+            logger.warning(f"Rate limit check failed: {e}")
+            return True, 0, limit
+
+    async def get_remaining(
+        self,
+        tenant_id: str,
+        risk_policy: RiskPolicy,
+    ) -> int:
+        """Get remaining requests in current window."""
+        r = await self._get_redis()
+        if not r:
+            return RATE_LIMITS.get(risk_policy, 30)
+
+        key = f"care:ratelimit:{tenant_id}:{risk_policy.value}"
+        try:
+            current = await r.get(key)
+            if current is None:
+                return RATE_LIMITS.get(risk_policy, 30)
+            return max(0, RATE_LIMITS.get(risk_policy, 30) - int(current))
+        except Exception:
+            return RATE_LIMITS.get(risk_policy, 30)
+
+
+# Singleton rate limiter
+_rate_limiter: Optional[RateLimiter] = None
+
+
+def get_rate_limiter() -> RateLimiter:
+    """Get singleton rate limiter instance."""
+    global _rate_limiter
+    if _rate_limiter is None:
+        _rate_limiter = RateLimiter()
+    return _rate_limiter
 
 logger = logging.getLogger("nova.routing.care")
 
@@ -49,8 +146,85 @@ class CAREEngine:
     Every routing decision is logged with structured JSON for audit.
     """
 
-    def __init__(self):
+    def __init__(self, persist_decisions: bool = True, rate_limit_enabled: bool = True):
         self.prober = get_capability_prober()
+        self.persist_decisions = persist_decisions
+        self.rate_limit_enabled = rate_limit_enabled
+        self._db_url = os.environ.get("DATABASE_URL")
+        self._rate_limiter = get_rate_limiter() if rate_limit_enabled else None
+
+    async def _persist_decision(
+        self,
+        decision: RoutingDecision,
+        request: RoutingRequest,
+    ) -> bool:
+        """
+        Persist routing decision to audit table.
+
+        Returns True if persistence succeeded, False otherwise.
+        Non-blocking - failures are logged but don't affect routing.
+        """
+        if not self.persist_decisions or not self._db_url:
+            return False
+
+        try:
+            engine = create_engine(self._db_url)
+            with engine.connect() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO routing.routing_decisions (
+                            request_id, task_description, task_domain,
+                            selected_agent_id, success_metric, orchestrator_mode,
+                            risk_policy, eligible_agents, fallback_agents,
+                            degraded, degraded_reason, evaluated_count, routed,
+                            error, actionable_fix, total_latency_ms,
+                            stage_latencies, decision_details, tenant_id, decided_at
+                        ) VALUES (
+                            :request_id, :task_description, :task_domain,
+                            :selected_agent_id, :success_metric, :orchestrator_mode,
+                            :risk_policy, :eligible_agents, :fallback_agents,
+                            :degraded, :degraded_reason, :evaluated_count, :routed,
+                            :error, :actionable_fix, :total_latency_ms,
+                            :stage_latencies, :decision_details, :tenant_id, :decided_at
+                        )
+                    """),
+                    {
+                        "request_id": decision.request_id,
+                        "task_description": decision.task_description[:1000],
+                        "task_domain": request.task_domain,
+                        "selected_agent_id": decision.selected_agent_id,
+                        "success_metric": decision.success_metric.value,
+                        "orchestrator_mode": decision.orchestrator_mode.value,
+                        "risk_policy": decision.risk_policy.value,
+                        "eligible_agents": json.dumps(decision.eligible_agents),
+                        "fallback_agents": json.dumps(decision.fallback_agents),
+                        "degraded": decision.degraded,
+                        "degraded_reason": decision.degraded_reason,
+                        "evaluated_count": len(decision.evaluated_agents),
+                        "routed": decision.routed,
+                        "error": decision.error,
+                        "actionable_fix": decision.actionable_fix,
+                        "total_latency_ms": decision.total_latency_ms,
+                        "stage_latencies": json.dumps(decision.stage_latencies),
+                        "decision_details": json.dumps({
+                            "decision_reason": decision.decision_reason,
+                            "difficulty": request.difficulty.value,
+                            "risk_tolerance": request.risk_tolerance.value,
+                        }),
+                        "tenant_id": request.tenant_id,
+                        "decided_at": decision.decided_at,
+                    }
+                )
+                conn.commit()
+            engine.dispose()
+            logger.debug(f"Persisted routing decision {decision.request_id}")
+            return True
+        except SQLAlchemyError as e:
+            logger.warning(f"Failed to persist routing decision: {e}")
+            return False
+        except Exception as e:
+            logger.warning(f"Unexpected error persisting decision: {e}")
+            return False
 
     # =========================================================================
     # Stage 1: Aspiration → Success Metric
@@ -320,20 +494,38 @@ class CAREEngine:
         latency = (time.time() - start) * 1000
 
         if not check_result.passed:
-            # Build actionable error message
-            failed_names = [p.name for p in check_result.failed_probes]
+            # HARD dependency failures - block routing
+            hard_names = [p.name for p in check_result.hard_failures]
             fix_instructions = [
-                p.fix_instruction for p in check_result.failed_probes
+                p.fix_instruction for p in check_result.hard_failures
                 if p.fix_instruction
             ]
 
             return StageResult(
                 stage=RoutingStage.CAPABILITY,
                 passed=False,
-                reason=f"Capability check failed: {', '.join(failed_names)}",
+                reason=f"Hard dependency failed: {', '.join(hard_names)}",
                 details={
-                    "failed_capabilities": failed_names,
+                    "failed_capabilities": hard_names,
                     "fix_instructions": fix_instructions,
+                    "hard_failures": len(check_result.hard_failures),
+                    "soft_failures": len(check_result.soft_failures),
+                    "probe_latency_ms": check_result.total_latency_ms,
+                },
+                latency_ms=latency,
+            ), check_result
+
+        # Check for degraded mode (soft deps failed but routing continues)
+        if check_result.degraded:
+            soft_names = [p.name for p in check_result.soft_failures]
+            return StageResult(
+                stage=RoutingStage.CAPABILITY,
+                passed=True,  # Still passes - only soft deps failed
+                reason=f"DEGRADED: {len(check_result.soft_failures)} soft deps unavailable",
+                details={
+                    "capabilities_checked": len(check_result.probes),
+                    "degraded": True,
+                    "soft_failures": soft_names,
                     "probe_latency_ms": check_result.total_latency_ms,
                 },
                 latency_ms=latency,
@@ -345,6 +537,7 @@ class CAREEngine:
             reason=f"All {len(check_result.probes)} capabilities available",
             details={
                 "capabilities_checked": len(check_result.probes),
+                "degraded": False,
                 "probe_latency_ms": check_result.total_latency_ms,
             },
             latency_ms=latency,
@@ -549,6 +742,38 @@ class CAREEngine:
             }
         )
 
+        # Rate limit check (per tenant and risk policy)
+        rate_limited = False
+        rate_limit_remaining = 0
+        if self._rate_limiter:
+            allowed, current, limit = await self._rate_limiter.check_rate_limit(
+                request.tenant_id, request.risk_tolerance
+            )
+            rate_limit_remaining = max(0, limit - current)
+            if not allowed:
+                rate_limited = True
+                logger.warning(
+                    "care_rate_limited",
+                    extra={
+                        "request_id": request_id,
+                        "tenant_id": request.tenant_id,
+                        "risk_policy": request.risk_tolerance.value,
+                        "current": current,
+                        "limit": limit,
+                    }
+                )
+                return RoutingDecision(
+                    request_id=request_id,
+                    task_description=request.task_description,
+                    routed=False,
+                    rate_limited=True,
+                    rate_limit_remaining=0,
+                    error=f"Rate limit exceeded: {current}/{limit} requests in {RATE_LIMIT_WINDOW}s",
+                    actionable_fix=f"Wait {RATE_LIMIT_WINDOW}s or use FAST risk policy for higher limits",
+                    total_latency_ms=(time.time() - start) * 1000,
+                    decided_at=datetime.now(timezone.utc),
+                )
+
         # Get agents from SBA registry
         try:
             from ..agents.sba import get_sba_service
@@ -620,10 +845,24 @@ class CAREEngine:
         eligible_ids = [e.agent_id for e in eligible]
 
         selected = None
+        fallback_agents = []
         if eligible:
             # Sort by score descending
             eligible.sort(key=lambda e: e.score, reverse=True)
             selected = eligible[0]
+
+            # Build fallback chain (next best agents, up to 3)
+            if len(eligible) > 1:
+                fallback_agents = [e.agent_id for e in eligible[1:4]]
+
+        # Check for degraded mode (any soft dependency failures)
+        degraded = False
+        degraded_reason = None
+        if selected and selected.capability_check:
+            if selected.capability_check.degraded:
+                degraded = True
+                soft_names = [p.name for p in selected.capability_check.soft_failures]
+                degraded_reason = f"Soft dependencies unavailable: {', '.join(soft_names)}"
 
         total_latency = (time.time() - start) * 1000
 
@@ -638,13 +877,18 @@ class CAREEngine:
             risk_policy=selected.risk_policy if selected else RiskPolicy.BALANCED,
             evaluated_agents=evaluated,
             eligible_agents=eligible_ids,
+            fallback_agents=fallback_agents,
+            degraded=degraded,
+            degraded_reason=degraded_reason,
+            rate_limited=False,
+            rate_limit_remaining=rate_limit_remaining,
             routed=selected is not None,
             error=None if selected else self._build_no_agent_error(evaluated, request),
             actionable_fix=None if selected else self._build_actionable_fix(evaluated, request),
             total_latency_ms=total_latency,
             stage_latencies=stage_latencies,
             decided_at=datetime.now(timezone.utc),
-            decision_reason=f"Selected {selected.agent_id} (score={selected.score:.2f})" if selected else "No eligible agent",
+            decision_reason=self._build_decision_reason(selected, fallback_agents, degraded),
         )
 
         # Log decision
@@ -657,8 +901,12 @@ class CAREEngine:
                 "eligible_count": len(eligible_ids),
                 "evaluated_count": len(evaluated),
                 "latency_ms": total_latency,
+                "degraded": degraded,
             }
         )
+
+        # Persist to audit table (non-blocking)
+        await self._persist_decision(decision, request)
 
         return decision
 
@@ -696,8 +944,9 @@ class CAREEngine:
             if e.rejection_stage == RoutingStage.DOMAIN_FILTER:
                 fixes.append(f"Register agent for domain '{request.task_domain}'")
             elif e.rejection_stage == RoutingStage.CAPABILITY:
-                if e.capability_check and e.capability_check.failed_probes:
-                    for p in e.capability_check.failed_probes:
+                if e.capability_check and e.capability_check.hard_failures:
+                    # Only show fix for HARD failures (blocking)
+                    for p in e.capability_check.hard_failures:
                         if p.fix_instruction:
                             fixes.append(p.fix_instruction)
 
@@ -705,6 +954,26 @@ class CAREEngine:
             return "; ".join(list(set(fixes))[:3])  # Top 3 unique fixes
 
         return "Register agents with complete SBA schema"
+
+    def _build_decision_reason(
+        self,
+        selected: Optional[RouteEvaluationResult],
+        fallback_agents: List[str],
+        degraded: bool,
+    ) -> str:
+        """Build human-readable decision reason."""
+        if not selected:
+            return "No eligible agent"
+
+        parts = [f"Selected {selected.agent_id} (score={selected.score:.2f})"]
+
+        if fallback_agents:
+            parts.append(f"fallbacks: {', '.join(fallback_agents)}")
+
+        if degraded:
+            parts.append("DEGRADED MODE")
+
+        return "; ".join(parts)
 
     # =========================================================================
     # API Methods

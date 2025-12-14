@@ -439,6 +439,239 @@ class TestCAREErrorHandling:
 
 
 # =============================================================================
+# Capability Hardness Tests (Soft vs Hard Dependencies)
+# =============================================================================
+
+class TestCapabilityHardness:
+    """Test hard vs soft dependency classification."""
+
+    def test_hardness_classification(self):
+        """Test that probe types are correctly classified as HARD or SOFT."""
+        from app.routing.models import ProbeType, CapabilityHardness, PROBE_HARDNESS
+
+        # HARD dependencies - should block routing
+        hard_deps = [
+            ProbeType.SMTP,
+            ProbeType.DNS,
+            ProbeType.API_KEY,
+            ProbeType.S3,
+            ProbeType.DATABASE,
+        ]
+        for probe in hard_deps:
+            assert PROBE_HARDNESS[probe] == CapabilityHardness.HARD, f"{probe} should be HARD"
+
+        # SOFT dependencies - should NOT block routing (degraded mode)
+        soft_deps = [
+            ProbeType.HTTP,
+            ProbeType.REDIS,  # Critical fix - Redis is SOFT
+            ProbeType.AGENT,
+            ProbeType.SERVICE,
+        ]
+        for probe in soft_deps:
+            assert PROBE_HARDNESS[probe] == CapabilityHardness.SOFT, f"{probe} should be SOFT"
+
+    def test_probe_result_is_blocking(self):
+        """Test is_blocking() method for probe results."""
+        from app.routing.models import CapabilityProbeResult, ProbeType, CapabilityHardness
+
+        # HARD failure should block
+        hard_fail = CapabilityProbeResult(
+            probe_type=ProbeType.DATABASE,
+            name="db",
+            available=False,
+            hardness=CapabilityHardness.HARD,
+            error="Connection refused",
+        )
+        assert hard_fail.is_blocking() is True
+
+        # SOFT failure should NOT block
+        soft_fail = CapabilityProbeResult(
+            probe_type=ProbeType.REDIS,
+            name="redis",
+            available=False,
+            hardness=CapabilityHardness.SOFT,
+            error="Connection refused",
+        )
+        assert soft_fail.is_blocking() is False
+
+        # Success never blocks
+        success = CapabilityProbeResult(
+            probe_type=ProbeType.DATABASE,
+            name="db",
+            available=True,
+            hardness=CapabilityHardness.HARD,
+        )
+        assert success.is_blocking() is False
+
+    def test_capability_check_result_degraded(self):
+        """Test degraded mode when only soft dependencies fail."""
+        from app.routing.models import (
+            CapabilityCheckResult,
+            CapabilityProbeResult,
+            ProbeType,
+            CapabilityHardness,
+        )
+
+        db_ok = CapabilityProbeResult(
+            probe_type=ProbeType.DATABASE,
+            name="db",
+            available=True,
+            hardness=CapabilityHardness.HARD,
+        )
+        redis_fail = CapabilityProbeResult(
+            probe_type=ProbeType.REDIS,
+            name="redis",
+            available=False,
+            hardness=CapabilityHardness.SOFT,
+            error="Connection refused",
+        )
+
+        result = CapabilityCheckResult(
+            passed=True,  # Passes because only soft dep failed
+            probes=[db_ok, redis_fail],
+            failed_probes=[redis_fail],
+            soft_failures=[redis_fail],
+            hard_failures=[],
+            degraded=True,  # Operating in degraded mode
+        )
+
+        assert result.passed is True
+        assert result.degraded is True
+        assert len(result.soft_failures) == 1
+        assert len(result.hard_failures) == 0
+
+    def test_capability_check_result_blocked(self):
+        """Test routing blocked when hard dependency fails."""
+        from app.routing.models import (
+            CapabilityCheckResult,
+            CapabilityProbeResult,
+            ProbeType,
+            CapabilityHardness,
+        )
+
+        db_fail = CapabilityProbeResult(
+            probe_type=ProbeType.DATABASE,
+            name="db",
+            available=False,
+            hardness=CapabilityHardness.HARD,
+            error="Connection refused",
+        )
+
+        result = CapabilityCheckResult(
+            passed=False,  # Blocked because hard dep failed
+            probes=[db_fail],
+            failed_probes=[db_fail],
+            soft_failures=[],
+            hard_failures=[db_fail],
+            degraded=False,
+        )
+
+        assert result.passed is False
+        assert result.degraded is False
+        assert len(result.hard_failures) == 1
+
+
+# =============================================================================
+# Fallback Agent Chain Tests
+# =============================================================================
+
+class TestFallbackAgentChain:
+    """Test fallback agent chain in routing decisions."""
+
+    def test_routing_decision_fallback_agents(self):
+        """Test that RoutingDecision includes fallback agents."""
+        from app.routing.models import RoutingDecision
+
+        decision = RoutingDecision(
+            request_id="test123",
+            task_description="Test task",
+            selected_agent_id="agent1",
+            eligible_agents=["agent1", "agent2", "agent3", "agent4"],
+            fallback_agents=["agent2", "agent3", "agent4"],  # Up to 3 fallbacks
+            routed=True,
+        )
+
+        assert decision.fallback_agents == ["agent2", "agent3", "agent4"]
+        assert len(decision.fallback_agents) == 3
+
+    def test_routing_decision_degraded_mode(self):
+        """Test that RoutingDecision tracks degraded mode."""
+        from app.routing.models import RoutingDecision
+
+        decision = RoutingDecision(
+            request_id="test123",
+            task_description="Test task",
+            selected_agent_id="agent1",
+            routed=True,
+            degraded=True,
+            degraded_reason="Soft dependencies unavailable: redis",
+        )
+
+        assert decision.degraded is True
+        assert "redis" in decision.degraded_reason
+
+    def test_routing_decision_to_dict_includes_fallbacks(self):
+        """Test that to_dict includes fallback and degraded info."""
+        from app.routing.models import RoutingDecision
+
+        decision = RoutingDecision(
+            request_id="test123",
+            task_description="Test task",
+            selected_agent_id="agent1",
+            fallback_agents=["agent2", "agent3"],
+            degraded=True,
+            degraded_reason="Redis down",
+            routed=True,
+        )
+
+        d = decision.to_dict()
+        assert "fallback_agents" in d
+        assert d["fallback_agents"] == ["agent2", "agent3"]
+        assert d["degraded"] is True
+        assert d["degraded_reason"] == "Redis down"
+
+
+# =============================================================================
+# Rate Limiting Tests
+# =============================================================================
+
+class TestRateLimiting:
+    """Test rate limiting per risk policy."""
+
+    def test_rate_limits_per_policy(self):
+        """Test different rate limits per risk policy."""
+        from app.routing.models import RiskPolicy, RATE_LIMITS
+
+        assert RATE_LIMITS[RiskPolicy.STRICT] < RATE_LIMITS[RiskPolicy.BALANCED]
+        assert RATE_LIMITS[RiskPolicy.BALANCED] < RATE_LIMITS[RiskPolicy.FAST]
+
+        # Verify specific values
+        assert RATE_LIMITS[RiskPolicy.STRICT] == 10
+        assert RATE_LIMITS[RiskPolicy.BALANCED] == 30
+        assert RATE_LIMITS[RiskPolicy.FAST] == 100
+
+    def test_routing_decision_rate_limit_fields(self):
+        """Test that RoutingDecision has rate limit fields."""
+        from app.routing.models import RoutingDecision
+
+        decision = RoutingDecision(
+            request_id="test123",
+            task_description="Test task",
+            rate_limited=True,
+            rate_limit_remaining=0,
+            routed=False,
+            error="Rate limit exceeded",
+        )
+
+        assert decision.rate_limited is True
+        assert decision.rate_limit_remaining == 0
+
+        d = decision.to_dict()
+        assert "rate_limited" in d
+        assert "rate_limit_remaining" in d
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 

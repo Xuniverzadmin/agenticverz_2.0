@@ -64,14 +64,41 @@ class ProbeType(str, Enum):
     SERVICE = "service"
 
 
+class CapabilityHardness(str, Enum):
+    """
+    Dependency hardness classification.
+
+    HARD: Failure blocks routing entirely
+    SOFT: Failure degrades performance but allows fallback
+    """
+    HARD = "hard"
+    SOFT = "soft"
+
+
+# Probe type to hardness mapping
+PROBE_HARDNESS: Dict[ProbeType, CapabilityHardness] = {
+    ProbeType.SMTP: CapabilityHardness.HARD,      # Can't send mail without SMTP
+    ProbeType.DNS: CapabilityHardness.HARD,       # Can't resolve anything without DNS
+    ProbeType.API_KEY: CapabilityHardness.HARD,   # Can't call APIs without keys
+    ProbeType.S3: CapabilityHardness.HARD,        # Can't store without S3
+    ProbeType.HTTP: CapabilityHardness.SOFT,      # May have fallback endpoints
+    ProbeType.REDIS: CapabilityHardness.SOFT,     # Caching, can use slow path
+    ProbeType.DATABASE: CapabilityHardness.HARD,  # Can't persist without DB
+    ProbeType.AGENT: CapabilityHardness.SOFT,     # May have fallback agents
+    ProbeType.SERVICE: CapabilityHardness.SOFT,   # May have fallback services
+}
+
+
 class CapabilityProbeResult(BaseModel):
     """Result of a single capability probe."""
     probe_type: ProbeType
     name: str
     available: bool
+    hardness: CapabilityHardness = CapabilityHardness.HARD
     latency_ms: float = Field(default=0.0, description="Probe latency in ms")
     error: Optional[str] = None
     fix_instruction: Optional[str] = None
+    fallback_available: bool = False  # True if soft dep has fallback
     cached: bool = False
     checked_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -80,12 +107,23 @@ class CapabilityProbeResult(BaseModel):
             "probe_type": self.probe_type.value,
             "name": self.name,
             "available": self.available,
+            "hardness": self.hardness.value,
             "latency_ms": self.latency_ms,
             "error": self.error,
             "fix_instruction": self.fix_instruction,
+            "fallback_available": self.fallback_available,
             "cached": self.cached,
             "checked_at": self.checked_at.isoformat(),
         }
+
+    def is_blocking(self) -> bool:
+        """Returns True if this failed probe should block routing."""
+        if self.available:
+            return False
+        # Soft dependencies with fallback don't block
+        if self.hardness == CapabilityHardness.SOFT:
+            return False
+        return True
 
 
 class CapabilityCheckResult(BaseModel):
@@ -93,14 +131,20 @@ class CapabilityCheckResult(BaseModel):
     passed: bool
     probes: List[CapabilityProbeResult] = Field(default_factory=list)
     failed_probes: List[CapabilityProbeResult] = Field(default_factory=list)
+    soft_failures: List[CapabilityProbeResult] = Field(default_factory=list)  # Soft deps that failed
+    hard_failures: List[CapabilityProbeResult] = Field(default_factory=list)  # Hard deps that failed
     total_latency_ms: float = 0.0
     error_summary: Optional[str] = None
+    degraded: bool = False  # True if running in degraded mode (soft failures)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "passed": self.passed,
+            "degraded": self.degraded,
             "probes": [p.to_dict() for p in self.probes],
             "failed_probes": [p.to_dict() for p in self.failed_probes],
+            "soft_failures": [p.to_dict() for p in self.soft_failures],
+            "hard_failures": [p.to_dict() for p in self.hard_failures],
             "total_latency_ms": self.total_latency_ms,
             "error_summary": self.error_summary,
         }
@@ -168,6 +212,17 @@ class RoutingDecision(BaseModel):
     evaluated_agents: List[RouteEvaluationResult] = Field(default_factory=list)
     eligible_agents: List[str] = Field(default_factory=list)
 
+    # Fallback chain (next best agents if primary fails)
+    fallback_agents: List[str] = Field(default_factory=list)
+
+    # Degraded mode flag (soft deps failed but routing continues)
+    degraded: bool = False
+    degraded_reason: Optional[str] = None
+
+    # Rate limiting
+    rate_limited: bool = False
+    rate_limit_remaining: int = 0
+
     # Routing metadata
     routed: bool = False
     error: Optional[str] = None
@@ -192,6 +247,11 @@ class RoutingDecision(BaseModel):
             "orchestrator_mode": self.orchestrator_mode.value,
             "risk_policy": self.risk_policy.value,
             "eligible_agents": self.eligible_agents,
+            "fallback_agents": self.fallback_agents,
+            "degraded": self.degraded,
+            "degraded_reason": self.degraded_reason,
+            "rate_limited": self.rate_limited,
+            "rate_limit_remaining": self.rate_limit_remaining,
             "routed": self.routed,
             "error": self.error,
             "actionable_fix": self.actionable_fix,
@@ -200,6 +260,21 @@ class RoutingDecision(BaseModel):
             "decided_at": self.decided_at.isoformat(),
             "decision_reason": self.decision_reason,
         }
+
+
+# =============================================================================
+# Rate Limit Configuration per Risk Policy
+# =============================================================================
+
+# Requests per minute per risk policy
+RATE_LIMITS: Dict[RiskPolicy, int] = {
+    RiskPolicy.STRICT: 10,    # Extra validation, lower throughput
+    RiskPolicy.BALANCED: 30,  # Standard rate limit
+    RiskPolicy.FAST: 100,     # High throughput, minimal validation
+}
+
+# Rate limit window in seconds
+RATE_LIMIT_WINDOW = 60
 
 
 # =============================================================================
