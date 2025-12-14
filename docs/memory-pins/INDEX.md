@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-14 (BudgetLLM Phase 0 Complete - OpenAI-compatible wrapper)
+**Last Updated:** 2025-12-14 (M15.1.1 SBA Inspector UI Complete)
 
 ---
 
@@ -92,12 +92,15 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-068](PIN-068-m13-prompt-caching.md) | **M13 Prompt Caching Implementation** | Feature / Cost Optimization | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-069](PIN-069-budgetllm-go-to-market-plan.md) | **BudgetLLM Go-To-Market Plan** | Strategy / GTM | **PHASE 0 ✅** | 2025-12-14 |
 | [PIN-070](PIN-070-budgetllm-safety-governance.md) | **BudgetLLM Safety Governance Layer** | Feature / Safety | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-071](PIN-071-m15-budgetllm-a2a-integration.md) | **M15 BudgetLLM A2A Integration** | Feature / Integration | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-072](PIN-072-m15-1-sba-foundations.md) | **M15.1 SBA Foundations (Strategy-Bound Agents)** | Milestone / Governance | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-073](PIN-073-m15-1-1-sba-inspector-ui.md) | **M15.1.1 SBA Inspector UI + Fulfillment Heatmap** | Frontend / Governance UI | **✅ COMPLETE** | 2025-12-14 |
 
 ---
 
 ## Vision Achievement Summary
 
-**Overall Score: 88%** toward machine-native vision (M12 + M12.1 stabilized, production enablement pending).
+**Overall Score: 90%** toward machine-native vision (M15.1 SBA governance layer complete).
 
 | Pillar | Score | Status |
 |--------|-------|--------|
@@ -105,8 +108,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | Reliable | 85% | ✅ LISTEN/NOTIFY for low-latency messaging |
 | Deterministic | 90% | ✅ Seed determinism proven |
 | Skills | 90% | ✅ M11+M12 skills complete + invoke audit |
-| Budgets | 85% | ✅ Pre-execution simulation added |
-| Safety | 85% | ✅ RBAC enforced |
+| Budgets | 90% | ✅ BudgetLLM governance + LLM cost tracking |
+| Safety | 92% | ✅ RBAC + SBA Strategy Cascade enforcement |
 | State | 85% | ✅ Memory pins + TTL + cancellation refunds |
 | Observability | 75% | ⚠️ Grafana dashboard pending |
 
@@ -117,11 +120,29 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 - ✅ Pre-execution simulation endpoint
 - ✅ Migration 025/026 verified
 
+**Resolved in M15.1 (SBA Foundations):**
+- ✅ Strategy Cascade schema (5 elements)
+- ✅ Spawn-time blocking for invalid agents
+- ✅ Semantic dependency validation (tool/agent/api/service)
+- ✅ Dynamic fulfillment metrics with history
+- ✅ Strict mode generator (quality enforcement)
+- ✅ Version negotiation system
+- ✅ Simplified SQL validator (Python source of truth)
+
+**Resolved in M15.1.1 (SBA Inspector UI):**
+- ✅ SBA Inspector page with list/heatmap views
+- ✅ Fulfillment heatmap with marketplace readiness indicators
+- ✅ Strategy Cascade modal (5 expandable sections)
+- ✅ Fulfillment history chart with threshold line
+- ✅ Spawn eligibility check from UI
+- ✅ Filters: search, agent_type, domain, validation status
+- ✅ New Governance sidebar section
+
 **Pending (Production Enablement):**
 - [ ] Grafana m12_* metrics dashboard
 - [ ] 7 production validation checks (see M12-PRODUCTION-ENABLEMENT.md)
 
-See PIN-062/063 for M12 complete status, PIN-064 for M13 readiness.
+See PIN-062/063 for M12 status, PIN-072 for M15.1 SBA governance, PIN-073 for M15.1.1 SBA Inspector UI.
 
 ---
 
