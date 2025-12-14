@@ -391,6 +391,7 @@ Additions:
 
 ## Related PINs
 
+- **PIN-070:** BudgetLLM Safety Governance Layer (extends BudgetLLM with risk scoring)
 - PIN-068: M13 Prompt Caching Implementation
 - PIN-067: M13 Iterations Cost Calculator Fix
 - PIN-033: M8-M14 Machine-Native Realignment Roadmap

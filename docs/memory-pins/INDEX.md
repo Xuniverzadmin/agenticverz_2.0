@@ -91,6 +91,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-067](PIN-067-m13-iterations-cost-fix.md) | **M13 Iterations Cost Calculator Fix** | Bug Fix / Feature | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-068](PIN-068-m13-prompt-caching.md) | **M13 Prompt Caching Implementation** | Feature / Cost Optimization | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-069](PIN-069-budgetllm-go-to-market-plan.md) | **BudgetLLM Go-To-Market Plan** | Strategy / GTM | **PHASE 0 ✅** | 2025-12-14 |
+| [PIN-070](PIN-070-budgetllm-safety-governance.md) | **BudgetLLM Safety Governance Layer** | Feature / Safety | **✅ COMPLETE** | 2025-12-14 |
 
 ---
 
