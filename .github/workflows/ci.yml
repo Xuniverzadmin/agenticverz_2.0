@@ -1,6 +1,10 @@
 # AOS CI Pipeline
 # Runs on every push and PR
 # Enforces quality gates before merge
+#
+# Database Strategy:
+# - If NEON_API_KEY + NEON_PROJECT_ID secrets are set: Creates ephemeral Neon branch per run (fully isolated)
+# - Otherwise: Falls back to Docker Postgres (for forks/external PRs)
 
 name: CI
 
@@ -18,13 +22,101 @@ on:
 
 env:
   PYTHONPATH: backend
-  # Use Neon if available (via secret), otherwise fall back to local Docker Postgres
-  # Set NEON_DATABASE_URL in GitHub Secrets for managed DB testing
-  # Note: trim() removes any trailing whitespace from secret values
-  DATABASE_URL: ${{ secrets.NEON_DATABASE_URL && format('{0}', secrets.NEON_DATABASE_URL) || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-  REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL && format('{0}', secrets.UPSTASH_REDIS_URL) || 'redis://localhost:6379/0' }}
 
 jobs:
+  # ============================================================================
+  # SETUP: Create ephemeral Neon branch for isolated testing
+  # ============================================================================
+  setup-neon-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      database_url: ${{ steps.get-conn.outputs.database_url }}
+      branch_name: ${{ steps.create-branch.outputs.branch_name }}
+      use_neon: ${{ steps.check-secrets.outputs.use_neon }}
+    steps:
+      - name: Check if Neon secrets are available
+        id: check-secrets
+        run: |
+          if [ -n "${{ secrets.NEON_API_KEY }}" ] && [ -n "${{ secrets.NEON_PROJECT_ID }}" ]; then
+            echo "use_neon=true" >> $GITHUB_OUTPUT
+            echo "✅ Neon secrets available - will create ephemeral branch"
+          else
+            echo "use_neon=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Neon secrets not available - jobs will use Docker Postgres"
+          fi
+
+      - name: Setup Neon CLI
+        if: steps.check-secrets.outputs.use_neon == 'true'
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Create ephemeral Neon branch
+        if: steps.check-secrets.outputs.use_neon == 'true'
+        id: create-branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          BRANCH_NAME="ci-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Creating Neon branch: $BRANCH_NAME"
+
+          # Create branch from main (parent)
+          neonctl branches create \
+            --project-id ${{ secrets.NEON_PROJECT_ID }} \
+            --name "$BRANCH_NAME" \
+            --parent main \
+            --api-key $NEON_API_KEY \
+            || {
+              # Branch might exist from failed previous run, try to delete and recreate
+              echo "Branch creation failed, attempting cleanup..."
+              neonctl branches delete "$BRANCH_NAME" \
+                --project-id ${{ secrets.NEON_PROJECT_ID }} \
+                --api-key $NEON_API_KEY 2>/dev/null || true
+              sleep 2
+              neonctl branches create \
+                --project-id ${{ secrets.NEON_PROJECT_ID }} \
+                --name "$BRANCH_NAME" \
+                --parent main \
+                --api-key $NEON_API_KEY
+            }
+
+          echo "✅ Branch created: $BRANCH_NAME"
+
+      - name: Get connection string
+        if: steps.check-secrets.outputs.use_neon == 'true'
+        id: get-conn
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          BRANCH_NAME="ci-${{ github.run_id }}-${{ github.run_attempt }}"
+
+          # Get connection string for the branch
+          CONN=$(neonctl connection-string "$BRANCH_NAME" \
+            --project-id ${{ secrets.NEON_PROJECT_ID }} \
+            --api-key $NEON_API_KEY \
+            --database-name neondb \
+            --role-name neondb_owner)
+
+          # Ensure sslmode=require is present
+          if [[ "$CONN" != *"sslmode="* ]]; then
+            CONN="${CONN}?sslmode=require"
+          fi
+
+          echo "database_url=$CONN" >> $GITHUB_OUTPUT
+          echo "✅ Connection string retrieved (hidden for security)"
+
+      - name: Output fallback for non-Neon mode
+        if: steps.check-secrets.outputs.use_neon != 'true'
+        id: fallback
+        run: |
+          echo "database_url=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_OUTPUT
+          echo "branch_name=" >> $GITHUB_OUTPUT
+
+  # ============================================================================
+  # FAST JOBS (No DB required)
+  # ============================================================================
+
   # Migration drift guard - verifies all migrations are committed
   migration-check:
     runs-on: ubuntu-latest
@@ -63,23 +155,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          
+
       - name: Install dependencies
         run: |
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
-          
+
       - name: Run unit tests
         run: |
           cd backend
           PYTHONPATH=. pytest tests/schemas -v -m "not slow" --maxfail=3
-          
+
       - name: Run skill tests
         run: |
           cd backend
@@ -178,13 +270,31 @@ jobs:
           name: golden-diff
           path: backend/artifacts/golden-diff/
 
-  # Integration tests (require services)
-  # Uses Neon if NEON_DATABASE_URL secret is set, otherwise Docker Postgres
+  # Lint Prometheus rules
+  lint-alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Prometheus rules
+        run: |
+          if [ -f ops/prometheus_rules/alerts.yml ]; then
+            echo "Prometheus rules file exists"
+          else
+            echo "::error::Prometheus rules file missing"
+            exit 1
+          fi
+
+  # ============================================================================
+  # DB-DEPENDENT JOBS (Use ephemeral Neon branch or Docker fallback)
+  # ============================================================================
+
+  # Integration tests
   integration:
     runs-on: ubuntu-latest
-    needs: determinism
+    needs: [setup-neon-branch, determinism]
     services:
-      # Docker Postgres - only used when NEON_DATABASE_URL is not set
+      # Docker Postgres - only used when Neon is not available
       postgres:
         image: postgres:15
         env:
@@ -198,7 +308,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      # Docker Redis - only used when UPSTASH_REDIS_URL is not set
       redis:
         image: redis:7
         ports:
@@ -208,6 +317,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.use_neon == 'true' && needs.setup-neon-branch.outputs.database_url || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
 
@@ -224,20 +336,15 @@ jobs:
 
       - name: Check database source
         run: |
-          if [ -n "${{ secrets.NEON_DATABASE_URL }}" ]; then
-            echo "Using Neon PostgreSQL (managed)"
+          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
+            echo "✅ Using Neon PostgreSQL (ephemeral branch: ci-${{ github.run_id }}-${{ github.run_attempt }})"
           else
-            echo "Using Docker PostgreSQL (ephemeral)"
+            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
           fi
 
-      - name: Wait for PostgreSQL to be fully ready
-        env:
-          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
+      - name: Wait for PostgreSQL (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
-          if [ -n "$NEON_URL" ]; then
-            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
-            exit 0
-          fi
           echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
@@ -250,77 +357,21 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Verify Redis connectivity
+      - name: Run Alembic migrations
         run: |
-          # Test Docker Redis is accessible
-          timeout 5 bash -c 'until echo PING | nc -q 1 localhost 6379 | grep -q PONG; do sleep 1; done' || {
-            echo "Docker Redis not responding on localhost:6379"
-            exit 1
-          }
-          echo "Docker Redis is accessible"
+          cd backend
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
+          alembic upgrade head
 
       - name: Run integration tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          # Use Docker Redis for integration tests (more reliable in CI)
-          # Upstash is used only for e2e-tests that need production-like setup
-          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           PYTHONPATH=. pytest tests/test_integration.py -v -m "not slow"
 
-  # Chaos tests (nightly or on demand)
-  chaos:
-    runs-on: ubuntu-latest
-    needs: integration
-    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[chaos]')
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio
-          
-      - name: Run chaos tests
-        run: |
-          cd backend
-          PYTHONPATH=. pytest tests/chaos -v -m chaos
-
-  # Legacy tests (nightly only, warn on failure)
-  legacy:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio
-          
-      - name: Run legacy tests
-        run: |
-          cd backend
-          PYTHONPATH=. pytest tests/legacy -v || echo "::warning::Legacy tests failed - scheduled for removal"
-
-  # M6: CostSim V2 Circuit Breaker tests (critical)
+  # M6: CostSim V2 Circuit Breaker tests
   costsim:
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [setup-neon-branch, unit-tests]
     services:
       postgres:
         image: postgres:15
@@ -335,6 +386,11 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.use_neon == 'true' && needs.setup-neon-branch.outputs.database_url || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+      COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+      COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+      COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
     steps:
       - uses: actions/checkout@v4
 
@@ -349,14 +405,9 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx asyncpg
 
-      - name: Wait for PostgreSQL to be fully ready
-        env:
-          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
+      - name: Wait for PostgreSQL (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
-          if [ -n "$NEON_URL" ]; then
-            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
-            exit 0
-          fi
           echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
@@ -370,93 +421,49 @@ jobs:
           exit 1
 
       - name: Run Alembic migrations
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
-          # Trim trailing whitespace from DATABASE_URL (GitHub secrets sometimes have trailing spaces)
           export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
-      - name: Debug - Check environment
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-        run: |
-          echo "DATABASE_URL set: $(if [ -n "$DATABASE_URL" ]; then echo 'YES (hidden)'; else echo 'NO'; fi)"
-          echo "Python version: $(python --version)"
-          cd backend
-          python -c "import os; print('DB URL prefix:', os.environ.get('DATABASE_URL', 'NOT SET')[:30] + '...')"
-
       - name: Run circuit breaker tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          # Override default /var/lib/aos paths for CI (no write perms)
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_circuit_breaker.py -v --tb=long
 
       - name: Run async circuit breaker tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_circuit_breaker_async.py -v
 
       - name: Run leader election tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_leader.py -v
 
       - name: Run canary tests
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           COSTSIM_V2_SANDBOX: "true"
-          # Override default /var/lib/aos paths for CI (no write perms)
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_canary.py -v
 
       - name: Run alert worker tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/costsim/test_alert_worker.py -v
 
       - name: Run all costsim tests (comprehensive)
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
           COSTSIM_V2_SANDBOX: "true"
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
-          # Exclude test_integration_real_db.py - it has async lifecycle issues
-          # Run those separately with: pytest -m integration
           PYTHONPATH=. pytest tests/costsim/ -v --tb=short --ignore=tests/costsim/test_integration_real_db.py
 
   # M6: CostSim Integration Tests with real DB + Alertmanager
   costsim-integration:
     runs-on: ubuntu-latest
-    needs: costsim
+    needs: [setup-neon-branch, costsim]
     services:
       postgres:
         image: postgres:15
@@ -480,6 +487,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.use_neon == 'true' && needs.setup-neon-branch.outputs.database_url || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+      ALERTMANAGER_URL: http://localhost:9093
+      COSTSIM_V2_SANDBOX: "true"
+      COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+      COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+      COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
     steps:
       - uses: actions/checkout@v4
 
@@ -494,14 +508,9 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx asyncpg
 
-      - name: Wait for PostgreSQL to be fully ready
-        env:
-          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
+      - name: Wait for PostgreSQL (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
-          if [ -n "$NEON_URL" ]; then
-            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
-            exit 0
-          fi
           echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
@@ -515,33 +524,20 @@ jobs:
           exit 1
 
       - name: Run Alembic migrations
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run CB integration tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          ALERTMANAGER_URL: http://localhost:9093
-          COSTSIM_V2_SANDBOX: "true"
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
-          # Exclude test_integration_real_db.py - it has async lifecycle issues
           PYTHONPATH=. pytest tests/costsim/ -v --tb=short --ignore=tests/costsim/test_integration_real_db.py
 
-      # Note: Table verification steps removed - they require direct psql access
-      # which doesn't work with Neon. Tests themselves verify functionality.
-
-  # M6: CostSim Tests with WireMock (faster, no real Alertmanager)
+  # M6: CostSim Tests with WireMock
   costsim-wiremock:
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [setup-neon-branch, unit-tests]
     services:
       postgres:
         image: postgres:15
@@ -556,6 +552,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.use_neon == 'true' && needs.setup-neon-branch.outputs.database_url || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+      ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
+      COSTSIM_V2_SANDBOX: "true"
+      COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+      COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+      COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
     steps:
       - uses: actions/checkout@v4
 
@@ -572,7 +575,6 @@ jobs:
 
       - name: Start WireMock with mounted mappings
         run: |
-          # Start WireMock with mappings from repo
           docker run -d --name wiremock \
             -p 8080:8080 \
             -v ${{ github.workspace }}/tools/wiremock/mappings:/home/wiremock/mappings:ro \
@@ -580,7 +582,6 @@ jobs:
             wiremock/wiremock:3.3.1 \
             --verbose --global-response-templating
 
-          # Wait for WireMock to be ready
           echo "Waiting for WireMock to start..."
           for i in {1..30}; do
             if curl -sf http://localhost:8080/__admin/health > /dev/null 2>&1; then
@@ -591,19 +592,12 @@ jobs:
             sleep 1
           done
 
-          # Verify mappings loaded from files
           echo "WireMock mappings loaded:"
           curl -s http://localhost:8080/__admin/mappings | jq '.mappings | length'
-          curl -s http://localhost:8080/__admin/mappings | jq '.mappings[].request.urlPattern' || true
 
-      - name: Wait for PostgreSQL to be fully ready
-        env:
-          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
+      - name: Wait for PostgreSQL (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
-          if [ -n "$NEON_URL" ]; then
-            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
-            exit 0
-          fi
           echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
@@ -617,36 +611,19 @@ jobs:
           exit 1
 
       - name: Run Alembic migrations
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run circuit breaker integration tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
-          COSTSIM_V2_SANDBOX: "true"
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           PYTHONPATH=. pytest tests/integration/test_circuit_breaker.py -v --tb=short
 
       - name: Run all costsim tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
-          COSTSIM_V2_SANDBOX: "true"
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
-          # Exclude test_integration_real_db.py - it has async lifecycle issues
           PYTHONPATH=. pytest tests/costsim/ -v --tb=short --ignore=tests/costsim/test_integration_real_db.py
 
       - name: Verify WireMock received requests
@@ -654,7 +631,6 @@ jobs:
           echo "=== WireMock Request Log ==="
           REQUESTS=$(curl -s http://localhost:8080/__admin/requests)
           echo "$REQUESTS" | jq '.requests | length'
-          echo "$REQUESTS" | jq '.requests[] | {method: .request.method, url: .request.url}' || true
 
       - name: Cleanup WireMock
         if: always()
@@ -663,7 +639,7 @@ jobs:
   # E2E tests (full stack with running server)
   e2e-tests:
     runs-on: ubuntu-latest
-    needs: [unit-tests]
+    needs: [setup-neon-branch, unit-tests]
     services:
       postgres:
         image: postgres:15
@@ -687,26 +663,23 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.use_neon == 'true' && needs.setup-neon-branch.outputs.database_url || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+      REDIS_URL: redis://localhost:6379/0
+      AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
+      MEMORY_FAIL_OPEN_OVERRIDE: "true"
+      COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
+      COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
+      COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check secrets availability
+      - name: Check database mode
         run: |
-          echo "=== Secrets Check ==="
-          if [ -n "${{ secrets.NEON_DATABASE_URL }}" ]; then
-            echo "✓ NEON_DATABASE_URL is set"
+          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
+            echo "✅ Using Neon PostgreSQL (ephemeral branch)"
           else
-            echo "⚠ NEON_DATABASE_URL not set (using Docker Postgres fallback)"
-          fi
-          if [ -n "${{ secrets.UPSTASH_REDIS_URL }}" ]; then
-            echo "✓ UPSTASH_REDIS_URL is set"
-          else
-            echo "⚠ UPSTASH_REDIS_URL not set (using Docker Redis fallback)"
-          fi
-          if [ -n "${{ secrets.AOS_API_KEY }}" ]; then
-            echo "✓ AOS_API_KEY is set"
-          else
-            echo "⚠ AOS_API_KEY not set (using test-e2e-key fallback)"
+            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
           fi
 
       - name: Set up Python
@@ -721,14 +694,9 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pytest pytest-asyncio httpx asyncpg
 
-      - name: Wait for PostgreSQL to be fully ready
-        env:
-          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
+      - name: Wait for PostgreSQL (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
-          if [ -n "$NEON_URL" ]; then
-            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
-            exit 0
-          fi
           echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
@@ -742,23 +710,12 @@ jobs:
           exit 1
 
       - name: Run Alembic migrations
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Start application server
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
-          AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
-          # Fail-open for non-critical services in CI
-          MEMORY_FAIL_OPEN_OVERRIDE: "true"
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
         run: |
           cd backend
           nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
@@ -768,7 +725,6 @@ jobs:
               echo "Server is ready!"
               exit 0
             fi
-            # Show server logs if startup is taking too long
             if [ $i -eq 15 ]; then
               echo "=== Server startup logs (debugging slow startup) ==="
               cat server.log 2>/dev/null || true
@@ -783,31 +739,18 @@ jobs:
 
       - name: Start worker (required for run execution)
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
-          AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
-          MEMORY_FAIL_OPEN_OVERRIDE: "true"
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
           PYTHONPATH: .
-          # Force unbuffered Python output for logs
           PYTHONUNBUFFERED: "1"
         run: |
           cd backend
-          # Start worker with unbuffered output
           nohup python -u -m app.worker.pool > worker.log 2>&1 &
           WORKER_PID=$!
           echo "Worker started (PID: $WORKER_PID)"
-
-          # Wait and verify worker is running
           sleep 5
           if ps -p $WORKER_PID > /dev/null 2>&1; then
             echo "Worker is running (PID: $WORKER_PID)"
-            echo "=== Worker startup logs ==="
             cat worker.log | head -20
           else
-            echo "=== Worker logs (process died) ==="
             cat worker.log 2>/dev/null || true
             echo "ERROR: Worker process $WORKER_PID is not running!"
             exit 1
@@ -815,12 +758,6 @@ jobs:
 
       - name: Run E2E tests
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
-          AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
-          COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
-          COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
-          COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
           RUN_E2E_TESTS: "1"
         run: |
           cd backend
@@ -836,28 +773,10 @@ jobs:
             backend/worker.log
           if-no-files-found: ignore
 
-  # Lint Prometheus rules
-  lint-alerts:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate Prometheus rules
-        run: |
-          if [ -f ops/prometheus_rules/alerts.yml ]; then
-            echo "Prometheus rules file exists"
-            # Add promtool check when available
-            # promtool check rules ops/prometheus_rules/alerts.yml
-          else
-            echo "::error::Prometheus rules file missing"
-            exit 1
-          fi
-
-  # M10: Combined Tests (PIN-058 consolidation: 3 jobs → 1)
-  # Includes: Redis config check, leader election, production hardening, outbox E2E
+  # M10: Combined Tests
   m10-tests:
     runs-on: ubuntu-latest
-    needs: [integration]
+    needs: [setup-neon-branch, integration]
     services:
       postgres:
         image: postgres:15
@@ -881,6 +800,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.use_neon == 'true' && needs.setup-neon-branch.outputs.database_url || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
 
@@ -900,22 +822,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y redis-tools
 
-      # Step 1: Redis Config Check
       - name: Check Redis configuration
-        env:
-          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           echo "=== M10 Redis Configuration Check ==="
-
-          # Run the config check (non-strict in CI since Docker Redis defaults differ)
           PYTHONPATH=. python -m scripts.ops.check_redis_config --json || true
-
-          # Verify stream operations work
           redis-cli XADD m10:ci:test '*' test_key test_value > /dev/null
           RESULT=$(redis-cli XLEN m10:ci:test)
           redis-cli DEL m10:ci:test > /dev/null
-
           if [ "$RESULT" -ge 1 ]; then
             echo "✓ Redis stream operations working"
           else
@@ -923,15 +837,9 @@ jobs:
             exit 1
           fi
 
-      # Step 2: Wait for PostgreSQL and run migrations
-      - name: Wait for PostgreSQL to be fully ready
-        env:
-          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
+      - name: Wait for PostgreSQL (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
-          if [ -n "$NEON_URL" ]; then
-            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
-            exit 0
-          fi
           echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
@@ -945,46 +853,111 @@ jobs:
           exit 1
 
       - name: Run Alembic migrations
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
-      # Step 3: Leader Election Tests
       - name: Run M10 leader election tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           echo "=== M10 Leader Election Tests ==="
           PYTHONPATH=. pytest tests/test_m10_leader_election.py -v --tb=short
 
-      # Step 4: Production Hardening Tests
       - name: Run M10 production hardening tests
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           echo "=== M10 Production Hardening Tests ==="
           PYTHONPATH=. pytest tests/test_m10_production_hardening.py -v --tb=short -k "not chaos and not high_volume"
 
-      # Step 5: M10 Metrics Check (alert-first testing)
       - name: Verify M10 metrics registered
         run: |
           cd backend
           echo "=== M10 Metrics Check ==="
           PYTHONPATH=. pytest tests/test_m10_metrics.py -v --tb=short -k "test_m10_metrics_defined or test_m10_metrics_in_registry"
 
-      # Step 6: Outbox E2E Tests (conditional - runs on schedule or [m10] tag)
       - name: Run outbox E2E tests
         if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[outbox]') || contains(github.event.head_commit.message, '[m10]')
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
           echo "=== M10 Outbox E2E Tests ==="
           PYTHONPATH=. pytest tests/test_m10_outbox_e2e.py -v --tb=short
+
+  # ============================================================================
+  # CONDITIONAL JOBS
+  # ============================================================================
+
+  # Chaos tests (nightly or on demand)
+  chaos:
+    runs-on: ubuntu-latest
+    needs: integration
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[chaos]')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run chaos tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/chaos -v -m chaos
+
+  # Legacy tests (nightly only, warn on failure)
+  legacy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run legacy tests
+        run: |
+          cd backend
+          PYTHONPATH=. pytest tests/legacy -v || echo "::warning::Legacy tests failed - scheduled for removal"
+
+  # ============================================================================
+  # CLEANUP: Delete ephemeral Neon branch
+  # ============================================================================
+  cleanup-neon-branch:
+    runs-on: ubuntu-latest
+    needs: [setup-neon-branch, integration, costsim, costsim-integration, costsim-wiremock, e2e-tests, m10-tests]
+    if: always() && needs.setup-neon-branch.outputs.use_neon == 'true'
+    steps:
+      - name: Setup Neon CLI
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Delete ephemeral Neon branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          BRANCH_NAME="ci-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "Deleting Neon branch: $BRANCH_NAME"
+
+          neonctl branches delete "$BRANCH_NAME" \
+            --project-id ${{ secrets.NEON_PROJECT_ID }} \
+            --api-key $NEON_API_KEY \
+            || echo "⚠️ Branch deletion failed (may already be deleted)"
+
+          echo "✅ Cleanup complete"
