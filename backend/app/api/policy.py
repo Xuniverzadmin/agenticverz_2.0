@@ -27,7 +27,10 @@ from uuid import uuid4
 import httpx
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_async_session
 
 logger = logging.getLogger("nova.api.policy")
 
@@ -99,17 +102,6 @@ def _record_webhook_fallback() -> None:
         record_webhook_fallback()
     except Exception as e:
         logger.debug(f"Failed to record webhook fallback metric: {e}")
-
-
-# =============================================================================
-# Database Session Dependency
-# =============================================================================
-
-def get_db_session():
-    """Get database session."""
-    from app.db import engine
-    with Session(engine) as session:
-        yield session
 
 
 # =============================================================================
@@ -301,7 +293,7 @@ def _hash_webhook_secret(secret: str) -> str:
 
 
 async def _get_approval_level_config(
-    session: Session,
+    session: AsyncSession,
     policy_type: PolicyType,
     tenant_id: str,
     agent_id: Optional[str] = None,
@@ -317,8 +309,8 @@ async def _get_approval_level_config(
             PolicyApprovalLevel.policy_type == policy_type.value
         )
 
-        result = session.exec(stmt)
-        configs = result.all()
+        result = await session.execute(stmt)
+        configs = result.scalars().all()
 
         # Find best match (most specific first)
         for config in configs:
@@ -551,7 +543,7 @@ def verify_webhook_signature(
 @router.post("/eval", response_model=PolicyEvalResponse)
 async def evaluate_policy(
     request: PolicyEvalRequest,
-    session: Session = Depends(get_db_session)
+    session: AsyncSession = Depends(get_async_session)
 ) -> PolicyEvalResponse:
     """
     Sandbox evaluation of policy for a skill execution.
@@ -628,7 +620,7 @@ async def evaluate_policy(
 async def create_approval_request(
     request: ApprovalRequestCreate,
     background_tasks: BackgroundTasks,
-    session: Session = Depends(get_db_session)
+    session: AsyncSession = Depends(get_async_session)
 ) -> ApprovalRequestResponse:
     """
     Create a new approval request (persisted to DB).
@@ -668,8 +660,8 @@ async def create_approval_request(
     approval.set_payload(request.payload)
 
     session.add(approval)
-    session.commit()
-    session.refresh(approval)
+    await session.commit()
+    await session.refresh(approval)
 
     # Record metric
     _record_approval_request_created(request.policy_type.value)
@@ -704,12 +696,12 @@ async def create_approval_request(
 @router.get("/requests/{request_id}", response_model=ApprovalStatusResponse)
 async def get_approval_request(
     request_id: str,
-    session: Session = Depends(get_db_session)
+    session: AsyncSession = Depends(get_async_session)
 ) -> ApprovalStatusResponse:
     """Get the current status of an approval request."""
     from app.db import ApprovalRequest as ApprovalRequestModel
 
-    approval = session.get(ApprovalRequestModel, request_id)
+    approval = await session.get(ApprovalRequestModel, request_id)
     if not approval:
         raise HTTPException(status_code=404, detail="Approval request not found")
 
@@ -720,7 +712,7 @@ async def get_approval_request(
     if now > expires_at and approval.status == "pending":
         approval.status = "expired"
         approval.updated_at = now
-        session.commit()
+        await session.commit()
         _record_approval_action("expired")
 
     data = approval.to_dict()
@@ -830,12 +822,12 @@ async def approve_request(
     request_id: str,
     action: ApprovalAction,
     background_tasks: BackgroundTasks,
-    session: Session = Depends(get_db_session)
+    session: AsyncSession = Depends(get_async_session)
 ) -> ApprovalStatusResponse:
     """Approve an approval request."""
     from app.db import ApprovalRequest as ApprovalRequestModel
 
-    approval = session.get(ApprovalRequestModel, request_id)
+    approval = await session.get(ApprovalRequestModel, request_id)
     if not approval:
         raise HTTPException(status_code=404, detail="Approval request not found")
 
@@ -852,7 +844,7 @@ async def approve_request(
     if now > expires_at:
         approval.status = "expired"
         approval.updated_at = now
-        session.commit()
+        await session.commit()
         raise HTTPException(status_code=400, detail="Approval request has expired")
 
     # Record the approval
@@ -867,7 +859,7 @@ async def approve_request(
         )
         approval.resolved_at = now
 
-    session.commit()
+    await session.commit()
 
     # Record metric
     if approval.status == "approved":
@@ -899,12 +891,12 @@ async def reject_request(
     request_id: str,
     action: ApprovalAction,
     background_tasks: BackgroundTasks,
-    session: Session = Depends(get_db_session)
+    session: AsyncSession = Depends(get_async_session)
 ) -> ApprovalStatusResponse:
     """Reject an approval request."""
     from app.db import ApprovalRequest as ApprovalRequestModel
 
-    approval = session.get(ApprovalRequestModel, request_id)
+    approval = await session.get(ApprovalRequestModel, request_id)
     if not approval:
         raise HTTPException(status_code=404, detail="Approval request not found")
 
@@ -922,7 +914,7 @@ async def reject_request(
         reason=action.notes or "Rejected"
     )
     approval.resolved_at = now
-    session.commit()
+    await session.commit()
 
     # Record metric
     _record_approval_action("rejected")
@@ -951,7 +943,7 @@ async def list_approval_requests(
     tenant_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    session: Session = Depends(get_db_session)
+    session: AsyncSession = Depends(get_async_session)
 ) -> List[ApprovalStatusResponse]:
     """List approval requests with optional filtering."""
     from app.db import ApprovalRequest as ApprovalRequestModel
@@ -966,7 +958,8 @@ async def list_approval_requests(
     stmt = stmt.order_by(ApprovalRequestModel.created_at.desc())
     stmt = stmt.offset(offset).limit(limit)
 
-    results = session.exec(stmt).all()
+    result = await session.execute(stmt)
+    results = result.scalars().all()
 
     responses = []
     now = datetime.now(timezone.utc)
@@ -1002,7 +995,7 @@ async def list_approval_requests(
             updated_at=data["updated_at"]
         ))
 
-    session.commit()
+    await session.commit()
     return responses
 
 
@@ -1010,7 +1003,7 @@ async def list_approval_requests(
 # Escalation Worker (called by scheduler)
 # =============================================================================
 
-async def run_escalation_check(session: Session) -> int:
+async def run_escalation_check(session: AsyncSession) -> int:
     """
     Check for pending requests that need escalation.
     Called by external scheduler (cron/celery).
@@ -1025,7 +1018,8 @@ async def run_escalation_check(session: Session) -> int:
         ApprovalRequestModel.status == "pending"
     )
 
-    results = session.exec(stmt).all()
+    result = await session.execute(stmt)
+    results = result.scalars().all()
 
     for approval in results:
         created_at = approval.created_at.replace(tzinfo=timezone.utc) if approval.created_at.tzinfo is None else approval.created_at
@@ -1057,7 +1051,7 @@ async def run_escalation_check(session: Session) -> int:
                     None
                 )
 
-    session.commit()
+    await session.commit()
 
     if escalated_count > 0:
         logger.info(f"Escalation check complete: {escalated_count} requests escalated")
@@ -1075,10 +1069,10 @@ def run_escalation_task():
     Can be called from cron, celery, or APScheduler.
     """
     import asyncio
-    from app.db import engine
+    from app.database import AsyncSessionLocal
 
     async def _run():
-        with Session(engine) as session:
+        async with AsyncSessionLocal() as session:
             return await run_escalation_check(session)
 
     return asyncio.run(_run())
