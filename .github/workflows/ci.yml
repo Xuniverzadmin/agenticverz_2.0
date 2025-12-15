@@ -123,6 +123,63 @@ jobs:
           fi
 
   # ============================================================================
+  # RUN MIGRATIONS ONCE (prevents concurrent migration race condition)
+  # ============================================================================
+  run-migrations:
+    runs-on: ubuntu-latest
+    needs: [setup-neon-branch]
+    if: needs.setup-neon-branch.outputs.use_neon == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Neon CLI
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Configure database connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          echo "✅ Configuring Neon connection for migrations"
+          BRANCH_NAME="${{ needs.setup-neon-branch.outputs.branch_name }}"
+          CONN=$(neonctl connection-string "$BRANCH_NAME" \
+            --project-id ${{ secrets.NEON_PROJECT_ID }} \
+            --api-key $NEON_API_KEY \
+            --database-name neondb \
+            --role-name neondb_owner)
+          if [[ "$CONN" != *"sslmode="* ]]; then
+            CONN="${CONN}?sslmode=require"
+          fi
+          echo "DATABASE_URL=$CONN" >> $GITHUB_ENV
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run Alembic migrations (single source of truth)
+        run: |
+          cd backend
+          echo "=== Running migrations on Neon ephemeral branch ==="
+          echo "This is the ONLY job that runs migrations on Neon"
+          echo ""
+          echo "Current head:"
+          alembic current || echo "No migrations applied yet"
+          echo ""
+          echo "Upgrading to head..."
+          alembic upgrade head
+          echo ""
+          echo "Final state:"
+          alembic current
+          echo "✅ Migrations complete"
+
+  # ============================================================================
   # FAST JOBS (No DB required)
   # ============================================================================
 
@@ -301,7 +358,8 @@ jobs:
   # Integration tests
   integration:
     runs-on: ubuntu-latest
-    needs: [setup-neon-branch, determinism]
+    needs: [setup-neon-branch, run-migrations, determinism]
+    if: always() && (needs.setup-neon-branch.result == 'success' || needs.setup-neon-branch.result == 'skipped') && needs.determinism.result == 'success'
     services:
       # Docker Postgres - only used when Neon is not available
       postgres:
@@ -385,10 +443,18 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Run Alembic migrations
+      - name: Run Alembic migrations (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
           cd backend
           alembic upgrade head
+
+      - name: Verify migrations at head (Neon)
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        run: |
+          cd backend
+          echo "Migrations already run by run-migrations job"
+          alembic current
 
       - name: Run integration tests
         run: |
@@ -398,7 +464,8 @@ jobs:
   # M6: CostSim V2 Circuit Breaker tests
   costsim:
     runs-on: ubuntu-latest
-    needs: [setup-neon-branch, unit-tests]
+    needs: [setup-neon-branch, run-migrations, unit-tests]
+    if: always() && (needs.setup-neon-branch.result == 'success' || needs.setup-neon-branch.result == 'skipped') && needs.unit-tests.result == 'success'
     services:
       postgres:
         image: postgres:15
@@ -473,7 +540,8 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Run Alembic migrations
+      - name: Run Alembic migrations (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
           cd backend
           alembic upgrade head
@@ -515,7 +583,8 @@ jobs:
   # M6: CostSim Integration Tests with real DB + Alertmanager
   costsim-integration:
     runs-on: ubuntu-latest
-    needs: [setup-neon-branch, costsim]
+    needs: [setup-neon-branch, run-migrations, costsim]
+    if: always() && (needs.setup-neon-branch.result == 'success' || needs.setup-neon-branch.result == 'skipped') && needs.costsim.result == 'success'
     services:
       postgres:
         image: postgres:15
@@ -601,7 +670,8 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Run Alembic migrations
+      - name: Run Alembic migrations (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
           cd backend
           alembic upgrade head
@@ -614,7 +684,8 @@ jobs:
   # M6: CostSim Tests with WireMock
   costsim-wiremock:
     runs-on: ubuntu-latest
-    needs: [setup-neon-branch, unit-tests]
+    needs: [setup-neon-branch, run-migrations, unit-tests]
+    if: always() && (needs.setup-neon-branch.result == 'success' || needs.setup-neon-branch.result == 'skipped') && needs.unit-tests.result == 'success'
     services:
       postgres:
         image: postgres:15
@@ -713,7 +784,8 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Run Alembic migrations
+      - name: Run Alembic migrations (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
           cd backend
           alembic upgrade head
@@ -741,7 +813,8 @@ jobs:
   # E2E tests (full stack with running server)
   e2e-tests:
     runs-on: ubuntu-latest
-    needs: [setup-neon-branch, unit-tests]
+    needs: [setup-neon-branch, run-migrations, unit-tests]
+    if: always() && (needs.setup-neon-branch.result == 'success' || needs.setup-neon-branch.result == 'skipped') && needs.unit-tests.result == 'success'
     services:
       postgres:
         image: postgres:15
@@ -829,7 +902,8 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Run Alembic migrations (with rollback test)
+      - name: Run Alembic migrations with rollback test (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
           cd backend
           echo "=== Step 1: Upgrade to head ==="
@@ -848,6 +922,13 @@ jobs:
 
           echo ""
           echo "=== Migration Test Complete ==="
+          alembic current
+
+      - name: Verify migrations at head (Neon)
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        run: |
+          cd backend
+          echo "Migrations already run by run-migrations job"
           alembic current
 
       - name: Schema audit (drift detection)
@@ -994,7 +1075,8 @@ jobs:
   # M10: Combined Tests
   m10-tests:
     runs-on: ubuntu-latest
-    needs: [setup-neon-branch, integration]
+    needs: [setup-neon-branch, run-migrations, integration]
+    if: always() && (needs.setup-neon-branch.result == 'success' || needs.setup-neon-branch.result == 'skipped') && needs.integration.result == 'success'
     services:
       postgres:
         image: postgres:15
@@ -1096,7 +1178,8 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Run Alembic migrations
+      - name: Run Alembic migrations (Docker fallback only)
+        if: needs.setup-neon-branch.outputs.use_neon != 'true'
         run: |
           cd backend
           alembic upgrade head
@@ -1183,7 +1266,7 @@ jobs:
   # ============================================================================
   cleanup-neon-branch:
     runs-on: ubuntu-latest
-    needs: [setup-neon-branch, integration, costsim, costsim-integration, costsim-wiremock, e2e-tests, m10-tests]
+    needs: [setup-neon-branch, run-migrations, integration, costsim, costsim-integration, costsim-wiremock, e2e-tests, m10-tests]
     if: always() && needs.setup-neon-branch.outputs.use_neon == 'true'
     steps:
       - name: Setup Neon CLI

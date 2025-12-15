@@ -157,29 +157,63 @@ Added new checks based on lessons learned:
 | Job | Status |
 |-----|--------|
 | e2e-tests | PASSED (20/20) |
-| m10-tests | IMPROVED (5/8 passed) |
+| m10-tests | **PASSED (8/8)** |
 
-**Overall:** 12/14 → 13/14 jobs passing
+**Overall:** 12/14 → **14/14** jobs passing
 
 ---
 
-## Remaining M10 Issues
+### Issue 7: Concurrent Migration Race Condition
 
-Pre-existing schema drift in Neon parent branch:
+**Symptom:**
+```
+psycopg2.errors.InternalError_: tuple concurrently updated
+```
+`costsim-wiremock` and other jobs intermittently failed when running migrations simultaneously.
 
-1. **Function signature mismatch:**
-   ```
-   claim_outbox_events(integer, unknown) does not exist
-   ```
-   Test passes wrong argument types.
+**Root Cause:** Multiple CI jobs (integration, costsim, costsim-integration, costsim-wiremock, e2e-tests, m10-tests) all ran `alembic upgrade head` in parallel on the same Neon ephemeral branch. This caused concurrent updates to the `alembic_version` table.
 
-2. **Missing column:**
-   ```
-   column "stream_msg_id" of relation "dead_letter_archive" does not exist
-   ```
-   Migration 022 may need update.
+**Fix:** Added dedicated `run-migrations` job that runs migrations ONCE after `setup-neon-branch`. All DB-dependent jobs now:
+1. Depend on `run-migrations` job
+2. Only run migrations for Docker fallback (`if: needs.setup-neon-branch.outputs.use_neon != 'true'`)
 
-These require separate investigation of Neon parent branch schema.
+**Pattern:**
+```yaml
+# New job runs migrations once
+run-migrations:
+  needs: [setup-neon-branch]
+  if: needs.setup-neon-branch.outputs.use_neon == 'true'
+  steps:
+    - run: alembic upgrade head  # ONLY migration run
+
+# DB jobs depend on it and skip migrations for Neon
+costsim-wiremock:
+  needs: [setup-neon-branch, run-migrations, unit-tests]
+  if: always() && ...
+  steps:
+    - name: Run Alembic migrations (Docker fallback only)
+      if: needs.setup-neon-branch.outputs.use_neon != 'true'
+      run: alembic upgrade head
+```
+
+**Files Changed:** `.github/workflows/ci.yml`
+
+---
+
+## M10 Issues - RESOLVED
+
+All M10 schema drift issues fixed by migration 035:
+
+1. **Function signature mismatch:** ✅ FIXED
+   - Created `claim_outbox_events` overloads for both signatures
+   - Created `complete_outbox_event` overloads for worker and test signatures
+
+2. **Missing columns:** ✅ FIXED
+   - Added `stream_msg_id` column
+   - Added `stream_name` column
+   - Added `process_after` column
+
+**Migration:** `backend/alembic/versions/035_m10_schema_repair.py`
 
 ---
 
@@ -195,17 +229,20 @@ These require separate investigation of Neon parent branch schema.
 
 5. **CI Diagnostics:** Always log enough context for debugging - truncated logs hide root causes.
 
+6. **Concurrent Migrations:** When multiple CI jobs share a database, run migrations ONCE in a dedicated job. Never run `alembic upgrade head` in parallel across jobs.
+
 ---
 
 ## Files Changed Summary
 
 | File | Change |
 |------|--------|
-| `.github/workflows/ci.yml` | Neon per-job DATABASE_URL, worker diagnostics |
+| `.github/workflows/ci.yml` | Neon per-job DATABASE_URL, worker diagnostics, **run-migrations job** |
 | `scripts/ops/ci_consistency_check.sh` | v1.1 with new checks |
 | `backend/alembic/versions/029_m15_sba_validator.py` | Renamed (shorter ID) |
 | `backend/alembic/versions/030_m17_care_routing.py` | Updated down_revision |
 | `backend/alembic/versions/034_fix_outbox_constraint.py` | NEW - fix publish_outbox |
+| `backend/alembic/versions/035_m10_schema_repair.py` | NEW - M10 schema repair |
 | `backend/app/tasks/m10_metrics_collector.py` | Import fix |
 | `backend/app/api/policy.py` | Import fix |
 | `backend/app/api/policy_layer.py` | Import fix |
