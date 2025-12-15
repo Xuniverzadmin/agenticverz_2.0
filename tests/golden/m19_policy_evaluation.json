@@ -1,0 +1,45 @@
+{
+  "data": {
+    "categories_checked": 5,
+    "evaluation_id": "golden-test-m19-001",
+    "final_decision": "ALLOW",
+    "request": {
+      "action": "execute_skill",
+      "skill": "http_call",
+      "target_url": "https://api.example.com"
+    },
+    "rules_evaluated": [
+      {
+        "category": "SAFETY",
+        "result": "pass",
+        "rule": "block_internal_ips"
+      },
+      {
+        "category": "PRIVACY",
+        "result": "pass",
+        "rule": "no_pii_logging"
+      },
+      {
+        "category": "OPERATIONAL",
+        "result": "pass",
+        "rule": "rate_limit_check"
+      },
+      {
+        "category": "ROUTING",
+        "result": "skip",
+        "rule": "prefer_cached"
+      },
+      {
+        "category": "CUSTOM_DOMAIN",
+        "result": "pass",
+        "rule": "api_allowlist"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "metadata": {
+    "created_at": "2025-12-15T13:23:10.255808",
+    "framework": "agenticverz-golden-test",
+    "version": "1.0"
+  }
+}

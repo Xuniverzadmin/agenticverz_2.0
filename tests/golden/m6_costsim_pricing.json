@@ -1,0 +1,27 @@
+{
+  "data": {
+    "budget_remaining_usd": 0.99789,
+    "deterministic_hash": "a1b2c3d4",
+    "run_id": "golden-test-m6-001",
+    "skill_costs": {
+      "http_call": {
+        "cost_usd": 0.0001,
+        "requests": 5
+      },
+      "kv_store": {
+        "cost_usd": 1e-05,
+        "operations": 10
+      },
+      "llm_invoke": {
+        "cost_usd": 0.002,
+        "tokens": 1000
+      }
+    },
+    "total_cost_usd": 0.00211
+  },
+  "metadata": {
+    "created_at": "2025-12-15T13:23:10.254564",
+    "framework": "agenticverz-golden-test",
+    "version": "1.0"
+  }
+}

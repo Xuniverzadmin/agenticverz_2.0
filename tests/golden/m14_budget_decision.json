@@ -1,0 +1,22 @@
+{
+  "data": {
+    "budget_available_usd": 1.0,
+    "cost_estimate_usd": 0.15,
+    "decision": "APPROVED",
+    "envelope_status": {
+      "daily_limit_usd": 10.0,
+      "daily_used_usd": 2.5,
+      "remaining_usd": 7.5
+    },
+    "fallback_model": null,
+    "model": "gpt-4",
+    "request_id": "golden-test-m14-001",
+    "requested_tokens": 5000,
+    "risk_score": 0.15
+  },
+  "metadata": {
+    "created_at": "2025-12-15T13:23:10.254892",
+    "framework": "agenticverz-golden-test",
+    "version": "1.0"
+  }
+}

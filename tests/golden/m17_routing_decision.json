@@ -1,0 +1,43 @@
+{
+  "data": {
+    "confidence": 0.95,
+    "deterministic": true,
+    "pipeline_stages": [
+      {
+        "name": "capability_probe",
+        "result": "compatible",
+        "stage": 1
+      },
+      {
+        "name": "cost_check",
+        "result": "within_budget",
+        "stage": 2
+      },
+      {
+        "name": "risk_assessment",
+        "result": "low_risk",
+        "stage": 3
+      },
+      {
+        "name": "load_balance",
+        "result": "agent_a",
+        "stage": 4
+      },
+      {
+        "name": "final_route",
+        "result": "agent_a:model_x",
+        "stage": 5
+      }
+    ],
+    "request_id": "golden-test-m17-001",
+    "risk_level": "low",
+    "selected_agent": "agent_a",
+    "selected_model": "model_x",
+    "task_type": "text_generation"
+  },
+  "metadata": {
+    "created_at": "2025-12-15T13:23:10.255175",
+    "framework": "agenticverz-golden-test",
+    "version": "1.0"
+  }
+}

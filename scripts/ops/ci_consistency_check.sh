@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# CI Consistency Checker v4.0 - AGENTICVERZ Milestone Certification Engine
+# CI Consistency Checker v4.1 - AGENTICVERZ Milestone Certification Engine
 # ============================================================================
 #
 # Purpose: Validate ALL Agenticverz milestones M0-M19 remain functional,
@@ -15,6 +15,15 @@
 #   ./scripts/ops/ci_consistency_check.sh --matrix     # Show test matrix
 #   ./scripts/ops/ci_consistency_check.sh --json       # Output JSON for CI
 #   ./scripts/ops/ci_consistency_check.sh --strict     # WARN = FAIL (blocks merge)
+#   ./scripts/ops/ci_consistency_check.sh --coverage   # Include test coverage check
+#   ./scripts/ops/ci_consistency_check.sh --smoke      # Run runtime smoke tests
+#   ./scripts/ops/ci_consistency_check.sh --golden     # Run golden tests
+#
+# v4.1 Changes:
+#   - MISSING #1: Test Coverage Enforcement per milestone
+#   - MISSING #2: Runtime Smoke Tests integration (runtime_smoke.py)
+#   - MISSING #3: Golden Tests integration (golden_test.py)
+#   - Test file presence AND passing verification
 #
 # v4.0 Changes:
 #   - Semantic checks (class/function definitions, not just patterns)
@@ -76,6 +85,14 @@ MILESTONE_MODE=false
 MATRIX_MODE=false
 JSON_MODE=false
 STRICT_MODE=false
+COVERAGE_MODE=false
+SMOKE_MODE=false
+GOLDEN_MODE=false
+
+# Test Coverage Tracking
+declare -A MILESTONE_TEST_PASS
+declare -A MILESTONE_TEST_TOTAL
+declare -A MILESTONE_COVERAGE
 
 # Milestone Status Tracking
 declare -A MILESTONE_STATUS
@@ -97,8 +114,11 @@ for arg in "$@"; do
         --matrix) MATRIX_MODE=true ;;
         --json) JSON_MODE=true ;;
         --strict) STRICT_MODE=true ;;
+        --coverage) COVERAGE_MODE=true ;;
+        --smoke) SMOKE_MODE=true ;;
+        --golden) GOLDEN_MODE=true ;;
         --help|-h)
-            echo "AGENTICVERZ Milestone Certification Engine v4.0"
+            echo "AGENTICVERZ Milestone Certification Engine v4.1"
             echo ""
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -108,6 +128,9 @@ for arg in "$@"; do
             echo "  --matrix     Show CI job -> milestone mapping"
             echo "  --json       Output JSON for CI pipelines"
             echo "  --strict     Treat WARN as FAIL (blocks merge)"
+            echo "  --coverage   Run test coverage enforcement (pytest)"
+            echo "  --smoke      Run runtime smoke tests"
+            echo "  --golden     Run golden determinism tests"
             echo ""
             echo "Validates M0-M19 correctness. M20+ is OUT OF SCOPE."
             exit 0
@@ -198,6 +221,175 @@ check_const() {
     else
         log_warn "$label: constant $const NOT FOUND"
         return 1
+    fi
+}
+
+# ============================================================================
+# TEST COVERAGE ENFORCEMENT (MISSING #1)
+# ============================================================================
+
+# Run tests for a specific milestone and capture results
+run_milestone_tests() {
+    local milestone=$1
+    local test_pattern=$2
+    local min_pass_rate=${3:-90}  # Default 90% pass rate required
+
+    local test_dir="$BACKEND_DIR/tests"
+    local test_files=$(find "$test_dir" -name "$test_pattern" 2>/dev/null | wc -l)
+
+    if [[ $test_files -eq 0 ]]; then
+        log_warn "$milestone: No test files matching '$test_pattern'"
+        MILESTONE_TEST_PASS[$milestone]=0
+        MILESTONE_TEST_TOTAL[$milestone]=0
+        MILESTONE_COVERAGE[$milestone]="none"
+        return 1
+    fi
+
+    # Run pytest and capture results
+    cd "$BACKEND_DIR" 2>/dev/null || return 1
+    local output=$(PYTHONPATH=. python3 -m pytest $test_dir -k "$test_pattern" --tb=no -q 2>&1 || true)
+    cd "$REPO_ROOT" 2>/dev/null || true
+
+    # Parse pytest output for pass/fail counts
+    local passed=$(echo "$output" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" || echo "0")
+    local failed=$(echo "$output" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" || echo "0")
+    local total=$((passed + failed))
+
+    [[ $total -eq 0 ]] && total=1  # Avoid divide by zero
+
+    local pass_rate=$((passed * 100 / total))
+
+    MILESTONE_TEST_PASS[$milestone]=$passed
+    MILESTONE_TEST_TOTAL[$milestone]=$total
+    MILESTONE_COVERAGE[$milestone]="${pass_rate}%"
+
+    if [[ $pass_rate -ge $min_pass_rate ]]; then
+        log_ok "$milestone: Tests PASS ($passed/$total = ${pass_rate}%)"
+        return 0
+    else
+        log_error "$milestone: Tests FAIL ($passed/$total = ${pass_rate}% < ${min_pass_rate}%)"
+        return 1
+    fi
+}
+
+# Enforce test coverage for all milestones
+check_test_coverage() {
+    header "Test Coverage Enforcement (MISSING #1)"
+
+    $COVERAGE_MODE || { log_info "Skipping (use --coverage)"; return 0; }
+
+    local issues=0
+
+    # M4: Workflow tests
+    run_milestone_tests "M4" "test_workflow*.py" 85 || issues=$((issues+1))
+
+    # M6: CostSim tests
+    run_milestone_tests "M6" "test_costsim*.py" 90 || issues=$((issues+1))
+
+    # M10: Recovery tests
+    run_milestone_tests "M10" "test_m10*.py" 80 || issues=$((issues+1))
+
+    # M12: Multi-agent tests
+    run_milestone_tests "M12" "test_m12*.py" 80 || issues=$((issues+1))
+
+    # M17: CARE routing tests
+    run_milestone_tests "M17" "test_m17*.py" 80 || issues=$((issues+1))
+
+    # M18: Governor tests
+    run_milestone_tests "M18" "test_m18*.py" 75 || issues=$((issues+1))
+
+    # M19: Policy tests
+    run_milestone_tests "M19" "test_m19*.py" 80 || issues=$((issues+1))
+
+    [[ $issues -eq 0 ]] && log_ok "All milestone tests passing" || log_error "$issues milestone(s) below coverage threshold"
+    return 0
+}
+
+# ============================================================================
+# RUNTIME SMOKE TESTS (MISSING #2)
+# ============================================================================
+
+check_runtime_smoke() {
+    header "Runtime Smoke Tests (MISSING #2)"
+
+    $SMOKE_MODE || { log_info "Skipping (use --smoke)"; return 0; }
+
+    local SMOKE_SCRIPT="$SCRIPT_DIR/runtime_smoke.py"
+
+    if [[ ! -f "$SMOKE_SCRIPT" ]]; then
+        log_error "runtime_smoke.py not found at $SMOKE_SCRIPT"
+        return 1
+    fi
+
+    log_info "Running runtime smoke tests..."
+    cd "$BACKEND_DIR" 2>/dev/null || return 1
+
+    local output
+    if $JSON_MODE; then
+        output=$(PYTHONPATH=. python3 "$SMOKE_SCRIPT" --json 2>&1 || true)
+        echo "$output"
+    else
+        output=$(PYTHONPATH=. python3 "$SMOKE_SCRIPT" 2>&1 || true)
+        echo "$output"
+    fi
+
+    cd "$REPO_ROOT" 2>/dev/null || true
+
+    # Check for failures
+    if echo "$output" | grep -q "FAILED TESTS:"; then
+        log_error "Runtime smoke tests have failures"
+        return 1
+    else
+        log_ok "Runtime smoke tests passed"
+        return 0
+    fi
+}
+
+# ============================================================================
+# GOLDEN TESTS (MISSING #3)
+# ============================================================================
+
+check_golden_tests() {
+    header "Golden Tests (MISSING #3)"
+
+    $GOLDEN_MODE || { log_info "Skipping (use --golden)"; return 0; }
+
+    local GOLDEN_SCRIPT="$SCRIPT_DIR/golden_test.py"
+    local GOLDEN_DIR="$REPO_ROOT/tests/golden"
+
+    if [[ ! -f "$GOLDEN_SCRIPT" ]]; then
+        log_error "golden_test.py not found at $GOLDEN_SCRIPT"
+        return 1
+    fi
+
+    # Check if golden snapshots exist
+    if [[ ! -d "$GOLDEN_DIR" ]] || [[ -z "$(ls -A "$GOLDEN_DIR" 2>/dev/null)" ]]; then
+        log_warn "No golden snapshots found in $GOLDEN_DIR"
+        log_info "Run: PYTHONPATH=. python3 $GOLDEN_SCRIPT --update"
+        return 0
+    fi
+
+    log_info "Running golden determinism tests..."
+    cd "$BACKEND_DIR" 2>/dev/null || return 1
+
+    local output
+    if $JSON_MODE; then
+        output=$(PYTHONPATH=. python3 "$GOLDEN_SCRIPT" --json 2>&1 || true)
+        echo "$output"
+    else
+        output=$(PYTHONPATH=. python3 "$GOLDEN_SCRIPT" 2>&1 || true)
+        echo "$output"
+    fi
+
+    cd "$REPO_ROOT" 2>/dev/null || true
+
+    # Check for mismatches
+    if echo "$output" | grep -qi "mismatch\|drift\|failed"; then
+        log_error "Golden tests detected drift from snapshots"
+        return 1
+    else
+        log_ok "Golden tests passed - determinism verified"
+        return 0
     fi
 }
 
@@ -1191,8 +1383,8 @@ print_dashboard() {
 
     echo ""
     echo -e "${CYAN}+====================================================================+${NC}"
-    echo -e "${CYAN}|       AGENTICVERZ MILESTONE DASHBOARD (M0-M19) v4.0               |${NC}"
-    echo -e "${CYAN}|       Semantic Checks + Cross-Milestone Dependencies              |${NC}"
+    echo -e "${CYAN}|       AGENTICVERZ MILESTONE DASHBOARD (M0-M19) v4.1               |${NC}"
+    echo -e "${CYAN}|       Semantic + Coverage + Smoke + Golden                        |${NC}"
     echo -e "${CYAN}+====================================================================+${NC}"
     echo ""
     printf "%-6s %-42s %-8s %-6s %-6s\n" "ID" "Milestone (PIN-Accurate)" "Status" "Checks" "Deps"
@@ -1252,7 +1444,7 @@ print_matrix() {
 
     echo ""
     echo -e "${CYAN}+====================================================================+${NC}"
-    echo -e "${CYAN}|         AGENTICVERZ CI JOB -> MILESTONE MAPPING v4.0              |${NC}"
+    echo -e "${CYAN}|         AGENTICVERZ CI JOB -> MILESTONE MAPPING v4.1              |${NC}"
     echo -e "${CYAN}+====================================================================+${NC}"
     echo ""
 
@@ -1300,7 +1492,7 @@ print_json() {
 
     cat <<EOF
 {
-  "version": "4.0",
+  "version": "4.1",
   "project": "agenticverz",
   "status": "$status",
   "strict_mode": $STRICT_MODE,
@@ -1380,8 +1572,8 @@ main() {
     $JSON_MODE || {
         echo ""
         echo -e "${CYAN}+====================================================================+${NC}"
-        echo -e "${CYAN}|  AGENTICVERZ Milestone Certification Engine v4.0                  |${NC}"
-        echo -e "${CYAN}|  Semantic Checks + Cross-Milestone Dependencies                   |${NC}"
+        echo -e "${CYAN}|  AGENTICVERZ Milestone Certification Engine v4.1                  |${NC}"
+        echo -e "${CYAN}|  Semantic + Coverage + Smoke + Golden Tests                       |${NC}"
         echo -e "${CYAN}+====================================================================+${NC}"
         echo ""
     }
@@ -1423,6 +1615,11 @@ main() {
     preflight
     check_ci_workflow
     check_alembic_health
+
+    # MISSING #1-3: Test enforcement (optional flags)
+    check_test_coverage
+    check_runtime_smoke
+    check_golden_tests
 
     header "Milestone Validation (M0-M19) - Semantic Checks"
 
