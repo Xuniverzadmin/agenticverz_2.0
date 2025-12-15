@@ -20,8 +20,9 @@ env:
   PYTHONPATH: backend
   # Use Neon if available (via secret), otherwise fall back to local Docker Postgres
   # Set NEON_DATABASE_URL in GitHub Secrets for managed DB testing
-  DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
-  REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL || 'redis://localhost:6379/0' }}
+  # Note: trim() removes any trailing whitespace from secret values
+  DATABASE_URL: ${{ secrets.NEON_DATABASE_URL && format('{0}', secrets.NEON_DATABASE_URL) || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+  REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL && format('{0}', secrets.UPSTASH_REDIS_URL) || 'redis://localhost:6379/0' }}
 
 jobs:
   # Migration drift guard - verifies all migrations are committed
@@ -373,6 +374,8 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
+          # Trim trailing whitespace from DATABASE_URL (GitHub secrets sometimes have trailing spaces)
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Debug - Check environment
@@ -516,6 +519,7 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run CB integration tests
@@ -617,6 +621,7 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run circuit breaker integration tests
@@ -741,6 +746,7 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Start application server
@@ -938,6 +944,7 @@ jobs:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
         run: |
           cd backend
+          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       # Step 3: Leader Election Tests
