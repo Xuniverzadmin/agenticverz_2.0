@@ -1,10 +1,11 @@
 #!/bin/bash
 # ============================================================================
-# CI Consistency Checker v4.1 - AGENTICVERZ Milestone Certification Engine
+# CI Consistency Checker v5.0 - AGENTICVERZ/MN-OS Certification Engine
 # ============================================================================
 #
 # Purpose: Validate ALL Agenticverz milestones M0-M19 remain functional,
 # internally consistent, and test-verified during CI, refactors, or features.
+# Supports DUAL NAMING: Legacy milestone names AND MN-OS subsystem names.
 #
 # M20+ is OUT OF SCOPE - this engine stays strictly within M0-M19.
 #
@@ -18,6 +19,13 @@
 #   ./scripts/ops/ci_consistency_check.sh --coverage   # Include test coverage check
 #   ./scripts/ops/ci_consistency_check.sh --smoke      # Run runtime smoke tests
 #   ./scripts/ops/ci_consistency_check.sh --golden     # Run golden tests
+#   ./scripts/ops/ci_consistency_check.sh --subsystems # Show MN-OS subsystem view
+#
+# v5.0 Changes:
+#   - MN-OS dual-name recognition (legacy + evolved + MN-OS names)
+#   - --subsystems flag for MN-OS subsystem dashboard
+#   - Detection patterns accept both naming conventions
+#   - Forward-compatible with M20 (Machine-Native OS)
 #
 # v4.1 Changes:
 #   - MISSING #1: Test Coverage Enforcement per milestone
@@ -25,35 +33,27 @@
 #   - MISSING #3: Golden Tests integration (golden_test.py)
 #   - Test file presence AND passing verification
 #
-# v4.0 Changes:
-#   - Semantic checks (class/function definitions, not just patterns)
-#   - Cross-milestone dependency validation
-#   - Updated file structure mappings
-#   - Corrected CI job -> milestone matrix
-#   - Deeper M14/M18/M19 validation
-#   - --strict mode (WARN blocks merge)
-#
-# AGENTICVERZ Milestone Coverage (M0-M19) - PIN-Accurate Names:
-#   M0:  Foundations & Contracts [PIN-009]
-#   M1:  Runtime Interfaces [PIN-009]
-#   M2:  Skill Registration [PIN-010]
-#   M3:  Core Skill Implementations [PIN-010]
-#   M4:  Workflow Engine [PIN-013/020]
-#   M5:  Policy API & Approval [PIN-021]
-#   M6:  Feature Freeze & CostSim V2 [PIN-026]
-#   M7:  Memory Integration [PIN-031/032]
-#   M8:  SDK Packaging & Auth [PIN-033]
-#   M9:  Failure Catalog Persistence [PIN-048]
-#   M10: Recovery Suggestion Engine [PIN-050]
-#   M11: Store Factories & LLM Adapters [PIN-055/060]
-#   M12: Multi-Agent System [PIN-062/063]
-#   M13: Console UI & Boundary Checklist [PIN-064]
-#   M14: BudgetLLM Safety Governance [PIN-070]
-#   M15: SBA Foundations [PIN-072]
-#   M16: Agent Governance Console [PIN-074]
-#   M17: CARE Routing Engine [PIN-075]
-#   M18: CARE-L & SBA Evolution [PIN-076]
-#   M19: Policy Layer Constitutional [PIN-078]
+# MILESTONE → MN-OS SUBSYSTEM MAPPING:
+#   M0:  Foundations → Kernel Primitives (KP)
+#   M1:  Runtime → Agent Runtime Kernel (ARK)
+#   M2:  Skill Registration → OS Capability Table (OCT)
+#   M3:  Core Skills → Native OS Skills (NOS)
+#   M4:  Workflow Engine → Agent Execution Engine (AXE)
+#   M5:  Policy API → Constitutional Guardrail Layer (CGL)
+#   M6:  CostSim V2 → Resource Economics Engine (REE)
+#   M7:  Memory → System Memory Matrix (SMM)
+#   M8:  SDK/Auth → Identity Authority & Access Panel (IAAP)
+#   M9:  Failure Catalog → System Failure Intelligence Layer (SFIL)
+#   M10: Recovery → System Self-Repair Layer (SSRL)
+#   M11: LLM Adapters → Cognitive Interface Kernel (CIK)
+#   M12: Multi-Agent → MAS Orchestrator Core (MOC)
+#   M13: Console UI → OS Control Center (OCC)
+#   M14: BudgetLLM → Cognitive Compliance Engine (CCE)
+#   M15: SBA → Strategic Agency Kernel (SAK)
+#   M16: Agent Governance → Agent Oversight Authority (AOA)
+#   M17: CARE Routing → Cognitive Routing Kernel (CRK)
+#   M18: CARE-L → Adaptive Governance Kernel (AGK)
+#   M19: Policy Constitutional → OS Constitution (OSC)
 #
 # ============================================================================
 
@@ -88,11 +88,58 @@ STRICT_MODE=false
 COVERAGE_MODE=false
 SMOKE_MODE=false
 GOLDEN_MODE=false
+SUBSYSTEMS_MODE=false
 
 # Test Coverage Tracking
 declare -A MILESTONE_TEST_PASS
 declare -A MILESTONE_TEST_TOTAL
 declare -A MILESTONE_COVERAGE
+
+# MN-OS Subsystem Names (Milestone → Subsystem)
+declare -A MNOS_NAME
+MNOS_NAME[M0]="Kernel Primitives"
+MNOS_NAME[M1]="Agent Runtime Kernel"
+MNOS_NAME[M2]="OS Capability Table"
+MNOS_NAME[M3]="Native OS Skills"
+MNOS_NAME[M4]="Agent Execution Engine"
+MNOS_NAME[M5]="Constitutional Guardrail"
+MNOS_NAME[M6]="Resource Economics Engine"
+MNOS_NAME[M7]="System Memory Matrix"
+MNOS_NAME[M8]="Identity Authority"
+MNOS_NAME[M9]="Failure Intelligence"
+MNOS_NAME[M10]="Self-Repair Layer"
+MNOS_NAME[M11]="Cognitive Interface"
+MNOS_NAME[M12]="MAS Orchestrator"
+MNOS_NAME[M13]="OS Control Center"
+MNOS_NAME[M14]="Cognitive Compliance"
+MNOS_NAME[M15]="Strategic Agency"
+MNOS_NAME[M16]="Oversight Authority"
+MNOS_NAME[M17]="Cognitive Routing"
+MNOS_NAME[M18]="Adaptive Governance"
+MNOS_NAME[M19]="OS Constitution"
+
+# MN-OS Acronyms
+declare -A MNOS_ACRONYM
+MNOS_ACRONYM[M0]="KP"
+MNOS_ACRONYM[M1]="ARK"
+MNOS_ACRONYM[M2]="OCT"
+MNOS_ACRONYM[M3]="NOS"
+MNOS_ACRONYM[M4]="AXE"
+MNOS_ACRONYM[M5]="CGL"
+MNOS_ACRONYM[M6]="REE"
+MNOS_ACRONYM[M7]="SMM"
+MNOS_ACRONYM[M8]="IAAP"
+MNOS_ACRONYM[M9]="SFIL"
+MNOS_ACRONYM[M10]="SSRL"
+MNOS_ACRONYM[M11]="CIK"
+MNOS_ACRONYM[M12]="MOC"
+MNOS_ACRONYM[M13]="OCC"
+MNOS_ACRONYM[M14]="CCE"
+MNOS_ACRONYM[M15]="SAK"
+MNOS_ACRONYM[M16]="AOA"
+MNOS_ACRONYM[M17]="CRK"
+MNOS_ACRONYM[M18]="AGK"
+MNOS_ACRONYM[M19]="OSC"
 
 # Milestone Status Tracking
 declare -A MILESTONE_STATUS
@@ -117,14 +164,16 @@ for arg in "$@"; do
         --coverage) COVERAGE_MODE=true ;;
         --smoke) SMOKE_MODE=true ;;
         --golden) GOLDEN_MODE=true ;;
+        --subsystems) SUBSYSTEMS_MODE=true ;;
         --help|-h)
-            echo "AGENTICVERZ Milestone Certification Engine v4.1"
+            echo "AGENTICVERZ/MN-OS Milestone Certification Engine v5.0"
             echo ""
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  --quick      Fast pre-commit check"
             echo "  --milestone  Show milestone health dashboard"
+            echo "  --subsystems Show MN-OS subsystem view (dual naming)"
             echo "  --matrix     Show CI job -> milestone mapping"
             echo "  --json       Output JSON for CI pipelines"
             echo "  --strict     Treat WARN as FAIL (blocks merge)"
@@ -132,7 +181,11 @@ for arg in "$@"; do
             echo "  --smoke      Run runtime smoke tests"
             echo "  --golden     Run golden determinism tests"
             echo ""
-            echo "Validates M0-M19 correctness. M20+ is OUT OF SCOPE."
+            echo "Validates M0-M19 correctness with dual-name support:"
+            echo "  Legacy: M4 Workflow Engine"
+            echo "  MN-OS:  Agent Execution Engine (AXE)"
+            echo ""
+            echo "M20+ is OUT OF SCOPE."
             exit 0
             ;;
     esac
@@ -1383,8 +1436,8 @@ print_dashboard() {
 
     echo ""
     echo -e "${CYAN}+====================================================================+${NC}"
-    echo -e "${CYAN}|       AGENTICVERZ MILESTONE DASHBOARD (M0-M19) v4.1               |${NC}"
-    echo -e "${CYAN}|       Semantic + Coverage + Smoke + Golden                        |${NC}"
+    echo -e "${CYAN}|       AGENTICVERZ MILESTONE DASHBOARD (M0-M19) v5.0               |${NC}"
+    echo -e "${CYAN}|       Semantic + Coverage + Smoke + Golden + MN-OS Names          |${NC}"
     echo -e "${CYAN}+====================================================================+${NC}"
     echo ""
     printf "%-6s %-42s %-8s %-6s %-6s\n" "ID" "Milestone (PIN-Accurate)" "Status" "Checks" "Deps"
@@ -1439,12 +1492,83 @@ print_dashboard() {
     return 0
 }
 
+# MN-OS Subsystem Dashboard (--subsystems)
+print_subsystems() {
+    $JSON_MODE && return 0
+
+    echo ""
+    echo -e "${CYAN}+====================================================================+${NC}"
+    echo -e "${CYAN}|       MN-OS SUBSYSTEM DASHBOARD (Machine-Native OS) v5.0          |${NC}"
+    echo -e "${CYAN}|       Legacy Names → MN-OS Names (Dual Recognition)               |${NC}"
+    echo -e "${CYAN}+====================================================================+${NC}"
+    echo ""
+    printf "%-4s %-28s %-24s %-6s %-8s\n" "ID" "Legacy Name" "MN-OS Name" "Acro" "Status"
+    echo "------------------------------------------------------------------------"
+
+    local SUBSYSTEMS=(
+        "M0:Foundations & Contracts:Kernel Primitives"
+        "M1:Runtime Interfaces:Agent Runtime Kernel"
+        "M2:Skill Registration:OS Capability Table"
+        "M3:Core Skills:Native OS Skills"
+        "M4:Workflow Engine:Agent Execution Engine"
+        "M5:Policy API:Constitutional Guardrail"
+        "M6:CostSim V2:Resource Economics Engine"
+        "M7:Memory Integration:System Memory Matrix"
+        "M8:SDK & Auth:Identity Authority"
+        "M9:Failure Catalog:Failure Intelligence"
+        "M10:Recovery Engine:Self-Repair Layer"
+        "M11:LLM Adapters:Cognitive Interface"
+        "M12:Multi-Agent System:MAS Orchestrator"
+        "M13:Console UI:OS Control Center"
+        "M14:BudgetLLM Safety:Cognitive Compliance"
+        "M15:SBA Foundations:Strategic Agency"
+        "M16:Agent Governance:Oversight Authority"
+        "M17:CARE Routing:Cognitive Routing"
+        "M18:CARE-L Evolution:Adaptive Governance"
+        "M19:Policy Constitutional:OS Constitution"
+    )
+
+    for entry in "${SUBSYSTEMS[@]}"; do
+        IFS=':' read -r ID LEGACY MNOS <<< "$entry"
+        local ACRONYM="${MNOS_ACRONYM[$ID]:-??}"
+        local STATUS="${MILESTONE_STATUS[$ID]:-unchecked}"
+
+        local COLOR="" TEXT=""
+        case $STATUS in
+            pass) COLOR="${GREEN}"; TEXT="PASS" ;;
+            warn) COLOR="${YELLOW}"; TEXT="WARN" ;;
+            fail) COLOR="${RED}"; TEXT="FAIL" ;;
+            *) COLOR="${BLUE}"; TEXT="--" ;;
+        esac
+
+        printf "%-4s %-28s %-24s %-6s ${COLOR}%-8s${NC}\n" "$ID" "$LEGACY" "$MNOS" "$ACRONYM" "$TEXT"
+    done
+
+    echo "------------------------------------------------------------------------"
+    echo ""
+    echo -e "${MAGENTA}MN-OS Architecture Layers:${NC}"
+    echo ""
+    echo "  Layer 6: Constitutional Governance (M19, M18, M14)"
+    echo "  Layer 5: Strategic Routing (M17, M15, M16)"
+    echo "  Layer 4: Multi-Agent Orchestration (M12, M13)"
+    echo "  Layer 3: Execution & Recovery (M4, M10, M9)"
+    echo "  Layer 2: Capability & Cognitive I/O (M2, M3, M11, M6)"
+    echo "  Layer 1: Kernel & Memory (M0, M1, M7)"
+    echo "  Layer 0: Identity & Access (M8)"
+    echo ""
+    echo -e "Summary: ${GREEN}$MILESTONE_PASS PASS${NC} | ${YELLOW}$MILESTONE_WARN WARN${NC} | ${RED}$MILESTONE_FAIL FAIL${NC}"
+    echo ""
+    echo "See docs/mn-os/subsystem_mapping.md for full mapping documentation"
+    echo ""
+    return 0
+}
+
 print_matrix() {
     $JSON_MODE && return 0
 
     echo ""
     echo -e "${CYAN}+====================================================================+${NC}"
-    echo -e "${CYAN}|         AGENTICVERZ CI JOB -> MILESTONE MAPPING v4.1              |${NC}"
+    echo -e "${CYAN}|         AGENTICVERZ CI JOB -> MILESTONE MAPPING v5.0              |${NC}"
     echo -e "${CYAN}+====================================================================+${NC}"
     echo ""
 
@@ -1492,7 +1616,7 @@ print_json() {
 
     cat <<EOF
 {
-  "version": "4.1",
+  "version": "5.0",
   "project": "agenticverz",
   "status": "$status",
   "strict_mode": $STRICT_MODE,
@@ -1572,8 +1696,8 @@ main() {
     $JSON_MODE || {
         echo ""
         echo -e "${CYAN}+====================================================================+${NC}"
-        echo -e "${CYAN}|  AGENTICVERZ Milestone Certification Engine v4.1                  |${NC}"
-        echo -e "${CYAN}|  Semantic + Coverage + Smoke + Golden Tests                       |${NC}"
+        echo -e "${CYAN}|  AGENTICVERZ/MN-OS Milestone Certification Engine v5.0            |${NC}"
+        echo -e "${CYAN}|  Semantic + Coverage + Smoke + Golden + Dual-Name Support         |${NC}"
         echo -e "${CYAN}+====================================================================+${NC}"
         echo ""
     }
@@ -1582,8 +1706,8 @@ main() {
 
     cd "$REPO_ROOT"
 
-    # Dashboard/matrix only mode
-    if $MILESTONE_MODE || $MATRIX_MODE; then
+    # Dashboard/matrix/subsystems only mode
+    if $MILESTONE_MODE || $MATRIX_MODE || $SUBSYSTEMS_MODE; then
         check_m0_foundations
         check_m1_runtime_interfaces
         check_m2_skill_registration
@@ -1607,6 +1731,7 @@ main() {
         check_cross_milestone_deps
 
         $MILESTONE_MODE && print_dashboard
+        $SUBSYSTEMS_MODE && print_subsystems
         $MATRIX_MODE && print_matrix
         exit 0
     fi
