@@ -231,9 +231,13 @@ jobs:
 
       - name: Wait for PostgreSQL to be fully ready
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          echo "Waiting for PostgreSQL to accept connections..."
+          if [ -n "$NEON_URL" ]; then
+            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
+            exit 0
+          fi
+          echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
               echo "PostgreSQL is ready!"
@@ -345,8 +349,14 @@ jobs:
           pip install pytest pytest-asyncio httpx asyncpg
 
       - name: Wait for PostgreSQL to be fully ready
+        env:
+          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          echo "Waiting for PostgreSQL to accept connections..."
+          if [ -n "$NEON_URL" ]; then
+            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
+            exit 0
+          fi
+          echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
               echo "PostgreSQL is ready!"
@@ -482,8 +492,14 @@ jobs:
           pip install pytest pytest-asyncio httpx asyncpg
 
       - name: Wait for PostgreSQL to be fully ready
+        env:
+          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          echo "Waiting for PostgreSQL to accept connections..."
+          if [ -n "$NEON_URL" ]; then
+            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
+            exit 0
+          fi
+          echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
               echo "PostgreSQL is ready!"
@@ -577,8 +593,14 @@ jobs:
           curl -s http://localhost:8080/__admin/mappings | jq '.mappings[].request.urlPattern' || true
 
       - name: Wait for PostgreSQL to be fully ready
+        env:
+          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          echo "Waiting for PostgreSQL to accept connections..."
+          if [ -n "$NEON_URL" ]; then
+            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
+            exit 0
+          fi
+          echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
               echo "PostgreSQL is ready!"
@@ -695,8 +717,14 @@ jobs:
           pip install pytest pytest-asyncio httpx asyncpg
 
       - name: Wait for PostgreSQL to be fully ready
+        env:
+          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          echo "Waiting for PostgreSQL to accept connections..."
+          if [ -n "$NEON_URL" ]; then
+            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
+            exit 0
+          fi
+          echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
               echo "PostgreSQL is ready!"
@@ -886,8 +914,14 @@ jobs:
 
       # Step 2: Wait for PostgreSQL and run migrations
       - name: Wait for PostgreSQL to be fully ready
+        env:
+          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: |
-          echo "Waiting for PostgreSQL to accept connections..."
+          if [ -n "$NEON_URL" ]; then
+            echo "Using Neon PostgreSQL (managed) - skipping Docker wait"
+            exit 0
+          fi
+          echo "Waiting for Docker PostgreSQL to accept connections..."
           for i in {1..30}; do
             if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
               echo "PostgreSQL is ready!"
