@@ -194,12 +194,13 @@ def upgrade():
         END $$;
     """))
 
+    # Create canonical version (matches migration 022 signature)
     conn.execute(text("""
         CREATE OR REPLACE FUNCTION m10_recovery.complete_outbox_event(
             p_event_id BIGINT,
+            p_processor_id TEXT,
             p_success BOOLEAN,
             p_error TEXT DEFAULT NULL,
-            p_processor_id TEXT DEFAULT NULL,
             p_retry_delay_seconds INTEGER DEFAULT 60
         )
         RETURNS BOOLEAN AS $$
@@ -213,7 +214,8 @@ def upgrade():
                 UPDATE m10_recovery.outbox
                 SET last_error = p_error,
                     retry_count = retry_count + 1,
-                    next_retry_at = now() + (p_retry_delay_seconds || ' seconds')::INTERVAL
+                    next_retry_at = now() + (p_retry_delay_seconds || ' seconds')::INTERVAL,
+                    process_after = now() + (p_retry_delay_seconds || ' seconds')::INTERVAL
                 WHERE id = p_event_id;
             END IF;
 
@@ -221,8 +223,27 @@ def upgrade():
         END;
         $$ LANGUAGE plpgsql;
 
-        COMMENT ON FUNCTION m10_recovery.complete_outbox_event IS
-            'Mark outbox event as processed or schedule retry';
+        COMMENT ON FUNCTION m10_recovery.complete_outbox_event(BIGINT, TEXT, BOOLEAN, TEXT, INTEGER) IS
+            'Mark outbox event as processed or schedule retry (worker signature)';
+    """))
+
+    # Create overload for test signature: (event_id, success, error, processor_id)
+    conn.execute(text("""
+        CREATE OR REPLACE FUNCTION m10_recovery.complete_outbox_event(
+            p_event_id BIGINT,
+            p_success BOOLEAN,
+            p_error TEXT,
+            p_processor_id TEXT
+        )
+        RETURNS BOOLEAN AS $$
+        BEGIN
+            -- Delegate to canonical signature with default retry delay
+            RETURN m10_recovery.complete_outbox_event(p_event_id, p_processor_id, p_success, p_error, 60);
+        END;
+        $$ LANGUAGE plpgsql;
+
+        COMMENT ON FUNCTION m10_recovery.complete_outbox_event(BIGINT, BOOLEAN, TEXT, TEXT) IS
+            'Mark outbox event - overload for test signature (event_id, success, error, processor_id)';
     """))
 
     # ==========================================================================
