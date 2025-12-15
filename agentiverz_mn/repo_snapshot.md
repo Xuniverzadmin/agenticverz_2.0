@@ -1,42 +1,85 @@
 # Repository Snapshot
 
-**Date:** 2025-12-08
-**Milestone:** M10 COMPLETE → M11 Next
+**Date:** 2025-12-15
+**Milestone:** M19 COMPLETE → M20 Planning
+**CI Checker:** v5.0 (MN-OS dual-name support)
 
 ---
 
 ## Project Status
 
-| Milestone | Status |
-|-----------|--------|
-| M0-M7 | ✅ COMPLETE |
-| M8: Demo + SDK + Auth | ✅ COMPLETE |
-| M9: Failure Catalog v2 | ✅ COMPLETE (PIN-048) |
-| **M10: Recovery Suggestion Engine** | ✅ **COMPLETE** (PIN-050) |
-| M11: Skill Expansion | ⏳ NEXT |
-| M12: Beta Rollout | Pending |
-| M13: Console UI | Pending |
+| Milestone | Status | PIN |
+|-----------|--------|-----|
+| M0-M7 | ✅ COMPLETE | PIN-009 to PIN-032 |
+| M8: Demo + SDK + Auth | ✅ COMPLETE | PIN-033 |
+| M9: Failure Catalog v2 | ✅ COMPLETE | PIN-048/049 |
+| M10: Recovery Suggestion Engine | ✅ COMPLETE | PIN-050/057/061 |
+| M11: Skill Expansion | ✅ COMPLETE | PIN-055/056/059/060 |
+| M12: Multi-Agent System | ✅ COMPLETE | PIN-062/063 |
+| M13: Console UI & Boundary | ✅ COMPLETE | PIN-064/067/068 |
+| M14: BudgetLLM Safety | ✅ COMPLETE | PIN-070 |
+| M15: SBA Foundations | ✅ COMPLETE | PIN-071/072/073 |
+| M16: Agent Governance Console | ✅ COMPLETE | PIN-074 |
+| M17: CARE Routing Engine | ✅ COMPLETE | PIN-075 |
+| M18: CARE-L & SBA Evolution | ✅ COMPLETE | PIN-076/077 |
+| **M19: Policy Constitutional** | ✅ **COMPLETE** | PIN-078 |
+| M20: Machine-Native OS v1.0 | ⏳ PLANNING | - |
 
 ---
 
-## M10 Deliverables (Just Completed)
+## Latest Session (2025-12-15)
 
-| Component | File | Status |
-|-----------|------|--------|
-| DB Migration | `alembic/versions/017_create_recovery_candidates.py` | ✅ |
-| Matcher Service | `app/services/recovery_matcher.py` | ✅ |
-| FastAPI Endpoints | `app/api/recovery.py` | ✅ |
-| CLI Commands | `cli/aos.py` (recovery subcommands) | ✅ |
-| Prometheus Metrics | `app/metrics.py` (4 new metrics) | ✅ |
-| Tests | `tests/test_recovery.py` | ✅ |
-| Documentation | `docs/memory-pins/PIN-050-*.md` | ✅ |
+### MN-OS Naming Evolution (PIN-081)
 
-**CLI Commands:**
-```bash
-aos recovery candidates --status pending
-aos recovery approve --id 5 --by operator --note "verified"
-aos recovery stats
-```
+Established formal naming evolution from legacy milestone identifiers (M0-M19) to Machine-Native Operating System (MN-OS) subsystem names.
+
+| Created | Purpose |
+|---------|---------|
+| `docs/mn-os/subsystem_mapping.md` | Canonical M→Subsystem mapping |
+| `docs/mn-os/transition_guide.md` | Contributor/operator guide |
+| `docs/mn-os/architecture_overview.md` | 6-layer architecture diagram |
+| `docs/memory-pins/PIN-081-mn-os-naming-evolution.md` | Change documentation |
+
+### CI Consistency Checker v5.0
+
+- `--subsystems` flag for MN-OS dashboard view
+- Dual-name recognition (legacy + MN-OS names)
+- MNOS_NAME/MNOS_ACRONYM arrays
+- All 20 milestones PASS
+
+### Key MN-OS Subsystem Names
+
+| Milestone | MN-OS Name | Acronym |
+|-----------|------------|---------|
+| M4 | Agent Execution Engine | **AXE** |
+| M9 | System Failure Intelligence | **SFIL** |
+| M15 | Strategic Agency Kernel | **SAK** |
+| M17 | Cognitive Routing Kernel | **CRK** |
+| M19 | OS Constitution | **OSC** |
+
+---
+
+## CI Status
+
+**Latest Run:** [20234756645](https://github.com/Xuniverzadmin/agenticverz_2.0/actions/runs/20234756645)
+**Result:** ✅ 15/15 jobs PASS
+
+| Job | Status |
+|-----|--------|
+| setup-neon-branch | ✅ |
+| unit-tests | ✅ |
+| lint-alerts | ✅ |
+| migration-check | ✅ |
+| run-migrations | ✅ |
+| determinism | ✅ |
+| workflow-engine | ✅ |
+| costsim | ✅ |
+| costsim-wiremock | ✅ |
+| integration | ✅ |
+| e2e-tests | ✅ |
+| workflow-golden-check | ✅ |
+| costsim-integration | ✅ |
+| m10-tests | ✅ |
 
 ---
 
@@ -48,75 +91,63 @@ aos recovery stats
 | Worker | nova_worker | - |
 | Database | nova_db | 5433 |
 | PgBouncer | nova_pgbouncer | 6432 |
+| Redis | redis | 6379 |
 | Prometheus | nova_prometheus | 9090 |
 | Grafana | nova_grafana | 3000 |
-| Keycloak | keycloak | 8080 |
+| Vault | vault | 8200 |
 
 ---
 
-## Database Tables (M9-M10)
+## Key Metrics
 
-| Table | Purpose |
-|-------|---------|
-| failure_matches | M9 - Failure persistence with 12 indexes |
-| failure_pattern_exports | M9 - R2 export tracking |
-| **recovery_candidates** | M10 - Suggestions with confidence |
-| **recovery_candidates_audit** | M10 - Approval audit trail |
+| Metric | Value |
+|--------|-------|
+| Memory PINs | 81 |
+| Migrations | 36 |
+| Milestones Complete | 20/20 |
+| CI Jobs Passing | 15/15 |
+| MN-OS Subsystems | 20 |
 
 ---
 
-## Key API Endpoints
+## Pending Activities
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/v1/recovery/suggest` | POST | Generate suggestion |
-| `/api/v1/recovery/candidates` | GET | List by status |
-| `/api/v1/recovery/approve` | POST | Approve/reject |
-| `/api/v1/recovery/stats` | GET | Approval stats |
-| `/api/v1/failures/*` | GET/PATCH | M9 failure API |
+### PIN-047: Polishing Tasks (P1-P3)
+
+| Priority | Task |
+|----------|------|
+| P1 | Prometheus alert reload |
+| P1 | Move remaining secrets to Vault |
+| P2 | Quota status API endpoint |
+| P2 | Embedding cost monitoring dashboard |
+| P3 | Anthropic Voyage backup provider |
+| P3 | Embedding cache layer |
+
+### M20 Planning
+
+- Unified syscall-like API
+- Cross-subsystem communication bus
+- Plugin architecture for extensions
+- Marketplace for agents and skills
 
 ---
 
 ## Quick Commands
 
 ```bash
-# Check health
-curl http://localhost:8000/health
+# Run CI consistency check
+./scripts/ops/ci_consistency_check.sh
 
-# Test recovery API
-curl "http://localhost:8000/api/v1/recovery/candidates?status=all&limit=5"
+# View MN-OS subsystem dashboard
+./scripts/ops/ci_consistency_check.sh --subsystems
 
-# CLI test
-AOS_API_BASE=http://localhost:8000 AOS_API_KEY=test python3 cli/aos.py recovery stats
+# View milestone dashboard
+./scripts/ops/ci_consistency_check.sh --milestone
 
-# Run M10 tests
-DATABASE_URL="$DATABASE_URL" PYTHONPATH=. python3 -m pytest tests/test_recovery.py -v
-
-# Rebuild backend
-docker compose up -d --build backend
+# Check services
+docker compose ps
 ```
 
 ---
 
-## M11 Scope (Next)
-
-Per PIN-033, M11 focuses on **Skill Expansion**:
-- Production-harden `postgres_query` skill
-- Production-harden `calendar_write` skill
-- Add email notification skill (`/notify/email`)
-- Skill versioning and deprecation workflow
-
----
-
-## Session Notes
-
-**SQLAlchemy 2.0 Compatibility:**
-- All raw SQL must use `text()` wrapper
-- Use `CAST(:param AS type)` not `::type` syntax
-- JSONB fields may return dict or str depending on driver
-
-**Confidence Scoring:**
-- `HALF_LIFE_DAYS = 30`
-- `ALPHA = 0.7` (weight for time-decay)
-- `NO_HISTORY_CONFIDENCE = 0.20`
-- `EXACT_MATCH_CONFIDENCE = 0.95`
+*Last updated: 2025-12-15 (MN-OS Naming Evolution)*
