@@ -229,6 +229,22 @@ jobs:
             echo "Using Docker PostgreSQL (ephemeral)"
           fi
 
+      - name: Wait for PostgreSQL to be fully ready
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
+        run: |
+          echo "Waiting for PostgreSQL to accept connections..."
+          for i in {1..30}; do
+            if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - PostgreSQL not ready yet..."
+            sleep 2
+          done
+          echo "PostgreSQL failed to become ready"
+          exit 1
+
       - name: Verify Redis connectivity
         run: |
           # Test Docker Redis is accessible
@@ -327,6 +343,20 @@ jobs:
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx asyncpg
+
+      - name: Wait for PostgreSQL to be fully ready
+        run: |
+          echo "Waiting for PostgreSQL to accept connections..."
+          for i in {1..30}; do
+            if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - PostgreSQL not ready yet..."
+            sleep 2
+          done
+          echo "PostgreSQL failed to become ready"
+          exit 1
 
       - name: Run Alembic migrations
         env:
@@ -451,6 +481,20 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx asyncpg
 
+      - name: Wait for PostgreSQL to be fully ready
+        run: |
+          echo "Waiting for PostgreSQL to accept connections..."
+          for i in {1..30}; do
+            if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - PostgreSQL not ready yet..."
+            sleep 2
+          done
+          echo "PostgreSQL failed to become ready"
+          exit 1
+
       - name: Run Alembic migrations
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
@@ -531,6 +575,20 @@ jobs:
           echo "WireMock mappings loaded:"
           curl -s http://localhost:8080/__admin/mappings | jq '.mappings | length'
           curl -s http://localhost:8080/__admin/mappings | jq '.mappings[].request.urlPattern' || true
+
+      - name: Wait for PostgreSQL to be fully ready
+        run: |
+          echo "Waiting for PostgreSQL to accept connections..."
+          for i in {1..30}; do
+            if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - PostgreSQL not ready yet..."
+            sleep 2
+          done
+          echo "PostgreSQL failed to become ready"
+          exit 1
 
       - name: Run Alembic migrations
         env:
@@ -635,6 +693,20 @@ jobs:
           pip install -U pip
           pip install -r backend/requirements.txt
           pip install pytest pytest-asyncio httpx asyncpg
+
+      - name: Wait for PostgreSQL to be fully ready
+        run: |
+          echo "Waiting for PostgreSQL to accept connections..."
+          for i in {1..30}; do
+            if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - PostgreSQL not ready yet..."
+            sleep 2
+          done
+          echo "PostgreSQL failed to become ready"
+          exit 1
 
       - name: Run Alembic migrations
         env:
@@ -812,7 +884,21 @@ jobs:
             exit 1
           fi
 
-      # Step 2: Run migrations
+      # Step 2: Wait for PostgreSQL and run migrations
+      - name: Wait for PostgreSQL to be fully ready
+        run: |
+          echo "Waiting for PostgreSQL to accept connections..."
+          for i in {1..30}; do
+            if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - PostgreSQL not ready yet..."
+            sleep 2
+          done
+          echo "PostgreSQL failed to become ready"
+          exit 1
+
       - name: Run Alembic migrations
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || 'postgresql://nova:novapass@localhost:5433/nova_aos' }}
