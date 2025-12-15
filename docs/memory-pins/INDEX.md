@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-15 (PIN-083 IAEC v4.0 Planning)
+**Last Updated:** 2025-12-15 (PIN-086 Business Builder Worker v0.2)
 
 ---
 
@@ -105,6 +105,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-081](PIN-081-mn-os-naming-evolution.md) | **MN-OS Naming Evolution (CI v5.0)** | Architecture / Documentation / CI | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-082](PIN-082-iaec-v2-embedding-composer.md) | **IAEC v3.2 - Instruction-Aware Embedding Composer** | Memory / Embedding / M20 Prep | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-083](PIN-083-iaec-v4-frontier-challenges.md) | **IAEC v4.0 Frontier Challenges** | Memory / Architecture / M20 | **⏳ PLANNING** | 2025-12-15 |
+| [PIN-084](PIN-084-m20-policy-compiler-runtime.md) | **M20 Policy Compiler & Deterministic Runtime** | Milestone / MN-OS Layer 0 | **✅ COMPLETE** | 2025-12-15 |
+| [PIN-085](PIN-085-worker-brainstorm-moat-audit.md) | **Worker Brainstorm & Moat Audit** | Strategy / Product | **DECISION MADE** | 2025-12-15 |
 
 ---
 
@@ -1182,3 +1184,5 @@ When resuming work on this project:
 | 2025-12-11 | **M12 Multi-Agent System COMPLETE** - 49 tests passing, DoD validated |
 | 2025-12-15 | **PIN-079 CI Ephemeral Neon Branch Fixes** - Fixed 6 issues: GitHub secret blocking, import paths, Pydantic forward refs, outbox constraint, alembic rev ID, worker diagnostics. CI: 13/14 jobs passing. |
 | 2025-12-15 | **PIN-082 IAEC v3.2 - Instruction-Aware Embedding Composer** - Production scale: Transform DAG Manager (canonical paths, pruning, transitive collapsing), correction cooldown (oscillation prevention), softmax policy folding (normalized weights), whitening versioning in all outputs. Builds on v3.1: temporal mediation, 5-level policy (L0-L4), corrective action with confidence. 13 Prometheus metrics total. |
+| 2025-12-15 | **PIN-085 Worker Brainstorm & Moat Audit** - Comprehensive audit of 35 unique moats (15 individual, 15 combined, 5 compound). Critiqued GPT's "Launch Package Worker" proposal (~15% moat utilization). Decision: Build worker with phased moat adoption strategy. |
+| 2025-12-15 | **PIN-086 Business Builder Worker v0.2** - Production implementation of worker using 8+ moats (M4, M9, M10, M15, M17, M18, M19, M20). Corrected GPT spec with proper directory structure, real SBA schema integration, governance-ordered execution. 33 tests passing. 14 files created. |

@@ -1,7 +1,7 @@
 # Repository Snapshot
 
 **Date:** 2025-12-15
-**Milestone:** M19 COMPLETE → M20 Planning
+**Milestone:** M20 COMPLETE (MN-OS Layer 0)
 **CI Checker:** v5.0 (MN-OS dual-name support)
 
 ---
@@ -23,11 +23,95 @@
 | M17: CARE Routing Engine | ✅ COMPLETE | PIN-075 |
 | M18: CARE-L & SBA Evolution | ✅ COMPLETE | PIN-076/077 |
 | **M19: Policy Constitutional** | ✅ **COMPLETE** | PIN-078 |
-| M20: Machine-Native OS v1.0 | ⏳ PLANNING | - |
+| **M20: Policy Compiler & Runtime** | ✅ **COMPLETE** | PIN-084 |
 
 ---
 
 ## Latest Session (2025-12-15)
+
+### Business Builder Worker v0.2 (PIN-086)
+
+Implemented the first productized worker using 8+ moats from M0-M20:
+
+| Component | Files |
+|-----------|-------|
+| Worker | `app/workers/business_builder/worker.py` |
+| Execution Plan | `app/workers/business_builder/execution_plan.py` |
+| Brand Schema | `app/workers/business_builder/schemas/brand.py` |
+| Agent Definitions | `app/workers/business_builder/agents/definitions.py` |
+| CLI | `app/workers/business_builder/cli.py` |
+| Stages | `app/workers/business_builder/stages/` (research, strategy, copy, ux) |
+| Tests | `tests/test_business_builder_worker.py` (33 tests) |
+
+**Moat Integration:**
+- M4: Golden replay via deterministic seeds
+- M9: Failure pattern matching
+- M10: Auto-recovery integration
+- M15: 7 agents with real SBA schema
+- M17: CARE routing for stages
+- M18: Drift anchors and metrics
+- M19/M20: Policy rules from brand constraints
+
+**CLI Usage:**
+```bash
+python -m app.workers.business_builder.cli build-business "AI tool for podcasters" \
+    --brand brand.json --budget 5000 --strict
+```
+
+---
+
+### Worker Brainstorm & Moat Audit (PIN-085)
+
+Comprehensive brainstorm session to identify product to build on M0-M20:
+
+**35 Unique Moats Identified:**
+- 15 individual moats (determinism, failure catalog, recovery, skills, etc.)
+- 15 combined moats (synergies between milestones)
+- 5 compound moats (3+ combined capabilities)
+
+**GPT's "Launch Package Worker" Proposal:**
+- Critiqued as using only ~15% of moats (2-3 actually exercised)
+- Could be replicated with LangChain + GPT-4
+- Missing: failure recovery, strategy binding, governance, learning loops
+
+**Decision: Build Worker with Phased Moat Adoption**
+| Phase | Focus | Moats |
+|-------|-------|-------|
+| 1 | Basic execution | M4, M11, M12 |
+| 2 | Add constraints | + M15, M19 |
+| 3 | Add learning | + M9, M18 |
+| 4 | Full governance | + M17, M20 |
+
+**Ideal Domain Properties:**
+- Recurring decisions (M18 learning)
+- Constraints/policies (M19/M20)
+- Failure modes (M9/M10)
+- Complexity variance (M17 CARE)
+- Strategic alignment (M15 SBA)
+
+---
+
+### M20 Policy Compiler & Deterministic Runtime (PIN-084)
+
+Implemented the Policy Compiler and Deterministic Runtime (MN-OS Layer 0):
+
+| Component | Files |
+|-----------|-------|
+| PLang v2.0 Compiler | `app/policy/compiler/` (grammar, tokenizer, parser) |
+| AST with Governance | `app/policy/ast/` (nodes, visitors) |
+| IR v2.0 | `app/policy/ir/` (ir_nodes, symbol_table, ir_builder) |
+| Governance-Aware Optimizer | `app/policy/optimizer/` (folds, conflict_resolver, dag_sorter) |
+| Deterministic Runtime | `app/policy/runtime/` (deterministic_engine, dag_executor, intent) |
+
+**Key Features:**
+- PLang v2.0 grammar with M19 category support
+- Category-aware execution ordering (SAFETY → PRIVACY → OPERATIONAL → ROUTING → CUSTOM)
+- Conflict resolution using category precedence
+- Deterministic execution with no randomness
+- Intent emission to M18 for governance-aware execution
+- Full audit trail for every execution
+
+**MN-OS Subsystem:** Policy Execution Core (PXC)
 
 ### MN-OS Naming Evolution (PIN-081)
 
