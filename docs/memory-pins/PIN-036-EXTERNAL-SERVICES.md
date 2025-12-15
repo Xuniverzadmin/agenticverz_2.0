@@ -58,16 +58,16 @@ secrets/
 |-------|-------|
 | **Account** | admin1@agenticverz.com |
 | **Region** | ap-southeast-1 (Singapore) |
-| **Endpoint** | ep-delicate-field-a1fd7srl |
+| **Endpoint** | ep-long-surf-a1n0hv91 |
 | **Database** | neondb |
 
 **Connection Strings:**
 ```bash
 # Pooled (for application - use this)
-postgresql://neondb_owner:***@ep-delicate-field-a1fd7srl-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+postgresql://neondb_owner:***@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
 
 # Direct (for migrations)
-postgresql://neondb_owner:***@ep-delicate-field-a1fd7srl.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+postgresql://neondb_owner:***@ep-long-surf-a1n0hv91.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
 ```
 
 **Replaces:** Local Postgres (5433) + PgBouncer (6432)
@@ -219,8 +219,8 @@ When integrating, update `.env`:
 
 ```bash
 # === M8: Database (Neon) ===
-DATABASE_URL=postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-delicate-field-a1fd7srl-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-DATABASE_URL_DIRECT=postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-delicate-field-a1fd7srl.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL_DIRECT=postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
 
 # === M8: Auth (Clerk) ===
 CLERK_SECRET_KEY=sk_test_***

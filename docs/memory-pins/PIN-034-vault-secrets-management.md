@@ -5,7 +5,7 @@
 **Category:** Security / Infrastructure
 **Status:** COMPLETE
 **Created:** 2025-12-05
-**Updated:** 2025-12-05
+**Updated:** 2025-12-09
 
 ---
 
@@ -100,8 +100,13 @@ services:
 |------|------|---------|
 | `agenticverz/app-prod` | AOS_API_KEY, MACHINE_SECRET_TOKEN, OIDC_CLIENT_SECRET | Application secrets |
 | `agenticverz/database` | POSTGRES_USER, POSTGRES_PASSWORD, DATABASE_URL, KEYCLOAK_DB_USER, KEYCLOAK_DB_PASSWORD | Database credentials |
-| `agenticverz/external-apis` | ANTHROPIC_API_KEY | Third-party API keys |
+| `agenticverz/external-apis` | ANTHROPIC_API_KEY, OPENAI_API_KEY | Third-party API keys |
 | `agenticverz/keycloak-admin` | KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD | Keycloak admin credentials |
+| `agenticverz/r2-storage` | R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID, R2_BUCKET, R2_ENDPOINT | Cloudflare R2 storage (M9) |
+| `agenticverz/external-integrations` | github_token, slack_mismatch_webhook, posthog_api_key, resend_api_key, trigger_api_key, cloudflare_api_token | External service integrations |
+| `agenticverz/microsoft-oauth` | client_id, client_secret, tenant_id, object_id | Microsoft Azure AD OAuth (Outlook/Calendar) |
+| `agenticverz/google-oauth` | client_id, client_secret, project_id | Google Cloud OAuth (Gmail/Calendar) |
+| `agenticverz/voyage-ai` | api_key, account_email | Voyage AI Embeddings API |
 
 ### Python Integration
 
@@ -263,3 +268,6 @@ Vault verification: PASS
 | 2025-12-05 | Created Python client `backend/app/secrets/vault_client.py` |
 | 2025-12-05 | Created rotation script - verified working |
 | 2025-12-05 | Updated `.env.example` with Vault references |
+| 2025-12-09 | Added `agenticverz/microsoft-oauth` - Azure AD OAuth for Outlook/Calendar (M11) |
+| 2025-12-09 | Added `agenticverz/google-oauth` - Google OAuth for Gmail/Calendar (M11) |
+| 2025-12-09 | Added `agenticverz/voyage-ai` - Voyage AI embeddings API key (M11) |

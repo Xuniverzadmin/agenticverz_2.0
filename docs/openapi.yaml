@@ -3049,11 +3049,18 @@ components:
           type: object
           title: Params
           description: Parameters for the skill
+        iterations:
+          type: integer
+          title: Iterations
+          description: Number of times to execute this step (affects cost, duration, and risk)
+          default: 1
+          minimum: 1
+          maximum: 100
       type: object
       required:
       - skill
       title: PlanStep
-      description: A single step in a plan to simulate.
+      description: A single step in a plan to simulate. Use iterations to multiply cost/duration.
     PolicyEvalRequest:
       properties:
         skill_id:
