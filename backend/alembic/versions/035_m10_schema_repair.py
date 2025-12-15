@@ -172,8 +172,28 @@ def upgrade():
     """))
 
     # ==========================================================================
-    # STEP 4: Ensure complete_outbox_event has correct signature
+    # STEP 4: Drop and recreate complete_outbox_event with correct signature
     # ==========================================================================
+    # Drop all overloads first (same pattern as claim_outbox_events)
+    conn.execute(text("""
+        DO $$
+        DECLARE
+            r RECORD;
+        BEGIN
+            -- Find and drop all versions of complete_outbox_event
+            FOR r IN (
+                SELECT pg_catalog.pg_get_function_identity_arguments(p.oid) as args
+                FROM pg_proc p
+                JOIN pg_namespace n ON p.pronamespace = n.oid
+                WHERE n.nspname = 'm10_recovery'
+                AND p.proname = 'complete_outbox_event'
+            ) LOOP
+                EXECUTE format('DROP FUNCTION IF EXISTS m10_recovery.complete_outbox_event(%s)', r.args);
+                RAISE NOTICE 'Dropped complete_outbox_event(%)', r.args;
+            END LOOP;
+        END $$;
+    """))
+
     conn.execute(text("""
         CREATE OR REPLACE FUNCTION m10_recovery.complete_outbox_event(
             p_event_id BIGINT,
