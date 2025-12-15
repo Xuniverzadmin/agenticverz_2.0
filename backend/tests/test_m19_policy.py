@@ -635,6 +635,64 @@ class TestEdgeCases:
 # Integration Test (requires database)
 # =============================================================================
 
+# =============================================================================
+# AsyncSession Regression Test (CI guardrail)
+# =============================================================================
+
+class TestAsyncSessionGuardrail:
+    """Ensure policy endpoints use AsyncSession - prevents sync DB regression."""
+
+    def test_policy_api_uses_async_session(self):
+        """
+        CI guardrail: Policy API endpoints MUST use AsyncSession.
+
+        Background: Sync Session(engine) inside async endpoints causes:
+        - Event-loop starvation under load
+        - Deadlock risk when sharing DB pools
+        - Incompatibility with M19 async governance layer
+
+        If this test fails, someone has regressed to sync sessions.
+        """
+        import inspect
+        from app.api.policy import evaluate_policy, get_approval_request
+
+        # Check evaluate_policy signature
+        sig = inspect.signature(evaluate_policy)
+        params_str = str(sig)
+        assert "AsyncSession" in params_str, (
+            "evaluate_policy must use AsyncSession dependency injection. "
+            "Sync Session inside async endpoints breaks event-loop safety."
+        )
+
+        # Check get_approval_request signature
+        sig = inspect.signature(get_approval_request)
+        params_str = str(sig)
+        assert "AsyncSession" in params_str, (
+            "get_approval_request must use AsyncSession dependency injection."
+        )
+
+    def test_no_sync_session_import_in_policy_api(self):
+        """Ensure policy.py doesn't import sync Session from sqlmodel."""
+        import ast
+        from pathlib import Path
+
+        policy_file = Path(__file__).parent.parent / "app" / "api" / "policy.py"
+        if not policy_file.exists():
+            pytest.skip("policy.py not found")
+
+        source = policy_file.read_text()
+        tree = ast.parse(source)
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                if node.module == "sqlmodel":
+                    imported_names = [alias.name for alias in node.names]
+                    assert "Session" not in imported_names, (
+                        "policy.py must NOT import sync Session from sqlmodel. "
+                        "Use 'from sqlalchemy.ext.asyncio import AsyncSession' instead."
+                    )
+
+
 @pytest.mark.skip(reason="Requires database connection")
 class TestDatabaseIntegration:
     """Integration tests with real database."""

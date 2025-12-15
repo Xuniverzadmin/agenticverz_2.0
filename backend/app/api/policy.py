@@ -12,6 +12,9 @@ Integrates with:
 - PolicyApprovalLevel and ApprovalRequest from db.py
 - Workflow metrics for observability
 - CostSim V2 for simulation
+
+NOTE: Policy subsystem MUST use AsyncSession - async endpoints + M17/M19 routing.
+      Do NOT import sync Session from sqlmodel. See test_m19_policy.py guardrail tests.
 """
 
 import asyncio
@@ -30,7 +33,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_async_session
+from app.db_async import get_async_session
 
 logger = logging.getLogger("nova.api.policy")
 
