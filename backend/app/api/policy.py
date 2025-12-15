@@ -1072,7 +1072,7 @@ def run_escalation_task():
     Can be called from cron, celery, or APScheduler.
     """
     import asyncio
-    from app.database import AsyncSessionLocal
+    from app.db_async import AsyncSessionLocal
 
     async def _run():
         async with AsyncSessionLocal() as session:

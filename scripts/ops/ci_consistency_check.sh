@@ -98,7 +98,7 @@ check_ci_workflow() {
 
         # Check for explicit REDIS_URL in jobs that need it
         # Use sed to extract job block and check for REDIS_URL
-        local REDIS_JOBS=("integration" "e2e-tests")
+        local REDIS_JOBS=("integration" "e2e-tests" "m10-tests")
         for job in "${REDIS_JOBS[@]}"; do
             # Extract the job section and check for REDIS_URL
             # Look for 150 lines after job: to catch all env vars
@@ -136,6 +136,24 @@ check_ci_workflow() {
     else
         log_ok "All jobs have timeouts"
     fi
+
+    # Check 5: No DATABASE_URL in job outputs (GitHub blocks secrets)
+    if grep -q "outputs:" "$CI_FILE" && grep -A 10 "outputs:" "$CI_FILE" | grep -q "database_url:"; then
+        log_error "DATABASE_URL in job outputs - GitHub blocks secrets in outputs!"
+        log_info "  Fix: Each job should construct DATABASE_URL via neonctl + GITHUB_ENV"
+    else
+        log_ok "No secret-containing job outputs detected"
+    fi
+
+    # Check 6: Neon ephemeral branch jobs must construct their own DATABASE_URL
+    local NEON_JOBS=("integration" "costsim" "costsim-integration" "costsim-wiremock" "e2e-tests" "m10-tests")
+    for job in "${NEON_JOBS[@]}"; do
+        if grep -A 100 "^  ${job}:" "$CI_FILE" 2>/dev/null | grep -q "neonctl connection-string"; then
+            log_ok "Job '$job' constructs DATABASE_URL via neonctl"
+        elif grep -A 100 "^  ${job}:" "$CI_FILE" 2>/dev/null | grep -q "needs.setup-neon-branch.outputs.database_url"; then
+            log_error "Job '$job' uses database_url from outputs - will fail due to secret blocking"
+        fi
+    done
 }
 
 #############################################
@@ -248,7 +266,80 @@ check_code_patterns() {
 }
 
 #############################################
-# LAYER 4: TEST INFRASTRUCTURE
+# LAYER 4: ALEMBIC MIGRATIONS
+#############################################
+
+check_alembic_migrations() {
+    header "Alembic Migrations"
+
+    local ALEMBIC_DIR="$REPO_ROOT/backend/alembic/versions"
+
+    if [[ ! -d "$ALEMBIC_DIR" ]]; then
+        log_warn "Alembic versions directory not found"
+        return
+    fi
+
+    # Check 1: Revision IDs must be <= 32 characters (alembic_version column limit)
+    local LONG_REVISIONS=0
+    for f in "$ALEMBIC_DIR"/*.py; do
+        [[ -f "$f" ]] || continue
+        [[ "$f" == *"__pycache__"* ]] && continue
+
+        local REV=$(grep "^revision = " "$f" 2>/dev/null | head -1 | sed "s/revision = ['\"]//g" | sed "s/['\"]//g")
+        if [[ -n "$REV" ]]; then
+            local LEN=${#REV}
+            if [[ $LEN -gt 32 ]]; then
+                log_error "Revision ID too long ($LEN > 32): $REV"
+                log_info "  File: $(basename "$f")"
+                ((LONG_REVISIONS++))
+            elif [[ $LEN -gt 28 ]]; then
+                log_warn "Revision ID near limit ($LEN/32): $REV"
+            fi
+        fi
+    done
+
+    if [[ $LONG_REVISIONS -eq 0 ]]; then
+        log_ok "All revision IDs fit within varchar(32)"
+    fi
+
+    # Check 2: Verify single migration head (no multiple heads)
+    if command -v alembic &>/dev/null; then
+        cd "$REPO_ROOT/backend" 2>/dev/null || true
+        local HEADS=$(PYTHONPATH=. alembic heads 2>/dev/null | grep -c "head" || echo "0")
+        if [[ "$HEADS" == "1" ]]; then
+            log_ok "Single migration head (no branching)"
+        elif [[ "$HEADS" -gt 1 ]]; then
+            log_error "Multiple migration heads detected - run 'alembic merge heads'"
+        fi
+        cd "$REPO_ROOT" 2>/dev/null || true
+    else
+        log_info "Alembic not in PATH - skipping head check"
+    fi
+
+    # Check 3: Migrations should use idempotent patterns (IF NOT EXISTS, DO blocks)
+    local NON_IDEMPOTENT=0
+    for f in "$ALEMBIC_DIR"/*.py; do
+        [[ -f "$f" ]] || continue
+        [[ "$f" == *"__pycache__"* ]] && continue
+
+        # Check for CREATE TABLE without IF NOT EXISTS
+        if grep -q "CREATE TABLE [^I]" "$f" 2>/dev/null && ! grep -q "IF NOT EXISTS\|DO \$\$" "$f" 2>/dev/null; then
+            # Only warn for newer migrations (028+)
+            local BASENAME=$(basename "$f")
+            if [[ "$BASENAME" > "028" ]]; then
+                log_warn "Non-idempotent migration: $(basename "$f")"
+                ((NON_IDEMPOTENT++))
+            fi
+        fi
+    done
+
+    if [[ $NON_IDEMPOTENT -eq 0 ]]; then
+        log_ok "Recent migrations use idempotent patterns"
+    fi
+}
+
+#############################################
+# LAYER 5: TEST INFRASTRUCTURE
 #############################################
 
 check_test_infrastructure() {
@@ -296,14 +387,28 @@ check_service_matrix() {
     cat <<EOF
 
 Service Matrix (CI vs Local vs Production):
-┌────────────────┬─────────────────────┬─────────────────────┬─────────────────────┐
-│ Service        │ CI (GitHub Actions) │ Local (docker)      │ Production          │
-├────────────────┼─────────────────────┼─────────────────────┼─────────────────────┤
-│ PostgreSQL     │ localhost:5432      │ localhost:5433      │ Neon (cloud)        │
-│ Redis          │ localhost:6379      │ localhost:6379      │ Upstash (cloud)     │
-│ Backend        │ localhost:8000      │ localhost:8000      │ api.agenticverz.com │
-│ WireMock       │ localhost:8080      │ localhost:8080      │ N/A                 │
-└────────────────┴─────────────────────┴─────────────────────┴─────────────────────┘
+┌────────────────┬────────────────────────────────┬─────────────────────┬─────────────────────┐
+│ Service        │ CI (GitHub Actions)            │ Local (docker)      │ Production          │
+├────────────────┼────────────────────────────────┼─────────────────────┼─────────────────────┤
+│ PostgreSQL     │ Neon ephemeral branch          │ localhost:5433      │ Neon (cloud)        │
+│                │ (fallback: Docker localhost)   │                     │                     │
+│ Redis          │ localhost:6379 (container)     │ localhost:6379      │ Upstash (cloud)     │
+│ Backend        │ localhost:8000                 │ localhost:8000      │ api.agenticverz.com │
+│ WireMock       │ localhost:8080                 │ localhost:8080      │ N/A                 │
+└────────────────┴────────────────────────────────┴─────────────────────┴─────────────────────┘
+
+CI Database Strategy (Ephemeral Neon Branches):
+┌─────────────────────┬────────────────────────────────────────────────────┐
+│ Phase               │ Description                                        │
+├─────────────────────┼────────────────────────────────────────────────────┤
+│ setup-neon-branch   │ Creates branch: ci-{run_id}-{attempt}              │
+│                     │ Parent: Agenticverz-AOS (production snapshot)      │
+├─────────────────────┼────────────────────────────────────────────────────┤
+│ Each DB job         │ Uses neonctl to construct DATABASE_URL             │
+│                     │ (Cannot pass URL as output - GitHub blocks secrets)│
+├─────────────────────┼────────────────────────────────────────────────────┤
+│ cleanup-neon-branch │ Deletes ephemeral branch after all jobs complete   │
+└─────────────────────┴────────────────────────────────────────────────────┘
 
 EOF
 
@@ -386,8 +491,9 @@ print_summary() {
 main() {
     echo ""
     echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║     CI Consistency Checker v1.0            ║${NC}"
+    echo -e "${BLUE}║     CI Consistency Checker v1.1            ║${NC}"
     echo -e "${BLUE}║     Fool-Proof Prevention Mechanism        ║${NC}"
+    echo -e "${BLUE}║     + Neon/Alembic checks (2025-12-15)     ║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -401,6 +507,7 @@ main() {
     check_ci_workflow
     check_infrastructure_deps
     check_code_patterns
+    check_alembic_migrations
 
     if ! $QUICK_MODE; then
         check_test_infrastructure

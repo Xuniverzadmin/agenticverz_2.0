@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_async_session
+from app.db_async import get_async_session
 from app.policy import (
     ActionType,
     PolicyCategory,

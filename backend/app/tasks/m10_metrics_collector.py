@@ -99,7 +99,7 @@ async def collect_db_queue_metrics(session=None) -> dict:
 
     try:
         if session is None:
-            from app.database import get_async_session
+            from app.db_async import get_async_session
             session = await get_async_session()
             close_session = True
 
@@ -151,7 +151,7 @@ async def collect_matview_freshness(session=None) -> dict:
 
     try:
         if session is None:
-            from app.database import get_async_session
+            from app.db_async import get_async_session
             session = await get_async_session()
             close_session = True
 
@@ -209,7 +209,7 @@ async def collect_candidate_stats(session=None) -> dict:
 
     try:
         if session is None:
-            from app.database import get_async_session
+            from app.db_async import get_async_session
             session = await get_async_session()
             close_session = True
 
