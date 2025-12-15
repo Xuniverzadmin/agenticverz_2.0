@@ -1,0 +1,196 @@
+# M10 Recovery Suggestion Engine Alerts (SIMPLIFIED)
+#
+# PIN-058: Reduced from 23 alerts to 7 critical alerts.
+# This prevents alert fatigue for solo founder operations.
+#
+# Kept alerts:
+# 1. M10QueueDepthCritical - Core queue health
+# 2. M10NoStreamConsumers - Workers dead
+# 3. M10OutboxPendingCritical - Side-effects blocked
+# 4. M10OutboxLagHigh - Processing stuck
+# 5. M10DeadLetterCritical - Systemic failures
+# 6. M10MatviewVeryStale - Dashboard broken
+# 7. M10WorkerNoActivity - Workers stuck
+# 8. M10ArchiveGrowthHigh - Data growth risk (added for retention policy)
+# 9. M10MetricsCollectorDown - Metrics blind spot
+#
+# See PIN-058 for rationale on which alerts to keep vs remove.
+
+groups:
+  # ==========================================================================
+  # Critical Queue Alerts (2 alerts)
+  # ==========================================================================
+  - name: m10_queue_critical
+    rules:
+      # Queue depth critical - immediate action required
+      - alert: M10QueueDepthCritical
+        expr: |
+          (recovery_stream_length + recovery_db_queue_depth) > 5000
+        for: 5m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 evaluation queue depth > 5000"
+          description: |
+            Queue depth critical: {{ printf "%.0f" $value }}.
+            Immediate action required - scale workers or investigate backlog.
+          runbook: "docs/runbooks/M10_RECOVERY_OPERATIONS.md#troubleshooting"
+
+      # No consumers - workers are dead
+      - alert: M10NoStreamConsumers
+        expr: recovery_stream_consumers == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "No M10 stream consumers active"
+          description: |
+            No workers consuming from the evaluation stream.
+            Start recovery_claim_worker service.
+          runbook: "docs/runbooks/M10_RECOVERY_OPERATIONS.md#worker-operations"
+
+  # ==========================================================================
+  # Critical Outbox Alerts (2 alerts)
+  # ==========================================================================
+  - name: m10_outbox_critical
+    rules:
+      # Outbox pending backlog critical - external side-effects blocked
+      - alert: M10OutboxPendingCritical
+        expr: m10_outbox_pending > 1000
+        for: 10m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 outbox pending events > 1000"
+          description: |
+            {{ printf "%.0f" $value }} outbox events backlogged.
+            External side-effects may be significantly delayed.
+            Check outbox processor and external endpoints.
+          runbook: "docs/runbooks/M10_MIGRATION_022_RUNBOOK.md#troubleshooting"
+
+      # Outbox lag high - processing stuck
+      - alert: M10OutboxLagHigh
+        expr: m10_outbox_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 outbox lag > 5 minutes"
+          description: |
+            Oldest pending outbox event is {{ printf "%.0f" $value }}s old.
+            Outbox processor may be stuck or slow.
+          runbook: "docs/runbooks/M10_MIGRATION_022_RUNBOOK.md#troubleshooting"
+
+  # ==========================================================================
+  # Critical Dead-Letter Alert (1 alert)
+  # ==========================================================================
+  - name: m10_dead_letter_critical
+    rules:
+      # Dead-letter queue critical - systemic failures
+      - alert: M10DeadLetterCritical
+        expr: recovery_dead_letter_length > 100
+        for: 15m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 dead-letter queue has > 100 messages"
+          description: |
+            {{ printf "%.0f" $value }} messages in dead-letter stream.
+            Systemic issue causing message failures. Immediate investigation required.
+          runbook: "docs/runbooks/M10_RECOVERY_OPERATIONS.md#dead-letter-operations"
+
+  # ==========================================================================
+  # Critical Matview Alert (1 alert)
+  # ==========================================================================
+  - name: m10_matview_critical
+    rules:
+      # Matview very stale - dashboard broken
+      - alert: M10MatviewVeryStale
+        expr: recovery_matview_age_seconds{view_name="mv_top_pending"} > 3600
+        for: 5m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 mv_top_pending matview stale > 1 hour"
+          description: |
+            Matview age: {{ printf "%.0f" $value }}s.
+            Refresh job may be failing. Manual refresh required.
+          runbook: "docs/runbooks/M10_RECOVERY_OPERATIONS.md#materialized-view-operations"
+
+  # ==========================================================================
+  # Critical Worker Alert (1 alert)
+  # ==========================================================================
+  - name: m10_worker_critical
+    rules:
+      # No worker activity despite backlog - workers stuck
+      - alert: M10WorkerNoActivity
+        expr: |
+          sum(rate(recovery_worker_claimed_total[10m])) == 0
+          and (recovery_stream_length + recovery_db_queue_depth) > 10
+        for: 10m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 workers not claiming work despite queue backlog"
+          description: |
+            Workers are not claiming items but queue has backlog.
+            Check worker health and restart if necessary.
+          runbook: "docs/runbooks/M10_RECOVERY_OPERATIONS.md#worker-operations"
+
+  # ==========================================================================
+  # Data Growth & Retention Alerts (1 alert)
+  # ==========================================================================
+  - name: m10_data_growth
+    rules:
+      # Archive growth high - retention policy needed
+      - alert: M10ArchiveGrowthHigh
+        expr: |
+          (m10_dead_letter_count + m10_replay_log_count) > 10000
+        for: 1h
+        labels:
+          severity: warning
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 archive tables growing large (>10k rows)"
+          description: |
+            Combined dead_letter_archive + replay_log rows: {{ printf "%.0f" $value }}.
+            Consider running retention job or enabling partitioning (migration 023).
+            Current threshold is pre-partitioning warning level.
+          runbook: "docs/runbooks/M10_PROD_HANDBOOK.md#retention-operations"
+
+  # ==========================================================================
+  # Metrics Collector Health (1 alert)
+  # ==========================================================================
+  - name: m10_collector_health
+    rules:
+      # Metrics collector not running - blind spot risk
+      - alert: M10MetricsCollectorDown
+        expr: |
+          absent(recovery_stream_length) == 1
+          or (time() - m10_last_collection_timestamp) > 120
+        for: 5m
+        labels:
+          severity: critical
+          component: m10_recovery
+          team: platform
+        annotations:
+          summary: "M10 metrics collector not producing metrics"
+          description: |
+            No M10 metrics received in last 2 minutes.
+            Alerts are effectively blind. Start m10-metrics-collector.service.
+          runbook: "docs/runbooks/M10_PROD_HANDBOOK.md#metrics-collector-operations"
