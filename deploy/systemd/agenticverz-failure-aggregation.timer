@@ -1,0 +1,20 @@
+# /etc/systemd/system/agenticverz-failure-aggregation.timer
+# Timer for nightly failure aggregation
+#
+# Runs at 02:00 UTC daily with 5-minute jitter
+
+[Unit]
+Description=Run Agenticverz Failure Aggregation daily at 02:00 UTC
+
+[Timer]
+# Run at 2:00 AM UTC every day
+OnCalendar=*-*-* 02:00:00 UTC
+# Add some jitter to avoid thundering herd
+RandomizedDelaySec=300
+# Run immediately if we missed a scheduled run
+Persistent=true
+# Accuracy (allow 1 minute window)
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

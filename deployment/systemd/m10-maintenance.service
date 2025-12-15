@@ -1,0 +1,24 @@
+[Unit]
+Description=M10 Maintenance Orchestrator
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/agenticverz2.0
+Environment=PYTHONPATH=/root/agenticverz2.0/backend
+EnvironmentFile=/root/agenticverz2.0/.env
+
+# Run the consolidated orchestrator
+ExecStart=/usr/bin/python3 -m scripts.ops.m10_orchestrator --json
+
+# Timeout for entire orchestrator run (all 5 tasks)
+TimeoutStartSec=1800
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=m10-maintenance
+
+[Install]
+WantedBy=multi-user.target

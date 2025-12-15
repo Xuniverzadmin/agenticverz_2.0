@@ -1,0 +1,18 @@
+[Unit]
+Description=M10 Synthetic Traffic Generator
+Documentation=file:///root/agenticverz2.0/scripts/ops/m10_synthetic_traffic.py
+After=postgresql.service redis.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/agenticverz2.0
+EnvironmentFile=/root/agenticverz2.0/.env
+ExecStart=/usr/bin/python3 -m scripts.ops.m10_synthetic_traffic --count 10 --json
+Environment="PYTHONPATH=/root/agenticverz2.0/backend"
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

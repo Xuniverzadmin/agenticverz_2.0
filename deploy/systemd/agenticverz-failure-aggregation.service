@@ -1,0 +1,43 @@
+# /etc/systemd/system/agenticverz-failure-aggregation.service
+# Agenticverz Failure Aggregation Job (R2 upload)
+#
+# Runs nightly to aggregate unmatched failures and upload to R2.
+# Install: sudo cp deploy/systemd/agenticverz-failure-aggregation.* /etc/systemd/system/
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable --now agenticverz-failure-aggregation.timer
+
+[Unit]
+Description=Agenticverz Failure Aggregation (R2 upload)
+After=network.target vault.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/agenticverz2.0/backend
+
+# Load Vault credentials
+EnvironmentFile=/opt/vault/.vault-keys
+Environment=VAULT_ADDR=http://127.0.0.1:8200
+Environment=PYTHONPATH=/root/agenticverz2.0/backend
+
+# Load database URL from .env
+EnvironmentFile=/root/agenticverz2.0/.env
+
+# Run aggregation job
+ExecStart=/usr/bin/python3 -m app.jobs.failure_aggregation --json
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aos-aggregation
+
+# Timeouts
+TimeoutStartSec=900
+TimeoutStopSec=60
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/agenticverz/state /tmp
+
+[Install]
+WantedBy=multi-user.target

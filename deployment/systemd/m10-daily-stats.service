@@ -1,0 +1,18 @@
+[Unit]
+Description=M10 Daily Stats Exporter
+Documentation=file:///root/agenticverz2.0/scripts/ops/m10_daily_stats_export.py
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/agenticverz2.0
+EnvironmentFile=/root/agenticverz2.0/.env
+ExecStart=/usr/bin/python3 -m scripts.ops.m10_daily_stats_export --output-dir /var/log/m10
+Environment="PYTHONPATH=/root/agenticverz2.0/backend"
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

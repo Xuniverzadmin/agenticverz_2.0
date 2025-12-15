@@ -1,0 +1,12 @@
+[Unit]
+Description=M10 Synthetic Traffic Generator (every 30 min)
+Documentation=file:///root/agenticverz2.0/scripts/ops/m10_synthetic_traffic.py
+
+[Timer]
+OnCalendar=*:0/30
+AccuracySec=60s
+Persistent=true
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=M10 Daily Stats Export (00:05 UTC)
+Documentation=file:///root/agenticverz2.0/scripts/ops/m10_daily_stats_export.py
+
+[Timer]
+OnCalendar=*-*-* 00:05:00 UTC
+AccuracySec=60s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

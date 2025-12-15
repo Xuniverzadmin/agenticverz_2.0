@@ -1,0 +1,16 @@
+[Unit]
+Description=M10 Maintenance Orchestrator Timer (runs every 5 minutes)
+Documentation=docs/memory-pins/PIN-058-m10-simplification-analysis.md
+
+[Timer]
+# Run every 5 minutes
+OnCalendar=*:0/5
+# Reduce timer accuracy jitter
+AccuracySec=30s
+# Run immediately if timer was missed (e.g., system was off)
+Persistent=true
+# Randomize start within 30s to prevent thundering herd
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

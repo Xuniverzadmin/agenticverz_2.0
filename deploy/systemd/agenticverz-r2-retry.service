@@ -1,0 +1,42 @@
+# /etc/systemd/system/agenticverz-r2-retry.service
+# Agenticverz R2 Fallback Retry Worker
+#
+# Retries failed R2 uploads from local fallback directory.
+# Install: sudo cp deploy/systemd/agenticverz-r2-retry.* /etc/systemd/system/
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable --now agenticverz-r2-retry.timer
+
+[Unit]
+Description=Agenticverz R2 fallback retry worker
+After=network.target vault.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/agenticverz2.0
+
+# Load Vault credentials
+EnvironmentFile=/opt/vault/.vault-keys
+Environment=VAULT_ADDR=http://127.0.0.1:8200
+Environment=PYTHONPATH=/root/agenticverz2.0/backend
+
+# Load environment
+EnvironmentFile=/root/agenticverz2.0/.env
+
+# Run retry script
+ExecStart=/usr/bin/bash ./scripts/ops/retry_r2_fallbacks.sh
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aos-r2-retry
+
+# Timeouts
+TimeoutStartSec=600
+TimeoutStopSec=30
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/agenticverz/state
+
+[Install]
+WantedBy=multi-user.target

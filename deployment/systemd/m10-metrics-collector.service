@@ -1,0 +1,28 @@
+[Unit]
+Description=M10 Metrics Collector
+Documentation=file:///root/agenticverz2.0/docs/runbooks/M10_PROD_HANDBOOK.md
+After=postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/agenticverz2.0
+EnvironmentFile=/root/agenticverz2.0/.env
+ExecStart=/usr/bin/python3 -m app.tasks.m10_metrics_collector --daemon
+Environment="PYTHONPATH=/root/agenticverz2.0/backend"
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Watchdog for health check
+WatchdogSec=120
+NotifyAccess=main
+
+# Resource limits
+MemoryMax=256M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target
