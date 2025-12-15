@@ -44,6 +44,7 @@ class PlanStep(BaseModel):
     """A single step in a plan to simulate."""
     skill: str = Field(..., description="Skill ID to execute")
     params: Dict[str, Any] = Field(default_factory=dict, description="Parameters for the skill")
+    iterations: int = Field(default=1, ge=1, le=100, description="Number of times to execute this step")
 
 
 class SimulateRequest(BaseModel):
@@ -291,7 +292,7 @@ async def simulate_plan(
     """
     # Convert plan to format expected by CostSimulator
     plan_steps = [
-        {"skill": step.skill, "params": step.params}
+        {"skill": step.skill, "params": step.params, "iterations": step.iterations}
         for step in request.plan
     ]
 
@@ -339,6 +340,7 @@ async def simulate_plan(
 
     for i, step in enumerate(plan_steps):
         skill_id = step["skill"]
+        iterations = step.get("iterations", 1)
         meta = DEFAULT_SKILL_METADATA.get(skill_id, {
             "cost_cents": 0,
             "latency_ms": 100,
@@ -346,8 +348,12 @@ async def simulate_plan(
             "constraints": {},
         })
 
-        cost = meta.get("cost_cents", 0)
-        latency = meta.get("latency_ms", 100)
+        base_cost = meta.get("cost_cents", 0)
+        base_latency = meta.get("latency_ms", 100)
+
+        # Multiply cost and latency by iterations
+        cost = base_cost * iterations
+        latency = base_latency * iterations
 
         total_cost += cost
         total_latency += latency
@@ -355,7 +361,10 @@ async def simulate_plan(
         step_estimates.append({
             "step_index": i,
             "skill_id": skill_id,
+            "iterations": iterations,
+            "base_cost_cents": base_cost,
             "estimated_cost_cents": cost,
+            "base_latency_ms": base_latency,
             "estimated_latency_ms": latency,
         })
 

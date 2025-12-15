@@ -11,7 +11,7 @@ remote_write:
     write_relabel_configs:
       # Send AOS-related metrics to Grafana Cloud
       - source_labels: [__name__]
-        regex: "aos_.*|nova_.*|rbac_.*|process_.*|python_.*|up"
+        regex: "aos_.*|nova_.*|rbac_.*|recovery_.*|process_.*|python_.*|up"
         action: keep
 
 # Alert rules

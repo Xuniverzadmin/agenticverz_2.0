@@ -271,31 +271,48 @@ class CostSimulator:
 
         for i, step in enumerate(plan):
             skill_id = step.get("skill", "unknown")
+            iterations = step.get("iterations", 1)
 
             # Check permission
             if self.allowed_skills is not None and skill_id not in self.allowed_skills:
                 permission_gaps.append(skill_id)
 
-            # Get estimate
+            # Get estimate for single execution
             estimate = self._estimate_step(i, step)
+
+            # Multiply cost and latency by iterations
+            step_cost = estimate["cost_cents"] * iterations
+            step_latency = estimate["latency_ms"] * iterations
+
+            # Add iterations info to estimate
+            estimate["iterations"] = iterations
+            estimate["base_cost_cents"] = estimate["cost_cents"]
+            estimate["cost_cents"] = step_cost
+            estimate["base_latency_ms"] = estimate["latency_ms"]
+            estimate["latency_ms"] = step_latency
+
             step_estimates.append(estimate)
 
-            total_cost += estimate["cost_cents"]
-            total_latency += estimate["latency_ms"]
+            total_cost += step_cost
+            total_latency += step_latency
 
-            # Track risks
+            # Track risks (risk compounds with iterations)
             if estimate["risk_probability"] > 0.05:
+                # Risk increases with iterations: P(at least one failure) = 1 - (1-p)^n
+                compounded_risk = 1.0 - ((1.0 - estimate["risk_probability"]) ** iterations)
                 risks.append(StepRisk(
                     step_index=i,
                     skill_id=skill_id,
                     risk_type=estimate["risk_type"],
-                    probability=estimate["risk_probability"],
-                    description=f"{skill_id} has {estimate['risk_probability']*100:.0f}% chance of {estimate['risk_type']}",
+                    probability=compounded_risk,
+                    description=f"{skill_id} x{iterations} has {compounded_risk*100:.0f}% chance of {estimate['risk_type']}",
                     mitigation=self._get_mitigation(estimate["risk_type"]),
                 ))
 
             # Calculate cumulative risk (simplified: 1 - product of success probabilities)
-            cumulative_risk = 1.0 - ((1.0 - cumulative_risk) * (1.0 - estimate["risk_probability"]))
+            # Use compounded risk for the step based on iterations
+            step_risk = 1.0 - ((1.0 - estimate["risk_probability"]) ** iterations)
+            cumulative_risk = 1.0 - ((1.0 - cumulative_risk) * (1.0 - step_risk))
 
         # Determine feasibility
         budget_sufficient = total_cost <= self.budget_cents
@@ -385,6 +402,9 @@ def simulate_plan(
 
 if __name__ == "__main__":
     # Quick smoke test
+    print("=" * 60)
+    print("Test 1: Basic plan (no iterations)")
+    print("=" * 60)
     simulator = CostSimulator(budget_cents=100)
 
     plan = [
@@ -404,3 +424,41 @@ if __name__ == "__main__":
         print("\nRisks:")
         for risk in result.risks:
             print(f"  - Step {risk.step_index}: {risk.description}")
+
+    # Test with iterations
+    print("\n" + "=" * 60)
+    print("Test 2: Plan with iterations (llm_invoke x10, email_send x10)")
+    print("Expected: 10*5 + 10*1 = 60 cents")
+    print("=" * 60)
+    simulator2 = CostSimulator(budget_cents=300)
+
+    plan2 = [
+        {"skill": "llm_invoke", "params": {"prompt": "Test"}, "iterations": 10},
+        {"skill": "email_send", "params": {"to": "test@example.com"}, "iterations": 10},
+    ]
+
+    result2 = simulator2.simulate(plan2)
+    print(f"Feasible: {result2.feasible}")
+    print(f"Status: {result2.status.value}")
+    print(f"Estimated cost: {result2.estimated_cost_cents} cents (expected: 60)")
+    print(f"Estimated duration: {result2.estimated_duration_ms} ms")
+    print(f"Budget remaining: {result2.budget_remaining_cents} cents")
+
+    for step in result2.step_estimates:
+        print(f"  Step {step['step_index']}: {step['skill_id']} x{step.get('iterations', 1)} = {step['cost_cents']} cents")
+
+    # Test budget failure with iterations
+    print("\n" + "=" * 60)
+    print("Test 3: Budget failure (llm_invoke x50 = 250 cents, budget = 100)")
+    print("=" * 60)
+    simulator3 = CostSimulator(budget_cents=100)
+
+    plan3 = [
+        {"skill": "llm_invoke", "params": {"prompt": "Test"}, "iterations": 50},
+    ]
+
+    result3 = simulator3.simulate(plan3)
+    print(f"Feasible: {result3.feasible} (expected: False)")
+    print(f"Status: {result3.status.value} (expected: budget_insufficient)")
+    print(f"Estimated cost: {result3.estimated_cost_cents} cents (expected: 250)")
+    print(f"Budget remaining: {result3.budget_remaining_cents} cents (expected: -150)")

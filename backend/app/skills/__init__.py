@@ -37,6 +37,11 @@ if TYPE_CHECKING:
     from .json_transform import JsonTransformSkill
     from .postgres_query import PostgresQuerySkill
     from .email_send import EmailSendSkill
+    # M11 Skills
+    from .kv_store import KVStoreSkill
+    from .slack_send import SlackSendSkill
+    from .webhook_send import WebhookSendSkill
+    from .voyage_embed import VoyageEmbedSkill
 
 
 # Skill module paths for lazy loading
@@ -47,6 +52,11 @@ _SKILL_MODULES = {
     "JsonTransformSkill": ".json_transform",
     "PostgresQuerySkill": ".postgres_query",
     "EmailSendSkill": ".email_send",
+    # M11 Skills
+    "KVStoreSkill": ".kv_store",
+    "SlackSendSkill": ".slack_send",
+    "WebhookSendSkill": ".webhook_send",
+    "VoyageEmbedSkill": ".voyage_embed",
 }
 
 _loaded_skills = {}
@@ -131,4 +141,9 @@ __all__ = [
     "JsonTransformSkill",
     "PostgresQuerySkill",
     "EmailSendSkill",
+    # M11 Skills
+    "KVStoreSkill",
+    "SlackSendSkill",
+    "WebhookSendSkill",
+    "VoyageEmbedSkill",
 ]

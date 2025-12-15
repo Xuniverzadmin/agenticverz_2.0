@@ -448,6 +448,110 @@ def cmd_capabilities(args):
         print()
 
 
+# ============== RECOVERY Commands (M10) ==============
+
+def cmd_recovery_candidates(args):
+    """
+    List recovery candidates for human review.
+
+    Usage:
+        aos recovery candidates [--status pending|approved|rejected|all] [--limit 50]
+    """
+    params = {
+        "status": args.status,
+        "limit": str(args.limit),
+        "offset": str(args.offset),
+    }
+
+    result = api_request("GET", "/api/v1/recovery/candidates", params=params)
+
+    candidates = result.get("candidates", [])
+
+    print()
+    print("=" * 80)
+    print("  RECOVERY CANDIDATES")
+    print("=" * 80)
+    print()
+
+    if not candidates:
+        print(f"  No candidates found with status '{args.status}'")
+        print()
+        return
+
+    print(f"  Total: {result.get('total', len(candidates))} (showing {len(candidates)})")
+    print()
+    print(f"  {'ID':<6} {'CONF':>6} {'STATUS':<10} {'ERROR_CODE':<20} {'SUGGESTION':<40}")
+    print(f"  {'-'*6} {'-'*6} {'-'*10} {'-'*20} {'-'*40}")
+
+    for c in candidates:
+        conf = f"{c['confidence']:.2f}"
+        suggestion = c['suggestion'][:37] + "..." if len(c['suggestion']) > 40 else c['suggestion']
+        error_code = (c.get('error_code') or 'N/A')[:20]
+        print(f"  {c['id']:<6} {conf:>6} {c['decision']:<10} {error_code:<20} {suggestion:<40}")
+
+    print()
+
+    if args.verbose:
+        print("  📄 Raw Response:")
+        print(format_json(result))
+        print()
+
+
+def cmd_recovery_approve(args):
+    """
+    Approve or reject a recovery candidate.
+
+    Usage:
+        aos recovery approve --id 17 --by mahesh [--note "looks correct"]
+        aos recovery reject --id 17 --by mahesh [--note "false positive"]
+    """
+    decision = "approved" if not args.reject else "rejected"
+
+    data = {
+        "candidate_id": args.id,
+        "approved_by": args.by,
+        "decision": decision,
+        "note": args.note or "",
+    }
+
+    result = api_request("POST", "/api/v1/recovery/approve", data=data)
+
+    print()
+    print("=" * 60)
+    print(f"  CANDIDATE {decision.upper()}")
+    print("=" * 60)
+    print()
+    print(f"  ID:          {result.get('id')}")
+    print(f"  Decision:    {result.get('decision')}")
+    print(f"  Approved By: {result.get('approved_by_human')}")
+    print(f"  Approved At: {result.get('approved_at')}")
+    if result.get('review_note'):
+        print(f"  Note:        {result.get('review_note')}")
+    print()
+
+
+def cmd_recovery_stats(args):
+    """
+    Show recovery suggestion statistics.
+
+    Usage:
+        aos recovery stats
+    """
+    result = api_request("GET", "/api/v1/recovery/stats")
+
+    print()
+    print("=" * 60)
+    print("  RECOVERY SUGGESTION STATS")
+    print("=" * 60)
+    print()
+    print(f"  Total Candidates: {result.get('total_candidates', 0)}")
+    print(f"  Pending:          {result.get('pending', 0)}")
+    print(f"  Approved:         {result.get('approved', 0)}")
+    print(f"  Rejected:         {result.get('rejected', 0)}")
+    print(f"  Approval Rate:    {result.get('approval_rate', 0):.1%}")
+    print()
+
+
 # ============== VERSION Command ==============
 
 def cmd_version(args):
@@ -528,6 +632,35 @@ Environment:
     # version command
     ver_parser = subparsers.add_parser("version", help="Show version info")
 
+    # recovery command group (M10)
+    recovery_parser = subparsers.add_parser("recovery", help="Recovery suggestion commands (M10)")
+    recovery_subparsers = recovery_parser.add_subparsers(dest="recovery_command", help="Recovery subcommands")
+
+    # recovery candidates
+    rc_parser = recovery_subparsers.add_parser("candidates", help="List recovery candidates")
+    rc_parser.add_argument("--status", "-s", default="pending",
+                          choices=["pending", "approved", "rejected", "all"],
+                          help="Filter by status (default: pending)")
+    rc_parser.add_argument("--limit", "-l", type=int, default=50, help="Max results (default: 50)")
+    rc_parser.add_argument("--offset", "-o", type=int, default=0, help="Pagination offset")
+    rc_parser.add_argument("--verbose", "-v", action="store_true", help="Show raw response")
+
+    # recovery approve
+    ra_parser = recovery_subparsers.add_parser("approve", help="Approve a recovery candidate")
+    ra_parser.add_argument("--id", "-i", type=int, required=True, help="Candidate ID to approve")
+    ra_parser.add_argument("--by", "-b", required=True, help="User making the decision")
+    ra_parser.add_argument("--note", "-n", default="", help="Optional review note")
+    ra_parser.add_argument("--reject", "-r", action="store_true", help="Reject instead of approve")
+
+    # recovery reject (alias for approve --reject)
+    rr_parser = recovery_subparsers.add_parser("reject", help="Reject a recovery candidate")
+    rr_parser.add_argument("--id", "-i", type=int, required=True, help="Candidate ID to reject")
+    rr_parser.add_argument("--by", "-b", required=True, help="User making the decision")
+    rr_parser.add_argument("--note", "-n", default="", help="Optional review note")
+
+    # recovery stats
+    rs_parser = recovery_subparsers.add_parser("stats", help="Show recovery statistics")
+
     args = parser.parse_args()
 
     if args.command == "simulate":
@@ -542,6 +675,18 @@ Environment:
         cmd_capabilities(args)
     elif args.command == "version":
         cmd_version(args)
+    elif args.command == "recovery":
+        if args.recovery_command == "candidates":
+            cmd_recovery_candidates(args)
+        elif args.recovery_command == "approve":
+            cmd_recovery_approve(args)
+        elif args.recovery_command == "reject":
+            args.reject = True
+            cmd_recovery_approve(args)
+        elif args.recovery_command == "stats":
+            cmd_recovery_stats(args)
+        else:
+            recovery_parser.print_help()
     else:
         parser.print_help()
 

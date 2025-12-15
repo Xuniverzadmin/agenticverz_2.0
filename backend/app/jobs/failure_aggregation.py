@@ -6,12 +6,14 @@ Runs nightly to:
 1. Query unmatched failures (catalog_entry_id IS NULL)
 2. Group by error signature
 3. Produce candidate_failure_patterns.json for catalog expansion
-4. Alert on high-frequency unknown errors
+4. Upload to Cloudflare R2 for durable storage (with local fallback)
+5. Alert on high-frequency unknown errors
 
 Usage:
     python -m app.jobs.failure_aggregation
     python -m app.jobs.failure_aggregation --output /custom/path/patterns.json
     python -m app.jobs.failure_aggregation --days 14 --min-occurrences 5
+    python -m app.jobs.failure_aggregation --skip-r2  # Local only, no R2 upload
 
 Schedule via cron/systemd:
     0 2 * * * cd /root/agenticverz2.0/backend && python -m app.jobs.failure_aggregation
@@ -295,6 +297,7 @@ def run_aggregation(
     days: int = 7,
     min_occurrences: int = 3,
     output_path: Optional[Path] = None,
+    skip_r2: bool = False,
 ) -> Dict[str, Any]:
     """
     Run the full aggregation pipeline.
@@ -303,6 +306,7 @@ def run_aggregation(
         days: Look back period
         min_occurrences: Minimum occurrences
         output_path: Output file path
+        skip_r2: If True, skip R2 upload (local file only)
 
     Returns:
         Summary statistics
@@ -327,13 +331,42 @@ def run_aggregation(
     aggregated = aggregate_patterns(raw_patterns)
     logger.info(f"Aggregated into {len(aggregated)} unique patterns")
 
-    # Write output
+    # Write local output
     success = write_output(aggregated, output_path)
 
     # Generate summary
     stats = get_summary_stats(aggregated)
     stats["output_path"] = str(output_path)
     stats["success"] = success
+
+    # Upload to R2 (unless skipped)
+    if not skip_r2:
+        try:
+            from app.jobs.storage import write_candidate_json_and_upload
+
+            output_payload = {
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "pattern_count": len(aggregated),
+                "patterns": aggregated,
+                "summary": stats,
+            }
+
+            r2_result = write_candidate_json_and_upload(output_payload)
+            stats["r2_upload"] = r2_result
+
+            if r2_result.get("status") == "uploaded":
+                logger.info(f"Uploaded to R2: {r2_result.get('key')} ({r2_result.get('size')} bytes)")
+            elif r2_result.get("status") == "fallback_local":
+                logger.warning(f"R2 upload failed, fallback to: {r2_result.get('path')}")
+            elif r2_result.get("status") == "disabled":
+                logger.info("R2 storage not configured, skipping upload")
+
+        except Exception as e:
+            logger.error(f"R2 upload failed: {e}")
+            stats["r2_upload"] = {"status": "error", "error": str(e)}
+    else:
+        logger.info("R2 upload skipped (--skip-r2 flag)")
+        stats["r2_upload"] = {"status": "skipped"}
 
     # Log summary
     logger.info(f"Aggregation complete: {stats['total_patterns']} patterns, {stats['total_occurrences']} total occurrences")
@@ -371,6 +404,11 @@ def main():
         action="store_true",
         help="Output results as JSON"
     )
+    parser.add_argument(
+        "--skip-r2",
+        action="store_true",
+        help="Skip R2 upload (local file only)"
+    )
 
     args = parser.parse_args()
 
@@ -381,12 +419,21 @@ def main():
             days=args.days,
             min_occurrences=args.min_occurrences,
             output_path=output_path,
+            skip_r2=args.skip_r2,
         )
 
         if args.json:
             print(json.dumps(stats, indent=2))
         else:
             print(f"Aggregation complete: {stats['total_patterns']} patterns found")
+            if stats.get("r2_upload"):
+                r2_status = stats["r2_upload"].get("status", "unknown")
+                if r2_status == "uploaded":
+                    print(f"R2 upload: {stats['r2_upload'].get('key')}")
+                elif r2_status == "fallback_local":
+                    print(f"R2 fallback: {stats['r2_upload'].get('path')}")
+                else:
+                    print(f"R2 status: {r2_status}")
 
         sys.exit(0 if stats.get("success", True) else 1)
 

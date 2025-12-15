@@ -101,6 +101,7 @@ class SimulationStep(BaseModel):
 
     skill: str = Field(..., description="Skill ID")
     params: Dict[str, Any] = Field(default_factory=dict, description="Skill parameters")
+    iterations: int = Field(default=1, ge=1, le=100, description="Number of times to execute this step")
 
 
 class SimulateRequest(BaseModel):
@@ -444,9 +445,9 @@ async def simulate_v2(request: SimulateRequest):
     - Post-execution memory updates via rules engine
     - Drift detection between baseline and memory-enabled runs
     """
-    # Convert request to plan format
+    # Convert request to plan format (include iterations for cost calculation)
     plan = [
-        {"skill": step.skill, "params": step.params}
+        {"skill": step.skill, "params": step.params, "iterations": step.iterations}
         for step in request.plan
     ]
 
