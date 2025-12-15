@@ -247,6 +247,7 @@ from .api.recovery import router as recovery_router
 from .api.recovery_ingest import router as recovery_ingest_router
 from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
+from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -261,6 +262,7 @@ app.include_router(recovery_router)  # M10 Recovery Suggestion Engine
 app.include_router(recovery_ingest_router)  # M10 Recovery Ingest (idempotent)
 app.include_router(agents_router)  # M12 Multi-Agent System
 app.include_router(policy_layer_router, prefix="/api/v1")  # M19 Policy Layer
+app.include_router(embedding_router, prefix="/api/v1")  # PIN-047 Embedding Quota
 
 # CORS middleware
 app.add_middleware(

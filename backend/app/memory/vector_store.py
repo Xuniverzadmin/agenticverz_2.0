@@ -54,11 +54,14 @@ from app.memory.embedding_metrics import (
 logger = logging.getLogger("nova.memory.vector_store")
 
 # Embedding configuration
-EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "openai")  # openai or anthropic
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "openai")  # openai or voyage
+EMBEDDING_BACKUP_PROVIDER = os.getenv("EMBEDDING_BACKUP_PROVIDER", "voyage")  # fallback provider
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+VOYAGE_MODEL = os.getenv("VOYAGE_MODEL", "voyage-3-lite")  # voyage-3, voyage-3-lite, voyage-code-3
 EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
+EMBEDDING_FALLBACK_ENABLED = os.getenv("EMBEDDING_FALLBACK_ENABLED", "true").lower() == "true"
 
 
 class EmbeddingError(Exception):
@@ -68,6 +71,8 @@ class EmbeddingError(Exception):
 
 async def get_embedding_openai(text: str) -> List[float]:
     """Get embedding from OpenAI API."""
+    import time
+
     if not OPENAI_API_KEY:
         raise EmbeddingError("OPENAI_API_KEY not set")
 
@@ -75,61 +80,166 @@ async def get_embedding_openai(text: str) -> List[float]:
     if not check_embedding_quota():
         raise EmbeddingError("Daily embedding quota exceeded")
 
+    start_time = time.perf_counter()
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            "https://api.openai.com/v1/embeddings",
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": EMBEDDING_MODEL,
-                "input": text[:8000],  # Truncate to avoid token limits
-            },
-        )
+        try:
+            response = await client.post(
+                "https://api.openai.com/v1/embeddings",
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": EMBEDDING_MODEL,
+                    "input": text[:8000],  # Truncate to avoid token limits
+                },
+            )
 
-        if response.status_code != 200:
-            raise EmbeddingError(f"OpenAI API error: {response.status_code} - {response.text}")
+            latency = time.perf_counter() - start_time
+            EMBEDDING_API_LATENCY.labels(provider="openai").observe(latency)
 
-        # Increment quota counter on success
-        increment_embedding_count()
+            if response.status_code == 429:
+                EMBEDDING_ERRORS.labels(provider="openai", error_type="rate_limit").inc()
+                raise EmbeddingError("OpenAI API rate limited")
+            elif response.status_code == 401:
+                EMBEDDING_ERRORS.labels(provider="openai", error_type="auth").inc()
+                raise EmbeddingError("OpenAI API authentication failed")
+            elif response.status_code != 200:
+                EMBEDDING_ERRORS.labels(provider="openai", error_type="other").inc()
+                raise EmbeddingError(f"OpenAI API error: {response.status_code} - {response.text}")
 
-        data = response.json()
-        return data["data"][0]["embedding"]
+            # Increment quota counter on success
+            increment_embedding_count()
+            EMBEDDING_API_CALLS.labels(provider="openai", status="success").inc()
+
+            data = response.json()
+            return data["data"][0]["embedding"]
+
+        except httpx.TimeoutException:
+            EMBEDDING_ERRORS.labels(provider="openai", error_type="timeout").inc()
+            raise EmbeddingError("OpenAI API timeout")
 
 
-async def get_embedding_anthropic(text: str) -> List[float]:
-    """Get embedding from Anthropic Voyage API."""
-    if not ANTHROPIC_API_KEY:
-        raise EmbeddingError("ANTHROPIC_API_KEY not set")
+async def get_embedding_voyage(text: str) -> List[float]:
+    """
+    Get embedding from Voyage AI API.
 
-    # Anthropic uses Voyage for embeddings
+    Voyage AI (https://www.voyageai.com/) provides high-quality embeddings
+    optimized for retrieval tasks.
+
+    Models:
+    - voyage-3: Best quality, 1024 dimensions
+    - voyage-3-lite: Faster, 512 dimensions
+    - voyage-code-3: Optimized for code
+    """
+    import time
+
+    if not VOYAGE_API_KEY:
+        raise EmbeddingError("VOYAGE_API_KEY not set")
+
+    # Check quota before making API call
+    if not check_embedding_quota():
+        raise EmbeddingError("Daily embedding quota exceeded")
+
+    start_time = time.perf_counter()
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            "https://api.voyageai.com/v1/embeddings",
-            headers={
-                "Authorization": f"Bearer {os.getenv('VOYAGE_API_KEY', '')}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "voyage-2",
-                "input": text[:8000],
-            },
-        )
+        try:
+            response = await client.post(
+                "https://api.voyageai.com/v1/embeddings",
+                headers={
+                    "Authorization": f"Bearer {VOYAGE_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": VOYAGE_MODEL,
+                    "input": text[:8000],  # Truncate to avoid token limits
+                    "input_type": "document",
+                },
+            )
 
-        if response.status_code != 200:
-            raise EmbeddingError(f"Voyage API error: {response.status_code}")
+            latency = time.perf_counter() - start_time
+            EMBEDDING_API_LATENCY.labels(provider="voyage").observe(latency)
 
-        data = response.json()
-        return data["data"][0]["embedding"]
+            if response.status_code == 429:
+                EMBEDDING_ERRORS.labels(provider="voyage", error_type="rate_limit").inc()
+                raise EmbeddingError("Voyage API rate limited")
+            elif response.status_code == 401:
+                EMBEDDING_ERRORS.labels(provider="voyage", error_type="auth").inc()
+                raise EmbeddingError("Voyage API authentication failed")
+            elif response.status_code != 200:
+                EMBEDDING_ERRORS.labels(provider="voyage", error_type="other").inc()
+                raise EmbeddingError(f"Voyage API error: {response.status_code} - {response.text}")
+
+            # Increment quota counter on success
+            increment_embedding_count()
+            EMBEDDING_API_CALLS.labels(provider="voyage", status="success").inc()
+
+            data = response.json()
+            return data["data"][0]["embedding"]
+
+        except httpx.TimeoutException:
+            EMBEDDING_ERRORS.labels(provider="voyage", error_type="timeout").inc()
+            raise EmbeddingError("Voyage API timeout")
 
 
-async def get_embedding(text: str) -> List[float]:
-    """Get embedding using configured provider."""
-    if EMBEDDING_PROVIDER == "anthropic":
-        return await get_embedding_anthropic(text)
-    else:
-        return await get_embedding_openai(text)
+async def get_embedding(text: str, allow_fallback: bool = True, use_cache: bool = True) -> List[float]:
+    """
+    Get embedding using configured provider with automatic fallback and caching.
+
+    Args:
+        text: Text to embed
+        allow_fallback: Whether to try backup provider on failure
+        use_cache: Whether to use cache layer
+
+    Returns:
+        Embedding vector
+
+    Raises:
+        EmbeddingError: If all providers fail
+    """
+    from app.memory.embedding_cache import get_embedding_cache
+
+    # Check cache first
+    if use_cache:
+        cache = get_embedding_cache()
+        model = EMBEDDING_MODEL if EMBEDDING_PROVIDER == "openai" else VOYAGE_MODEL
+        cached = await cache.get(text, model=model, provider=EMBEDDING_PROVIDER)
+        if cached is not None:
+            return cached
+
+    providers = [EMBEDDING_PROVIDER]
+    if EMBEDDING_FALLBACK_ENABLED and allow_fallback and EMBEDDING_BACKUP_PROVIDER:
+        providers.append(EMBEDDING_BACKUP_PROVIDER)
+
+    last_error = None
+
+    for provider in providers:
+        try:
+            if provider == "voyage":
+                embedding = await get_embedding_voyage(text)
+            else:  # default to openai
+                embedding = await get_embedding_openai(text)
+
+            # Cache the result
+            if use_cache:
+                model = VOYAGE_MODEL if provider == "voyage" else EMBEDDING_MODEL
+                await cache.set(text, embedding, model=model)
+
+            return embedding
+
+        except EmbeddingError as e:
+            last_error = e
+            if provider == EMBEDDING_PROVIDER and len(providers) > 1:
+                logger.warning(
+                    f"Primary provider {provider} failed ({e}), trying backup {EMBEDDING_BACKUP_PROVIDER}"
+                )
+                continue
+            raise
+
+    # Should not reach here, but just in case
+    raise last_error or EmbeddingError("No embedding providers available")
 
 
 def compute_text_hash(text: str) -> str:

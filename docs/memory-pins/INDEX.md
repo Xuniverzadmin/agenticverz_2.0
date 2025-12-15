@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-15 (MN-OS Naming Evolution + CI v5.0)
+**Last Updated:** 2025-12-15 (PIN-083 IAEC v4.0 Planning)
 
 ---
 
@@ -68,7 +68,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-044](PIN-044-e2e-test-harness-run.md) | **E2E Test Harness Run** | Testing / Validation | **COMPLETE** | 2025-12-06 |
 | [PIN-045](PIN-045-ci-infrastructure-fixes.md) | **CI Infrastructure Fixes** | Infrastructure / CI | **COMPLETE** | 2025-12-07 |
 | [PIN-046](PIN-046-stub-replacement-pgvector.md) | **Stub Replacement & pgvector Integration** | Infrastructure / Integration | **COMPLETE** | 2025-12-07 |
-| [PIN-047](PIN-047-pending-polishing-tasks.md) | **Pending Polishing Tasks** | Technical Debt / Polishing | **PENDING** | 2025-12-07 |
+| [PIN-047](PIN-047-pending-polishing-tasks.md) | **Pending Polishing Tasks** | Technical Debt / Polishing | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-048](PIN-048-m9-failure-catalog-completion.md) | **M9 Failure Catalog Persistence Layer** | Milestone / Completion | **✅ COMPLETE** | 2025-12-07 |
 | [PIN-049](PIN-049-r2-durable-storage.md) | **Cloudflare R2 Durable Storage** | Infrastructure / Storage | **✅ COMPLETE** | 2025-12-08 |
 | [PIN-050](PIN-050-m10-recovery-suggestion-engine-complete.md) | **M10 Recovery Suggestion Engine** | Milestone / Completion | **✅ COMPLETE** | 2025-12-08 |
@@ -103,6 +103,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-079](PIN-079-ci-ephemeral-neon-fixes.md) | **CI Ephemeral Neon Branch Fixes** | Infrastructure / CI | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-080](PIN-080-ci-consistency-checker-v41.md) | **CI Consistency Checker v4.1 - Test Enforcement** | Infrastructure / CI / Testing | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-081](PIN-081-mn-os-naming-evolution.md) | **MN-OS Naming Evolution (CI v5.0)** | Architecture / Documentation / CI | **✅ COMPLETE** | 2025-12-15 |
+| [PIN-082](PIN-082-iaec-v2-embedding-composer.md) | **IAEC v3.2 - Instruction-Aware Embedding Composer** | Memory / Embedding / M20 Prep | **✅ COMPLETE** | 2025-12-15 |
+| [PIN-083](PIN-083-iaec-v4-frontier-challenges.md) | **IAEC v4.0 Frontier Challenges** | Memory / Architecture / M20 | **⏳ PLANNING** | 2025-12-15 |
 
 ---
 
@@ -1179,3 +1181,4 @@ When resuming work on this project:
 | 2025-11-30 | Created index with PIN-001 and PIN-002 |
 | 2025-12-11 | **M12 Multi-Agent System COMPLETE** - 49 tests passing, DoD validated |
 | 2025-12-15 | **PIN-079 CI Ephemeral Neon Branch Fixes** - Fixed 6 issues: GitHub secret blocking, import paths, Pydantic forward refs, outbox constraint, alembic rev ID, worker diagnostics. CI: 13/14 jobs passing. |
+| 2025-12-15 | **PIN-082 IAEC v3.2 - Instruction-Aware Embedding Composer** - Production scale: Transform DAG Manager (canonical paths, pruning, transitive collapsing), correction cooldown (oscillation prevention), softmax policy folding (normalized weights), whitening versioning in all outputs. Builds on v3.1: temporal mediation, 5-level policy (L0-L4), corrective action with confidence. 13 Prometheus metrics total. |

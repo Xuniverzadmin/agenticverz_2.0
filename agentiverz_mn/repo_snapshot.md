@@ -102,7 +102,7 @@ Established formal naming evolution from legacy milestone identifiers (M0-M19) t
 
 | Metric | Value |
 |--------|-------|
-| Memory PINs | 81 |
+| Memory PINs | 82 |
 | Migrations | 36 |
 | Milestones Complete | 20/20 |
 | CI Jobs Passing | 15/15 |
@@ -110,18 +110,84 @@ Established formal naming evolution from legacy milestone identifiers (M0-M19) t
 
 ---
 
+## Completed This Session
+
+### PIN-047: Polishing Tasks ✅ COMPLETE
+
+| Priority | Task | Status |
+|----------|------|--------|
+| P1 | Prometheus alert reload | ✅ 33 rule groups loaded |
+| P1 | Move remaining secrets to Vault | ✅ All 6 in Vault |
+| P2 | Quota status API endpoint | ✅ `/api/v1/embedding/quota` |
+| P2 | Embedding cost monitoring dashboard | ✅ 13-panel Grafana dashboard |
+| P3 | Anthropic Voyage backup provider | ✅ Auto-failover implemented |
+| P3 | Embedding cache layer | ✅ Redis-based, 7-day TTL |
+
+**New API Endpoints:**
+- `GET /api/v1/embedding/health` (no auth)
+- `GET /api/v1/embedding/quota`
+- `GET /api/v1/embedding/config`
+- `GET /api/v1/embedding/cache/stats`
+- `DELETE /api/v1/embedding/cache`
+
+**New Files:**
+- `backend/app/api/embedding.py`
+- `backend/app/memory/embedding_cache.py`
+- `monitoring/grafana/.../embedding_cost_dashboard.json`
+
+### IAEC v3.2 - Instruction-Aware Embedding Composer
+
+Production-scale 4-slot embedding architecture with Transform DAG Manager, correction cooldown, and whitening versioning.
+
+**v3.2 Features (Production Scale Ready):**
+| Feature | Description |
+|---------|-------------|
+| Transform DAG Manager | Canonical paths, graph pruning, transitive collapsing for O(n²) prevention |
+| Correction Cooldown | Monotonic correction policy prevents oscillation loops |
+| Policy Softmax Folding | Normalized weights ensure sum=1.0 for deep stacks |
+| Whitening Versioning | `whitening_basis_id` + `whitening_version` in all outputs for audit replay |
+
+**v3.1 Features (Production Critical):**
+| Feature | Description |
+|---------|-------------|
+| Temporal Mediation | Cross-version embedding transformation for safe mixing |
+| 5-Level Policy (L0-L4) | Global/Org/AgentClass/AgentInstance/Task hierarchy with folding |
+| Corrective Action | Prescriptive mismatch resolution with confidence scores |
+| Whitening Persistence | Version-locked matrix storage in `/tmp/iaec/` |
+
+**v3.0 Features (preserved):**
+| Feature | Description |
+|---------|-------------|
+| 4-Slot Architecture | Instruction + Query + Context + Temporal + Policy |
+| Reversible Decomposition | SlotBasis stores original vectors for weighted mode |
+| Temporal Signature | 32-dim slot for model drift detection |
+| Deep Mismatch Detection | Embedding-based semantic compatibility |
+| Self-Verifier | Slot integrity validation |
+
+**API Endpoints:**
+- `POST /api/v1/embedding/compose` - Compose with policy/temporal/whitening versioning
+- `POST /api/v1/embedding/decompose` - Extract 5 slots from vector
+- `POST /api/v1/embedding/iaec/check-mismatch` - Deep mismatch with corrective action + cooldown
+- `GET /api/v1/embedding/iaec/segment-info` - Slot layout info
+- `GET /api/v1/embedding/iaec/instructions` - Instruction types/weights
+
+**New Metrics (v3.2):**
+- `aos_iaec_dag_transforms_total` - Transform DAG operations (prune, collapse, canonical_path)
+- `aos_iaec_correction_cooldowns_total` - Correction cooldown events (window_limit, monotonic_block)
+- `aos_iaec_policy_softmax_total` - Policy folding with softmax normalization
+
+**Metrics (v3.1):**
+- `aos_iaec_temporal_mediations_total` - Cross-version transformations
+- `aos_iaec_corrective_actions_total` - Prescriptive actions issued
+- `aos_iaec_policy_folding_total` - Multi-level policy folding
+- `aos_iaec_whitening_loads_total` - Whitening matrix disk loads
+
+**File:**
+- `backend/app/memory/iaec.py` (~2100 lines)
+
+---
+
 ## Pending Activities
-
-### PIN-047: Polishing Tasks (P1-P3)
-
-| Priority | Task |
-|----------|------|
-| P1 | Prometheus alert reload |
-| P1 | Move remaining secrets to Vault |
-| P2 | Quota status API endpoint |
-| P2 | Embedding cost monitoring dashboard |
-| P3 | Anthropic Voyage backup provider |
-| P3 | Embedding cache layer |
 
 ### M20 Planning
 
@@ -150,4 +216,4 @@ docker compose ps
 
 ---
 
-*Last updated: 2025-12-15 (MN-OS Naming Evolution)*
+*Last updated: 2025-12-15 (IAEC v3.1 Implementation Complete - Production Ready)*
