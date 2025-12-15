@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# CI Consistency Checker v2.0 - AGENTICVERZ Milestone Certification Engine
+# CI Consistency Checker v3.0 - AGENTICVERZ Milestone Certification Engine
 # ============================================================================
 #
 # Purpose: Validate ALL Agenticverz milestones M0-M19 remain functional,
@@ -15,31 +15,31 @@
 #   ./scripts/ops/ci_consistency_check.sh --matrix     # Show test matrix
 #   ./scripts/ops/ci_consistency_check.sh --json       # Output JSON for CI
 #
-# AGENTICVERZ Milestone Coverage (M0-M19):
-#   M0:  Foundations (async DB, migrations, determinism)
-#   M1:  Agent Registry (metadata, capabilities, routing)
-#   M2:  Topology & Dependencies (cycle detection, version constraints)
-#   M3:  Event Replay / State Stream (durable events, idempotency)
-#   M4:  Capability Modeling (runtime resolution, routing)
-#   M5:  Policy & Approval Layer (evaluation rules, escalation)
-#   M6:  Outbox & Delivery (publish/claim/complete, dead-letter)
-#   M7:  Workflow Engine (deterministic execution, checkpoints)
-#   M8:  Cost Simulator (circuit breaker, golden tests)
-#   M9:  Hardening (migration safety, idempotent patterns)
-#   M10: Reliability Layer (leader election, recovery, retention)
-#   M11: Skill Sandbox (security, budget limits, forbidden patterns)
-#   M12: Multi-Agent Planner (step graph, cycle detection, max steps)
-#   M13: Tooling Layer (tool registry, permissions, parameter safety)
-#   M14: BudgetLLM (cost deduction, accumulation, blocking)
-#   M15: Semantic Dependencies (SBA - dependency graph, version mismatch)
-#   M16: UI/API Cohesion (OpenAPI stability, endpoint contracts)
-#   M17: Routing Engine (CARE - multi-step execution, skill registry)
-#   M18: Governor (rate limits, magnitude caps, oscillation detection)
-#   M19: Policy Layer Async (async evaluation, rule merging, caching)
+# AGENTICVERZ Milestone Coverage (M0-M19) - PIN-Accurate Names:
+#   M0:  Foundations & Contracts (schemas, error taxonomy, CI, tests) [PIN-009]
+#   M1:  Runtime Interfaces (execute, query, describe_skill, contracts) [PIN-009]
+#   M2:  Skill Registration (registry, versioning, core stubs) [PIN-010]
+#   M3:  Core Skill Implementations (http_call, llm_invoke, json_transform) [PIN-010]
+#   M4:  Workflow Engine (deterministic execution, checkpoints, replay) [PIN-013/020]
+#   M5:  Policy API & Approval (evaluation rules, escalation, webhooks) [PIN-021]
+#   M6:  Feature Freeze & CostSim V2 (circuit breaker, drift detection) [PIN-026]
+#   M7:  Memory Integration (memory pins, context management, RBAC) [PIN-031/032]
+#   M8:  SDK Packaging & Auth (PyPI, npm, auth integration) [PIN-033]
+#   M9:  Failure Catalog Persistence (failure_matches, R2, metrics) [PIN-048]
+#   M10: Recovery Suggestion Engine (confidence scoring, CLI approval) [PIN-050]
+#   M11: Store Factories & LLM Adapters (R2, OpenAI adapter, metering) [PIN-055/060]
+#   M12: Multi-Agent System (parallel spawning, blackboard, credits) [PIN-062/063]
+#   M13: Console UI & Boundary Checklist (metrics dashboard) [PIN-064]
+#   M14: BudgetLLM Safety Governance (cost control, risk scoring) [PIN-070]
+#   M15: SBA Foundations (Strategy Cascade, semantic validation) [PIN-072]
+#   M16: Agent Governance Console (profile/activity/health tabs) [PIN-074]
+#   M17: CARE Routing Engine (5-stage pipeline, capability probes) [PIN-075]
+#   M18: CARE-L & SBA Evolution (learning router, governor, drift) [PIN-076]
+#   M19: Policy Layer Constitutional (5 categories, versioning) [PIN-078]
 #
 # ============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -85,14 +85,14 @@ for arg in "$@"; do
         --matrix) MATRIX_MODE=true ;;
         --json) JSON_MODE=true ;;
         --help|-h)
-            echo "AGENTICVERZ Milestone Certification Engine v2.0"
+            echo "AGENTICVERZ Milestone Certification Engine v3.0"
             echo ""
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  --quick      Fast pre-commit check"
             echo "  --milestone  Show milestone health dashboard"
-            echo "  --matrix     Show CI job → milestone mapping"
+            echo "  --matrix     Show CI job -> milestone mapping"
             echo "  --json       Output JSON for CI pipelines"
             echo ""
             echo "Validates M0-M19 correctness. M20+ is OUT OF SCOPE."
@@ -144,10 +144,10 @@ header() { $JSON_MODE || echo -e "\n${CYAN}=== $1 ===${NC}"; }
 section() { $JSON_MODE || echo -e "\n${MAGENTA}--- $1 ---${NC}"; }
 
 # ============================================================================
-# M0: FOUNDATIONS (async DB, migrations, determinism)
+# M0: FOUNDATIONS & CONTRACTS (schemas, error taxonomy, CI, tests) [PIN-009]
 # ============================================================================
 check_m0_foundations() {
-    section "M0: Foundations"
+    section "M0: Foundations & Contracts [PIN-009]"
     local issues=0
 
     # Alembic configuration
@@ -177,106 +177,143 @@ check_m0_foundations() {
 
     MILESTONE_CHECKS[M0]=$((MILESTONE_CHECKS[M0] + 5))
     [[ $issues -eq 0 ]] && log_milestone "M0" "pass" "Foundations validated" || log_milestone "M0" "fail" "$issues issue(s)"
+    return 0
 }
 
 # ============================================================================
-# M1: AGENT REGISTRY (metadata, capabilities, routing)
+# M1: RUNTIME INTERFACES (execute, query, describe_skill, contracts) [PIN-009]
 # ============================================================================
-check_m1_agent_registry() {
-    section "M1: Agent Registry"
+check_m1_runtime_interfaces() {
+    section "M1: Runtime Interfaces [PIN-009]"
     local issues=0
 
-    # Check for agents module
-    if [[ -d "$BACKEND_DIR/app/agents" ]]; then
-        log_ok "M1: Agents module exists"
+    # Check for runtime module
+    if [[ -d "$BACKEND_DIR/app/worker/runtime" ]]; then
+        log_ok "M1: Runtime module exists"
 
-        # Check for registry pattern
-        grep -rq "agent.*registry\|AgentRegistry\|register.*agent" "$BACKEND_DIR/app/agents" 2>/dev/null && \
-            log_ok "M1: Agent registry pattern" || log_info "M1: No explicit registry"
+        # Check for execute/query patterns
+        grep -rq "execute\|Execute\|run.*execution" "$BACKEND_DIR/app/worker/runtime" 2>/dev/null && \
+            log_ok "M1: Execute interface"
 
-        # Check for agent models/schema
-        [[ -f "$BACKEND_DIR/app/agents/schema.py" ]] && log_ok "M1: Agent schema present"
+        grep -rq "query\|Query\|state.*query" "$BACKEND_DIR/app/worker/runtime" 2>/dev/null && \
+            log_ok "M1: Query interface"
     else
-        log_warn "M1: No agents module"
+        log_warn "M1: No runtime module"
         issues=$((issues+1))
     fi
 
-    MILESTONE_CHECKS[M1]=$((MILESTONE_CHECKS[M1] + 3))
-    [[ $issues -eq 0 ]] && log_milestone "M1" "pass" "Agent registry OK" || log_milestone "M1" "warn" "Needs setup"
+    # Runtime API
+    if [[ -d "$BACKEND_DIR/app/api" ]]; then
+        grep -rq "runtime\|Runtime" "$BACKEND_DIR/app/api" 2>/dev/null && \
+            log_ok "M1: Runtime API present"
+    fi
+
+    MILESTONE_CHECKS[M1]=$((MILESTONE_CHECKS[M1] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M1" "pass" "Runtime interfaces OK" || log_milestone "M1" "warn" "Needs setup"
+    return 0
 }
 
 # ============================================================================
-# M2: TOPOLOGY & DEPENDENCIES (cycle detection, version constraints)
+# M2: SKILL REGISTRATION (registry, versioning, core stubs) [PIN-010]
 # ============================================================================
-check_m2_topology() {
-    section "M2: Topology & Dependencies"
+check_m2_skill_registration() {
+    section "M2: Skill Registration [PIN-010]"
     local issues=0
 
-    # Check for dependency/topology logic
-    if grep -rq "dependency\|topology\|depends_on\|cycle.*detect" "$BACKEND_DIR/app" 2>/dev/null; then
-        log_ok "M2: Dependency patterns found"
+    # Check for skills module
+    if [[ -d "$BACKEND_DIR/app/skills" ]]; then
+        log_ok "M2: Skills module exists"
+
+        # Check for registry pattern
+        grep -rq "skill.*registry\|SkillRegistry\|register.*skill" "$BACKEND_DIR/app/skills" 2>/dev/null && \
+            log_ok "M2: Skill registry pattern"
+
+        # Base skill class
+        [[ -f "$BACKEND_DIR/app/skills/base.py" ]] && log_ok "M2: Base skill class"
+
+        # Version patterns
+        grep -rq "version\|Version\|skill.*version" "$BACKEND_DIR/app/skills" 2>/dev/null && \
+            log_ok "M2: Skill versioning"
     else
-        log_info "M2: No explicit topology module"
+        log_warn "M2: No skills module"
+        issues=$((issues+1))
     fi
 
-    # Check for version constraints
-    grep -rq "version.*constraint\|semver\|compatible" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M2: Version constraint patterns"
-
-    MILESTONE_CHECKS[M2]=$((MILESTONE_CHECKS[M2] + 2))
-    log_milestone "M2" "pass" "Topology baseline OK"
+    MILESTONE_CHECKS[M2]=$((MILESTONE_CHECKS[M2] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M2" "pass" "Skill registration OK" || log_milestone "M2" "warn" "Needs setup"
+    return 0
 }
 
 # ============================================================================
-# M3: EVENT REPLAY / STATE STREAM (durable events, idempotency)
+# M3: CORE SKILL IMPLEMENTATIONS (http_call, llm_invoke, json_transform) [PIN-010]
 # ============================================================================
-check_m3_event_replay() {
-    section "M3: Event Replay / State Stream"
+check_m3_core_skills() {
+    section "M3: Core Skill Implementations [PIN-010]"
     local issues=0
 
-    # Replay/event patterns
-    if grep -rq "replay\|Replay\|event.*stream\|durable.*event" "$BACKEND_DIR/app" 2>/dev/null; then
-        log_ok "M3: Event replay patterns"
+    if [[ -d "$BACKEND_DIR/app/skills" ]]; then
+        # Key core skills
+        local found_skills=0
+
+        # http_call / webhook_send
+        [[ -f "$BACKEND_DIR/app/skills/webhook_send.py" ]] && { log_ok "M3: webhook_send skill"; found_skills=$((found_skills+1)); }
+
+        # llm_invoke
+        grep -rq "llm.*invoke\|LLM\|voyage.*embed\|openai" "$BACKEND_DIR/app/skills" 2>/dev/null && \
+            { log_ok "M3: LLM invoke patterns"; found_skills=$((found_skills+1)); }
+
+        # json_transform / kv_store
+        [[ -f "$BACKEND_DIR/app/skills/kv_store.py" ]] && { log_ok "M3: kv_store skill"; found_skills=$((found_skills+1)); }
+
+        # slack_send
+        [[ -f "$BACKEND_DIR/app/skills/slack_send.py" ]] && { log_ok "M3: slack_send skill"; found_skills=$((found_skills+1)); }
+
+        [[ $found_skills -lt 2 ]] && { log_warn "M3: Few core skills"; issues=$((issues+1)); }
     else
-        log_info "M3: No explicit replay module"
+        issues=$((issues+1))
     fi
 
-    # Idempotency patterns
-    grep -rq "idempotent\|idempotency_key\|ON CONFLICT\|IF NOT EXISTS" "$BACKEND_DIR" 2>/dev/null && \
-        log_ok "M3: Idempotency patterns"
-
-    # Dead letter queue
-    grep -rq "dead.?letter\|DLQ\|dlq" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M3: Dead letter handling"
-
-    MILESTONE_CHECKS[M3]=$((MILESTONE_CHECKS[M3] + 3))
-    log_milestone "M3" "pass" "Event replay validated"
+    MILESTONE_CHECKS[M3]=$((MILESTONE_CHECKS[M3] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M3" "pass" "Core skills validated" || log_milestone "M3" "warn" "Skills incomplete"
+    return 0
 }
 
 # ============================================================================
-# M4: CAPABILITY MODELING (runtime resolution, routing)
+# M4: WORKFLOW ENGINE (deterministic execution, checkpoints, replay) [PIN-013/020]
 # ============================================================================
-check_m4_capability() {
-    section "M4: Capability Modeling"
+check_m4_workflow_engine() {
+    section "M4: Workflow Engine [PIN-013/020]"
+    local issues=0
 
-    # Capability patterns
-    if grep -rq "capability\|Capability\|capabilities" "$BACKEND_DIR/app" 2>/dev/null; then
-        log_ok "M4: Capability patterns found"
+    if [[ -d "$BACKEND_DIR/app/workflow" ]]; then
+        log_ok "M4: Workflow module exists"
+
+        # Checkpoint pattern
+        grep -rq "checkpoint\|Checkpoint\|save.*state" "$BACKEND_DIR/app/workflow" 2>/dev/null && \
+            log_ok "M4: Checkpoint pattern"
+
+        # Deterministic execution
+        grep -rq "deterministic\|replay.*execution\|golden" "$BACKEND_DIR/app/workflow" 2>/dev/null && \
+            log_ok "M4: Deterministic execution"
+    else
+        log_warn "M4: No workflow module"
+        issues=$((issues+1))
     fi
 
-    # Runtime resolution
-    grep -rq "resolve.*capability\|capability.*discovery" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M4: Runtime resolution"
+    # Workflow tests
+    local wf_tests=$(find "$BACKEND_DIR/tests" -name "*workflow*" -o -name "*replay*" 2>/dev/null | wc -l)
+    [[ $wf_tests -gt 0 ]] && log_ok "M4: $wf_tests workflow test files"
 
-    MILESTONE_CHECKS[M4]=$((MILESTONE_CHECKS[M4] + 2))
-    log_milestone "M4" "pass" "Capability modeling OK"
+    MILESTONE_CHECKS[M4]=$((MILESTONE_CHECKS[M4] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M4" "pass" "Workflow engine validated" || log_milestone "M4" "warn" "Needs setup"
+    return 0
 }
 
 # ============================================================================
-# M5: POLICY & APPROVAL LAYER (evaluation rules, escalation)
+# M5: POLICY API & APPROVAL (evaluation rules, escalation, webhooks) [PIN-021]
 # ============================================================================
-check_m5_policy() {
-    section "M5: Policy & Approval"
+check_m5_policy_approval() {
+    section "M5: Policy API & Approval [PIN-021]"
     local issues=0
 
     if [[ -d "$BACKEND_DIR/app/policy" ]]; then
@@ -304,105 +341,109 @@ check_m5_policy() {
 
     MILESTONE_CHECKS[M5]=$((MILESTONE_CHECKS[M5] + 4))
     [[ $issues -eq 0 ]] && log_milestone "M5" "pass" "Policy layer validated" || log_milestone "M5" "warn" "$issues issue(s)"
+    return 0
 }
 
 # ============================================================================
-# M6: OUTBOX & DELIVERY (publish/claim/complete, dead-letter)
+# M6: FEATURE FREEZE & COSTSIM V2 (circuit breaker, drift detection) [PIN-026]
 # ============================================================================
-check_m6_outbox() {
-    section "M6: Outbox & Delivery"
-    local issues=0
-
-    # Outbox pattern
-    if grep -rq "outbox\|Outbox\|publish.*event\|claim.*event" "$BACKEND_DIR/app" 2>/dev/null; then
-        log_ok "M6: Outbox pattern found"
-    else
-        log_warn "M6: No outbox pattern"
-        issues=$((issues+1))
-    fi
-
-    # Claim/complete flow
-    grep -rq "claim_outbox\|complete_outbox\|process.*outbox" "$BACKEND_DIR" 2>/dev/null && \
-        log_ok "M6: Claim/complete flow"
-
-    # Retry logic
-    grep -rq "retry_count\|next_retry\|retry.*delay" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M6: Retry logic"
-
-    # Check for M10 recovery schema (outbox lives here)
-    [[ -f "$BACKEND_DIR/app/models/m10_recovery.py" ]] && log_ok "M6: Recovery models present"
-
-    MILESTONE_CHECKS[M6]=$((MILESTONE_CHECKS[M6] + 4))
-    [[ $issues -eq 0 ]] && log_milestone "M6" "pass" "Outbox validated" || log_milestone "M6" "warn" "Outbox needs setup"
-}
-
-# ============================================================================
-# M7: WORKFLOW ENGINE (deterministic execution, checkpoints)
-# ============================================================================
-check_m7_workflow() {
-    section "M7: Workflow Engine"
-    local issues=0
-
-    if [[ -d "$BACKEND_DIR/app/workflow" ]]; then
-        log_ok "M7: Workflow module exists"
-
-        # Checkpoint pattern
-        grep -rq "checkpoint\|Checkpoint\|save.*state" "$BACKEND_DIR/app/workflow" 2>/dev/null && \
-            log_ok "M7: Checkpoint pattern"
-
-        # Deterministic execution
-        grep -rq "deterministic\|replay.*execution\|golden" "$BACKEND_DIR/app/workflow" 2>/dev/null && \
-            log_ok "M7: Deterministic execution"
-    else
-        log_warn "M7: No workflow module"
-        issues=$((issues+1))
-    fi
-
-    # Workflow tests
-    local wf_tests=$(find "$BACKEND_DIR/tests" -name "*workflow*" -o -name "*replay*" 2>/dev/null | wc -l)
-    [[ $wf_tests -gt 0 ]] && log_ok "M7: $wf_tests workflow test files"
-
-    MILESTONE_CHECKS[M7]=$((MILESTONE_CHECKS[M7] + 4))
-    [[ $issues -eq 0 ]] && log_milestone "M7" "pass" "Workflow engine validated" || log_milestone "M7" "warn" "Needs setup"
-}
-
-# ============================================================================
-# M8: COST SIMULATOR (circuit breaker, golden tests)
-# ============================================================================
-check_m8_costsim() {
-    section "M8: Cost Simulator"
+check_m6_costsim_v2() {
+    section "M6: Feature Freeze & CostSim V2 [PIN-026]"
     local issues=0
 
     if [[ -d "$BACKEND_DIR/app/costsim" ]]; then
-        log_ok "M8: CostSim module exists"
+        log_ok "M6: CostSim module exists"
 
         # Circuit breaker
         grep -rq "circuit.*breaker\|CircuitBreaker" "$BACKEND_DIR/app/costsim" 2>/dev/null && \
-            log_ok "M8: Circuit breaker present"
+            log_ok "M6: Circuit breaker present"
 
-        # Golden test patterns
-        grep -rq "golden\|deterministic\|snapshot" "$BACKEND_DIR/app/costsim" 2>/dev/null && \
-            log_ok "M8: Golden test patterns"
+        # Drift detection
+        grep -rq "drift\|deterministic\|golden" "$BACKEND_DIR/app/costsim" 2>/dev/null && \
+            log_ok "M6: Drift/determinism patterns"
     else
-        log_warn "M8: No costsim module"
+        log_warn "M6: No costsim module"
         issues=$((issues+1))
     fi
 
     # CostSim tests
     [[ -d "$BACKEND_DIR/tests/costsim" ]] && {
         local count=$(find "$BACKEND_DIR/tests/costsim" -name "test_*.py" | wc -l)
-        log_ok "M8: $count costsim test files"
+        log_ok "M6: $count costsim test files"
     }
 
-    MILESTONE_CHECKS[M8]=$((MILESTONE_CHECKS[M8] + 4))
-    [[ $issues -eq 0 ]] && log_milestone "M8" "pass" "CostSim validated" || log_milestone "M8" "warn" "Needs setup"
+    MILESTONE_CHECKS[M6]=$((MILESTONE_CHECKS[M6] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M6" "pass" "CostSim V2 validated" || log_milestone "M6" "warn" "Needs setup"
+    return 0
 }
 
 # ============================================================================
-# M9: HARDENING (migration safety, idempotent patterns)
+# M7: MEMORY INTEGRATION (memory pins, context management, RBAC) [PIN-031/032]
 # ============================================================================
-check_m9_hardening() {
-    section "M9: Hardening"
+check_m7_memory_integration() {
+    section "M7: Memory Integration [PIN-031/032]"
+    local issues=0
+
+    # Memory pins directory
+    if [[ -d "$REPO_ROOT/docs/memory-pins" ]]; then
+        local pin_count=$(find "$REPO_ROOT/docs/memory-pins" -name "PIN-*.md" | wc -l)
+        log_ok "M7: $pin_count memory PINs found"
+
+        # INDEX.md
+        [[ -f "$REPO_ROOT/docs/memory-pins/INDEX.md" ]] && log_ok "M7: PIN INDEX.md present"
+    else
+        log_warn "M7: No memory-pins directory"
+        issues=$((issues+1))
+    fi
+
+    # RBAC / Auth
+    if [[ -d "$BACKEND_DIR/app/auth" ]]; then
+        log_ok "M7: Auth module exists"
+        grep -rq "rbac\|RBAC\|role.*based" "$BACKEND_DIR/app/auth" 2>/dev/null && \
+            log_ok "M7: RBAC patterns"
+    fi
+
+    MILESTONE_CHECKS[M7]=$((MILESTONE_CHECKS[M7] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M7" "pass" "Memory integration validated" || log_milestone "M7" "warn" "Needs setup"
+    return 0
+}
+
+# ============================================================================
+# M8: SDK PACKAGING & AUTH (PyPI, npm, auth integration) [PIN-033]
+# ============================================================================
+check_m8_sdk_packaging() {
+    section "M8: SDK Packaging & Auth [PIN-033]"
+    local issues=0
+
+    # SDK directories
+    if [[ -d "$REPO_ROOT/sdk" ]]; then
+        log_ok "M8: SDK directory exists"
+
+        [[ -d "$REPO_ROOT/sdk/python" ]] && log_ok "M8: Python SDK"
+        [[ -d "$REPO_ROOT/sdk/js" ]] && log_ok "M8: JS SDK"
+    else
+        log_warn "M8: No SDK directory"
+        issues=$((issues+1))
+    fi
+
+    # Auth integration
+    if [[ -d "$BACKEND_DIR/app/auth" ]]; then
+        log_ok "M8: Auth module present"
+    fi
+
+    # CLI tool
+    [[ -f "$BACKEND_DIR/cli/aos.py" ]] && log_ok "M8: CLI tool present"
+
+    MILESTONE_CHECKS[M8]=$((MILESTONE_CHECKS[M8] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M8" "pass" "SDK packaging validated" || log_milestone "M8" "warn" "SDK incomplete"
+    return 0
+}
+
+# ============================================================================
+# M9: FAILURE CATALOG PERSISTENCE (failure_matches, R2, metrics) [PIN-048]
+# ============================================================================
+check_m9_failure_catalog() {
+    section "M9: Failure Catalog Persistence [PIN-048]"
     local issues=0
 
     local ALEMBIC_DIR="$BACKEND_DIR/alembic/versions"
@@ -441,15 +482,20 @@ check_m9_hardening() {
     local idempotent=$(grep -rl "IF NOT EXISTS\|DO \$\$\|OR REPLACE" "$ALEMBIC_DIR" 2>/dev/null | wc -l)
     log_ok "M9: $idempotent migrations use idempotent patterns"
 
-    MILESTONE_CHECKS[M9]=$((MILESTONE_CHECKS[M9] + 3))
-    [[ $issues -eq 0 ]] && log_milestone "M9" "pass" "Hardening validated" || log_milestone "M9" "fail" "$issues issue(s)"
+    # Failure pattern exports table
+    grep -rq "failure_pattern_exports\|FailurePatternExport" "$BACKEND_DIR" 2>/dev/null && \
+        log_ok "M9: Failure pattern exports"
+
+    MILESTONE_CHECKS[M9]=$((MILESTONE_CHECKS[M9] + 4))
+    [[ $issues -eq 0 ]] && log_milestone "M9" "pass" "Failure catalog validated" || log_milestone "M9" "fail" "$issues issue(s)"
+    return 0
 }
 
 # ============================================================================
-# M10: RELIABILITY LAYER (leader election, recovery, retention)
+# M10: RECOVERY SUGGESTION ENGINE (confidence scoring, CLI approval) [PIN-050]
 # ============================================================================
-check_m10_reliability() {
-    section "M10: Reliability Layer"
+check_m10_recovery_engine() {
+    section "M10: Recovery Suggestion Engine [PIN-050]"
     local issues=0
 
     # Leader election
@@ -466,92 +512,112 @@ check_m10_reliability() {
     # Recovery migrations
     ls "$BACKEND_DIR/alembic/versions"/*m10* &>/dev/null 2>&1 && log_ok "M10: Recovery migrations present"
 
-    # Retention/archive
-    grep -rq "retention\|archive\|partition" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M10: Retention patterns"
+    # Outbox pattern (recovery uses outbox)
+    grep -rq "outbox\|claim_outbox\|complete_outbox" "$BACKEND_DIR" 2>/dev/null && \
+        log_ok "M10: Outbox patterns"
 
     MILESTONE_CHECKS[M10]=$((MILESTONE_CHECKS[M10] + 5))
-    log_milestone "M10" "pass" "Reliability validated"
+    log_milestone "M10" "pass" "Recovery engine validated"
+    return 0
 }
 
 # ============================================================================
-# M11: SKILL SANDBOX (security, budget limits, forbidden patterns)
+# M11: STORE FACTORIES & LLM ADAPTERS (R2, OpenAI adapter, metering) [PIN-055/060]
 # ============================================================================
-check_m11_skill_sandbox() {
-    section "M11: Skill Sandbox"
+check_m11_store_factories() {
+    section "M11: Store Factories & LLM Adapters [PIN-055/060]"
     local issues=0
 
+    # Stores module
+    if [[ -d "$BACKEND_DIR/app/stores" ]]; then
+        log_ok "M11: Stores module exists"
+    fi
+
+    # Skills module with adapters
     if [[ -d "$BACKEND_DIR/app/skills" ]]; then
         log_ok "M11: Skills module exists"
 
-        # Security patterns
-        grep -rq "forbidden\|sanitize\|validate\|max_step\|budget" "$BACKEND_DIR/app/skills" 2>/dev/null && \
-            log_ok "M11: Security patterns" || { log_warn "M11: No security patterns"; issues=$((issues+1)); }
+        # Adapters
+        if [[ -d "$BACKEND_DIR/app/skills/adapters" ]]; then
+            log_ok "M11: Skill adapters directory"
+            [[ -f "$BACKEND_DIR/app/skills/adapters/openai_adapter.py" ]] && log_ok "M11: OpenAI adapter"
+            [[ -f "$BACKEND_DIR/app/skills/adapters/metrics.py" ]] && log_ok "M11: Metrics adapter"
+        fi
 
-        # Base skill
-        [[ -f "$BACKEND_DIR/app/skills/base.py" ]] && log_ok "M11: Base skill class"
+        # Voyage embed (LLM skill)
+        [[ -f "$BACKEND_DIR/app/skills/voyage_embed.py" ]] && log_ok "M11: Voyage embed skill"
     else
         log_warn "M11: No skills module"
         issues=$((issues+1))
     fi
 
-    MILESTONE_CHECKS[M11]=$((MILESTONE_CHECKS[M11] + 3))
-    [[ $issues -eq 0 ]] && log_milestone "M11" "pass" "Skill sandbox validated" || log_milestone "M11" "warn" "Security needs review"
+    MILESTONE_CHECKS[M11]=$((MILESTONE_CHECKS[M11] + 5))
+    [[ $issues -eq 0 ]] && log_milestone "M11" "pass" "Store factories validated" || log_milestone "M11" "warn" "Adapters incomplete"
+    return 0
 }
 
 # ============================================================================
-# M12: MULTI-AGENT PLANNER (step graph, cycle detection, max steps)
+# M12: MULTI-AGENT SYSTEM (parallel spawning, blackboard, credits) [PIN-062/063]
 # ============================================================================
-check_m12_planner() {
-    section "M12: Multi-Agent Planner"
+check_m12_multi_agent() {
+    section "M12: Multi-Agent System [PIN-062/063]"
     local issues=0
 
     if [[ -d "$BACKEND_DIR/app/agents" ]]; then
         log_ok "M12: Agents module exists"
 
-        # Planner patterns
-        grep -rq "planner\|executor\|step.*graph\|plan.*execution" "$BACKEND_DIR/app/agents" 2>/dev/null && \
-            log_ok "M12: Planner patterns"
-
-        # Cycle detection
-        grep -rq "cycle.*detect\|circular\|DAG" "$BACKEND_DIR/app/agents" 2>/dev/null && \
-            log_ok "M12: Cycle detection"
-
         # Services
         [[ -d "$BACKEND_DIR/app/agents/services" ]] && log_ok "M12: Agent services present"
+
+        # Skills
+        [[ -d "$BACKEND_DIR/app/agents/skills" ]] && log_ok "M12: Agent skills present"
+
+        # Credit/budget patterns
+        grep -rq "credit\|Credit\|budget" "$BACKEND_DIR/app/agents" 2>/dev/null && \
+            log_ok "M12: Credit patterns"
     fi
 
     # M12 tests
     local m12_tests=$(find "$BACKEND_DIR/tests" -name "test_m12_*.py" 2>/dev/null | wc -l)
     [[ $m12_tests -gt 0 ]] && log_ok "M12: $m12_tests M12 test files"
 
-    MILESTONE_CHECKS[M12]=$((MILESTONE_CHECKS[M12] + 4))
-    log_milestone "M12" "pass" "Multi-agent planner validated"
+    MILESTONE_CHECKS[M12]=$((MILESTONE_CHECKS[M12] + 5))
+    log_milestone "M12" "pass" "Multi-agent system validated"
+    return 0
 }
 
 # ============================================================================
-# M13: TOOLING LAYER (tool registry, permissions, parameter safety)
+# M13: CONSOLE UI & BOUNDARY CHECKLIST (metrics dashboard) [PIN-064]
 # ============================================================================
-check_m13_tooling() {
-    section "M13: Tooling Layer"
+check_m13_console_ui() {
+    section "M13: Console UI & Boundary Checklist [PIN-064]"
 
-    # Tool registry
-    grep -rq "tool.*registry\|ToolRegistry\|register.*tool" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M13: Tool registry pattern"
+    # Console/website directory
+    if [[ -d "$REPO_ROOT/website" ]]; then
+        log_ok "M13: Website directory exists"
 
-    # Permissions
-    grep -rq "tool.*permission\|allowed.*tool\|tool.*access" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M13: Tool permissions"
+        [[ -d "$REPO_ROOT/website/aos-console" ]] && log_ok "M13: AOS Console present"
+    fi
 
-    MILESTONE_CHECKS[M13]=$((MILESTONE_CHECKS[M13] + 2))
-    log_milestone "M13" "pass" "Tooling layer OK"
+    # Grafana dashboards
+    if [[ -d "$REPO_ROOT/monitoring/grafana" ]] || [[ -d "$REPO_ROOT/monitoring/dashboards" ]]; then
+        log_ok "M13: Monitoring dashboards present"
+    fi
+
+    # M13 boundary checklist PIN
+    [[ -f "$REPO_ROOT/docs/memory-pins/PIN-064-m13-boundary-checklist.md" ]] && \
+        log_ok "M13: Boundary checklist PIN"
+
+    MILESTONE_CHECKS[M13]=$((MILESTONE_CHECKS[M13] + 3))
+    log_milestone "M13" "pass" "Console UI validated"
+    return 0
 }
 
 # ============================================================================
-# M14: BUDGETLLM (cost deduction, accumulation, blocking)
+# M14: BUDGETLLM SAFETY GOVERNANCE (cost control, risk scoring) [PIN-070]
 # ============================================================================
 check_m14_budgetllm() {
-    section "M14: BudgetLLM"
+    section "M14: BudgetLLM Safety Governance [PIN-070]"
 
     # Budget patterns
     grep -rq "budget\|Budget\|cost.*limit\|token.*limit" "$BACKEND_DIR/app" 2>/dev/null && \
@@ -564,19 +630,20 @@ check_m14_budgetllm() {
     grep -rq "cost.*calculation\|deduct.*budget\|accumulate" "$BACKEND_DIR/app" 2>/dev/null && \
         log_ok "M14: Cost calculation"
 
-    # Blocking behavior
-    grep -rq "insufficient.*budget\|budget.*exceed\|block.*budget" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M14: Budget blocking"
+    # Risk scoring
+    grep -rq "risk.*scor\|safety\|governance" "$BACKEND_DIR/app" 2>/dev/null && \
+        log_ok "M14: Risk/safety patterns"
 
     MILESTONE_CHECKS[M14]=$((MILESTONE_CHECKS[M14] + 4))
     log_milestone "M14" "pass" "BudgetLLM validated"
+    return 0
 }
 
 # ============================================================================
-# M15: SEMANTIC DEPENDENCIES (SBA - dependency graph, version mismatch)
+# M15: SBA FOUNDATIONS (Strategy Cascade, semantic validation) [PIN-072]
 # ============================================================================
-check_m15_sba() {
-    section "M15: Semantic Dependencies (SBA)"
+check_m15_sba_foundations() {
+    section "M15: SBA Foundations [PIN-072]"
     local issues=0
 
     if [[ -d "$BACKEND_DIR/app/agents/sba" ]]; then
@@ -591,43 +658,51 @@ check_m15_sba() {
         issues=$((issues+1))
     fi
 
-    # Dependency graph
-    grep -rq "dependency.*graph\|resolve.*dep\|version.*mismatch" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M15: Dependency resolution"
+    # Strategy patterns
+    grep -rq "strategy\|Strategy\|cascade" "$BACKEND_DIR/app" 2>/dev/null && \
+        log_ok "M15: Strategy patterns"
 
-    MILESTONE_CHECKS[M15]=$((MILESTONE_CHECKS[M15] + 3))
-    [[ $issues -eq 0 ]] && log_milestone "M15" "pass" "SBA validated" || log_milestone "M15" "warn" "SBA needs setup"
+    MILESTONE_CHECKS[M15]=$((MILESTONE_CHECKS[M15] + 5))
+    [[ $issues -eq 0 ]] && log_milestone "M15" "pass" "SBA foundations validated" || log_milestone "M15" "warn" "SBA needs setup"
+    return 0
 }
 
 # ============================================================================
-# M16: UI/API COHESION (OpenAPI stability, endpoint contracts)
+# M16: AGENT GOVERNANCE CONSOLE (profile/activity/health tabs) [PIN-074]
 # ============================================================================
-check_m16_api_cohesion() {
-    section "M16: UI/API Cohesion"
+check_m16_governance_console() {
+    section "M16: Agent Governance Console [PIN-074]"
 
-    # API routers
+    # API routers for agents
     if [[ -d "$BACKEND_DIR/app/api" ]]; then
         local count=$(find "$BACKEND_DIR/app/api" -name "*.py" ! -name "__*" | wc -l)
         log_ok "M16: $count API router files"
+
+        # Agent-related APIs
+        grep -rq "agents\|agent" "$BACKEND_DIR/app/api" 2>/dev/null && \
+            log_ok "M16: Agent API routes"
     fi
 
-    # OpenAPI
-    grep -rq "openapi\|OpenAPI\|swagger" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M16: OpenAPI patterns"
+    # Console SBA pages
+    if [[ -d "$REPO_ROOT/website/aos-console" ]]; then
+        [[ -d "$REPO_ROOT/website/aos-console/console/src/pages/sba" ]] && \
+            log_ok "M16: SBA console pages"
+    fi
 
     # Pydantic validation
     grep -rq "pydantic\|BaseModel\|validator" "$BACKEND_DIR/app" 2>/dev/null && \
         log_ok "M16: Pydantic validation"
 
-    MILESTONE_CHECKS[M16]=$((MILESTONE_CHECKS[M16] + 3))
-    log_milestone "M16" "pass" "API cohesion validated"
+    MILESTONE_CHECKS[M16]=$((MILESTONE_CHECKS[M16] + 4))
+    log_milestone "M16" "pass" "Governance console validated"
+    return 0
 }
 
 # ============================================================================
-# M17: ROUTING ENGINE (CARE - multi-step execution, skill registry)
+# M17: CARE ROUTING ENGINE (5-stage pipeline, capability probes) [PIN-075]
 # ============================================================================
-check_m17_routing() {
-    section "M17: Routing Engine (CARE)"
+check_m17_care_routing() {
+    section "M17: CARE Routing Engine [PIN-075]"
     local issues=0
 
     if [[ -d "$BACKEND_DIR/app/routing" ]]; then
@@ -651,14 +726,15 @@ check_m17_routing() {
     [[ $m17_tests -gt 0 ]] && log_ok "M17: $m17_tests M17 test files"
 
     MILESTONE_CHECKS[M17]=$((MILESTONE_CHECKS[M17] + 5))
-    [[ $issues -eq 0 ]] && log_milestone "M17" "pass" "Routing engine validated" || log_milestone "M17" "warn" "Needs setup"
+    [[ $issues -eq 0 ]] && log_milestone "M17" "pass" "CARE routing validated" || log_milestone "M17" "warn" "Needs setup"
+    return 0
 }
 
 # ============================================================================
-# M18: GOVERNOR (rate limits, magnitude caps, oscillation detection)
+# M18: CARE-L & SBA EVOLUTION (learning router, governor, drift) [PIN-076]
 # ============================================================================
-check_m18_governor() {
-    section "M18: Governor (Stabilization)"
+check_m18_care_l_evolution() {
+    section "M18: CARE-L & SBA Evolution [PIN-076]"
     local issues=0
 
     # Governor patterns
@@ -672,23 +748,27 @@ check_m18_governor() {
     # Governor module
     [[ -f "$BACKEND_DIR/app/routing/governor.py" ]] && log_ok "M18: Routing governor"
 
-    # Oscillation detection
-    grep -rq "oscillation\|dampen\|stabiliz" "$BACKEND_DIR/app" 2>/dev/null && \
-        log_ok "M18: Oscillation detection"
-
     # Learning/feedback
     [[ -f "$BACKEND_DIR/app/routing/learning.py" ]] && log_ok "M18: Learning module"
     [[ -f "$BACKEND_DIR/app/routing/feedback.py" ]] && log_ok "M18: Feedback module"
 
-    MILESTONE_CHECKS[M18]=$((MILESTONE_CHECKS[M18] + 5))
-    [[ $issues -eq 0 ]] && log_milestone "M18" "pass" "Governor validated" || log_milestone "M18" "warn" "Needs review"
+    # SBA evolution
+    [[ -f "$BACKEND_DIR/app/agents/sba/evolution.py" ]] && log_ok "M18: SBA evolution"
+
+    # Drift detection
+    grep -rq "drift\|oscillation\|dampen\|stabiliz" "$BACKEND_DIR/app" 2>/dev/null && \
+        log_ok "M18: Drift detection patterns"
+
+    MILESTONE_CHECKS[M18]=$((MILESTONE_CHECKS[M18] + 6))
+    [[ $issues -eq 0 ]] && log_milestone "M18" "pass" "CARE-L evolution validated" || log_milestone "M18" "warn" "Needs review"
+    return 0
 }
 
 # ============================================================================
-# M19: POLICY LAYER ASYNC (async evaluation, rule merging, caching)
+# M19: POLICY LAYER CONSTITUTIONAL (5 categories, versioning) [PIN-078]
 # ============================================================================
-check_m19_async_policy() {
-    section "M19: Policy Layer (Async)"
+check_m19_policy_constitutional() {
+    section "M19: Policy Layer Constitutional [PIN-078]"
     local issues=0
 
     if [[ -d "$BACKEND_DIR/app/policy" ]]; then
@@ -715,9 +795,9 @@ check_m19_async_policy() {
         [[ -f "$BACKEND_DIR/app/api/policy_layer.py" ]] || [[ -f "$BACKEND_DIR/app/api/policy.py" ]] && \
             log_ok "M19: Policy API"
 
-        # Rule merging
-        grep -rq "merge.*rule\|rule.*order\|priority" "$BACKEND_DIR/app/policy" 2>/dev/null && \
-            log_ok "M19: Rule merging"
+        # Rule merging / versioning
+        grep -rq "merge.*rule\|rule.*order\|priority\|version" "$BACKEND_DIR/app/policy" 2>/dev/null && \
+            log_ok "M19: Rule versioning"
 
         # Policy cache
         grep -rq "policy.*cache\|cache.*policy" "$BACKEND_DIR/app/policy" 2>/dev/null && \
@@ -728,7 +808,8 @@ check_m19_async_policy() {
     fi
 
     MILESTONE_CHECKS[M19]=$((MILESTONE_CHECKS[M19] + 6))
-    [[ $issues -eq 0 ]] && log_milestone "M19" "pass" "Async policy validated" || log_milestone "M19" "warn" "$issues issue(s)"
+    [[ $issues -eq 0 ]] && log_milestone "M19" "pass" "Policy constitutional validated" || log_milestone "M19" "warn" "$issues issue(s)"
+    return 0
 }
 
 # ============================================================================
@@ -738,21 +819,22 @@ check_ci_workflow() {
     header "CI Workflow"
 
     local CI_FILE="$REPO_ROOT/.github/workflows/ci.yml"
-    [[ ! -f "$CI_FILE" ]] && { log_error "CI workflow not found"; return; }
+    [[ ! -f "$CI_FILE" ]] && { log_error "CI workflow not found"; return 0; }
 
-    grep -q "redis:" "$CI_FILE" && log_ok "Redis service"
-    grep -q "PYTHONUNBUFFERED" "$CI_FILE" && log_ok "PYTHONUNBUFFERED"
-    grep -q "run-migrations:" "$CI_FILE" && log_ok "run-migrations job (race condition fix)"
-    grep -q "neonctl connection-string" "$CI_FILE" && log_ok "Neon ephemeral pattern"
-    grep -q "schema_audit" "$CI_FILE" && log_ok "Schema audit"
-    grep -q "metrics" "$CI_FILE" && log_ok "Metrics validation"
+    grep -q "redis:" "$CI_FILE" && log_ok "Redis service" || true
+    grep -q "PYTHONUNBUFFERED" "$CI_FILE" && log_ok "PYTHONUNBUFFERED" || true
+    grep -q "run-migrations:" "$CI_FILE" && log_ok "run-migrations job (race condition fix)" || true
+    grep -q "neonctl connection-string" "$CI_FILE" && log_ok "Neon ephemeral pattern" || true
+    grep -q "schema_audit" "$CI_FILE" && log_ok "Schema audit" || true
+    grep -q "metrics" "$CI_FILE" && log_ok "Metrics validation" || true
+    return 0
 }
 
 check_alembic_health() {
     header "Alembic Health"
 
     local ALEMBIC_DIR="$BACKEND_DIR/alembic/versions"
-    [[ ! -d "$ALEMBIC_DIR" ]] && { log_warn "No alembic versions"; return; }
+    [[ ! -d "$ALEMBIC_DIR" ]] && { log_warn "No alembic versions"; return 0; }
 
     # Revision ID lengths
     for f in "$ALEMBIC_DIR"/*.py; do
@@ -775,43 +857,45 @@ check_alembic_health() {
             log_error "Multiple heads!"
         fi
     fi
+    return 0
 }
 
 # ============================================================================
 # DASHBOARD & MATRIX
 # ============================================================================
 print_dashboard() {
-    $JSON_MODE && return
+    $JSON_MODE && return 0
 
     echo ""
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║       AGENTICVERZ MILESTONE DASHBOARD (M0-M19)                     ║${NC}"
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${CYAN}+====================================================================+${NC}"
+    echo -e "${CYAN}|       AGENTICVERZ MILESTONE DASHBOARD (M0-M19) v3.0               |${NC}"
+    echo -e "${CYAN}+====================================================================+${NC}"
     echo ""
-    printf "%-6s %-45s %-8s %-6s\n" "ID" "Milestone" "Status" "Checks"
-    echo "────────────────────────────────────────────────────────────────────"
+    printf "%-6s %-48s %-8s %-6s\n" "ID" "Milestone (PIN-Accurate)" "Status" "Checks"
+    echo "------------------------------------------------------------------------"
 
+    # PIN-accurate milestone names
     local MILESTONES=(
-        "M0:Foundations (async DB, migrations, determinism)"
-        "M1:Agent Registry (metadata, capabilities)"
-        "M2:Topology & Dependencies (cycles, versions)"
-        "M3:Event Replay / State Stream (idempotency)"
-        "M4:Capability Modeling (runtime resolution)"
-        "M5:Policy & Approval (evaluation, escalation)"
-        "M6:Outbox & Delivery (publish/claim/complete)"
-        "M7:Workflow Engine (checkpoints, determinism)"
-        "M8:Cost Simulator (circuit breaker, golden)"
-        "M9:Hardening (migration safety, idempotent)"
-        "M10:Reliability (leader election, recovery)"
-        "M11:Skill Sandbox (security, budget limits)"
-        "M12:Multi-Agent Planner (step graph, cycles)"
-        "M13:Tooling Layer (registry, permissions)"
-        "M14:BudgetLLM (deduction, blocking)"
-        "M15:Semantic Dependencies (SBA)"
-        "M16:UI/API Cohesion (OpenAPI, contracts)"
-        "M17:Routing Engine (CARE)"
-        "M18:Governor (rate limits, oscillation)"
-        "M19:Policy Layer Async (caching, merging)"
+        "M0:Foundations & Contracts [PIN-009]"
+        "M1:Runtime Interfaces [PIN-009]"
+        "M2:Skill Registration [PIN-010]"
+        "M3:Core Skill Implementations [PIN-010]"
+        "M4:Workflow Engine [PIN-013/020]"
+        "M5:Policy API & Approval [PIN-021]"
+        "M6:Feature Freeze & CostSim V2 [PIN-026]"
+        "M7:Memory Integration [PIN-031/032]"
+        "M8:SDK Packaging & Auth [PIN-033]"
+        "M9:Failure Catalog Persistence [PIN-048]"
+        "M10:Recovery Suggestion Engine [PIN-050]"
+        "M11:Store Factories & LLM Adapters [PIN-055/060]"
+        "M12:Multi-Agent System [PIN-062/063]"
+        "M13:Console UI & Boundary Checklist [PIN-064]"
+        "M14:BudgetLLM Safety Governance [PIN-070]"
+        "M15:SBA Foundations [PIN-072]"
+        "M16:Agent Governance Console [PIN-074]"
+        "M17:CARE Routing Engine [PIN-075]"
+        "M18:CARE-L & SBA Evolution [PIN-076]"
+        "M19:Policy Layer Constitutional [PIN-078]"
     )
 
     for entry in "${MILESTONES[@]}"; do
@@ -828,60 +912,61 @@ print_dashboard() {
             *) COLOR="${BLUE}"; TEXT="--" ;;
         esac
 
-        printf "%-6s %-45s ${COLOR}%-8s${NC} %-6s\n" "$ID" "$NAME" "$TEXT" "$CHECKS"
+        printf "%-6s %-48s ${COLOR}%-8s${NC} %-6s\n" "$ID" "$NAME" "$TEXT" "$CHECKS"
     done
 
-    echo "────────────────────────────────────────────────────────────────────"
+    echo "------------------------------------------------------------------------"
     echo ""
     echo -e "Summary: ${GREEN}$MILESTONE_PASS PASS${NC} | ${YELLOW}$MILESTONE_WARN WARN${NC} | ${RED}$MILESTONE_FAIL FAIL${NC}"
     echo ""
     echo -e "${BLUE}Note: M20+ is OUT OF SCOPE - Agenticverz validates M0-M19 only.${NC}"
     echo ""
+    return 0
 }
 
 print_matrix() {
-    $JSON_MODE && return
+    $JSON_MODE && return 0
 
     echo ""
-    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║         AGENTICVERZ CI JOB → MILESTONE MAPPING                     ║${NC}"
-    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${CYAN}+====================================================================+${NC}"
+    echo -e "${CYAN}|         AGENTICVERZ CI JOB -> MILESTONE MAPPING v3.0              |${NC}"
+    echo -e "${CYAN}+====================================================================+${NC}"
     echo ""
 
     cat <<'EOF'
-┌─────────────────────┬────────────────────────────────────────────────┐
-│ CI Job              │ Milestones Validated                           │
-├─────────────────────┼────────────────────────────────────────────────┤
-│ unit-tests          │ M0, M4, M11, M14                               │
-│ determinism         │ M0, M3, M7, M9                                 │
-│ workflow-engine     │ M7, M17                                        │
-│ integration         │ M0, M5, M6, M16                                │
-│ costsim             │ M8, M14                                        │
-│ costsim-wiremock    │ M8                                             │
-│ e2e-tests           │ M0, M5, M6, M7, M10, M16, M17                  │
-│ m10-tests           │ M6, M10                                        │
-└─────────────────────┴────────────────────────────────────────────────┘
++---------------------+------------------------------------------------+
+| CI Job              | Milestones Validated (PIN-Accurate)            |
++---------------------+------------------------------------------------+
+| unit-tests          | M0, M2, M3, M11, M14                           |
+| determinism         | M0, M4, M6, M9                                 |
+| workflow-engine     | M4, M17                                        |
+| integration         | M0, M5, M7, M16                                |
+| costsim             | M6, M14                                        |
+| costsim-wiremock    | M6                                             |
+| e2e-tests           | M0, M5, M7, M10, M16, M17                      |
+| m10-tests           | M9, M10                                        |
++---------------------+------------------------------------------------+
 
-┌─────────────────────┬────────────────────────────────────────────────┐
-│ Milestone           │ Primary Test Files                             │
-├─────────────────────┼────────────────────────────────────────────────┤
-│ M0                  │ test_integration.py                            │
-│ M3, M6              │ test_m10_outbox_e2e.py                         │
-│ M7                  │ tests/workflow/test_*.py                       │
-│ M8                  │ tests/costsim/test_*.py                        │
-│ M10                 │ test_m10_*.py (6+ files)                       │
-│ M11                 │ tests/skills/test_m11_skills.py                │
-│ M12                 │ test_m12_*.py (4 files)                        │
-│ M17                 │ test_m17_care.py                               │
-│ M18                 │ test_m18_*.py                                  │
-│ M19                 │ test_m19_policy.py                             │
-└─────────────────────┴────────────────────────────────────────────────┘
++---------------------+------------------------------------------------+
+| Milestone           | Primary Test Files / PIN Reference             |
++---------------------+------------------------------------------------+
+| M0  [PIN-009]       | test_integration.py                            |
+| M3  [PIN-010]       | tests/skills/test_m11_skills.py                |
+| M4  [PIN-013/020]   | tests/workflow/test_*.py                       |
+| M6  [PIN-026]       | tests/costsim/test_*.py                        |
+| M10 [PIN-050]       | test_m10_*.py (6+ files)                       |
+| M12 [PIN-062/063]   | test_m12_*.py (4 files)                        |
+| M17 [PIN-075]       | test_m17_care.py                               |
+| M18 [PIN-076]       | test_m18_*.py                                  |
+| M19 [PIN-078]       | test_m19_policy.py                             |
++---------------------+------------------------------------------------+
 EOF
     echo ""
+    return 0
 }
 
 print_json() {
-    $JSON_MODE || return
+    $JSON_MODE || return 0
 
     local status="pass"
     [[ $ERRORS -gt 0 ]] && status="fail"
@@ -889,7 +974,7 @@ print_json() {
 
     cat <<EOF
 {
-  "version": "2.0",
+  "version": "3.0",
   "project": "agenticverz",
   "status": "$status",
   "errors": $ERRORS,
@@ -905,6 +990,7 @@ EOF
     done
 
     echo -e "\n  }\n}"
+    return 0
 }
 
 # ============================================================================
@@ -922,13 +1008,14 @@ preflight() {
         local last=$(gh run list --limit 1 --json conclusion,name 2>/dev/null || echo "")
         [[ -n "$last" ]] && log_info "Last CI: $last"
     }
+    return 0
 }
 
 # ============================================================================
 # SUMMARY
 # ============================================================================
 print_summary() {
-    $JSON_MODE && { print_json; return; }
+    $JSON_MODE && { print_json; return 0; }
 
     header "Summary"
     echo ""
@@ -955,10 +1042,10 @@ print_summary() {
 main() {
     $JSON_MODE || {
         echo ""
-        echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${CYAN}║  AGENTICVERZ Milestone Certification Engine v2.0                   ║${NC}"
-        echo -e "${CYAN}║  Validates M0-M19 • M20+ OUT OF SCOPE                              ║${NC}"
-        echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════╝${NC}"
+        echo -e "${CYAN}+====================================================================+${NC}"
+        echo -e "${CYAN}|  AGENTICVERZ Milestone Certification Engine v3.0                  |${NC}"
+        echo -e "${CYAN}|  PIN-Accurate Milestone Names | Validates M0-M19                  |${NC}"
+        echo -e "${CYAN}+====================================================================+${NC}"
         echo ""
     }
 
@@ -968,11 +1055,26 @@ main() {
 
     # Dashboard/matrix only mode
     if $MILESTONE_MODE || $MATRIX_MODE; then
-        check_m0_foundations; check_m1_agent_registry; check_m2_topology; check_m3_event_replay
-        check_m4_capability; check_m5_policy; check_m6_outbox; check_m7_workflow
-        check_m8_costsim; check_m9_hardening; check_m10_reliability; check_m11_skill_sandbox
-        check_m12_planner; check_m13_tooling; check_m14_budgetllm; check_m15_sba
-        check_m16_api_cohesion; check_m17_routing; check_m18_governor; check_m19_async_policy
+        check_m0_foundations
+        check_m1_runtime_interfaces
+        check_m2_skill_registration
+        check_m3_core_skills
+        check_m4_workflow_engine
+        check_m5_policy_approval
+        check_m6_costsim_v2
+        check_m7_memory_integration
+        check_m8_sdk_packaging
+        check_m9_failure_catalog
+        check_m10_recovery_engine
+        check_m11_store_factories
+        check_m12_multi_agent
+        check_m13_console_ui
+        check_m14_budgetllm
+        check_m15_sba_foundations
+        check_m16_governance_console
+        check_m17_care_routing
+        check_m18_care_l_evolution
+        check_m19_policy_constitutional
 
         $MILESTONE_MODE && print_dashboard
         $MATRIX_MODE && print_matrix
@@ -986,11 +1088,26 @@ main() {
 
     header "Milestone Validation (M0-M19)"
 
-    check_m0_foundations; check_m1_agent_registry; check_m2_topology; check_m3_event_replay
-    check_m4_capability; check_m5_policy; check_m6_outbox; check_m7_workflow
-    check_m8_costsim; check_m9_hardening; check_m10_reliability; check_m11_skill_sandbox
-    check_m12_planner; check_m13_tooling; check_m14_budgetllm; check_m15_sba
-    check_m16_api_cohesion; check_m17_routing; check_m18_governor; check_m19_async_policy
+    check_m0_foundations
+    check_m1_runtime_interfaces
+    check_m2_skill_registration
+    check_m3_core_skills
+    check_m4_workflow_engine
+    check_m5_policy_approval
+    check_m6_costsim_v2
+    check_m7_memory_integration
+    check_m8_sdk_packaging
+    check_m9_failure_catalog
+    check_m10_recovery_engine
+    check_m11_store_factories
+    check_m12_multi_agent
+    check_m13_console_ui
+    check_m14_budgetllm
+    check_m15_sba_foundations
+    check_m16_governance_console
+    check_m17_care_routing
+    check_m18_care_l_evolution
+    check_m19_policy_constitutional
 
     ! $QUICK_MODE && ! $JSON_MODE && print_dashboard
 
