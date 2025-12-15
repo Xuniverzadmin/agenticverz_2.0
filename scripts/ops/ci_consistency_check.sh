@@ -769,7 +769,11 @@ check_alembic_health() {
         cd "$BACKEND_DIR" 2>/dev/null || true
         local heads=$(PYTHONPATH=. alembic heads 2>/dev/null | grep -c "head" || echo "0")
         cd "$REPO_ROOT" 2>/dev/null || true
-        [[ "$heads" == "1" ]] && log_ok "Single migration head" || [[ "$heads" -gt 1 ]] && log_error "Multiple heads!"
+        if [[ "$heads" == "1" ]]; then
+            log_ok "Single migration head"
+        elif [[ "$heads" -gt 1 ]]; then
+            log_error "Multiple heads!"
+        fi
     fi
 }
 
