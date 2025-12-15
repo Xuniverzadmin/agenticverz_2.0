@@ -671,3 +671,10 @@ class EnhancedPolicyEvaluationResult(BaseModel):
 
     # Metadata
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# =============================================================================
+# Resolve Forward References (Pydantic v2)
+# =============================================================================
+# PolicyEvaluationResult references PolicyViolation which is defined after it
+PolicyEvaluationResult.model_rebuild()
