@@ -18,7 +18,7 @@ Key Design:
 """
 
 revision = '024_m11_skill_audit'
-down_revision = '022_m10_production_hardening'  # Skip deferred 023
+down_revision = '023_m10_archive_partitioning'
 branch_labels = None
 depends_on = None
 

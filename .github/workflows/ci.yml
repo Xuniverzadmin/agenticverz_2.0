@@ -895,6 +895,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
+      - name: Install redis-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-tools
+
       # Step 1: Redis Config Check
       - name: Check Redis configuration
         env:
