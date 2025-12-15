@@ -30,7 +30,8 @@ jobs:
   setup-neon-branch:
     runs-on: ubuntu-latest
     outputs:
-      database_url: ${{ steps.set-outputs.outputs.database_url }}
+      # Note: database_url cannot be passed as output because GitHub blocks secrets
+      # Each job must construct its own connection string using neonctl
       branch_name: ${{ steps.set-outputs.outputs.branch_name }}
       use_neon: ${{ steps.set-outputs.outputs.use_neon }}
     steps:
@@ -83,36 +84,28 @@ jobs:
 
           echo "✅ Branch created: $BRANCH_NAME"
 
-      - name: Get Neon connection string
+      - name: Verify Neon branch is ready
         if: steps.check-secrets.outputs.use_neon == 'true'
-        id: get-conn
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
         run: |
           BRANCH_NAME="ci-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "Waiting for branch endpoint to be ready..."
+          sleep 5
 
-          # Get connection string for the branch
+          # Verify we can get a connection string
           CONN=$(neonctl connection-string "$BRANCH_NAME" \
             --project-id ${{ secrets.NEON_PROJECT_ID }} \
             --api-key $NEON_API_KEY \
             --database-name neondb \
             --role-name neondb_owner 2>&1)
 
-          # Validate connection string format
           if [[ ! "$CONN" =~ ^postgresql:// ]]; then
-            echo "::error::Invalid connection string format received"
-            echo "Raw output (sanitized): ${CONN:0:50}..."
+            echo "::error::Failed to get valid connection string"
             exit 1
           fi
 
-          # Ensure sslmode=require is present
-          if [[ "$CONN" != *"sslmode="* ]]; then
-            CONN="${CONN}?sslmode=require"
-          fi
-
-          # Store in environment file for next step (avoids output issues with special chars)
-          echo "NEON_DATABASE_URL=$CONN" >> $GITHUB_ENV
-          echo "✅ Connection string retrieved and validated"
+          echo "✅ Branch is ready for connections"
 
       - name: Set final outputs
         id: set-outputs
@@ -120,25 +113,14 @@ jobs:
           USE_NEON="${{ steps.check-secrets.outputs.use_neon }}"
 
           if [ "$USE_NEON" == "true" ]; then
-            # Use Neon connection string from environment
-            if [ -z "$NEON_DATABASE_URL" ]; then
-              echo "::error::NEON_DATABASE_URL not set despite use_neon=true"
-              exit 1
-            fi
-            echo "database_url=$NEON_DATABASE_URL" >> $GITHUB_OUTPUT
             echo "branch_name=${{ steps.create-branch.outputs.branch_name }}" >> $GITHUB_OUTPUT
             echo "use_neon=true" >> $GITHUB_OUTPUT
-            echo "✅ Using Neon ephemeral branch"
+            echo "✅ Neon ephemeral branch ready: ${{ steps.create-branch.outputs.branch_name }}"
           else
-            # Fallback to Docker Postgres
-            echo "database_url=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_OUTPUT
             echo "branch_name=" >> $GITHUB_OUTPUT
             echo "use_neon=false" >> $GITHUB_OUTPUT
             echo "⚠️ Using Docker PostgreSQL fallback"
           fi
-
-          # Debug: confirm output is set (masked in logs)
-          echo "Output database_url length: $(echo '${{ steps.set-outputs.outputs.database_url }}' | wc -c 2>/dev/null || echo 'pending')"
 
   # ============================================================================
   # FAST JOBS (No DB required)
@@ -345,11 +327,37 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      # Always use output from setup job (now always set correctly)
-      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.database_url }}
       REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Neon CLI
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Configure database connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
+            echo "✅ Using Neon PostgreSQL (ephemeral branch)"
+            BRANCH_NAME="${{ needs.setup-neon-branch.outputs.branch_name }}"
+            CONN=$(neonctl connection-string "$BRANCH_NAME" \
+              --project-id ${{ secrets.NEON_PROJECT_ID }} \
+              --api-key $NEON_API_KEY \
+              --database-name neondb \
+              --role-name neondb_owner)
+            # Ensure sslmode=require is present
+            if [[ "$CONN" != *"sslmode="* ]]; then
+              CONN="${CONN}?sslmode=require"
+            fi
+            echo "DATABASE_URL=$CONN" >> $GITHUB_ENV
+          else
+            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
+            echo "DATABASE_URL=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_ENV
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -361,14 +369,6 @@ jobs:
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
-
-      - name: Check database source
-        run: |
-          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
-            echo "✅ Using Neon PostgreSQL (ephemeral branch: ci-${{ github.run_id }}-${{ github.run_attempt }})"
-          else
-            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
-          fi
 
       - name: Wait for PostgreSQL (Docker fallback only)
         if: needs.setup-neon-branch.outputs.use_neon != 'true'
@@ -388,7 +388,6 @@ jobs:
       - name: Run Alembic migrations
         run: |
           cd backend
-          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run integration tests
@@ -415,12 +414,38 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.database_url }}
       COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
       COSTSIM_INCIDENT_DIR: /tmp/aos/costsim_incidents
       COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Neon CLI
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Configure database connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
+            echo "✅ Using Neon PostgreSQL (ephemeral branch)"
+            BRANCH_NAME="${{ needs.setup-neon-branch.outputs.branch_name }}"
+            CONN=$(neonctl connection-string "$BRANCH_NAME" \
+              --project-id ${{ secrets.NEON_PROJECT_ID }} \
+              --api-key $NEON_API_KEY \
+              --database-name neondb \
+              --role-name neondb_owner)
+            if [[ "$CONN" != *"sslmode="* ]]; then
+              CONN="${CONN}?sslmode=require"
+            fi
+            echo "DATABASE_URL=$CONN" >> $GITHUB_ENV
+          else
+            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
+            echo "DATABASE_URL=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_ENV
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -451,7 +476,6 @@ jobs:
       - name: Run Alembic migrations
         run: |
           cd backend
-          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run circuit breaker tests
@@ -516,7 +540,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.database_url }}
       ALERTMANAGER_URL: http://localhost:9093
       COSTSIM_V2_SANDBOX: "true"
       COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
@@ -524,6 +547,33 @@ jobs:
       COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Neon CLI
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Configure database connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
+            echo "✅ Using Neon PostgreSQL (ephemeral branch)"
+            BRANCH_NAME="${{ needs.setup-neon-branch.outputs.branch_name }}"
+            CONN=$(neonctl connection-string "$BRANCH_NAME" \
+              --project-id ${{ secrets.NEON_PROJECT_ID }} \
+              --api-key $NEON_API_KEY \
+              --database-name neondb \
+              --role-name neondb_owner)
+            if [[ "$CONN" != *"sslmode="* ]]; then
+              CONN="${CONN}?sslmode=require"
+            fi
+            echo "DATABASE_URL=$CONN" >> $GITHUB_ENV
+          else
+            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
+            echo "DATABASE_URL=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_ENV
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -554,7 +604,6 @@ jobs:
       - name: Run Alembic migrations
         run: |
           cd backend
-          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run CB integration tests
@@ -581,7 +630,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.database_url }}
       ALERTMANAGER_URL: http://localhost:8080/api/v2/alerts
       COSTSIM_V2_SANDBOX: "true"
       COSTSIM_DISABLE_FILE: /tmp/aos/costsim_v2_disabled
@@ -589,6 +637,33 @@ jobs:
       COSTSIM_ARTIFACTS_DIR: /tmp/aos/costsim_artifacts
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Neon CLI
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Configure database connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
+            echo "✅ Using Neon PostgreSQL (ephemeral branch)"
+            BRANCH_NAME="${{ needs.setup-neon-branch.outputs.branch_name }}"
+            CONN=$(neonctl connection-string "$BRANCH_NAME" \
+              --project-id ${{ secrets.NEON_PROJECT_ID }} \
+              --api-key $NEON_API_KEY \
+              --database-name neondb \
+              --role-name neondb_owner)
+            if [[ "$CONN" != *"sslmode="* ]]; then
+              CONN="${CONN}?sslmode=require"
+            fi
+            echo "DATABASE_URL=$CONN" >> $GITHUB_ENV
+          else
+            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
+            echo "DATABASE_URL=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_ENV
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -641,7 +716,6 @@ jobs:
       - name: Run Alembic migrations
         run: |
           cd backend
-          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run circuit breaker integration tests
@@ -692,7 +766,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.database_url }}
       REDIS_URL: redis://localhost:6379/0
       AOS_API_KEY: ${{ secrets.AOS_API_KEY || 'test-e2e-key' }}
       MEMORY_FAIL_OPEN_OVERRIDE: "true"
@@ -702,12 +775,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check database mode
+      - name: Setup Neon CLI
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Configure database connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
         run: |
           if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
             echo "✅ Using Neon PostgreSQL (ephemeral branch)"
+            BRANCH_NAME="${{ needs.setup-neon-branch.outputs.branch_name }}"
+            CONN=$(neonctl connection-string "$BRANCH_NAME" \
+              --project-id ${{ secrets.NEON_PROJECT_ID }} \
+              --api-key $NEON_API_KEY \
+              --database-name neondb \
+              --role-name neondb_owner)
+            if [[ "$CONN" != *"sslmode="* ]]; then
+              CONN="${CONN}?sslmode=require"
+            fi
+            echo "DATABASE_URL=$CONN" >> $GITHUB_ENV
           else
             echo "⚠️ Using Docker PostgreSQL (fallback mode)"
+            echo "DATABASE_URL=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_ENV
           fi
 
       - name: Set up Python
@@ -740,7 +832,6 @@ jobs:
       - name: Run Alembic migrations
         run: |
           cd backend
-          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Start application server
@@ -829,10 +920,36 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: ${{ needs.setup-neon-branch.outputs.database_url }}
       REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Neon CLI
+        if: needs.setup-neon-branch.outputs.use_neon == 'true'
+        uses: nhedger/setup-neon@v1
+        with:
+          version: latest
+
+      - name: Configure database connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          if [ "${{ needs.setup-neon-branch.outputs.use_neon }}" == "true" ]; then
+            echo "✅ Using Neon PostgreSQL (ephemeral branch)"
+            BRANCH_NAME="${{ needs.setup-neon-branch.outputs.branch_name }}"
+            CONN=$(neonctl connection-string "$BRANCH_NAME" \
+              --project-id ${{ secrets.NEON_PROJECT_ID }} \
+              --api-key $NEON_API_KEY \
+              --database-name neondb \
+              --role-name neondb_owner)
+            if [[ "$CONN" != *"sslmode="* ]]; then
+              CONN="${CONN}?sslmode=require"
+            fi
+            echo "DATABASE_URL=$CONN" >> $GITHUB_ENV
+          else
+            echo "⚠️ Using Docker PostgreSQL (fallback mode)"
+            echo "DATABASE_URL=postgresql://nova:novapass@localhost:5433/nova_aos" >> $GITHUB_ENV
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -883,7 +1000,6 @@ jobs:
       - name: Run Alembic migrations
         run: |
           cd backend
-          export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's/[[:space:]]*$//')
           alembic upgrade head
 
       - name: Run M10 leader election tests
