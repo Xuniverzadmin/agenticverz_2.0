@@ -865,13 +865,32 @@ jobs:
           nohup python -u -m app.worker.pool > worker.log 2>&1 &
           WORKER_PID=$!
           echo "Worker started (PID: $WORKER_PID)"
-          sleep 5
+          echo "WORKER_PID=$WORKER_PID" >> $GITHUB_ENV
+
+          # Wait for worker to fully initialize (look for poll loop start)
+          echo "Waiting for worker to start polling..."
+          for i in {1..15}; do
+            sleep 2
+            if grep -q "worker_pool_starting\|poll_and_dispatch" worker.log 2>/dev/null; then
+              echo "✅ Worker poll loop started"
+              break
+            fi
+            if ! ps -p $WORKER_PID > /dev/null 2>&1; then
+              echo "❌ Worker crashed during startup!"
+              cat worker.log 2>/dev/null || true
+              exit 1
+            fi
+            echo "  Attempt $i/15 - waiting..."
+          done
+
+          # Final verification
           if ps -p $WORKER_PID > /dev/null 2>&1; then
-            echo "Worker is running (PID: $WORKER_PID)"
-            cat worker.log | head -20
+            echo "✅ Worker is running (PID: $WORKER_PID)"
+            echo "=== Worker logs (last 50 lines) ==="
+            tail -50 worker.log
           else
+            echo "❌ Worker process is not running!"
             cat worker.log 2>/dev/null || true
-            echo "ERROR: Worker process $WORKER_PID is not running!"
             exit 1
           fi
 
@@ -881,6 +900,27 @@ jobs:
         run: |
           cd backend
           PYTHONPATH=. pytest tests/test_phase4_e2e.py -v --tb=short -m e2e
+
+      - name: Show worker logs (debug)
+        if: always()
+        run: |
+          cd backend
+          echo "=== Worker process status ==="
+          ps aux | grep worker || echo "No worker process found"
+          echo ""
+          echo "=== Full worker.log ==="
+          cat worker.log 2>/dev/null || echo "No worker.log found"
+          echo ""
+          echo "=== Checking for runs in DB ==="
+          PYTHONPATH=. python -c "
+          from app.db import engine
+          from sqlmodel import Session, select
+          from app.db import Run
+          with Session(engine) as s:
+              runs = s.exec(select(Run)).all()
+              for r in runs:
+                  print(f'Run {r.id}: status={r.status}, created={r.created_at}, started={r.started_at}')
+          " 2>/dev/null || echo "Could not query runs"
 
       - name: Upload logs on failure
         if: failure()
