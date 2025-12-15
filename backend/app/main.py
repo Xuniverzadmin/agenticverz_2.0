@@ -243,6 +243,10 @@ from .api.memory_pins import router as memory_pins_router
 from .api.rbac_api import router as rbac_router
 from .api.traces import router as traces_router
 from .api.failures import router as failures_router
+from .api.recovery import router as recovery_router
+from .api.recovery_ingest import router as recovery_ingest_router
+from .api.agents import router as agents_router  # M12 Multi-Agent System
+from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -253,6 +257,10 @@ app.include_router(memory_pins_router)
 app.include_router(rbac_router)
 app.include_router(traces_router, prefix="/api/v1")
 app.include_router(failures_router)
+app.include_router(recovery_router)  # M10 Recovery Suggestion Engine
+app.include_router(recovery_ingest_router)  # M10 Recovery Ingest (idempotent)
+app.include_router(agents_router)  # M12 Multi-Agent System
+app.include_router(policy_layer_router, prefix="/api/v1")  # M19 Policy Layer
 
 # CORS middleware
 app.add_middleware(

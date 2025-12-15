@@ -1,0 +1,106 @@
+# M19 Policy Layer
+# Constitutional governance for multi-agent systems
+#
+# This module provides the policy engine that every agent and subsystem
+# must consult before deciding, routing, executing, escalating, or self-modifying.
+#
+# GAP Fixes (M19.1):
+# - GAP 1: Policy Versioning & Provenance
+# - GAP 2: Policy Dependency Graph & Conflict Resolution
+# - GAP 3: Temporal Policies (Sliding Windows)
+# - GAP 4: Policy Context Object
+# - GAP 5: Enhanced Violation Classifications
+
+from app.policy.engine import PolicyEngine, get_policy_engine
+from app.policy.models import (
+    # Core enums
+    ActionType,
+    BusinessRuleType,
+    EthicalConstraintType,
+    PolicyCategory,
+    PolicyDecision,
+    SafetyRuleType,
+    ViolationType,
+    # GAP 5: Enhanced severity
+    ViolationSeverity,
+    RecoverabilityType,
+    # GAP 3: Temporal policy types
+    TemporalPolicyType,
+    # Core models
+    BusinessRule,
+    EthicalConstraint,
+    Policy,
+    PolicyEvaluationRequest,
+    PolicyEvaluationResult,
+    PolicyLoadResult,
+    PolicyModification,
+    PolicyRule,
+    PolicyState,
+    PolicyViolation,
+    RiskCeiling,
+    SafetyRule,
+    # GAP 1: Versioning & Provenance
+    PolicyVersion,
+    PolicyProvenance,
+    # GAP 2: Dependency Graph
+    PolicyDependency,
+    PolicyConflict,
+    DependencyGraph,
+    # GAP 3: Temporal Policies
+    TemporalPolicy,
+    TemporalMetricWindow,
+    # GAP 4: Policy Context
+    PolicyContext,
+    # Enhanced models (GAPs 4-5)
+    EnhancedPolicyEvaluationRequest,
+    EnhancedPolicyViolation,
+    EnhancedPolicyEvaluationResult,
+)
+
+__all__ = [
+    # Engine
+    "PolicyEngine",
+    "get_policy_engine",
+    # Core enums
+    "ActionType",
+    "BusinessRuleType",
+    "EthicalConstraintType",
+    "PolicyCategory",
+    "PolicyDecision",
+    "SafetyRuleType",
+    "ViolationType",
+    # GAP 5: Enhanced severity
+    "ViolationSeverity",
+    "RecoverabilityType",
+    # GAP 3: Temporal policy types
+    "TemporalPolicyType",
+    # Core models
+    "BusinessRule",
+    "EthicalConstraint",
+    "Policy",
+    "PolicyEvaluationRequest",
+    "PolicyEvaluationResult",
+    "PolicyLoadResult",
+    "PolicyModification",
+    "PolicyRule",
+    "PolicyState",
+    "PolicyViolation",
+    "RiskCeiling",
+    "SafetyRule",
+    # GAP 1: Versioning & Provenance
+    "PolicyVersion",
+    "PolicyProvenance",
+    # GAP 2: Dependency Graph
+    "PolicyDependency",
+    "PolicyConflict",
+    "DependencyGraph",
+    # GAP 3: Temporal Policies
+    "TemporalPolicy",
+    "TemporalMetricWindow",
+    # GAP 4: Policy Context
+    "PolicyContext",
+    # Enhanced models (GAPs 4-5)
+    "EnhancedPolicyEvaluationRequest",
+    "EnhancedPolicyViolation",
+    "EnhancedPolicyEvaluationResult",
+]

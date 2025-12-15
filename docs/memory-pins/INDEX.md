@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-14 (M18 CARE-L + SBA Evolution Complete)
+**Last Updated:** 2025-12-15 (M19 Policy Layer Complete)
 
 ---
 
@@ -98,12 +98,14 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-074](PIN-074-m16-strategybound-governance-console.md) | **M16 StrategyBound Governance Console** | Milestone / Specification | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-075](PIN-075-m17-care-routing-engine.md) | **M17 CARE Routing Engine** | Milestone / Routing | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-076](PIN-076-m18-care-l-sba-evolution.md) | **M18 CARE-L + SBA Evolution** | Milestone / Autonomous Learning | **✅ COMPLETE** | 2025-12-14 |
+| [PIN-077](PIN-077-m18-3-metrics-dashboard.md) | **M18.3 Metrics & Dashboard** | Observability / Metrics | **✅ COMPLETE** | 2025-12-15 |
+| [PIN-078](PIN-078-m19-policy-layer.md) | **M19 Policy Layer (Constitutional Governance)** | Milestone / Governance | **✅ COMPLETE** | 2025-12-15 |
 
 ---
 
 ## Vision Achievement Summary
 
-**Overall Score: 95%** toward machine-native vision (M18 autonomous learning complete).
+**Overall Score: 97%** toward machine-native vision (M19 constitutional governance complete).
 
 | Pillar | Score | Status |
 |--------|-------|--------|
@@ -112,9 +114,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | Deterministic | 90% | ✅ Seed determinism proven |
 | Skills | 90% | ✅ M11+M12 skills complete + invoke audit |
 | Budgets | 90% | ✅ BudgetLLM governance + LLM cost tracking |
-| Safety | 95% | ✅ RBAC + SBA + CARE-L quarantine + governor |
+| Safety | 98% | ✅ RBAC + SBA + CARE-L quarantine + governor + M19 policy layer |
 | State | 88% | ✅ Memory pins + TTL + drift detection |
-| Observability | 80% | ✅ M18 explainability + stability metrics |
+| Observability | 90% | ✅ M18.3 dashboard + 25 new metrics + explainability |
 | **Self-Optimization** | 95% | ✅ CARE-L + SBA Evolution feedback loop |
 
 **Resolved in M12.1:**
@@ -161,11 +163,17 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 - ✅ Offline batch learning
 - ✅ Explainability endpoints (62 tests)
 
-**Pending (Production Enablement):**
-- [ ] Grafana m12_* metrics dashboard
-- [ ] 7 production validation checks (see M12-PRODUCTION-ENABLEMENT.md)
+**Resolved in M18.3 (Metrics & Dashboard):**
+- ✅ Grafana M12/M18 dashboard created (20+ panels)
+- ✅ m12_message_latency_seconds metric added
+- ✅ 25+ M18 Prometheus metrics (reputation, quarantine, drift, violations, governor, feedback loop, SLA, batch learning)
+- ✅ Observability pillar score: 80% → 90%
 
-See PIN-062/063 for M12 status, PIN-072/073 for M15.1 SBA governance + Inspector UI, PIN-075 for M17 CARE routing, PIN-076 for M18 autonomous learning.
+**Pending (Production Enablement):**
+- [ ] Import dashboard to Grafana
+- [ ] 6 human validation checks (see M12-PRODUCTION-ENABLEMENT.md)
+
+See PIN-062/063 for M12 status, PIN-072/073 for M15.1 SBA governance + Inspector UI, PIN-075 for M17 CARE routing, PIN-076 for M18 autonomous learning, PIN-077 for M18.3 metrics dashboard.
 
 ---
 
@@ -193,9 +201,9 @@ Quick reference for all pending polishing and tech debt tasks across PINs.
 | Priority | Count | Status |
 |----------|-------|--------|
 | **P0** | **0** | ✅ All M12.1 blockers resolved |
-| P1 | 1 | Grafana metrics dashboard |
+| **P1** | **0** | ✅ Grafana M12/M18 dashboard created (needs import) |
 | P2 | 2 | M13 architectural gaps (blackboard scale, message guarantees) |
-| **Total** | **3** | M12 + M12.1 Complete — Production Enablement Pending |
+| **Total** | **2** | M12 + M12.1 + M18 Complete — Dashboard Import Pending |
 
 **Production Checklist:** [M12-PRODUCTION-ENABLEMENT.md](../checklists/M12-PRODUCTION-ENABLEMENT.md)
 
