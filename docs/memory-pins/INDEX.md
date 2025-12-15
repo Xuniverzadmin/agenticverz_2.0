@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-15 (M19 Policy Layer Complete)
+**Last Updated:** 2025-12-15 (CI v4.1 Test Enforcement)
 
 ---
 
@@ -101,6 +101,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-077](PIN-077-m18-3-metrics-dashboard.md) | **M18.3 Metrics & Dashboard** | Observability / Metrics | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-078](PIN-078-m19-policy-layer.md) | **M19 Policy Layer (Constitutional Governance)** | Milestone / Governance | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-079](PIN-079-ci-ephemeral-neon-fixes.md) | **CI Ephemeral Neon Branch Fixes** | Infrastructure / CI | **✅ COMPLETE** | 2025-12-15 |
+| [PIN-080](PIN-080-ci-consistency-checker-v41.md) | **CI Consistency Checker v4.1 - Test Enforcement** | Infrastructure / CI / Testing | **✅ COMPLETE** | 2025-12-15 |
 
 ---
 
