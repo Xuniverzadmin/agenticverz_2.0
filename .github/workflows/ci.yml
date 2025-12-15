@@ -61,11 +61,11 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
           echo "Creating Neon branch: $BRANCH_NAME"
 
-          # Create branch from main (parent)
+          # Create branch from default branch (parent)
           neonctl branches create \
             --project-id ${{ secrets.NEON_PROJECT_ID }} \
             --name "$BRANCH_NAME" \
-            --parent main \
+            --parent "Agenticverz-AOS" \
             --api-key $NEON_API_KEY \
             || {
               # Branch might exist from failed previous run, try to delete and recreate
@@ -77,7 +77,7 @@ jobs:
               neonctl branches create \
                 --project-id ${{ secrets.NEON_PROJECT_ID }} \
                 --name "$BRANCH_NAME" \
-                --parent main \
+                --parent "Agenticverz-AOS" \
                 --api-key $NEON_API_KEY
             }
 
