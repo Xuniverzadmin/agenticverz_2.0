@@ -1,7 +1,7 @@
 """M17 CARE Routing
 
 Revision ID: 030_m17_care_routing
-Revises: 029_m15_1_1_simplify_sba_validator
+Revises: 029_m15_sba_validator
 Create Date: 2025-12-14
 
 Adds:
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision = '030_m17_care_routing'
-down_revision = '029_m15_1_1_simplify_sba_validator'
+down_revision = '029_m15_sba_validator'
 branch_labels = None
 depends_on = None
 

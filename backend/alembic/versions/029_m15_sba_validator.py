@@ -1,6 +1,6 @@
 """M15.1.1 Simplify SBA SQL Validator
 
-Revision ID: 029_m15_1_1_simplify_sba_validator
+Revision ID: 029_m15_sba_validator
 Revises: 028_m15_1_sba_schema
 Create Date: 2025-12-14
 
@@ -10,7 +10,7 @@ Detailed semantic validation (governance, dependencies, etc.) handled by Python.
 This reduces maintenance burden and prevents SQL/Python logic divergence.
 """
 
-revision = '029_m15_1_1_simplify_sba_validator'
+revision = '029_m15_sba_validator'
 down_revision = '028_m15_1_sba_schema'
 branch_labels = None
 depends_on = None
