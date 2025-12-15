@@ -100,6 +100,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-076](PIN-076-m18-care-l-sba-evolution.md) | **M18 CARE-L + SBA Evolution** | Milestone / Autonomous Learning | **✅ COMPLETE** | 2025-12-14 |
 | [PIN-077](PIN-077-m18-3-metrics-dashboard.md) | **M18.3 Metrics & Dashboard** | Observability / Metrics | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-078](PIN-078-m19-policy-layer.md) | **M19 Policy Layer (Constitutional Governance)** | Milestone / Governance | **✅ COMPLETE** | 2025-12-15 |
+| [PIN-079](PIN-079-ci-ephemeral-neon-fixes.md) | **CI Ephemeral Neon Branch Fixes** | Infrastructure / CI | **✅ COMPLETE** | 2025-12-15 |
 
 ---
 
@@ -1175,3 +1176,4 @@ When resuming work on this project:
 | 2025-11-30 | Added PIN-003 Phase 3 Completion |
 | 2025-11-30 | Created index with PIN-001 and PIN-002 |
 | 2025-12-11 | **M12 Multi-Agent System COMPLETE** - 49 tests passing, DoD validated |
+| 2025-12-15 | **PIN-079 CI Ephemeral Neon Branch Fixes** - Fixed 6 issues: GitHub secret blocking, import paths, Pydantic forward refs, outbox constraint, alembic rev ID, worker diagnostics. CI: 13/14 jobs passing. |
