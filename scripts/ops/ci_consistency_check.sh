@@ -1,5 +1,5 @@
 #!/bin/bash
-# CI Consistency Checker - Fool-proof mechanism to catch CI issues early
+# CI Consistency Checker v1.2 - Production-grade CI validation
 #
 # Usage:
 #   ./scripts/ops/ci_consistency_check.sh           # Full check
@@ -12,6 +12,10 @@
 # 3. File existence requirements
 # 4. Concurrency safety patterns
 # 5. Process observability requirements
+# 6. Background worker configuration (NEW in v1.2)
+# 7. Schema audit infrastructure (NEW in v1.2)
+# 8. Migration rollback testing (NEW in v1.2)
+# 9. Metrics endpoint validation (NEW in v1.2)
 #
 # Run before every CI push to catch issues early.
 
@@ -52,7 +56,7 @@ done
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
-    ((ERRORS++))
+    ERRORS=$((ERRORS + 1))
 }
 
 log_warn() {
@@ -70,7 +74,7 @@ log_info() {
 
 log_fix() {
     echo -e "${GREEN}[FIX]${NC} $1"
-    ((FIXES++))
+    FIXES=$((FIXES + 1))
 }
 
 header() {
@@ -236,7 +240,7 @@ check_code_patterns() {
                 # Check if it's inside an async function
                 if grep -B 5 "with Session" "$f" | grep -q "async def"; then
                     log_warn "Potential sync DB in async context: $f"
-                    ((SYNC_IN_ASYNC++))
+                    SYNC_IN_ASYNC=$((SYNC_IN_ASYNC + 1))
                 fi
             fi
         done
@@ -291,7 +295,7 @@ check_alembic_migrations() {
             if [[ $LEN -gt 32 ]]; then
                 log_error "Revision ID too long ($LEN > 32): $REV"
                 log_info "  File: $(basename "$f")"
-                ((LONG_REVISIONS++))
+                LONG_REVISIONS=$((LONG_REVISIONS + 1))
             elif [[ $LEN -gt 28 ]]; then
                 log_warn "Revision ID near limit ($LEN/32): $REV"
             fi
@@ -328,7 +332,7 @@ check_alembic_migrations() {
             local BASENAME=$(basename "$f")
             if [[ "$BASENAME" > "028" ]]; then
                 log_warn "Non-idempotent migration: $(basename "$f")"
-                ((NON_IDEMPOTENT++))
+                NON_IDEMPOTENT=$((NON_IDEMPOTENT + 1))
             fi
         fi
     done
@@ -448,6 +452,93 @@ preflight_checks() {
 }
 
 #############################################
+# LAYER 7: PRODUCTION-GRADE CI ELEMENTS (v1.2)
+#############################################
+
+check_production_ci_elements() {
+    header "Production-Grade CI Elements (v1.2)"
+
+    local CI_FILE="$REPO_ROOT/.github/workflows/ci.yml"
+
+    # Check 1: Schema audit script exists
+    local SCHEMA_AUDIT="$REPO_ROOT/scripts/ops/schema_audit.py"
+    if [[ -f "$SCHEMA_AUDIT" ]]; then
+        log_ok "Schema audit script exists: scripts/ops/schema_audit.py"
+    else
+        log_error "Missing schema audit script - required for drift detection"
+        log_info "  Create: scripts/ops/schema_audit.py"
+    fi
+
+    # Check 2: Metrics validation script exists
+    local METRICS_SCRIPT="$REPO_ROOT/scripts/ops/metrics_validation.py"
+    if [[ -f "$METRICS_SCRIPT" ]]; then
+        log_ok "Metrics validation script exists: scripts/ops/metrics_validation.py"
+    else
+        log_error "Missing metrics validation script - required for observability"
+        log_info "  Create: scripts/ops/metrics_validation.py"
+    fi
+
+    # Check 3: CI has migration rollback test (up/down/up pattern)
+    if [[ -f "$CI_FILE" ]]; then
+        if grep -q "alembic downgrade" "$CI_FILE" 2>/dev/null; then
+            log_ok "CI includes migration rollback test (up/down/up)"
+        else
+            log_error "CI missing migration rollback test"
+            log_info "  Add: alembic upgrade head && alembic downgrade base && alembic upgrade head"
+        fi
+    fi
+
+    # Check 4: CI has schema audit step
+    if [[ -f "$CI_FILE" ]]; then
+        if grep -q "schema_audit.py\|schema-audit\|Schema audit" "$CI_FILE" 2>/dev/null; then
+            log_ok "CI includes schema audit step"
+        else
+            log_warn "CI missing schema audit step"
+            log_info "  Add: python scripts/ops/schema_audit.py"
+        fi
+    fi
+
+    # Check 5: CI has worker health check step (for e2e tests)
+    if [[ -f "$CI_FILE" ]]; then
+        if grep -q "Worker health check\|pgrep.*worker\|worker.*running" "$CI_FILE" 2>/dev/null; then
+            log_ok "CI includes worker health check"
+        else
+            log_warn "CI missing explicit worker health check"
+            log_info "  Add: pgrep -f 'app.worker.pool' check step"
+        fi
+    fi
+
+    # Check 6: CI has metrics endpoint validation (for e2e tests)
+    if [[ -f "$CI_FILE" ]]; then
+        if grep -q "metrics_validation.py\|Metrics endpoint validation\|nova_runs_total" "$CI_FILE" 2>/dev/null; then
+            log_ok "CI includes metrics endpoint validation"
+        else
+            log_warn "CI missing metrics endpoint validation"
+            log_info "  Add: python scripts/ops/metrics_validation.py"
+        fi
+    fi
+
+    # Check 7: E2E test worker startup uses PYTHONUNBUFFERED
+    if [[ -f "$CI_FILE" ]]; then
+        if grep -A 20 "e2e-tests:" "$CI_FILE" 2>/dev/null | grep -q "PYTHONUNBUFFERED"; then
+            log_ok "E2E worker uses PYTHONUNBUFFERED for observable output"
+        else
+            log_warn "E2E worker may have buffered output"
+            log_info "  Add: PYTHONUNBUFFERED=1 to worker startup"
+        fi
+    fi
+
+    # Check 8: E2E shows adequate worker logs on failure
+    if [[ -f "$CI_FILE" ]]; then
+        if grep -q "tail.*50\|tail.*100\|tail -n 50\|tail -n 100" "$CI_FILE" 2>/dev/null; then
+            log_ok "CI shows adequate log output (50+ lines)"
+        else
+            log_warn "CI may show truncated logs - increase tail count"
+        fi
+    fi
+}
+
+#############################################
 # SUMMARY
 #############################################
 
@@ -473,6 +564,7 @@ print_summary() {
     echo "Documentation:"
     echo "  - RCA Report: docs/RCA-CI-FIXES-2025-12-07.md"
     echo "  - Memory PIN: docs/memory-pins/PIN-045-ci-infrastructure-fixes.md"
+    echo "  - Memory PIN: docs/memory-pins/PIN-079-ci-ephemeral-neon-fixes.md"
     echo ""
 
     if [[ $ERRORS -gt 0 ]]; then
@@ -491,9 +583,9 @@ print_summary() {
 main() {
     echo ""
     echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║     CI Consistency Checker v1.1            ║${NC}"
+    echo -e "${BLUE}║     CI Consistency Checker v1.2            ║${NC}"
     echo -e "${BLUE}║     Fool-Proof Prevention Mechanism        ║${NC}"
-    echo -e "${BLUE}║     + Neon/Alembic checks (2025-12-15)     ║${NC}"
+    echo -e "${BLUE}║     + Production-Grade CI (2025-12-15)     ║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -512,6 +604,7 @@ main() {
     if ! $QUICK_MODE; then
         check_test_infrastructure
         check_service_matrix
+        check_production_ci_elements
     fi
 
     print_summary

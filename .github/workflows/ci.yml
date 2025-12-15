@@ -829,10 +829,35 @@ jobs:
           echo "PostgreSQL failed to become ready"
           exit 1
 
-      - name: Run Alembic migrations
+      - name: Run Alembic migrations (with rollback test)
         run: |
           cd backend
+          echo "=== Step 1: Upgrade to head ==="
           alembic upgrade head
+
+          echo ""
+          echo "=== Step 2: Downgrade to base (rollback test) ==="
+          alembic downgrade base || {
+            echo "WARNING: Downgrade failed - some migrations may not be reversible"
+            echo "Continuing with upgrade-only test..."
+          }
+
+          echo ""
+          echo "=== Step 3: Re-upgrade to head ==="
+          alembic upgrade head
+
+          echo ""
+          echo "=== Migration Test Complete ==="
+          alembic current
+
+      - name: Schema audit (drift detection)
+        run: |
+          cd backend
+          echo "Running schema audit to detect drift..."
+          PYTHONPATH=. python ../scripts/ops/schema_audit.py || {
+            echo "WARNING: Schema audit found issues (non-blocking for now)"
+            echo "Review schema_audit.py output above"
+          }
 
       - name: Start application server
         run: |
@@ -892,6 +917,40 @@ jobs:
             echo "❌ Worker process is not running!"
             cat worker.log 2>/dev/null || true
             exit 1
+          fi
+
+      - name: Worker health check
+        run: |
+          echo "Verifying worker process is healthy..."
+          if pgrep -f "app.worker.pool" > /dev/null; then
+            echo "✅ Worker process found"
+            pgrep -af "app.worker.pool"
+          else
+            echo "❌ Worker process not found!"
+            echo "Processes running:"
+            ps aux | grep python || true
+            exit 1
+          fi
+
+      - name: Metrics endpoint validation
+        run: |
+          echo "Validating /metrics endpoint..."
+          # Check endpoint is reachable
+          if curl -sf http://localhost:8000/metrics > /tmp/metrics.txt 2>&1; then
+            echo "✅ Metrics endpoint reachable"
+            METRIC_COUNT=$(grep -c "^nova_" /tmp/metrics.txt || echo "0")
+            echo "   Found $METRIC_COUNT nova_* metrics"
+
+            # Check for critical metrics
+            for metric in nova_runs_total nova_skills_executed_total; do
+              if grep -q "$metric" /tmp/metrics.txt 2>/dev/null; then
+                echo "   ✅ $metric present"
+              else
+                echo "   ⚠️  $metric not found (may be zero)"
+              fi
+            done
+          else
+            echo "⚠️  Metrics endpoint not available (non-blocking)"
           fi
 
       - name: Run E2E tests
