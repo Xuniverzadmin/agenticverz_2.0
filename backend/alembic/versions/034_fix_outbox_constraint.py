@@ -16,7 +16,7 @@ from alembic import op
 from sqlalchemy import text
 
 revision = '034_fix_outbox_constraint'
-down_revision = '033_m19_1_policy_gaps'
+down_revision = '033_m19_1_gaps'
 branch_labels = None
 depends_on = None
 
