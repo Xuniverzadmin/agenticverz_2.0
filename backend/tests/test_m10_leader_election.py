@@ -13,6 +13,7 @@ import os
 import pytest
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # Test configuration
@@ -507,14 +508,15 @@ class TestReconcileLeaderElection:
 
         spec = importlib.util.spec_from_file_location(
             "reconcile_dl",
-            "/root/agenticverz2.0/backend/scripts/ops/reconcile_dl.py"
+            str(Path(__file__).parent.parent / "scripts" / "ops" / "reconcile_dl.py")
         )
         if spec and spec.loader:
             module = importlib.util.module_from_spec(spec)
             # Just verify the module has the functions
             assert hasattr(module, '__file__')
             # Read the source to verify lock usage
-            with open("/root/agenticverz2.0/backend/scripts/ops/reconcile_dl.py") as f:
+            script_path = Path(__file__).parent.parent / "scripts" / "ops" / "reconcile_dl.py"
+            with open(script_path) as f:
                 source = f.read()
                 assert "acquire_lock" in source
                 assert "release_lock" in source
@@ -523,7 +525,8 @@ class TestReconcileLeaderElection:
 
     def test_matview_lock_functions_exist(self, db_session):
         """Verify refresh_matview uses acquire_lock and release_lock."""
-        with open("/root/agenticverz2.0/backend/scripts/ops/refresh_matview.py") as f:
+        script_path = Path(__file__).parent.parent / "scripts" / "ops" / "refresh_matview.py"
+        with open(script_path) as f:
             source = f.read()
             assert "acquire_view_lock" in source
             assert "release_view_lock" in source
@@ -572,13 +575,13 @@ class TestRedisConfigCheck:
 
     def test_check_script_exists(self):
         """Verify config check script exists."""
-        import os
-        script_path = "/root/agenticverz2.0/backend/scripts/ops/check_redis_config.py"
-        assert os.path.exists(script_path)
+        script_path = Path(__file__).parent.parent / "scripts" / "ops" / "check_redis_config.py"
+        assert script_path.exists()
 
     def test_check_script_has_required_config(self):
         """Verify script checks required config."""
-        with open("/root/agenticverz2.0/backend/scripts/ops/check_redis_config.py") as f:
+        script_path = Path(__file__).parent.parent / "scripts" / "ops" / "check_redis_config.py"
+        with open(script_path) as f:
             source = f.read()
             assert "appendonly" in source
             assert "maxmemory-policy" in source

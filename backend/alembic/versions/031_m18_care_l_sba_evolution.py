@@ -25,26 +25,33 @@ depends_on = None
 def upgrade() -> None:
     # =========================================================================
     # Agent Reputation Table
+    # Use DO block to handle concurrent migration execution gracefully
     # =========================================================================
     op.execute("""
-        CREATE TABLE IF NOT EXISTS routing.agent_reputation (
-            agent_id VARCHAR(128) PRIMARY KEY,
-            reputation_score FLOAT NOT NULL DEFAULT 1.0,
-            success_rate FLOAT NOT NULL DEFAULT 1.0,
-            latency_percentile FLOAT NOT NULL DEFAULT 0.5,
-            violation_count INT NOT NULL DEFAULT 0,
-            quarantine_count INT NOT NULL DEFAULT 0,
-            quarantine_state VARCHAR(20) NOT NULL DEFAULT 'active',
-            quarantine_until TIMESTAMPTZ,
-            quarantine_reason TEXT,
-            total_routes INT NOT NULL DEFAULT 0,
-            successful_routes INT NOT NULL DEFAULT 0,
-            recent_failures INT NOT NULL DEFAULT 0,
-            consecutive_successes INT NOT NULL DEFAULT 0,
-            last_success_at TIMESTAMPTZ,
-            last_failure_at TIMESTAMPTZ,
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
+        DO $$
+        BEGIN
+            CREATE TABLE IF NOT EXISTS routing.agent_reputation (
+                agent_id VARCHAR(128) PRIMARY KEY,
+                reputation_score FLOAT NOT NULL DEFAULT 1.0,
+                success_rate FLOAT NOT NULL DEFAULT 1.0,
+                latency_percentile FLOAT NOT NULL DEFAULT 0.5,
+                violation_count INT NOT NULL DEFAULT 0,
+                quarantine_count INT NOT NULL DEFAULT 0,
+                quarantine_state VARCHAR(20) NOT NULL DEFAULT 'active',
+                quarantine_until TIMESTAMPTZ,
+                quarantine_reason TEXT,
+                total_routes INT NOT NULL DEFAULT 0,
+                successful_routes INT NOT NULL DEFAULT 0,
+                recent_failures INT NOT NULL DEFAULT 0,
+                consecutive_successes INT NOT NULL DEFAULT 0,
+                last_success_at TIMESTAMPTZ,
+                last_failure_at TIMESTAMPTZ,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            -- Table or type already exists (concurrent migration), skip
+            NULL;
+        END $$
     """)
 
     # Index for reputation queries
@@ -62,17 +69,22 @@ def upgrade() -> None:
     # Boundary Violations Table
     # =========================================================================
     op.execute("""
-        CREATE TABLE IF NOT EXISTS agents.boundary_violations (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            agent_id VARCHAR(128) NOT NULL,
-            violation_type VARCHAR(50) NOT NULL,
-            description TEXT,
-            task_description TEXT,
-            task_domain VARCHAR(100),
-            severity FLOAT NOT NULL DEFAULT 0.5,
-            auto_reported BOOLEAN NOT NULL DEFAULT false,
-            detected_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
+        DO $$
+        BEGIN
+            CREATE TABLE IF NOT EXISTS agents.boundary_violations (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                agent_id VARCHAR(128) NOT NULL,
+                violation_type VARCHAR(50) NOT NULL,
+                description TEXT,
+                task_description TEXT,
+                task_domain VARCHAR(100),
+                severity FLOAT NOT NULL DEFAULT 0.5,
+                auto_reported BOOLEAN NOT NULL DEFAULT false,
+                detected_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            NULL;
+        END $$
     """)
 
     # Index for violation queries
@@ -90,17 +102,22 @@ def upgrade() -> None:
     # Drift Signals Table
     # =========================================================================
     op.execute("""
-        CREATE TABLE IF NOT EXISTS agents.drift_signals (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            agent_id VARCHAR(128) NOT NULL,
-            drift_type VARCHAR(50) NOT NULL,
-            severity FLOAT NOT NULL,
-            evidence JSONB NOT NULL DEFAULT '{}',
-            recommendation TEXT,
-            acknowledged BOOLEAN NOT NULL DEFAULT false,
-            auto_adjusted BOOLEAN NOT NULL DEFAULT false,
-            detected_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
+        DO $$
+        BEGIN
+            CREATE TABLE IF NOT EXISTS agents.drift_signals (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                agent_id VARCHAR(128) NOT NULL,
+                drift_type VARCHAR(50) NOT NULL,
+                severity FLOAT NOT NULL,
+                evidence JSONB NOT NULL DEFAULT '{}',
+                recommendation TEXT,
+                acknowledged BOOLEAN NOT NULL DEFAULT false,
+                auto_adjusted BOOLEAN NOT NULL DEFAULT false,
+                detected_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            NULL;
+        END $$
     """)
 
     # Index for drift queries
@@ -119,17 +136,22 @@ def upgrade() -> None:
     # Strategy Adjustments Table
     # =========================================================================
     op.execute("""
-        CREATE TABLE IF NOT EXISTS agents.strategy_adjustments (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            agent_id VARCHAR(128) NOT NULL,
-            trigger VARCHAR(200) NOT NULL,
-            adjustment_type VARCHAR(50) NOT NULL,
-            old_strategy JSONB NOT NULL,
-            new_strategy JSONB NOT NULL,
-            success_rate_before FLOAT,
-            success_rate_after FLOAT,
-            adjusted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
+        DO $$
+        BEGIN
+            CREATE TABLE IF NOT EXISTS agents.strategy_adjustments (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                agent_id VARCHAR(128) NOT NULL,
+                trigger VARCHAR(200) NOT NULL,
+                adjustment_type VARCHAR(50) NOT NULL,
+                old_strategy JSONB NOT NULL,
+                new_strategy JSONB NOT NULL,
+                success_rate_before FLOAT,
+                success_rate_after FLOAT,
+                adjusted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            NULL;
+        END $$
     """)
 
     # Index for adjustment queries
@@ -142,17 +164,22 @@ def upgrade() -> None:
     # Learning Parameters Table
     # =========================================================================
     op.execute("""
-        CREATE TABLE IF NOT EXISTS routing.learning_parameters (
-            id SERIAL PRIMARY KEY,
-            parameter_name VARCHAR(100) NOT NULL UNIQUE,
-            current_value FLOAT NOT NULL,
-            min_value FLOAT NOT NULL,
-            max_value FLOAT NOT NULL,
-            adaptation_rate FLOAT NOT NULL DEFAULT 0.01,
-            last_adjusted_at TIMESTAMPTZ,
-            adjustment_reason TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
+        DO $$
+        BEGIN
+            CREATE TABLE IF NOT EXISTS routing.learning_parameters (
+                id SERIAL PRIMARY KEY,
+                parameter_name VARCHAR(100) NOT NULL UNIQUE,
+                current_value FLOAT NOT NULL,
+                min_value FLOAT NOT NULL,
+                max_value FLOAT NOT NULL,
+                adaptation_rate FLOAT NOT NULL DEFAULT 0.01,
+                last_adjusted_at TIMESTAMPTZ,
+                adjustment_reason TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            NULL;
+        END $$
     """)
 
     # Insert default learning parameters
