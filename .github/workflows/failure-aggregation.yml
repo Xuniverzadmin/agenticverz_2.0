@@ -1,0 +1,231 @@
+name: Failure Pattern Aggregation
+
+on:
+  schedule:
+    # Run at 2:30am UTC daily (after nightly profiling)
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Look back period in days'
+        type: number
+        default: 7
+      min_occurrences:
+        description: 'Minimum occurrences to include'
+        type: number
+        default: 3
+      skip_r2:
+        description: 'Skip R2 upload (local only)'
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  aggregate:
+    name: Run Aggregation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run aggregation job
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET || 'candidate-failure-patterns' }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_UPLOAD_PREFIX: failure_patterns
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          cd backend
+
+          # Determine flags
+          DAYS="${{ github.event.inputs.days || '7' }}"
+          MIN_OCC="${{ github.event.inputs.min_occurrences || '3' }}"
+          SKIP_R2="${{ github.event.inputs.skip_r2 || 'false' }}"
+
+          CMD="python -m app.jobs.failure_aggregation --days $DAYS --min-occurrences $MIN_OCC --json"
+
+          if [ "$SKIP_R2" == "true" ]; then
+            CMD="$CMD --skip-r2"
+          fi
+
+          echo "Running: $CMD"
+          $CMD | tee aggregation_result.json
+
+      - name: Upload aggregation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: aggregation-result-${{ github.run_id }}
+          path: |
+            backend/aggregation_result.json
+            backend/data/candidate_failure_patterns.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Parse and report results
+        run: |
+          cd backend
+          if [ -f aggregation_result.json ]; then
+            echo "=== Aggregation Summary ==="
+            cat aggregation_result.json | python -c "
+          import json
+          import sys
+          data = json.load(sys.stdin)
+          print(f\"Patterns found: {data.get('total_patterns', 0)}\")
+          print(f\"Total occurrences: {data.get('total_occurrences', 0)}\")
+
+          r2 = data.get('r2_upload', {})
+          status = r2.get('status', 'unknown')
+          if status == 'uploaded':
+              print(f\"R2 upload: SUCCESS -> {r2.get('key', 'unknown')}\")
+          elif status == 'fallback_local':
+              print(f\"R2 upload: FALLBACK -> {r2.get('path', 'unknown')}\")
+          elif status == 'disabled':
+              print(f\"R2 upload: DISABLED (not configured)\")
+          else:
+              print(f\"R2 upload: {status}\")
+
+          top_codes = data.get('top_error_codes', [])[:5]
+          if top_codes:
+              print()
+              print('Top error codes:')
+              for item in top_codes:
+                  print(f\"  {item.get('code', '?')}: {item.get('count', 0)}\")
+          "
+          fi
+
+  retry-fallbacks:
+    name: Retry Pending Fallbacks
+    runs-on: ubuntu-latest
+    needs: aggregate
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Check for pending fallbacks
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          cd backend
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          try:
+              from app.db import engine
+              from sqlmodel import Session, text
+              with Session(engine) as session:
+                  result = session.execute(text(
+                      \"SELECT COUNT(*) FROM failure_pattern_exports WHERE status = 'fallback_local'\"
+                  ))
+                  count = result.scalar()
+                  print(f'Pending fallback uploads: {count}')
+                  if count > 0:
+                      print('::warning::There are pending R2 uploads that need retry')
+          except Exception as e:
+              print(f'Could not check fallbacks: {e}')
+          "
+
+  alert-on-high-patterns:
+    name: Alert on High Pattern Count
+    runs-on: ubuntu-latest
+    needs: aggregate
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check pattern threshold
+        id: check
+        run: |
+          # Read results if available
+          if [ -f backend/aggregation_result.json ]; then
+            PATTERNS=$(cat backend/aggregation_result.json | python -c "import json,sys; print(json.load(sys.stdin).get('total_patterns', 0))" 2>/dev/null || echo "0")
+            OCCURRENCES=$(cat backend/aggregation_result.json | python -c "import json,sys; print(json.load(sys.stdin).get('total_occurrences', 0))" 2>/dev/null || echo "0")
+          else
+            PATTERNS=0
+            OCCURRENCES=0
+          fi
+
+          echo "patterns=$PATTERNS" >> $GITHUB_OUTPUT
+          echo "occurrences=$OCCURRENCES" >> $GITHUB_OUTPUT
+
+          # Alert thresholds
+          if [ "$PATTERNS" -gt 50 ]; then
+            echo "alert=high_patterns" >> $GITHUB_OUTPUT
+          elif [ "$OCCURRENCES" -gt 1000 ]; then
+            echo "alert=high_occurrences" >> $GITHUB_OUTPUT
+          else
+            echo "alert=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create alert issue
+        if: steps.check.outputs.alert != 'none'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const patterns = '${{ steps.check.outputs.patterns }}';
+            const occurrences = '${{ steps.check.outputs.occurrences }}';
+            const alertType = '${{ steps.check.outputs.alert }}';
+
+            const title = `⚠️ High Unmatched Failure Patterns - ${new Date().toISOString().split('T')[0]}`;
+            const body = `
+            ## Failure Pattern Alert
+
+            The nightly aggregation detected a high number of unmatched failures.
+
+            **Metrics:**
+            - Unique patterns: ${patterns}
+            - Total occurrences: ${occurrences}
+            - Alert type: ${alertType}
+
+            **Action Required:**
+            1. Review the aggregation results artifact
+            2. Check for new error patterns that need catalog entries
+            3. Investigate any sudden spikes in failure counts
+
+            **Run:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            `;
+
+            // Check for existing open issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'failure-patterns,automated'
+            });
+
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['failure-patterns', 'automated', 'needs-review']
+              });
+            }
