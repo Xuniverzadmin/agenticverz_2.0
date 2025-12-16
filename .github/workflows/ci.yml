@@ -271,10 +271,67 @@ jobs:
           cd backend
           PYTHONPATH=. pytest tests/integration/test_registry_snapshot.py -v
 
+  # ============================================================================
+  # 🔒 GOLDEN REPLAY GUARD (MANDATORY - BLOCKS MERGE)
+  # ============================================================================
+  # Run → Replay → Diff artifacts/logs
+  # Fail CI if ANY byte differs
+  # Protects M4 determinism moat from silent regressions
+  golden-replay-guard:
+    runs-on: ubuntu-latest
+    needs: determinism
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run Golden Replay Tests (M4, M6, M14, M17, M18, M19)
+        run: |
+          echo "🔒 GOLDEN REPLAY GUARD - MANDATORY CHECK"
+          echo "Protects determinism moat from silent regressions"
+          echo ""
+          PYTHONPATH=backend python3 scripts/ops/golden_test.py --json > golden_results.json
+
+          # Parse results and fail on any diff
+          FAILED=$(jq '.failed' golden_results.json)
+          PASSED=$(jq '.passed' golden_results.json)
+          TOTAL=$(jq '.total' golden_results.json)
+
+          echo ""
+          echo "Results: $PASSED/$TOTAL passed"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::🚫 GOLDEN REPLAY FAILED - $FAILED test(s) differ from snapshots"
+            echo ""
+            echo "Diffs detected:"
+            jq -r '.results[] | select(.passed == false) | "  - [\(.milestone)] \(.test_name): \(.error)"' golden_results.json
+            echo ""
+            echo "To update snapshots (if intentional change):"
+            echo "  PYTHONPATH=backend python3 scripts/ops/golden_test.py --update"
+            exit 1
+          fi
+
+          echo "✅ All golden tests passed - determinism verified"
+
+      - name: Upload golden results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-replay-results
+          path: golden_results.json
+
   # M4: Workflow Engine tests (critical for determinism)
   workflow-engine:
     runs-on: ubuntu-latest
-    needs: determinism
+    needs: golden-replay-guard
     steps:
       - uses: actions/checkout@v4
 

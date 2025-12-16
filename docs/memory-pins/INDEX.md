@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-15 (PIN-086 Business Builder Worker v0.2)
+**Last Updated:** 2025-12-16 (PIN-093 Worker v0.3 Real MOAT Integration)
 
 ---
 
@@ -107,6 +107,14 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-083](PIN-083-iaec-v4-frontier-challenges.md) | **IAEC v4.0 Frontier Challenges** | Memory / Architecture / M20 | **⏳ PLANNING** | 2025-12-15 |
 | [PIN-084](PIN-084-m20-policy-compiler-runtime.md) | **M20 Policy Compiler & Deterministic Runtime** | Milestone / MN-OS Layer 0 | **✅ COMPLETE** | 2025-12-15 |
 | [PIN-085](PIN-085-worker-brainstorm-moat-audit.md) | **Worker Brainstorm & Moat Audit** | Strategy / Product | **DECISION MADE** | 2025-12-15 |
+| [PIN-086](PIN-086-business-builder-worker-v02.md) | **Business Builder Worker v0.2** | Workers / Implementation | **✅ COMPLETE** | 2025-12-15 |
+| [PIN-087](PIN-087-business-builder-api-hosting.md) | **Business Builder Worker API Hosting** | Workers / API / Hosting | **✅ COMPLETE** | 2025-12-16 |
+| [PIN-088](PIN-088-worker-execution-console.md) | **Worker Execution Console (Real-Time UI)** | Frontend / Workers / SSE | **✅ COMPLETE** | 2025-12-16 |
+| [PIN-089](PIN-089-m21-tenant-auth-billing.md) | **M21 Tenant, Auth & Billing Layer** | Infrastructure / Multi-Tenancy | **✅ COMPLETE** | 2025-12-16 |
+| [PIN-090](PIN-090-worker-console-llm-integration.md) | **Worker Console v0.3 - LLM Integration Patch** | Workers / LLM / Streaming | **✅ COMPLETE** | 2025-12-16 |
+| [PIN-091](PIN-091-artifact-identity-placement.md) | **Artifact Identity & Placement Guarantees** | Operations / Doctrine | **DOCTRINE** | 2025-12-16 |
+| [PIN-092](PIN-092-sse-lifecycle-hardening.md) | **SSE Lifecycle Hardening & Console Fixes** | Console / SSE / Streaming | **✅ COMPLETE** | 2025-12-16 |
+| [PIN-093](PIN-093-worker-v03-real-moat-integration.md) | **Worker v0.3 - Real MOAT Integration** | Workers / Architecture / MOAT Integration | **✅ COMPLETE** | 2025-12-16 |
 
 ---
 
@@ -1186,3 +1194,12 @@ When resuming work on this project:
 | 2025-12-15 | **PIN-082 IAEC v3.2 - Instruction-Aware Embedding Composer** - Production scale: Transform DAG Manager (canonical paths, pruning, transitive collapsing), correction cooldown (oscillation prevention), softmax policy folding (normalized weights), whitening versioning in all outputs. Builds on v3.1: temporal mediation, 5-level policy (L0-L4), corrective action with confidence. 13 Prometheus metrics total. |
 | 2025-12-15 | **PIN-085 Worker Brainstorm & Moat Audit** - Comprehensive audit of 35 unique moats (15 individual, 15 combined, 5 compound). Critiqued GPT's "Launch Package Worker" proposal (~15% moat utilization). Decision: Build worker with phased moat adoption strategy. |
 | 2025-12-15 | **PIN-086 Business Builder Worker v0.2** - Production implementation of worker using 8+ moats (M4, M9, M10, M15, M17, M18, M19, M20). Corrected GPT spec with proper directory structure, real SBA schema integration, governance-ordered execution. 33 tests passing. 14 files created. |
+| 2025-12-16 | **PIN-087 Business Builder API Hosting** - FastAPI endpoints, SSE streaming, Apache reverse proxy. Worker accessible at agenticverz.com/api/v1/workers/. |
+| 2025-12-16 | **PIN-088 Worker Execution Console** - Real-time SSE UI at /console/workers. Split-pane view, stage progress, artifact preview. 6 issues fixed (auth header, SSE deps, brand validation). |
+| 2025-12-16 | **PIN-090 Worker Console v0.3 LLM Integration** - Fixed artifact `(loading...)` issue. Created LLM service with stage prompts (research, strategy, copy, UX). Removed simulated artifact events. Artifacts now emit with content. Fallback content when API key invalid. |
+| 2025-12-16 | **PIN-091 Artifact Identity & Placement Guarantees** - Doctrine PIN for deployment integrity. Build-time fingerprints (`app-role` meta tags), source→destination mapping, fail-hard validation, smoke tests. Prevents wrong-dist-in-wrong-location failures. |
+| 2025-12-16 | **PIN-092 SSE Lifecycle Hardening** - Fixed SSE reconnect replay (final-state latch), suppressed expected post-completion errors, fixed iframe sandbox (`allow-scripts`), fixed `/api/v1/failures/stats` 500 error. Doctrine: SSE `onerror` after completion is expected behavior. |
+| 2025-12-16 | **PIN-093 Worker v0.3 Real MOAT Integration** - Refactored Business Builder Worker from v0.2 (simulated events) to v0.3 (real MOAT integration). Worker is now source of truth for all telemetry. API layer only relays events. Fixed M9/M10 imports (RecoveryMatcher). Doctrine: Worker is source of truth, API relays, never simulates. |
+| 2025-12-16 | **Anthropic API Key Configured** - User-provided API key stored in `.env` and Vault (`agenticverz/llm`). Backend and worker containers restarted. LLM integration now live with real Claude calls. |
+| 2025-12-16 | **🔒 Golden Replay Guard CI** - Mandatory CI job added to `.github/workflows/ci.yml`. Runs `golden_test.py` covering M4, M6, M14, M17, M18, M19. Blocks merge on any diff. Protects determinism moat from silent regressions. |
+| 2025-12-16 | **🛡️ Content Policy Validation Gate** - Implemented constitutional enforcement in `worker.py`. Added `_validate_content_policy()` with 10 universal forbidden patterns (guarantees, 100% claims, clinically proven, etc.). M9/M10/M18/M19 now fire on adversarial input. Drift score=0.8 on scammy content. Test reports: TR-001 (happy path PASS), TR-002 (pre-fix GAPS), TR-003 (post-fix PASS). Demo ready. |
