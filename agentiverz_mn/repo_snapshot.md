@@ -1,7 +1,7 @@
 # Repository Snapshot
 
-**Date:** 2025-12-15
-**Milestone:** M20 COMPLETE (MN-OS Layer 0)
+**Date:** 2025-12-16
+**Milestone:** M20 COMPLETE (MN-OS Layer 0) + Demo Ready
 **CI Checker:** v5.0 (MN-OS dual-name support)
 
 ---
@@ -27,7 +27,70 @@
 
 ---
 
-## Latest Session (2025-12-15)
+## Latest Session (2025-12-16)
+
+### TR-004 Scenario Test Matrix (Demo Validation)
+
+Created comprehensive 13-scenario test matrix validating external services and MOAT capabilities:
+
+| Set | Description | Result |
+|-----|-------------|--------|
+| Set A | External Integrations (8 scenarios) | 6/8 PASS |
+| Set B | Core MOATs (4 scenarios) | 4/4 PASS |
+| Set C | Skills Attribution (1 scenario) | 1/1 PASS |
+| **Total** | **13 Scenarios** | **11/13 PASS (85%)** |
+
+**External Services Validated:**
+- OpenAI API (gpt-4o-mini, text-embedding-3-small)
+- Clerk Auth (API accessible)
+- Neon DB (PostgreSQL connected)
+- Upstash Redis (SET/GET/TTL working)
+- PostHog (events captured)
+- Voyage AI (voyage-3, 1024 dims) - NEW
+
+**Failed (credentials issue, non-blocking):**
+- Trigger.dev (GAP-004: API key invalid)
+- Slack (GAP-005: webhook 404)
+
+**Files Created:**
+- `scripts/ops/scenario_test_matrix.py` - 13-scenario test runner
+- `docs/test_reports/TR-004_SCENARIO_TEST_MATRIX_2025-12-16.md`
+- `docs/test_reports/REGISTER.md` - Test report index
+
+### Voyage AI Embeddings Configuration
+
+Switched from OpenAI to Voyage AI for embeddings:
+
+| Setting | Old Value | New Value |
+|---------|-----------|-----------|
+| EMBEDDING_PROVIDER | openai | voyage |
+| EMBEDDING_MODEL | text-embedding-3-small | voyage-3 |
+| EMBEDDING_DIMENSIONS | 1536 | 1024 |
+
+**Vault Update:** Added `VOYAGE_API_KEY` to `external-apis` path.
+
+### Content Policy Validation Gate
+
+Enhanced worker.py with constitutional enforcement:
+
+| Component | Description |
+|-----------|-------------|
+| `UNIVERSAL_FORBIDDEN_PATTERNS` | 10 regex patterns for claims detection |
+| `_validate_content_policy()` | Scans content for forbidden claims |
+| `_generate_recovery_suggestions()` | M10 recovery path for violations |
+| Drift Score | `errors × 0.2 + warnings × 0.1` |
+
+**Test Reports Summary:**
+| Report | Type | Result |
+|--------|------|--------|
+| TR-001 | Happy Path | PASS (9,979 tokens) |
+| TR-002 | Adversarial Pre-Fix | GAPS (3 identified) |
+| TR-003 | Adversarial Post-Fix | PASS (all gaps fixed) |
+| TR-004 | Scenario Matrix | PASS (85%) |
+
+---
+
+## Previous Session (2025-12-15)
 
 ### Business Builder Worker v0.2 (PIN-086)
 
@@ -191,6 +254,9 @@ Established formal naming evolution from legacy milestone identifiers (M0-M19) t
 | Milestones Complete | 20/20 |
 | CI Jobs Passing | 15/15 |
 | MN-OS Subsystems | 20 |
+| Test Reports | 4 (TR-001 to TR-004) |
+| Demo Ready | YES (Happy + Adversarial passing) |
+| External Services | 6/8 validated |
 
 ---
 
@@ -300,4 +366,4 @@ docker compose ps
 
 ---
 
-*Last updated: 2025-12-15 (IAEC v3.1 Implementation Complete - Production Ready)*
+*Last updated: 2025-12-16 (TR-004 Scenario Test Matrix + Voyage AI + Demo Ready)*

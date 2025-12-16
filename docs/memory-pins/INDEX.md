@@ -863,6 +863,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-16 | **TR-004 Scenario Test Matrix** - Created `scripts/ops/scenario_test_matrix.py` with 13 scenarios (A1-A8 external services, B1-B4 MOATs, C1 skills). 11/13 PASS (85%). GAP-004 Trigger.dev, GAP-005 Slack credentials. |
+| 2025-12-16 | **Voyage AI Embeddings Configured** - Switched from OpenAI to Voyage AI (voyage-3, 1024 dims). Added `VOYAGE_API_KEY` to vault `external-apis`. Updated .env: `EMBEDDING_PROVIDER=voyage`. |
+| 2025-12-16 | **Content Policy Validation Gate** - Added `UNIVERSAL_FORBIDDEN_PATTERNS` (10 regex) and `_validate_content_policy()` to worker.py. M18 drift detection + M19 violations now fire on adversarial input. |
+| 2025-12-16 | **Test Reports TR-001 to TR-004** - CLI Demo Happy Path, Adversarial Pre-Fix, Adversarial Post-Fix, Scenario Matrix. All gaps (GAP-001 to GAP-003) resolved. Demo Ready status achieved. |
 | 2025-12-11 | **PIN-061 M10 Test Fixes RESOLVED** - Fixed 5 issues: (1) outbox status column removed, (2) ON CONFLICT changed to `failure_match_id`, (3) M10 metrics added to metrics.py, (4) enqueue_work args fixed, (5) Counter/Gauge handling. 22 passed, 1 skipped. |
 | 2025-12-10 | **PIN-061 M10 Test Verification** - Ran M10 tests with real Neon+Redis. Fixed SQL syntax `:payload::jsonb`→`CAST()`. 14 passed, 19 failed (missing unique index for ON CONFLICT). P0 fix pending. |
 | 2025-12-09 | **PIN-059 M11 Blueprint REFINED** - Consistency check: 5 skills (kv_store, slack_send, email_send, webhook_send, voyage_embed), leveraged existing infra (idempotency, replay, circuit breaker), aligned with PIN-005 vision |
