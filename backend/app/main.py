@@ -248,6 +248,16 @@ from .api.recovery_ingest import router as recovery_ingest_router
 from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
+from .api.workers import router as workers_router  # Business Builder Worker v0.2
+# from .api.tenants import router as tenants_router  # M21 - DISABLED: Premature for beta stage
+
+# M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
+from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
+from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
+
+# M22.1 UI Console - Dual-console architecture (Customer + Operator)
+from .api.guard import router as guard_router  # Customer Console (/guard/*)
+from .api.operator import router as operator_router  # Operator Console (/operator/*)
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -263,6 +273,16 @@ app.include_router(recovery_ingest_router)  # M10 Recovery Ingest (idempotent)
 app.include_router(agents_router)  # M12 Multi-Agent System
 app.include_router(policy_layer_router, prefix="/api/v1")  # M19 Policy Layer
 app.include_router(embedding_router, prefix="/api/v1")  # PIN-047 Embedding Quota
+app.include_router(workers_router)  # Business Builder Worker v0.2
+# app.include_router(tenants_router)  # M21 - DISABLED: Premature for beta stage
+
+# M22 KillSwitch MVP - OpenAI-compatible proxy (THE FRONT DOOR)
+app.include_router(v1_proxy_router)  # /v1/chat/completions, /v1/embeddings, /v1/status
+app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v1/incidents/*, /v1/replay/*, /v1/demo/*
+
+# M22.1 UI Console - Dual-console architecture
+app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
+app.include_router(operator_router)  # /operator/* - Operator Console (truth + oversight)
 
 # CORS middleware
 app.add_middleware(

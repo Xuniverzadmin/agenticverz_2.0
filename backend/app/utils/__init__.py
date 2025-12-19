@@ -45,6 +45,31 @@ def get_budget_tracker():
     from .budget_tracker import get_budget_tracker as _get_budget_tracker
     return _get_budget_tracker()
 
+# Database helpers (PIN-099: SQLModel Row Extraction Patterns)
+def scalar_or_default(*args, **kwargs):
+    from .db_helpers import scalar_or_default as _scalar_or_default
+    return _scalar_or_default(*args, **kwargs)
+
+def scalar_or_none(*args, **kwargs):
+    from .db_helpers import scalar_or_none as _scalar_or_none
+    return _scalar_or_none(*args, **kwargs)
+
+def extract_model(*args, **kwargs):
+    from .db_helpers import extract_model as _extract_model
+    return _extract_model(*args, **kwargs)
+
+def extract_models(*args, **kwargs):
+    from .db_helpers import extract_models as _extract_models
+    return _extract_models(*args, **kwargs)
+
+def count_or_zero(*args, **kwargs):
+    from .db_helpers import count_or_zero as _count_or_zero
+    return _count_or_zero(*args, **kwargs)
+
+def sum_or_zero(*args, **kwargs):
+    from .db_helpers import sum_or_zero as _sum_or_zero
+    return _sum_or_zero(*args, **kwargs)
+
 # Type hints only (not imported at runtime)
 if TYPE_CHECKING:
     from .idempotency import IdempotencyResult
@@ -67,4 +92,11 @@ __all__ = [
     "deduct_budget",
     "record_cost",
     "get_budget_tracker",
+    # Database helpers (PIN-099)
+    "scalar_or_default",
+    "scalar_or_none",
+    "extract_model",
+    "extract_models",
+    "count_or_zero",
+    "sum_or_zero",
 ]

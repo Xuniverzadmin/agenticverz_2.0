@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-19 (PIN-097 Prevention System v1.0)
+**Last Updated:** 2025-12-19 (PIN-099 SQLModel Row Extraction Patterns)
 
 ---
 
@@ -119,6 +119,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-095](PIN-095-ai-incident-console-strategy.md) | **AI Incident Console - Strategic Pivot** | Strategy / Product / GTM | **🎯 ACTIVE - STRATEGIC** | 2025-12-17 |
 | [PIN-096](PIN-096-m22-killswitch-mvp.md) | **M22 KillSwitch MVP - OpenAI Proxy + Safety** | Milestone / Product / Safety | **✅ COMPLETE** | 2025-12-19 |
 | [PIN-097](PIN-097-prevention-system-v1.md) | **Prevention System v1.0 - Code Quality Automation** | Infrastructure / Code Quality / CI | **ACTIVE** | 2025-12-19 |
+| [PIN-098](PIN-098-m22.1-ui-console-implementation.md) | **M22.1 UI Console Implementation** | Milestone / UI / Product | **✅ GA-READY** | 2025-12-19 |
+| [PIN-099](PIN-099-sqlmodel-row-extraction-patterns.md) | **SQLModel Row Extraction Patterns** | Prevention / Best Practices | **ACTIVE** | 2025-12-19 |
 
 ---
 
