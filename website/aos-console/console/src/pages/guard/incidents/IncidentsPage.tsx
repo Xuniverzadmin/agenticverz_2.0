@@ -226,12 +226,21 @@ export function IncidentsPage() {
           <DecisionTimeline
             timeline={timeline}
             onReplay={() => {
-              // TODO: Implement replay navigation
-              console.log('Replay clicked');
+              // Navigate to replay page with this call
+              window.location.href = `/guard/replay?call_id=${timeline.call_id || timeline.incident_id}`;
             }}
-            onExport={() => {
-              // TODO: Implement PDF export
-              console.log('Export clicked');
+            onExport={async () => {
+              // Download PDF evidence report
+              try {
+                await guardApi.downloadEvidenceReport(timeline.incident_id, {
+                  includeReplay: true,
+                  includePrevention: true,
+                  isDemo: true,
+                });
+              } catch (error) {
+                console.error('Failed to download evidence report:', error);
+                alert('Failed to download evidence report. Please try again.');
+              }
             }}
           />
         ) : (

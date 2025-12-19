@@ -295,6 +295,60 @@ export const guardApi = {
     const response = await apiClient.post('/guard/demo/seed-incident', { scenario });
     return response.data;
   },
+
+  // ============== M24 EVIDENCE EXPORT ==============
+
+  // Export incident as legal-grade PDF evidence report
+  exportEvidenceReport: async (
+    incidentId: string,
+    options?: {
+      includeReplay?: boolean;
+      includePrevention?: boolean;
+      isDemo?: boolean;
+    }
+  ): Promise<Blob> => {
+    const params = {
+      include_replay: options?.includeReplay ?? true,
+      include_prevention: options?.includePrevention ?? true,
+      is_demo: options?.isDemo ?? true,
+    };
+
+    const response = await apiClient.post(
+      `/guard/incidents/${incidentId}/export`,
+      null,
+      {
+        params,
+        responseType: 'blob',
+      }
+    );
+
+    return response.data;
+  },
+
+  // Download evidence report (triggers browser download)
+  downloadEvidenceReport: async (
+    incidentId: string,
+    options?: {
+      includeReplay?: boolean;
+      includePrevention?: boolean;
+      isDemo?: boolean;
+    }
+  ): Promise<void> => {
+    const blob = await guardApi.exportEvidenceReport(incidentId, options);
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute(
+      'download',
+      `evidence_report_${incidentId}_${new Date().toISOString().split('T')[0]}.pdf`
+    );
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export default guardApi;
