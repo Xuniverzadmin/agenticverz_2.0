@@ -6,7 +6,8 @@ import {
   ChevronRight, ChevronDown, Github, BookOpen, Mail,
   AlertTriangle, FileText, BarChart3, Settings,
   Scale, Search, TrendingDown, Workflow,
-  Play, Sparkles, X, Check, Users, Building2
+  Play, Sparkles, X, Check, Users, Building2,
+  Menu
 } from 'lucide-react';
 import { BuildYourApp } from './pages/build/BuildYourApp';
 import { IncidentConsolePage } from './pages/incident-console/IncidentConsolePage';
@@ -87,12 +88,65 @@ function ProductsDropdown({ isOpen, onClose }) {
   );
 }
 
+// Mobile Menu Component
+function MobileMenu({ isOpen, onClose }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 md:hidden">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="fixed top-0 right-0 w-72 h-full glass border-l border-white/10 p-6 overflow-y-auto">
+        <div className="flex justify-end mb-8">
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xs uppercase text-gray-500 mb-3 font-medium">Products</h3>
+            <div className="space-y-2">
+              <a href="/incident-console" onClick={onClose} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-lg transition-colors">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <div>
+                  <div className="font-medium">Incident Console</div>
+                  <div className="text-xs text-gray-400">Investigate AI failures</div>
+                </div>
+              </a>
+              <a href="/build" onClick={onClose} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-lg transition-colors">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                <div>
+                  <div className="font-medium">Build Your App</div>
+                  <div className="text-xs text-gray-400">No-code AI builder</div>
+                </div>
+              </a>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-6 space-y-2">
+            <a href="#capabilities" onClick={onClose} className="block p-3 hover:bg-white/10 rounded-lg transition-colors">Capabilities</a>
+            <a href="https://docs.agenticverz.com" onClick={onClose} className="block p-3 hover:bg-white/10 rounded-lg transition-colors">Documentation</a>
+            <a href="#pricing" onClick={onClose} className="block p-3 hover:bg-white/10 rounded-lg transition-colors">Pricing</a>
+          </div>
+          <div className="border-t border-white/10 pt-6">
+            <a href="/console" onClick={onClose} className="block w-full text-center px-4 py-3 bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg font-medium">
+              Request Demo
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Landing Page Component
 function LandingPage() {
   const [productsOpen, setProductsOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen gradient-bg">
+      {/* Mobile Menu */}
+      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -103,6 +157,16 @@ function LandingPage() {
               </div>
               <span className="text-xl font-semibold">Agenticverz</span>
             </a>
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            {/* Desktop navigation */}
             <div className="hidden md:flex items-center gap-8">
               <div className="relative">
                 <button
