@@ -163,7 +163,7 @@ export function IncidentsPage() {
         filters={filters}
         onChange={handleFilterChange}
         onClose={() => setShowFilters(false)}
-        isOpen={showFilters}
+        open={showFilters}
       />
 
       {/* Results Info */}
@@ -213,7 +213,7 @@ export function IncidentsPage() {
 
       {/* Decision Inspector Modal */}
       <Modal
-        isOpen={!!selectedIncident}
+        open={!!selectedIncident}
         onClose={() => setSelectedIncident(null)}
         title="Decision Inspector"
         size="xl"
@@ -297,7 +297,7 @@ function IncidentRow({ incident, onClick }: IncidentRowProps) {
 
           {/* Status & Inspect */}
           <Badge
-            variant={status.color === 'green' ? 'success' : status.color === 'red' ? 'danger' : 'warning'}
+            variant={status.color === 'green' ? 'success' : status.color === 'red' ? 'error' : 'warning'}
           >
             {status.label}
           </Badge>

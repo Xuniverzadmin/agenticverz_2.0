@@ -369,7 +369,7 @@ export function TenantDrilldown() {
 
       {/* Freeze Modal */}
       <Modal
-        isOpen={showFreezeModal}
+        open={showFreezeModal}
         onClose={() => setShowFreezeModal(false)}
         title="Freeze Tenant"
       >

@@ -208,7 +208,7 @@ export function GuardOverview() {
 
       {/* Kill Switch Confirmation Modal */}
       <Modal
-        isOpen={showKillConfirm}
+        open={showKillConfirm}
         onClose={() => setShowKillConfirm(false)}
         title="Confirm: Stop All Traffic"
       >
@@ -242,7 +242,7 @@ export function GuardOverview() {
 
       {/* Resume Confirmation Modal */}
       <Modal
-        isOpen={showResumeConfirm}
+        open={showResumeConfirm}
         onClose={() => setShowResumeConfirm(false)}
         title="Confirm: Resume Traffic"
       >

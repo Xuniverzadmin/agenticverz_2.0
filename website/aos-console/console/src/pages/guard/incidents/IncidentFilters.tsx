@@ -12,7 +12,7 @@ interface IncidentFiltersProps {
   filters: IncidentSearchRequest;
   onChange: (filters: IncidentSearchRequest) => void;
   onClose: () => void;
-  isOpen: boolean;
+  open: boolean;
 }
 
 const SEVERITY_OPTIONS = [
@@ -42,9 +42,9 @@ export function IncidentFilters({
   filters,
   onChange,
   onClose,
-  isOpen,
+  open,
 }: IncidentFiltersProps) {
-  if (!isOpen) return null;
+  if (!open) return null;
 
   const handleFilterChange = (key: keyof IncidentSearchRequest, value: any) => {
     onChange({

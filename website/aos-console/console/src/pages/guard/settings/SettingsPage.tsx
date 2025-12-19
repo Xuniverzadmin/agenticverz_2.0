@@ -88,7 +88,7 @@ export function SettingsPage() {
           </p>
         </div>
         <Badge
-          variant={settings.plan === 'enterprise' ? 'secondary' : 'primary'}
+          variant={settings.plan === 'enterprise' ? 'default' : 'primary'}
           className={`${
             settings.plan === 'enterprise' ? 'bg-purple-100 text-purple-800' :
             settings.plan === 'pro' ? 'bg-blue-100 text-blue-800' :

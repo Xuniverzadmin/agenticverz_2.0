@@ -358,7 +358,7 @@ function ReplayResultView({ result }: { result: ReplayResult }) {
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium text-gray-900">{original.guardrail_name}</span>
-                  {!matches && <Badge variant="danger">MISMATCH</Badge>}
+                  {!matches && <Badge variant="error">MISMATCH</Badge>}
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>

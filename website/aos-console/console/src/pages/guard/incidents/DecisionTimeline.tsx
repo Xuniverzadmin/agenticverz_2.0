@@ -129,7 +129,6 @@ function TimelineEventCard({ event, isLast }: { event: TimelineEvent; isLast: bo
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    fractionalSecondDigits: 3,
   });
 
   // Check if this is a policy evaluation with failure

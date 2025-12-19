@@ -154,7 +154,7 @@ export function GlobalOverview() {
           label="Model Drift Alerts"
           value={status?.model_drift_alerts?.toString() ?? '0'}
           subValue="Requires review"
-          highlight={status?.model_drift_alerts ?? 0 > 0}
+          highlight={(status?.model_drift_alerts ?? 0) > 0}
         />
       </div>
 

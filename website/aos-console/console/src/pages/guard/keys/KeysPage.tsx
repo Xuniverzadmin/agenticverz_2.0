@@ -136,7 +136,7 @@ export function KeysPage() {
 
       {/* Confirmation Modal */}
       <Modal
-        isOpen={!!selectedKey && !!actionType}
+        open={!!selectedKey && !!actionType}
         onClose={() => {
           setSelectedKey(null);
           setActionType(null);

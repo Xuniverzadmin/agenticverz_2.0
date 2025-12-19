@@ -297,7 +297,7 @@ export function PolicyAuditLog() {
                         {enforcement.guardrail_name}
                       </td>
                       <td className="p-3">
-                        <Badge variant={enforcement.passed ? 'success' : 'danger'}>
+                        <Badge variant={enforcement.passed ? 'success' : 'error'}>
                           {enforcement.passed ? 'Passed' : 'Failed'}
                         </Badge>
                       </td>
@@ -355,7 +355,7 @@ export function PolicyAuditLog() {
 
       {/* Enforcement Detail Modal */}
       <Modal
-        isOpen={!!selectedEnforcement}
+        open={!!selectedEnforcement}
         onClose={() => setSelectedEnforcement(null)}
         title="Enforcement Details"
         size="lg"
@@ -365,7 +365,7 @@ export function PolicyAuditLog() {
             {/* Summary */}
             <div className="flex items-center gap-4 pb-4 border-b">
               <Badge
-                variant={selectedEnforcement.passed ? 'success' : 'danger'}
+                variant={selectedEnforcement.passed ? 'success' : 'error'}
                 className="text-lg px-4 py-1"
               >
                 {selectedEnforcement.passed ? 'PASSED' : 'FAILED'}

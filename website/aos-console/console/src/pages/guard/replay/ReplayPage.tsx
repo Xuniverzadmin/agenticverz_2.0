@@ -275,7 +275,7 @@ function ReplayResultView({ result }: { result: ReplayResult }) {
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium text-gray-900">Policy Decisions</h3>
-          <Badge variant={result.policy_match ? 'success' : 'danger'}>
+          <Badge variant={result.policy_match ? 'success' : 'error'}>
             {result.policy_match ? 'All Matched' : 'Differences Found'}
           </Badge>
         </div>
@@ -365,7 +365,7 @@ function PolicyBadge({
   action?: string | null;
 }) {
   if (passed === undefined) {
-    return <Badge variant="secondary">N/A</Badge>;
+    return <Badge variant="default">N/A</Badge>;
   }
 
   if (passed) {
@@ -373,7 +373,7 @@ function PolicyBadge({
   }
 
   return (
-    <Badge variant="danger">
+    <Badge variant="error">
       {action || 'Blocked'}
     </Badge>
   );

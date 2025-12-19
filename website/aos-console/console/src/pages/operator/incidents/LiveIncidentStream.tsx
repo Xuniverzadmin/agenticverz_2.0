@@ -224,7 +224,7 @@ export function LiveIncidentStream() {
 
       {/* Incident Action Modal */}
       <Modal
-        isOpen={!!selectedIncident}
+        open={!!selectedIncident}
         onClose={() => setSelectedIncident(null)}
         title="Incident Actions"
         size="lg"
@@ -249,7 +249,7 @@ export function LiveIncidentStream() {
                   variant={
                     selectedIncident.status === 'resolved' ? 'success' :
                     selectedIncident.status === 'acknowledged' ? 'warning' :
-                    'danger'
+                    'error'
                   }
                 >
                   {STATUS_CONFIG[selectedIncident.status].label}
@@ -342,14 +342,12 @@ function IncidentStreamCard({
   const status = STATUS_CONFIG[incident.status];
   const timeAgo = formatTimeAgo(new Date(incident.started_at));
 
+  const borderColorClass = incident.severity === 'critical' ? 'border-l-red-500' :
+                          incident.severity === 'high' ? 'border-l-orange-500' :
+                          incident.severity === 'medium' ? 'border-l-yellow-500' : 'border-l-gray-400';
   return (
     <Card
-      className="cursor-pointer hover:shadow-md transition-all border-l-4"
-      style={{
-        borderLeftColor: incident.severity === 'critical' ? '#ef4444' :
-                         incident.severity === 'high' ? '#f97316' :
-                         incident.severity === 'medium' ? '#eab308' : '#9ca3af'
-      }}
+      className={`cursor-pointer hover:shadow-md transition-all border-l-4 ${borderColorClass}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
@@ -372,7 +370,7 @@ function IncidentStreamCard({
               <Badge
                 variant={
                   status.color === 'green' ? 'success' :
-                  status.color === 'yellow' ? 'warning' : 'danger'
+                  status.color === 'yellow' ? 'warning' : 'error'
                 }
               >
                 {status.label}
