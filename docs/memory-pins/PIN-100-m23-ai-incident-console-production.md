@@ -16,6 +16,23 @@ M23 transforms the AI Incident Console from demo-ready to **production-ready**. 
 
 ---
 
+## ⛔ Phase 0: Hard Lock - What's OUT
+
+Before any work begins, these are **explicitly out of scope for M23**:
+
+| OUT | Reason |
+|-----|--------|
+| New agent abstractions | We're selling the console, not reinventing agents |
+| LangChain evangelism | Wrong audience - we're B2B SaaS, not framework users |
+| "AI governance platform" branding | Too abstract - we're selling incident investigation |
+| Multi-cloud fantasies | Focus on Neon + Upstash + Vault - no new infra |
+| New skills development | M11 skills are sufficient for this phase |
+| Complex pricing tiers | One price, one product - simplify sales |
+
+**Rule:** If it's not in the 7 objectives below, it doesn't exist for M23.
+
+---
+
 ## Current State (Post-M22.1)
 
 | Component | Status | Gap |
@@ -600,6 +617,19 @@ website/aos-console/console/src/
 
 ## Success Criteria
 
+### 🏆 Phase 4: Business Success (Primary)
+
+These are the **real** success metrics - everything else supports these:
+
+| Metric | Target | Why It Matters |
+|--------|--------|----------------|
+| Companies onboarded | ≥ 5 | Validates product-market fit |
+| Real incidents analyzed | ≥ 1 per company | Proves actual value delivery |
+| "This saved us" quote | ≥ 1 | Social proof for sales |
+| Unprompted payment | ≥ 1 | Someone pays without negotiating price |
+
+**M23 is not done until at least one company pays without being asked for a discount.**
+
 ### Functional
 
 - [ ] Search finds incidents by user_id, time, content
@@ -625,7 +655,52 @@ website/aos-console/console/src/
 
 ---
 
-## Timeline
+## Timeline (14-Day Execution Plan)
+
+**Philosophy:** Product-first, sell-first. Build only what we can demo tomorrow.
+
+### Phase 1: Sellable Demo (Days 1-3)
+
+| Day | Focus | Deliverable |
+|-----|-------|-------------|
+| Day 1 | Demo flow script | Written walkthrough for sales calls |
+| Day 2 | Timeline polish | Decision timeline component working |
+| Day 3 | Export foundation | Basic PDF export functional |
+
+**Gate:** Can run a 15-minute demo that answers "What happened? Why? Proof?"
+
+### Phase 2: First 5 Users (Days 4-7)
+
+| Day | Focus | Deliverable |
+|-----|-------|-------------|
+| Day 4-5 | Onboarding | Integration guide, API key flow |
+| Day 6-7 | User feedback | Watch 5 companies use it, note friction |
+
+**Gate:** 5 companies integrated, feedback collected
+
+### Phase 3: First Incident (Days 8-11)
+
+| Day | Focus | Deliverable |
+|-----|-------|-------------|
+| Day 8-9 | Wait for incidents | Monitor for real policy violations |
+| Day 10-11 | Investigation support | Help users analyze their first incident |
+
+**Gate:** ≥1 real incident analyzed end-to-end
+
+### Phase 4: First Quote (Days 12-14)
+
+| Day | Focus | Deliverable |
+|-----|-------|-------------|
+| Day 12 | Value capture | Get "this saved us" quote |
+| Day 13-14 | Pricing test | Present price, observe reaction |
+
+**Gate:** Someone pays without negotiating
+
+---
+
+## Technical Timeline (Original 6-Week Reference)
+
+For reference, the detailed technical work maps to:
 
 | Week | Focus | Deliverables |
 |------|-------|--------------|
@@ -635,6 +710,8 @@ website/aos-console/console/src/
 | **Week 4** | Certificates | Certificate service, verification endpoint |
 | **Week 5** | Live Tests | Remove all mocks, live test suite |
 | **Week 6** | Deploy | Production deployment, documentation |
+
+*Technical work is sequenced based on business milestones, not completed in isolation.*
 
 ---
 
@@ -666,6 +743,9 @@ website/aos-console/console/src/
 
 | Date | Change |
 |------|--------|
+| 2025-12-19 | Added Phase 0 "Hard Lock" OUT list - explicit scope boundaries |
+| 2025-12-19 | Added Phase 4 business success criteria (5 companies, 1 quote, 1 payment) |
+| 2025-12-19 | Updated timeline to 14-day execution plan (product-first approach) |
 | 2025-12-19 | Initial M23 specification created |
 
 ---
