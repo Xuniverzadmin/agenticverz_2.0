@@ -1211,7 +1211,11 @@ async def get_decision_timeline(
         # Generate from trigger type
         if incident.trigger_type == "policy_violation":
             policy_decisions = [
-                {"policy": "CONTENT_ACCURACY", "result": "FAIL", "reason": incident.trigger_value or "Policy violation detected"}
+                {
+                    "policy": "CONTENT_ACCURACY",
+                    "result": "FAIL",
+                    "reason": incident.trigger_value or "Policy violation detected",
+                }
             ]
         elif incident.trigger_type == "budget_breach":
             policy_decisions = [{"policy": "BUDGET_LIMIT", "result": "FAIL", "reason": "Budget threshold exceeded"}]
@@ -1473,3 +1477,67 @@ async def seed_demo_incident(
 # Import json for the demo endpoint
 import json
 from decimal import Decimal
+
+
+# =============================================================================
+# M23 Prevention Validation Endpoint
+# =============================================================================
+
+
+class ContentValidationRequest(BaseModel):
+    """Request for content accuracy validation."""
+    output: str  # The LLM output to validate
+    context: Dict[str, Any]  # Context data that was available
+    user_query: Optional[str] = None
+    call_id: Optional[str] = None
+
+
+class ContentValidationResponse(BaseModel):
+    """Response from content accuracy validation."""
+    action: str  # allow, block, modify, warn
+    policy: str
+    result: str  # PASS, FAIL, WARN
+    reason: Optional[str]
+    modified_output: Optional[str]
+    expected_behavior: Optional[str]
+    actual_behavior: Optional[str]
+    would_prevent_incident: bool
+
+
+@router.post("/validate/content-accuracy", response_model=ContentValidationResponse)
+async def validate_content_accuracy_endpoint(
+    request: ContentValidationRequest,
+    tenant_id: str = Query(..., description="Tenant ID"),
+):
+    """
+    Validate content accuracy of an LLM output.
+
+    This endpoint tests the CONTENT_ACCURACY prevention mechanism:
+    - Checks if the output makes assertions about missing data
+    - Returns whether the response would be blocked/modified
+
+    Use this to:
+    1. Test prevention before deploying
+    2. Debug why a response was blocked
+    3. Validate context data completeness
+    """
+    from app.policy.validators import evaluate_response, PreventionAction
+
+    result = evaluate_response(
+        tenant_id=tenant_id,
+        call_id=request.call_id or f"validate_{uuid.uuid4().hex[:8]}",
+        user_query=request.user_query or "",
+        context_data=request.context,
+        llm_output=request.output,
+    )
+
+    return ContentValidationResponse(
+        action=result.action.value,
+        policy=result.policy,
+        result=result.result,
+        reason=result.reason,
+        modified_output=result.modified_output,
+        expected_behavior=result.expected_behavior,
+        actual_behavior=result.actual_behavior,
+        would_prevent_incident=(result.action != PreventionAction.ALLOW),
+    )
