@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-19 (PIN-100 M23 AI Incident Console Production)
+**Last Updated:** 2025-12-19 (PIN-101 Website Cluster Restructure)
 
 ---
 
@@ -122,6 +122,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-098](PIN-098-m22.1-ui-console-implementation.md) | **M22.1 UI Console Implementation** | Milestone / UI / Product | **✅ GA-READY** | 2025-12-19 |
 | [PIN-099](PIN-099-sqlmodel-row-extraction-patterns.md) | **SQLModel Row Extraction Patterns** | Prevention / Best Practices | **ACTIVE** | 2025-12-19 |
 | [PIN-100](PIN-100-m23-ai-incident-console-production.md) | **M23 AI Incident Console - Production Ready** | Milestone / Product / Live | **🚀 ACTIVE - M23** | 2025-12-19 |
+| [PIN-101](PIN-101-website-cluster-restructure.md) | **Website Cluster Restructure** | Frontend / Landing Page / UX | **🎨 ACTIVE** | 2025-12-19 |
 
 ---
 

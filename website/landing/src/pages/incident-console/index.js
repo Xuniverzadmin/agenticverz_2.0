@@ -1,0 +1,1 @@
+export { IncidentConsolePage } from './IncidentConsolePage';
