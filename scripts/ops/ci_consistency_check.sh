@@ -1428,6 +1428,52 @@ check_alembic_health() {
     return 0
 }
 
+check_sqlmodel_patterns() {
+    header "SQLModel Pattern Check"
+
+    local LINT_SCRIPT="$REPO_ROOT/scripts/ops/lint_sqlmodel_patterns.py"
+    if [[ ! -f "$LINT_SCRIPT" ]]; then
+        log_info "SQLModel linter not found (optional)"
+        return 0
+    fi
+
+    if $QUICK_MODE; then
+        log_info "Skipping (use full mode)"
+        return 0
+    fi
+
+    # Run the linter
+    if python3 "$LINT_SCRIPT" "$BACKEND_DIR/app/api/" 2>/dev/null; then
+        log_ok "No unsafe SQLModel patterns"
+    else
+        log_warn "SQLModel pattern issues detected (run lint_sqlmodel_patterns.py)"
+    fi
+    return 0
+}
+
+check_api_wiring() {
+    header "API Wiring Check"
+
+    local WIRING_SCRIPT="$REPO_ROOT/scripts/ops/check_api_wiring.py"
+    if [[ ! -f "$WIRING_SCRIPT" ]]; then
+        log_info "API wiring checker not found (optional)"
+        return 0
+    fi
+
+    if $QUICK_MODE; then
+        log_info "Skipping (use full mode)"
+        return 0
+    fi
+
+    # Run the checker
+    if python3 "$WIRING_SCRIPT" 2>/dev/null; then
+        log_ok "API wiring validated"
+    else
+        log_warn "API wiring issues detected (run check_api_wiring.py)"
+    fi
+    return 0
+}
+
 # ============================================================================
 # DASHBOARD & MATRIX
 # ============================================================================
@@ -1740,6 +1786,8 @@ main() {
     preflight
     check_ci_workflow
     check_alembic_health
+    check_sqlmodel_patterns
+    check_api_wiring
 
     # MISSING #1-3: Test enforcement (optional flags)
     check_test_coverage

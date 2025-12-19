@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-16 (PIN-093 Worker v0.3 Real MOAT Integration)
+**Last Updated:** 2025-12-19 (PIN-096 M22 KillSwitch MVP)
 
 ---
 
@@ -115,6 +115,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-091](PIN-091-artifact-identity-placement.md) | **Artifact Identity & Placement Guarantees** | Operations / Doctrine | **DOCTRINE** | 2025-12-16 |
 | [PIN-092](PIN-092-sse-lifecycle-hardening.md) | **SSE Lifecycle Hardening & Console Fixes** | Console / SSE / Streaming | **✅ COMPLETE** | 2025-12-16 |
 | [PIN-093](PIN-093-worker-v03-real-moat-integration.md) | **Worker v0.3 - Real MOAT Integration** | Workers / Architecture / MOAT Integration | **✅ COMPLETE** | 2025-12-16 |
+| [PIN-094](PIN-094-build-your-app-landing-page.md) | **Build Your App - Landing Page Feature** | Frontend / Landing Page / UX | **✅ COMPLETE** | 2025-12-16 |
+| [PIN-095](PIN-095-ai-incident-console-strategy.md) | **AI Incident Console - Strategic Pivot** | Strategy / Product / GTM | **🎯 ACTIVE - STRATEGIC** | 2025-12-17 |
+| [PIN-096](PIN-096-m22-killswitch-mvp.md) | **M22 KillSwitch MVP - OpenAI Proxy + Safety** | Milestone / Product / Safety | **✅ COMPLETE** | 2025-12-19 |
 
 ---
 
@@ -863,6 +866,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-19 | **Prevention System v1.0** - SQLModel Row tuple detection & prevention. Files: `backend/app/db_helpers.py` (safe query helpers), `scripts/ops/lint_sqlmodel_patterns.py` (pattern linter), `scripts/ops/check_api_wiring.py` (API validation), `scripts/ops/add_lint_pattern.py` (interactive pattern adder), `.pre-commit-config.yaml` (pre-commit hooks), `docs/PREVENTION_PLAYBOOK.md` (maintenance guide). Integrated into CI consistency check. |
+| 2025-12-19 | **PIN-096 M22 KillSwitch MVP HARDENED** - OpenAI-compatible proxy with kill switch controls. 14 endpoints: drop-in proxy (/v1/chat/completions, /v1/embeddings), kill switch (tenant/key freeze), default guardrails (5 battle-tested policies), incidents timeline, replay capability, demo simulation. **Improvements:** (1) ABSOLUTE kill switch semantics - record_usage AFTER freeze check, (2) Incident grouping v1 heuristics LOCKED - determinism over cleverness, (3) /v1/status enhanced with buyer signals (p95 latency, incidents blocked, freeze status), (4) Demo endpoint hardened (demo- prefix required, before/after deltas, no random), (5) Language layer ("Traffic stopped" not "frozen", "Incident prevented" not "policy triggered"). 26 tests passing. |
+| 2025-12-17 | **PIN-095 AI Incident Console Strategy** - STRATEGIC PIVOT from SDK-first to product-first GTM. Core insight: "Nobody buys unknown SDKs—they buy products that secretly install SDKs." Wedge product: AI Incident Investigation Console. Target: B2B SaaS with embedded AI. 30-year problem: AI Accountability Infrastructure. UX designed: Search → Inspect → Replay → Export. Integration via drop-in wrapper (extends BudgetLLM). Build priority: wrapper enhancement, search API, console UI, export. |
+| 2025-12-16 | **PIN-094 Build Your App Landing Page** - Created `website/landing/src/pages/build/BuildYourApp.jsx` with 3-state flow (Input → Plan → Execution). Human-centric UI hides OS internals. React Router + Apache .htaccess for SPA routing. Debug logger with console.warn. Live at https://agenticverz.com/build. |
 | 2025-12-16 | **TR-004 Scenario Test Matrix** - Created `scripts/ops/scenario_test_matrix.py` with 13 scenarios (A1-A8 external services, B1-B4 MOATs, C1 skills). 11/13 PASS (85%). GAP-004 Trigger.dev, GAP-005 Slack credentials. |
 | 2025-12-16 | **Voyage AI Embeddings Configured** - Switched from OpenAI to Voyage AI (voyage-3, 1024 dims). Added `VOYAGE_API_KEY` to vault `external-apis`. Updated .env: `EMBEDDING_PROVIDER=voyage`. |
 | 2025-12-16 | **Content Policy Validation Gate** - Added `UNIVERSAL_FORBIDDEN_PATTERNS` (10 regex) and `_validate_content_policy()` to worker.py. M18 drift detection + M19 violations now fire on adversarial input. |
