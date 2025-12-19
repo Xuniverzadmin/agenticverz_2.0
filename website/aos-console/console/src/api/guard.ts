@@ -128,6 +128,81 @@ export interface PaginatedResponse<T> {
   page_size: number;
 }
 
+// ============== M23 SEARCH & TIMELINE TYPES ==============
+
+export interface IncidentSearchRequest {
+  query?: string;
+  user_id?: string;
+  policy_status?: 'passed' | 'failed' | 'all';
+  severity?: 'critical' | 'high' | 'medium' | 'low';
+  time_from?: string;
+  time_to?: string;
+  model?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface IncidentSearchResult {
+  incident_id: string;
+  timestamp: string;
+  user_id: string | null;
+  output_preview: string;
+  policy_status: string;
+  confidence: number;
+  model: string;
+  severity: string;
+  cost_cents: number;
+}
+
+export interface IncidentSearchResponse {
+  items: IncidentSearchResult[];
+  total: number;
+  query: string | null;
+  filters_applied: Record<string, any>;
+}
+
+export interface TimelineEvent {
+  event: 'INPUT_RECEIVED' | 'CONTEXT_RETRIEVED' | 'POLICY_EVALUATED' | 'MODEL_CALLED' | 'OUTPUT_GENERATED' | 'LOGGED';
+  timestamp: string;
+  duration_ms: number | null;
+  data: Record<string, any>;
+}
+
+export interface PolicyEvaluation {
+  policy: string;
+  result: 'PASS' | 'FAIL' | 'WARN';
+  reason: string | null;
+  expected_behavior: string | null;
+  actual_behavior: string | null;
+}
+
+export interface DecisionTimelineResponse {
+  incident_id: string;
+  call_id: string | null;
+  user_id: string | null;
+  model: string;
+  timestamp: string;
+  cost_cents: number;
+  latency_ms: number;
+  events: TimelineEvent[];
+  policy_evaluations: PolicyEvaluation[];
+  root_cause: string | null;
+  root_cause_badge: string | null;
+}
+
+export interface DemoSeedResponse {
+  status: string;
+  incident_id: string;
+  call_id: string;
+  scenario: string;
+  demo_ready: boolean;
+  demo_flow: {
+    search_query: string;
+    expected_incident_title: string;
+    root_cause: string;
+  };
+}
+
 // ============== API FUNCTIONS ==============
 
 export const guardApi = {
@@ -198,6 +273,26 @@ export const guardApi = {
   // Settings (read-only for customers)
   getSettings: async (): Promise<TenantSettings> => {
     const response = await apiClient.get('/guard/settings');
+    return response.data;
+  },
+
+  // ============== M23 SEARCH & TIMELINE ==============
+
+  // Search incidents with filters
+  searchIncidents: async (request: IncidentSearchRequest): Promise<IncidentSearchResponse> => {
+    const response = await apiClient.post('/guard/incidents/search', request);
+    return response.data;
+  },
+
+  // Get decision timeline for an incident
+  getDecisionTimeline: async (incidentId: string): Promise<DecisionTimelineResponse> => {
+    const response = await apiClient.get(`/guard/incidents/${incidentId}/timeline`);
+    return response.data;
+  },
+
+  // Seed demo incident for 7-minute demo flow
+  seedDemoIncident: async (scenario: string = 'contract_autorenew'): Promise<DemoSeedResponse> => {
+    const response = await apiClient.post('/guard/demo/seed-incident', { scenario });
     return response.data;
   },
 };
