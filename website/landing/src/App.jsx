@@ -7,7 +7,7 @@ import {
   AlertTriangle, FileText, BarChart3, Settings,
   Scale, Search, TrendingDown, Workflow,
   Play, Sparkles, X, Check, Users, Building2,
-  Menu
+  Menu, Newspaper, ExternalLink
 } from 'lucide-react';
 import { BuildYourApp } from './pages/build/BuildYourApp';
 import { IncidentConsolePage } from './pages/incident-console/IncidentConsolePage';
@@ -51,40 +51,55 @@ function EntryPath({ icon: Icon, title, description, cta, link }) {
   );
 }
 
-// Products Dropdown
+// Article Card Component
+function ArticleCard({ category, title, description, readTime, link, isNew }) {
+  return (
+    <a href={link} className="glass rounded-xl p-6 hover:bg-white/5 transition-all group block h-full">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs uppercase tracking-wider text-primary-400 font-medium">{category}</span>
+        {isNew && (
+          <span className="text-[10px] uppercase tracking-wider bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-medium">New</span>
+        )}
+      </div>
+      <h3 className="text-lg font-semibold mb-2 group-hover:text-primary-400 transition-colors">{title}</h3>
+      <p className="text-gray-400 text-sm mb-4 line-clamp-2">{description}</p>
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span>{readTime} read</span>
+        <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </a>
+  );
+}
+
+// Products Dropdown - Simplified, no Build Your App
 function ProductsDropdown({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-full left-0 mt-2 w-72 glass rounded-xl overflow-hidden shadow-xl z-50">
-      <a href="/incident-console" className="block px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-400" />
-          <div>
-            <div className="font-medium">Incident Console</div>
-            <div className="text-xs text-gray-400">Investigate AI failures</div>
+    <>
+      {/* Click-away overlay */}
+      <div className="fixed inset-0 z-40" onClick={onClose}></div>
+      <div className="absolute top-full left-0 mt-2 w-72 glass rounded-xl overflow-hidden shadow-xl z-50">
+        <a href="/incident-console" className="block px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+            <div>
+              <div className="font-medium">Incident Console</div>
+              <div className="text-xs text-gray-400">Investigate AI failures</div>
+            </div>
           </div>
-        </div>
-      </a>
-      <a href="/build" className="block px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <Sparkles className="w-5 h-5 text-purple-400" />
-          <div>
-            <div className="font-medium">Build Your App</div>
-            <div className="text-xs text-gray-400">No-code AI app builder</div>
+        </a>
+        <a href="/documentation" className="block px-4 py-3 hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-3">
+            <Terminal className="w-5 h-5 text-green-400" />
+            <div>
+              <div className="font-medium">API & Documentation</div>
+              <div className="text-xs text-gray-400">Integration guides & reference</div>
+            </div>
           </div>
-        </div>
-      </a>
-      <a href="https://docs.agenticverz.com/api" className="block px-4 py-3 hover:bg-white/10 transition-colors">
-        <div className="flex items-center gap-3">
-          <Terminal className="w-5 h-5 text-green-400" />
-          <div>
-            <div className="font-medium">API</div>
-            <div className="text-xs text-gray-400">OpenAI-compatible proxy</div>
-          </div>
-        </div>
-      </a>
-    </div>
+        </a>
+      </div>
+    </>
   );
 }
 
@@ -112,18 +127,18 @@ function MobileMenu({ isOpen, onClose }) {
                   <div className="text-xs text-gray-400">Investigate AI failures</div>
                 </div>
               </a>
-              <a href="/build" onClick={onClose} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-lg transition-colors">
-                <Sparkles className="w-5 h-5 text-purple-400" />
+              <a href="/documentation" onClick={onClose} className="flex items-center gap-3 p-3 hover:bg-white/10 rounded-lg transition-colors">
+                <Terminal className="w-5 h-5 text-green-400" />
                 <div>
-                  <div className="font-medium">Build Your App</div>
-                  <div className="text-xs text-gray-400">No-code AI builder</div>
+                  <div className="font-medium">API & Documentation</div>
+                  <div className="text-xs text-gray-400">Integration guides</div>
                 </div>
               </a>
             </div>
           </div>
           <div className="border-t border-white/10 pt-6 space-y-2">
             <a href="#capabilities" onClick={onClose} className="block p-3 hover:bg-white/10 rounded-lg transition-colors">Capabilities</a>
-            <a href="https://docs.agenticverz.com" onClick={onClose} className="block p-3 hover:bg-white/10 rounded-lg transition-colors">Documentation</a>
+            <a href="#insights" onClick={onClose} className="block p-3 hover:bg-white/10 rounded-lg transition-colors">Insights</a>
             <a href="#pricing" onClick={onClose} className="block p-3 hover:bg-white/10 rounded-lg transition-colors">Pricing</a>
           </div>
           <div className="border-t border-white/10 pt-6">
@@ -178,8 +193,8 @@ function LandingPage() {
                 <ProductsDropdown isOpen={productsOpen} onClose={() => setProductsOpen(false)} />
               </div>
               <a href="#capabilities" className="text-gray-400 hover:text-white transition-colors">Capabilities</a>
-              <a href="https://docs.agenticverz.com" className="text-gray-400 hover:text-white transition-colors">Docs</a>
-              <a href="#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</a>
+              <a href="#insights" className="text-gray-400 hover:text-white transition-colors">Insights</a>
+              <a href="/documentation" className="text-gray-400 hover:text-white transition-colors">Docs</a>
               <a href="/console" className="px-4 py-2 glass hover:bg-white/10 rounded-lg transition-colors font-medium">
                 Request Demo
               </a>
@@ -197,17 +212,18 @@ function LandingPage() {
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-slide-up">
-            AI decisions happen fast.{' '}
-            <span className="gradient-text">Yours should too.</span>
+            Making AI systems{' '}
+            <span className="gradient-text">reliable, safe, and controllable</span>{' '}
+            in production.
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-400 mb-4 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            We help teams investigate, govern, and prevent AI failures
-            — before they become support tickets.
+            Investigate incidents. Enforce policies. Export evidence.
+            One proxy between your app and any LLM.
           </p>
 
           <p className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '0.15s' }}>
-            Drop-in proxy between your app and any LLM. Full audit trail included.
+            For teams that need audit trails, not log files.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
@@ -449,6 +465,56 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Insights & Articles */}
+      <section id="insights" className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-12">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">
+                Insights
+              </h2>
+              <p className="text-gray-400">
+                Thinking on AI reliability, governance, and operational patterns.
+              </p>
+            </div>
+            <a href="/insights" className="hidden md:inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors">
+              View all <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <ArticleCard
+              category="Architecture"
+              title="Why Proxy-Based AI Observability Beats SDK Instrumentation"
+              description="The tradeoffs between embedded SDKs and proxy-based approaches for production AI systems. Spoiler: proxies win for governance."
+              readTime="5 min"
+              link="/insights/proxy-vs-sdk"
+              isNew={true}
+            />
+            <ArticleCard
+              category="Governance"
+              title="AI Audit Trails That Actually Work in Court"
+              description="What legal and compliance teams need from AI decision logs, and why most observability tools fall short."
+              readTime="7 min"
+              link="/insights/audit-trails-legal"
+            />
+            <ArticleCard
+              category="Operations"
+              title="The Three Types of AI Incidents (And How to Handle Each)"
+              description="Not all AI failures are equal. Classification framework for triage, investigation, and remediation."
+              readTime="6 min"
+              link="/insights/ai-incident-types"
+            />
+          </div>
+
+          <div className="mt-8 text-center md:hidden">
+            <a href="/insights" className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors">
+              View all articles <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Entry Paths */}
       <section className="py-20 px-6 border-t border-white/5">
         <div className="max-w-5xl mx-auto">
@@ -471,7 +537,7 @@ function LandingPage() {
               title="Read Documentation"
               description="API reference, integration guides, and examples."
               cta="Go to Docs"
-              link="https://docs.agenticverz.com"
+              link="/documentation"
             />
             <EntryPath
               icon={BarChart3}
@@ -504,16 +570,15 @@ function LandingPage() {
               <h4 className="font-medium mb-4">Products</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><a href="/incident-console" className="hover:text-white transition-colors">Incident Console</a></li>
-                <li><a href="/build" className="hover:text-white transition-colors">Build Your App</a></li>
-                <li><a href="https://docs.agenticverz.com/api" className="hover:text-white transition-colors">API</a></li>
+                <li><a href="/documentation" className="hover:text-white transition-colors">API & Docs</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-medium mb-4">Resources</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="https://docs.agenticverz.com" className="hover:text-white transition-colors">Documentation</a></li>
-                <li><a href="https://blog.agenticverz.com" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="/documentation" className="hover:text-white transition-colors">Documentation</a></li>
+                <li><a href="/insights" className="hover:text-white transition-colors">Insights</a></li>
                 <li><a href="https://status.agenticverz.com" className="hover:text-white transition-colors">Status</a></li>
               </ul>
             </div>
@@ -548,6 +613,204 @@ function LandingPage() {
   );
 }
 
+// Docs Page (Placeholder)
+function DocsPage() {
+  return (
+    <div className="min-h-screen gradient-bg">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-semibold">Agenticverz</span>
+            </a>
+            <a href="/" className="text-gray-400 hover:text-white transition-colors">← Back to Home</a>
+          </div>
+        </div>
+      </nav>
+
+      <div className="pt-32 pb-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold mb-6">Documentation</h1>
+          <p className="text-xl text-gray-400 mb-12">
+            API reference, integration guides, and examples for the Agenticverz platform.
+          </p>
+
+          <div className="space-y-8">
+            <div className="glass rounded-xl p-6">
+              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-3">
+                <Terminal className="w-6 h-6 text-green-400" />
+                Quick Start
+              </h2>
+              <p className="text-gray-400 mb-4">
+                Get started with Agenticverz in under 5 minutes. Point your OpenAI client at our proxy.
+              </p>
+              <pre className="bg-black/50 rounded-lg p-4 overflow-x-auto text-sm">
+                <code className="text-gray-300">{`from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.agenticverz.com/v1",
+    api_key="YOUR_API_KEY"  # Get from dashboard  # pragma: allowlist secret
+)
+
+# That's it - all calls now have full audit trails`}</code>
+              </pre>
+            </div>
+
+            <div className="glass rounded-xl p-6">
+              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-3">
+                <BookOpen className="w-6 h-6 text-blue-400" />
+                API Reference
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                  <div>
+                    <code className="text-primary-400">POST /v1/chat/completions</code>
+                    <p className="text-sm text-gray-500 mt-1">OpenAI-compatible completions endpoint</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-600" />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                  <div>
+                    <code className="text-primary-400">GET /v1/incidents</code>
+                    <p className="text-sm text-gray-500 mt-1">List and search incidents</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-600" />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                  <div>
+                    <code className="text-primary-400">GET /v1/incidents/:id/evidence</code>
+                    <p className="text-sm text-gray-500 mt-1">Export evidence for an incident</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="glass rounded-xl p-6">
+              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-3">
+                <Scale className="w-6 h-6 text-purple-400" />
+                Policy Configuration
+              </h2>
+              <p className="text-gray-400 mb-4">
+                Define policies to govern AI behavior. Policies are evaluated before each request.
+              </p>
+              <pre className="bg-black/50 rounded-lg p-4 overflow-x-auto text-sm">
+                <code className="text-gray-300">{`{
+  "name": "content-safety",
+  "rules": [
+    {
+      "if": "output.contains_pii",
+      "action": "block",
+      "message": "Response contains PII"
+    }
+  ]
+}`}</code>
+              </pre>
+            </div>
+
+            <div className="text-center pt-8">
+              <p className="text-gray-500 mb-4">Full documentation coming soon.</p>
+              <a href="mailto:docs@agenticverz.com" className="text-primary-400 hover:text-primary-300 transition-colors">
+                Request specific documentation →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Insights Page (Placeholder)
+function InsightsPage() {
+  const articles = [
+    {
+      category: "Architecture",
+      title: "Why Proxy-Based AI Observability Beats SDK Instrumentation",
+      description: "The tradeoffs between embedded SDKs and proxy-based approaches for production AI systems. Spoiler: proxies win for governance.",
+      readTime: "5 min",
+      slug: "proxy-vs-sdk",
+      isNew: true
+    },
+    {
+      category: "Governance",
+      title: "AI Audit Trails That Actually Work in Court",
+      description: "What legal and compliance teams need from AI decision logs, and why most observability tools fall short.",
+      readTime: "7 min",
+      slug: "audit-trails-legal"
+    },
+    {
+      category: "Operations",
+      title: "The Three Types of AI Incidents (And How to Handle Each)",
+      description: "Not all AI failures are equal. Classification framework for triage, investigation, and remediation.",
+      readTime: "6 min",
+      slug: "ai-incident-types"
+    }
+  ];
+
+  return (
+    <div className="min-h-screen gradient-bg">
+      <nav className="fixed top-0 left-0 right-0 z-50 glass">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-purple-500 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-semibold">Agenticverz</span>
+            </a>
+            <a href="/" className="text-gray-400 hover:text-white transition-colors">← Back to Home</a>
+          </div>
+        </div>
+      </nav>
+
+      <div className="pt-32 pb-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl font-bold mb-4">Insights</h1>
+          <p className="text-xl text-gray-400 mb-12">
+            Thinking on AI reliability, governance, and operational patterns.
+          </p>
+
+          <div className="space-y-6">
+            {articles.map((article, i) => (
+              <a
+                key={i}
+                href={`/insights/${article.slug}`}
+                className="glass rounded-xl p-6 hover:bg-white/5 transition-all group block"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs uppercase tracking-wider text-primary-400 font-medium">{article.category}</span>
+                  {article.isNew && (
+                    <span className="text-[10px] uppercase tracking-wider bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-medium">New</span>
+                  )}
+                </div>
+                <h2 className="text-xl font-semibold mb-2 group-hover:text-primary-400 transition-colors">{article.title}</h2>
+                <p className="text-gray-400 mb-4">{article.description}</p>
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>{article.readTime} read</span>
+                  <span className="text-primary-400 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Read article <ArrowRight className="w-4 h-4" />
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          <div className="text-center pt-12">
+            <p className="text-gray-500 mb-4">More articles coming soon.</p>
+            <a href="mailto:hello@agenticverz.com" className="text-primary-400 hover:text-primary-300 transition-colors">
+              Subscribe to updates →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // App with Routing
 function App() {
   return (
@@ -556,6 +819,9 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/build" element={<BuildYourApp />} />
         <Route path="/incident-console" element={<IncidentConsolePage />} />
+        <Route path="/documentation" element={<DocsPage />} />
+        <Route path="/insights" element={<InsightsPage />} />
+        <Route path="/insights/:slug" element={<InsightsPage />} />
       </Routes>
     </BrowserRouter>
   );
