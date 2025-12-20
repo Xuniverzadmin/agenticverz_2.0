@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# CI Consistency Checker v5.0 - AGENTICVERZ/MN-OS Certification Engine
+# CI Consistency Checker v5.1 - AGENTICVERZ/MN-OS Certification Engine
 # ============================================================================
 #
 # Purpose: Validate ALL Agenticverz milestones M0-M19 remain functional,
@@ -20,6 +20,11 @@
 #   ./scripts/ops/ci_consistency_check.sh --smoke      # Run runtime smoke tests
 #   ./scripts/ops/ci_consistency_check.sh --golden     # Run golden tests
 #   ./scripts/ops/ci_consistency_check.sh --subsystems # Show MN-OS subsystem view
+#
+# v5.1 Changes:
+#   - Secrets baseline validation (detect-secrets)
+#   - Checks for unverified and actual secrets
+#   - JSON validation of .secrets.baseline
 #
 # v5.0 Changes:
 #   - MN-OS dual-name recognition (legacy + evolved + MN-OS names)
@@ -444,6 +449,101 @@ check_golden_tests() {
         log_ok "Golden tests passed - determinism verified"
         return 0
     fi
+}
+
+# ============================================================================
+# SECRETS BASELINE VALIDATION
+# ============================================================================
+
+check_secrets_baseline() {
+    header "Secrets Baseline Validation"
+
+    local BASELINE="$REPO_ROOT/.secrets.baseline"
+    local issues=0
+
+    # Check baseline exists
+    if [[ ! -f "$BASELINE" ]]; then
+        log_error "Missing .secrets.baseline - run: pipx run detect-secrets scan > .secrets.baseline"
+        return 1
+    fi
+
+    log_ok "Secrets baseline exists"
+
+    # Check baseline is valid JSON
+    if ! jq empty "$BASELINE" 2>/dev/null; then
+        log_error "Invalid JSON in .secrets.baseline"
+        return 1
+    fi
+
+    log_ok "Secrets baseline is valid JSON"
+
+    # Count total detected secrets
+    local total_secrets=$(jq '[.results[] | length] | add // 0' "$BASELINE" 2>/dev/null)
+    log_info "Total secrets in baseline: $total_secrets"
+
+    # Check for unverified secrets (is_verified: false or missing)
+    local unverified=$(jq '[.results[][] | select(.is_verified != true)] | length' "$BASELINE" 2>/dev/null || echo "0")
+
+    if [[ "$unverified" -gt 0 ]]; then
+        log_warn "$unverified unverified secret(s) in baseline"
+        log_info "Run: pipx run detect-secrets audit .secrets.baseline"
+
+        # List unverified files
+        local unverified_files=$(jq -r '.results | to_entries[] | select(.value[] | .is_verified != true) | .key' "$BASELINE" 2>/dev/null | sort -u)
+        if [[ -n "$unverified_files" ]]; then
+            while IFS= read -r file; do
+                log_warn "  Unverified: $file"
+            done <<< "$unverified_files"
+        fi
+
+        issues=$((issues+1))
+    else
+        log_ok "All secrets verified (marked as false positives)"
+    fi
+
+    # Check for secrets marked as actual secrets (is_secret: true)
+    local actual_secrets=$(jq '[.results[][] | select(.is_secret == true)] | length' "$BASELINE" 2>/dev/null || echo "0")
+
+    if [[ "$actual_secrets" -gt 0 ]]; then
+        log_error "$actual_secrets actual secret(s) detected - these should be removed from code"
+
+        # List files with actual secrets
+        local secret_files=$(jq -r '.results | to_entries[] | select(.value[] | .is_secret == true) | .key' "$BASELINE" 2>/dev/null | sort -u)
+        if [[ -n "$secret_files" ]]; then
+            while IFS= read -r file; do
+                log_error "  CONTAINS SECRET: $file"
+            done <<< "$secret_files"
+        fi
+
+        issues=$((issues+1))
+    fi
+
+    # Check baseline version
+    local version=$(jq -r '.version // "unknown"' "$BASELINE" 2>/dev/null)
+    log_info "detect-secrets version: $version"
+
+    # Quick scan to check for new secrets (optional - requires detect-secrets)
+    if command -v detect-secrets &>/dev/null || pipx list 2>/dev/null | grep -q detect-secrets; then
+        log_info "Running quick scan for new secrets..."
+
+        local new_secrets
+        new_secrets=$(pipx run detect-secrets scan --baseline "$BASELINE" --list-all-plugins 2>&1 || true)
+
+        # If the scan finds new secrets, it outputs them
+        if echo "$new_secrets" | grep -q '"results"' && echo "$new_secrets" | jq -e '.results | length > 0' &>/dev/null; then
+            local new_count=$(echo "$new_secrets" | jq '[.results[] | length] | add // 0' 2>/dev/null || echo "0")
+            if [[ "$new_count" -gt 0 ]]; then
+                log_warn "$new_count new potential secret(s) detected since baseline"
+                log_info "Update baseline: pipx run detect-secrets scan --update .secrets.baseline"
+                issues=$((issues+1))
+            fi
+        fi
+    else
+        log_info "detect-secrets not available - skipping new secret scan"
+    fi
+
+    [[ $issues -eq 0 ]] && log_ok "Secrets baseline validation passed" || log_warn "Secrets baseline has $issues issue(s)"
+    return 0
 }
 
 # ============================================================================
@@ -1742,8 +1842,8 @@ main() {
     $JSON_MODE || {
         echo ""
         echo -e "${CYAN}+====================================================================+${NC}"
-        echo -e "${CYAN}|  AGENTICVERZ/MN-OS Milestone Certification Engine v5.0            |${NC}"
-        echo -e "${CYAN}|  Semantic + Coverage + Smoke + Golden + Dual-Name Support         |${NC}"
+        echo -e "${CYAN}|  AGENTICVERZ/MN-OS Milestone Certification Engine v5.1            |${NC}"
+        echo -e "${CYAN}|  Semantic + Coverage + Smoke + Golden + Secrets + Dual-Name       |${NC}"
         echo -e "${CYAN}+====================================================================+${NC}"
         echo ""
     }
@@ -1788,6 +1888,7 @@ main() {
     check_alembic_health
     check_sqlmodel_patterns
     check_api_wiring
+    check_secrets_baseline
 
     # MISSING #1-3: Test enforcement (optional flags)
     check_test_coverage

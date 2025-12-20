@@ -216,6 +216,86 @@ jobs:
           echo ""
           echo "OK: All migrations committed"
 
+  # Secret scanning - validate no new secrets introduced
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python for detect-secrets
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install detect-secrets
+        run: pip install detect-secrets
+
+      - name: Validate secrets baseline exists
+        run: |
+          if [ ! -f .secrets.baseline ]; then
+            echo "::error::Missing .secrets.baseline file"
+            echo "Run: detect-secrets scan > .secrets.baseline"
+            exit 1
+          fi
+          echo "✅ Secrets baseline exists"
+
+      - name: Validate baseline is valid JSON
+        run: |
+          if ! jq empty .secrets.baseline 2>/dev/null; then
+            echo "::error::Invalid JSON in .secrets.baseline"
+            exit 1
+          fi
+          echo "✅ Baseline is valid JSON"
+
+      - name: Check for new secrets
+        run: |
+          echo "=== Secret Scanning ==="
+          # Scan for new secrets not in baseline
+          detect-secrets scan --baseline .secrets.baseline --list-all-plugins > /tmp/new_secrets.json 2>&1 || true
+
+          # Check if any new secrets were found
+          if jq -e '.results | length > 0' /tmp/new_secrets.json > /dev/null 2>&1; then
+            NEW_COUNT=$(jq '[.results[] | length] | add // 0' /tmp/new_secrets.json)
+            if [ "$NEW_COUNT" -gt 0 ]; then
+              echo "::error::$NEW_COUNT new potential secret(s) detected!"
+              echo ""
+              echo "Files with new secrets:"
+              jq -r '.results | keys[]' /tmp/new_secrets.json
+              echo ""
+              echo "To fix:"
+              echo "  1. Remove the secrets from code"
+              echo "  2. Or if false positive: detect-secrets scan --update .secrets.baseline"
+              echo "  3. Then audit: detect-secrets audit .secrets.baseline"
+              exit 1
+            fi
+          fi
+
+          echo "✅ No new secrets detected"
+
+      - name: Check for unverified secrets in baseline
+        run: |
+          # Count secrets not marked as verified (is_verified != true)
+          UNVERIFIED=$(jq '[.results[][] | select(.is_verified != true)] | length' .secrets.baseline 2>/dev/null || echo "0")
+
+          if [ "$UNVERIFIED" -gt 0 ]; then
+            echo "::warning::$UNVERIFIED unverified secret(s) in baseline"
+            echo "Files with unverified secrets:"
+            jq -r '.results | to_entries[] | select(.value[] | .is_verified != true) | .key' .secrets.baseline | sort -u
+            echo ""
+            echo "Run: detect-secrets audit .secrets.baseline"
+          fi
+
+          # Check for actual secrets (is_secret == true)
+          ACTUAL=$(jq '[.results[][] | select(.is_secret == true)] | length' .secrets.baseline 2>/dev/null || echo "0")
+
+          if [ "$ACTUAL" -gt 0 ]; then
+            echo "::error::$ACTUAL actual secret(s) marked in baseline - these must be removed!"
+            jq -r '.results | to_entries[] | select(.value[] | .is_secret == true) | .key' .secrets.baseline | sort -u
+            exit 1
+          fi
+
+          echo "✅ All baseline secrets are verified false positives"
+
   # Fast unit tests (no external deps)
   unit-tests:
     runs-on: ubuntu-latest

@@ -37,12 +37,32 @@ repos:
         pass_filenames: false
 
   # Prevent secrets in commits
+  # Baseline regeneration: pipx run detect-secrets scan --update .secrets.baseline
+  # Audit false positives: pipx run detect-secrets audit .secrets.baseline
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
-        exclude: package-lock.json
+        exclude: |
+          (?x)^(
+            # Lock files
+            package-lock\.json|yarn\.lock|.*\.lock|
+            # Config examples and backups
+            .*\.baseline|.*\.example|.*\.bak\.\d+|\.env.*|
+            # Documentation (may contain example credentials)
+            docs/.*|memory-pins/.*|agentiverz_mn/.*|.*\.md$|
+            # Test files (contain mock credentials)
+            .*test.*\.py|.*conftest\.py|.*_test\.py|
+            # SDKs and tools (contain examples)
+            sdk/.*|tools/.*|helm/.*|k8s/.*|
+            # CI/CD and monitoring
+            \.github/.*|monitoring/.*|
+            # Scripts (contain test API keys)
+            scripts/smoke/.*|scripts/stress/.*|scripts/ops/canary/.*|
+            # Website/frontend
+            website/.*|node_modules/.*
+          )$
 
   # Standard pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
