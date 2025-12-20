@@ -39,10 +39,7 @@ def find_routers_in_api(api_dir: Path) -> Dict[str, Set[str]]:
         content = filepath.read_text()
 
         # Find router = APIRouter(...) patterns
-        router_matches = re.findall(
-            r'(\w+)\s*=\s*APIRouter\s*\(',
-            content
-        )
+        router_matches = re.findall(r"(\w+)\s*=\s*APIRouter\s*\(", content)
 
         if router_matches:
             routers[filepath.name] = set(router_matches)
@@ -58,19 +55,13 @@ def find_mounted_routers(main_file: Path) -> Set[str]:
     mounted = set()
 
     # Pattern: app.include_router(xxx_router) or app.include_router(router)
-    matches = re.findall(
-        r'app\.include_router\s*\(\s*(\w+)',
-        content
-    )
+    matches = re.findall(r"app\.include_router\s*\(\s*(\w+)", content)
     mounted.update(matches)
 
     # Pattern: from app.api.xxx import router
-    import_matches = re.findall(
-        r'from\s+app\.api\.(\w+)\s+import\s+(\w+)',
-        content
-    )
+    import_matches = re.findall(r"from\s+app\.api\.(\w+)\s+import\s+(\w+)", content)
     for module, name in import_matches:
-        if 'router' in name.lower():
+        if "router" in name.lower():
             mounted.add(f"{module}.{name}")
 
     return mounted
@@ -85,27 +76,29 @@ def check_response_models(api_dir: Path) -> List[WiringIssue]:
             continue
 
         content = filepath.read_text()
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         for i, line in enumerate(lines):
             # Find endpoint decorators without response_model
-            if re.match(r'\s*@router\.(get|post|put|delete|patch)\s*\(', line):
+            if re.match(r"\s*@router\.(get|post|put|delete|patch)\s*\(", line):
                 # Check if response_model is specified
                 # Look at next few lines for the full decorator
-                decorator_block = '\n'.join(lines[i:i+5])
+                decorator_block = "\n".join(lines[i : i + 5])
 
-                if 'response_model' not in decorator_block:
+                if "response_model" not in decorator_block:
                     # Get the function name
-                    for j in range(i, min(i+10, len(lines))):
-                        func_match = re.match(r'\s*(?:async\s+)?def\s+(\w+)', lines[j])
+                    for j in range(i, min(i + 10, len(lines))):
+                        func_match = re.match(r"\s*(?:async\s+)?def\s+(\w+)", lines[j])
                         if func_match:
                             func_name = func_match.group(1)
-                            issues.append(WiringIssue(
-                                category="response_model",
-                                file=f"{filepath.name}:{i+1}",
-                                message=f"Endpoint '{func_name}' missing response_model",
-                                severity="warning"
-                            ))
+                            issues.append(
+                                WiringIssue(
+                                    category="response_model",
+                                    file=f"{filepath.name}:{i+1}",
+                                    message=f"Endpoint '{func_name}' missing response_model",
+                                    severity="warning",
+                                )
+                            )
                             break
 
     return issues
@@ -123,61 +116,95 @@ def check_route_consistency(api_dir: Path) -> List[WiringIssue]:
 
         # Find APIRouter prefix
         prefix_match = re.search(
-            r'APIRouter\s*\([^)]*prefix\s*=\s*["\']([^"\']+)["\']',
-            content
+            r'APIRouter\s*\([^)]*prefix\s*=\s*["\']([^"\']+)["\']', content
         )
 
         if prefix_match:
-            prefix = prefix_match.group(1).strip('/')
+            prefix = prefix_match.group(1).strip("/")
             filename = filepath.stem
 
             # Check consistency
             # v1_proxy.py should have prefix /v1 or similar
             # agents.py should have prefix /agents or /api/agents
             expected_patterns = [
-                filename.replace('_', '-'),
-                filename.replace('_', '/'),
-                filename.split('_')[-1],  # last part
+                filename.replace("_", "-"),
+                filename.replace("_", "/"),
+                filename.split("_")[-1],  # last part
             ]
 
-            prefix_normalized = prefix.replace('/', '-').replace('api-', '')
-            if not any(exp in prefix_normalized or prefix_normalized in exp for exp in expected_patterns):
-                issues.append(WiringIssue(
-                    category="route_consistency",
-                    file=filepath.name,
-                    message=f"Prefix '{prefix}' may not match filename '{filename}'",
-                    severity="warning"
-                ))
+            prefix_normalized = prefix.replace("/", "-").replace("api-", "")
+            if not any(
+                exp in prefix_normalized or prefix_normalized in exp
+                for exp in expected_patterns
+            ):
+                issues.append(
+                    WiringIssue(
+                        category="route_consistency",
+                        file=filepath.name,
+                        message=f"Prefix '{prefix}' may not match filename '{filename}'",
+                        severity="warning",
+                    )
+                )
 
     return issues
 
 
+def get_router_prefix(filepath: Path) -> str:
+    """Extract the router prefix from a file."""
+    content = filepath.read_text()
+
+    # Find APIRouter prefix
+    prefix_match = re.search(
+        r'APIRouter\s*\([^)]*prefix\s*=\s*["\']([^"\']+)["\']', content, re.DOTALL
+    )
+
+    if prefix_match:
+        return prefix_match.group(1).rstrip("/")
+
+    # No prefix means root
+    return ""
+
+
 def check_duplicate_routes(api_dir: Path) -> List[WiringIssue]:
-    """Check for duplicate route definitions."""
+    """Check for duplicate route definitions (considering router prefixes)."""
     issues = []
-    routes = {}  # route -> file
+    routes = {}  # full_path -> file
 
     for filepath in api_dir.glob("*.py"):
         if filepath.name.startswith("__"):
             continue
 
         content = filepath.read_text()
+        prefix = get_router_prefix(filepath)
 
         # Find route definitions
         route_matches = re.findall(
-            r'@router\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']',
-            content
+            r'@router\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']', content
         )
 
         for method, path in route_matches:
-            route_key = f"{method.upper()} {path}"
+            # Construct full path with prefix
+            if path.startswith("/"):
+                full_path = f"{prefix}{path}"
+            else:
+                full_path = f"{prefix}/{path}"
+
+            # Normalize path (remove double slashes)
+            full_path = re.sub(r"/+", "/", full_path)
+            if not full_path.startswith("/"):
+                full_path = "/" + full_path
+
+            route_key = f"{method.upper()} {full_path}"
+
             if route_key in routes:
-                issues.append(WiringIssue(
-                    category="duplicate_route",
-                    file=filepath.name,
-                    message=f"Route '{route_key}' also defined in {routes[route_key]}",
-                    severity="error"
-                ))
+                issues.append(
+                    WiringIssue(
+                        category="duplicate_route",
+                        file=filepath.name,
+                        message=f"Route '{route_key}' also defined in {routes[route_key]}",
+                        severity="error",
+                    )
+                )
             else:
                 routes[route_key] = filepath.name
 
@@ -203,7 +230,11 @@ def main():
 
         for filename, router_names in routers.items():
             for router_name in router_names:
-                if router_name not in mounted and f"{filename.replace('.py', '')}.{router_name}" not in str(mounted):
+                if (
+                    router_name not in mounted
+                    and f"{filename.replace('.py', '')}.{router_name}"
+                    not in str(mounted)
+                ):
                     # This is a heuristic check, may have false positives
                     pass  # Skip for now, too many false positives
 
