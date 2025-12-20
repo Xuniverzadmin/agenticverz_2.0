@@ -11,11 +11,11 @@ Provides REST API for:
 - PII redaction on storage
 """
 
-import os
 import logging
-from datetime import datetime
-from typing import Optional, List, Any
-from fastapi import APIRouter, HTTPException, Query, Depends, Response, status, Request
+import os
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
 # Use PostgreSQL store in production, SQLite for dev/test
@@ -23,16 +23,16 @@ USE_POSTGRES = os.getenv("USE_POSTGRES_TRACES", "false").lower() == "true"
 
 if USE_POSTGRES:
     from ..traces.pg_store import PostgresTraceStore, get_postgres_trace_store
+
     TraceStoreType = PostgresTraceStore
 else:
     from ..traces.store import SQLiteTraceStore
+
     TraceStoreType = SQLiteTraceStore
 
-from ..traces.models import TraceSummary, TraceRecord
-from ..traces.redact import redact_trace_data
-
 # JWT Authentication
-from ..auth.jwt_auth import JWTAuthDependency, TokenPayload, JWTConfig
+from ..auth.jwt_auth import JWTAuthDependency, JWTConfig, TokenPayload
+from ..traces.redact import redact_trace_data
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +43,12 @@ router = APIRouter(prefix="/traces", tags=["traces"])
 # Auth/RBAC - JWT/OIDC Integration (M8 Production)
 # =============================================================================
 
+
 class User:
     """
     User model for RBAC - wraps JWT TokenPayload for backwards compatibility.
     """
+
     def __init__(
         self,
         user_id: str = "anonymous",
@@ -74,10 +76,7 @@ class User:
 _jwt_auth = JWTAuthDependency(JWTConfig())
 
 
-async def get_current_user(
-    request: Request,
-    token: TokenPayload = Depends(_jwt_auth)
-) -> User:
+async def get_current_user(request: Request, token: TokenPayload = Depends(_jwt_auth)) -> User:
     """
     Get current authenticated user from JWT token.
 
@@ -116,8 +115,10 @@ def get_trace_store() -> TraceStoreType:
 # Response Models
 # =============================================================================
 
+
 class TraceSummaryResponse(BaseModel):
     """Trace summary for list views."""
+
     run_id: str
     correlation_id: str
     tenant_id: str
@@ -137,6 +138,7 @@ class TraceSummaryResponse(BaseModel):
 
 class TraceStepResponse(BaseModel):
     """Individual trace step."""
+
     step_index: int
     skill_name: str
     params: dict
@@ -157,6 +159,7 @@ class TraceStepResponse(BaseModel):
 
 class TraceDetailResponse(BaseModel):
     """Full trace with all steps."""
+
     run_id: str
     correlation_id: str
     tenant_id: str
@@ -177,6 +180,7 @@ class TraceDetailResponse(BaseModel):
 
 class TraceListResponse(BaseModel):
     """Paginated trace list."""
+
     traces: List[TraceSummaryResponse]
     total: int
     limit: int
@@ -185,6 +189,7 @@ class TraceListResponse(BaseModel):
 
 class TraceCompareResponse(BaseModel):
     """Result of comparing two traces."""
+
     match: bool
     trace1_root_hash: Optional[str]
     trace2_root_hash: Optional[str]
@@ -194,6 +199,7 @@ class TraceCompareResponse(BaseModel):
 
 class StoreTraceRequest(BaseModel):
     """Request to store a client-provided trace."""
+
     trace: dict
     overwrite: bool = False
 
@@ -201,6 +207,7 @@ class StoreTraceRequest(BaseModel):
 # =============================================================================
 # Endpoints
 # =============================================================================
+
 
 @router.get("", response_model=TraceListResponse)
 async def list_traces(
@@ -396,10 +403,7 @@ async def get_trace_by_hash(
             raise HTTPException(status_code=403, detail="Access denied")
 
     if not trace:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No trace found with root_hash {root_hash}"
-        )
+        raise HTTPException(status_code=404, detail=f"No trace found with root_hash {root_hash}")
 
     return TraceDetailResponse(
         run_id=trace.run_id,
@@ -462,50 +466,62 @@ async def compare_traces(
 
     # Compare root hashes
     if trace1.root_hash != trace2.root_hash:
-        differences.append({
-            "field": "root_hash",
-            "trace1": trace1.root_hash,
-            "trace2": trace2.root_hash,
-        })
+        differences.append(
+            {
+                "field": "root_hash",
+                "trace1": trace1.root_hash,
+                "trace2": trace2.root_hash,
+            }
+        )
 
     # Compare seeds
     if trace1.seed != trace2.seed:
-        differences.append({
-            "field": "seed",
-            "trace1": trace1.seed,
-            "trace2": trace2.seed,
-        })
+        differences.append(
+            {
+                "field": "seed",
+                "trace1": trace1.seed,
+                "trace2": trace2.seed,
+            }
+        )
 
     # Compare frozen timestamps
     if trace1.frozen_timestamp != trace2.frozen_timestamp:
-        differences.append({
-            "field": "frozen_timestamp",
-            "trace1": trace1.frozen_timestamp,
-            "trace2": trace2.frozen_timestamp,
-        })
+        differences.append(
+            {
+                "field": "frozen_timestamp",
+                "trace1": trace1.frozen_timestamp,
+                "trace2": trace2.frozen_timestamp,
+            }
+        )
 
     # Compare step counts
     if len(trace1.steps) != len(trace2.steps):
-        differences.append({
-            "field": "step_count",
-            "trace1": len(trace1.steps),
-            "trace2": len(trace2.steps),
-        })
+        differences.append(
+            {
+                "field": "step_count",
+                "trace1": len(trace1.steps),
+                "trace2": len(trace2.steps),
+            }
+        )
 
     # Compare individual steps
     for i, (s1, s2) in enumerate(zip(trace1.steps, trace2.steps)):
         if s1.skill_name != s2.skill_name:
-            differences.append({
-                "field": f"step[{i}].skill_name",
-                "trace1": s1.skill_name,
-                "trace2": s2.skill_name,
-            })
+            differences.append(
+                {
+                    "field": f"step[{i}].skill_name",
+                    "trace1": s1.skill_name,
+                    "trace2": s2.skill_name,
+                }
+            )
         if s1.outcome_category != s2.outcome_category:
-            differences.append({
-                "field": f"step[{i}].outcome_category",
-                "trace1": s1.outcome_category,
-                "trace2": s2.outcome_category,
-            })
+            differences.append(
+                {
+                    "field": f"step[{i}].outcome_category",
+                    "trace1": s1.outcome_category,
+                    "trace2": s2.outcome_category,
+                }
+            )
 
     match = len(differences) == 0
 
@@ -576,6 +592,7 @@ async def cleanup_old_traces(
 # Idempotency Check Endpoint
 # =============================================================================
 
+
 @router.get("/idempotency/{idempotency_key}")
 async def check_idempotency(
     idempotency_key: str,
@@ -588,10 +605,7 @@ async def check_idempotency(
     Returns execution status and output if found.
     """
     if not USE_POSTGRES:
-        raise HTTPException(
-            status_code=501,
-            detail="Idempotency check requires PostgreSQL store"
-        )
+        raise HTTPException(status_code=501, detail="Idempotency check requires PostgreSQL store")
 
     result = await store.check_idempotency_key(idempotency_key, user.tenant_id)
 
@@ -613,8 +627,10 @@ async def check_idempotency(
 # Replay Mismatch Reporting (M8)
 # =============================================================================
 
+
 class MismatchReport(BaseModel):
     """Report a replay mismatch for operator review."""
+
     step_index: int = Field(..., description="Index of the mismatched step")
     reason: str = Field(..., description="Reason for mismatch (output_mismatch, hash_mismatch, etc.)")
     expected_hash: Optional[str] = Field(None, description="Expected output hash")
@@ -624,6 +640,7 @@ class MismatchReport(BaseModel):
 
 class MismatchResponse(BaseModel):
     """Response after reporting a mismatch."""
+
     mismatch_id: str
     trace_id: str
     status: str
@@ -631,6 +648,132 @@ class MismatchResponse(BaseModel):
     issue_url: Optional[str] = None
 
 
+# NOTE: Static routes MUST come before parameter routes
+@router.post("/mismatches/bulk-report")
+async def bulk_report_mismatches(
+    mismatch_ids: List[str] = Query(..., description="List of mismatch IDs to link"),
+    github_issue: bool = Query(True, description="Create a GitHub issue for all"),
+    user: User = Depends(get_current_user),
+):
+    """
+    Create a single GitHub issue for multiple mismatches.
+
+    Useful when a replay causes multiple step mismatches that should be tracked together.
+
+    RBAC: Requires admin or operator role.
+    """
+    if not user.has_role("admin") and not user.has_role("operator"):
+        raise HTTPException(status_code=403, detail="Requires admin or operator role")
+
+    if not USE_POSTGRES:
+        raise HTTPException(status_code=501, detail="Requires PostgreSQL store")
+
+    import httpx
+
+    from ..db import db_async
+
+    # Fetch all mismatches
+    async with db_async.get_session() as session:
+        placeholders = ",".join([f"${i+1}" for i in range(len(mismatch_ids))])
+        result = await session.execute(
+            f"""
+            SELECT id, trace_id, step_index, reason, expected_hash, actual_hash, details
+            FROM aos_trace_mismatches
+            WHERE id IN ({placeholders})
+            ORDER BY trace_id, step_index
+        """,
+            mismatch_ids,
+        )
+        rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No mismatches found")
+
+    # Group by trace_id
+    by_trace = {}
+    for r in rows:
+        trace_id = r[1]
+        if trace_id not in by_trace:
+            by_trace[trace_id] = []
+        by_trace[trace_id].append(
+            {
+                "mismatch_id": str(r[0]),
+                "step_index": r[2],
+                "reason": r[3],
+                "expected_hash": r[4],
+                "actual_hash": r[5],
+            }
+        )
+
+    issue_url = None
+
+    if github_issue:
+        github_token = os.getenv("GITHUB_TOKEN")
+        github_repo = os.getenv("GITHUB_REPO")
+
+        if github_token and github_repo:
+            # Build issue body
+            title = f"[Replay Mismatches] {len(rows)} mismatches across {len(by_trace)} trace(s)"
+
+            body_parts = ["## Bulk Mismatch Report\n"]
+            body_parts.append(f"**Total Mismatches:** {len(rows)}")
+            body_parts.append(f"**Traces Affected:** {len(by_trace)}")
+            body_parts.append(f"**Reported By:** {user.user_id}\n")
+
+            for trace_id, mismatches in by_trace.items():
+                body_parts.append(f"### Trace `{trace_id}`")
+                body_parts.append("| Step | Reason | Expected | Actual |")
+                body_parts.append("|------|--------|----------|--------|")
+                for m in mismatches:
+                    exp = m["expected_hash"][:8] if m["expected_hash"] else "N/A"
+                    act = m["actual_hash"][:8] if m["actual_hash"] else "N/A"
+                    body_parts.append(f"| {m['step_index']} | {m['reason']} | `{exp}` | `{act}` |")
+                body_parts.append("")
+
+            body = "\n".join(body_parts)
+
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        f"https://api.github.com/repos/{github_repo}/issues",
+                        headers={
+                            "Authorization": f"token {github_token}",
+                            "Accept": "application/vnd.github.v3+json",
+                        },
+                        json={
+                            "title": title,
+                            "body": body,
+                            "labels": ["replay-mismatch", "aos", "bulk-report", "automated"],
+                        },
+                        timeout=15.0,
+                    )
+                    if resp.status_code in (200, 201):
+                        issue_data = resp.json()
+                        issue_url = issue_data.get("html_url")
+
+                        # Update all mismatches with the issue URL
+                        async with db_async.get_session() as session:
+                            await session.execute(
+                                f"""
+                                UPDATE aos_trace_mismatches
+                                SET issue_url = $1, notification_sent = TRUE
+                                WHERE id IN ({placeholders})
+                            """,
+                                [issue_url] + mismatch_ids,
+                            )
+                            await session.commit()
+            except Exception as e:
+                logger.warning(f"Failed to create bulk GitHub issue: {e}")
+
+    return {
+        "linked_count": len(rows),
+        "traces_affected": len(by_trace),
+        "issue_url": issue_url,
+        "mismatch_ids": [str(r[0]) for r in rows],
+    }
+
+
+# Parameter route MUST come after static routes
 @router.post("/{trace_id}/mismatch", response_model=MismatchResponse, status_code=201)
 async def report_mismatch(
     trace_id: str,
@@ -648,17 +791,16 @@ async def report_mismatch(
 
     RBAC: Requires authenticated user. Only allows reporting mismatches for user's tenant.
     """
-    import httpx
     import uuid
+
+    import httpx
 
     # Verify trace exists and belongs to user's tenant (or user is admin)
     if USE_POSTGRES:
         from ..db import db_async
+
         async with db_async.get_session() as session:
-            result = await session.execute(
-                "SELECT tenant_id FROM aos_traces WHERE trace_id = $1",
-                [trace_id]
-            )
+            result = await session.execute("SELECT tenant_id FROM aos_traces WHERE trace_id = $1", [trace_id])
             row = result.fetchone()
     else:
         trace = await store.get_trace(trace_id)
@@ -677,22 +819,26 @@ async def report_mismatch(
     # Insert mismatch record
     if USE_POSTGRES:
         from ..db import db_async
+
         async with db_async.get_session() as session:
-            await session.execute("""
+            await session.execute(
+                """
                 INSERT INTO aos_trace_mismatches
                 (id, trace_id, tenant_id, reported_by, step_index, reason, expected_hash, actual_hash, details)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            """, [
-                mismatch_id,
-                trace_id,
-                user.tenant_id,
-                user.user_id,
-                payload.step_index,
-                payload.reason,
-                payload.expected_hash,
-                payload.actual_hash,
-                payload.details,
-            ])
+            """,
+                [
+                    mismatch_id,
+                    trace_id,
+                    user.tenant_id,
+                    user.user_id,
+                    payload.step_index,
+                    payload.reason,
+                    payload.expected_hash,
+                    payload.actual_hash,
+                    payload.details,
+                ],
+            )
             await session.commit()
 
     # Attempt notifications
@@ -753,7 +899,7 @@ curl -H "Authorization: Bearer $TOKEN" https://api.agenticverz.com/api/v1/traces
                         async with db_async.get_session() as session:
                             await session.execute(
                                 "UPDATE aos_trace_mismatches SET issue_url = $1, notification_sent = TRUE WHERE id = $2",
-                                [issue_url, mismatch_id]
+                                [issue_url, mismatch_id],
                             )
                             await session.commit()
         except Exception as e:
@@ -767,13 +913,7 @@ curl -H "Authorization: Bearer $TOKEN" https://api.agenticverz.com/api/v1/traces
             message = {
                 "text": f"[Replay Mismatch] trace:{trace_id} step:{payload.step_index}",
                 "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": f"*Replay Mismatch Detected* :warning:"
-                        }
-                    },
+                    {"type": "section", "text": {"type": "mrkdwn", "text": "*Replay Mismatch Detected* :warning:"}},
                     {
                         "type": "section",
                         "fields": [
@@ -781,9 +921,9 @@ curl -H "Authorization: Bearer $TOKEN" https://api.agenticverz.com/api/v1/traces
                             {"type": "mrkdwn", "text": f"*Step Index*\n{payload.step_index}"},
                             {"type": "mrkdwn", "text": f"*Reason*\n{payload.reason}"},
                             {"type": "mrkdwn", "text": f"*Reported By*\n{user.user_id}"},
-                        ]
+                        ],
                     },
-                ]
+                ],
             }
             async with httpx.AsyncClient() as client:
                 resp = await client.post(slack_webhook, json=message, timeout=10.0)
@@ -794,8 +934,7 @@ curl -H "Authorization: Bearer $TOKEN" https://api.agenticverz.com/api/v1/traces
                     if USE_POSTGRES:
                         async with db_async.get_session() as session:
                             await session.execute(
-                                "UPDATE aos_trace_mismatches SET notification_sent = TRUE WHERE id = $1",
-                                [mismatch_id]
+                                "UPDATE aos_trace_mismatches SET notification_sent = TRUE WHERE id = $1", [mismatch_id]
                             )
                             await session.commit()
         except Exception as e:
@@ -824,12 +963,10 @@ async def list_trace_mismatches(
         raise HTTPException(status_code=501, detail="Requires PostgreSQL store")
 
     from ..db import db_async
+
     async with db_async.get_session() as session:
         # Verify access
-        result = await session.execute(
-            "SELECT tenant_id FROM aos_traces WHERE trace_id = $1",
-            [trace_id]
-        )
+        result = await session.execute("SELECT tenant_id FROM aos_traces WHERE trace_id = $1", [trace_id])
         row = result.fetchone()
 
         if not row:
@@ -839,13 +976,16 @@ async def list_trace_mismatches(
             raise HTTPException(status_code=403, detail="Access denied")
 
         # Get mismatches
-        result = await session.execute("""
+        result = await session.execute(
+            """
             SELECT id, step_index, reason, expected_hash, actual_hash, details,
                    notification_sent, issue_url, resolved, resolved_at, resolved_by, created_at
             FROM aos_trace_mismatches
             WHERE trace_id = $1
             ORDER BY created_at DESC
-        """, [trace_id])
+        """,
+            [trace_id],
+        )
         rows = result.fetchall()
 
     return {
@@ -890,13 +1030,17 @@ async def resolve_mismatch(
         raise HTTPException(status_code=501, detail="Requires PostgreSQL store")
 
     from ..db import db_async
+
     async with db_async.get_session() as session:
-        result = await session.execute("""
+        result = await session.execute(
+            """
             UPDATE aos_trace_mismatches
             SET resolved = TRUE, resolved_at = now(), resolved_by = $1
             WHERE id = $2 AND trace_id = $3
             RETURNING id, issue_url
-        """, [user.user_id, mismatch_id, trace_id])
+        """,
+            [user.user_id, mismatch_id, trace_id],
+        )
         row = result.fetchone()
         await session.commit()
 
@@ -907,11 +1051,12 @@ async def resolve_mismatch(
     issue_url = row[1] if row else None
     if issue_url and resolution_note:
         import httpx
+
         github_token = os.getenv("GITHUB_TOKEN")
         if github_token:
             # Extract issue number from URL
             try:
-                issue_number = issue_url.rstrip('/').split('/')[-1]
+                issue_number = issue_url.rstrip("/").split("/")[-1]
                 github_repo = os.getenv("GITHUB_REPO")
                 if github_repo:
                     async with httpx.AsyncClient() as client:
@@ -928,118 +1073,3 @@ async def resolve_mismatch(
                 logger.warning(f"Failed to comment on GitHub issue: {e}")
 
     return {"status": "resolved", "mismatch_id": mismatch_id, "resolved_by": user.user_id}
-
-
-@router.post("/mismatches/bulk-report")
-async def bulk_report_mismatches(
-    mismatch_ids: List[str] = Query(..., description="List of mismatch IDs to link"),
-    github_issue: bool = Query(True, description="Create a GitHub issue for all"),
-    user: User = Depends(get_current_user),
-):
-    """
-    Create a single GitHub issue for multiple mismatches.
-
-    Useful when a replay causes multiple step mismatches that should be tracked together.
-
-    RBAC: Requires admin or operator role.
-    """
-    if not user.has_role("admin") and not user.has_role("operator"):
-        raise HTTPException(status_code=403, detail="Requires admin or operator role")
-
-    if not USE_POSTGRES:
-        raise HTTPException(status_code=501, detail="Requires PostgreSQL store")
-
-    import httpx
-    from ..db import db_async
-
-    # Fetch all mismatches
-    async with db_async.get_session() as session:
-        placeholders = ','.join([f'${i+1}' for i in range(len(mismatch_ids))])
-        result = await session.execute(f"""
-            SELECT id, trace_id, step_index, reason, expected_hash, actual_hash, details
-            FROM aos_trace_mismatches
-            WHERE id IN ({placeholders})
-            ORDER BY trace_id, step_index
-        """, mismatch_ids)
-        rows = result.fetchall()
-
-    if not rows:
-        raise HTTPException(status_code=404, detail="No mismatches found")
-
-    # Group by trace_id
-    by_trace = {}
-    for r in rows:
-        trace_id = r[1]
-        if trace_id not in by_trace:
-            by_trace[trace_id] = []
-        by_trace[trace_id].append({
-            "mismatch_id": str(r[0]),
-            "step_index": r[2],
-            "reason": r[3],
-            "expected_hash": r[4],
-            "actual_hash": r[5],
-        })
-
-    issue_url = None
-
-    if github_issue:
-        github_token = os.getenv("GITHUB_TOKEN")
-        github_repo = os.getenv("GITHUB_REPO")
-
-        if github_token and github_repo:
-            # Build issue body
-            title = f"[Replay Mismatches] {len(rows)} mismatches across {len(by_trace)} trace(s)"
-
-            body_parts = ["## Bulk Mismatch Report\n"]
-            body_parts.append(f"**Total Mismatches:** {len(rows)}")
-            body_parts.append(f"**Traces Affected:** {len(by_trace)}")
-            body_parts.append(f"**Reported By:** {user.user_id}\n")
-
-            for trace_id, mismatches in by_trace.items():
-                body_parts.append(f"### Trace `{trace_id}`")
-                body_parts.append("| Step | Reason | Expected | Actual |")
-                body_parts.append("|------|--------|----------|--------|")
-                for m in mismatches:
-                    exp = m['expected_hash'][:8] if m['expected_hash'] else 'N/A'
-                    act = m['actual_hash'][:8] if m['actual_hash'] else 'N/A'
-                    body_parts.append(f"| {m['step_index']} | {m['reason']} | `{exp}` | `{act}` |")
-                body_parts.append("")
-
-            body = "\n".join(body_parts)
-
-            try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        f"https://api.github.com/repos/{github_repo}/issues",
-                        headers={
-                            "Authorization": f"token {github_token}",
-                            "Accept": "application/vnd.github.v3+json",
-                        },
-                        json={
-                            "title": title,
-                            "body": body,
-                            "labels": ["replay-mismatch", "aos", "bulk-report", "automated"],
-                        },
-                        timeout=15.0,
-                    )
-                    if resp.status_code in (200, 201):
-                        issue_data = resp.json()
-                        issue_url = issue_data.get("html_url")
-
-                        # Update all mismatches with the issue URL
-                        async with db_async.get_session() as session:
-                            await session.execute(f"""
-                                UPDATE aos_trace_mismatches
-                                SET issue_url = $1, notification_sent = TRUE
-                                WHERE id IN ({placeholders})
-                            """, [issue_url] + mismatch_ids)
-                            await session.commit()
-            except Exception as e:
-                logger.warning(f"Failed to create bulk GitHub issue: {e}")
-
-    return {
-        "linked_count": len(rows),
-        "traces_affected": len(by_trace),
-        "issue_url": issue_url,
-        "mismatch_ids": [str(r[0]) for r in rows],
-    }

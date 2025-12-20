@@ -8,6 +8,7 @@ Focused on BEHAVIORAL TRUTH - answer founder questions without customer input.
 Modules:
 1. System Pulse     - "Is my business healthy right now?"
 2. Customer Intel   - "Who is this customer and are they slipping?"
+2.5 At-Risk         - "Who should I call today?" (Phase-2)
 3. Incident Intel   - "What is breaking and is it systemic?"
 4. Product Stickiness - "Which feature actually keeps users?"
 5. Revenue & Risk   - "Am I making money safely?"
@@ -15,6 +16,41 @@ Modules:
 7. Replay Lab       - "Can I reproduce and fix anything?"
 
 All insights are derived from ops_events table (event-sourced).
+
+ARCHITECTURE NOTES (Phase-2):
+==================================
+
+1. SOURCE OF TRUTH: ops_events table
+   - Event-sourced design: ops_events is the ONLY authoritative data
+   - All metrics are derived from events, never stored directly
+   - This enables replay, audit, and recalculation
+
+2. CACHE TABLES (NOT authoritative):
+   - ops_customer_segments: Pre-computed customer profiles (cache-only)
+   - ops_tenant_metrics: (if exists) Pre-computed metrics (cache-only)
+   - These can be DELETED and recomputed from ops_events at any time
+   - Never treat cache tables as source of truth
+   - Background jobs refresh caches periodically
+
+3. FRICTION EVENTS (Phase-2):
+   - *_STARTED vs *_COMPLETED tracks drop-offs
+   - *_ABORTED tracks explicit abandonment
+   - *_NO_ACTION tracks hesitation
+   - These feed into stickiness_delta calculations
+
+4. STICKINESS DECAY:
+   - stickiness_7d: Recent engagement (high signal)
+   - stickiness_30d: Historical baseline (normalized to weekly)
+   - stickiness_delta: Ratio (7d/30d) - <1 means decelerating
+
+5. FOUNDER INTERVENTIONS:
+   - Auto-generated action suggestions based on risk signals
+   - Priority: immediate > today > this_week
+   - Types: call, email, feature_help, pricing, technical
+
+6. FOUNDER PLAYBOOKS (Phase-2.1):
+   See PLAYBOOKS constant below for signal → action mappings.
+   Use playbooks BEFORE automating - learn what works first.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -26,6 +62,154 @@ from sqlalchemy import text
 from sqlmodel import Session
 
 from app.db import get_session
+
+# =============================================================================
+# FOUNDER PLAYBOOKS v1 (Phase-2.1)
+# Signal → Action Matrix - Use BEFORE automating
+# =============================================================================
+
+FOUNDER_PLAYBOOKS = {
+    # =========================================================================
+    # PLAYBOOK 1: Silent Churn
+    # Signal: API active but no investigation in 7+ days
+    # =========================================================================
+    "silent_churn": {
+        "name": "Silent Churn Recovery",
+        "trigger_conditions": [
+            "API_CALL_RECEIVED in last 48h",
+            "NO INCIDENT_VIEWED or REPLAY_EXECUTED in 7+ days",
+        ],
+        "risk_level": "high",
+        "actions": [
+            {
+                "step": 1,
+                "type": "call",
+                "action": "Direct founder call - they may have moved on",
+                "timing": "within 24h",
+                "talk_track": "Hey, noticed you're still integrating but haven't explored incidents. Want me to walk you through the value?",
+            },
+            {
+                "step": 2,
+                "type": "email",
+                "action": "If no call response, send case study email",
+                "timing": "after 48h if no response",
+            },
+        ],
+        "success_metric": "INCIDENT_VIEWED or REPLAY_EXECUTED within 7 days",
+        "notes": "Often means they integrated for compliance but don't see value",
+    },
+    # =========================================================================
+    # PLAYBOOK 2: Policy Friction
+    # Signal: Repeated POLICY_BLOCK_REPEAT events
+    # =========================================================================
+    "policy_friction": {
+        "name": "Policy Friction Resolution",
+        "trigger_conditions": [
+            "3+ POLICY_BLOCK_REPEAT events in 7 days",
+            "Same policy_id blocking repeatedly",
+        ],
+        "risk_level": "medium",
+        "actions": [
+            {
+                "step": 1,
+                "type": "technical",
+                "action": "Review their policy config - likely misconfigured",
+                "timing": "same day",
+            },
+            {
+                "step": 2,
+                "type": "email",
+                "action": "Proactive email with fix suggestion",
+                "timing": "same day after review",
+                "template": "Hi, noticed your policy {policy_id} is blocking frequently. Here's a suggested adjustment...",
+            },
+        ],
+        "success_metric": "POLICY_BLOCK_REPEAT drops by 80%",
+        "notes": "Policy friction often means they don't understand the safety layer",
+    },
+    # =========================================================================
+    # PLAYBOOK 3: Abandonment Pattern
+    # Signal: Multiple REPLAY_ABORTED or EXPORT_ABORTED
+    # =========================================================================
+    "abandonment": {
+        "name": "Flow Abandonment Recovery",
+        "trigger_conditions": [
+            "3+ REPLAY_ABORTED or EXPORT_ABORTED in 7 days",
+            "stickiness_delta < 0.7",
+        ],
+        "risk_level": "high",
+        "actions": [
+            {
+                "step": 1,
+                "type": "email",
+                "action": "Ask for feedback on what blocked them",
+                "timing": "within 24h",
+                "template": "We noticed you started a replay/export but didn't complete it. Was something confusing? I'd love to help.",
+            },
+            {
+                "step": 2,
+                "type": "feature_help",
+                "action": "Send video walkthrough based on friction point",
+                "timing": "after email response or 48h",
+            },
+        ],
+        "success_metric": "Completed REPLAY_EXECUTED or EXPORT_GENERATED",
+        "notes": "Abandonment often signals UX confusion, not feature rejection",
+    },
+    # =========================================================================
+    # PLAYBOOK 4: Engagement Decay
+    # Signal: stickiness_delta < 0.5 (engagement dropped 50%+)
+    # =========================================================================
+    "engagement_decay": {
+        "name": "Engagement Recovery",
+        "trigger_conditions": [
+            "stickiness_delta < 0.5",
+            "Was previously active (stickiness_30d > 3)",
+        ],
+        "risk_level": "critical",
+        "actions": [
+            {
+                "step": 1,
+                "type": "call",
+                "action": "Priority call - something changed",
+                "timing": "same day",
+                "talk_track": "Noticed your usage dropped recently. Did something change on your end, or did we break something?",
+            },
+            {
+                "step": 2,
+                "type": "email",
+                "action": "If no call, send 'what changed?' email",
+                "timing": "after 24h if no call response",
+            },
+        ],
+        "success_metric": "stickiness_delta returns to > 0.8",
+        "notes": "Often signals internal priority shift or competitor evaluation",
+    },
+    # =========================================================================
+    # PLAYBOOK 5: Legal/Enterprise-Only Pattern
+    # Signal: Only using certs, no investigation
+    # =========================================================================
+    "legal_only": {
+        "name": "Legal-Only Customer Expansion",
+        "trigger_conditions": [
+            "CERT_VERIFIED events present",
+            "NO REPLAY_EXECUTED or EXPORT_GENERATED",
+            "Integration older than 14 days",
+        ],
+        "risk_level": "medium",
+        "actions": [
+            {
+                "step": 1,
+                "type": "email",
+                "action": "Value expansion email - show other use cases",
+                "timing": "within week",
+                "template": "You're using certificates for compliance - great! Did you know you can also use replays to debug production issues?",
+            },
+        ],
+        "success_metric": "First REPLAY_EXECUTED or EXPORT_GENERATED",
+        "notes": "Legal-only customers have low churn but also low expansion",
+    },
+}
 
 # =============================================================================
 # Router - Operator-only access (requires ops auth)
@@ -81,8 +265,11 @@ class CustomerSegment(BaseModel):
     first_action_at: Optional[str] = None
     inferred_buyer_type: Optional[str] = None
 
-    # Stickiness
+    # Stickiness (with recency decay - Phase-2)
     current_stickiness: float
+    stickiness_7d: float = 0.0  # Phase-2: Recent engagement (7 days)
+    stickiness_30d: float = 0.0  # Phase-2: Historical engagement (30 days)
+    stickiness_delta: float = 0.0  # Phase-2: 7d vs 30d ratio (>1 = accelerating, <1 = decelerating)
     peak_stickiness: float
     stickiness_trend: str  # 'rising', 'stable', 'falling', 'silent'
 
@@ -98,6 +285,10 @@ class CustomerSegment(BaseModel):
     # Time-to-value
     time_to_first_replay_m: Optional[int] = None
     time_to_first_export_m: Optional[int] = None
+
+    # Phase-2: Friction signals
+    friction_score: float = 0.0  # Aggregate of friction signals
+    last_friction_event: Optional[str] = None
 
 
 class StickinessByFeature(BaseModel):
@@ -137,6 +328,63 @@ class RevenueRisk(BaseModel):
     revenue_alerts: List[Dict[str, Any]]
 
 
+class FounderIntervention(BaseModel):
+    """Phase-2: Suggested founder action for at-risk customer.
+
+    IMPORTANT: Every intervention MUST include explicit triggering_signals.
+    This prevents blind trust and enables learning from outcomes.
+    """
+
+    intervention_type: str  # 'call', 'email', 'feature_help', 'pricing', 'technical'
+    priority: str  # 'immediate', 'today', 'this_week'
+    suggested_action: str
+    context: str
+    expected_outcome: str
+    # Phase-2.1: Explicit trigger explainability (mandatory)
+    triggering_signals: List[str]  # e.g., ["stickiness_delta < 0.3", "no REPLAY in 9 days"]
+
+
+class CustomerAtRisk(BaseModel):
+    """Phase-2.1: At-risk customer with intervention suggestions.
+
+    NAMING CONVENTION (epistemic honesty):
+    - risk_signal_strength: Heuristic attention ranking, NOT prediction
+    - Only rename to "risk_score" after validation with 10-20 real churn events
+    """
+
+    tenant_id: str
+    tenant_name: Optional[str] = None
+
+    # Risk signals (renamed for epistemic honesty)
+    risk_level: str  # 'critical', 'high', 'medium'
+    risk_signal_strength: float  # 0-100 (heuristic, NOT prediction - treat as attention ranking)
+    primary_risk_reason: str
+    secondary_signals: List[str]
+
+    # Stickiness context
+    stickiness_7d: float
+    stickiness_30d: float
+    stickiness_delta: float  # Ratio - <1 means decelerating
+
+    # Last activity
+    last_investigation: Optional[str] = None
+    days_since_investigation: Optional[int] = None
+    last_api_call: Optional[str] = None
+    days_since_api_call: Optional[int] = None
+
+    # Friction signals (with weighted score)
+    friction_events_7d: int = 0
+    friction_weighted_score: float = 0.0  # Phase-2.1: Weighted friction (not raw count)
+    top_friction_type: Optional[str] = None
+
+    # Phase-2.1: "What changed?" correlation layer
+    recent_changes: List[str] = []  # e.g., ["policy_change 3 days ago", "model_switch 5 days ago"]
+    decay_correlation: Optional[str] = None  # Best guess at what triggered decay
+
+    # Founder interventions
+    interventions: List[FounderIntervention]
+
+
 class InfraLimits(BaseModel):
     """Infrastructure limits and capacity."""
 
@@ -145,15 +393,21 @@ class InfraLimits(BaseModel):
     db_connections_max: int
     db_storage_used_gb: float
     db_storage_limit_gb: float
+    db_storage_days_to_limit: Optional[int] = None  # Phase-2: Projection
 
     # Redis
     redis_memory_used_mb: float
     redis_memory_limit_mb: float
     redis_keys_count: int
+    redis_memory_days_to_limit: Optional[int] = None  # Phase-2: Projection
 
     # API
     requests_per_minute_avg: float
     requests_per_minute_peak: float
+
+    # Phase-2: Growth-based projections
+    db_growth_rate_gb_per_day: float = 0.0
+    api_growth_rate_pct_per_week: float = 0.0
 
     # Warnings
     limit_warnings: List[Dict[str, Any]]
@@ -405,6 +659,366 @@ async def get_customer_segments(
         return []
 
 
+# =============================================================================
+# Module 2.5: Customers At Risk (Phase-2)
+# NOTE: This route MUST come before /customers/{tenant_id} to avoid route collision
+# =============================================================================
+
+
+def generate_interventions(
+    risk_level: str,
+    risk_reason: str,
+    stickiness_delta: float,
+    days_since_investigation: Optional[int],
+    friction_type: Optional[str],
+    friction_count: int = 0,
+) -> List[FounderIntervention]:
+    """Generate founder intervention suggestions based on risk signals.
+
+    Phase-2.1 RULE: Every intervention MUST include explicit triggering_signals.
+    This enables:
+    - Explainability (founder can see "why")
+    - Learning (correlate actions with outcomes)
+    - Trust calibration (validate signal quality over time)
+    """
+    interventions = []
+
+    # Critical risk - immediate action
+    if risk_level == "critical":
+        interventions.append(
+            FounderIntervention(
+                intervention_type="call",
+                priority="immediate",
+                suggested_action="Schedule 15-min call with customer",
+                context=f"Critical risk: {risk_reason}",
+                expected_outcome="Understand blockers, prevent churn",
+                triggering_signals=[
+                    "risk_level = 'critical'",
+                    f"primary_reason: {risk_reason}",
+                ],
+            )
+        )
+
+    # Decelerating stickiness
+    if stickiness_delta < 0.5:
+        interventions.append(
+            FounderIntervention(
+                intervention_type="email",
+                priority="today",
+                suggested_action="Send personalized check-in email",
+                context=f"Engagement dropped {(1 - stickiness_delta) * 100:.0f}% vs last week",
+                expected_outcome="Re-engage, identify friction points",
+                triggering_signals=[
+                    f"stickiness_delta = {stickiness_delta:.2f} (< 0.5 threshold)",
+                    f"engagement_drop = {(1 - stickiness_delta) * 100:.0f}%",
+                ],
+            )
+        )
+
+    # Long time since investigation
+    if days_since_investigation and days_since_investigation > 7:
+        interventions.append(
+            FounderIntervention(
+                intervention_type="feature_help",
+                priority="today",
+                suggested_action="Send feature guide or video walkthrough",
+                context=f"No investigation in {days_since_investigation} days",
+                expected_outcome="Remind value, reduce friction",
+                triggering_signals=[
+                    f"days_since_investigation = {days_since_investigation} (> 7 day threshold)",
+                    "no INCIDENT_VIEWED or REPLAY_EXECUTED events",
+                ],
+            )
+        )
+
+    # Friction-based interventions
+    if friction_type:
+        if friction_type == "POLICY_BLOCK_REPEAT":
+            interventions.append(
+                FounderIntervention(
+                    intervention_type="technical",
+                    priority="this_week",
+                    suggested_action="Review and adjust their policy configuration",
+                    context="Repeated policy blocks causing friction",
+                    expected_outcome="Remove blockers, improve experience",
+                    triggering_signals=[
+                        "top_friction_type = POLICY_BLOCK_REPEAT",
+                        f"friction_events_7d = {friction_count}",
+                    ],
+                )
+            )
+        elif friction_type in ("REPLAY_ABORTED", "EXPORT_ABORTED", "SESSION_IDLE_TIMEOUT"):
+            interventions.append(
+                FounderIntervention(
+                    intervention_type="email",
+                    priority="today",
+                    suggested_action="Ask for feedback on incomplete workflows",
+                    context="User abandoning flows mid-way",
+                    expected_outcome="Identify UX issues, improve conversion",
+                    triggering_signals=[
+                        f"top_friction_type = {friction_type}",
+                        f"friction_events_7d = {friction_count}",
+                        "user abandonment pattern detected",
+                    ],
+                )
+            )
+
+    # Silent churn pattern
+    if "silent" in (risk_reason or "").lower():
+        interventions.append(
+            FounderIntervention(
+                intervention_type="call",
+                priority="today",
+                suggested_action="Direct outreach - they may have moved on",
+                context="API active but no human engagement",
+                expected_outcome="Win back or understand why they left",
+                triggering_signals=[
+                    "risk_reason contains 'silent'",
+                    "API_CALL_RECEIVED events present",
+                    "no INCIDENT_VIEWED or REPLAY_EXECUTED events",
+                ],
+            )
+        )
+
+    # Default intervention if none generated
+    if not interventions:
+        interventions.append(
+            FounderIntervention(
+                intervention_type="email",
+                priority="this_week",
+                suggested_action="Send value reminder with recent improvements",
+                context=risk_reason or "Moderate risk signals detected",
+                expected_outcome="Maintain engagement, gather feedback",
+                triggering_signals=[
+                    "no specific high-priority triggers met",
+                    f"risk_level = {risk_level}",
+                    "proactive outreach recommended",
+                ],
+            )
+        )
+
+    return interventions[:3]  # Max 3 interventions
+
+
+# Friction event weights (Phase-2.1: Different events have different severity)
+FRICTION_WEIGHTS = {
+    "REPLAY_ABORTED": 3.0,  # High - user gave up on core feature
+    "EXPORT_ABORTED": 2.5,  # High - value extraction abandoned
+    "REPLAY_FAILED": 2.0,  # System failure - not user's fault but still friction
+    "EXPORT_FAILED": 2.0,
+    "INCIDENT_VIEWED_NO_ACTION": 1.0,  # Low - hesitation signal
+    "POLICY_BLOCK_REPEAT": 2.0,  # Systemic friction
+    "SESSION_IDLE_TIMEOUT": 1.5,  # User went away
+}
+
+# Caps per session/day to prevent one bad UX path from dominating
+FRICTION_CAP_PER_SESSION = 5
+FRICTION_CAP_PER_DAY = 10
+
+
+@router.get("/customers/at-risk", response_model=List[CustomerAtRisk])
+async def get_customers_at_risk(
+    limit: int = Query(20, ge=1, le=50),
+    session: Session = Depends(get_session),
+):
+    """
+    Customers At Risk - Phase-2 Founder Intelligence.
+
+    Returns at-risk customers with:
+    - Risk scores and signals
+    - Stickiness decay (7d vs 30d)
+    - Friction events
+    - Suggested founder interventions
+
+    This is THE endpoint for "who should I call today?"
+    """
+    h7d_ago = get_window(168)  # 7 days
+    now = utc_now()
+
+    try:
+        # Get at-risk customers with detailed metrics
+        stmt = text(
+            """
+            WITH customer_stickiness AS (
+                SELECT
+                    tenant_id,
+                    -- 7-day stickiness (weighted recent)
+                    (
+                        COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp > now() - interval '7 days') * 0.2 +
+                        COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp > now() - interval '7 days') * 0.3 +
+                        COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp > now() - interval '7 days') * 0.5
+                    ) as stickiness_7d,
+                    -- 30-day stickiness (normalized to weekly)
+                    (
+                        COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp > now() - interval '30 days') * 0.2 +
+                        COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp > now() - interval '30 days') * 0.3 +
+                        COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp > now() - interval '30 days') * 0.5
+                    ) / 4.3 as stickiness_30d,  -- Normalize to weekly (30/7)
+                    -- Friction events
+                    COUNT(*) FILTER (
+                        WHERE timestamp > now() - interval '7 days'
+                        AND event_type IN ('REPLAY_ABORTED', 'EXPORT_ABORTED', 'INCIDENT_VIEWED_NO_ACTION', 'POLICY_BLOCK_REPEAT', 'SESSION_IDLE_TIMEOUT')
+                    ) as friction_events_7d,
+                    -- Last activity
+                    MAX(timestamp) FILTER (WHERE event_type IN ('INCIDENT_VIEWED', 'REPLAY_EXECUTED')) as last_investigation,
+                    MAX(timestamp) FILTER (WHERE event_type = 'API_CALL_RECEIVED') as last_api_call
+                FROM ops_events
+                WHERE timestamp > now() - interval '30 days'
+                GROUP BY tenant_id
+            ),
+            friction_types AS (
+                SELECT
+                    tenant_id,
+                    event_type as top_friction_type,
+                    ROW_NUMBER() OVER (PARTITION BY tenant_id ORDER BY COUNT(*) DESC) as rn
+                FROM ops_events
+                WHERE timestamp > now() - interval '7 days'
+                  AND event_type IN ('REPLAY_ABORTED', 'EXPORT_ABORTED', 'INCIDENT_VIEWED_NO_ACTION', 'POLICY_BLOCK_REPEAT', 'SESSION_IDLE_TIMEOUT')
+                GROUP BY tenant_id, event_type
+            )
+            SELECT
+                cs.tenant_id,
+                cs.stickiness_7d,
+                cs.stickiness_30d,
+                CASE WHEN cs.stickiness_30d > 0 THEN cs.stickiness_7d / cs.stickiness_30d ELSE 0 END as stickiness_delta,
+                cs.friction_events_7d,
+                cs.last_investigation,
+                cs.last_api_call,
+                EXTRACT(DAY FROM now() - cs.last_investigation) as days_since_investigation,
+                EXTRACT(DAY FROM now() - cs.last_api_call) as days_since_api,
+                ft.top_friction_type,
+                seg.risk_level,
+                seg.risk_reason
+            FROM customer_stickiness cs
+            LEFT JOIN friction_types ft ON cs.tenant_id = ft.tenant_id AND ft.rn = 1
+            LEFT JOIN ops_customer_segments seg ON cs.tenant_id = seg.tenant_id
+            WHERE (
+                seg.risk_level IN ('critical', 'high')
+                OR cs.stickiness_7d < cs.stickiness_30d * 0.5  -- Dropping fast
+                OR cs.friction_events_7d > 3
+                OR EXTRACT(DAY FROM now() - cs.last_investigation) > 7
+            )
+            ORDER BY
+                CASE seg.risk_level
+                    WHEN 'critical' THEN 1
+                    WHEN 'high' THEN 2
+                    ELSE 3
+                END,
+                cs.stickiness_7d / NULLIF(cs.stickiness_30d, 0) ASC,  -- Most dropping first
+                cs.friction_events_7d DESC
+            LIMIT :limit
+        """
+        )
+        rows = exec_sql(session, stmt, {"limit": limit}).all()
+
+        result = []
+        for row in rows:
+            tenant_id = str(row[0])
+            stickiness_7d = float(row[1]) if row[1] else 0.0
+            stickiness_30d = float(row[2]) if row[2] else 0.0
+            stickiness_delta = float(row[3]) if row[3] else 0.0
+            friction_events = int(row[4]) if row[4] else 0
+            last_investigation = row[5]
+            last_api_call = row[6]
+            days_since_inv = int(row[7]) if row[7] else None
+            days_since_api = int(row[8]) if row[8] else None
+            friction_type = row[9]
+            risk_level = row[10] or "medium"
+            risk_reason = row[11] or "Engagement declining"
+
+            # Calculate risk score (0-100)
+            risk_score = 0
+            secondary_signals = []
+
+            # Stickiness drop contributes up to 40 points
+            if stickiness_delta < 0.5:
+                risk_score += 40
+                secondary_signals.append(f"Engagement dropped {(1 - stickiness_delta) * 100:.0f}%")
+            elif stickiness_delta < 0.8:
+                risk_score += 20
+                secondary_signals.append("Engagement declining")
+
+            # Friction events contribute up to 30 points
+            if friction_events > 5:
+                risk_score += 30
+                secondary_signals.append(f"{friction_events} friction events this week")
+            elif friction_events > 2:
+                risk_score += 15
+                secondary_signals.append("Multiple friction events")
+
+            # Time since investigation contributes up to 30 points
+            if days_since_inv and days_since_inv > 14:
+                risk_score += 30
+                secondary_signals.append(f"No investigation in {days_since_inv} days")
+            elif days_since_inv and days_since_inv > 7:
+                risk_score += 15
+                secondary_signals.append("Disengaged for over a week")
+
+            # Phase-2.1: Calculate weighted friction score
+            friction_weight = FRICTION_WEIGHTS.get(friction_type, 1.0) if friction_type else 1.0
+            # Cap raw count to prevent one bad UX path from dominating
+            capped_friction = min(friction_events, FRICTION_CAP_PER_DAY)
+            friction_weighted = round(capped_friction * friction_weight, 2)
+
+            # Phase-2.1: Generate "What changed?" signals
+            # In production, this would query policy_changes, model_switches, etc.
+            recent_changes = []
+            decay_correlation = None
+
+            if stickiness_delta < 0.5:
+                # Significant decay detected - note this for correlation tracking
+                decay_correlation = "engagement_decay_detected"
+                if friction_type:
+                    decay_correlation = f"friction_correlation: {friction_type}"
+
+            # Generate interventions with friction count
+            interventions = generate_interventions(
+                risk_level=risk_level,
+                risk_reason=risk_reason,
+                stickiness_delta=stickiness_delta,
+                days_since_investigation=days_since_inv,
+                friction_type=friction_type,
+                friction_count=friction_events,
+            )
+
+            result.append(
+                CustomerAtRisk(
+                    tenant_id=tenant_id,
+                    risk_level=risk_level,
+                    risk_signal_strength=min(risk_score, 100),  # Renamed for epistemic honesty
+                    primary_risk_reason=risk_reason,
+                    secondary_signals=secondary_signals[:3],
+                    stickiness_7d=round(stickiness_7d, 2),
+                    stickiness_30d=round(stickiness_30d, 2),
+                    stickiness_delta=round(stickiness_delta, 2),
+                    last_investigation=last_investigation.isoformat() if last_investigation else None,
+                    days_since_investigation=days_since_inv,
+                    last_api_call=last_api_call.isoformat() if last_api_call else None,
+                    days_since_api_call=days_since_api,
+                    friction_events_7d=friction_events,
+                    friction_weighted_score=friction_weighted,
+                    top_friction_type=friction_type,
+                    recent_changes=recent_changes,
+                    decay_correlation=decay_correlation,
+                    interventions=interventions,
+                )
+            )
+
+        return result
+
+    except Exception as e:
+        # Return empty list on error, log for debugging
+        import logging
+
+        logging.getLogger("nova.api.ops").error(f"at-risk query failed: {e}")
+        return []
+
+
+# =============================================================================
+# Module 2.5b: Customer Detail (must come AFTER /customers/at-risk)
+# =============================================================================
+
+
 @router.get("/customers/{tenant_id}", response_model=CustomerSegment)
 async def get_customer_detail(
     tenant_id: str,
@@ -458,6 +1072,105 @@ async def get_customer_detail(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Module 2.6: Founder Playbooks (Phase-2.1)
+# =============================================================================
+
+
+class PlaybookAction(BaseModel):
+    """A single step in a founder playbook."""
+
+    step: int
+    type: str  # 'call', 'email', 'feature_help', 'technical'
+    action: str
+    timing: str
+    talk_track: Optional[str] = None
+    template: Optional[str] = None
+
+
+class PlaybookDetail(BaseModel):
+    """A founder playbook with signal → action mapping."""
+
+    id: str
+    name: str
+    trigger_conditions: List[str]
+    risk_level: str
+    actions: List[PlaybookAction]
+    success_metric: str
+    notes: str
+
+
+@router.get("/playbooks", response_model=List[PlaybookDetail])
+async def get_founder_playbooks():
+    """
+    Founder Playbooks - Signal → Action Matrix.
+
+    Returns the v1 playbooks for manual founder intervention.
+    Use these BEFORE automating - learn what works first.
+
+    Playbooks available:
+    - silent_churn: API active but no investigation
+    - policy_friction: Repeated policy blocks
+    - abandonment: Replay/export abandonment pattern
+    - engagement_decay: Stickiness drop >50%
+    - legal_only: Using certs but no investigation
+    """
+    result = []
+    for playbook_id, playbook in FOUNDER_PLAYBOOKS.items():
+        actions = [
+            PlaybookAction(
+                step=a["step"],
+                type=a["type"],
+                action=a["action"],
+                timing=a["timing"],
+                talk_track=a.get("talk_track"),
+                template=a.get("template"),
+            )
+            for a in playbook["actions"]
+        ]
+        result.append(
+            PlaybookDetail(
+                id=playbook_id,
+                name=playbook["name"],
+                trigger_conditions=playbook["trigger_conditions"],
+                risk_level=playbook["risk_level"],
+                actions=actions,
+                success_metric=playbook["success_metric"],
+                notes=playbook["notes"],
+            )
+        )
+    return result
+
+
+@router.get("/playbooks/{playbook_id}", response_model=PlaybookDetail)
+async def get_playbook_detail(playbook_id: str):
+    """Get a specific founder playbook by ID."""
+    if playbook_id not in FOUNDER_PLAYBOOKS:
+        raise HTTPException(status_code=404, detail=f"Playbook '{playbook_id}' not found")
+
+    playbook = FOUNDER_PLAYBOOKS[playbook_id]
+    actions = [
+        PlaybookAction(
+            step=a["step"],
+            type=a["type"],
+            action=a["action"],
+            timing=a["timing"],
+            talk_track=a.get("talk_track"),
+            template=a.get("template"),
+        )
+        for a in playbook["actions"]
+    ]
+    return PlaybookDetail(
+        id=playbook_id,
+        name=playbook["name"],
+        trigger_conditions=playbook["trigger_conditions"],
+        risk_level=playbook["risk_level"],
+        actions=actions,
+        success_metric=playbook["success_metric"],
+        notes=playbook["notes"],
+    )
 
 
 # =============================================================================
@@ -741,7 +1454,9 @@ async def get_infra_limits(
     """
     Infra & Limits - What breaks first if I grow?
 
-    Database, Redis, and API capacity metrics.
+    Database, Redis, and API capacity metrics with days-to-limit projections.
+
+    Phase-2: Added growth rate tracking and days_to_limit projections.
     """
     warnings = []
 
@@ -766,8 +1481,50 @@ async def get_infra_limits(
     except Exception:
         db_size_gb = 0.0
 
+    # Phase-2: Calculate DB growth rate from INFRA_LIMIT_HIT events or event volume
+    db_growth_rate = 0.0
+    db_days_to_limit = None
+    try:
+        # Estimate growth from event volume (proxy for data growth)
+        stmt = text(
+            """
+            WITH daily_events AS (
+                SELECT
+                    date_trunc('day', timestamp) as day,
+                    COUNT(*) as event_count
+                FROM ops_events
+                WHERE timestamp > now() - interval '7 days'
+                GROUP BY 1
+            )
+            SELECT
+                COALESCE(AVG(event_count), 0) as avg_events_per_day,
+                COALESCE(
+                    (MAX(event_count) - MIN(event_count)) / NULLIF(COUNT(*), 0),
+                    0
+                ) as growth_trend
+            FROM daily_events
+        """
+        )
+        row = exec_sql(session, stmt, {}).first()
+        avg_events = float(row[0]) if row else 0
+        # Rough estimate: 1KB per event average
+        db_growth_rate = avg_events * 0.000001  # Convert to GB/day
+
+        # Calculate days to limit
+        db_limit = 10.0  # Neon Pro limit
+        remaining_gb = db_limit - db_size_gb
+        if db_growth_rate > 0 and remaining_gb > 0:
+            db_days_to_limit = int(remaining_gb / db_growth_rate)
+            if db_days_to_limit > 365:
+                db_days_to_limit = None  # More than a year, not concerning
+    except Exception:
+        pass
+
     # API request rate (from ops_events)
     h1_ago = get_window(1)
+    rpm_avg = 0.0
+    rpm_peak = 0.0
+    api_growth_rate = 0.0
     try:
         stmt = text(
             """
@@ -793,11 +1550,35 @@ async def get_infra_limits(
         )
         row = exec_sql(session, stmt, {"h1_ago": h1_ago}).first()
         rpm_peak = float(row[0]) if row else 0.0
-    except Exception:
-        rpm_avg = 0.0
-        rpm_peak = 0.0
 
-    # Generate warnings
+        # Phase-2: Calculate week-over-week API growth
+        stmt = text(
+            """
+            WITH weekly_requests AS (
+                SELECT
+                    COUNT(*) FILTER (WHERE timestamp > now() - interval '7 days') as this_week,
+                    COUNT(*) FILTER (WHERE timestamp <= now() - interval '7 days' AND timestamp > now() - interval '14 days') as last_week
+                FROM ops_events
+                WHERE event_type = 'API_CALL_RECEIVED'
+                  AND timestamp > now() - interval '14 days'
+            )
+            SELECT
+                this_week,
+                last_week,
+                CASE
+                    WHEN last_week > 0 THEN ((this_week - last_week)::float / last_week) * 100
+                    ELSE 0
+                END as growth_pct
+            FROM weekly_requests
+        """
+        )
+        row = exec_sql(session, stmt, {}).first()
+        if row:
+            api_growth_rate = float(row[2]) if row[2] else 0.0
+    except Exception:
+        pass
+
+    # Generate warnings with Phase-2 projections
     if db_connections / max(db_max, 1) > 0.8:
         warnings.append(
             {
@@ -815,16 +1596,41 @@ async def get_infra_limits(
             }
         )
 
+    # Phase-2: Days-to-limit warning
+    if db_days_to_limit and db_days_to_limit < 30:
+        warnings.append(
+            {
+                "resource": "db_storage",
+                "message": f"At current growth, DB storage limit reached in {db_days_to_limit} days",
+                "severity": "critical" if db_days_to_limit < 7 else "warning",
+                "days_to_limit": db_days_to_limit,
+            }
+        )
+
+    # Phase-2: API growth warning
+    if api_growth_rate > 50:  # Growing >50% week-over-week
+        warnings.append(
+            {
+                "resource": "api_traffic",
+                "message": f"API traffic growing {api_growth_rate:.1f}% week-over-week - review capacity",
+                "severity": "warning",
+            }
+        )
+
     return InfraLimits(
         db_connections_current=db_connections,
         db_connections_max=db_max,
         db_storage_used_gb=round(db_size_gb, 2),
         db_storage_limit_gb=10.0,  # Neon Pro limit
-        redis_memory_used_mb=0.0,  # TODO: Redis metrics
+        db_storage_days_to_limit=db_days_to_limit,
+        redis_memory_used_mb=0.0,  # TODO: Redis metrics via Upstash API
         redis_memory_limit_mb=256.0,  # Upstash limit
         redis_keys_count=0,
+        redis_memory_days_to_limit=None,  # TODO: Calculate from Redis metrics
         requests_per_minute_avg=round(rpm_avg, 2),
         requests_per_minute_peak=round(rpm_peak, 2),
+        db_growth_rate_gb_per_day=round(db_growth_rate, 6),
+        api_growth_rate_pct_per_week=round(api_growth_rate, 1),
         limit_warnings=warnings,
     )
 

@@ -1399,6 +1399,95 @@ jobs:
           PYTHONPATH=. pytest tests/legacy -v || echo "::warning::Legacy tests failed - scheduled for removal"
 
   # ============================================================================
+  # POSTFLIGHT: Code quality check after all tests pass
+  # ============================================================================
+  postflight:
+    name: Post-Flight Hygiene Check
+    runs-on: ubuntu-latest
+    needs: [integration, costsim, e2e-tests]
+    if: always() && needs.integration.result == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run full postflight check
+        id: postflight
+        run: |
+          echo "🔍 Running full post-flight hygiene check..."
+          chmod +x ./scripts/ops/postflight.py
+
+          # Run full check with JSON output
+          python3 ./scripts/ops/postflight.py --full --json > /tmp/postflight.json 2>&1 || true
+
+          # Parse results
+          ERRORS=$(python3 -c "import json; d=json.load(open('/tmp/postflight.json')); print(d.get('summary',{}).get('errors',0))" 2>/dev/null || echo "0")
+          WARNINGS=$(python3 -c "import json; d=json.load(open('/tmp/postflight.json')); print(d.get('summary',{}).get('warnings',0))" 2>/dev/null || echo "0")
+          SUGGESTIONS=$(python3 -c "import json; d=json.load(open('/tmp/postflight.json')); print(d.get('summary',{}).get('suggestions',0))" 2>/dev/null || echo "0")
+
+          echo "postflight_errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "postflight_warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "postflight_suggestions=$SUGGESTIONS" >> $GITHUB_OUTPUT
+
+          # Show summary
+          echo ""
+          echo "📊 Postflight Summary:"
+          echo "  Errors: $ERRORS"
+          echo "  Warnings: $WARNINGS"
+          echo "  Suggestions: $SUGGESTIONS"
+
+          # Fail on errors (security issues, syntax errors)
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::Postflight check found $ERRORS error(s)"
+            python3 ./scripts/ops/postflight.py --full
+            exit 1
+          fi
+
+          # Warn but don't fail on high warning count
+          if [ "$WARNINGS" -gt 50 ]; then
+            echo "::warning::High warning count ($WARNINGS) - consider addressing some issues"
+          fi
+
+          echo "✅ Postflight check passed"
+
+      - name: Check route conflicts
+        run: |
+          echo "🔍 Verifying no route conflicts..."
+          OUTPUT=$(python3 ./scripts/ops/preflight.py --routes 2>&1)
+          echo "$OUTPUT"
+
+          if echo "$OUTPUT" | grep -q "Route conflict:"; then
+            echo "::error::Route conflicts found after tests passed - this should not happen"
+            exit 1
+          fi
+
+          echo "✅ No route conflicts"
+
+      - name: Generate hygiene report
+        if: always()
+        run: |
+          echo "## 🔍 Code Hygiene Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f /tmp/postflight.json ]; then
+            ERRORS=$(python3 -c "import json; d=json.load(open('/tmp/postflight.json')); print(d.get('summary',{}).get('errors',0))" 2>/dev/null || echo "?")
+            WARNINGS=$(python3 -c "import json; d=json.load(open('/tmp/postflight.json')); print(d.get('summary',{}).get('warnings',0))" 2>/dev/null || echo "?")
+            SUGGESTIONS=$(python3 -c "import json; d=json.load(open('/tmp/postflight.json')); print(d.get('summary',{}).get('suggestions',0))" 2>/dev/null || echo "?")
+
+            echo "| Category | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| 🔴 Errors | $ERRORS |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟡 Warnings | $WARNINGS |" >> $GITHUB_STEP_SUMMARY
+            echo "| 💡 Suggestions | $SUGGESTIONS |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Postflight report not available" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================================================
   # CLEANUP: Delete ephemeral Neon branch
   # ============================================================================
   cleanup-neon-branch:

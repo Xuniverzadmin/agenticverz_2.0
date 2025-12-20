@@ -1,5 +1,10 @@
 # CI Preflight Check - Runs consistency check before main CI
 # This catches configuration issues early before wasting CI minutes
+#
+# Checks:
+# 1. CI consistency check (files, patterns)
+# 2. Route conflict detection (preflight.py)
+# 3. Code hygiene check (postflight.py)
 
 name: CI Preflight
 
@@ -13,11 +18,16 @@ jobs:
   preflight:
     name: Consistency Check
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Run CI consistency check
         run: |
@@ -26,6 +36,76 @@ jobs:
         env:
           # Skip git checks in CI (already clean checkout)
           CI: true
+
+      # ========================================================================
+      # Route Conflict Detection
+      # ========================================================================
+      - name: Check for route conflicts
+        id: route-check
+        run: |
+          echo "🔍 Checking for FastAPI route conflicts..."
+          chmod +x ./scripts/ops/preflight.py
+
+          # Run route check and capture output
+          OUTPUT=$(python3 ./scripts/ops/preflight.py --routes 2>&1)
+          echo "$OUTPUT"
+
+          # Check for conflicts (errors)
+          if echo "$OUTPUT" | grep -q "Route conflict:"; then
+            echo "::error::Route conflicts detected! Static routes must come before parameter routes."
+            echo "route_conflicts=true" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ No route conflicts detected"
+            echo "route_conflicts=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ========================================================================
+      # Code Hygiene Check (Quick)
+      # ========================================================================
+      - name: Run code hygiene check
+        id: hygiene-check
+        run: |
+          echo "🔍 Running quick code hygiene check..."
+          chmod +x ./scripts/ops/postflight.py
+
+          # Run quick check (syntax, imports, security)
+          python3 ./scripts/ops/postflight.py --quick --json > /tmp/hygiene.json 2>&1 || true
+
+          # Parse results
+          ERRORS=$(python3 -c "import json; d=json.load(open('/tmp/hygiene.json')); print(d.get('summary',{}).get('errors',0))" 2>/dev/null || echo "0")
+          WARNINGS=$(python3 -c "import json; d=json.load(open('/tmp/hygiene.json')); print(d.get('summary',{}).get('warnings',0))" 2>/dev/null || echo "0")
+
+          echo "hygiene_errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "hygiene_warnings=$WARNINGS" >> $GITHUB_OUTPUT
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::Code hygiene check found $ERRORS error(s)"
+            python3 ./scripts/ops/postflight.py --quick
+            exit 1
+          else
+            echo "✅ Code hygiene check passed (errors: $ERRORS, warnings: $WARNINGS)"
+          fi
+
+      # ========================================================================
+      # Security Scan
+      # ========================================================================
+      - name: Security scan
+        run: |
+          echo "🔒 Scanning for security issues..."
+
+          # Check for hardcoded secrets (basic patterns)
+          FOUND_SECRETS=0
+
+          # Check for patterns that look like real API keys (long alphanumeric strings in non-test files)
+          if grep -r --include="*.py" -E "(api_key|secret|password)\s*=\s*['\"][a-zA-Z0-9\-_]{32,}['\"]" backend/app/ 2>/dev/null | grep -v "test_" | grep -v "os\.getenv" | grep -v "environ" | head -5; then
+            echo "::warning::Potential hardcoded secrets found - please review"
+            FOUND_SECRETS=1
+          fi
+
+          if [ "$FOUND_SECRETS" -eq 0 ]; then
+            echo "✅ No obvious hardcoded secrets found"
+          fi
 
       - name: Verify required files exist
         run: |

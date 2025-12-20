@@ -1019,9 +1019,61 @@ async def list_guardrail_types(
 
 # =============================================================================
 # Replay Endpoints
+# NOTE: Static routes (/replay/batch) MUST come before parameter routes (/replay/{call_id})
 # =============================================================================
 
 
+class BatchReplayRequest(BaseModel):
+    tenant_id: str = ""
+    sample_size: int = 100
+    time_range_hours: int = 24
+
+
+@router.post("/replay/batch", response_model=BatchReplayResult)
+async def batch_replay(
+    request: BatchReplayRequest,
+    session: Session = Depends(get_session),
+):
+    """
+    Batch replay for regression testing.
+
+    Tests determinism across many calls.
+    """
+    time_cutoff = utc_now() - timedelta(hours=request.time_range_hours)
+
+    stmt = select(ProxyCall).where(ProxyCall.created_at >= time_cutoff)
+
+    if request.tenant_id:
+        stmt = stmt.where(ProxyCall.tenant_id == request.tenant_id)
+
+    stmt = stmt.where(ProxyCall.replay_eligible == True).limit(request.sample_size)
+    results = session.exec(stmt).all()
+
+    # Simulate batch replay
+    total = len(results)
+    completed = total
+    exact_matches = total  # All match in MVP
+    logical_matches = 0
+    semantic_matches = 0
+    mismatches = 0
+    model_drift_count = 0
+    policy_drift_count = 0
+    failures = []
+
+    return BatchReplayResult(
+        total=total,
+        completed=completed,
+        exact_matches=exact_matches,
+        logical_matches=logical_matches,
+        semantic_matches=semantic_matches,
+        mismatches=mismatches,
+        model_drift_count=model_drift_count,
+        policy_drift_count=policy_drift_count,
+        failures=failures,
+    )
+
+
+# Parameter route MUST come after static routes
 @router.post("/replay/{call_id}", response_model=ReplayResult)
 async def replay_call(
     call_id: str,
@@ -1086,54 +1138,4 @@ async def replay_call(
             "policy_match": True,
             "model_drift": False,
         },
-    )
-
-
-class BatchReplayRequest(BaseModel):
-    tenant_id: str = ""
-    sample_size: int = 100
-    time_range_hours: int = 24
-
-
-@router.post("/replay/batch", response_model=BatchReplayResult)
-async def batch_replay(
-    request: BatchReplayRequest,
-    session: Session = Depends(get_session),
-):
-    """
-    Batch replay for regression testing.
-
-    Tests determinism across many calls.
-    """
-    time_cutoff = utc_now() - timedelta(hours=request.time_range_hours)
-
-    stmt = select(ProxyCall).where(ProxyCall.created_at >= time_cutoff)
-
-    if request.tenant_id:
-        stmt = stmt.where(ProxyCall.tenant_id == request.tenant_id)
-
-    stmt = stmt.where(ProxyCall.replay_eligible == True).limit(request.sample_size)
-    results = session.exec(stmt).all()
-
-    # Simulate batch replay
-    total = len(results)
-    completed = total
-    exact_matches = total  # All match in MVP
-    logical_matches = 0
-    semantic_matches = 0
-    mismatches = 0
-    model_drift_count = 0
-    policy_drift_count = 0
-    failures = []
-
-    return BatchReplayResult(
-        total=total,
-        completed=completed,
-        exact_matches=exact_matches,
-        logical_matches=logical_matches,
-        semantic_matches=semantic_matches,
-        mismatches=mismatches,
-        model_drift_count=model_drift_count,
-        policy_drift_count=policy_drift_count,
-        failures=failures,
     )

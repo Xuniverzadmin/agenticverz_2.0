@@ -23,38 +23,34 @@ import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Header, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ..agents.services.job_service import (
-    JobService, JobConfig, get_job_service
-)
-from ..agents.services.worker_service import (
-    WorkerService, get_worker_service
-)
-from ..agents.services.blackboard_service import (
-    BlackboardService, get_blackboard_service
-)
-from ..agents.services.message_service import (
-    MessageService, get_message_service
-)
-from ..agents.services.registry_service import (
-    RegistryService, get_registry_service
-)
-from ..agents.services.credit_service import (
-    CreditService, get_credit_service, CREDIT_COSTS
-)
+from ..agents.services.blackboard_service import get_blackboard_service
+from ..agents.services.credit_service import CREDIT_COSTS, get_credit_service
+from ..agents.services.job_service import JobConfig, get_job_service
+from ..agents.services.message_service import get_message_service
+from ..agents.services.registry_service import get_registry_service
+from ..agents.services.worker_service import get_worker_service
 from ..agents.skills.agent_invoke import AgentInvokeSkill
 
 # M15.1: SBA imports
 try:
     from ..agents.sba import (
-        SBAService, SBASchema, validate_sba, get_sba_service,
-        generate_sba_from_agent, SBAValidationResult,
+        SUPPORTED_SBA_VERSIONS,
+        SBASchema,
+        SBAService,
+        SBAValidationResult,
+        SBAVersionError,
+        check_version_deprecated,
+        generate_sba_from_agent,
+        get_sba_service,
         # M15.1.1: Version negotiation
-        get_version_info, negotiate_version, SBAVersionError,
-        SUPPORTED_SBA_VERSIONS, check_version_deprecated,
+        get_version_info,
+        negotiate_version,
+        validate_sba,
     )
+
     SBA_AVAILABLE = True
 except ImportError:
     SBA_AVAILABLE = False
@@ -66,8 +62,10 @@ router = APIRouter(prefix="/api/v1", tags=["agents"])
 
 # ============ Request/Response Models ============
 
+
 class CreateJobRequest(BaseModel):
     """Request to create a parallel job."""
+
     orchestrator_agent: str = Field(..., description="Orchestrator agent type")
     worker_agent: str = Field(..., description="Worker agent type")
     task: str = Field(..., description="Task name/description")
@@ -79,6 +77,7 @@ class CreateJobRequest(BaseModel):
 
 class JobResponse(BaseModel):
     """Job status response."""
+
     id: str
     status: str
     task: str
@@ -91,6 +90,7 @@ class JobResponse(BaseModel):
 
 class ClaimItemResponse(BaseModel):
     """Response when claiming an item."""
+
     claimed: bool
     item_id: Optional[str] = None
     item_index: Optional[int] = None
@@ -100,28 +100,33 @@ class ClaimItemResponse(BaseModel):
 
 class CompleteItemRequest(BaseModel):
     """Request to complete an item."""
+
     output: Any = Field(..., description="Item result")
 
 
 class FailItemRequest(BaseModel):
     """Request to fail an item."""
+
     error_message: str = Field(..., description="Error description")
     retry: bool = Field(default=True, description="Whether to retry")
 
 
 class BlackboardWriteRequest(BaseModel):
     """Request to write to blackboard."""
+
     value: Any = Field(..., description="Value to store")
     ttl: Optional[int] = Field(default=None, description="TTL in seconds")
 
 
 class BlackboardIncrementRequest(BaseModel):
     """Request to increment counter."""
+
     amount: int = Field(default=1, description="Increment amount")
 
 
 class LockRequest(BaseModel):
     """Request for lock operation."""
+
     holder: str = Field(..., description="Lock holder identity")
     action: str = Field(default="acquire", description="acquire/release/extend")
     ttl: int = Field(default=30, description="Lock TTL in seconds")
@@ -129,6 +134,7 @@ class LockRequest(BaseModel):
 
 class RegisterAgentRequest(BaseModel):
     """Request to register an agent."""
+
     agent_id: str = Field(..., description="Agent type/name")
     instance_id: Optional[str] = Field(default=None, description="Instance ID")
     job_id: Optional[str] = Field(default=None, description="Associated job")
@@ -137,6 +143,7 @@ class RegisterAgentRequest(BaseModel):
 
 class SendMessageRequest(BaseModel):
     """Request to send a message."""
+
     from_instance_id: str = Field(..., description="Sender")
     message_type: str = Field(..., description="Message type")
     payload: Dict[str, Any] = Field(..., description="Message content")
@@ -146,12 +153,14 @@ class SendMessageRequest(BaseModel):
 
 class InvokeResponseRequest(BaseModel):
     """Request to respond to an invocation."""
+
     invoke_id: str = Field(..., description="Invocation ID")
     response_payload: Dict[str, Any] = Field(..., description="Response data")
 
 
 class SimulateJobRequest(BaseModel):
     """Request to simulate job execution before committing."""
+
     orchestrator_agent: str = Field(..., description="Orchestrator agent type")
     worker_agent: str = Field(..., description="Worker agent type")
     task: str = Field(..., description="Task name/description")
@@ -163,6 +172,7 @@ class SimulateJobRequest(BaseModel):
 
 class SimulateJobResponse(BaseModel):
     """Response from job simulation."""
+
     feasible: bool = Field(..., description="Whether job can be executed")
     estimated_credits: float = Field(..., description="Estimated total credits")
     credits_per_item: float = Field(..., description="Credits per item")
@@ -175,6 +185,7 @@ class SimulateJobResponse(BaseModel):
 
 
 # ============ Job Endpoints ============
+
 
 @router.post("/jobs/simulate", response_model=SimulateJobResponse)
 async def simulate_job(
@@ -212,9 +223,7 @@ async def simulate_job(
         }
 
         # Check budget
-        has_budget, budget_reason = credit_service.check_credits(
-            x_tenant_id, estimated_total
-        )
+        has_budget, budget_reason = credit_service.check_credits(x_tenant_id, estimated_total)
 
         budget_check = {
             "sufficient": has_budget,
@@ -445,6 +454,7 @@ async def fail_item(
 
 # ============ Blackboard Endpoints ============
 
+
 @router.get("/blackboard/{key}")
 async def get_blackboard(key: str):
     """Read value from blackboard."""
@@ -508,6 +518,7 @@ async def lock_blackboard(key: str, request: LockRequest):
 
 
 # ============ Agent Endpoints ============
+
 
 @router.post("/agents/register")
 async def register_agent(request: RegisterAgentRequest):
@@ -612,6 +623,7 @@ async def list_agents(
 
 # ============ Message Endpoints ============
 
+
 @router.post("/agents/{instance_id}/messages")
 async def send_message(instance_id: str, request: SendMessageRequest):
     """Send a message to an agent."""
@@ -687,6 +699,7 @@ async def mark_message_read(instance_id: str, message_id: str):
 
 # ============ Invocation Response Endpoint ============
 
+
 @router.post("/invocations/respond")
 async def respond_to_invocation(request: InvokeResponseRequest):
     """Respond to an agent invocation."""
@@ -703,14 +716,17 @@ async def respond_to_invocation(request: InvokeResponseRequest):
 
 # ============ M15.1 SBA Endpoints ============
 
+
 class SBAValidateRequest(BaseModel):
     """Request to validate SBA schema."""
+
     sba: Dict[str, Any] = Field(..., description="SBA schema to validate")
     enforce_governance: bool = Field(default=True, description="Require BudgetLLM governance")
 
 
 class SBARegisterRequest(BaseModel):
     """Request to register agent with SBA."""
+
     agent_id: str = Field(..., description="Agent identifier")
     sba: Dict[str, Any] = Field(..., description="SBA schema")
     agent_name: Optional[str] = Field(default=None, description="Human-readable name")
@@ -722,6 +738,7 @@ class SBARegisterRequest(BaseModel):
 
 class SBAGenerateRequest(BaseModel):
     """Request to auto-generate SBA for an agent."""
+
     agent_id: str = Field(..., description="Agent identifier")
     capabilities: Optional[Dict[str, Any]] = Field(default=None)
     config: Optional[Dict[str, Any]] = Field(default=None)
@@ -831,6 +848,55 @@ async def generate_sba_for_agent(request: SBAGenerateRequest):
         raise HTTPException(status_code=500, detail=f"Generation error: {str(e)[:100]}")
 
 
+# NOTE: Static routes (/sba/version, /sba/version/negotiate) MUST come before /sba/{agent_id}
+@router.get("/sba/version")
+async def get_sba_version_info():
+    """
+    M15.1.1: Get SBA version negotiation info.
+
+    Returns information about supported SBA versions for client negotiation.
+    """
+    if not SBA_AVAILABLE:
+        raise HTTPException(status_code=501, detail="SBA module not available")
+
+    return get_version_info()
+
+
+@router.post("/sba/version/negotiate")
+async def negotiate_sba_version(
+    requested_version: str = Query(..., description="Requested SBA version"),
+):
+    """
+    M15.1.1: Negotiate SBA version.
+
+    Client submits requested version, server responds with best compatible version.
+    """
+    if not SBA_AVAILABLE:
+        raise HTTPException(status_code=501, detail="SBA module not available")
+
+    try:
+        negotiated = negotiate_version(requested_version)
+        deprecated = check_version_deprecated(negotiated)
+
+        return {
+            "requested": requested_version,
+            "negotiated": negotiated,
+            "supported": True,
+            "deprecated": deprecated,
+            "message": f"Version {negotiated} is deprecated, consider upgrading" if deprecated else None,
+        }
+    except SBAVersionError as e:
+        return {
+            "requested": requested_version,
+            "negotiated": None,
+            "supported": False,
+            "deprecated": False,
+            "message": str(e),
+            "supported_versions": list(e.supported),
+        }
+
+
+# Parameter route MUST come after static routes
 @router.get("/sba/{agent_id}")
 async def get_agent_sba(agent_id: str):
     """
@@ -945,53 +1011,6 @@ async def check_spawn_allowed(
         raise HTTPException(status_code=500, detail=f"Error: {str(e)[:100]}")
 
 
-@router.get("/sba/version")
-async def get_sba_version_info():
-    """
-    M15.1.1: Get SBA version negotiation info.
-
-    Returns information about supported SBA versions for client negotiation.
-    """
-    if not SBA_AVAILABLE:
-        raise HTTPException(status_code=501, detail="SBA module not available")
-
-    return get_version_info()
-
-
-@router.post("/sba/version/negotiate")
-async def negotiate_sba_version(
-    requested_version: str = Query(..., description="Requested SBA version"),
-):
-    """
-    M15.1.1: Negotiate SBA version.
-
-    Client submits requested version, server responds with best compatible version.
-    """
-    if not SBA_AVAILABLE:
-        raise HTTPException(status_code=501, detail="SBA module not available")
-
-    try:
-        negotiated = negotiate_version(requested_version)
-        deprecated = check_version_deprecated(negotiated)
-
-        return {
-            "requested": requested_version,
-            "negotiated": negotiated,
-            "supported": True,
-            "deprecated": deprecated,
-            "message": f"Version {negotiated} is deprecated, consider upgrading" if deprecated else None,
-        }
-    except SBAVersionError as e:
-        return {
-            "requested": requested_version,
-            "negotiated": None,
-            "supported": False,
-            "deprecated": False,
-            "message": str(e),
-            "supported_versions": list(e.supported),
-        }
-
-
 @router.get("/sba/fulfillment/aggregated")
 async def get_fulfillment_aggregated(
     group_by: str = Query(default="domain", description="Group by: domain, agent_type, orchestrator"),
@@ -1025,8 +1044,8 @@ async def get_fulfillment_aggregated(
                     "0.4-0.6": 0,
                     "0.6-0.8": 0,
                     "0.8-1.0": 0,
-                }
-            }
+                },
+            },
         }
 
         fulfillment_sum = 0.0
@@ -1108,8 +1127,10 @@ async def get_fulfillment_aggregated(
 
 # ============ M16 Activity & Health Endpoints ============
 
+
 class WorkerCostMetrics(BaseModel):
     """Worker cost and risk metrics."""
+
     id: str
     name: Optional[str] = None
     cost: str  # low/medium/high
@@ -1119,6 +1140,7 @@ class WorkerCostMetrics(BaseModel):
 
 class ActivityCostsResponse(BaseModel):
     """Response for activity costs endpoint."""
+
     agent_id: str
     workers: List[WorkerCostMetrics]
     total_cost_level: str
@@ -1128,6 +1150,7 @@ class ActivityCostsResponse(BaseModel):
 
 class SpendingDataResponse(BaseModel):
     """Response for spending tracker endpoint."""
+
     agent_id: str
     actual: List[float]
     projected: List[float]
@@ -1139,6 +1162,7 @@ class SpendingDataResponse(BaseModel):
 
 class RetryEntryResponse(BaseModel):
     """Single retry entry."""
+
     time: str
     reason: str
     attempt: int
@@ -1148,6 +1172,7 @@ class RetryEntryResponse(BaseModel):
 
 class ActivityRetriesResponse(BaseModel):
     """Response for retries endpoint."""
+
     agent_id: str
     retries: List[RetryEntryResponse]
     total_retries: int
@@ -1157,6 +1182,7 @@ class ActivityRetriesResponse(BaseModel):
 
 class BlockerEntry(BaseModel):
     """Single blocker entry."""
+
     type: str  # dependency/api/tool/circular/budget
     message: str
     since: str
@@ -1166,6 +1192,7 @@ class BlockerEntry(BaseModel):
 
 class ActivityBlockersResponse(BaseModel):
     """Response for blockers endpoint."""
+
     agent_id: str
     blockers: List[BlockerEntry]
     blocked: bool
@@ -1174,6 +1201,7 @@ class ActivityBlockersResponse(BaseModel):
 
 class HealthCheckItem(BaseModel):
     """Single health check result."""
+
     severity: str  # error/warning/info
     code: str
     title: str
@@ -1183,6 +1211,7 @@ class HealthCheckItem(BaseModel):
 
 class HealthCheckResponse(BaseModel):
     """Response for health check endpoint."""
+
     agent_id: str
     healthy: bool
     errors: List[HealthCheckItem]
@@ -1239,13 +1268,15 @@ async def get_agent_activity_costs(
             if cost_level == "high":
                 high_cost_count += 1
 
-            worker_metrics.append(WorkerCostMetrics(
-                id=worker.instance_id,
-                name=caps.get("name", worker.agent_id),
-                cost=cost_level,
-                risk=round(risk, 2),
-                budget_used=round(budget_used, 1),
-            ))
+            worker_metrics.append(
+                WorkerCostMetrics(
+                    id=worker.instance_id,
+                    name=caps.get("name", worker.agent_id),
+                    cost=cost_level,
+                    risk=round(risk, 2),
+                    budget_used=round(budget_used, 1),
+                )
+            )
             total_risk += risk
 
         # Determine total cost level
@@ -1308,6 +1339,7 @@ async def get_agent_activity_spending(
         # Generate spending data
         # In production, this would come from a time-series store
         import random
+
         random.seed(hash(agent_id) % 2**32)  # Consistent per agent
 
         projected = []
@@ -1331,12 +1363,14 @@ async def get_agent_activity_spending(
 
             # Detect anomalies (>30% over projected)
             if act_sum > proj_sum * 1.3:
-                anomalies.append({
-                    "index": i,
-                    "reason": "Spending 30%+ over projected",
-                    "actual": round(act_sum, 2),
-                    "projected": round(proj_sum, 2),
-                })
+                anomalies.append(
+                    {
+                        "index": i,
+                        "reason": "Spending 30%+ over projected",
+                        "actual": round(act_sum, 2),
+                        "projected": round(proj_sum, 2),
+                    }
+                )
 
         return SpendingDataResponse(
             agent_id=agent_id,
@@ -1364,7 +1398,7 @@ async def get_agent_activity_retries(
 
     Returns recent retry attempts with outcomes and risk impact.
     """
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
     try:
         # Get job service to find jobs for this agent
@@ -1396,13 +1430,15 @@ async def get_agent_activity_retries(
                                 # Use completed_at or claimed_at for timing
                                 retry_time = item.completed_at or item.claimed_at or datetime.utcnow()
 
-                                retries.append(RetryEntryResponse(
-                                    time=retry_time.strftime("%H:%M:%S"),
-                                    reason=item.error_message[:100] if item.error_message else "Unknown error",
-                                    attempt=1,
-                                    outcome="success" if is_success else "failure",
-                                    risk_change=-0.05 if is_success else 0.1,
-                                ))
+                                retries.append(
+                                    RetryEntryResponse(
+                                        time=retry_time.strftime("%H:%M:%S"),
+                                        reason=item.error_message[:100] if item.error_message else "Unknown error",
+                                        attempt=1,
+                                        outcome="success" if is_success else "failure",
+                                        risk_change=-0.05 if is_success else 0.1,
+                                    )
+                                )
                     except Exception:
                         # Skip if we can't get job items
                         pass
@@ -1461,21 +1497,25 @@ async def get_agent_activity_blockers(
                             # Check if dependency agent exists and is healthy
                             dep_agent = sba_service.get_agent(dep_id)
                             if not dep_agent:
-                                blockers.append(BlockerEntry(
-                                    type="dependency",
-                                    message=f"Required agent '{dep_id}' not found",
-                                    since="Registration time",
-                                    action="Register dependency",
-                                    details=f"Agent depends on {dep_id}",
-                                ))
+                                blockers.append(
+                                    BlockerEntry(
+                                        type="dependency",
+                                        message=f"Required agent '{dep_id}' not found",
+                                        since="Registration time",
+                                        action="Register dependency",
+                                        details=f"Agent depends on {dep_id}",
+                                    )
+                                )
                             elif not dep_agent.enabled:
-                                blockers.append(BlockerEntry(
-                                    type="dependency",
-                                    message=f"Required agent '{dep_id}' is disabled",
-                                    since="Unknown",
-                                    action="Enable dependency",
-                                    details=f"Agent depends on {dep_id}",
-                                ))
+                                blockers.append(
+                                    BlockerEntry(
+                                        type="dependency",
+                                        message=f"Required agent '{dep_id}' is disabled",
+                                        since="Unknown",
+                                        action="Enable dependency",
+                                        details=f"Agent depends on {dep_id}",
+                                    )
+                                )
 
                 # Check budget constraints
                 if ems.get("governance") == "BudgetLLM":
@@ -1483,13 +1523,15 @@ async def get_agent_activity_blockers(
                     balance = credit_service.get_balance(x_tenant_id)
                     available = float(balance.available_credits) if balance else 0
                     if available < 10:
-                        blockers.append(BlockerEntry(
-                            type="budget",
-                            message="Insufficient credits available",
-                            since="Now",
-                            action="Add credits",
-                            details=f"Available: {available} credits",
-                        ))
+                        blockers.append(
+                            BlockerEntry(
+                                type="budget",
+                                message="Insufficient credits available",
+                                since="Now",
+                                action="Add credits",
+                                details=f"Available: {available} credits",
+                            )
+                        )
 
         # Check registry for stale workers
         registry = get_registry_service()
@@ -1497,24 +1539,28 @@ async def get_agent_activity_blockers(
 
         stale_workers = [w for w in workers if w.heartbeat_age_seconds and w.heartbeat_age_seconds > 120]
         if stale_workers:
-            blockers.append(BlockerEntry(
-                type="api",
-                message=f"{len(stale_workers)} worker(s) have stale heartbeats",
-                since=f"{min(w.heartbeat_age_seconds for w in stale_workers)}s ago",
-                action="Restart workers",
-                details=", ".join(w.instance_id for w in stale_workers[:3]),
-            ))
+            blockers.append(
+                BlockerEntry(
+                    type="api",
+                    message=f"{len(stale_workers)} worker(s) have stale heartbeats",
+                    since=f"{min(w.heartbeat_age_seconds for w in stale_workers)}s ago",
+                    action="Restart workers",
+                    details=", ".join(w.instance_id for w in stale_workers[:3]),
+                )
+            )
 
         # Check for error status workers
         error_workers = [w for w in workers if w.status == "error"]
         if error_workers:
-            blockers.append(BlockerEntry(
-                type="tool",
-                message=f"{len(error_workers)} worker(s) in error state",
-                since="Recent",
-                action="Investigate errors",
-                details=", ".join(w.instance_id for w in error_workers[:3]),
-            ))
+            blockers.append(
+                BlockerEntry(
+                    type="tool",
+                    message=f"{len(error_workers)} worker(s) in error state",
+                    since="Recent",
+                    action="Investigate errors",
+                    details=", ".join(w.instance_id for w in error_workers[:3]),
+                )
+            )
 
         return ActivityBlockersResponse(
             agent_id=agent_id,
@@ -1547,13 +1593,15 @@ async def check_agent_health(
 
     try:
         if not SBA_AVAILABLE:
-            errors.append(HealthCheckItem(
-                severity="error",
-                code="SBA_UNAVAILABLE",
-                title="SBA Module Unavailable",
-                message="Strategy-Bound Agent module is not available",
-                action="Contact administrator",
-            ))
+            errors.append(
+                HealthCheckItem(
+                    severity="error",
+                    code="SBA_UNAVAILABLE",
+                    title="SBA Module Unavailable",
+                    message="Strategy-Bound Agent module is not available",
+                    action="Contact administrator",
+                )
+            )
             return HealthCheckResponse(
                 agent_id=agent_id,
                 healthy=False,
@@ -1567,13 +1615,15 @@ async def check_agent_health(
         agent = sba_service.get_agent(agent_id)
 
         if not agent:
-            errors.append(HealthCheckItem(
-                severity="error",
-                code="AGENT_NOT_FOUND",
-                title="Agent Not Registered",
-                message=f"No agent found with ID '{agent_id}'",
-                action="Register the agent",
-            ))
+            errors.append(
+                HealthCheckItem(
+                    severity="error",
+                    code="AGENT_NOT_FOUND",
+                    title="Agent Not Registered",
+                    message=f"No agent found with ID '{agent_id}'",
+                    action="Register the agent",
+                )
+            )
             return HealthCheckResponse(
                 agent_id=agent_id,
                 healthy=False,
@@ -1587,92 +1637,108 @@ async def check_agent_health(
 
         # Check 1: SBA Validation Status
         if not agent.sba_validated:
-            errors.append(HealthCheckItem(
-                severity="error",
-                code="NOT_VALIDATED",
-                title="Not Validated",
-                message="Agent SBA schema has not passed validation",
-                action="Run Validation",
-            ))
+            errors.append(
+                HealthCheckItem(
+                    severity="error",
+                    code="NOT_VALIDATED",
+                    title="Not Validated",
+                    message="Agent SBA schema has not passed validation",
+                    action="Run Validation",
+                )
+            )
 
         # Check 2: Purpose defined
         winning_aspiration = sba.get("winning_aspiration", {})
         if not winning_aspiration.get("description"):
-            errors.append(HealthCheckItem(
-                severity="error",
-                code="NO_PURPOSE",
-                title="No Purpose Defined",
-                message="This agent has no purpose statement",
-                action="Add Purpose",
-            ))
+            errors.append(
+                HealthCheckItem(
+                    severity="error",
+                    code="NO_PURPOSE",
+                    title="No Purpose Defined",
+                    message="This agent has no purpose statement",
+                    action="Add Purpose",
+                )
+            )
 
         # Check 3: Orchestrator assigned
         ems = sba.get("enabling_management_systems", {})
         if not ems.get("orchestrator"):
-            errors.append(HealthCheckItem(
-                severity="error",
-                code="NO_ORCHESTRATOR",
-                title="No Workflow Defined",
-                message="Agent has no orchestrator assigned",
-                action="Assign Orchestrator",
-            ))
+            errors.append(
+                HealthCheckItem(
+                    severity="error",
+                    code="NO_ORCHESTRATOR",
+                    title="No Workflow Defined",
+                    message="Agent has no orchestrator assigned",
+                    action="Assign Orchestrator",
+                )
+            )
 
         # Check 4: Tools defined
         where_to_play = sba.get("where_to_play", {})
         allowed_tools = where_to_play.get("allowed_tools", [])
         if not allowed_tools:
-            warnings.append(HealthCheckItem(
-                severity="warning",
-                code="NO_TOOLS",
-                title="No Tools Specified",
-                message="Agent has no allowed tools listed",
-                action="Configure Tools",
-            ))
+            warnings.append(
+                HealthCheckItem(
+                    severity="warning",
+                    code="NO_TOOLS",
+                    title="No Tools Specified",
+                    message="Agent has no allowed tools listed",
+                    action="Configure Tools",
+                )
+            )
 
         # Check 5: Tasks defined
         how_to_win = sba.get("how_to_win", {})
         tasks = how_to_win.get("tasks", [])
         if not tasks:
-            warnings.append(HealthCheckItem(
-                severity="warning",
-                code="NO_TASKS",
-                title="No Tasks Defined",
-                message="Agent has no tasks in its checklist",
-                action="Add Tasks",
-            ))
+            warnings.append(
+                HealthCheckItem(
+                    severity="warning",
+                    code="NO_TASKS",
+                    title="No Tasks Defined",
+                    message="Agent has no tasks in its checklist",
+                    action="Add Tasks",
+                )
+            )
 
         # Check 6: Governance enabled
         if ems.get("governance") != "BudgetLLM":
-            warnings.append(HealthCheckItem(
-                severity="warning",
-                code="NO_GOVERNANCE",
-                title="No Governance",
-                message="Agent is not under BudgetLLM governance",
-                action="Enable Governance",
-            ))
+            warnings.append(
+                HealthCheckItem(
+                    severity="warning",
+                    code="NO_GOVERNANCE",
+                    title="No Governance",
+                    message="Agent is not under BudgetLLM governance",
+                    action="Enable Governance",
+                )
+            )
 
         # Check 7: Fulfillment score
         fulfillment = how_to_win.get("fulfillment_metric", 0)
         if 0 < fulfillment < 0.5:
-            warnings.append(HealthCheckItem(
-                severity="warning",
-                code="LOW_FULFILLMENT",
-                title="Low Completion Score",
-                message=f"Agent completion score is only {int(fulfillment * 100)}%",
-                action="Review tasks and tests",
-            ))
+            warnings.append(
+                HealthCheckItem(
+                    severity="warning",
+                    code="LOW_FULFILLMENT",
+                    title="Low Completion Score",
+                    message=f"Agent completion score is only {int(fulfillment * 100)}%",
+                    action="Review tasks and tests",
+                )
+            )
 
         # Check 8: Dependencies declared
         caps = sba.get("capabilities_capacity", {})
         dependencies = caps.get("dependencies", [])
         if allowed_tools and not dependencies:
-            suggestions.append(HealthCheckItem(
-                severity="info",
-                code="NO_DEPENDENCIES",
-                title="No Dependencies Listed",
-                message="Agent uses tools but has no explicit dependencies",
-                action=None,
-            ))
+            suggestions.append(
+                HealthCheckItem(
+                    severity="info",
+                    code="NO_DEPENDENCIES",
+                    title="No Dependencies Listed",
+                    message="Agent uses tools but has no explicit dependencies",
+                    action=None,
+                )
+            )
 
         # Check 9: Verify dependencies exist
         for dep in dependencies:
@@ -1681,23 +1747,27 @@ async def check_agent_health(
                 if dep_id:
                     dep_agent = sba_service.get_agent(dep_id)
                     if not dep_agent:
-                        warnings.append(HealthCheckItem(
-                            severity="warning",
-                            code="MISSING_DEPENDENCY",
-                            title="Unregistered Connection",
-                            message=f"Dependency '{dep_id}' is not registered",
-                            action="Register dependency",
-                        ))
+                        warnings.append(
+                            HealthCheckItem(
+                                severity="warning",
+                                code="MISSING_DEPENDENCY",
+                                title="Unregistered Connection",
+                                message=f"Dependency '{dep_id}' is not registered",
+                                action="Register dependency",
+                            )
+                        )
 
         # Check 10: Domain specified
         if not where_to_play.get("domain"):
-            suggestions.append(HealthCheckItem(
-                severity="info",
-                code="NO_DOMAIN",
-                title="No Domain Specified",
-                message="Consider specifying a domain for better organization",
-                action=None,
-            ))
+            suggestions.append(
+                HealthCheckItem(
+                    severity="info",
+                    code="NO_DOMAIN",
+                    title="No Domain Specified",
+                    message="Consider specifying a domain for better organization",
+                    action=None,
+                )
+            )
 
         # Determine overall health
         healthy = len(errors) == 0
@@ -1723,10 +1793,17 @@ async def check_agent_health(
 # M17: CARE imports
 try:
     from ..routing import (
-        CAREEngine, get_care_engine,
-        RoutingDecision, RoutingRequest, RouteEvaluationResult,
-        SuccessMetric, OrchestratorMode, RiskPolicy, DifficultyLevel,
+        CAREEngine,
+        DifficultyLevel,
+        OrchestratorMode,
+        RiskPolicy,
+        RouteEvaluationResult,
+        RoutingDecision,
+        RoutingRequest,
+        SuccessMetric,
+        get_care_engine,
     )
+
     CARE_AVAILABLE = True
 except ImportError:
     CARE_AVAILABLE = False
@@ -1734,6 +1811,7 @@ except ImportError:
 
 class CascadeEvaluateRequest(BaseModel):
     """Request for cascade evaluation."""
+
     task_description: str = Field(..., min_length=1, description="Task to evaluate")
     task_domain: Optional[str] = Field(default=None, description="Target domain")
     required_tools: List[str] = Field(default_factory=list, description="Required tools")
@@ -1745,6 +1823,7 @@ class CascadeEvaluateRequest(BaseModel):
 
 class RoutingDispatchRequest(BaseModel):
     """Request for routing dispatch."""
+
     task_description: str = Field(..., min_length=1, description="Task to route")
     task_domain: Optional[str] = Field(default=None, description="Target domain")
     required_tools: List[str] = Field(default_factory=list, description="Required tools")
@@ -1757,10 +1836,15 @@ class RoutingDispatchRequest(BaseModel):
 
 class RoutingConfigUpdate(BaseModel):
     """Request to update agent routing config."""
-    success_metric: Optional[str] = Field(default=None, description="Success metric: cost, latency, accuracy, risk_min, balanced")
+
+    success_metric: Optional[str] = Field(
+        default=None, description="Success metric: cost, latency, accuracy, risk_min, balanced"
+    )
     difficulty_threshold: Optional[str] = Field(default=None, description="Difficulty threshold: low, medium, high")
     risk_policy: Optional[str] = Field(default=None, description="Risk policy: strict, balanced, fast")
-    orchestrator_mode: Optional[str] = Field(default=None, description="Orchestrator mode: parallel, hierarchical, blackboard, sequential")
+    orchestrator_mode: Optional[str] = Field(
+        default=None, description="Orchestrator mode: parallel, hierarchical, blackboard, sequential"
+    )
     max_parallel_tasks: Optional[int] = Field(default=None, ge=1, le=100)
     escalation_enabled: Optional[bool] = Field(default=None)
 
@@ -1979,17 +2063,21 @@ async def update_agent_strategy(
 
         # Save via raw SQL (SBA service update doesn't support partial updates easily)
         import json
-        from sqlalchemy import create_engine, text
         import os
+
+        from sqlalchemy import create_engine, text
+
         engine = create_engine(os.environ.get("DATABASE_URL"))
         with engine.connect() as conn:
             conn.execute(
-                text("""
+                text(
+                    """
                     UPDATE agents.agent_registry
                     SET sba = CAST(:sba AS JSONB)
                     WHERE agent_id = :agent_id
-                """),
-                {"agent_id": agent_id, "sba": json.dumps(updated_sba)}
+                """
+                ),
+                {"agent_id": agent_id, "sba": json.dumps(updated_sba)},
             )
             conn.commit()
 
@@ -2016,14 +2104,17 @@ async def get_routing_stats(
     Returns aggregate stats on routing decisions.
     """
     try:
-        from sqlalchemy import create_engine, text
         import os
+
+        from sqlalchemy import create_engine, text
+
         engine = create_engine(os.environ.get("DATABASE_URL"))
 
         with engine.connect() as conn:
             # Get recent stats
             result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         COUNT(*) as total_decisions,
                         COUNT(*) FILTER (WHERE routed = true) as successful_routes,
@@ -2033,8 +2124,9 @@ async def get_routing_stats(
                     FROM routing.routing_decisions
                     WHERE tenant_id = :tenant_id
                     AND decided_at > now() - interval '24 hours'
-                """),
-                {"tenant_id": x_tenant_id}
+                """
+                ),
+                {"tenant_id": x_tenant_id},
             )
             row = result.fetchone()
 
@@ -2080,17 +2172,28 @@ async def get_routing_stats(
 
 # M18: CARE-L and SBA Evolution imports
 try:
-    from ..routing import (
-        get_reputation_store, get_hysteresis_manager, get_learning_parameters,
-        get_governor, get_feedback_loop,
-        AgentReputation, QuarantineState, StabilityMetrics,
-        SLAScore, BatchLearningResult,
-    )
     from ..agents.sba import (
+        AdjustmentType,
+        BoundaryViolation,
+        DriftSignal,
+        DriftType,
+        StrategyAdjustment,
+        ViolationType,
         get_evolution_engine,
-        DriftType, DriftSignal, ViolationType, BoundaryViolation,
-        AdjustmentType, StrategyAdjustment,
     )
+    from ..routing import (
+        AgentReputation,
+        BatchLearningResult,
+        QuarantineState,
+        SLAScore,
+        StabilityMetrics,
+        get_feedback_loop,
+        get_governor,
+        get_hysteresis_manager,
+        get_learning_parameters,
+        get_reputation_store,
+    )
+
     M18_AVAILABLE = True
 except ImportError:
     M18_AVAILABLE = False
@@ -2098,6 +2201,7 @@ except ImportError:
 
 class ExplainRoutingResponse(BaseModel):
     """Response explaining a routing decision."""
+
     request_id: str
     agent_id: str
     explanation: Dict[str, Any]
@@ -2107,6 +2211,7 @@ class ExplainRoutingResponse(BaseModel):
 
 class EvolutionReportResponse(BaseModel):
     """Response with agent evolution history."""
+
     agent_id: str
     drift_signals: List[Dict[str, Any]]
     violations: List[Dict[str, Any]]
@@ -2117,6 +2222,7 @@ class EvolutionReportResponse(BaseModel):
 
 class SystemStabilityResponse(BaseModel):
     """Response with system-wide stability metrics."""
+
     state: str
     frozen: bool
     freeze_until: Optional[str] = None
@@ -2143,14 +2249,17 @@ async def explain_routing_decision(
         raise HTTPException(status_code=501, detail="M18 module not available")
 
     try:
-        from sqlalchemy import create_engine, text
         import os
+
+        from sqlalchemy import create_engine, text
+
         engine = create_engine(os.environ.get("DATABASE_URL"))
 
         with engine.connect() as conn:
             # Get the routing decision
             result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         request_id, selected_agent_id, routed, decision_reason,
                         error, actionable_fix, total_latency_ms,
@@ -2159,8 +2268,9 @@ async def explain_routing_decision(
                     FROM routing.routing_decisions
                     WHERE request_id = :request_id
                     AND tenant_id = :tenant_id
-                """),
-                {"request_id": request_id, "tenant_id": x_tenant_id}
+                """
+                ),
+                {"request_id": request_id, "tenant_id": x_tenant_id},
             )
             row = result.fetchone()
 
@@ -2194,40 +2304,52 @@ async def explain_routing_decision(
 
             # Reputation factor
             if agent_id != "none":
-                factors.append({
-                    "factor": "reputation",
-                    "value": round(reputation_at_route, 3),
-                    "impact": "positive" if reputation_at_route > 0.7 else "neutral" if reputation_at_route > 0.4 else "negative",
-                    "explanation": f"Agent reputation was {reputation_at_route:.1%} at routing time",
-                })
+                factors.append(
+                    {
+                        "factor": "reputation",
+                        "value": round(reputation_at_route, 3),
+                        "impact": "positive"
+                        if reputation_at_route > 0.7
+                        else "neutral"
+                        if reputation_at_route > 0.4
+                        else "negative",
+                        "explanation": f"Agent reputation was {reputation_at_route:.1%} at routing time",
+                    }
+                )
 
                 # Quarantine factor
-                factors.append({
-                    "factor": "quarantine_state",
-                    "value": quarantine_state,
-                    "impact": "positive" if quarantine_state == "active" else "negative",
-                    "explanation": f"Agent was in {quarantine_state} state",
-                })
+                factors.append(
+                    {
+                        "factor": "quarantine_state",
+                        "value": quarantine_state,
+                        "impact": "positive" if quarantine_state == "active" else "negative",
+                        "explanation": f"Agent was in {quarantine_state} state",
+                    }
+                )
 
             # Confidence factor
             if confidence:
-                factors.append({
-                    "factor": "confidence",
-                    "value": round(confidence, 3),
-                    "impact": "positive" if confidence > 0.7 else "neutral" if confidence > 0.4 else "negative",
-                    "explanation": f"Routing confidence was {confidence:.1%}",
-                })
+                factors.append(
+                    {
+                        "factor": "confidence",
+                        "value": round(confidence, 3),
+                        "impact": "positive" if confidence > 0.7 else "neutral" if confidence > 0.4 else "negative",
+                        "explanation": f"Routing confidence was {confidence:.1%}",
+                    }
+                )
 
             # Get SLA score if available
             feedback_loop = get_feedback_loop()
             sla_score = await feedback_loop.get_sla_score(agent_id)
             if sla_score:
-                factors.append({
-                    "factor": "sla_compliance",
-                    "value": round(sla_score.current_sla, 3),
-                    "impact": "positive" if sla_score.current_sla >= sla_score.sla_target else "negative",
-                    "explanation": f"SLA is {sla_score.current_sla:.1%} vs target {sla_score.sla_target:.1%}",
-                })
+                factors.append(
+                    {
+                        "factor": "sla_compliance",
+                        "value": round(sla_score.current_sla, 3),
+                        "impact": "positive" if sla_score.current_sla >= sla_score.sla_target else "negative",
+                        "explanation": f"SLA is {sla_score.current_sla:.1%} vs target {sla_score.sla_target:.1%}",
+                    }
+                )
 
             # Generate recommendation
             recommendation = None
@@ -2458,9 +2580,7 @@ async def trigger_batch_learning(
             "total_outcomes": result.total_outcomes,
             "successful_outcomes": result.successful_outcomes,
             "failed_outcomes": result.failed_outcomes,
-            "success_rate": round(
-                result.successful_outcomes / max(result.total_outcomes, 1), 3
-            ),
+            "success_rate": round(result.successful_outcomes / max(result.total_outcomes, 1), 3),
             "parameter_adjustments": result.parameter_adjustments,
             "reputation_updates": result.reputation_updates,
             "drift_signals_generated": result.drift_signals_generated,

@@ -24,7 +24,7 @@ WARNINGS=0
 # -----------------------------------------------------------------------------
 # 1. Verify working environment exists
 # -----------------------------------------------------------------------------
-echo "[1/6] Checking working environment..."
+echo "[1/7] Checking working environment..."
 if [ ! -d "agentiverz_mn" ]; then
     echo "  ERROR: Working environment missing at agentiverz_mn/"
     echo "  Action: Create it or restore from backup"
@@ -38,7 +38,7 @@ fi
 # 2. Check for stale checklists (>7 days untouched)
 # -----------------------------------------------------------------------------
 echo ""
-echo "[2/6] Checking for stale files..."
+echo "[2/7] Checking for stale files..."
 STALE_FILES=$(find agentiverz_mn -name "*.md" -mtime +7 2>/dev/null || true)
 if [ -n "$STALE_FILES" ]; then
     echo "  WARN: Files not updated in >7 days:"
@@ -55,7 +55,7 @@ fi
 # 3. Show current milestone status
 # -----------------------------------------------------------------------------
 echo ""
-echo "[3/6] Current project phase..."
+echo "[3/7] Current project phase..."
 if [ -f "docs/memory-pins/INDEX.md" ]; then
     PHASE=$(grep -A2 "### Current Project Phase" docs/memory-pins/INDEX.md | tail -2 | head -1 | sed 's/^\*\*/  /' | sed 's/\*\*$//')
     echo "  $PHASE"
@@ -77,7 +77,7 @@ fi
 # 4. Show blocking items
 # -----------------------------------------------------------------------------
 echo ""
-echo "[4/6] Checking for blockers..."
+echo "[4/7] Checking for blockers..."
 BLOCKERS=$(grep -l -i "BLOCKING\|BLOCKER" agentiverz_mn/*.md 2>/dev/null || true)
 if [ -n "$BLOCKERS" ]; then
     echo "  BLOCKERS FOUND:"
@@ -90,10 +90,26 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 5. Check services status
+# 5. Dev Sync Check (code vs container consistency)
 # -----------------------------------------------------------------------------
 echo ""
-echo "[5/6] Service status..."
+echo "[5/7] Dev sync status..."
+if [ -x "$ROOT/scripts/ops/dev_sync.sh" ]; then
+    if "$ROOT/scripts/ops/dev_sync.sh" --quick 2>&1 | grep -q "ERROR"; then
+        echo "  WARN: Backend may need rebuild - run ./scripts/ops/dev_sync.sh"
+        WARNINGS=$((WARNINGS+1))
+    else
+        echo "  OK: Backend responding"
+    fi
+else
+    echo "  SKIP: dev_sync.sh not found"
+fi
+
+# -----------------------------------------------------------------------------
+# 6. Check services status
+# -----------------------------------------------------------------------------
+echo ""
+echo "[6/7] Service status..."
 if command -v docker &> /dev/null; then
     RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep -c "nova" || echo "0")
     UNHEALTHY=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null | grep "nova" || true)
@@ -116,10 +132,10 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 6. PIN count check
+# 7. PIN count check
 # -----------------------------------------------------------------------------
 echo ""
-echo "[6/6] PIN hygiene..."
+echo "[7/7] PIN hygiene..."
 PIN_COUNT=$(ls docs/memory-pins/PIN-*.md 2>/dev/null | wc -l)
 echo "  Total PINs: $PIN_COUNT"
 if [ "$PIN_COUNT" -gt 40 ]; then
