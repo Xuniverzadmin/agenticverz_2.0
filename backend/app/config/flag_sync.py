@@ -27,13 +27,13 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from sqlmodel import Session, select
 from sqlalchemy import text
+from sqlmodel import Session, select
 
 logger = logging.getLogger("nova.config.flag_sync")
 
@@ -44,6 +44,7 @@ DEFAULT_FLAGS_FILE = Path(__file__).parent / "feature_flags.json"
 def get_db_session():
     """Get database session."""
     from app.db import engine
+
     return Session(engine)
 
 
@@ -53,7 +54,7 @@ def read_file_flags(path: Path = DEFAULT_FLAGS_FILE) -> Dict:
         logger.warning(f"Flags file not found: {path}")
         return {"flags": {}, "environments": {}}
 
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         return json.load(f)
 
 
@@ -62,11 +63,11 @@ def write_file_flags(flags: Dict, path: Path = DEFAULT_FLAGS_FILE) -> None:
     import tempfile
 
     dir_path = path.parent
-    fd, tmp_path = tempfile.mkstemp(dir=str(dir_path), suffix='.tmp')
+    fd, tmp_path = tempfile.mkstemp(dir=str(dir_path), suffix=".tmp")
     try:
-        with os.fdopen(fd, 'w') as f:
+        with os.fdopen(fd, "w") as f:
             json.dump(flags, f, indent=2)
-            f.write('\n')
+            f.write("\n")
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_path, str(path))
@@ -98,7 +99,7 @@ def sync_file_to_db(
     file_path: Path = DEFAULT_FLAGS_FILE,
     environment: str = "staging",
     changed_by: str = "flag_sync",
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> Tuple[int, int, List[str]]:
     """
     Sync flags from file to database.
@@ -133,15 +134,12 @@ def sync_file_to_db(
             enabled = env_flags.get(name, config.get("enabled", False))
 
             # Check if flag exists
-            stmt = select(FeatureFlag).where(
-                FeatureFlag.name == name,
-                FeatureFlag.environment == environment
-            )
+            stmt = select(FeatureFlag).where(FeatureFlag.name == name, FeatureFlag.environment == environment)
             result = session.exec(stmt).first()
             # Handle both Row tuple and direct model returns
             if result is None:
                 existing = None
-            elif hasattr(result, 'name'):  # Already a model
+            elif hasattr(result, "name"):  # Already a model
                 existing = result
             else:  # Row tuple
                 existing = result[0]
@@ -189,9 +187,7 @@ def sync_file_to_db(
 
 
 def sync_db_to_file(
-    file_path: Path = DEFAULT_FLAGS_FILE,
-    environment: str = "staging",
-    dry_run: bool = False
+    file_path: Path = DEFAULT_FLAGS_FILE, environment: str = "staging", dry_run: bool = False
 ) -> Tuple[int, List[str]]:
     """
     Sync flags from database to file.
@@ -249,10 +245,7 @@ def sync_db_to_file(
         session.close()
 
 
-def check_consistency(
-    file_path: Path = DEFAULT_FLAGS_FILE,
-    environment: str = "staging"
-) -> Tuple[bool, List[str]]:
+def check_consistency(file_path: Path = DEFAULT_FLAGS_FILE, environment: str = "staging") -> Tuple[bool, List[str]]:
     """
     Check consistency between file and DB flags.
 
@@ -273,7 +266,7 @@ def check_consistency(
         # Handle both Row tuple and direct model returns
         db_flags = {}
         for r in results:
-            flag = r if hasattr(r, 'name') else r[0]
+            flag = r if hasattr(r, "name") else r[0]
             db_flags[flag.name] = flag.enabled
 
         # Check file flags against DB
@@ -302,39 +295,15 @@ def check_consistency(
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(description="Feature flag file↔DB sync")
-    parser.add_argument(
-        "--direction",
-        choices=["file-to-db", "db-to-file"],
-        help="Sync direction"
-    )
-    parser.add_argument(
-        "--check-only",
-        action="store_true",
-        help="Check consistency without syncing"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be done without making changes"
-    )
-    parser.add_argument(
-        "--environment",
-        default="staging",
-        help="Environment to sync (default: staging)"
-    )
-    parser.add_argument(
-        "--file",
-        type=Path,
-        default=DEFAULT_FLAGS_FILE,
-        help="Path to feature_flags.json"
-    )
+    parser.add_argument("--direction", choices=["file-to-db", "db-to-file"], help="Sync direction")
+    parser.add_argument("--check-only", action="store_true", help="Check consistency without syncing")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
+    parser.add_argument("--environment", default="staging", help="Environment to sync (default: staging)")
+    parser.add_argument("--file", type=Path, default=DEFAULT_FLAGS_FILE, help="Path to feature_flags.json")
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
     if args.check_only:
         is_consistent, diffs = check_consistency(args.file, args.environment)
@@ -348,18 +317,14 @@ def main():
             sys.exit(1)
 
     elif args.direction == "file-to-db":
-        created, updated, errors = sync_file_to_db(
-            args.file, args.environment, dry_run=args.dry_run
-        )
+        created, updated, errors = sync_file_to_db(args.file, args.environment, dry_run=args.dry_run)
         print(f"Created: {created}, Updated: {updated}")
         if errors:
             print(f"Errors: {errors}")
             sys.exit(1)
 
     elif args.direction == "db-to-file":
-        synced, errors = sync_db_to_file(
-            args.file, args.environment, dry_run=args.dry_run
-        )
+        synced, errors = sync_db_to_file(args.file, args.environment, dry_run=args.dry_run)
         print(f"Synced: {synced}")
         if errors:
             print(f"Errors: {errors}")

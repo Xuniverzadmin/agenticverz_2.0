@@ -11,23 +11,18 @@ Provides:
 
 import json
 import logging
-import secrets
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Tuple
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional, Tuple
 
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
 from ..models.tenant import (
-    Tenant,
-    User,
-    TenantMembership,
-    APIKey,
-    Subscription,
-    UsageRecord,
-    WorkerConfig,
-    WorkerRun,
-    AuditLog,
     PLAN_QUOTAS,
+    APIKey,
+    AuditLog,
+    Tenant,
+    UsageRecord,
+    WorkerRun,
 )
 
 logger = logging.getLogger("nova.services.tenant")
@@ -39,11 +34,13 @@ def utc_now() -> datetime:
 
 class TenantServiceError(Exception):
     """Base exception for tenant service errors."""
+
     pass
 
 
 class QuotaExceededError(TenantServiceError):
     """Raised when a quota limit is exceeded."""
+
     def __init__(self, quota_name: str, limit: int, current: int):
         self.quota_name = quota_name
         self.limit = limit
@@ -69,9 +66,7 @@ class TenantService:
     ) -> Tenant:
         """Create a new tenant."""
         # Check slug uniqueness
-        existing = self.session.exec(
-            select(Tenant).where(Tenant.slug == slug)
-        ).first()
+        existing = self.session.exec(select(Tenant).where(Tenant.slug == slug)).first()
         if existing:
             raise TenantServiceError(f"Tenant with slug '{slug}' already exists")
 
@@ -104,9 +99,7 @@ class TenantService:
 
     def get_tenant_by_slug(self, slug: str) -> Optional[Tenant]:
         """Get tenant by slug."""
-        return self.session.exec(
-            select(Tenant).where(Tenant.slug == slug)
-        ).first()
+        return self.session.exec(select(Tenant).where(Tenant.slug == slug)).first()
 
     def update_tenant_plan(self, tenant_id: str, plan: str) -> Tenant:
         """Update tenant plan and quotas."""
@@ -172,10 +165,7 @@ class TenantService:
 
         # Check key limit
         key_count = self.session.exec(
-            select(func.count(APIKey.id)).where(
-                APIKey.tenant_id == tenant_id,
-                APIKey.status == "active"
-            )
+            select(func.count(APIKey.id)).where(APIKey.tenant_id == tenant_id, APIKey.status == "active")
         ).one()
 
         if key_count >= tenant.max_api_keys:
@@ -216,11 +206,14 @@ class TenantService:
             new_value={"name": name, "prefix": prefix},
         )
 
-        logger.info("api_key_created", extra={
-            "tenant_id": tenant_id,
-            "key_id": api_key.id,
-            "key_prefix": prefix,
-        })
+        logger.info(
+            "api_key_created",
+            extra={
+                "tenant_id": tenant_id,
+                "key_id": api_key.id,
+                "key_prefix": prefix,
+            },
+        )
 
         return full_key, api_key
 
@@ -290,8 +283,7 @@ class TenantService:
         # Check concurrent runs
         running_count = self.session.exec(
             select(func.count(WorkerRun.id)).where(
-                WorkerRun.tenant_id == tenant_id,
-                WorkerRun.status.in_(["queued", "running"])
+                WorkerRun.tenant_id == tenant_id, WorkerRun.status.in_(["queued", "running"])
             )
         ).one()
 
@@ -571,6 +563,7 @@ class TenantService:
 
 
 # ============== Factory Function ==============
+
 
 def get_tenant_service(session: Session) -> TenantService:
     """Get a TenantService instance."""

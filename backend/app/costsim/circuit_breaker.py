@@ -38,24 +38,24 @@ Usage:
 """
 
 from __future__ import annotations
+
 import asyncio
 import json
 import logging
-import os
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
-import uuid
 
 import httpx
-from sqlmodel import Session, select, text
+from sqlmodel import Session, select
 
 from app.costsim.config import get_config
 from app.db import (
-    engine,
-    CostSimCBState,
     CostSimCBIncident,
+    CostSimCBState,
+    engine,
     log_status_change,
 )
 
@@ -189,6 +189,7 @@ class CircuitBreaker:
             # OSError covers other filesystem issues
             import logging
             import os
+
             logger = logging.getLogger("nova.costsim.circuit_breaker")
             fallback_path = os.environ.get("COSTSIM_INCIDENT_DIR", "/tmp/aos_costsim_incidents")
             fallback_dir = Path(fallback_path)
@@ -209,15 +210,13 @@ class CircuitBreaker:
         Uses SELECT FOR UPDATE to lock the row for atomic updates.
         """
         # Try to select with lock
-        statement = select(CostSimCBState).where(
-            CostSimCBState.name == self.name
-        ).with_for_update()
+        statement = select(CostSimCBState).where(CostSimCBState.name == self.name).with_for_update()
 
         result = session.exec(statement).first()
         # Handle both Row tuple and direct model returns
         if result is None:
             state = None
-        elif hasattr(result, 'name'):  # Already a model
+        elif hasattr(result, "name"):  # Already a model
             state = result
         else:  # Row tuple
             state = result[0]
@@ -315,10 +314,7 @@ class CircuitBreaker:
             reason="Auto-recovered after TTL expired",
         )
 
-        logger.info(
-            f"Circuit breaker auto-recovered: name={self.name}, "
-            f"old_incident_id={old_incident_id}"
-        )
+        logger.info(f"Circuit breaker auto-recovered: name={self.name}, " f"old_incident_id={old_incident_id}")
 
     def is_open(self) -> bool:
         """
@@ -399,7 +395,7 @@ class CircuitBreaker:
             else:
                 # Reset consecutive failures on success
                 if state.consecutive_failures > 0:
-                    logger.info(f"Drift within threshold, resetting consecutive failures")
+                    logger.info("Drift within threshold, resetting consecutive failures")
                     state.consecutive_failures = 0
                     state.updated_at = now
                     session.commit()
@@ -692,14 +688,12 @@ class CircuitBreaker:
         resolution_notes: str,
     ) -> None:
         """Resolve an incident in the database."""
-        statement = select(CostSimCBIncident).where(
-            CostSimCBIncident.id == incident_id
-        )
+        statement = select(CostSimCBIncident).where(CostSimCBIncident.id == incident_id)
         result = session.exec(statement).first()
         # Handle both Row tuple and direct model returns
         if result is None:
             incident = None
-        elif hasattr(result, 'id'):  # Already a model
+        elif hasattr(result, "id"):  # Already a model
             incident = result
         else:  # Row tuple
             incident = result[0]
@@ -736,36 +730,34 @@ class CircuitBreaker:
             List of incidents
         """
         with self._get_session() as session:
-            statement = select(CostSimCBIncident).where(
-                CostSimCBIncident.circuit_breaker_name == self.name
-            )
+            statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == self.name)
 
             if not include_resolved:
                 statement = statement.where(CostSimCBIncident.resolved == False)
 
-            statement = statement.order_by(
-                CostSimCBIncident.timestamp.desc()
-            ).limit(limit)
+            statement = statement.order_by(CostSimCBIncident.timestamp.desc()).limit(limit)
 
             result = session.exec(statement)
             incidents = []
 
             for db_incident in result:
-                incidents.append(Incident(
-                    id=db_incident.id,
-                    timestamp=db_incident.timestamp,
-                    reason=db_incident.reason,
-                    severity=db_incident.severity,
-                    drift_score=db_incident.drift_score or 0.0,
-                    sample_count=db_incident.sample_count or 0,
-                    details=db_incident.get_details(),
-                    resolved=db_incident.resolved,
-                    resolved_at=db_incident.resolved_at,
-                    resolved_by=db_incident.resolved_by,
-                    resolution_notes=db_incident.resolution_notes,
-                    alert_sent=db_incident.alert_sent,
-                    alert_sent_at=db_incident.alert_sent_at,
-                ))
+                incidents.append(
+                    Incident(
+                        id=db_incident.id,
+                        timestamp=db_incident.timestamp,
+                        reason=db_incident.reason,
+                        severity=db_incident.severity,
+                        drift_score=db_incident.drift_score or 0.0,
+                        sample_count=db_incident.sample_count or 0,
+                        details=db_incident.get_details(),
+                        resolved=db_incident.resolved,
+                        resolved_at=db_incident.resolved_at,
+                        resolved_by=db_incident.resolved_by,
+                        resolution_notes=db_incident.resolution_notes,
+                        alert_sent=db_incident.alert_sent,
+                        alert_sent_at=db_incident.alert_sent_at,
+                    )
+                )
 
             return incidents
 
@@ -783,27 +775,29 @@ class CircuitBreaker:
             logger.warning("ALERTMANAGER_URL not configured; skipping alert")
             return False
 
-        payload = [{
-            "labels": {
-                "alertname": "CostSimV2Disabled",
-                "severity": incident.severity.lower(),
-                "component": "costsim",
-                "circuit_breaker": self.name,
-                "instance": config.instance_id,
-                "incident_id": incident.id,
-            },
-            "annotations": {
-                "summary": f"CostSim V2 circuit breaker tripped ({incident.severity})",
-                "description": (
-                    f"Reason: {incident.reason}\n"
-                    f"Drift score: {incident.drift_score:.4f}\n"
-                    f"Sample count: {incident.sample_count}\n"
-                    f"Disabled until: {disabled_until.isoformat() if disabled_until else 'manual reset required'}"
-                ),
-                "runbook_url": "https://docs.aos.internal/runbooks/costsim-circuit-breaker",
-            },
-            "startsAt": datetime.now(timezone.utc).isoformat(),
-        }]
+        payload = [
+            {
+                "labels": {
+                    "alertname": "CostSimV2Disabled",
+                    "severity": incident.severity.lower(),
+                    "component": "costsim",
+                    "circuit_breaker": self.name,
+                    "instance": config.instance_id,
+                    "incident_id": incident.id,
+                },
+                "annotations": {
+                    "summary": f"CostSim V2 circuit breaker tripped ({incident.severity})",
+                    "description": (
+                        f"Reason: {incident.reason}\n"
+                        f"Drift score: {incident.drift_score:.4f}\n"
+                        f"Sample count: {incident.sample_count}\n"
+                        f"Disabled until: {disabled_until.isoformat() if disabled_until else 'manual reset required'}"
+                    ),
+                    "runbook_url": "https://docs.aos.internal/runbooks/costsim-circuit-breaker",
+                },
+                "startsAt": datetime.now(timezone.utc).isoformat(),
+            }
+        ]
 
         return await self._post_alertmanager(payload)
 
@@ -820,24 +814,23 @@ class CircuitBreaker:
             return False
 
         now = datetime.now(timezone.utc)
-        payload = [{
-            "labels": {
-                "alertname": "CostSimV2Reenabled",
-                "severity": "info",
-                "component": "costsim",
-                "circuit_breaker": self.name,
-                "instance": config.instance_id,
-            },
-            "annotations": {
-                "summary": "CostSim V2 circuit breaker re-enabled",
-                "description": (
-                    f"Re-enabled by: {enabled_by}\n"
-                    f"Reason: {reason or 'Not specified'}"
-                ),
-            },
-            "startsAt": now.isoformat(),
-            "endsAt": now.isoformat(),  # Resolved immediately
-        }]
+        payload = [
+            {
+                "labels": {
+                    "alertname": "CostSimV2Reenabled",
+                    "severity": "info",
+                    "component": "costsim",
+                    "circuit_breaker": self.name,
+                    "instance": config.instance_id,
+                },
+                "annotations": {
+                    "summary": "CostSim V2 circuit breaker re-enabled",
+                    "description": (f"Re-enabled by: {enabled_by}\n" f"Reason: {reason or 'Not specified'}"),
+                },
+                "startsAt": now.isoformat(),
+                "endsAt": now.isoformat(),  # Resolved immediately
+            }
+        ]
 
         return await self._post_alertmanager(payload)
 
@@ -856,9 +849,7 @@ class CircuitBreaker:
 
         for attempt in range(config.alertmanager_retry_attempts):
             try:
-                async with httpx.AsyncClient(
-                    timeout=config.alertmanager_timeout_seconds
-                ) as client:
+                async with httpx.AsyncClient(timeout=config.alertmanager_timeout_seconds) as client:
                     response = await client.post(
                         config.alertmanager_url,
                         json=payload,
@@ -880,10 +871,12 @@ class CircuitBreaker:
 
                 if attempt < config.alertmanager_retry_attempts - 1:
                     await asyncio.sleep(
-                        config.alertmanager_retry_delay_seconds * (2 ** attempt)  # Exponential backoff
+                        config.alertmanager_retry_delay_seconds * (2**attempt)  # Exponential backoff
                     )
 
-        logger.error(f"Failed to post to Alertmanager after {config.alertmanager_retry_attempts} attempts: {last_error}")
+        logger.error(
+            f"Failed to post to Alertmanager after {config.alertmanager_retry_attempts} attempts: {last_error}"
+        )
         return False
 
 
@@ -901,6 +894,7 @@ def get_circuit_breaker() -> CircuitBreaker:
 
 
 # ========== Convenience Functions ==========
+
 
 async def is_v2_disabled() -> bool:
     """Check if CostSim V2 is disabled."""

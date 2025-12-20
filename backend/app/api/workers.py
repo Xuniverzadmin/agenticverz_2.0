@@ -18,9 +18,9 @@ import asyncio
 import json
 import logging
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
-from collections import defaultdict
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -37,8 +37,10 @@ router = APIRouter(prefix="/api/v1/workers/business-builder", tags=["Workers"])
 # Request/Response Schemas
 # =============================================================================
 
+
 class ToneRuleRequest(BaseModel):
     """Tone rule for brand."""
+
     primary: str = Field(default="professional", description="Primary tone")
     avoid: List[str] = Field(default_factory=list, description="Tones to avoid")
     examples_good: List[str] = Field(default_factory=list, description="Good examples")
@@ -47,6 +49,7 @@ class ToneRuleRequest(BaseModel):
 
 class ForbiddenClaimRequest(BaseModel):
     """Forbidden claim definition."""
+
     pattern: str = Field(..., description="Pattern to match")
     reason: str = Field(default="Policy violation", description="Reason for forbidding")
     severity: str = Field(default="error", description="error or warning")
@@ -54,6 +57,7 @@ class ForbiddenClaimRequest(BaseModel):
 
 class VisualIdentityRequest(BaseModel):
     """Visual identity for brand."""
+
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
     font_heading: str = "Inter"
@@ -63,6 +67,7 @@ class VisualIdentityRequest(BaseModel):
 
 class BrandRequest(BaseModel):
     """Brand schema for worker execution."""
+
     company_name: str = Field(..., min_length=1, description="Company name")
     tagline: Optional[str] = None
     mission: str = Field(..., min_length=10, description="Mission statement")
@@ -80,37 +85,20 @@ class BrandRequest(BaseModel):
 
 class WorkerRunRequest(BaseModel):
     """Request to run the Business Builder Worker."""
-    task: str = Field(
-        ...,
-        min_length=5,
-        description="Business/product idea to build launch package for"
-    )
+
+    task: str = Field(..., min_length=5, description="Business/product idea to build launch package for")
     brand: Optional[BrandRequest] = Field(
-        default=None,
-        description="Brand constraints (optional, creates minimal brand if not provided)"
+        default=None, description="Brand constraints (optional, creates minimal brand if not provided)"
     )
-    budget: Optional[int] = Field(
-        default=None,
-        ge=1000,
-        le=100000,
-        description="Token budget for execution"
-    )
-    strict_mode: bool = Field(
-        default=False,
-        description="If true, any policy violation stops execution"
-    )
-    depth: str = Field(
-        default="auto",
-        description="Research depth: auto, shallow, deep"
-    )
-    async_mode: bool = Field(
-        default=False,
-        description="If true, returns immediately with run_id to poll"
-    )
+    budget: Optional[int] = Field(default=None, ge=1000, le=100000, description="Token budget for execution")
+    strict_mode: bool = Field(default=False, description="If true, any policy violation stops execution")
+    depth: str = Field(default="auto", description="Research depth: auto, shallow, deep")
+    async_mode: bool = Field(default=False, description="If true, returns immediately with run_id to poll")
 
 
 class WorkerRunResponse(BaseModel):
     """Response from worker execution."""
+
     run_id: str
     success: bool
     status: str  # queued, running, completed, failed
@@ -130,14 +118,13 @@ class WorkerRunResponse(BaseModel):
 
 class ReplayRequest(BaseModel):
     """Request to replay a previous execution."""
-    replay_token: Dict[str, Any] = Field(
-        ...,
-        description="Replay token from previous execution"
-    )
+
+    replay_token: Dict[str, Any] = Field(..., description="Replay token from previous execution")
 
 
 class BrandValidationResponse(BaseModel):
     """Response from brand validation."""
+
     valid: bool
     errors: List[str] = Field(default_factory=list)
     warnings: List[str] = Field(default_factory=list)
@@ -147,6 +134,7 @@ class BrandValidationResponse(BaseModel):
 
 class RunListItem(BaseModel):
     """Summary item for run listing."""
+
     run_id: str
     task: str
     status: str
@@ -157,6 +145,7 @@ class RunListItem(BaseModel):
 
 class RunListResponse(BaseModel):
     """Response for listing runs."""
+
     runs: List[RunListItem]
     total: int
 
@@ -190,6 +179,7 @@ def _list_runs(limit: int = 20) -> List[Dict[str, Any]]:
 # =============================================================================
 # SSE Event Bus for Real-Time Streaming
 # =============================================================================
+
 
 class WorkerEventBus:
     """
@@ -260,6 +250,7 @@ def get_event_bus() -> WorkerEventBus:
 # SSE Event Types
 class EventType:
     """Constants for SSE event types."""
+
     RUN_STARTED = "run_started"
     STAGE_STARTED = "stage_started"
     STAGE_COMPLETED = "stage_completed"
@@ -281,15 +272,16 @@ class EventType:
 # Helper Functions
 # =============================================================================
 
+
 def _brand_request_to_schema(brand_req: BrandRequest):
     """Convert API request to BrandSchema."""
     from ..workers.business_builder.schemas.brand import (
-        BrandSchema,
-        ToneRule,
-        ToneLevel,
-        ForbiddenClaim,
-        VisualIdentity,
         AudienceSegment,
+        BrandSchema,
+        ForbiddenClaim,
+        ToneLevel,
+        ToneRule,
+        VisualIdentity,
     )
 
     # Convert tone
@@ -351,12 +343,15 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
     try:
         from ..workers.business_builder.worker import BusinessBuilderWorker
 
-        _store_run(run_id, {
-            "run_id": run_id,
-            "task": request.task,
-            "status": "running",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        _store_run(
+            run_id,
+            {
+                "run_id": run_id,
+                "task": request.task,
+                "status": "running",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
         worker = BusinessBuilderWorker()
 
@@ -374,40 +369,47 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
         )
 
         # Update stored run
-        _store_run(run_id, {
-            "run_id": run_id,
-            "task": request.task,
-            "status": "completed" if result.success else "failed",
-            "success": result.success,
-            "artifacts": result.artifacts,
-            "replay_token": result.replay_token,
-            "cost_report": result.cost_report,
-            "policy_violations": result.policy_violations,
-            "recovery_log": result.recovery_log,
-            "drift_metrics": result.drift_metrics,
-            "execution_trace": result.execution_trace,
-            "routing_decisions": result.routing_decisions,
-            "error": result.error,
-            "total_tokens_used": result.total_tokens_used,
-            "total_latency_ms": result.total_latency_ms,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        _store_run(
+            run_id,
+            {
+                "run_id": run_id,
+                "task": request.task,
+                "status": "completed" if result.success else "failed",
+                "success": result.success,
+                "artifacts": result.artifacts,
+                "replay_token": result.replay_token,
+                "cost_report": result.cost_report,
+                "policy_violations": result.policy_violations,
+                "recovery_log": result.recovery_log,
+                "drift_metrics": result.drift_metrics,
+                "execution_trace": result.execution_trace,
+                "routing_decisions": result.routing_decisions,
+                "error": result.error,
+                "total_tokens_used": result.total_tokens_used,
+                "total_latency_ms": result.total_latency_ms,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
     except Exception as e:
         logger.exception(f"Worker execution failed for run {run_id}")
-        _store_run(run_id, {
-            "run_id": run_id,
-            "task": request.task,
-            "status": "failed",
-            "success": False,
-            "error": str(e),
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        _store_run(
+            run_id,
+            {
+                "run_id": run_id,
+                "task": request.task,
+                "status": "failed",
+                "success": False,
+                "error": str(e),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
 
 # =============================================================================
 # API Endpoints
 # =============================================================================
+
 
 @router.post("/run", response_model=WorkerRunResponse, status_code=202)
 async def run_worker(
@@ -444,17 +446,20 @@ async def run_worker(
             "task": request.task[:100],
             "has_brand": request.brand is not None,
             "async_mode": request.async_mode,
-        }
+        },
     )
 
     if request.async_mode:
         # Queue for background execution
-        _store_run(run_id, {
-            "run_id": run_id,
-            "task": request.task,
-            "status": "queued",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        _store_run(
+            run_id,
+            {
+                "run_id": run_id,
+                "task": request.task,
+                "status": "queued",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
         background_tasks.add_task(_execute_worker_async, run_id, request)
 
         return WorkerRunResponse(
@@ -506,10 +511,7 @@ async def run_worker(
 
     except Exception as e:
         logger.exception("worker_run_failed")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Worker execution failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Worker execution failed: {str(e)}")
 
 
 @router.post("/replay", response_model=WorkerRunResponse, status_code=202)
@@ -547,10 +549,7 @@ async def replay_execution(
 
     except Exception as e:
         logger.exception("replay_failed")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Replay failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Replay failed: {str(e)}")
 
 
 @router.get("/runs/{run_id}", response_model=WorkerRunResponse)
@@ -660,6 +659,7 @@ async def worker_health():
     # Check M17 CARE
     try:
         from ..routing.care import get_care_engine
+
         get_care_engine()
         moat_status["m17_care"] = "available"
     except ImportError:
@@ -668,6 +668,7 @@ async def worker_health():
     # Check M20 Policy
     try:
         from ..policy.runtime.dag_executor import DAGExecutor
+
         DAGExecutor()
         moat_status["m20_policy"] = "available"
     except ImportError:
@@ -676,6 +677,7 @@ async def worker_health():
     # Check M9 Failure Catalog (via RecoveryMatcher)
     try:
         from ..services.recovery_matcher import RecoveryMatcher
+
         RecoveryMatcher()
         moat_status["m9_failure_catalog"] = "available"
     except ImportError:
@@ -684,6 +686,7 @@ async def worker_health():
     # Check M10 Recovery (via RecoveryMatcher)
     try:
         from ..services.recovery_matcher import RecoveryMatcher
+
         RecoveryMatcher()
         moat_status["m10_recovery"] = "available"
     except ImportError:
@@ -736,6 +739,7 @@ async def get_run_schema():
 # SSE Streaming Endpoint
 # =============================================================================
 
+
 async def _sse_event_generator(run_id: str, queue: asyncio.Queue) -> AsyncGenerator[str, None]:
     """Generate SSE events from the queue."""
     try:
@@ -754,13 +758,13 @@ async def _sse_event_generator(run_id: str, queue: asyncio.Queue) -> AsyncGenera
                 yield f"event: {event['type']}\ndata: {json.dumps(event)}\n\n"
 
                 # Check for terminal events
-                if event['type'] in (EventType.RUN_COMPLETED, EventType.RUN_FAILED):
+                if event["type"] in (EventType.RUN_COMPLETED, EventType.RUN_FAILED):
                     yield f"event: stream_end\ndata: {json.dumps({'run_id': run_id, 'reason': 'run_completed'})}\n\n"
                     break
 
             except asyncio.TimeoutError:
                 # Send keepalive
-                yield f": keepalive\n\n"
+                yield ": keepalive\n\n"
 
     except asyncio.CancelledError:
         logger.debug(f"SSE stream cancelled for run {run_id}")
@@ -810,7 +814,7 @@ async def stream_run_events(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
-        }
+        },
     )
 
 
@@ -836,6 +840,7 @@ async def get_run_events(
 # Enhanced Worker Execution with Event Emission
 # =============================================================================
 
+
 async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) -> None:
     """
     Execute worker with REAL event emission from worker itself.
@@ -847,12 +852,15 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
     try:
         from ..workers.business_builder.worker import BusinessBuilderWorker
 
-        _store_run(run_id, {
-            "run_id": run_id,
-            "task": request.task,
-            "status": "running",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        _store_run(
+            run_id,
+            {
+                "run_id": run_id,
+                "task": request.task,
+                "status": "running",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
         # Convert brand if provided
         brand = None
@@ -901,19 +909,26 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
     except Exception as e:
         logger.exception(f"Worker execution failed for run {run_id}")
 
-        await event_bus.emit(run_id, EventType.RUN_FAILED, {
-            "success": False,
-            "error": str(e),
-        })
+        await event_bus.emit(
+            run_id,
+            EventType.RUN_FAILED,
+            {
+                "success": False,
+                "error": str(e),
+            },
+        )
 
-        _store_run(run_id, {
-            "run_id": run_id,
-            "task": request.task,
-            "status": "failed",
-            "success": False,
-            "error": str(e),
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        _store_run(
+            run_id,
+            {
+                "run_id": run_id,
+                "task": request.task,
+                "status": "failed",
+                "success": False,
+                "error": str(e),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
 
 @router.post("/run-streaming", response_model=WorkerRunResponse, status_code=202)
@@ -937,16 +952,19 @@ async def run_worker_streaming(
         extra={
             "run_id": run_id,
             "task": request.task[:100],
-        }
+        },
     )
 
     # Initialize run
-    _store_run(run_id, {
-        "run_id": run_id,
-        "task": request.task,
-        "status": "queued",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
+    _store_run(
+        run_id,
+        {
+            "run_id": run_id,
+            "task": request.task,
+            "status": "queued",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
 
     # Queue for background execution with events
     background_tasks.add_task(_execute_worker_with_events, run_id, request)

@@ -4,12 +4,12 @@
 
 import logging
 import os
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
 import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Dict, Optional
 
-from sqlmodel import Session, select, text
+from sqlmodel import Session, text
 
 from ..db import Agent, engine
 
@@ -39,6 +39,7 @@ AUTO_PAUSE_ON_BREACH = os.getenv("AUTO_PAUSE_ON_BREACH", "true").lower() == "tru
 @dataclass
 class BudgetStatus:
     """Current budget status for an agent."""
+
     budget_cents: int
     spent_cents: int
     remaining_cents: int
@@ -52,6 +53,7 @@ class BudgetStatus:
 @dataclass
 class BudgetCheckResult:
     """Result of a budget enforcement check."""
+
     allowed: bool
     reason: Optional[str] = None
     breach_type: Optional[str] = None  # "per_run", "per_day", "per_model", "total_budget"
@@ -98,7 +100,7 @@ class BudgetTracker:
             today_spent = self._get_today_spent(session, agent_id)
 
             # Check if agent is paused
-            is_paused = getattr(agent, 'is_paused', False)
+            is_paused = getattr(agent, "is_paused", False)
 
             return BudgetStatus(
                 budget_cents=budget,
@@ -115,11 +117,13 @@ class BudgetTracker:
         """Get total spent today from llm_costs table."""
         try:
             today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-            query = text("""
+            query = text(
+                """
                 SELECT COALESCE(SUM(cost_cents), 0) as total
                 FROM llm_costs
                 WHERE agent_id = :agent_id AND created_at >= :today_start
-            """)
+            """
+            )
             result = session.exec(query, {"agent_id": agent_id, "today_start": today_start})
             row = result.first()
             return int(row[0]) if row else 0
@@ -170,7 +174,7 @@ class BudgetTracker:
                     "agent_id": agent_id,
                     "estimated_cost": estimated_cost_cents,
                     "limit": PER_RUN_MAX_CENTS,
-                }
+                },
             )
             return BudgetCheckResult(
                 allowed=False,
@@ -191,7 +195,7 @@ class BudgetTracker:
                         "model": model,
                         "estimated_cost": estimated_cost_cents,
                         "limit": model_limit,
-                    }
+                    },
                 )
                 return BudgetCheckResult(
                     allowed=False,
@@ -226,7 +230,7 @@ class BudgetTracker:
                     "estimated_cost": estimated_cost_cents,
                     "projected": projected_today,
                     "limit": PER_DAY_MAX_CENTS,
-                }
+                },
             )
             # Auto-pause agent if configured
             if AUTO_PAUSE_ON_BREACH:
@@ -270,7 +274,7 @@ class BudgetTracker:
                     "agent_id": agent_id,
                     "usage_percent": status.usage_percent,
                     "remaining_cents": status.remaining_cents,
-                }
+                },
             )
 
         return BudgetCheckResult(allowed=True)
@@ -280,22 +284,18 @@ class BudgetTracker:
         try:
             with Session(engine) as session:
                 # Try to set is_paused flag (column may not exist)
-                query = text("""
+                query = text(
+                    """
                     UPDATE agents SET is_paused = true WHERE id = :agent_id
-                """)
+                """
+                )
                 session.exec(query, {"agent_id": agent_id})
                 session.commit()
 
-                logger.warning(
-                    "agent_paused_budget_breach",
-                    extra={"agent_id": agent_id, "reason": reason}
-                )
+                logger.warning("agent_paused_budget_breach", extra={"agent_id": agent_id, "reason": reason})
         except Exception as e:
             # Column might not exist, log but continue
-            logger.warning(
-                "agent_pause_failed",
-                extra={"agent_id": agent_id, "error": str(e)[:100]}
-            )
+            logger.warning("agent_pause_failed", extra={"agent_id": agent_id, "error": str(e)[:100]})
 
     def deduct(
         self,
@@ -315,23 +315,27 @@ class BudgetTracker:
         """
         with Session(engine) as session:
             # Use raw SQL for atomic update with check
-            query = text("""
+            query = text(
+                """
                 UPDATE agents
                 SET spent_cents = spent_cents + :cost
                 WHERE id = :agent_id
                 AND (budget_cents = 0 OR budget_cents - spent_cents >= :cost)
                 RETURNING id, budget_cents, spent_cents
-            """)
+            """
+            )
 
             if tenant_id:
-                query = text("""
+                query = text(
+                    """
                     UPDATE agents
                     SET spent_cents = spent_cents + :cost
                     WHERE id = :agent_id
                     AND tenant_id = :tenant_id
                     AND (budget_cents = 0 OR budget_cents - spent_cents >= :cost)
                     RETURNING id, budget_cents, spent_cents
-                """)
+                """
+                )
                 result = session.execute(query, {"agent_id": agent_id, "cost": cost_cents, "tenant_id": tenant_id})
             else:
                 result = session.execute(query, {"agent_id": agent_id, "cost": cost_cents})
@@ -347,14 +351,11 @@ class BudgetTracker:
                         "cost_cents": cost_cents,
                         "new_spent": row[2],
                         "budget": row[1],
-                    }
+                    },
                 )
                 return True
             else:
-                logger.warning(
-                    "budget_deduction_failed",
-                    extra={"agent_id": agent_id, "cost_cents": cost_cents}
-                )
+                logger.warning("budget_deduction_failed", extra={"agent_id": agent_id, "cost_cents": cost_cents})
                 return False
 
     def record_cost(
@@ -375,21 +376,26 @@ class BudgetTracker:
         try:
             with Session(engine) as session:
                 # Try to insert into llm_costs table
-                query = text("""
+                query = text(
+                    """
                     INSERT INTO llm_costs (id, run_id, agent_id, provider, model, input_tokens, output_tokens, cost_cents, created_at)
                     VALUES (:id, :run_id, :agent_id, :provider, :model, :input_tokens, :output_tokens, :cost_cents, :created_at)
-                """)
-                session.exec(query, {
-                    "id": str(uuid.uuid4()),
-                    "run_id": run_id,
-                    "agent_id": agent_id,
-                    "provider": provider,
-                    "model": model,
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "cost_cents": cost_cents,
-                    "created_at": datetime.now(timezone.utc),
-                })
+                """
+                )
+                session.exec(
+                    query,
+                    {
+                        "id": str(uuid.uuid4()),
+                        "run_id": run_id,
+                        "agent_id": agent_id,
+                        "provider": provider,
+                        "model": model,
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "cost_cents": cost_cents,
+                        "created_at": datetime.now(timezone.utc),
+                    },
+                )
                 session.commit()
 
         except Exception as e:
@@ -405,7 +411,7 @@ class BudgetTracker:
                     "output_tokens": output_tokens,
                     "cost_cents": cost_cents,
                     "error": str(e)[:100] if "llm_costs" not in str(e) else "table_missing",
-                }
+                },
             )
 
 
@@ -441,9 +447,7 @@ def record_cost(
     cost_cents: int,
 ):
     """Convenience function to record cost."""
-    get_budget_tracker().record_cost(
-        run_id, agent_id, provider, model, input_tokens, output_tokens, cost_cents
-    )
+    get_budget_tracker().record_cost(run_id, agent_id, provider, model, input_tokens, output_tokens, cost_cents)
 
 
 def enforce_budget(
@@ -457,6 +461,4 @@ def enforce_budget(
     This is the main entry point for Phase 5 budget protection.
     Checks: per-run, per-model, per-day, and total budget limits.
     """
-    return get_budget_tracker().enforce_budget(
-        agent_id, estimated_cost_cents, model, run_id
-    )
+    return get_budget_tracker().enforce_budget(agent_id, estimated_cost_cents, model, run_id)

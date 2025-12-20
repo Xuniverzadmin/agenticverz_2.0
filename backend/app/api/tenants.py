@@ -9,26 +9,21 @@ Provides:
 """
 
 import logging
-from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from ..auth import verify_api_key
 from ..auth.tenant_auth import TenantContext, get_tenant_context
 from ..services.tenant_service import (
+    QuotaExceededError,
     TenantService,
     TenantServiceError,
-    QuotaExceededError,
-    get_tenant_service,
 )
 from ..services.worker_registry_service import (
-    WorkerRegistryService,
-    WorkerRegistryError,
     WorkerNotFoundError,
-    get_worker_registry_service,
+    WorkerRegistryService,
 )
 
 logger = logging.getLogger("nova.api.tenants")
@@ -38,9 +33,11 @@ router = APIRouter(prefix="/api/v1", tags=["Tenants & API Keys"])
 
 # ============== Dependency Injection ==============
 
+
 def get_db():
     """Get database session."""
     from ..db import get_session
+
     return next(get_session())
 
 
@@ -57,8 +54,10 @@ def get_services(
 
 # ============== Request/Response Schemas ==============
 
+
 class TenantResponse(BaseModel):
     """Tenant information response."""
+
     id: str
     name: str
     slug: str
@@ -77,6 +76,7 @@ class TenantResponse(BaseModel):
 
 class APIKeyCreateRequest(BaseModel):
     """Request to create an API key."""
+
     name: str = Field(..., min_length=1, max_length=100)
     permissions: Optional[List[str]] = Field(default=None)
     allowed_workers: Optional[List[str]] = Field(default=None)
@@ -87,6 +87,7 @@ class APIKeyCreateRequest(BaseModel):
 
 class APIKeyResponse(BaseModel):
     """API key information (without the actual key)."""
+
     id: str
     name: str
     key_prefix: str
@@ -99,11 +100,13 @@ class APIKeyResponse(BaseModel):
 
 class APIKeyCreatedResponse(APIKeyResponse):
     """Response when creating an API key (includes the key once)."""
+
     key: str = Field(..., description="The full API key. Store this securely - it won't be shown again!")
 
 
 class UsageSummaryResponse(BaseModel):
     """Usage summary for a tenant."""
+
     tenant_id: str
     period: dict
     meters: dict
@@ -112,6 +115,7 @@ class UsageSummaryResponse(BaseModel):
 
 class WorkerSummaryResponse(BaseModel):
     """Worker summary information."""
+
     id: str
     name: str
     description: Optional[str]
@@ -124,6 +128,7 @@ class WorkerSummaryResponse(BaseModel):
 
 class WorkerDetailResponse(WorkerSummaryResponse):
     """Detailed worker information."""
+
     is_public: bool
     default_config: dict
     input_schema: dict
@@ -134,6 +139,7 @@ class WorkerDetailResponse(WorkerSummaryResponse):
 
 class WorkerConfigRequest(BaseModel):
     """Request to configure a worker for a tenant."""
+
     enabled: bool = True
     config: Optional[dict] = None
     brand: Optional[dict] = None
@@ -143,6 +149,7 @@ class WorkerConfigRequest(BaseModel):
 
 class WorkerConfigResponse(BaseModel):
     """Worker configuration response."""
+
     worker_id: str
     enabled: bool
     config: dict
@@ -153,6 +160,7 @@ class WorkerConfigResponse(BaseModel):
 
 class RunHistoryItem(BaseModel):
     """Run history item."""
+
     id: str
     worker_id: str
     task: str
@@ -167,6 +175,7 @@ class RunHistoryItem(BaseModel):
 
 class QuotaCheckResponse(BaseModel):
     """Quota check response."""
+
     allowed: bool
     reason: str
     quota_name: str
@@ -175,6 +184,7 @@ class QuotaCheckResponse(BaseModel):
 
 
 # ============== Tenant Endpoints ==============
+
 
 @router.get("/tenant", response_model=TenantResponse)
 async def get_current_tenant(
@@ -261,6 +271,7 @@ async def check_token_quota(
 
 # ============== API Key Endpoints ==============
 
+
 @router.get("/api-keys", response_model=List[APIKeyResponse])
 async def list_api_keys(
     include_revoked: bool = False,
@@ -274,8 +285,7 @@ async def list_api_keys(
     """
     if not ctx.has_permission("admin:*") and not ctx.has_permission("keys:read"):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Permission denied: requires admin or keys:read permission"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: requires admin or keys:read permission"
         )
 
     keys = services["tenant"].list_api_keys(ctx.tenant_id, include_revoked)
@@ -311,8 +321,7 @@ async def create_api_key(
     """
     if not ctx.has_permission("admin:*") and not ctx.has_permission("keys:create"):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Permission denied: requires admin or keys:create permission"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: requires admin or keys:create permission"
         )
 
     try:
@@ -341,8 +350,7 @@ async def create_api_key(
 
     except QuotaExceededError as e:
         raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"API key limit exceeded: {e.limit} keys maximum"
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=f"API key limit exceeded: {e.limit} keys maximum"
         )
 
 
@@ -362,8 +370,7 @@ async def revoke_api_key(
     """
     if not ctx.has_permission("admin:*") and not ctx.has_permission("keys:revoke"):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Permission denied: requires admin or keys:revoke permission"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: requires admin or keys:revoke permission"
         )
 
     try:
@@ -379,6 +386,7 @@ async def revoke_api_key(
 
 
 # ============== Worker Registry Endpoints ==============
+
 
 @router.get("/workers", response_model=List[WorkerSummaryResponse])
 async def list_workers(
@@ -456,7 +464,7 @@ async def set_worker_config(
     if not ctx.has_permission("admin:*") and not ctx.has_permission("workers:configure"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Permission denied: requires admin or workers:configure permission"
+            detail="Permission denied: requires admin or workers:configure permission",
         )
 
     try:
@@ -479,6 +487,7 @@ async def set_worker_config(
 
 
 # ============== Run History Endpoints ==============
+
 
 @router.get("/runs", response_model=List[RunHistoryItem])
 async def list_runs(
@@ -518,6 +527,7 @@ async def list_runs(
 
 
 # ============== Health Check ==============
+
 
 @router.get("/tenant/health")
 async def tenant_health():

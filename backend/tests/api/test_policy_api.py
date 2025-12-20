@@ -12,18 +12,20 @@ Run with:
     pytest tests/api/test_policy_api.py -v
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
-from unittest.mock import AsyncMock, patch, MagicMock
-
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_db_session():
@@ -49,7 +51,7 @@ def sample_eval_request():
         "tenant_id": "tenant-001",
         "agent_id": "agent-001",
         "payload": {"url": "https://api.example.com/data", "method": "GET"},
-        "simulate_cost": True
+        "simulate_cost": True,
     }
 
 
@@ -64,23 +66,20 @@ def sample_approval_request():
         "payload": {"prompt": "Generate summary", "model": "claude-3"},
         "requested_by": "user-001",
         "justification": "Need to process large document",
-        "expires_in_seconds": 300
+        "expires_in_seconds": 300,
     }
 
 
 @pytest.fixture
 def sample_approval_action():
     """Sample approval action."""
-    return {
-        "approver_id": "approver-001",
-        "level": 3,
-        "notes": "Approved for document processing"
-    }
+    return {"approver_id": "approver-001", "level": 3, "notes": "Approved for document processing"}
 
 
 # =============================================================================
 # Policy Evaluation Tests
 # =============================================================================
+
 
 class TestPolicyEvaluation:
     """Tests for /api/v1/policy/eval endpoint."""
@@ -105,7 +104,7 @@ class TestPolicyEvaluation:
             policy_version="v1.0.0",
             approval_level_required=None,
             violations=[],
-            timestamp="2025-12-03T00:00:00Z"
+            timestamp="2025-12-03T00:00:00Z",
         )
         assert response.decision == "allow"
         assert response.simulated_cost_cents == 10
@@ -124,13 +123,9 @@ class TestPolicyEvaluation:
         """Should return empty violations when PolicyEnforcer not available."""
         from app.api.policy import _check_policy_violations
 
-        with patch.dict('sys.modules', {'app.workflow.policies': None}):
+        with patch.dict("sys.modules", {"app.workflow.policies": None}):
             violations = await _check_policy_violations(
-                skill_id="http_call",
-                tenant_id="tenant-001",
-                agent_id=None,
-                payload={},
-                simulated_cost=10
+                skill_id="http_call", tenant_id="tenant-001", agent_id=None, payload={}, simulated_cost=10
             )
             # May have violations from actual enforcer or empty
             assert isinstance(violations, list)
@@ -139,6 +134,7 @@ class TestPolicyEvaluation:
 # =============================================================================
 # Approval Workflow Tests
 # =============================================================================
+
 
 class TestApprovalWorkflow:
     """Tests for approval workflow endpoints."""
@@ -161,8 +157,9 @@ class TestApprovalWorkflow:
 
     def test_approval_action_level_validation(self):
         """ApprovalAction should reject invalid levels."""
-        from app.api.policy import ApprovalAction
         from pydantic import ValidationError
+
+        from app.api.policy import ApprovalAction
 
         with pytest.raises(ValidationError):
             ApprovalAction(approver_id="test", level=0)  # Too low
@@ -185,6 +182,7 @@ class TestApprovalWorkflow:
 # Database Model Tests
 # =============================================================================
 
+
 class TestApprovalRequestModel:
     """Tests for ApprovalRequest database model."""
 
@@ -193,9 +191,7 @@ class TestApprovalRequestModel:
         from app.db import ApprovalRequest
 
         approval = ApprovalRequest(
-            policy_type="cost",
-            requested_by="user-001",
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
+            policy_type="cost", requested_by="user-001", expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
         )
 
         payload = {"key": "value", "nested": {"a": 1}}
@@ -208,9 +204,7 @@ class TestApprovalRequestModel:
         from app.db import ApprovalRequest
 
         approval = ApprovalRequest(
-            policy_type="cost",
-            requested_by="user-001",
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
+            policy_type="cost", requested_by="user-001", expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
         )
 
         approval.add_approval("approver-1", 2, "approve", "ok")
@@ -230,7 +224,7 @@ class TestApprovalRequestModel:
             tenant_id="tenant-001",
             requested_by="user-001",
             required_level=3,
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
         )
 
         data = approval.to_dict()
@@ -242,6 +236,7 @@ class TestApprovalRequestModel:
 # =============================================================================
 # Webhook Tests
 # =============================================================================
+
 
 class TestWebhooks:
     """Tests for webhook callback behavior."""
@@ -257,7 +252,7 @@ class TestWebhooks:
 
         # Should be a hex string
         assert len(signature) == 64
-        assert all(c in '0123456789abcdef' for c in signature)
+        assert all(c in "0123456789abcdef" for c in signature)
 
     def test_webhook_secret_hashing(self):
         """Webhook secret should be hashed for storage."""
@@ -278,14 +273,10 @@ class TestWebhooks:
         with patch("app.api.policy.httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 200
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             result = await _send_webhook(
-                url="https://hooks.example.com/approval",
-                payload={"event": "test"},
-                secret="test-secret"
+                url="https://hooks.example.com/approval", payload={"event": "test"}, secret="test-secret"
             )
 
             assert result is True
@@ -305,15 +296,9 @@ class TestWebhooks:
                 captured_headers.update(headers)
                 return mock_response
 
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                side_effect=capture_post
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(side_effect=capture_post)
 
-            await _send_webhook(
-                url="https://hooks.example.com",
-                payload={"event": "test"},
-                secret="my-secret"
-            )
+            await _send_webhook(url="https://hooks.example.com", payload={"event": "test"}, secret="my-secret")
 
             assert "X-Webhook-Signature" in captured_headers
             assert captured_headers["X-Webhook-Signature"].startswith("sha256=")
@@ -322,6 +307,7 @@ class TestWebhooks:
 # =============================================================================
 # Escalation Tests
 # =============================================================================
+
 
 class TestEscalation:
     """Tests for escalation worker behavior."""
@@ -348,6 +334,7 @@ class TestEscalation:
 # =============================================================================
 # Metrics Tests
 # =============================================================================
+
 
 class TestMetrics:
     """Tests for metrics recording."""
@@ -377,6 +364,7 @@ class TestMetrics:
 # =============================================================================
 # Policy Type Tests
 # =============================================================================
+
 
 class TestPolicyTypes:
     """Tests for policy type handling."""
@@ -427,6 +415,7 @@ class TestPolicyTypes:
 # Integration Test (requires DB)
 # =============================================================================
 
+
 @pytest.mark.integration
 class TestIntegration:
     """Integration tests requiring database."""
@@ -435,8 +424,9 @@ class TestIntegration:
     def app_client(self):
         """Create test client with real app."""
         try:
-            from fastapi.testclient import TestClient
             from fastapi import FastAPI
+            from fastapi.testclient import TestClient
+
             from app.api.policy import router
 
             app = FastAPI()
@@ -457,6 +447,7 @@ class TestIntegration:
 # =============================================================================
 # Replay/Determinism Tests
 # =============================================================================
+
 
 class TestDeterminism:
     """Tests for policy decision determinism."""

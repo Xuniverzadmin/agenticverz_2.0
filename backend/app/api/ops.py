@@ -17,19 +17,15 @@ Modules:
 All insights are derived from ops_events table (event-sourced).
 """
 
-import uuid
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import and_, desc, func, select, text
-from sqlalchemy.orm import Session as SASession
+from sqlalchemy import text
 from sqlmodel import Session
 
 from app.db import get_session
-from app.services.event_emitter import EventType
 
 # =============================================================================
 # Router - Operator-only access (requires ops auth)
@@ -202,7 +198,8 @@ async def get_system_pulse(
     h48_ago = get_window(48)
 
     # Active tenants (current 24h vs previous 24h)
-    stmt = text("""
+    stmt = text(
+        """
         WITH current_period AS (
             SELECT COUNT(DISTINCT tenant_id) as cnt
             FROM ops_events
@@ -217,7 +214,8 @@ async def get_system_pulse(
             COALESCE(c.cnt, 0) as current_cnt,
             COALESCE(p.cnt, 0) as previous_cnt
         FROM current_period c, previous_period p
-    """)
+    """
+    )
 
     try:
         row = exec_sql(session, stmt, {"h24_ago": h24_ago, "h48_ago": h48_ago}).first()
@@ -233,7 +231,8 @@ async def get_system_pulse(
     # Event counts by type
     def get_event_counts(event_type: str) -> tuple:
         try:
-            stmt = text("""
+            stmt = text(
+                """
                 WITH current_period AS (
                     SELECT COUNT(*) as cnt
                     FROM ops_events
@@ -248,12 +247,9 @@ async def get_system_pulse(
                     COALESCE(c.cnt, 0) as current_cnt,
                     COALESCE(p.cnt, 0) as previous_cnt
                 FROM current_period c, previous_period p
-            """)
-            row = exec_sql(session, stmt, {
-                "event_type": event_type,
-                "h24_ago": h24_ago,
-                "h48_ago": h48_ago
-            }).first()
+            """
+            )
+            row = exec_sql(session, stmt, {"event_type": event_type, "h24_ago": h24_ago, "h48_ago": h48_ago}).first()
             current = row[0] if row else 0
             previous = row[1] if row else 0
             delta = ((current - previous) / max(previous, 1)) * 100
@@ -267,14 +263,16 @@ async def get_system_pulse(
 
     # LLM health
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT
                 COUNT(*) FILTER (WHERE event_type = 'LLM_CALL_MADE') as success,
                 COUNT(*) FILTER (WHERE event_type = 'LLM_CALL_FAILED') as failed
             FROM ops_events
             WHERE timestamp > :h24_ago
               AND event_type IN ('LLM_CALL_MADE', 'LLM_CALL_FAILED')
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"h24_ago": h24_ago}).first()
         llm_success = row[0] if row else 0
         llm_failed = row[1] if row else 0
@@ -287,11 +285,13 @@ async def get_system_pulse(
 
     # Total cost
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT COALESCE(SUM(cost_usd), 0)
             FROM ops_events
             WHERE timestamp > :h24_ago AND cost_usd IS NOT NULL
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"h24_ago": h24_ago}).first()
         total_cost = float(row[0]) if row else 0.0
     except Exception:
@@ -350,7 +350,8 @@ async def get_customer_segments(
     Customer Intelligence - All tenant profiles with stickiness and risk.
     """
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT
                 tenant_id,
                 first_action,
@@ -377,7 +378,8 @@ async def get_customer_segments(
                 END,
                 current_stickiness DESC
             LIMIT :limit
-        """)
+        """
+        )
         rows = exec_sql(session, stmt, {"risk_level": risk_level, "limit": limit}).all()
 
         return [
@@ -410,7 +412,8 @@ async def get_customer_detail(
 ):
     """Get detailed customer profile for a specific tenant."""
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT
                 tenant_id,
                 first_action,
@@ -428,7 +431,8 @@ async def get_customer_detail(
                 time_to_first_export_m
             FROM ops_customer_segments
             WHERE tenant_id = :tenant_id
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"tenant_id": tenant_id}).first()
 
         if not row:
@@ -484,7 +488,8 @@ async def get_incident_patterns(
 
     for event_type, pattern_name in pattern_types:
         try:
-            stmt = text("""
+            stmt = text(
+                """
                 WITH counts AS (
                     SELECT
                         COUNT(*) FILTER (WHERE timestamp > :h24_ago) as cnt_24h,
@@ -516,12 +521,17 @@ async def get_incident_patterns(
                 LEFT JOIN top_tenants t ON true
                 LEFT JOIN samples s ON true
                 GROUP BY c.cnt_24h, c.cnt_7d
-            """)
-            row = exec_sql(session, stmt, {
-                "event_type": event_type,
-                "h24_ago": h24_ago,
-                "h7d_ago": h7d_ago,
-            }).first()
+            """
+            )
+            row = exec_sql(
+                session,
+                stmt,
+                {
+                    "event_type": event_type,
+                    "h24_ago": h24_ago,
+                    "h7d_ago": h7d_ago,
+                },
+            ).first()
 
             if row:
                 cnt_24h = row[0] or 0
@@ -535,14 +545,16 @@ async def get_incident_patterns(
                 else:
                     trend = "stable"
 
-                patterns.append(IncidentPattern(
-                    pattern_type=pattern_name,
-                    count_24h=cnt_24h,
-                    count_7d=cnt_7d,
-                    trend=trend,
-                    top_tenants=[t for t in (row[2] or []) if t],
-                    sample_ids=[s for s in (row[3] or []) if s],
-                ))
+                patterns.append(
+                    IncidentPattern(
+                        pattern_type=pattern_name,
+                        count_24h=cnt_24h,
+                        count_7d=cnt_7d,
+                        trend=trend,
+                        top_tenants=[t for t in (row[2] or []) if t],
+                        sample_ids=[s for s in (row[3] or []) if s],
+                    )
+                )
         except Exception:
             continue
 
@@ -575,11 +587,13 @@ async def get_stickiness_by_feature(
 
     try:
         # Get total active tenants for percentage calc
-        stmt = text("""
+        stmt = text(
+            """
             SELECT COUNT(DISTINCT tenant_id)
             FROM ops_events
             WHERE timestamp > :h30d_ago
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"h30d_ago": h30d_ago}).first()
         total_active = row[0] if row else 1
     except Exception:
@@ -587,31 +601,39 @@ async def get_stickiness_by_feature(
 
     for feature_name, event_type in feature_events:
         try:
-            stmt = text("""
+            stmt = text(
+                """
                 SELECT
                     COUNT(*) as total_actions,
                     COUNT(DISTINCT tenant_id) as unique_tenants
                 FROM ops_events
                 WHERE event_type = :event_type
                   AND timestamp > :h30d_ago
-            """)
-            row = exec_sql(session, stmt, {
-                "event_type": event_type,
-                "h30d_ago": h30d_ago,
-            }).first()
+            """
+            )
+            row = exec_sql(
+                session,
+                stmt,
+                {
+                    "event_type": event_type,
+                    "h30d_ago": h30d_ago,
+                },
+            ).first()
 
             total_actions = row[0] if row else 0
             unique_tenants = row[1] if row else 0
             avg_per_tenant = total_actions / max(unique_tenants, 1)
             pct_of_active = (unique_tenants / max(total_active, 1)) * 100
 
-            features.append(StickinessByFeature(
-                feature=feature_name,
-                total_actions_30d=total_actions,
-                unique_tenants=unique_tenants,
-                avg_per_tenant=round(avg_per_tenant, 2),
-                pct_of_active_tenants=round(pct_of_active, 1),
-            ))
+            features.append(
+                StickinessByFeature(
+                    feature=feature_name,
+                    total_actions_30d=total_actions,
+                    unique_tenants=unique_tenants,
+                    avg_per_tenant=round(avg_per_tenant, 2),
+                    pct_of_active_tenants=round(pct_of_active, 1),
+                )
+            )
         except Exception:
             continue
 
@@ -634,13 +656,15 @@ async def get_revenue_risk(
     """
     try:
         # At-risk tenants from customer segments
-        stmt = text("""
+        stmt = text(
+            """
             SELECT
                 COUNT(*) FILTER (WHERE risk_level = 'critical') as critical,
                 COUNT(*) FILTER (WHERE risk_level = 'high') as high,
                 COUNT(*) FILTER (WHERE is_silent_churn = true) as silent_churn
             FROM ops_customer_segments
-        """)
+        """
+        )
         row = session.exec(stmt).first()
         critical = row[0] if row else 0
         high = row[1] if row else 0
@@ -653,12 +677,14 @@ async def get_revenue_risk(
     # Daily revenue from LLM costs (proxy for revenue)
     h24_ago = get_window(24)
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT COALESCE(SUM(cost_usd), 0)
             FROM ops_events
             WHERE event_type = 'LLM_CALL_MADE'
               AND timestamp > :h24_ago
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"h24_ago": h24_ago}).first()
         daily_cost = float(row[0]) if row else 0.0
         # Assume 2x markup for revenue
@@ -668,11 +694,13 @@ async def get_revenue_risk(
 
     # MRR estimate (active tenants * $50 avg plan)
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT COUNT(DISTINCT tenant_id)
             FROM ops_events
             WHERE timestamp > :h24_ago
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"h24_ago": h24_ago}).first()
         active_tenants = row[0] if row else 0
         mrr_estimate = active_tenants * 50  # $50 avg plan assumption
@@ -682,15 +710,14 @@ async def get_revenue_risk(
     # Revenue alerts
     alerts = []
     if silent_churn > 0:
-        alerts.append({
-            "type": "warning",
-            "message": f"{silent_churn} tenants showing silent churn (API active, no investigation)"
-        })
+        alerts.append(
+            {
+                "type": "warning",
+                "message": f"{silent_churn} tenants showing silent churn (API active, no investigation)",
+            }
+        )
     if critical > 0:
-        alerts.append({
-            "type": "critical",
-            "message": f"{critical} tenants at critical risk level"
-        })
+        alerts.append({"type": "critical", "message": f"{critical} tenants at critical risk level"})
 
     return RevenueRisk(
         mrr_estimate_usd=round(mrr_estimate, 2),
@@ -742,16 +769,19 @@ async def get_infra_limits(
     # API request rate (from ops_events)
     h1_ago = get_window(1)
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT COUNT(*) / 60.0
             FROM ops_events
             WHERE event_type = 'API_CALL_RECEIVED'
               AND timestamp > :h1_ago
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"h1_ago": h1_ago}).first()
         rpm_avg = float(row[0]) if row else 0.0
 
-        stmt = text("""
+        stmt = text(
+            """
             SELECT MAX(cnt) FROM (
                 SELECT date_trunc('minute', timestamp) as minute, COUNT(*) as cnt
                 FROM ops_events
@@ -759,7 +789,8 @@ async def get_infra_limits(
                   AND timestamp > :h1_ago
                 GROUP BY 1
             ) sub
-        """)
+        """
+        )
         row = exec_sql(session, stmt, {"h1_ago": h1_ago}).first()
         rpm_peak = float(row[0]) if row else 0.0
     except Exception:
@@ -768,17 +799,21 @@ async def get_infra_limits(
 
     # Generate warnings
     if db_connections / max(db_max, 1) > 0.8:
-        warnings.append({
-            "resource": "db_connections",
-            "message": f"Database connections at {(db_connections/db_max)*100:.1f}%",
-            "severity": "warning"
-        })
+        warnings.append(
+            {
+                "resource": "db_connections",
+                "message": f"Database connections at {(db_connections/db_max)*100:.1f}%",
+                "severity": "warning",
+            }
+        )
     if db_size_gb > 8:  # 80% of 10GB Neon limit
-        warnings.append({
-            "resource": "db_storage",
-            "message": f"Database storage at {db_size_gb:.1f}GB (limit: 10GB)",
-            "severity": "warning"
-        })
+        warnings.append(
+            {
+                "resource": "db_storage",
+                "message": f"Database storage at {db_size_gb:.1f}GB (limit: 10GB)",
+                "severity": "warning",
+            }
+        )
 
     return InfraLimits(
         db_connections_current=db_connections,
@@ -815,7 +850,8 @@ async def get_event_stream(
     window = get_window(hours)
 
     try:
-        stmt = text("""
+        stmt = text(
+            """
             SELECT
                 event_id,
                 timestamp,
@@ -835,13 +871,18 @@ async def get_event_stream(
               AND (:event_type IS NULL OR event_type = :event_type)
             ORDER BY timestamp DESC
             LIMIT :limit
-        """)
-        rows = exec_sql(session, stmt, {
-            "window": window,
-            "tenant_id": tenant_id,
-            "event_type": event_type,
-            "limit": limit,
-        }).all()
+        """
+        )
+        rows = exec_sql(
+            session,
+            stmt,
+            {
+                "window": window,
+                "tenant_id": tenant_id,
+                "event_type": event_type,
+                "limit": limit,
+            },
+        ).all()
 
         return {
             "events": [
@@ -884,7 +925,8 @@ async def detect_silent_churn(
     Updates ops_customer_segments table.
     """
     try:
-        stmt = text("""
+        stmt = text(
+            """
             UPDATE ops_customer_segments
             SET
                 is_silent_churn = true,
@@ -899,7 +941,8 @@ async def detect_silent_churn(
                     AND
                     MAX(timestamp) FILTER (WHERE event_type IN ('INCIDENT_VIEWED', 'REPLAY_EXECUTED')) < now() - interval '7 days'
             )
-        """)
+        """
+        )
         session.execute(stmt)
         session.commit()
 
@@ -924,7 +967,8 @@ async def compute_stickiness(
     With time decay: recent (7d) actions weighted 2x.
     """
     try:
-        stmt = text("""
+        stmt = text(
+            """
             WITH actions AS (
                 SELECT
                     tenant_id,
@@ -960,7 +1004,8 @@ async def compute_stickiness(
                     ELSE 'stable'
                 END,
                 computed_at = now()
-        """)
+        """
+        )
         session.execute(stmt)
         session.commit()
 

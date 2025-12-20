@@ -134,7 +134,7 @@ async def validate_api_key_db(
     # Handle both Row tuple and direct model returns
     if result is None:
         db_key = None
-    elif hasattr(result, 'key_hash'):  # Already a model
+    elif hasattr(result, "key_hash"):  # Already a model
         db_key = result
     else:  # Row tuple
         db_key = result[0]
@@ -157,7 +157,7 @@ async def validate_api_key_db(
     # Handle both Row tuple and direct model returns
     if result is None:
         tenant = None
-    elif hasattr(result, 'id'):  # Already a model
+    elif hasattr(result, "id"):  # Already a model
         tenant = result
     else:  # Row tuple
         tenant = result[0]

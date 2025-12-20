@@ -26,8 +26,6 @@ Environment variables:
 
 import asyncio
 import json
-import os
-import sys
 import time
 from pathlib import Path
 from typing import Optional
@@ -37,26 +35,25 @@ import click
 # Optional httpx for API mode
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
 
+from .schemas.brand import BrandSchema, ToneLevel, create_minimal_brand
 from .worker import BusinessBuilderWorker, WorkerResult, replay
-from .schemas.brand import BrandSchema, create_minimal_brand, ToneLevel
-
 
 # =============================================================================
 # API Client Functions
 # =============================================================================
 
+
 def _get_api_client(api_url: str, api_key: str) -> "httpx.Client":
     """Get an HTTP client configured for the API."""
     if not HAS_HTTPX:
-        raise click.ClickException(
-            "httpx is required for API mode. Install with: pip install httpx"
-        )
+        raise click.ClickException("httpx is required for API mode. Install with: pip install httpx")
     return httpx.Client(
-        base_url=api_url.rstrip('/'),
+        base_url=api_url.rstrip("/"),
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -219,16 +216,14 @@ def build_business(
     # API mode
     if api:
         if not api_key:
-            raise click.ClickException(
-                "API key required. Use --api-key or set AGENTICVERZ_API_KEY"
-            )
+            raise click.ClickException("API key required. Use --api-key or set AGENTICVERZ_API_KEY")
 
         click.echo(f"Connecting to API: {api}")
 
         # Load brand data for API
         brand_data = None
         if brand:
-            with open(brand, 'r') as f:
+            with open(brand, "r") as f:
                 brand_data = json.load(f)
 
         result = _run_via_api(
@@ -264,13 +259,15 @@ def build_business(
 
     # Run worker
     worker = BusinessBuilderWorker()
-    result = asyncio.run(worker.run(
-        task=task,
-        brand=brand_schema,
-        budget=budget,
-        strict_mode=strict,
-        depth=depth,
-    ))
+    result = asyncio.run(
+        worker.run(
+            task=task,
+            brand=brand_schema,
+            budget=budget,
+            strict_mode=strict,
+            depth=depth,
+        )
+    )
 
     # Output
     if json_output:
@@ -461,10 +458,15 @@ def replay_cmd(token_file: str, json_output: bool):
     result = asyncio.run(replay(token))
 
     if json_output:
-        click.echo(json.dumps({
-            "success": result.success,
-            "error": result.error,
-        }, indent=2))
+        click.echo(
+            json.dumps(
+                {
+                    "success": result.success,
+                    "error": result.error,
+                },
+                indent=2,
+            )
+        )
     else:
         if result.success:
             click.secho("REPLAY SUCCESSFUL", fg="green", bold=True)
@@ -532,7 +534,7 @@ def inspect_cmd(
 
         if failures:
             click.echo("\n=== Failure Patterns (M9) ===")
-            recovery_log = result.get('recovery_log', [])
+            recovery_log = result.get("recovery_log", [])
             if recovery_log:
                 for r in recovery_log:
                     click.echo(f"  - Stage {r.get('stage')}: {r.get('recovery')}")
@@ -541,7 +543,7 @@ def inspect_cmd(
 
         if policy:
             click.echo("\n=== Policy Violations (M19) ===")
-            violations = result.get('policy_violations', [])
+            violations = result.get("policy_violations", [])
             if violations:
                 for v in violations:
                     click.echo(f"  - {v.get('policy')}: {v.get('reason')}")
@@ -550,7 +552,7 @@ def inspect_cmd(
 
         if routing:
             click.echo("\n=== Routing Decisions (M17) ===")
-            routing_decisions = result.get('routing_decisions', [])
+            routing_decisions = result.get("routing_decisions", [])
             if routing_decisions:
                 for r in routing_decisions:
                     click.echo(f"  - {r}")
@@ -614,7 +616,7 @@ def list_runs_cmd(
         click.secho(f"    Status: {run.get('status', 'unknown')}", fg=status_color)
         click.echo(f"    Task: {run.get('task', 'N/A')[:50]}...")
         click.echo(f"    Created: {run.get('created_at', 'N/A')}")
-        latency = run.get('total_latency_ms')
+        latency = run.get("total_latency_ms")
         if latency:
             click.echo(f"    Latency: {latency:.0f}ms")
         click.echo("")
@@ -625,7 +627,9 @@ def list_runs_cmd(
 @click.option("--name", prompt="Company name", help="Company/product name")
 @click.option("--mission", prompt="Mission statement", help="Mission statement")
 @click.option("--value-prop", prompt="Value proposition", help="Value proposition")
-@click.option("--tone", type=click.Choice(["casual", "neutral", "professional", "formal", "luxury"]), default="professional")
+@click.option(
+    "--tone", type=click.Choice(["casual", "neutral", "professional", "formal", "luxury"]), default="professional"
+)
 def create_brand_cmd(
     output_file: str,
     name: str,

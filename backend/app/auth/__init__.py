@@ -6,25 +6,26 @@ and authentication utilities.
 """
 
 import os
+
 from fastapi import Header, HTTPException, status
 
-from .rbac import (
-    ApprovalLevel,
-    RBACError,
-    RBACResult,
-    check_approver_permission,
-    require_approval_level,
-    USE_CLERK_AUTH,
-)
-
 from .clerk_provider import (
-    ClerkAuthProvider,
     ClerkAuthError,
+    ClerkAuthProvider,
     ClerkUser,
     get_clerk_provider,
     get_user_roles_from_clerk,
 )
-
+from .jwt_auth import (
+    JWTAuthDependency,
+    JWTConfig,
+    TokenPayload,
+    create_dev_token,
+    get_jwt_auth,
+)
+from .jwt_auth import (
+    verify_token as verify_jwt_token,
+)
 from .oidc_provider import (
     OIDC_ENABLED,
     OIDCError,
@@ -35,14 +36,13 @@ from .oidc_provider import (
     validate_and_extract,
     validate_token,
 )
-
-from .jwt_auth import (
-    JWTConfig,
-    JWTAuthDependency,
-    get_jwt_auth,
-    verify_token as verify_jwt_token,
-    TokenPayload,
-    create_dev_token,
+from .rbac import (
+    USE_CLERK_AUTH,
+    ApprovalLevel,
+    RBACError,
+    RBACResult,
+    check_approver_permission,
+    require_approval_level,
 )
 
 # M21 Tenant Auth - DISABLED for beta stage
@@ -66,15 +66,11 @@ async def verify_api_key(x_aos_key: str = Header(..., alias="X-AOS-Key")):
     """
     if not AOS_API_KEY:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Server misconfigured: AOS_API_KEY not set"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Server misconfigured: AOS_API_KEY not set"
         )
 
     if x_aos_key != AOS_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
     return x_aos_key
 

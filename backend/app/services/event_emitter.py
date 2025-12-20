@@ -12,11 +12,11 @@ Provides:
 
 import logging
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, field, asdict
 
 from sqlmodel import Session
 
@@ -32,6 +32,7 @@ class EventType(str, Enum):
 
     Any new feature MUST emit at least one of these events.
     """
+
     # API Activity
     API_CALL_RECEIVED = "API_CALL_RECEIVED"
 
@@ -68,6 +69,7 @@ class EventType(str, Enum):
 
 class EntityType(str, Enum):
     """Entity types for classification."""
+
     INCIDENT = "incident"
     REPLAY = "replay"
     EXPORT = "export"
@@ -83,6 +85,7 @@ class EntityType(str, Enum):
 @dataclass
 class OpsEvent:
     """Represents an ops event to be persisted."""
+
     tenant_id: uuid.UUID
     event_type: EventType
 
@@ -107,6 +110,7 @@ class OpsEvent:
 
 class EventEmitterError(Exception):
     """Base exception for event emitter errors."""
+
     pass
 
 
@@ -168,7 +172,9 @@ class EventEmitter:
         # Prepare values
         metadata_json = event.metadata if event.metadata else {}
 
-        self.session.execute(text("""
+        self.session.execute(
+            text(
+                """
             INSERT INTO ops_events (
                 event_id, timestamp, tenant_id, user_id, session_id,
                 event_type, entity_type, entity_id,
@@ -178,20 +184,23 @@ class EventEmitter:
                 :event_type, :entity_type, :entity_id,
                 :severity, :latency_ms, :cost_usd, :metadata::jsonb
             )
-        """), {
-            "event_id": str(event.event_id),
-            "timestamp": event.timestamp,
-            "tenant_id": str(event.tenant_id),
-            "user_id": str(event.user_id) if event.user_id else None,
-            "session_id": str(event.session_id) if event.session_id else None,
-            "event_type": event.event_type.value,
-            "entity_type": event.entity_type.value if event.entity_type else None,
-            "entity_id": str(event.entity_id) if event.entity_id else None,
-            "severity": event.severity,
-            "latency_ms": event.latency_ms,
-            "cost_usd": float(event.cost_usd) if event.cost_usd else None,
-            "metadata": str(metadata_json).replace("'", '"'),  # Convert to JSON string
-        })
+        """
+            ),
+            {
+                "event_id": str(event.event_id),
+                "timestamp": event.timestamp,
+                "tenant_id": str(event.tenant_id),
+                "user_id": str(event.user_id) if event.user_id else None,
+                "session_id": str(event.session_id) if event.session_id else None,
+                "event_type": event.event_type.value,
+                "entity_type": event.entity_type.value if event.entity_type else None,
+                "entity_id": str(event.entity_id) if event.entity_id else None,
+                "severity": event.severity,
+                "latency_ms": event.latency_ms,
+                "cost_usd": float(event.cost_usd) if event.cost_usd else None,
+                "metadata": str(metadata_json).replace("'", '"'),  # Convert to JSON string
+            },
+        )
 
         logger.debug(
             "event_emitted",
@@ -199,7 +208,7 @@ class EventEmitter:
                 "event_id": str(event.event_id),
                 "event_type": event.event_type.value,
                 "tenant_id": str(event.tenant_id),
-            }
+            },
         )
 
     # ============== Convenience Methods ==============
@@ -215,18 +224,20 @@ class EventEmitter:
         session_id: Optional[uuid.UUID] = None,
     ) -> uuid.UUID:
         """Emit API_CALL_RECEIVED event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.API_CALL_RECEIVED,
-            user_id=user_id,
-            session_id=session_id,
-            latency_ms=latency_ms,
-            metadata={
-                "endpoint": endpoint,
-                "method": method,
-                "status_code": status_code,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.API_CALL_RECEIVED,
+                user_id=user_id,
+                session_id=session_id,
+                latency_ms=latency_ms,
+                metadata={
+                    "endpoint": endpoint,
+                    "method": method,
+                    "status_code": status_code,
+                },
+            )
+        )
 
     def emit_incident_created(
         self,
@@ -238,18 +249,20 @@ class EventEmitter:
         trigger_type: Optional[str] = None,
     ) -> uuid.UUID:
         """Emit INCIDENT_CREATED event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.INCIDENT_CREATED,
-            entity_type=EntityType.INCIDENT,
-            entity_id=incident_id,
-            severity=severity,
-            metadata={
-                "policy_id": policy_id,
-                "model": model,
-                "trigger_type": trigger_type,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.INCIDENT_CREATED,
+                entity_type=EntityType.INCIDENT,
+                entity_id=incident_id,
+                severity=severity,
+                metadata={
+                    "policy_id": policy_id,
+                    "model": model,
+                    "trigger_type": trigger_type,
+                },
+            )
+        )
 
     def emit_incident_viewed(
         self,
@@ -259,16 +272,18 @@ class EventEmitter:
         time_on_page_ms: Optional[int] = None,
     ) -> uuid.UUID:
         """Emit INCIDENT_VIEWED event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.INCIDENT_VIEWED,
-            entity_type=EntityType.INCIDENT,
-            entity_id=incident_id,
-            user_id=user_id,
-            metadata={
-                "time_on_page_ms": time_on_page_ms,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.INCIDENT_VIEWED,
+                entity_type=EntityType.INCIDENT,
+                entity_id=incident_id,
+                user_id=user_id,
+                metadata={
+                    "time_on_page_ms": time_on_page_ms,
+                },
+            )
+        )
 
     def emit_replay_executed(
         self,
@@ -280,18 +295,20 @@ class EventEmitter:
         user_id: Optional[uuid.UUID] = None,
     ) -> uuid.UUID:
         """Emit REPLAY_EXECUTED event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.REPLAY_EXECUTED,
-            entity_type=EntityType.REPLAY,
-            entity_id=replay_id,
-            user_id=user_id,
-            cost_usd=cost_delta_usd,
-            metadata={
-                "incident_id": str(incident_id),
-                "match_level": match_level,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.REPLAY_EXECUTED,
+                entity_type=EntityType.REPLAY,
+                entity_id=replay_id,
+                user_id=user_id,
+                cost_usd=cost_delta_usd,
+                metadata={
+                    "incident_id": str(incident_id),
+                    "match_level": match_level,
+                },
+            )
+        )
 
     def emit_export_generated(
         self,
@@ -303,18 +320,20 @@ class EventEmitter:
         user_id: Optional[uuid.UUID] = None,
     ) -> uuid.UUID:
         """Emit EXPORT_GENERATED event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.EXPORT_GENERATED,
-            entity_type=EntityType.EXPORT,
-            entity_id=export_id,
-            user_id=user_id,
-            metadata={
-                "incident_id": str(incident_id),
-                "format": format,
-                "include_flags": include_flags,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.EXPORT_GENERATED,
+                entity_type=EntityType.EXPORT,
+                entity_id=export_id,
+                user_id=user_id,
+                metadata={
+                    "incident_id": str(incident_id),
+                    "format": format,
+                    "include_flags": include_flags,
+                },
+            )
+        )
 
     def emit_cert_verified(
         self,
@@ -325,17 +344,19 @@ class EventEmitter:
         referrer: Optional[str] = None,
     ) -> uuid.UUID:
         """Emit CERT_VERIFIED event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.CERT_VERIFIED,
-            entity_type=EntityType.CERTIFICATE,
-            entity_id=cert_id,
-            metadata={
-                "incident_id": str(incident_id),
-                "source_ip": source_ip,
-                "referrer": referrer,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.CERT_VERIFIED,
+                entity_type=EntityType.CERTIFICATE,
+                entity_id=cert_id,
+                metadata={
+                    "incident_id": str(incident_id),
+                    "source_ip": source_ip,
+                    "referrer": referrer,
+                },
+            )
+        )
 
     def emit_llm_call(
         self,
@@ -353,21 +374,23 @@ class EventEmitter:
         """Emit LLM_CALL_MADE or LLM_CALL_FAILED event."""
         event_type = EventType.LLM_CALL_MADE if success else EventType.LLM_CALL_FAILED
 
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=event_type,
-            entity_type=EntityType.LLM_CALL,
-            entity_id=call_id,
-            latency_ms=latency_ms,
-            cost_usd=cost_usd,
-            metadata={
-                "model": model,
-                "tokens_in": tokens_in,
-                "tokens_out": tokens_out,
-                "error_type": error_type,
-                "retry_count": retry_count,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=event_type,
+                entity_type=EntityType.LLM_CALL,
+                entity_id=call_id,
+                latency_ms=latency_ms,
+                cost_usd=cost_usd,
+                metadata={
+                    "model": model,
+                    "tokens_in": tokens_in,
+                    "tokens_out": tokens_out,
+                    "error_type": error_type,
+                    "retry_count": retry_count,
+                },
+            )
+        )
 
     def emit_policy_decision(
         self,
@@ -380,17 +403,19 @@ class EventEmitter:
         """Emit POLICY_EVALUATED or POLICY_BLOCKED event."""
         event_type = EventType.POLICY_BLOCKED if blocked else EventType.POLICY_EVALUATED
 
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=event_type,
-            entity_type=EntityType.POLICY,
-            latency_ms=latency_ms,
-            metadata={
-                "policy_id": policy_id,
-                "result": "blocked" if blocked else "allowed",
-                "reason": reason,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=event_type,
+                entity_type=EntityType.POLICY,
+                latency_ms=latency_ms,
+                metadata={
+                    "policy_id": policy_id,
+                    "result": "blocked" if blocked else "allowed",
+                    "reason": reason,
+                },
+            )
+        )
 
     def emit_infra_limit(
         self,
@@ -400,17 +425,19 @@ class EventEmitter:
         limit: float,
     ) -> uuid.UUID:
         """Emit INFRA_LIMIT_HIT event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.INFRA_LIMIT_HIT,
-            severity=4,  # High severity
-            metadata={
-                "resource": resource,
-                "current": current,
-                "limit": limit,
-                "utilization_pct": round((current / limit) * 100, 2),
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.INFRA_LIMIT_HIT,
+                severity=4,  # High severity
+                metadata={
+                    "resource": resource,
+                    "current": current,
+                    "limit": limit,
+                    "utilization_pct": round((current / limit) * 100, 2),
+                },
+            )
+        )
 
     def emit_freeze(
         self,
@@ -421,18 +448,20 @@ class EventEmitter:
         auto_triggered: bool = False,
     ) -> uuid.UUID:
         """Emit FREEZE_ACTIVATED event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.FREEZE_ACTIVATED,
-            entity_type=EntityType.TENANT if scope == "tenant" else EntityType.API_KEY,
-            entity_id=entity_id,
-            severity=5,  # Critical
-            metadata={
-                "scope": scope,
-                "reason": reason,
-                "auto_triggered": auto_triggered,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.FREEZE_ACTIVATED,
+                entity_type=EntityType.TENANT if scope == "tenant" else EntityType.API_KEY,
+                entity_id=entity_id,
+                severity=5,  # Critical
+                metadata={
+                    "scope": scope,
+                    "reason": reason,
+                    "auto_triggered": auto_triggered,
+                },
+            )
+        )
 
     def emit_login(
         self,
@@ -442,17 +471,19 @@ class EventEmitter:
         session_id: Optional[uuid.UUID] = None,
     ) -> uuid.UUID:
         """Emit LOGIN event."""
-        return self.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.LOGIN,
-            entity_type=EntityType.USER,
-            entity_id=user_id,
-            user_id=user_id,
-            session_id=session_id,
-            metadata={
-                "source": source,
-            }
-        ))
+        return self.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.LOGIN,
+                entity_type=EntityType.USER,
+                entity_id=user_id,
+                user_id=user_id,
+                session_id=session_id,
+                metadata={
+                    "source": source,
+                },
+            )
+        )
 
 
 # Dependency injection helper

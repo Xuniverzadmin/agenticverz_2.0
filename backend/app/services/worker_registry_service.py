@@ -10,27 +10,30 @@ Provides:
 
 import json
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
-from ..models.tenant import WorkerRegistry, WorkerConfig
+from ..models.tenant import WorkerConfig, WorkerRegistry
 
 logger = logging.getLogger("nova.services.worker_registry")
 
 
 class WorkerRegistryError(Exception):
     """Base exception for worker registry errors."""
+
     pass
 
 
 class WorkerNotFoundError(WorkerRegistryError):
     """Raised when a worker is not found."""
+
     pass
 
 
 class WorkerUnavailableError(WorkerRegistryError):
     """Raised when a worker is not available."""
+
     pass
 
 
@@ -254,7 +257,9 @@ class WorkerRegistryService:
             existing.config_json = json.dumps(config) if config else existing.config_json
             existing.brand_json = json.dumps(brand) if brand else existing.brand_json
             existing.max_runs_per_day = max_runs_per_day if max_runs_per_day is not None else existing.max_runs_per_day
-            existing.max_tokens_per_run = max_tokens_per_run if max_tokens_per_run is not None else existing.max_tokens_per_run
+            existing.max_tokens_per_run = (
+                max_tokens_per_run if max_tokens_per_run is not None else existing.max_tokens_per_run
+            )
             self.session.add(existing)
             self.session.commit()
             self.session.refresh(existing)
@@ -358,24 +363,27 @@ class WorkerRegistryService:
                 except json.JSONDecodeError:
                     pass
 
-            result.append({
-                "id": worker.id,
-                "name": worker.name,
-                "description": worker.description,
-                "version": worker.version,
-                "status": worker.status,
-                "moats": moats,
-                "enabled": effective["enabled"],
-                "has_custom_config": bool(effective["config"]),
-                "has_custom_brand": bool(effective["brand"]),
-                "tokens_per_run_estimate": worker.tokens_per_run_estimate,
-                "cost_per_run_cents": worker.cost_per_run_cents,
-            })
+            result.append(
+                {
+                    "id": worker.id,
+                    "name": worker.name,
+                    "description": worker.description,
+                    "version": worker.version,
+                    "status": worker.status,
+                    "moats": moats,
+                    "enabled": effective["enabled"],
+                    "has_custom_config": bool(effective["config"]),
+                    "has_custom_brand": bool(effective["brand"]),
+                    "tokens_per_run_estimate": worker.tokens_per_run_estimate,
+                    "cost_per_run_cents": worker.cost_per_run_cents,
+                }
+            )
 
         return result
 
 
 # ============== Factory Function ==============
+
 
 def get_worker_registry_service(session: Session) -> WorkerRegistryService:
     """Get a WorkerRegistryService instance."""

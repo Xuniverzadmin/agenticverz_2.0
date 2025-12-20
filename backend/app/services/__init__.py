@@ -1,30 +1,27 @@
 # app/services/__init__.py
 """Service layer for business logic."""
 
-from .recovery_matcher import RecoveryMatcher
-
-from .tenant_service import (
-    TenantService,
-    TenantServiceError,
-    QuotaExceededError,
-    get_tenant_service,
-)
-
-from .worker_registry_service import (
-    WorkerRegistryService,
-    WorkerRegistryError,
-    WorkerNotFoundError,
-    WorkerUnavailableError,
-    get_worker_registry_service,
-)
-
 from .event_emitter import (
+    EntityType,
     EventEmitter,
     EventEmitterError,
     EventType,
-    EntityType,
     OpsEvent,
     get_event_emitter,
+)
+from .recovery_matcher import RecoveryMatcher
+from .tenant_service import (
+    QuotaExceededError,
+    TenantService,
+    TenantServiceError,
+    get_tenant_service,
+)
+from .worker_registry_service import (
+    WorkerNotFoundError,
+    WorkerRegistryError,
+    WorkerRegistryService,
+    WorkerUnavailableError,
+    get_worker_registry_service,
 )
 
 __all__ = [

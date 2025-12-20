@@ -18,7 +18,7 @@ Exit codes:
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple, NamedTuple
+from typing import List, NamedTuple
 
 
 class LintIssue(NamedTuple):
@@ -91,7 +91,7 @@ SAFE_PATTERNS = [
 def is_safe_context(content: str, match_start: int, match_end: int) -> bool:
     """Check if the match is in a safe context."""
     # Get surrounding context (5 lines before and after)
-    lines = content[:match_end].split('\n')
+    lines = content[:match_end].split("\n")
     current_line = len(lines)
 
     context_start = max(0, match_start - 500)
@@ -110,20 +110,20 @@ def lint_file(filepath: Path) -> List[LintIssue]:
 
     try:
         content = filepath.read_text()
-    except Exception as e:
+    except Exception:
         return []
 
-    lines = content.split('\n')
+    lines = content.split("\n")
 
     for pattern_def in UNSAFE_PATTERNS:
         regex = pattern_def["regex"]
         for match in re.finditer(regex, content, re.MULTILINE):
             # Calculate line number
-            line_num = content[:match.start()].count('\n') + 1
+            line_num = content[: match.start()].count("\n") + 1
 
             # Check for exclusions
             if "exclude_if_followed_by" in pattern_def:
-                next_chars = content[match.end():match.end()+20]
+                next_chars = content[match.end() : match.end() + 20]
                 if re.match(pattern_def["exclude_if_followed_by"], next_chars):
                     continue
 
@@ -131,13 +131,17 @@ def lint_file(filepath: Path) -> List[LintIssue]:
             if is_safe_context(content, match.start(), match.end()):
                 continue
 
-            issues.append(LintIssue(
-                file=str(filepath),
-                line=line_num,
-                pattern=match.group()[:80] + "..." if len(match.group()) > 80 else match.group(),
-                message=pattern_def["message"],
-                suggestion=pattern_def["suggestion"],
-            ))
+            issues.append(
+                LintIssue(
+                    file=str(filepath),
+                    line=line_num,
+                    pattern=match.group()[:80] + "..."
+                    if len(match.group()) > 80
+                    else match.group(),
+                    message=pattern_def["message"],
+                    suggestion=pattern_def["suggestion"],
+                )
+            )
 
     return issues
 
@@ -148,7 +152,10 @@ def lint_directory(path: Path) -> List[LintIssue]:
 
     for filepath in path.rglob("*.py"):
         # Skip test files, migrations, and __pycache__
-        if any(skip in str(filepath) for skip in ["__pycache__", ".venv", "alembic/versions"]):
+        if any(
+            skip in str(filepath)
+            for skip in ["__pycache__", ".venv", "alembic/versions"]
+        ):
             continue
 
         file_issues = lint_file(filepath)

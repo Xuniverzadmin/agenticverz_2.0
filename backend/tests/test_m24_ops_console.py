@@ -37,21 +37,23 @@ class TestEventEmitter:
         emitter = EventEmitter(session)
         tenant_id = uuid.uuid4()
 
-        event_id = emitter.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.INCIDENT_CREATED,
-            entity_type=EntityType.INCIDENT,
-            entity_id=uuid.uuid4(),
-            severity=3,
-            metadata={"policy_id": "pol-001"},
-        ))
+        event_id = emitter.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.INCIDENT_CREATED,
+                entity_type=EntityType.INCIDENT,
+                entity_id=uuid.uuid4(),
+                severity=3,
+                metadata={"policy_id": "pol-001"},
+            )
+        )
 
         session.commit()
 
         # Verify event was stored
-        result = session.exec(text(
-            "SELECT event_type, severity FROM ops_events WHERE event_id = :event_id"
-        ), {"event_id": str(event_id)}).first()
+        result = session.exec(
+            text("SELECT event_type, severity FROM ops_events WHERE event_id = :event_id"), {"event_id": str(event_id)}
+        ).first()
 
         assert result is not None
         assert result[0] == "INCIDENT_CREATED"
@@ -72,9 +74,10 @@ class TestEventEmitter:
 
         session.commit()
 
-        result = session.exec(text(
-            "SELECT event_type, latency_ms, metadata FROM ops_events WHERE event_id = :event_id"
-        ), {"event_id": str(event_id)}).first()
+        result = session.exec(
+            text("SELECT event_type, latency_ms, metadata FROM ops_events WHERE event_id = :event_id"),
+            {"event_id": str(event_id)},
+        ).first()
 
         assert result is not None
         assert result[0] == "API_CALL_RECEIVED"
@@ -98,9 +101,9 @@ class TestEventEmitter:
 
         session.commit()
 
-        result = session.exec(text(
-            "SELECT event_type, cost_usd FROM ops_events WHERE event_id = :event_id"
-        ), {"event_id": str(event_id)}).first()
+        result = session.exec(
+            text("SELECT event_type, cost_usd FROM ops_events WHERE event_id = :event_id"), {"event_id": str(event_id)}
+        ).first()
 
         assert result is not None
         assert result[0] == "LLM_CALL_MADE"
@@ -115,16 +118,18 @@ class TestEventEmitter:
 
         # Queue multiple events
         for i in range(5):
-            emitter.emit(OpsEvent(
-                tenant_id=tenant_id,
-                event_type=EventType.INCIDENT_VIEWED,
-                entity_id=uuid.uuid4(),
-            ))
+            emitter.emit(
+                OpsEvent(
+                    tenant_id=tenant_id,
+                    event_type=EventType.INCIDENT_VIEWED,
+                    entity_id=uuid.uuid4(),
+                )
+            )
 
         # Nothing committed yet
-        count_before = session.exec(text(
-            "SELECT COUNT(*) FROM ops_events WHERE tenant_id = :tenant_id"
-        ), {"tenant_id": str(tenant_id)}).first()
+        count_before = session.exec(
+            text("SELECT COUNT(*) FROM ops_events WHERE tenant_id = :tenant_id"), {"tenant_id": str(tenant_id)}
+        ).first()
 
         # Flush batch
         event_ids = emitter.flush_batch()
@@ -133,9 +138,9 @@ class TestEventEmitter:
         assert len(event_ids) == 5
 
         # Now events are committed
-        count_after = session.exec(text(
-            "SELECT COUNT(*) FROM ops_events WHERE tenant_id = :tenant_id"
-        ), {"tenant_id": str(tenant_id)}).first()
+        count_after = session.exec(
+            text("SELECT COUNT(*) FROM ops_events WHERE tenant_id = :tenant_id"), {"tenant_id": str(tenant_id)}
+        ).first()
 
         assert count_after[0] == 5
 
@@ -224,25 +229,31 @@ class TestStickinessComputation:
 
         # Recent events (last 7 days) - higher weight
         for _ in range(5):
-            emitter.emit(OpsEvent(
-                tenant_id=tenant_id,
-                event_type=EventType.INCIDENT_VIEWED,
-                timestamp=now - timedelta(days=2),
-            ))
+            emitter.emit(
+                OpsEvent(
+                    tenant_id=tenant_id,
+                    event_type=EventType.INCIDENT_VIEWED,
+                    timestamp=now - timedelta(days=2),
+                )
+            )
 
         for _ in range(3):
-            emitter.emit(OpsEvent(
-                tenant_id=tenant_id,
-                event_type=EventType.REPLAY_EXECUTED,
-                timestamp=now - timedelta(days=3),
-            ))
+            emitter.emit(
+                OpsEvent(
+                    tenant_id=tenant_id,
+                    event_type=EventType.REPLAY_EXECUTED,
+                    timestamp=now - timedelta(days=3),
+                )
+            )
 
         for _ in range(2):
-            emitter.emit(OpsEvent(
-                tenant_id=tenant_id,
-                event_type=EventType.EXPORT_GENERATED,
-                timestamp=now - timedelta(days=1),
-            ))
+            emitter.emit(
+                OpsEvent(
+                    tenant_id=tenant_id,
+                    event_type=EventType.EXPORT_GENERATED,
+                    timestamp=now - timedelta(days=1),
+                )
+            )
 
         session.commit()
 
@@ -253,14 +264,19 @@ class TestStickinessComputation:
         # Total = 2.9
 
         # Compute stickiness
-        result = session.exec(text("""
+        result = session.exec(
+            text(
+                """
             SELECT
                 (COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED') * 0.2) +
                 (COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED') * 0.3) +
                 (COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED') * 0.5) as stickiness
             FROM ops_events
             WHERE tenant_id = :tenant_id
-        """), {"tenant_id": str(tenant_id)}).first()
+        """
+            ),
+            {"tenant_id": str(tenant_id)},
+        ).first()
 
         assert result is not None
         assert float(result[0]) == pytest.approx(2.9, rel=0.01)
@@ -278,24 +294,30 @@ class TestSilentChurnDetection:
 
         # API calls in last 48 hours
         for _ in range(5):
-            emitter.emit(OpsEvent(
-                tenant_id=tenant_id,
-                event_type=EventType.API_CALL_RECEIVED,
-                timestamp=now - timedelta(hours=12),
-            ))
+            emitter.emit(
+                OpsEvent(
+                    tenant_id=tenant_id,
+                    event_type=EventType.API_CALL_RECEIVED,
+                    timestamp=now - timedelta(hours=12),
+                )
+            )
 
         # No investigation events in last 7 days
         # (but one 10 days ago)
-        emitter.emit(OpsEvent(
-            tenant_id=tenant_id,
-            event_type=EventType.INCIDENT_VIEWED,
-            timestamp=now - timedelta(days=10),
-        ))
+        emitter.emit(
+            OpsEvent(
+                tenant_id=tenant_id,
+                event_type=EventType.INCIDENT_VIEWED,
+                timestamp=now - timedelta(days=10),
+            )
+        )
 
         session.commit()
 
         # Check silent churn detection query
-        result = session.exec(text("""
+        result = session.exec(
+            text(
+                """
             SELECT tenant_id
             FROM ops_events
             GROUP BY tenant_id
@@ -307,7 +329,9 @@ class TestSilentChurnDetection:
                     OR
                     MAX(timestamp) FILTER (WHERE event_type IN ('INCIDENT_VIEWED', 'REPLAY_EXECUTED')) < now() - interval '7 days'
                 )
-        """)).first()
+        """
+            )
+        ).first()
 
         assert result is not None
         assert str(result[0]) == str(tenant_id)
@@ -318,7 +342,9 @@ class TestSilentChurnDetection:
 def client():
     """Create test client."""
     from fastapi.testclient import TestClient
+
     from app.main import app
+
     return TestClient(app)
 
 
@@ -326,6 +352,7 @@ def client():
 def session():
     """Create test database session with ops_events table."""
     from sqlmodel import Session
+
     from app.db import engine
 
     with Session(engine) as session:
@@ -334,7 +361,9 @@ def session():
             session.exec(text("SELECT 1 FROM ops_events LIMIT 1"))
         except Exception:
             # Table doesn't exist, run migration
-            session.exec(text("""
+            session.exec(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS ops_events (
                     event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -349,8 +378,12 @@ def session():
                     cost_usd NUMERIC(10,6),
                     metadata JSONB DEFAULT '{}'
                 )
-            """))
-            session.exec(text("""
+            """
+                )
+            )
+            session.exec(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS ops_customer_segments (
                     tenant_id UUID PRIMARY KEY,
                     first_action TEXT,
@@ -368,7 +401,9 @@ def session():
                     time_to_first_export_m INT,
                     computed_at TIMESTAMPTZ DEFAULT now()
                 )
-            """))
+            """
+                )
+            )
             session.commit()
 
         yield session

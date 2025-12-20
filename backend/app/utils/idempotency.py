@@ -4,7 +4,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -20,6 +20,7 @@ IDEMPOTENCY_TTL_SECONDS = int(os.getenv("IDEMPOTENCY_TTL_SECONDS", "86400"))
 @dataclass
 class IdempotencyResult:
     """Result of idempotency check."""
+
     exists: bool
     run_id: Optional[str] = None
     status: Optional[str] = None
@@ -54,7 +55,7 @@ def get_existing_run(
         # Handle both Row tuple and direct model returns
         if result is None:
             return None
-        elif hasattr(result, 'id'):  # Already a model
+        elif hasattr(result, "id"):  # Already a model
             return result
         else:  # Row tuple
             return result[0]
@@ -94,7 +95,7 @@ def check_idempotency(
                     "idempotency_key": idempotency_key[:16] + "...",
                     "run_id": run.id,
                     "age_seconds": age.total_seconds(),
-                }
+                },
             )
             return IdempotencyResult(
                 exists=True,
@@ -109,7 +110,7 @@ def check_idempotency(
             "idempotency_key": idempotency_key[:16] + "...",
             "run_id": run.id,
             "status": run.status,
-        }
+        },
     )
 
     return IdempotencyResult(

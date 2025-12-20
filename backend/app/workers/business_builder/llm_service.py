@@ -30,6 +30,7 @@ USE_STUB = not ANTHROPIC_API_KEY
 @dataclass
 class LLMResult:
     """Result from LLM call."""
+
     content: str
     input_tokens: int
     output_tokens: int
@@ -56,9 +57,11 @@ class WorkerLLMService:
         if self._adapter is None:
             if self.use_stub:
                 from app.skills.llm_invoke_v2 import StubAdapter
+
                 self._adapter = StubAdapter()
             else:
                 from app.skills.adapters.claude_adapter import ClaudeAdapter
+
                 self._adapter = ClaudeAdapter()
         return self._adapter
 

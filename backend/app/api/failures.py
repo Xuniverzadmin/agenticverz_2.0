@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.middleware.rate_limit import rate_limit_dependency
@@ -31,8 +31,10 @@ router = APIRouter(prefix="/api/v1/failures", tags=["failures"])
 # Request/Response Models
 # =============================================================================
 
+
 class RecoveryUpdateRequest(BaseModel):
     """Request to update recovery status for a failure."""
+
     recovery_succeeded: bool = Field(..., description="Whether recovery was successful")
     notes: Optional[str] = Field(None, description="Operator notes on recovery")
     recovered_by: Optional[str] = Field(None, description="User/system that performed recovery")
@@ -40,6 +42,7 @@ class RecoveryUpdateRequest(BaseModel):
 
 class RecoveryUpdateResponse(BaseModel):
     """Response after updating recovery status."""
+
     id: str
     run_id: str
     recovery_attempted: bool
@@ -51,6 +54,7 @@ class RecoveryUpdateResponse(BaseModel):
 
 class FailureRecord(BaseModel):
     """Full failure record."""
+
     id: str
     run_id: str
     error_code: str
@@ -77,6 +81,7 @@ class FailureRecord(BaseModel):
 
 class FailureListResponse(BaseModel):
     """Response for failure list endpoint."""
+
     failures: List[FailureRecord]
     total: int
     limit: int
@@ -85,6 +90,7 @@ class FailureListResponse(BaseModel):
 
 class FailureStatsResponse(BaseModel):
     """Aggregate failure statistics."""
+
     total_failures: int
     matched_failures: int
     unmatched_failures: int
@@ -101,10 +107,12 @@ class FailureStatsResponse(BaseModel):
 # Database Helpers
 # =============================================================================
 
+
 def _get_db_session():
     """Get database session."""
     try:
         from app.db import get_session
+
         return get_session()
     except ImportError:
         return None
@@ -142,6 +150,7 @@ def _failure_to_record(fm) -> FailureRecord:
 # Endpoints
 # =============================================================================
 
+
 @router.get("", response_model=FailureListResponse)
 async def list_failures(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
@@ -168,8 +177,9 @@ async def list_failures(
     Returns paginated results with total count.
     """
     try:
-        from sqlmodel import Session, select, func, col
-        from app.db import engine, FailureMatch
+        from sqlmodel import Session, col, func, select
+
+        from app.db import FailureMatch, engine
 
         with Session(engine) as session:
             # Build query
@@ -223,16 +233,10 @@ async def list_failures(
 
     except ImportError as e:
         logger.error(f"Database not available: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Database not available"
-        )
+        raise HTTPException(status_code=503, detail="Database not available")
     except Exception as e:
         logger.error(f"List failures error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to list failures: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to list failures: {str(e)}")
 
 
 @router.get("/stats", response_model=FailureStatsResponse)
@@ -252,8 +256,9 @@ async def get_failure_stats(
     - Distribution by category and severity
     """
     try:
-        from sqlmodel import Session, select, func, col
-        from app.db import engine, FailureMatch
+        from sqlmodel import Session, col, func, select
+
+        from app.db import FailureMatch, engine
 
         with Session(engine) as session:
             cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
@@ -264,15 +269,11 @@ async def get_failure_stats(
                 base_filter = base_filter & (FailureMatch.tenant_id == tenant_id)
 
             # Total failures
-            total = session.exec(
-                select(func.count(FailureMatch.id)).where(base_filter)
-            ).one()
+            total = session.exec(select(func.count(FailureMatch.id)).where(base_filter)).one()
 
             # Matched (catalog_entry_id not null)
             matched = session.exec(
-                select(func.count(FailureMatch.id)).where(
-                    base_filter & (FailureMatch.catalog_entry_id.isnot(None))
-                )
+                select(func.count(FailureMatch.id)).where(base_filter & (FailureMatch.catalog_entry_id.isnot(None)))
             ).one()
 
             unmatched = total - matched
@@ -280,15 +281,11 @@ async def get_failure_stats(
 
             # Recovery stats
             recovery_attempts = session.exec(
-                select(func.count(FailureMatch.id)).where(
-                    base_filter & (FailureMatch.recovery_attempted == True)
-                )
+                select(func.count(FailureMatch.id)).where(base_filter & (FailureMatch.recovery_attempted == True))
             ).one()
 
             recovery_successes = session.exec(
-                select(func.count(FailureMatch.id)).where(
-                    base_filter & (FailureMatch.recovery_succeeded == True)
-                )
+                select(func.count(FailureMatch.id)).where(base_filter & (FailureMatch.recovery_succeeded == True))
             ).one()
 
             recovery_success_rate = recovery_successes / recovery_attempts if recovery_attempts > 0 else 0.0
@@ -315,9 +312,7 @@ async def get_failure_stats(
 
             # By severity
             severity_result = session.exec(
-                select(FailureMatch.severity, count_col)
-                .where(base_filter)
-                .group_by(FailureMatch.severity)
+                select(FailureMatch.severity, count_col).where(base_filter).group_by(FailureMatch.severity)
             ).all()
             by_severity = {row[0] or "UNKNOWN": row[1] for row in severity_result}
 
@@ -339,16 +334,10 @@ async def get_failure_stats(
 
     except ImportError as e:
         logger.error(f"Database not available: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Database not available"
-        )
+        raise HTTPException(status_code=503, detail="Database not available")
     except Exception as e:
         logger.error(f"Get failure stats error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get stats: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
 
 
 @router.get("/unrecovered", response_model=FailureListResponse)
@@ -370,19 +359,18 @@ async def list_unrecovered_failures(
     Ordered by severity (critical first) and recency.
     """
     try:
-        from sqlmodel import Session, select, func, col, case
-        from app.db import engine, FailureMatch
+        from sqlmodel import Session, case, col, func, select
+
+        from app.db import FailureMatch, engine
 
         with Session(engine) as session:
             cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
 
             query = select(FailureMatch).where(
-                (FailureMatch.recovery_succeeded == False) &
-                (FailureMatch.created_at >= cutoff)
+                (FailureMatch.recovery_succeeded == False) & (FailureMatch.created_at >= cutoff)
             )
             count_query = select(func.count(FailureMatch.id)).where(
-                (FailureMatch.recovery_succeeded == False) &
-                (FailureMatch.created_at >= cutoff)
+                (FailureMatch.recovery_succeeded == False) & (FailureMatch.created_at >= cutoff)
             )
 
             if tenant_id:
@@ -401,7 +389,7 @@ async def list_unrecovered_failures(
                 (FailureMatch.severity == "CRITICAL", 0),
                 (FailureMatch.severity == "ERROR", 1),
                 (FailureMatch.severity == "WARNING", 2),
-                else_=3
+                else_=3,
             )
 
             query = query.order_by(severity_order, col(FailureMatch.created_at).desc())
@@ -418,16 +406,10 @@ async def list_unrecovered_failures(
 
     except ImportError as e:
         logger.error(f"Database not available: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Database not available"
-        )
+        raise HTTPException(status_code=503, detail="Database not available")
     except Exception as e:
         logger.error(f"List unrecovered failures error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to list unrecovered failures: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to list unrecovered failures: {str(e)}")
 
 
 @router.get("/{failure_id}", response_model=FailureRecord)
@@ -446,27 +428,20 @@ async def get_failure(
     """
     try:
         from sqlmodel import Session, select
-        from app.db import engine, FailureMatch
+
+        from app.db import FailureMatch, engine
 
         with Session(engine) as session:
             # Try UUID parse
             try:
                 failure_uuid = UUID(failure_id)
             except ValueError:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid failure ID format: {failure_id}"
-                )
+                raise HTTPException(status_code=400, detail=f"Invalid failure ID format: {failure_id}")
 
-            failure = session.exec(
-                select(FailureMatch).where(FailureMatch.id == failure_uuid)
-            ).first()
+            failure = session.exec(select(FailureMatch).where(FailureMatch.id == failure_uuid)).first()
 
             if not failure:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Failure not found: {failure_id}"
-                )
+                raise HTTPException(status_code=404, detail=f"Failure not found: {failure_id}")
 
             return _failure_to_record(failure)
 
@@ -474,16 +449,10 @@ async def get_failure(
         raise
     except ImportError as e:
         logger.error(f"Database not available: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Database not available"
-        )
+        raise HTTPException(status_code=503, detail="Database not available")
     except Exception as e:
         logger.error(f"Get failure error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get failure: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to get failure: {str(e)}")
 
 
 @router.patch("/{failure_id}/recovery", response_model=RecoveryUpdateResponse)
@@ -510,7 +479,8 @@ async def update_recovery_status(
     """
     try:
         from sqlmodel import Session, select
-        from app.db import engine, FailureMatch
+
+        from app.db import FailureMatch, engine
         from app.runtime.failure_catalog import update_recovery_status as update_metrics
 
         with Session(engine) as session:
@@ -518,33 +488,19 @@ async def update_recovery_status(
             try:
                 failure_uuid = UUID(failure_id)
             except ValueError:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid failure ID format: {failure_id}"
-                )
+                raise HTTPException(status_code=400, detail=f"Invalid failure ID format: {failure_id}")
 
             # Get failure
-            failure = session.exec(
-                select(FailureMatch).where(FailureMatch.id == failure_uuid)
-            ).first()
+            failure = session.exec(select(FailureMatch).where(FailureMatch.id == failure_uuid)).first()
 
             if not failure:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Failure not found: {failure_id}"
-                )
+                raise HTTPException(status_code=404, detail=f"Failure not found: {failure_id}")
 
             # Update recovery status
             if request.recovery_succeeded:
-                failure.mark_recovery_succeeded(
-                    by=request.recovered_by,
-                    notes=request.notes
-                )
+                failure.mark_recovery_succeeded(by=request.recovered_by, notes=request.notes)
             else:
-                failure.mark_recovery_failed(
-                    by=request.recovered_by,
-                    notes=request.notes
-                )
+                failure.mark_recovery_failed(by=request.recovered_by, notes=request.notes)
 
             session.add(failure)
             session.commit()
@@ -579,13 +535,7 @@ async def update_recovery_status(
         raise
     except ImportError as e:
         logger.error(f"Database not available: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Database not available"
-        )
+        raise HTTPException(status_code=503, detail="Database not available")
     except Exception as e:
         logger.error(f"Update recovery status error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update recovery status: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to update recovery status: {str(e)}")

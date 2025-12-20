@@ -12,8 +12,9 @@ import hashlib
 import secrets
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
-from sqlmodel import Field, SQLModel, Relationship
+from typing import Optional
+
+from sqlmodel import Field, SQLModel
 
 
 def utc_now() -> datetime:
@@ -26,8 +27,10 @@ def generate_uuid() -> str:
 
 # ============== TENANT (Organization) ==============
 
+
 class Tenant(SQLModel, table=True):
     """Organization/Tenant model for multi-tenancy."""
+
     __tablename__ = "tenants"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -111,8 +114,10 @@ PLAN_QUOTAS = {
 
 # ============== USER ==============
 
+
 class User(SQLModel, table=True):
     """User account linked to Clerk."""
+
     __tablename__ = "users"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -135,8 +140,10 @@ class User(SQLModel, table=True):
 
 # ============== TENANT MEMBERSHIP ==============
 
+
 class TenantMembership(SQLModel, table=True):
     """User membership in a tenant with role."""
+
     __tablename__ = "tenant_memberships"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -162,8 +169,10 @@ class TenantMembership(SQLModel, table=True):
 
 # ============== API KEY ==============
 
+
 class APIKey(SQLModel, table=True):
     """API key for programmatic access."""
+
     __tablename__ = "api_keys"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -227,8 +236,10 @@ class APIKey(SQLModel, table=True):
 
 # ============== SUBSCRIPTION ==============
 
+
 class Subscription(SQLModel, table=True):
     """Billing subscription for a tenant."""
+
     __tablename__ = "subscriptions"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -261,8 +272,10 @@ class Subscription(SQLModel, table=True):
 
 # ============== USAGE RECORD ==============
 
+
 class UsageRecord(SQLModel, table=True):
     """Usage metering for billing."""
+
     __tablename__ = "usage_records"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -288,8 +301,10 @@ class UsageRecord(SQLModel, table=True):
 
 # ============== WORKER REGISTRY ==============
 
+
 class WorkerRegistry(SQLModel, table=True):
     """Registry of available workers."""
+
     __tablename__ = "worker_registry"
 
     id: str = Field(primary_key=True, max_length=100)  # e.g., 'business-builder'
@@ -318,8 +333,10 @@ class WorkerRegistry(SQLModel, table=True):
 
 # ============== WORKER CONFIG (Per-Tenant) ==============
 
+
 class WorkerConfig(SQLModel, table=True):
     """Per-tenant worker configuration."""
+
     __tablename__ = "worker_configs"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -342,8 +359,10 @@ class WorkerConfig(SQLModel, table=True):
 
 # ============== WORKER RUN (With Tenant Isolation) ==============
 
+
 class WorkerRun(SQLModel, table=True):
     """Worker execution run with tenant isolation."""
+
     __tablename__ = "worker_runs"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -383,8 +402,10 @@ class WorkerRun(SQLModel, table=True):
 
 # ============== AUDIT LOG ==============
 
+
 class AuditLog(SQLModel, table=True):
     """Comprehensive audit log for compliance."""
+
     __tablename__ = "audit_log"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)

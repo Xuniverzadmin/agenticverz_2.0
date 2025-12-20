@@ -15,11 +15,12 @@ import json
 import os
 import sys
 import httpx
-from typing import Optional
 
 # Configuration
 API_BASE = os.getenv("AOS_API_BASE", "http://localhost:8000")
-API_KEY = os.getenv("AOS_API_KEY", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf")
+API_KEY = os.getenv(
+    "AOS_API_KEY", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf"
+)
 ENDPOINT = f"{API_BASE}/api/v1/workers/business-builder/run-streaming"
 
 # Test scenarios
@@ -34,10 +35,26 @@ TEST_SCENARIOS = {
             "target_audience": ["b2b_enterprise"],
             "tone": {"primary": "professional"},
             "forbidden_claims": [
-                {"pattern": "world's best", "reason": "Unverifiable superlative", "severity": "error"},
-                {"pattern": "guaranteed results", "reason": "Cannot guarantee outcomes", "severity": "error"},
-                {"pattern": "100% accurate", "reason": "Unverifiable accuracy", "severity": "error"},
-                {"pattern": "risk-free", "reason": "All investments carry risk", "severity": "warning"},
+                {
+                    "pattern": "world's best",
+                    "reason": "Unverifiable superlative",
+                    "severity": "error",
+                },
+                {
+                    "pattern": "guaranteed results",
+                    "reason": "Cannot guarantee outcomes",
+                    "severity": "error",
+                },
+                {
+                    "pattern": "100% accurate",
+                    "reason": "Unverifiable accuracy",
+                    "severity": "error",
+                },
+                {
+                    "pattern": "risk-free",
+                    "reason": "All investments carry risk",
+                    "severity": "warning",
+                },
             ],
         },
         "expected_events": ["policy_violation", "policy_check"],
@@ -54,7 +71,11 @@ TEST_SCENARIOS = {
             "tone": {
                 "primary": "luxury",
                 "avoid": ["casual"],
-                "examples_good": ["curated experience", "bespoke solutions", "distinguished clientele"],
+                "examples_good": [
+                    "curated experience",
+                    "bespoke solutions",
+                    "distinguished clientele",
+                ],
                 "examples_bad": ["cheap", "budget", "basic", "easy", "slang"],
             },
         },
@@ -154,7 +175,17 @@ def print_event(event_type: str, data: dict, is_expected: bool):
     print(f"{color}{marker} [{event_type}]{reset}")
     if data:
         # Print key fields only
-        for key in ["stage_id", "agent", "message", "error", "drift_score", "policy", "passed", "pattern", "severity"]:
+        for key in [
+            "stage_id",
+            "agent",
+            "message",
+            "error",
+            "drift_score",
+            "policy",
+            "passed",
+            "pattern",
+            "severity",
+        ]:
             if key in data:
                 print(f"   {key}: {data[key]}")
 
@@ -183,7 +214,9 @@ def run_test(test_name: str, scenario: dict) -> dict:
     try:
         # Step 1: POST to start the run (returns 202 with run_id)
         print("📤 Starting worker run...")
-        response = httpx.post(ENDPOINT, json=request_body, headers=headers, timeout=30.0)
+        response = httpx.post(
+            ENDPOINT, json=request_body, headers=headers, timeout=30.0
+        )
 
         if response.status_code not in (200, 202):
             print(f"❌ Request failed with status {response.status_code}")
@@ -205,7 +238,10 @@ def run_test(test_name: str, scenario: dict) -> dict:
         with httpx.stream("GET", stream_url, timeout=120.0) as sse_response:
             if sse_response.status_code != 200:
                 print(f"❌ SSE stream failed with status {sse_response.status_code}")
-                return {"success": False, "error": f"SSE HTTP {sse_response.status_code}"}
+                return {
+                    "success": False,
+                    "error": f"SSE HTTP {sse_response.status_code}",
+                }
 
             print("📡 SSE Stream connected\n")
 
@@ -228,20 +264,28 @@ def run_test(test_name: str, scenario: dict) -> dict:
                             found_expected[event_type] = True
 
                         # Print important events
-                        if event_type in ["run_started", "run_completed", "run_failed",
-                                         "stage_failed", "policy_violation", "policy_check",
-                                         "drift_detected", "failure_detected",
-                                         "recovery_started", "recovery_completed"]:
+                        if event_type in [
+                            "run_started",
+                            "run_completed",
+                            "run_failed",
+                            "stage_failed",
+                            "policy_violation",
+                            "policy_check",
+                            "drift_detected",
+                            "failure_detected",
+                            "recovery_started",
+                            "recovery_completed",
+                        ]:
                             print_event(event_type, data, is_expected)
 
                         if event_type == "run_completed":
-                            print(f"\n✅ Run completed successfully")
+                            print("\n✅ Run completed successfully")
                             break
                         elif event_type == "run_failed":
                             print(f"\n❌ Run failed: {data.get('error', 'unknown')}")
                             break
                         elif event_type == "stream_end":
-                            print(f"\n📡 Stream ended")
+                            print("\n📡 Stream ended")
                             break
 
                     except json.JSONDecodeError:
@@ -255,7 +299,7 @@ def run_test(test_name: str, scenario: dict) -> dict:
         return {"success": False, "error": str(e)}
 
     # Summary
-    print(f"\n--- Results ---")
+    print("\n--- Results ---")
     print(f"Total events: {len(collected_events)}")
     print(f"Event types: {set(collected_events)}")
 
@@ -273,13 +317,20 @@ def run_test(test_name: str, scenario: dict) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Test Worker Events")
-    parser.add_argument("--test", type=str, default="valid_professional",
-                       choices=list(TEST_SCENARIOS.keys()) + ["all", "risk1", "risk3"],
-                       help="Test scenario to run")
-    parser.add_argument("--api-base", type=str, default=None,
-                       help="API base URL (default: localhost:8000)")
-    parser.add_argument("--api-key", type=str, default=None,
-                       help="API key")
+    parser.add_argument(
+        "--test",
+        type=str,
+        default="valid_professional",
+        choices=list(TEST_SCENARIOS.keys()) + ["all", "risk1", "risk3"],
+        help="Test scenario to run",
+    )
+    parser.add_argument(
+        "--api-base",
+        type=str,
+        default=None,
+        help="API base URL (default: localhost:8000)",
+    )
+    parser.add_argument("--api-key", type=str, default=None, help="API key")
 
     args = parser.parse_args()
 
@@ -300,7 +351,13 @@ def main():
     elif args.test == "risk1":
         tests = ["policy_violation", "drift_contradiction", "budget_exceeded"]
     elif args.test == "risk3":
-        tests = ["valid_professional", "valid_casual", "valid_luxury", "valid_formal", "valid_developer"]
+        tests = [
+            "valid_professional",
+            "valid_casual",
+            "valid_luxury",
+            "valid_formal",
+            "valid_developer",
+        ]
     else:
         tests = [args.test]
 
