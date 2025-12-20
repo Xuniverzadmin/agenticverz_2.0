@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Target,
   Factory,
+  Radar,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ function NavItem({ icon: Icon, label, href, collapsed }: NavItemProps) {
 }
 
 const NAV_ITEMS = [
+  { icon: Radar, label: 'Ops Console', href: '/ops' },
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
   { icon: Cpu, label: 'Skills', href: '/skills' },
 ];

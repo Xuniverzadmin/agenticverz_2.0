@@ -19,6 +19,7 @@ const MetricsPage = lazy(() => import('@/pages/metrics/MetricsPage'));
 const SBAInspectorPage = lazy(() => import('@/pages/sba/SBAInspectorPage'));
 const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome'));
 const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExecutionConsole'));
+const FounderOpsConsolePage = lazy(() => import('@/pages/ops/FounderOpsConsole'));
 
 function LoadingFallback() {
   return (
@@ -66,6 +67,9 @@ export function AppRoutes() {
 
           {/* Governance */}
           <Route path="sba" element={<SBAInspectorPage />} />
+
+          {/* Ops */}
+          <Route path="ops" element={<FounderOpsConsolePage />} />
 
           {/* System */}
           <Route path="credits" element={<CreditsPage />} />
