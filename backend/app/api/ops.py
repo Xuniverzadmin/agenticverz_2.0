@@ -612,6 +612,9 @@ async def get_customer_segments(
                 first_action_at,
                 inferred_buyer_type,
                 current_stickiness,
+                stickiness_7d,
+                stickiness_30d,
+                stickiness_delta,
                 peak_stickiness,
                 stickiness_trend,
                 last_api_call,
@@ -620,7 +623,9 @@ async def get_customer_segments(
                 risk_level,
                 risk_reason,
                 time_to_first_replay_m,
-                time_to_first_export_m
+                time_to_first_export_m,
+                friction_score,
+                last_friction_event
             FROM ops_customer_segments
             WHERE (:risk_level IS NULL OR risk_level = :risk_level)
             ORDER BY
@@ -643,15 +648,20 @@ async def get_customer_segments(
                 first_action_at=r[2].isoformat() if r[2] else None,
                 inferred_buyer_type=r[3],
                 current_stickiness=float(r[4]) if r[4] else 0.0,
-                peak_stickiness=float(r[5]) if r[5] else 0.0,
-                stickiness_trend=r[6] or "unknown",
-                last_api_call=r[7].isoformat() if r[7] else None,
-                last_investigation=r[8].isoformat() if r[8] else None,
-                is_silent_churn=bool(r[9]),
-                risk_level=r[10] or "low",
-                risk_reason=r[11],
-                time_to_first_replay_m=r[12],
-                time_to_first_export_m=r[13],
+                stickiness_7d=float(r[5]) if r[5] else 0.0,
+                stickiness_30d=float(r[6]) if r[6] else 0.0,
+                stickiness_delta=float(r[7]) if r[7] else 0.0,
+                peak_stickiness=float(r[8]) if r[8] else 0.0,
+                stickiness_trend=r[9] or "unknown",
+                last_api_call=r[10].isoformat() if r[10] else None,
+                last_investigation=r[11].isoformat() if r[11] else None,
+                is_silent_churn=bool(r[12]),
+                risk_level=r[13] or "low",
+                risk_reason=r[14],
+                time_to_first_replay_m=r[15],
+                time_to_first_export_m=r[16],
+                friction_score=float(r[17]) if r[17] else 0.0,
+                last_friction_event=r[18].isoformat() if r[18] else None,
             )
             for r in rows
         ]
@@ -1767,7 +1777,14 @@ async def compute_stickiness(
     session: Session = Depends(get_session),
 ):
     """
-    Background job to compute stickiness scores.
+    Background job to compute comprehensive stickiness scores.
+
+    Computes:
+    - stickiness_7d: Recent 7-day engagement score
+    - stickiness_30d: Full 30-day engagement score
+    - stickiness_delta: Ratio of 7d/30d (trend indicator)
+    - friction_score: Weighted friction events
+    - last_friction_event: Most recent friction timestamp
 
     Stickiness = weighted sum of (incidents * 0.2) + (replays * 0.3) + (exports * 0.5)
     With time decay: recent (7d) actions weighted 2x.
@@ -1778,37 +1795,88 @@ async def compute_stickiness(
             WITH actions AS (
                 SELECT
                     tenant_id,
-                    -- Recent (7 days)
-                    COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp > now() - interval '7 days') as recent_views,
-                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp > now() - interval '7 days') as recent_replays,
-                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp > now() - interval '7 days') as recent_exports,
-                    -- Older (7-30 days)
-                    COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp <= now() - interval '7 days' AND timestamp > now() - interval '30 days') as older_views,
-                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp <= now() - interval '7 days' AND timestamp > now() - interval '30 days') as older_replays,
-                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp <= now() - interval '7 days' AND timestamp > now() - interval '30 days') as older_exports
+                    -- 7-day stickiness (recent engagement)
+                    COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp > now() - interval '7 days') as views_7d,
+                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp > now() - interval '7 days') as replays_7d,
+                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp > now() - interval '7 days') as exports_7d,
+                    -- 30-day stickiness (full window)
+                    COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp > now() - interval '30 days') as views_30d,
+                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp > now() - interval '30 days') as replays_30d,
+                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp > now() - interval '30 days') as exports_30d,
+                    -- Friction events (weighted by severity)
+                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_ABORTED' AND timestamp > now() - interval '14 days') as aborts,
+                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_ABORTED' AND timestamp > now() - interval '14 days') as export_aborts,
+                    COUNT(*) FILTER (WHERE event_type = 'POLICY_BLOCK_REPEAT' AND timestamp > now() - interval '14 days') as policy_blocks,
+                    COUNT(*) FILTER (WHERE event_type = 'SESSION_IDLE_TIMEOUT' AND timestamp > now() - interval '14 days') as idle_timeouts,
+                    MAX(timestamp) FILTER (WHERE event_type IN (
+                        'REPLAY_ABORTED', 'EXPORT_ABORTED', 'POLICY_BLOCK_REPEAT',
+                        'SESSION_IDLE_TIMEOUT', 'SESSION_STARTED', 'INVESTIGATION_NO_ACTION'
+                    )) as last_friction,
+                    -- Last activity timestamps
+                    MAX(timestamp) FILTER (WHERE event_type = 'API_CALL_RECEIVED') as last_api,
+                    MAX(timestamp) FILTER (WHERE event_type IN ('INCIDENT_VIEWED', 'REPLAY_EXECUTED')) as last_investigation,
+                    -- First action
+                    MIN(timestamp) as first_action_at
                 FROM ops_events
                 WHERE timestamp > now() - interval '30 days'
                 GROUP BY tenant_id
+            ),
+            computed AS (
+                SELECT
+                    tenant_id,
+                    -- 7-day stickiness
+                    ROUND((views_7d * 0.2 + replays_7d * 0.3 + exports_7d * 0.5)::numeric, 2) as stickiness_7d,
+                    -- 30-day stickiness (normalized to weekly equivalent)
+                    ROUND(((views_30d * 0.2 + replays_30d * 0.3 + exports_30d * 0.5) / 4.28)::numeric, 2) as stickiness_30d,
+                    -- Friction score (capped per Phase-2.1 rules)
+                    ROUND(LEAST(
+                        (aborts * 2.0 + export_aborts * 1.5 + policy_blocks * 3.0 + idle_timeouts * 1.0),
+                        50.0  -- Global cap
+                    )::numeric, 2) as friction_score,
+                    last_friction,
+                    last_api,
+                    last_investigation,
+                    first_action_at
+                FROM actions
             )
-            INSERT INTO ops_customer_segments (tenant_id, current_stickiness, computed_at)
+            INSERT INTO ops_customer_segments (
+                tenant_id, current_stickiness, stickiness_7d, stickiness_30d, stickiness_delta,
+                friction_score, last_friction_event, last_api_call, last_investigation,
+                first_action_at, computed_at
+            )
             SELECT
                 tenant_id,
-                ROUND(
-                    (recent_views * 0.2 + older_views * 0.1) +
-                    (recent_replays * 0.3 + older_replays * 0.15) +
-                    (recent_exports * 0.5 + older_exports * 0.25),
-                    2
-                ) as stickiness,
+                stickiness_7d as current_stickiness,
+                stickiness_7d,
+                stickiness_30d,
+                CASE
+                    WHEN stickiness_30d > 0 THEN ROUND((stickiness_7d / stickiness_30d)::numeric, 2)
+                    WHEN stickiness_7d > 0 THEN 2.0  -- New active customer
+                    ELSE 0.0
+                END as stickiness_delta,
+                friction_score,
+                last_friction,
+                last_api,
+                last_investigation,
+                first_action_at,
                 now()
-            FROM actions
+            FROM computed
             ON CONFLICT (tenant_id) DO UPDATE SET
                 current_stickiness = EXCLUDED.current_stickiness,
+                stickiness_7d = EXCLUDED.stickiness_7d,
+                stickiness_30d = EXCLUDED.stickiness_30d,
+                stickiness_delta = EXCLUDED.stickiness_delta,
                 peak_stickiness = GREATEST(ops_customer_segments.peak_stickiness, EXCLUDED.current_stickiness),
                 stickiness_trend = CASE
-                    WHEN EXCLUDED.current_stickiness > ops_customer_segments.current_stickiness * 1.1 THEN 'rising'
-                    WHEN EXCLUDED.current_stickiness < ops_customer_segments.current_stickiness * 0.9 THEN 'falling'
+                    WHEN EXCLUDED.stickiness_delta > 1.1 THEN 'rising'
+                    WHEN EXCLUDED.stickiness_delta < 0.9 THEN 'falling'
                     ELSE 'stable'
                 END,
+                friction_score = EXCLUDED.friction_score,
+                last_friction_event = EXCLUDED.last_friction_event,
+                last_api_call = EXCLUDED.last_api_call,
+                last_investigation = EXCLUDED.last_investigation,
+                first_action_at = COALESCE(ops_customer_segments.first_action_at, EXCLUDED.first_action_at),
                 computed_at = now()
         """
         )
