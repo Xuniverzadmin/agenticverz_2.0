@@ -22,6 +22,14 @@ repos:
   # Custom SQLModel pattern linting
   - repo: local
     hooks:
+      - id: preflight-routes
+        name: Preflight Route Check
+        entry: python scripts/ops/preflight.py --routes
+        language: python
+        types: [python]
+        pass_filenames: false
+        stages: [commit]
+
       - id: sqlmodel-patterns
         name: SQLModel Pattern Linter
         entry: python scripts/ops/lint_sqlmodel_patterns.py backend/app/

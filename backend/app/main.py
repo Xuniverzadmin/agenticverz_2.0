@@ -133,6 +133,71 @@ async def update_queue_depth():
         await asyncio.sleep(10)  # Update every 10 seconds
 
 
+# =============================================================================
+# Runtime Route Validation (PIN-108)
+# =============================================================================
+
+
+def validate_route_order(app: FastAPI) -> list:
+    """
+    Runtime validation of route ordering.
+    Detects if parameter routes shadow static routes.
+
+    Only flags as problematic when, at the FIRST segment where routes differ,
+    the earlier route has a parameter (less specific) and the later has static (more specific).
+    """
+    from typing import Dict, List
+
+    issues = []
+    routes_by_method: Dict[str, List[tuple]] = {}
+
+    for route in app.routes:
+        if hasattr(route, "methods") and hasattr(route, "path"):
+            for method in route.methods:
+                if method not in routes_by_method:
+                    routes_by_method[method] = []
+                endpoint_name = getattr(route.endpoint, "__name__", str(route.endpoint))
+                routes_by_method[method].append((route.path, endpoint_name))
+
+    def check_route_pair(path1: str, path2: str) -> bool:
+        """Returns True if path1 (earlier) problematically shadows path2 (later)."""
+        parts1 = path1.strip("/").split("/")
+        parts2 = path2.strip("/").split("/")
+        if len(parts1) != len(parts2):
+            return False
+
+        # Find first position where one route is more specific
+        for p1, p2 in zip(parts1, parts2):
+            is_param1 = "{" in p1
+            is_param2 = "{" in p2
+
+            if not is_param1 and not is_param2:
+                if p1 != p2:
+                    return False  # Paths diverge, no collision
+                continue  # Same static segment
+
+            if is_param1 and is_param2:
+                continue  # Both params, no clear winner yet
+
+            # One is static, one is param - this is the differentiator
+            if is_param1 and not is_param2:
+                # Earlier has param, later has static = PROBLEMATIC
+                return True
+            else:
+                # Earlier has static (more specific) = CORRECT order
+                return False
+
+        return False  # Identical or no issues
+
+    for method, routes in routes_by_method.items():
+        for i, (path1, name1) in enumerate(routes):
+            for path2, name2 in routes[i + 1 :]:
+                if check_route_pair(path1, path2):
+                    issues.append(f"{method} {path1} ({name1}) may shadow {path2} ({name2})")
+
+    return issues
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan - start background tasks and initialize services."""
@@ -210,6 +275,16 @@ async def lifespan(app: FastAPI):
     # Start queue depth updater
     task = asyncio.create_task(update_queue_depth())
     logger.info("queue_depth_updater_started")
+
+    # Runtime route validation (PIN-108)
+    route_issues = validate_route_order(app)
+    if route_issues:
+        for issue in route_issues:
+            logger.warning(f"ROUTE_VALIDATION: {issue}")
+        logger.warning("route_validation_complete", extra={"issues": len(route_issues)})
+    else:
+        logger.info("route_validation_complete", extra={"issues": 0, "status": "pass"})
+
     yield
     # Cleanup on shutdown
     task.cancel()

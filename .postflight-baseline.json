@@ -1,0 +1,27 @@
+{
+  "complexity": {
+    "suggestion": 31,
+    "warning": 11
+  },
+  "unused": {
+    "warning": 946
+  },
+  "coverage": {
+    "suggestion": 767
+  },
+  "imports": {
+    "warning": 62
+  },
+  "duplication": {
+    "suggestion": 64
+  },
+  "api": {
+    "suggestion": 115
+  },
+  "security": {
+    "warning": 6
+  },
+  "consistency": {
+    "suggestion": 4
+  }
+}

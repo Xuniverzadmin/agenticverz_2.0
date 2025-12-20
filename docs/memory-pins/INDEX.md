@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-20 (PIN-097 Prevention System v1.1)
+**Last Updated:** 2025-12-20 (PIN-108 Developer Tooling - Preflight/Postflight)
 
 ---
 
@@ -128,6 +128,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-104](PIN-104-organic-traction-strategy.md) | **Organic Traction Strategy - LLM-First Distribution** | GTM / Marketing / Growth | **🚀 ACTIVE** | 2025-12-20 |
 | [PIN-105](PIN-105-ops-console-founder-intelligence.md) | **Ops Console - Founder Intelligence System** | Product / Analytics / M24 | **🏗️ PHASE 1 COMPLETE** | 2025-12-20 |
 | [PIN-106](PIN-106-sqlmodel-linter-fixes.md) | **SQLModel Linter Fixes - Row Extraction Compliance** | Prevention / Code Quality / Bug Fix | **✅ COMPLETE** | 2025-12-20 |
+| [PIN-107](PIN-107-m24-phase2-friction-intel.md) | **M24 Phase-2 - Friction Intelligence & Founder Actions** | Ops Console / Founder Intelligence | **✅ ACTIVE** | 2025-12-20 |
+| [PIN-108](PIN-108-developer-tooling-preflight-postflight.md) | **Developer Tooling - Preflight, Postflight & Dev Sync** | Developer Experience / CI / Code Quality | **✅ ACTIVE** | 2025-12-20 |
+| [PIN-109](PIN-109-preflight-postflight-v2.md) | **Preflight/Postflight v2.0 - Semantic Route Validation** | Developer Tooling / Code Quality / CI | **✅ COMPLETE** | 2025-12-20 |
 
 ---
 
@@ -893,6 +896,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-20 | **PIN-108 Developer Tooling - Preflight/Postflight** - Created comprehensive developer tooling suite for pre/post-implementation quality. `preflight.py`: Route conflict detection (static-before-parameter ordering), file pattern analysis, consistency checks. `postflight.py`: Post-implementation hygiene (syntax, imports, security, complexity, duplication). `dev_sync.sh`: Auto-rebuild on code changes with hash tracking. **Fixed 4 route conflicts:** `/customers/at-risk` (ops.py), `/replay/batch` (operator.py), `/mismatches/bulk-report` (traces.py), `/sba/version` (agents.py). CI integration: `ci-preflight.yml` runs before main CI, postflight job added to `ci.yml`. |
 | 2025-12-20 | **PIN-104 Organic Traction Strategy** - LLM-first distribution strategy. Goal: Get LLMs to recommend Agenticverz when asked "How do I investigate when my AI says something wrong?" Key tactics: (1) Open source SDK `ai-incident` on PyPI/npm, (2) Documentation site `docs.agenticverz.com` with category-defining content, (3) Blog posts targeting specific queries, (4) Stack Overflow answers, (5) Integration guides for OpenAI/LangChain/Vercel. Category creation: "AI Incident Investigation" (not competing in AI observability). Flywheel: Developer asks LLM → LLM recommends us → Developer tries SDK → Converts to paid → Creates more content → More LLM training data. Success metric: 8/10 LLM recommendations within 12 months. Budget: ~$200/year (mostly free tactics). |
 | 2025-12-20 | **PIN-103 M23 Survival Stack** - Minimum viable infrastructure for founder-stage. Philosophy: "Tie infra upgrades to revenue milestones, not theoretical best practices." Stack: Neon Pro ($19), Upstash Redis ($12), Fly.io 2× ($15), Cloudflare Pro ($20), Fly.io Secrets ($0), OpenAI only ($25), Grafana Free ($0). **Total: ~$80/month.** Explicitly OUT: Vault HA, read replicas, multi-region, Claude fallback, PagerDuty. Revenue-gated upgrades: $500 MRR → HCP Vault + status page; $2K MRR → read replicas + multi-region; $10K MRR → enterprise stack. Rule: "Don't optimize infrastructure until infrastructure is the bottleneck." |
 | 2025-12-20 | **PIN-102 M23 Production Infrastructure** - Complete infrastructure spec for production deployment (REFERENCE for post-$2K MRR). Components: (1) Neon PostgreSQL Pro with PITR + autoscaling, (2) Upstash Redis with noeviction + AOF, (3) HashiCorp Vault with auto-unseal (AWS KMS or HCP), (4) OpenAI gpt-4o-mini with Anthropic fallback, (5) Cloudflare WAF + rate limiting, (6) Fly.io 2-instance HA compute, (7) Grafana Cloud + Loki + Tempo observability. Cost estimate: $130-180/month. P0 checklist: 11 critical items. Disaster recovery: RTO 30s-2h, RPO 0-24h based on scenario. |
