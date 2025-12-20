@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Target,
+  Factory,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ const NAV_ITEMS = [
 ];
 
 const EXECUTION_ITEMS = [
+  { icon: Factory, label: 'Workers', href: '/workers' },
   { icon: Zap, label: 'Simulation', href: '/simulation' },
   { icon: GitBranch, label: 'Traces', href: '/traces' },
   { icon: PlayCircle, label: 'Replay', href: '/replay' },

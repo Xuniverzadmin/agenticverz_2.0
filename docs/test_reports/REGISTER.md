@@ -2,7 +2,7 @@
 
 **Project:** Agenticverz AOS
 **Component:** Business Builder Worker
-**Last Updated:** 2025-12-16
+**Last Updated:** 2025-12-20
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Total Reports | Passed | Failed/Gaps | In Progress |
 |---------------|--------|-------------|-------------|
-| 4 | 4 | 0 | 0 |
+| 5 | 5 | 0 | 0 |
 
 ---
 
@@ -22,6 +22,7 @@
 | [TR-002](TR-002_CLI_ADVERSARIAL_TEST_2025-12-16.md) | 2025-12-16 | CLI Adversarial Test (Pre-Fix) | Adversarial | ⚠️ **GAPS** | `efffd933-3be1-4483-9bdc-4381fc8e05e8` | 9,496 | M18/M19 not triggered, gaps identified |
 | [TR-003](TR-003_CLI_ADVERSARIAL_TEST_PASS_2025-12-16.md) | 2025-12-16 | CLI Adversarial Test (Post-Fix) | Adversarial | ✅ **PASS** | `68a1b548-0dde-42e2-806a-6f0a8b34cdb3` | 9,871 | 4 violations detected, drift=0.8, M9/M10/M18/M19 all firing |
 | [TR-004](TR-004_SCENARIO_TEST_MATRIX_2025-12-16.md) | 2025-12-16 | Scenario Test Matrix | External/MOAT | ✅ **PASS** (85%) | `44413e02-bb22-40ce-a3c9-377f19cd4d43` | 30,034 | 11/13 scenarios pass, OpenAI/Clerk/Neon/Redis/PostHog working |
+| [TR-005](TR-005_SQLMODEL_LINTER_FIXES_2025-12-20.md) | 2025-12-20 | SQLModel Linter Fixes | Regression | ✅ **PASS** | N/A | N/A | 9 linter issues fixed, 46/46 tests pass, safe extraction pattern |
 
 ---
 
@@ -55,7 +56,7 @@ Tests that verify fixes don't break existing functionality.
 
 | ID | Status | Description |
 |----|--------|-------------|
-| - | - | None yet |
+| TR-005 | ✅ PASS | SQLModel linter fixes - 9 issues fixed, 46 tests pass |
 
 ### Performance Tests
 Tests that measure latency, throughput, and resource usage.
@@ -176,8 +177,10 @@ cat docs/test_reports/REGISTER.md
 | 2025-12-16 | Created `scripts/ops/scenario_test_matrix.py` | Claude |
 | 2025-12-16 | Created TR-004: Scenario Test Matrix (11/13 PASS) | Claude |
 | 2025-12-16 | Identified GAP-004, GAP-005: Trigger.dev/Slack credentials | Claude |
+| 2025-12-20 | Created TR-005: SQLModel Linter Fixes (9 issues, 46 tests pass) | Claude |
+| 2025-12-20 | Added Regression Tests category with TR-005 | Claude |
 
 ---
 
 *Register maintained by: Agenticverz QA*
-*Last test run: 2025-12-16*
+*Last test run: 2025-12-20*

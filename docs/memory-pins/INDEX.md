@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-19 (PIN-101 Website Cluster Restructure)
+**Last Updated:** 2025-12-20 (PIN-106 SQLModel Linter Fixes)
 
 ---
 
@@ -123,6 +123,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-099](PIN-099-sqlmodel-row-extraction-patterns.md) | **SQLModel Row Extraction Patterns** | Prevention / Best Practices | **ACTIVE** | 2025-12-19 |
 | [PIN-100](PIN-100-m23-ai-incident-console-production.md) | **M23 AI Incident Console - Production Ready** | Milestone / Product / Live | **🚀 ACTIVE - M23** | 2025-12-19 |
 | [PIN-101](PIN-101-website-cluster-restructure.md) | **Website Cluster Restructure** | Frontend / Landing Page / UX | **🎨 ACTIVE** | 2025-12-19 |
+| [PIN-102](PIN-102-m23-production-infrastructure.md) | **M23 Production Infrastructure** | Infrastructure / DevOps / Production | **📋 REFERENCE** | 2025-12-20 |
+| [PIN-103](PIN-103-m23-survival-stack.md) | **M23 Survival Stack ($60-80/mo)** | Infrastructure / Founder-Stage / MVP | **🎯 ACTIVE** | 2025-12-20 |
+| [PIN-104](PIN-104-organic-traction-strategy.md) | **Organic Traction Strategy - LLM-First Distribution** | GTM / Marketing / Growth | **🚀 ACTIVE** | 2025-12-20 |
+| [PIN-105](PIN-105-ops-console-founder-intelligence.md) | **Ops Console - Founder Intelligence System** | Product / Analytics / M24 | **🏗️ PHASE 1 COMPLETE** | 2025-12-20 |
+| [PIN-106](PIN-106-sqlmodel-linter-fixes.md) | **SQLModel Linter Fixes - Row Extraction Compliance** | Prevention / Code Quality / Bug Fix | **✅ COMPLETE** | 2025-12-20 |
 
 ---
 
@@ -888,6 +893,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-20 | **PIN-104 Organic Traction Strategy** - LLM-first distribution strategy. Goal: Get LLMs to recommend Agenticverz when asked "How do I investigate when my AI says something wrong?" Key tactics: (1) Open source SDK `ai-incident` on PyPI/npm, (2) Documentation site `docs.agenticverz.com` with category-defining content, (3) Blog posts targeting specific queries, (4) Stack Overflow answers, (5) Integration guides for OpenAI/LangChain/Vercel. Category creation: "AI Incident Investigation" (not competing in AI observability). Flywheel: Developer asks LLM → LLM recommends us → Developer tries SDK → Converts to paid → Creates more content → More LLM training data. Success metric: 8/10 LLM recommendations within 12 months. Budget: ~$200/year (mostly free tactics). |
+| 2025-12-20 | **PIN-103 M23 Survival Stack** - Minimum viable infrastructure for founder-stage. Philosophy: "Tie infra upgrades to revenue milestones, not theoretical best practices." Stack: Neon Pro ($19), Upstash Redis ($12), Fly.io 2× ($15), Cloudflare Pro ($20), Fly.io Secrets ($0), OpenAI only ($25), Grafana Free ($0). **Total: ~$80/month.** Explicitly OUT: Vault HA, read replicas, multi-region, Claude fallback, PagerDuty. Revenue-gated upgrades: $500 MRR → HCP Vault + status page; $2K MRR → read replicas + multi-region; $10K MRR → enterprise stack. Rule: "Don't optimize infrastructure until infrastructure is the bottleneck." |
+| 2025-12-20 | **PIN-102 M23 Production Infrastructure** - Complete infrastructure spec for production deployment (REFERENCE for post-$2K MRR). Components: (1) Neon PostgreSQL Pro with PITR + autoscaling, (2) Upstash Redis with noeviction + AOF, (3) HashiCorp Vault with auto-unseal (AWS KMS or HCP), (4) OpenAI gpt-4o-mini with Anthropic fallback, (5) Cloudflare WAF + rate limiting, (6) Fly.io 2-instance HA compute, (7) Grafana Cloud + Loki + Tempo observability. Cost estimate: $130-180/month. P0 checklist: 11 critical items. Disaster recovery: RTO 30s-2h, RPO 0-24h based on scenario. |
 | 2025-12-19 | **PIN-100 M23 AI Incident Console Production** - Full production readiness spec. 7 objectives: (1) Search API + UI with user_id tracking, (2) Decision timeline component with step-by-step policy trace, (3) Export package (PDF/JSON/SOC2), (4) Evidence certificates with cryptographic verification, (5) Remove ALL mocks - live tests only, (6) Production deployment (no localhost), (7) CI/CD pipeline. New files: `incidents.py` (search/timeline/export), `export_service.py`, `pdf_generator.py`, `certificate_service.py`. Target: 6 weeks to complete. |
 | 2025-12-19 | **PIN-098 M22.1 UI Console GA-READY** - Dual-console architecture. Guard Console (5 pages): overview, incidents, replay, keys, settings. Operator Console (5 pages): global overview, incident stream, tenant drilldown, policy audit, replay lab. 3 GA Lock items completed: overflow incident labeling, determinism badge text, Guard/Operator auth boundary. All endpoints return 200 OK. |
 | 2025-12-19 | **Prevention System v1.0** - SQLModel Row tuple detection & prevention. Files: `backend/app/db_helpers.py` (safe query helpers), `scripts/ops/lint_sqlmodel_patterns.py` (pattern linter), `scripts/ops/check_api_wiring.py` (API validation), `scripts/ops/add_lint_pattern.py` (interactive pattern adder), `.pre-commit-config.yaml` (pre-commit hooks), `docs/PREVENTION_PLAYBOOK.md` (maintenance guide). Integrated into CI consistency check. |

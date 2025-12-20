@@ -17,6 +17,8 @@ const BlackboardPage = lazy(() => import('@/pages/blackboard/BlackboardPage'));
 const CreditsPage = lazy(() => import('@/pages/credits/CreditsPage'));
 const MetricsPage = lazy(() => import('@/pages/metrics/MetricsPage'));
 const SBAInspectorPage = lazy(() => import('@/pages/sba/SBAInspectorPage'));
+const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome'));
+const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExecutionConsole'));
 
 function LoadingFallback() {
   return (
@@ -51,6 +53,9 @@ export function AppRoutes() {
           <Route path="traces" element={<TracesPage />} />
           <Route path="traces/:runId" element={<TracesPage />} />
           <Route path="replay" element={<JobRunnerPage />} />
+          <Route path="workers" element={<WorkerStudioHomePage />} />
+          <Route path="workers/console" element={<WorkerExecutionConsolePage />} />
+          <Route path="workers/history" element={<WorkerStudioHomePage />} />
 
           {/* Reliability */}
           <Route path="failures" element={<FailuresPage />} />

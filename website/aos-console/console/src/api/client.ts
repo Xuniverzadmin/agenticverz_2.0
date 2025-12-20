@@ -1,7 +1,8 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+// Use relative URL in production (same origin), empty for same-origin requests
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '15000', 10);
 
 export const apiClient = axios.create({

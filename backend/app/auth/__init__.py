@@ -45,6 +45,16 @@ from .jwt_auth import (
     create_dev_token,
 )
 
+# M21 Tenant Auth - DISABLED for beta stage
+# from .tenant_auth import (
+#     TenantContext,
+#     get_tenant_context,
+#     require_permission,
+#     require_worker_access,
+#     verify_api_key_with_fallback,
+#     hash_api_key,
+# )
+
 # API Key configuration
 AOS_API_KEY = os.getenv("AOS_API_KEY", "")
 
@@ -83,9 +93,16 @@ __all__ = [
     "ClerkUser",
     "get_clerk_provider",
     "get_user_roles_from_clerk",
-    # API Key
+    # API Key (Simple env-based)
     "verify_api_key",
     "AOS_API_KEY",
+    # Tenant Auth (M21) - DISABLED for beta stage
+    # "TenantContext",
+    # "get_tenant_context",
+    # "require_permission",
+    # "require_worker_access",
+    # "verify_api_key_with_fallback",
+    # "hash_api_key",
     # OIDC (Legacy - Keycloak)
     "OIDC_ENABLED",
     "OIDCError",

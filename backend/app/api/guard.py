@@ -1478,7 +1478,6 @@ async def seed_demo_incident(
 import json
 from decimal import Decimal
 
-
 # =============================================================================
 # M23 Prevention Validation Endpoint
 # =============================================================================
@@ -1486,6 +1485,7 @@ from decimal import Decimal
 
 class ContentValidationRequest(BaseModel):
     """Request for content accuracy validation."""
+
     output: str  # The LLM output to validate
     context: Dict[str, Any]  # Context data that was available
     user_query: Optional[str] = None
@@ -1494,6 +1494,7 @@ class ContentValidationRequest(BaseModel):
 
 class ContentValidationResponse(BaseModel):
     """Response from content accuracy validation."""
+
     action: str  # allow, block, modify, warn
     policy: str
     result: str  # PASS, FAIL, WARN
@@ -1521,7 +1522,7 @@ async def validate_content_accuracy_endpoint(
     2. Debug why a response was blocked
     3. Validate context data completeness
     """
-    from app.policy.validators import evaluate_response, PreventionAction
+    from app.policy.validators import PreventionAction, evaluate_response
 
     result = evaluate_response(
         tenant_id=tenant_id,
@@ -1550,6 +1551,7 @@ async def validate_content_accuracy_endpoint(
 
 class EvidenceExportRequest(BaseModel):
     """Request for evidence report export."""
+
     incident_id: str
     include_replay: bool = True
     include_prevention: bool = True
@@ -1587,6 +1589,7 @@ async def export_incident_evidence(
     Returns: PDF file with Content-Disposition header
     """
     from fastapi.responses import Response
+
     from app.services.evidence_report import generate_evidence_report
 
     # Get incident
@@ -1603,29 +1606,39 @@ async def export_incident_evidence(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # Get incident events for timeline
-    stmt = (
-        select(IncidentEvent)
-        .where(IncidentEvent.incident_id == incident_id)
-        .order_by(IncidentEvent.created_at)
-    )
+    stmt = select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
     timeline_rows = session.exec(stmt).all()
     timeline_events = []
 
     for row in timeline_rows:
         event = row[0] if isinstance(row, tuple) else row
-        timeline_events.append({
-            "time": event.created_at.strftime("%H:%M:%S.%f")[:-3] if event.created_at else "",
-            "event": event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type),
-            "details": event.description or "",
-        })
+        timeline_events.append(
+            {
+                "time": event.created_at.strftime("%H:%M:%S.%f")[:-3] if event.created_at else "",
+                "event": event.event_type.value if hasattr(event.event_type, "value") else str(event.event_type),
+                "details": event.description or "",
+            }
+        )
 
     # If no events, create synthetic timeline from incident data
     if not timeline_events:
         base_time = incident.started_at or datetime.now(timezone.utc)
         timeline_events = [
-            {"time": base_time.strftime("%H:%M:%S.001"), "event": "INPUT_RECEIVED", "details": "User question received"},
-            {"time": base_time.strftime("%H:%M:%S.023"), "event": "CONTEXT_RETRIEVED", "details": "Contract data loaded"},
-            {"time": base_time.strftime("%H:%M:%S.050"), "event": "POLICY_EVALUATED", "details": "Content accuracy check"},
+            {
+                "time": base_time.strftime("%H:%M:%S.001"),
+                "event": "INPUT_RECEIVED",
+                "details": "User question received",
+            },
+            {
+                "time": base_time.strftime("%H:%M:%S.023"),
+                "event": "CONTEXT_RETRIEVED",
+                "details": "Contract data loaded",
+            },
+            {
+                "time": base_time.strftime("%H:%M:%S.050"),
+                "event": "POLICY_EVALUATED",
+                "details": "Content accuracy check",
+            },
             {"time": base_time.strftime("%H:%M:%S.087"), "event": "MODEL_CALLED", "details": "LLM invoked"},
             {"time": base_time.strftime("%H:%M:%S.847"), "event": "OUTPUT_GENERATED", "details": "Response produced"},
             {"time": base_time.strftime("%H:%M:%S.900"), "event": "LOGGED", "details": "Incident recorded"},
@@ -1639,11 +1652,14 @@ async def export_incident_evidence(
 
     # Extract context data from incident metadata or use demo data
     incident_data = incident.metadata if isinstance(incident.metadata, dict) else {}
-    context_data = incident_data.get("context", {
-        "contract_status": "active",
-        "auto_renew": None,
-        "renewal_date": "2026-01-01",
-    })
+    context_data = incident_data.get(
+        "context",
+        {
+            "contract_status": "active",
+            "auto_renew": None,
+            "renewal_date": "2026-01-01",
+        },
+    )
 
     # Extract user input and AI output from incident
     user_input = incident_data.get("user_query", incident.title or "Is my contract auto-renewed?")
@@ -1679,7 +1695,8 @@ async def export_incident_evidence(
                 "policy": prevention.policy,
                 "action": prevention.action.value,
                 "would_prevent_incident": prevention.action.value != "allow",
-                "safe_output": prevention.modified_output or "I don't have enough information to confirm this. Let me check.",
+                "safe_output": prevention.modified_output
+                or "I don't have enough information to confirm this. Let me check.",
             }
         except Exception:
             prevention_result = {
@@ -1693,6 +1710,7 @@ async def export_incident_evidence(
     replay_result = None
     if include_replay:
         import hashlib
+
         output_hash = hashlib.sha256(ai_output.encode()).hexdigest()
         replay_result = {
             "match_level": "exact",
@@ -1708,7 +1726,9 @@ async def export_incident_evidence(
         user_id=incident_data.get("user_id", "cust_8372"),
         product_name=incident_data.get("product", "AI Support Chatbot"),
         model_id=incident_data.get("model", "gpt-4.1"),
-        timestamp=incident.started_at.strftime("%Y-%m-%d %H:%M:%S UTC") if incident.started_at else datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        timestamp=incident.started_at.strftime("%Y-%m-%d %H:%M:%S UTC")
+        if incident.started_at
+        else datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         user_input=user_input,
         context_data=context_data,
         ai_output=ai_output,

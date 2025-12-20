@@ -9,19 +9,19 @@
 # - Rule chaining with short-circuit
 # - Counterfactual simulation result
 
-import asyncio
 import hashlib
 import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 from uuid import uuid4
 
 
 class PolicyType(str, Enum):
     """Types of policies that can be evaluated."""
+
     CONTENT_ACCURACY = "CONTENT_ACCURACY"
     SAFETY = "SAFETY"
     PII = "PII"
@@ -33,14 +33,16 @@ class PolicyType(str, Enum):
 
 class Severity(str, Enum):
     """Severity levels for policy violations."""
+
     CRITICAL = "critical"  # Immediate block, incident creation, alert
-    HIGH = "high"          # Block, incident creation
-    MEDIUM = "medium"      # Modify response, log warning
-    LOW = "low"            # Log only, allow through
+    HIGH = "high"  # Block, incident creation
+    MEDIUM = "medium"  # Modify response, log warning
+    LOW = "low"  # Log only, allow through
 
 
 class PreventionAction(str, Enum):
     """Action to take when prevention triggers."""
+
     ALLOW = "allow"
     BLOCK = "block"
     MODIFY = "modify"
@@ -51,6 +53,7 @@ class PreventionAction(str, Enum):
 @dataclass
 class PolicyViolation:
     """A single policy violation detected."""
+
     policy: PolicyType
     severity: Severity
     rule_id: str
@@ -78,6 +81,7 @@ class PolicyViolation:
 @dataclass
 class PreventionContext:
     """Context for prevention evaluation."""
+
     tenant_id: str
     call_id: str
     user_query: str
@@ -99,6 +103,7 @@ class PreventionContext:
 @dataclass
 class PreventionResult:
     """Result of prevention engine evaluation."""
+
     action: PreventionAction
     violations: List[PolicyViolation] = field(default_factory=list)
     passed_policies: List[PolicyType] = field(default_factory=list)
@@ -159,18 +164,35 @@ class ContentAccuracyValidatorV2(BaseValidator):
 
     # Definitive assertion patterns
     DEFINITIVE_PATTERNS = [
-        r"\bis\b", r"\bwill\b", r"\bhas been\b", r"\byes\b",
-        r"\bconfirm\b", r"\bdefinitely\b", r"\bcertainly\b",
-        r"\babsolutely\b", r"\bguaranteed\b", r"\bscheduled\b",
-        r"\bset to\b", r"\bwill be\b", r"\byou have\b",
+        r"\bis\b",
+        r"\bwill\b",
+        r"\bhas been\b",
+        r"\byes\b",
+        r"\bconfirm\b",
+        r"\bdefinitely\b",
+        r"\bcertainly\b",
+        r"\babsolutely\b",
+        r"\bguaranteed\b",
+        r"\bscheduled\b",
+        r"\bset to\b",
+        r"\bwill be\b",
+        r"\byou have\b",
     ]
 
     # Uncertainty patterns (good behavior)
     UNCERTAINTY_PATTERNS = [
-        r"\bi don't have\b", r"\bi'm not sure\b", r"\bi cannot confirm\b",
-        r"\bunable to verify\b", r"\bno information\b", r"\bmissing\b",
-        r"\bnot available\b", r"\bwould need to check\b", r"\blet me look\b",
-        r"\bi don't see\b", r"\bno record of\b", r"\bplease provide\b",
+        r"\bi don't have\b",
+        r"\bi'm not sure\b",
+        r"\bi cannot confirm\b",
+        r"\bunable to verify\b",
+        r"\bno information\b",
+        r"\bmissing\b",
+        r"\bnot available\b",
+        r"\bwould need to check\b",
+        r"\blet me look\b",
+        r"\bi don't see\b",
+        r"\bno record of\b",
+        r"\bplease provide\b",
     ]
 
     # Domain terms to check
@@ -204,10 +226,7 @@ class ContentAccuracyValidatorV2(BaseValidator):
 
         # Check each domain term
         for field_name, terms in self.DOMAIN_TERMS.items():
-            field_mentioned = any(
-                re.search(rf"\b{re.escape(term)}\b", ctx.llm_output, re.I)
-                for term in terms
-            )
+            field_mentioned = any(re.search(rf"\b{re.escape(term)}\b", ctx.llm_output, re.I) for term in terms)
 
             if not field_mentioned:
                 continue
@@ -218,21 +237,23 @@ class ContentAccuracyValidatorV2(BaseValidator):
             if field_value is None:
                 # Made definitive claim about missing data
                 claim = self._extract_claim(ctx.llm_output, terms)
-                violations.append(PolicyViolation(
-                    policy=PolicyType.CONTENT_ACCURACY,
-                    severity=Severity.HIGH,
-                    rule_id="CA001",
-                    reason=f"Definitive assertion about '{field_name}' but data is NULL/missing",
-                    evidence={
-                        "field": field_name,
-                        "value_in_context": None,
-                        "claim_made": claim[:100],
-                    },
-                    field_name=field_name,
-                    expected_behavior="Express uncertainty when data is missing",
-                    actual_behavior=f"Made definitive claim: '{claim[:50]}...'",
-                    confidence=0.90,
-                ))
+                violations.append(
+                    PolicyViolation(
+                        policy=PolicyType.CONTENT_ACCURACY,
+                        severity=Severity.HIGH,
+                        rule_id="CA001",
+                        reason=f"Definitive assertion about '{field_name}' but data is NULL/missing",
+                        evidence={
+                            "field": field_name,
+                            "value_in_context": None,
+                            "claim_made": claim[:100],
+                        },
+                        field_name=field_name,
+                        expected_behavior="Express uncertainty when data is missing",
+                        actual_behavior=f"Made definitive claim: '{claim[:50]}...'",
+                        confidence=0.90,
+                    )
+                )
 
         return violations
 
@@ -248,7 +269,7 @@ class ContentAccuracyValidatorV2(BaseValidator):
         return data.get(key)
 
     def _extract_claim(self, text: str, terms: List[str]) -> str:
-        sentences = re.split(r'[.!?]', text)
+        sentences = re.split(r"[.!?]", text)
         for sent in sentences:
             if any(re.search(rf"\b{re.escape(t)}\b", sent, re.I) for t in terms):
                 return sent.strip()
@@ -275,9 +296,7 @@ class PIIValidator(BaseValidator):
     def __init__(self, allowed_pii: Optional[Set[str]] = None):
         self.allowed_pii = allowed_pii or set()
         self._patterns = {
-            k: (re.compile(v[0], re.I), v[1])
-            for k, v in self.PII_PATTERNS.items()
-            if k not in self.allowed_pii
+            k: (re.compile(v[0], re.I), v[1]) for k, v in self.PII_PATTERNS.items() if k not in self.allowed_pii
         }
 
     def validate(self, ctx: PreventionContext) -> List[PolicyViolation]:
@@ -288,20 +307,22 @@ class PIIValidator(BaseValidator):
             if matches:
                 # Redact the actual values in evidence
                 redacted = [self._redact(m) for m in matches[:3]]
-                violations.append(PolicyViolation(
-                    policy=PolicyType.PII,
-                    severity=Severity.CRITICAL,
-                    rule_id=f"PII_{pii_type.upper()}",
-                    reason=f"Detected {description} in output",
-                    evidence={
-                        "pii_type": pii_type,
-                        "count": len(matches),
-                        "samples_redacted": redacted,
-                    },
-                    expected_behavior="Never expose PII in responses",
-                    actual_behavior=f"Exposed {len(matches)} {description}(s)",
-                    confidence=0.95,
-                ))
+                violations.append(
+                    PolicyViolation(
+                        policy=PolicyType.PII,
+                        severity=Severity.CRITICAL,
+                        rule_id=f"PII_{pii_type.upper()}",
+                        reason=f"Detected {description} in output",
+                        evidence={
+                            "pii_type": pii_type,
+                            "count": len(matches),
+                            "samples_redacted": redacted,
+                        },
+                        expected_behavior="Never expose PII in responses",
+                        actual_behavior=f"Exposed {len(matches)} {description}(s)",
+                        confidence=0.95,
+                    )
+                )
 
         return violations
 
@@ -348,19 +369,21 @@ class SafetyValidator(BaseValidator):
             for pattern in patterns:
                 match = pattern.search(ctx.llm_output)
                 if match:
-                    violations.append(PolicyViolation(
-                        policy=PolicyType.SAFETY,
-                        severity=Severity.CRITICAL,
-                        rule_id=f"SAFETY_{category.upper()}",
-                        reason=f"Detected potentially harmful content: {category}",
-                        evidence={
-                            "category": category,
-                            "matched_text": match.group()[:50],
-                        },
-                        expected_behavior="Refuse to provide harmful content",
-                        actual_behavior=f"Generated content matching {category} pattern",
-                        confidence=0.85,
-                    ))
+                    violations.append(
+                        PolicyViolation(
+                            policy=PolicyType.SAFETY,
+                            severity=Severity.CRITICAL,
+                            rule_id=f"SAFETY_{category.upper()}",
+                            reason=f"Detected potentially harmful content: {category}",
+                            evidence={
+                                "category": category,
+                                "matched_text": match.group()[:50],
+                            },
+                            expected_behavior="Refuse to provide harmful content",
+                            actual_behavior=f"Generated content matching {category} pattern",
+                            confidence=0.85,
+                        )
+                    )
                     break  # One violation per category is enough
 
         return violations
@@ -394,19 +417,21 @@ class HallucinationValidator(BaseValidator):
                 # Check if this specific claim is in context
                 claim = match.group()
                 if not self._claim_in_context(claim, ctx.context_data):
-                    violations.append(PolicyViolation(
-                        policy=PolicyType.HALLUCINATION,
-                        severity=Severity.MEDIUM,
-                        rule_id="HALL001",
-                        reason="Potentially fabricated specific claim not in context",
-                        evidence={
-                            "claim": claim,
-                            "pattern_matched": pattern.pattern[:50],
-                        },
-                        expected_behavior="Only cite information from provided context",
-                        actual_behavior=f"Made specific claim: '{claim}'",
-                        confidence=0.70,
-                    ))
+                    violations.append(
+                        PolicyViolation(
+                            policy=PolicyType.HALLUCINATION,
+                            severity=Severity.MEDIUM,
+                            rule_id="HALL001",
+                            reason="Potentially fabricated specific claim not in context",
+                            evidence={
+                                "claim": claim,
+                                "pattern_matched": pattern.pattern[:50],
+                            },
+                            expected_behavior="Only cite information from provided context",
+                            actual_behavior=f"Made specific claim: '{claim}'",
+                            confidence=0.70,
+                        )
+                    )
 
         return violations
 
@@ -414,7 +439,7 @@ class HallucinationValidator(BaseValidator):
         """Check if claim can be found anywhere in context."""
         context_str = str(context).lower()
         # Extract key terms from claim
-        terms = re.findall(r'\b\w+\b', claim.lower())
+        terms = re.findall(r"\b\w+\b", claim.lower())
         # If most terms are in context, it might be supported
         matches = sum(1 for t in terms if t in context_str)
         return matches > len(terms) * 0.7
@@ -435,36 +460,40 @@ class BudgetValidator(BaseValidator):
 
         total_tokens = ctx.input_tokens + ctx.output_tokens
         if total_tokens > self.max_tokens:
-            violations.append(PolicyViolation(
-                policy=PolicyType.BUDGET_LIMIT,
-                severity=Severity.MEDIUM,
-                rule_id="BUDGET_TOKENS",
-                reason=f"Token usage ({total_tokens}) exceeds limit ({self.max_tokens})",
-                evidence={
-                    "input_tokens": ctx.input_tokens,
-                    "output_tokens": ctx.output_tokens,
-                    "total_tokens": total_tokens,
-                    "limit": self.max_tokens,
-                },
-                expected_behavior=f"Stay within {self.max_tokens} tokens",
-                actual_behavior=f"Used {total_tokens} tokens",
-                confidence=1.0,
-            ))
+            violations.append(
+                PolicyViolation(
+                    policy=PolicyType.BUDGET_LIMIT,
+                    severity=Severity.MEDIUM,
+                    rule_id="BUDGET_TOKENS",
+                    reason=f"Token usage ({total_tokens}) exceeds limit ({self.max_tokens})",
+                    evidence={
+                        "input_tokens": ctx.input_tokens,
+                        "output_tokens": ctx.output_tokens,
+                        "total_tokens": total_tokens,
+                        "limit": self.max_tokens,
+                    },
+                    expected_behavior=f"Stay within {self.max_tokens} tokens",
+                    actual_behavior=f"Used {total_tokens} tokens",
+                    confidence=1.0,
+                )
+            )
 
         if ctx.cost_usd > self.max_cost_usd:
-            violations.append(PolicyViolation(
-                policy=PolicyType.BUDGET_LIMIT,
-                severity=Severity.HIGH,
-                rule_id="BUDGET_COST",
-                reason=f"Cost (${ctx.cost_usd:.4f}) exceeds limit (${self.max_cost_usd:.4f})",
-                evidence={
-                    "cost_usd": ctx.cost_usd,
-                    "limit_usd": self.max_cost_usd,
-                },
-                expected_behavior=f"Stay within ${self.max_cost_usd:.4f}",
-                actual_behavior=f"Cost ${ctx.cost_usd:.4f}",
-                confidence=1.0,
-            ))
+            violations.append(
+                PolicyViolation(
+                    policy=PolicyType.BUDGET_LIMIT,
+                    severity=Severity.HIGH,
+                    rule_id="BUDGET_COST",
+                    reason=f"Cost (${ctx.cost_usd:.4f}) exceeds limit (${self.max_cost_usd:.4f})",
+                    evidence={
+                        "cost_usd": ctx.cost_usd,
+                        "limit_usd": self.max_cost_usd,
+                    },
+                    expected_behavior=f"Stay within ${self.max_cost_usd:.4f}",
+                    actual_behavior=f"Cost ${ctx.cost_usd:.4f}",
+                    confidence=1.0,
+                )
+            )
 
         return violations
 
@@ -542,14 +571,16 @@ class PreventionEngine:
                     passed_policies.append(validator.policy_type)
             except Exception as e:
                 # Log error but don't fail the entire evaluation
-                all_violations.append(PolicyViolation(
-                    policy=validator.policy_type,
-                    severity=Severity.LOW,
-                    rule_id="VALIDATOR_ERROR",
-                    reason=f"Validator error: {str(e)}",
-                    evidence={"error": str(e)},
-                    confidence=0.5,
-                ))
+                all_violations.append(
+                    PolicyViolation(
+                        policy=validator.policy_type,
+                        severity=Severity.LOW,
+                        rule_id="VALIDATOR_ERROR",
+                        reason=f"Validator error: {str(e)}",
+                        evidence={"error": str(e)},
+                        confidence=0.5,
+                    )
+                )
 
         # Sort violations by severity
         severity_order = {Severity.CRITICAL: 0, Severity.HIGH: 1, Severity.MEDIUM: 2, Severity.LOW: 3}
@@ -641,21 +672,17 @@ class PreventionEngine:
 
             # Define metrics (will use existing if already defined)
             prevention_total = Counter(
-                'prevention_evaluations_total',
-                'Total prevention evaluations',
-                ['tenant_id', 'action', 'highest_severity']
+                "prevention_evaluations_total",
+                "Total prevention evaluations",
+                ["tenant_id", "action", "highest_severity"],
             )
 
             prevention_violations = Counter(
-                'prevention_violations_total',
-                'Total policy violations detected',
-                ['tenant_id', 'policy', 'severity']
+                "prevention_violations_total", "Total policy violations detected", ["tenant_id", "policy", "severity"]
             )
 
             prevention_latency = Histogram(
-                'prevention_evaluation_seconds',
-                'Prevention evaluation latency',
-                ['tenant_id']
+                "prevention_evaluation_seconds", "Prevention evaluation latency", ["tenant_id"]
             )
 
             # Emit

@@ -6,35 +6,34 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from .auth import verify_api_key
-from .metrics import (
-    nova_worker_pool_size,
-    nova_runs_total,
-    nova_runs_failed_total,
-    nova_skill_attempts_total,
-    nova_skill_duration_seconds,
-    nova_runs_queued,
-    generate_metrics,
-    get_content_type,
-)
+from .auth.rbac_middleware import RBACMiddleware
 from .db import Agent, Memory, Provenance, Run, engine, init_db
 from .logging_config import log_provenance, log_request, setup_logging
+from .metrics import (
+    generate_metrics,
+    get_content_type,
+    nova_runs_failed_total,
+    nova_runs_queued,
+    nova_runs_total,
+    nova_skill_attempts_total,
+    nova_skill_duration_seconds,
+    nova_worker_pool_size,
+)
+from .middleware.tenant import TenantMiddleware
 from .planners import get_planner
 from .skills import get_skill, get_skill_manifest, list_skills
-from .events import get_publisher
-from .utils.idempotency import check_idempotency
-from .utils.rate_limiter import RateLimiter
-from .utils.concurrent_runs import ConcurrentRunsLimiter
 from .utils.budget_tracker import BudgetTracker, enforce_budget
+from .utils.concurrent_runs import ConcurrentRunsLimiter
+from .utils.idempotency import check_idempotency
 from .utils.input_sanitizer import sanitize_goal
-from .middleware.tenant import TenantMiddleware
-from .auth.rbac_middleware import RBACMiddleware
+from .utils.rate_limiter import RateLimiter
 
 # Initialize utilities
 rate_limiter = RateLimiter()
@@ -55,8 +54,8 @@ logger.info(
     "NOVA Agent Manager started",
     extra={
         "planner_backend": os.getenv("PLANNER_BACKEND", "stub"),
-        "skills_registered": [s["name"] for s in list_skills()]
-    }
+        "skills_registered": [s["name"] for s in list_skills()],
+    },
 )
 
 
@@ -127,9 +126,7 @@ async def update_queue_depth():
     while True:
         try:
             with Session(engine) as session:
-                count = session.exec(
-                    select(Run).where(Run.status.in_(["queued", "retry"]))
-                ).all()
+                count = session.exec(select(Run).where(Run.status.in_(["queued", "retry"]))).all()
                 nova_runs_queued.set(len(count))
         except Exception as e:
             logger.warning(f"Failed to update queue depth: {e}")
@@ -149,9 +146,9 @@ async def lifespan(app: FastAPI):
     # Initialize M7 services - FAIL-FAST if memory features are enabled but modules unavailable
     try:
         from .auth.rbac_engine import init_rbac_engine
+        from .db import get_session
         from .memory.memory_service import init_memory_service
         from .memory.update_rules import init_update_rules_engine
-        from .db import get_session
 
         # Initialize RBAC engine with DB session factory
         init_rbac_engine(db_session_factory=get_session)
@@ -167,6 +164,7 @@ async def lifespan(app: FastAPI):
         if redis_url:
             try:
                 import redis
+
                 redis_client = redis.from_url(redis_url)
                 redis_client.ping()  # Test connection
                 logger.info("redis_connected", extra={"url": redis_url.split("@")[-1]})
@@ -174,11 +172,7 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"Redis connection failed, continuing without cache: {e}")
                 redis_client = None
 
-        init_memory_service(
-            db_session_factory=get_session,
-            redis_client=redis_client,
-            update_rules=update_rules
-        )
+        init_memory_service(db_session_factory=get_session, redis_client=redis_client, update_rules=update_rules)
         logger.info("memory_service_initialized")
 
         # M8: Initialize Redis idempotency store for traces
@@ -186,12 +180,13 @@ async def lifespan(app: FastAPI):
         idempotency_store = None
         try:
             from .traces.idempotency import get_idempotency_store
+
             idempotency_store = await get_idempotency_store()
-            logger.info("idempotency_store_initialized", extra={
-                "type": type(idempotency_store).__name__,
-                "redis_available": bool(redis_url)
-            })
-        except Exception as e:
+            logger.info(
+                "idempotency_store_initialized",
+                extra={"type": type(idempotency_store).__name__, "redis_available": bool(redis_url)},
+            )
+        except Exception:
             logger.warning("Idempotency store initialization failed (continuing without).", exc_info=True)
             idempotency_store = None
 
@@ -230,34 +225,35 @@ app = FastAPI(
     title="NOVA Agent Manager",
     description="AOS MVA - Agent Manager + Planner with async execution",
     version="0.2.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Include API routers
-from .api.health import router as health_router
-from .api.policy import router as policy_router
-from .api.runtime import router as runtime_router
-from .api.status_history import router as status_history_router
-from .api.costsim import router as costsim_router
-from .api.memory_pins import router as memory_pins_router
-from .api.rbac_api import router as rbac_router
-from .api.traces import router as traces_router
-from .api.failures import router as failures_router
-from .api.recovery import router as recovery_router
-from .api.recovery_ingest import router as recovery_ingest_router
 from .api.agents import router as agents_router  # M12 Multi-Agent System
-from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
+from .api.costsim import router as costsim_router
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
-from .api.workers import router as workers_router  # Business Builder Worker v0.2
-# from .api.tenants import router as tenants_router  # M21 - DISABLED: Premature for beta stage
-
-# M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
-from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
-from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
+from .api.failures import router as failures_router
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
+from .api.health import router as health_router
+from .api.memory_pins import router as memory_pins_router
 from .api.operator import router as operator_router  # Operator Console (/operator/*)
+from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
+from .api.policy import router as policy_router
+from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
+from .api.rbac_api import router as rbac_router
+from .api.recovery import router as recovery_router
+from .api.recovery_ingest import router as recovery_ingest_router
+from .api.runtime import router as runtime_router
+from .api.status_history import router as status_history_router
+from .api.traces import router as traces_router
+from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
+
+# from .api.tenants import router as tenants_router  # M21 - DISABLED: Premature for beta stage
+# M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
+from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
+from .api.workers import router as workers_router  # Business Builder Worker v0.2
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -283,6 +279,7 @@ app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v
 # M22.1 UI Console - Dual-console architecture
 app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
 app.include_router(operator_router)  # /operator/* - Operator Console (truth + oversight)
+app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 
 # CORS middleware
 app.add_middleware(
@@ -327,10 +324,7 @@ async def execute_run(run_id: str, slot_token: Optional[str] = None, concurrency
         # Always release concurrency slot when done (if we have one)
         if slot_token and concurrency_key:
             concurrent_limiter.release(concurrency_key, slot_token)
-            logger.debug(
-                "concurrency_slot_released",
-                extra={"run_id": run_id, "concurrency_key": concurrency_key}
-            )
+            logger.debug("concurrency_slot_released", extra={"run_id": run_id, "concurrency_key": concurrency_key})
 
 
 async def _execute_run_inner(run_id: str):
@@ -347,14 +341,7 @@ async def _execute_run_inner(run_id: str):
         session.add(run)
         session.commit()
 
-        logger.info(
-            "run_started",
-            extra={
-                "run_id": run_id,
-                "agent_id": run.agent_id,
-                "goal": run.goal
-            }
-        )
+        logger.info("run_started", extra={"run_id": run_id, "agent_id": run.agent_id, "goal": run.goal})
         planner_backend = os.getenv("PLANNER_BACKEND", "stub")
         nova_runs_total.labels(status="started", planner=planner_backend).inc()
 
@@ -367,7 +354,7 @@ async def _execute_run_inner(run_id: str):
         goal=run.goal,
         context_summary=None,  # TODO: Add context from previous runs
         memory_snippets=None,  # TODO: Query relevant memories
-        tool_manifest=tool_manifest
+        tool_manifest=tool_manifest,
     )
 
     # Normalize step format for execution
@@ -385,8 +372,8 @@ async def _execute_run_inner(run_id: str):
             "run_id": run_id,
             "agent_id": run.agent_id,
             "planner": plan.get("planner", "unknown"),
-            "step_count": len(plan.get("steps", []))
-        }
+            "step_count": len(plan.get("steps", [])),
+        },
     )
 
     # Execute steps using skill registry
@@ -401,16 +388,13 @@ async def _execute_run_inner(run_id: str):
 
             if not skill_entry:
                 # Skill not found - log error and continue
-                logger.warning(
-                    "skill_not_found",
-                    extra={"skill": skill_name, "run_id": run_id}
-                )
+                logger.warning("skill_not_found", extra={"skill": skill_name, "run_id": run_id})
                 tool_call = {
                     "step_id": step["step_id"],
                     "skill": skill_name,
                     "request": step.get("params", {}),
                     "response": {"status": "error", "error": f"Skill '{skill_name}' not found"},
-                    "ts": datetime.now(timezone.utc).isoformat()
+                    "ts": datetime.now(timezone.utc).isoformat(),
                 }
                 tool_calls.append(tool_call)
                 final_status = "failed"
@@ -426,6 +410,7 @@ async def _execute_run_inner(run_id: str):
 
             # Execute skill with metrics tracking
             import time as _time
+
             _skill_start = _time.time()
             nova_skill_attempts_total.labels(skill=skill_name).inc()
             result = await skill_instance.execute(step.get("params", {}))
@@ -440,7 +425,7 @@ async def _execute_run_inner(run_id: str):
                 "response": result.get("result", {}),
                 "side_effects": result.get("side_effects", {}),
                 "duration": result.get("duration"),
-                "ts": datetime.now(timezone.utc).isoformat()
+                "ts": datetime.now(timezone.utc).isoformat(),
             }
             tool_calls.append(tool_call)
 
@@ -455,8 +440,8 @@ async def _execute_run_inner(run_id: str):
                 duration_ms=result.get("duration", 0) * 1000,
                 extra_data={
                     "skill_version": result.get("skill_version"),
-                    "side_effects": result.get("side_effects", {})
-                }
+                    "side_effects": result.get("side_effects", {}),
+                },
             )
 
             # Check if skill failed
@@ -471,14 +456,16 @@ async def _execute_run_inner(run_id: str):
                     agent_id=run.agent_id,
                     memory_type="skill_result",
                     text=f"Skill result: {json.dumps(result.get('result', {}))}",
-                    meta=json.dumps({
-                        "goal": run.goal,
-                        "skill": skill_name,
-                        "skill_version": result.get("skill_version"),
-                        "status": skill_status,
-                        "run_id": run_id,
-                        "side_effects": result.get("side_effects", {})
-                    })
+                    meta=json.dumps(
+                        {
+                            "goal": run.goal,
+                            "skill": skill_name,
+                            "skill_version": result.get("skill_version"),
+                            "status": skill_status,
+                            "run_id": run_id,
+                            "side_effects": result.get("side_effects", {}),
+                        }
+                    ),
                 )
                 session.add(memory)
                 session.commit()
@@ -508,19 +495,14 @@ async def _execute_run_inner(run_id: str):
             attempts=run.attempts,
             started_at=run.started_at,
             completed_at=completed_at,
-            duration_ms=run.duration_ms
+            duration_ms=run.duration_ms,
         )
         session.add(provenance)
         session.commit()
 
         # Log provenance
         log_provenance(
-            logger=logger,
-            run_id=run_id,
-            agent_id=run.agent_id,
-            goal=run.goal,
-            plan=plan,
-            tool_calls=tool_calls
+            logger=logger, run_id=run_id, agent_id=run.agent_id, goal=run.goal, plan=plan, tool_calls=tool_calls
         )
 
         logger.info(
@@ -530,8 +512,8 @@ async def _execute_run_inner(run_id: str):
                 "agent_id": run.agent_id,
                 "goal": run.goal,
                 "status": final_status,
-                "duration_ms": run.duration_ms
-            }
+                "duration_ms": run.duration_ms,
+            },
         )
 
         # Update run metrics
@@ -560,7 +542,7 @@ async def health_check():
         "status": "healthy" if db_status == "connected" and api_key_set else "degraded",
         "service": "nova_agent_manager",
         "database": db_status,
-        "api_key_configured": api_key_set
+        "api_key_configured": api_key_set,
     }
 
 
@@ -579,12 +561,12 @@ async def version():
             "pluggable_planners",
             "skill_registry",
             "worker_pool",
-            "event_publisher"
+            "event_publisher",
         ],
         "planner_backend": os.getenv("PLANNER_BACKEND", "stub"),
         "event_publisher": os.getenv("EVENT_PUBLISHER", "logging"),
         "worker_concurrency": int(os.getenv("WORKER_CONCURRENCY", "0")),
-        "skills": list_skills()
+        "skills": list_skills(),
     }
 
 
@@ -598,22 +580,14 @@ async def healthz():
 async def download_openapi():
     """Download OpenAPI spec as JSON file."""
     openapi_spec = app.openapi()
-    return JSONResponse(
-        content=openapi_spec,
-        headers={
-            "Content-Disposition": "attachment; filename=openapi.json"
-        }
-    )
+    return JSONResponse(content=openapi_spec, headers={"Content-Disposition": "attachment; filename=openapi.json"})
 
 
 @app.get("/healthz/worker_pool")
 async def worker_pool_health():
     """Worker pool health probe endpoint."""
     concurrency = int(os.getenv("WORKER_CONCURRENCY", "0"))
-    return {
-        "worker_pool_configured": concurrency,
-        "status": "standby" if concurrency == 0 else "active"
-    }
+    return {"worker_pool_configured": concurrency, "status": "standby" if concurrency == 0 else "active"}
 
 
 # Set static worker pool size gauge on startup
@@ -630,17 +604,11 @@ async def metrics():
 @app.get("/skills")
 async def get_skills():
     """List all registered skills."""
-    return {
-        "skills": list_skills(),
-        "manifest": get_skill_manifest()
-    }
+    return {"skills": list_skills(), "manifest": get_skill_manifest()}
 
 
 @app.post("/agents", response_model=CreateAgentResponse, status_code=201)
-async def create_agent(
-    payload: CreateAgentRequest,
-    _: str = Depends(verify_api_key)
-):
+async def create_agent(payload: CreateAgentRequest, _: str = Depends(verify_api_key)):
     """Create a new agent."""
     agent = Agent(name=payload.name)
 
@@ -649,24 +617,15 @@ async def create_agent(
         session.commit()
         session.refresh(agent)
 
-    logger.info(
-        "agent_created",
-        extra={"agent_id": agent.id, "extra_data": {"name": agent.name}}
-    )
+    logger.info("agent_created", extra={"agent_id": agent.id, "extra_data": {"name": agent.name}})
 
     return CreateAgentResponse(
-        agent_id=agent.id,
-        name=agent.name,
-        status=agent.status,
-        created_at=agent.created_at.isoformat()
+        agent_id=agent.id, name=agent.name, status=agent.status, created_at=agent.created_at.isoformat()
     )
 
 
 @app.get("/agents/{agent_id}")
-async def get_agent(
-    agent_id: str,
-    _: str = Depends(verify_api_key)
-):
+async def get_agent(agent_id: str, _: str = Depends(verify_api_key)):
     """Get agent by ID."""
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
@@ -677,7 +636,7 @@ async def get_agent(
             "agent_id": agent.id,
             "name": agent.name,
             "status": agent.status,
-            "created_at": agent.created_at.isoformat()
+            "created_at": agent.created_at.isoformat(),
         }
 
 
@@ -687,7 +646,7 @@ async def post_goal(
     payload: GoalRequest,
     request: Request,
     background_tasks: BackgroundTasks,
-    _: str = Depends(verify_api_key)
+    _: str = Depends(verify_api_key),
 ):
     """
     Submit a goal to an agent.
@@ -711,13 +670,13 @@ async def post_goal(
                 extra={
                     "idempotency_key": payload.idempotency_key,
                     "existing_run_id": result.run_id,
-                    "tenant_id": tenant_id
-                }
+                    "tenant_id": tenant_id,
+                },
             )
             return GoalResponse(
                 run_id=result.run_id,
                 status=result.status or "queued",
-                message="Existing run returned (idempotent request)."
+                message="Existing run returned (idempotent request).",
             )
 
     # 2. Input sanitization (prompt injection protection)
@@ -730,12 +689,9 @@ async def post_goal(
                 "tenant_id": tenant_id,
                 "reason": sanitization.blocked_reason,
                 "patterns": sanitization.detected_patterns,
-            }
+            },
         )
-        raise HTTPException(
-            status_code=400,
-            detail=f"Goal rejected: {sanitization.blocked_reason}"
-        )
+        raise HTTPException(status_code=400, detail=f"Goal rejected: {sanitization.blocked_reason}")
 
     # Use sanitized goal
     sanitized_goal = sanitization.sanitized
@@ -746,33 +702,21 @@ async def post_goal(
             extra={
                 "agent_id": agent_id,
                 "warnings": sanitization.warnings,
-            }
+            },
         )
 
     # 3. Rate limit check (per tenant, 100 req/min)
     rate_key = f"tenant:{tenant_id or 'default'}"
     if not rate_limiter.allow(rate_key, rate_per_min=100):
-        logger.warning(
-            "rate_limit_exceeded",
-            extra={"tenant_id": tenant_id, "agent_id": agent_id}
-        )
-        raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded. Try again later."
-        )
+        logger.warning("rate_limit_exceeded", extra={"tenant_id": tenant_id, "agent_id": agent_id})
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
 
     # 4. Concurrent runs limit check (per agent, max 5)
     concurrency_key = f"agent:{agent_id}"
     slot_token = concurrent_limiter.acquire(concurrency_key, max_slots=5)
     if not slot_token:
-        logger.warning(
-            "concurrency_limit_exceeded",
-            extra={"agent_id": agent_id, "tenant_id": tenant_id}
-        )
-        raise HTTPException(
-            status_code=429,
-            detail="Agent has too many concurrent runs. Try again later."
-        )
+        logger.warning("concurrency_limit_exceeded", extra={"agent_id": agent_id, "tenant_id": tenant_id})
+        raise HTTPException(status_code=429, detail="Agent has too many concurrent runs. Try again later.")
 
     # 5. Budget pre-check with full enforcement
     estimated_cost = int(os.getenv("DEFAULT_EST_COST_CENTS", "50"))
@@ -788,12 +732,9 @@ async def post_goal(
                 "breach_type": budget_result.breach_type,
                 "limit": budget_result.limit_cents,
                 "current": budget_result.current_cents,
-            }
+            },
         )
-        raise HTTPException(
-            status_code=402,
-            detail=f"Budget exceeded: {budget_result.reason}"
-        )
+        raise HTTPException(status_code=402, detail=f"Budget exceeded: {budget_result.reason}")
 
     # Verify agent exists
     with Session(engine) as session:
@@ -809,7 +750,7 @@ async def post_goal(
             goal=sanitized_goal,
             status="queued",
             idempotency_key=payload.idempotency_key,
-            tenant_id=tenant_id
+            tenant_id=tenant_id,
         )
         session.add(run)
         session.commit()
@@ -825,8 +766,8 @@ async def post_goal(
             "goal": payload.goal,
             "tenant_id": tenant_id,
             "idempotency_key": payload.idempotency_key,
-            "concurrency_slot": slot_token
-        }
+            "concurrency_slot": slot_token,
+        },
     )
 
     # Schedule background execution
@@ -834,18 +775,12 @@ async def post_goal(
     background_tasks.add_task(execute_run, run_id, slot_token, concurrency_key)
 
     return GoalResponse(
-        run_id=run_id,
-        status="queued",
-        message="Goal accepted. Poll /agents/{agent_id}/runs/{run_id} for status."
+        run_id=run_id, status="queued", message="Goal accepted. Poll /agents/{agent_id}/runs/{run_id} for status."
     )
 
 
 @app.get("/agents/{agent_id}/runs/{run_id}", response_model=RunResponse)
-async def get_run(
-    agent_id: str,
-    run_id: str,
-    _: str = Depends(verify_api_key)
-):
+async def get_run(agent_id: str, run_id: str, _: str = Depends(verify_api_key)):
     """Get run status and results."""
     with Session(engine) as session:
         run = session.get(Run, run_id)
@@ -864,28 +799,19 @@ async def get_run(
             created_at=run.created_at.isoformat(),
             started_at=run.started_at.isoformat() if run.started_at else None,
             completed_at=run.completed_at.isoformat() if run.completed_at else None,
-            duration_ms=run.duration_ms
+            duration_ms=run.duration_ms,
         )
 
 
 @app.get("/agents/{agent_id}/runs", response_model=List[RunResponse])
-async def list_runs(
-    agent_id: str,
-    limit: int = 10,
-    _: str = Depends(verify_api_key)
-):
+async def list_runs(agent_id: str, limit: int = 10, _: str = Depends(verify_api_key)):
     """List runs for an agent."""
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
-        statement = (
-            select(Run)
-            .where(Run.agent_id == agent_id)
-            .order_by(Run.created_at.desc())
-            .limit(limit)
-        )
+        statement = select(Run).where(Run.agent_id == agent_id).order_by(Run.created_at.desc()).limit(limit)
         runs = session.exec(statement).all()
 
         return [
@@ -901,19 +827,14 @@ async def list_runs(
                 created_at=run.created_at.isoformat(),
                 started_at=run.started_at.isoformat() if run.started_at else None,
                 completed_at=run.completed_at.isoformat() if run.completed_at else None,
-                duration_ms=run.duration_ms
+                duration_ms=run.duration_ms,
             )
             for run in runs
         ]
 
 
 @app.get("/agents/{agent_id}/recall", response_model=List[MemoryResponse])
-async def recall_memory(
-    agent_id: str,
-    query: str,
-    k: int = 5,
-    _: str = Depends(verify_api_key)
-):
+async def recall_memory(agent_id: str, query: str, k: int = 5, _: str = Depends(verify_api_key)):
     """Recall memories for an agent."""
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
@@ -929,23 +850,11 @@ async def recall_memory(
         )
         results = session.exec(statement).all()
 
-        return [
-            MemoryResponse(
-                id=m.id,
-                text=m.text,
-                meta=m.meta,
-                created_at=m.created_at.isoformat()
-            )
-            for m in results
-        ]
+        return [MemoryResponse(id=m.id, text=m.text, meta=m.meta, created_at=m.created_at.isoformat()) for m in results]
 
 
 @app.get("/agents/{agent_id}/provenance", response_model=List[ProvenanceResponse])
-async def get_provenance(
-    agent_id: str,
-    limit: int = 10,
-    _: str = Depends(verify_api_key)
-):
+async def get_provenance(agent_id: str, limit: int = 10, _: str = Depends(verify_api_key)):
     """Get provenance records for an agent."""
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
@@ -974,18 +883,14 @@ async def get_provenance(
                 created_at=p.created_at.isoformat(),
                 started_at=p.started_at.isoformat() if p.started_at else None,
                 completed_at=p.completed_at.isoformat() if p.completed_at else None,
-                duration_ms=p.duration_ms
+                duration_ms=p.duration_ms,
             )
             for p in results
         ]
 
 
 @app.get("/agents/{agent_id}/provenance/{prov_id}", response_model=ProvenanceResponse)
-async def get_provenance_by_id(
-    agent_id: str,
-    prov_id: str,
-    _: str = Depends(verify_api_key)
-):
+async def get_provenance_by_id(agent_id: str, prov_id: str, _: str = Depends(verify_api_key)):
     """Get a specific provenance record."""
     with Session(engine) as session:
         provenance = session.get(Provenance, prov_id)
@@ -1005,7 +910,7 @@ async def get_provenance_by_id(
             created_at=provenance.created_at.isoformat(),
             started_at=provenance.started_at.isoformat() if provenance.started_at else None,
             completed_at=provenance.completed_at.isoformat() if provenance.completed_at else None,
-            duration_ms=provenance.duration_ms
+            duration_ms=provenance.duration_ms,
         )
 
 
@@ -1023,10 +928,7 @@ class RerunResponse(BaseModel):
 
 
 @app.post("/admin/rerun", response_model=RerunResponse)
-async def rerun_failed_run(
-    payload: RerunRequest,
-    _: str = Depends(verify_api_key)
-):
+async def rerun_failed_run(payload: RerunRequest, _: str = Depends(verify_api_key)):
     """
     Re-queue a failed or completed run for retry.
     Only allows re-running runs with status: failed, succeeded, or retry.
@@ -1040,8 +942,7 @@ async def rerun_failed_run(
         allowed_states = ["failed", "succeeded", "retry"]
         if run.status not in allowed_states:
             raise HTTPException(
-                status_code=400,
-                detail=f"Cannot rerun run with status '{run.status}'. Allowed: {allowed_states}"
+                status_code=400, detail=f"Cannot rerun run with status '{run.status}'. Allowed: {allowed_states}"
             )
 
         original_status = run.status
@@ -1062,31 +963,23 @@ async def rerun_failed_run(
                 "run_id": payload.run_id,
                 "original_status": original_status,
                 "reason": payload.reason,
-                "agent_id": run.agent_id
-            }
+                "agent_id": run.agent_id,
+            },
         )
 
         return RerunResponse(
             status="queued",
             run_id=payload.run_id,
             original_status=original_status,
-            reason=payload.reason or "manual_retry"
+            reason=payload.reason or "manual_retry",
         )
 
 
 @app.get("/admin/failed-runs")
-async def list_failed_runs(
-    limit: int = 50,
-    _: str = Depends(verify_api_key)
-):
+async def list_failed_runs(limit: int = 50, _: str = Depends(verify_api_key)):
     """List recent failed runs for review."""
     with Session(engine) as session:
-        statement = (
-            select(Run)
-            .where(Run.status == "failed")
-            .order_by(Run.completed_at.desc())
-            .limit(limit)
-        )
+        statement = select(Run).where(Run.status == "failed").order_by(Run.completed_at.desc()).limit(limit)
         runs = session.exec(statement).all()
 
         return {
@@ -1098,8 +991,8 @@ async def list_failed_runs(
                     "goal": r.goal,
                     "attempts": r.attempts,
                     "error_message": r.error_message,
-                    "completed_at": r.completed_at.isoformat() if r.completed_at else None
+                    "completed_at": r.completed_at.isoformat() if r.completed_at else None,
                 }
                 for r in runs
-            ]
+            ],
         }

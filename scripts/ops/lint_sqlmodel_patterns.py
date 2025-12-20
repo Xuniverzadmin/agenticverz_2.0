@@ -63,15 +63,28 @@ UNSAFE_PATTERNS = [
         "message": "Unsafe: accessing attribute on .first() result (Row tuple)",
         "suggestion": "Extract model first: row = session.exec(stmt).first(); obj = row[0] if row else None",
     },
+    # Pattern: session.exec(text(...), params) - exec() doesn't accept params dict
+    # Discovered during M24 Ops Console implementation (PIN-105)
+    {
+        "regex": r"session\.exec\s*\(\s*text\s*\([^)]+\)\s*,\s*\{",
+        "message": "Unsafe: session.exec() does not accept params dict. Only takes 1 argument.",
+        "suggestion": "Use session.execute(text(...), params) for raw SQL with parameters",
+    },
 ]
 
 # Safe patterns to allow (false positive prevention)
 SAFE_PATTERNS = [
     r"row\s*=\s*session\.exec\([^)]+\)\.first\(\)",  # Using 'row' variable name
+    r"result\s*=\s*session\.exec\([^)]+\)\.first\(\)",  # Using 'result' variable name
     r"row\[0\]",  # Extracting from row
+    r"result\[0\]",  # Extracting from result
     r"r\[0\]\s+for\s+r\s+in",  # List comprehension extraction
     r"from app\.db_helpers import",  # Using safe helpers
     r"query_one\(|query_all\(|query_scalar\(",  # Using helper functions
+    r"session\.execute\s*\(\s*text\s*\(",  # Correct: session.execute() for raw SQL with params
+    r"exec_sql\(",  # Helper function for raw SQL execution
+    r"hasattr\(result,",  # Safe model-or-tuple extraction pattern
+    r"hasattr\(r,",  # Safe model-or-tuple extraction in loop
 ]
 
 
@@ -164,6 +177,7 @@ def main():
         print("  - row = session.exec(stmt).first(); obj = row[0] if row else None")
         print("  - objs = [r[0] for r in session.exec(stmt).all()]")
         print("  - from app.db_helpers import query_one, query_all")
+        print("  - session.execute(text(...), params) for raw SQL with parameters")
         sys.exit(0)
 
     print(f"⚠️  Found {len(issues)} potential issue(s):")

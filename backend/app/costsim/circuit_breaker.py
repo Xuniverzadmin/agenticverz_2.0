@@ -213,8 +213,14 @@ class CircuitBreaker:
             CostSimCBState.name == self.name
         ).with_for_update()
 
-        result = session.exec(statement)
-        state = result.first()
+        result = session.exec(statement).first()
+        # Handle both Row tuple and direct model returns
+        if result is None:
+            state = None
+        elif hasattr(result, 'name'):  # Already a model
+            state = result
+        else:  # Row tuple
+            state = result[0]
 
         if state is None:
             # Create new state
@@ -689,8 +695,14 @@ class CircuitBreaker:
         statement = select(CostSimCBIncident).where(
             CostSimCBIncident.id == incident_id
         )
-        result = session.exec(statement)
-        incident = result.first()
+        result = session.exec(statement).first()
+        # Handle both Row tuple and direct model returns
+        if result is None:
+            incident = None
+        elif hasattr(result, 'id'):  # Already a model
+            incident = result
+        else:  # Row tuple
+            incident = result[0]
 
         if incident:
             incident.resolved = True

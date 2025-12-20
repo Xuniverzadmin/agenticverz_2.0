@@ -332,9 +332,9 @@ class BudgetTracker:
                     AND (budget_cents = 0 OR budget_cents - spent_cents >= :cost)
                     RETURNING id, budget_cents, spent_cents
                 """)
-                result = session.exec(query, {"agent_id": agent_id, "cost": cost_cents, "tenant_id": tenant_id})
+                result = session.execute(query, {"agent_id": agent_id, "cost": cost_cents, "tenant_id": tenant_id})
             else:
-                result = session.exec(query, {"agent_id": agent_id, "cost": cost_cents})
+                result = session.execute(query, {"agent_id": agent_id, "cost": cost_cents})
 
             row = result.first()
             session.commit()

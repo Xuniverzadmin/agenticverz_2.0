@@ -50,8 +50,14 @@ def get_existing_run(
         if agent_id:
             query = query.where(Run.agent_id == agent_id)
 
-        run = session.exec(query).first()
-        return run
+        result = session.exec(query).first()
+        # Handle both Row tuple and direct model returns
+        if result is None:
+            return None
+        elif hasattr(result, 'id'):  # Already a model
+            return result
+        else:  # Row tuple
+            return result[0]
 
 
 def check_idempotency(

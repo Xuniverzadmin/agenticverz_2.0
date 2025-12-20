@@ -294,27 +294,28 @@ async def get_failure_stats(
             recovery_success_rate = recovery_successes / recovery_attempts if recovery_attempts > 0 else 0.0
 
             # Top error codes
+            count_col = func.count(FailureMatch.id)
             top_codes_result = session.exec(
-                select(FailureMatch.error_code, func.count(FailureMatch.id).label("count"))
+                select(FailureMatch.error_code, count_col)
                 .where(base_filter)
                 .group_by(FailureMatch.error_code)
-                .order_by(col("count").desc())
+                .order_by(count_col.desc())
                 .limit(10)
             ).all()
             top_codes = [{"error_code": row[0], "count": row[1]} for row in top_codes_result]
 
             # Top categories
             top_cats_result = session.exec(
-                select(FailureMatch.category, func.count(FailureMatch.id).label("count"))
+                select(FailureMatch.category, count_col)
                 .where(base_filter)
                 .group_by(FailureMatch.category)
-                .order_by(col("count").desc())
+                .order_by(count_col.desc())
             ).all()
             top_cats = [{"category": row[0] or "UNKNOWN", "count": row[1]} for row in top_cats_result]
 
             # By severity
             severity_result = session.exec(
-                select(FailureMatch.severity, func.count(FailureMatch.id).label("count"))
+                select(FailureMatch.severity, count_col)
                 .where(base_filter)
                 .group_by(FailureMatch.severity)
             ).all()

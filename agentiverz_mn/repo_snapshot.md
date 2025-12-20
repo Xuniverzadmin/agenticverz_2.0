@@ -1,7 +1,7 @@
 # Repository Snapshot
 
-**Date:** 2025-12-16
-**Milestone:** M20 COMPLETE (MN-OS Layer 0) + Demo Ready
+**Date:** 2025-12-19
+**Milestone:** M22 COMPLETE (KillSwitch MVP) + Demo Ready
 **CI Checker:** v5.0 (MN-OS dual-name support)
 
 ---
@@ -22,12 +22,81 @@
 | M16: Agent Governance Console | ✅ COMPLETE | PIN-074 |
 | M17: CARE Routing Engine | ✅ COMPLETE | PIN-075 |
 | M18: CARE-L & SBA Evolution | ✅ COMPLETE | PIN-076/077 |
-| **M19: Policy Constitutional** | ✅ **COMPLETE** | PIN-078 |
-| **M20: Policy Compiler & Runtime** | ✅ **COMPLETE** | PIN-084 |
+| M19: Policy Constitutional | ✅ COMPLETE | PIN-078 |
+| M20: Policy Compiler & Runtime | ✅ COMPLETE | PIN-084 |
+| M21: Tenant Auth Billing | ✅ COMPLETE | PIN-079 |
+| **M22: KillSwitch MVP** | ✅ **COMPLETE** | PIN-096 |
 
 ---
 
-## Latest Session (2025-12-16)
+## Latest Session (2025-12-19)
+
+### M22 KillSwitch MVP (PIN-096) ✅ COMPLETE
+
+Implemented OpenAI-compatible proxy with kill switch controls, default guardrails, incident timeline, and replay capabilities.
+
+| Endpoint Category | Count | Status |
+|-------------------|-------|--------|
+| Drop-in Proxy | 3 | ✅ (/v1/chat/completions, /v1/embeddings, /v1/status) |
+| Kill Switch | 5 | ✅ (freeze/unfreeze tenant/key, status) |
+| Default Guardrails | 1 | ✅ (/v1/policies/active) |
+| Incidents | 2 | ✅ (/v1/incidents, /v1/incidents/{id}) |
+| Replay | 2 | ✅ (/v1/replay/{call_id}, /v1/calls/{call_id}) |
+| Demo | 1 | ✅ (/v1/demo/simulate-incident) |
+
+**Default Guardrail Pack v1:**
+| ID | Name | Category | Action |
+|----|------|----------|--------|
+| dg-001 | max_cost_per_request | cost | block (100¢) |
+| dg-002 | max_tokens_per_request | cost | block (16K) |
+| dg-003 | rate_limit_rpm | rate | throttle (100/min) |
+| dg-004 | failure_spike_freeze | safety | freeze (50% error) |
+| dg-005 | prompt_injection_block | content | block |
+
+**HTTP Status Codes:**
+| Code | Meaning |
+|------|---------|
+| 423 | Locked (killswitch frozen) |
+| 402 | Payment Required (budget exceeded) |
+| 429 | Rate Limited |
+
+**Files Created:**
+- `alembic/versions/037_m22_killswitch.py` - Migration (5 tables)
+- `app/models/killswitch.py` - Models + schemas
+- `app/api/v1_proxy.py` - OpenAI proxy endpoints
+- `app/api/v1_killswitch.py` - Control endpoints
+- `tests/test_m22_killswitch.py` - 26 tests ✅
+
+**Usage:**
+```python
+# Drop-in OpenAI replacement
+from openai import OpenAI
+client = OpenAI(
+    api_key="aos_...",
+    base_url="https://api.agenticverz.com/v1"
+)
+```
+
+---
+
+## Previous Session (2025-12-16)
+
+### Build Your App Landing Page (PIN-094)
+
+Implemented human-centric "Build Your App" feature on landing page:
+
+| Component | Description |
+|-----------|-------------|
+| **URL** | https://agenticverz.com/build |
+| **File** | `website/landing/src/pages/build/BuildYourApp.jsx` |
+| **Flow** | Input → Plan Review → Execution (3-state) |
+| **Routing** | React Router + Apache .htaccess SPA fallback |
+
+**Features:**
+- Collects product idea, problem statement, audience, constraints
+- Calls `/api/v1/workers/business-builder/run` API
+- Shows agents as "workers" (human-centric, no OS jargon)
+- Debug logger with `console.warn` for troubleshooting
 
 ### TR-004 Scenario Test Matrix (Demo Validation)
 
@@ -249,14 +318,17 @@ Established formal naming evolution from legacy milestone identifiers (M0-M19) t
 
 | Metric | Value |
 |--------|-------|
-| Memory PINs | 82 |
-| Migrations | 36 |
-| Milestones Complete | 20/20 |
+| Memory PINs | 96 |
+| Migrations | 37 |
+| Milestones Complete | 22/22 |
 | CI Jobs Passing | 15/15 |
-| MN-OS Subsystems | 20 |
+| MN-OS Subsystems | 22 |
 | Test Reports | 4 (TR-001 to TR-004) |
+| M22 Tests | 26/26 passing |
 | Demo Ready | YES (Happy + Adversarial passing) |
 | External Services | 6/8 validated |
+| KillSwitch MVP | ✅ Drop-in OpenAI replacement |
+| Landing Page | https://agenticverz.com/build |
 
 ---
 
@@ -366,4 +438,4 @@ docker compose ps
 
 ---
 
-*Last updated: 2025-12-16 (TR-004 Scenario Test Matrix + Voyage AI + Demo Ready)*
+*Last updated: 2025-12-19 (M22 KillSwitch MVP - OpenAI-compatible proxy with kill switch)*

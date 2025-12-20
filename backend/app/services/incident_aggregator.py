@@ -17,28 +17,22 @@ Watchpoint #1: Incident Explosion Under Load
 - Severity auto-escalates based on affected call count
 """
 
-import json
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Optional, Dict, Any, List, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
+from typing import Any, Dict, Optional, Tuple
 
-from sqlmodel import Session, select, and_
+from sqlmodel import Session, and_, select
 
-from app.models.killswitch import (
-    Incident,
-    IncidentEvent,
-    IncidentSeverity,
-    IncidentStatus
-)
+from app.models.killswitch import Incident, IncidentEvent, IncidentSeverity, IncidentStatus
 from app.utils.deterministic import generate_uuid, utc_now
 
 logger = logging.getLogger(__name__)
 
 
 # ============== CONFIGURATION ==============
+
 
 @dataclass
 class IncidentAggregatorConfig:
@@ -51,12 +45,9 @@ class IncidentAggregatorConfig:
     max_incidents_per_tenant_per_hour: int = 20
 
     # Thresholds for severity escalation based on affected calls
-    severity_thresholds: Dict[str, int] = field(default_factory=lambda: {
-        "low": 1,
-        "medium": 10,
-        "high": 50,
-        "critical": 200
-    })
+    severity_thresholds: Dict[str, int] = field(
+        default_factory=lambda: {"low": 1, "medium": 10, "high": 50, "critical": 200}
+    )
 
     # Maximum related calls to store per incident (prevents JSON bloat)
     max_related_calls_per_incident: int = 1000
@@ -70,6 +61,7 @@ class IncidentAggregatorConfig:
 
 # ============== AGGREGATION KEY ==============
 
+
 @dataclass
 class IncidentKey:
     """
@@ -80,6 +72,7 @@ class IncidentKey:
     - trigger_type: Type of failure (failure_spike, budget_breach, rate_limit)
     - window_start: 5-minute bucketed window
     """
+
     tenant_id: str
     trigger_type: str
     window_start: datetime
@@ -91,18 +84,14 @@ class IncidentKey:
         if not isinstance(other, IncidentKey):
             return False
         return (
-            self.tenant_id == other.tenant_id and
-            self.trigger_type == other.trigger_type and
-            self.window_start == other.window_start
+            self.tenant_id == other.tenant_id
+            and self.trigger_type == other.trigger_type
+            and self.window_start == other.window_start
         )
 
     @classmethod
     def from_event(
-        cls,
-        tenant_id: str,
-        trigger_type: str,
-        event_time: datetime,
-        window_seconds: int = 300
+        cls, tenant_id: str, trigger_type: str, event_time: datetime, window_seconds: int = 300
     ) -> "IncidentKey":
         """Create an incident key from an event, bucketed to window."""
         # Bucket to nearest window
@@ -110,14 +99,11 @@ class IncidentKey:
         window_epoch = int(epoch // window_seconds) * window_seconds
         window_start = datetime.fromtimestamp(window_epoch, tz=timezone.utc)
 
-        return cls(
-            tenant_id=tenant_id,
-            trigger_type=trigger_type,
-            window_start=window_start
-        )
+        return cls(tenant_id=tenant_id, trigger_type=trigger_type, window_start=window_start)
 
 
 # ============== AGGREGATOR SERVICE ==============
+
 
 class IncidentAggregator:
     """
@@ -156,7 +142,7 @@ class IncidentAggregator:
             tenant_id=tenant_id,
             trigger_type=trigger_type,
             event_time=now,
-            window_seconds=self.config.aggregation_window_seconds
+            window_seconds=self.config.aggregation_window_seconds,
         )
 
         # Check for existing open incident in current window
@@ -169,15 +155,14 @@ class IncidentAggregator:
                 incident=existing,
                 call_id=call_id,
                 cost_delta_cents=cost_delta_cents,
-                metadata=metadata
+                metadata=metadata,
             )
             return existing, False
 
         # Check rate limiting
         if not self._can_create_incident(session, tenant_id, now):
             logger.warning(
-                f"Incident rate limit reached for tenant {tenant_id}. "
-                f"Dropping incident creation for {trigger_type}"
+                f"Incident rate limit reached for tenant {tenant_id}. " f"Dropping incident creation for {trigger_type}"
             )
             # Return a synthetic "dropped" incident for tracking
             return self._get_rate_limit_incident(session, tenant_id, now), False
@@ -190,48 +175,41 @@ class IncidentAggregator:
             call_id=call_id,
             cost_delta_cents=cost_delta_cents,
             auto_action=auto_action,
-            metadata=metadata
+            metadata=metadata,
         )
 
         return incident, True
 
-    def _find_open_incident(
-        self,
-        session: Session,
-        key: IncidentKey,
-        now: datetime
-    ) -> Optional[Incident]:
+    def _find_open_incident(self, session: Session, key: IncidentKey, now: datetime) -> Optional[Incident]:
         """Find an open incident matching the key within the current window."""
         window_end = key.window_start + timedelta(seconds=self.config.aggregation_window_seconds)
 
-        stmt = select(Incident).where(
-            and_(
-                Incident.tenant_id == key.tenant_id,
-                Incident.trigger_type == key.trigger_type,
-                Incident.status != IncidentStatus.RESOLVED.value,
-                Incident.started_at >= key.window_start,
-                Incident.started_at < window_end
+        stmt = (
+            select(Incident)
+            .where(
+                and_(
+                    Incident.tenant_id == key.tenant_id,
+                    Incident.trigger_type == key.trigger_type,
+                    Incident.status != IncidentStatus.RESOLVED.value,
+                    Incident.started_at >= key.window_start,
+                    Incident.started_at < window_end,
+                )
             )
-        ).order_by(Incident.started_at.desc()).limit(1)
+            .order_by(Incident.started_at.desc())
+            .limit(1)
+        )
 
         row = session.exec(stmt).first()
         return row[0] if row else None
 
-    def _can_create_incident(
-        self,
-        session: Session,
-        tenant_id: str,
-        now: datetime
-    ) -> bool:
+    def _can_create_incident(self, session: Session, tenant_id: str, now: datetime) -> bool:
         """Check if we can create a new incident (rate limiting)."""
         one_hour_ago = now - timedelta(hours=1)
 
         from sqlalchemy import func
+
         stmt = select(func.count(Incident.id)).where(
-            and_(
-                Incident.tenant_id == tenant_id,
-                Incident.created_at >= one_hour_ago
-            )
+            and_(Incident.tenant_id == tenant_id, Incident.created_at >= one_hour_ago)
         )
 
         result = session.exec(stmt).one()
@@ -239,24 +217,24 @@ class IncidentAggregator:
 
         return count < self.config.max_incidents_per_tenant_per_hour
 
-    def _get_rate_limit_incident(
-        self,
-        session: Session,
-        tenant_id: str,
-        now: datetime
-    ) -> Incident:
+    def _get_rate_limit_incident(self, session: Session, tenant_id: str, now: datetime) -> Incident:
         """Get or create a rate-limit overflow incident."""
         one_hour_ago = now - timedelta(hours=1)
 
         # Find existing rate-limit incident
-        stmt = select(Incident).where(
-            and_(
-                Incident.tenant_id == tenant_id,
-                Incident.trigger_type == "rate_limit_overflow",
-                Incident.status != IncidentStatus.RESOLVED.value,
-                Incident.created_at >= one_hour_ago
+        stmt = (
+            select(Incident)
+            .where(
+                and_(
+                    Incident.tenant_id == tenant_id,
+                    Incident.trigger_type == "rate_limit_overflow",
+                    Incident.status != IncidentStatus.RESOLVED.value,
+                    Incident.created_at >= one_hour_ago,
+                )
             )
-        ).order_by(Incident.created_at.desc()).limit(1)
+            .order_by(Incident.created_at.desc())
+            .limit(1)
+        )
 
         row = session.exec(stmt).first()
         if row:
@@ -333,13 +311,10 @@ class IncidentAggregator:
             incident=incident,
             event_type="incident_created",
             description=f"Incident created: {title}",
-            data={"trigger_value": trigger_value, **(metadata or {})}
+            data={"trigger_value": trigger_value, **(metadata or {})},
         )
 
-        logger.info(
-            f"Created incident {incident.id} for tenant {key.tenant_id}: "
-            f"{key.trigger_type} - {title}"
-        )
+        logger.info(f"Created incident {incident.id} for tenant {key.tenant_id}: " f"{key.trigger_type} - {title}")
 
         return incident
 
@@ -378,8 +353,8 @@ class IncidentAggregator:
                 data={
                     "old_severity": old_severity,
                     "new_severity": new_severity,
-                    "calls_affected": incident.calls_affected
-                }
+                    "calls_affected": incident.calls_affected,
+                },
             )
             logger.warning(
                 f"Incident {incident.id} escalated: {old_severity} -> {new_severity} "
@@ -461,10 +436,7 @@ class IncidentAggregator:
         now = utc_now()
         cutoff = now - timedelta(seconds=self.config.auto_resolve_after_seconds)
 
-        conditions = [
-            Incident.status == IncidentStatus.OPEN.value,
-            Incident.updated_at < cutoff
-        ]
+        conditions = [Incident.status == IncidentStatus.OPEN.value, Incident.updated_at < cutoff]
 
         if tenant_id:
             conditions.append(Incident.tenant_id == tenant_id)
@@ -483,7 +455,7 @@ class IncidentAggregator:
                 incident=incident,
                 event_type="auto_resolved",
                 description=f"Incident auto-resolved after {self.config.auto_resolve_after_seconds}s of inactivity",
-                data={"resolved_by": "system", "reason": "inactivity_timeout"}
+                data={"resolved_by": "system", "reason": "inactivity_timeout"},
             )
 
             resolved_count += 1
@@ -508,10 +480,7 @@ class IncidentAggregator:
 
         # Total incidents
         total_stmt = select(func.count(Incident.id)).where(
-            and_(
-                Incident.tenant_id == tenant_id,
-                Incident.created_at >= since
-            )
+            and_(Incident.tenant_id == tenant_id, Incident.created_at >= since)
         )
         total_result = session.exec(total_stmt).one()
         total_count = total_result[0] if total_result else 0
@@ -521,7 +490,7 @@ class IncidentAggregator:
             and_(
                 Incident.tenant_id == tenant_id,
                 Incident.status == IncidentStatus.OPEN.value,
-                Incident.created_at >= since
+                Incident.created_at >= since,
             )
         )
         open_result = session.exec(open_stmt).one()
@@ -532,7 +501,7 @@ class IncidentAggregator:
             and_(
                 Incident.tenant_id == tenant_id,
                 Incident.severity == IncidentSeverity.CRITICAL.value,
-                Incident.created_at >= since
+                Incident.created_at >= since,
             )
         )
         critical_result = session.exec(critical_stmt).one()
@@ -540,10 +509,7 @@ class IncidentAggregator:
 
         # Total calls affected
         calls_stmt = select(func.sum(Incident.calls_affected)).where(
-            and_(
-                Incident.tenant_id == tenant_id,
-                Incident.created_at >= since
-            )
+            and_(Incident.tenant_id == tenant_id, Incident.created_at >= since)
         )
         calls_result = session.exec(calls_stmt).one()
         total_calls = calls_result[0] if calls_result else 0
@@ -558,7 +524,7 @@ class IncidentAggregator:
             "config": {
                 "window_seconds": self.config.aggregation_window_seconds,
                 "max_per_hour": self.config.max_incidents_per_tenant_per_hour,
-            }
+            },
         }
 
 

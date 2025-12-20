@@ -15,10 +15,36 @@ from app.models.costsim_cb import (
     CostSimAlertQueueModel,
 )
 
+from app.models.tenant import (
+    Tenant,
+    User,
+    TenantMembership,
+    APIKey,
+    Subscription,
+    UsageRecord,
+    WorkerRegistry,
+    WorkerConfig,
+    WorkerRun,
+    AuditLog,
+    PLAN_QUOTAS,
+)
+
 __all__ = [
     "Base",
     "CostSimCBStateModel",
     "CostSimCBIncidentModel",
     "CostSimProvenanceModel",
     "CostSimAlertQueueModel",
+    # Tenant models (M21)
+    "Tenant",
+    "User",
+    "TenantMembership",
+    "APIKey",
+    "Subscription",
+    "UsageRecord",
+    "WorkerRegistry",
+    "WorkerConfig",
+    "WorkerRun",
+    "AuditLog",
+    "PLAN_QUOTAS",
 ]

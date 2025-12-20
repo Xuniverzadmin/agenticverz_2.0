@@ -148,6 +148,7 @@ See `docs/PREVENTION_PLAYBOOK.md` for detailed process. Quick summary:
 2. `session.exec(stmt).first().attribute` - direct attribute access
 3. `for x in session.exec(stmt).all()` - iteration without extraction
 4. `session.exec(func.count(...)).one()` - scalar without extraction
+5. **NEW (2025-12-20):** `session.exec(text(...), params)` - exec() doesn't accept params dict
 
 ### Safe Patterns (Whitelisted)
 1. `row = session.exec(stmt).first()` - using 'row' variable name
@@ -155,6 +156,7 @@ See `docs/PREVENTION_PLAYBOOK.md` for detailed process. Quick summary:
 3. `r[0] for r in` - list comprehension extraction
 4. `from app.db_helpers import` - using safe helpers
 5. `query_one(|query_all(|query_scalar(` - helper function calls
+6. **NEW (2025-12-20):** `session.execute(text(...), params)` - correct for raw SQL with params
 
 ---
 
@@ -180,3 +182,67 @@ See `docs/PREVENTION_PLAYBOOK.md` for detailed process. Quick summary:
 | Date | Change |
 |------|--------|
 | 2025-12-19 | Initial release - 4 unsafe patterns, 5 safe patterns, pre-commit hooks |
+| 2025-12-20 | Added Pattern #5: session.exec() vs session.execute() for raw SQL with params |
+
+---
+
+## Pattern #5 Details: Raw SQL Parameter Passing
+
+### Discovery Context
+Found during M24 Ops Console implementation (PIN-105). All `/ops/*` endpoints using raw SQL with `text()` failed with:
+```
+Session.exec() takes 2 positional arguments but 3 were given
+```
+
+### Root Cause
+SQLModel's `session.exec()` is designed for SQLAlchemy Core/ORM statements and only accepts one argument.
+For raw SQL with parameters, SQLAlchemy's `session.execute()` must be used.
+
+### Incorrect Pattern (Runtime Error)
+```python
+from sqlalchemy import text
+
+stmt = text("SELECT * FROM users WHERE id = :id")
+row = session.exec(stmt, {"id": user_id}).first()  # FAILS
+```
+
+### Correct Patterns
+
+**Option 1: Use session.execute() directly**
+```python
+from sqlalchemy import text
+
+stmt = text("SELECT * FROM users WHERE id = :id")
+row = session.execute(stmt, {"id": user_id}).first()  # WORKS
+```
+
+**Option 2: Create helper function**
+```python
+def exec_sql(session: Session, stmt, params: dict = None):
+    """Execute raw SQL with parameters."""
+    if params:
+        return session.execute(stmt, params)
+    return session.execute(stmt)
+
+# Usage
+row = exec_sql(session, stmt, {"id": user_id}).first()
+```
+
+**Option 3: Use bindparams on the statement**
+```python
+from sqlalchemy import text, bindparam
+
+stmt = text("SELECT * FROM users WHERE id = :id").bindparams(id=user_id)
+row = session.exec(stmt).first()  # WORKS
+```
+
+### Detection Rule
+```python
+# Linter pattern to detect
+pattern = r'session\.exec\s*\(\s*text\s*\([^)]+\)\s*,\s*\{'
+message = "session.exec() does not accept params dict. Use session.execute() for raw SQL with parameters."
+```
+
+### Files Affected in M24
+- `backend/app/api/ops.py` (13 occurrences fixed)
+- `backend/app/services/event_emitter.py` (1 occurrence fixed)

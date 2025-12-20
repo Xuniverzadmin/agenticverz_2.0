@@ -11,7 +11,6 @@ Provides:
 
 import hashlib
 import logging
-from datetime import datetime, timezone
 from typing import Optional, Tuple
 
 from fastapi import Depends, Header, HTTPException, Request, status
@@ -21,6 +20,7 @@ logger = logging.getLogger("nova.auth.tenant")
 
 
 # ============== Tenant Context ==============
+
 
 class TenantContext:
     """
@@ -87,13 +87,16 @@ class TenantContext:
 
 # ============== Database Connection ==============
 
+
 def get_db_session():
     """Get database session - to be configured in main.py."""
     from ..db import get_session
+
     return next(get_session())
 
 
 # ============== API Key Validation ==============
+
 
 def hash_api_key(key: str) -> str:
     """Hash an API key for database lookup."""
@@ -111,8 +114,9 @@ async def validate_api_key_db(
         (TenantContext, None) on success
         (None, error_message) on failure
     """
-    from ..models.tenant import APIKey, Tenant
     import json
+
+    from ..models.tenant import APIKey, Tenant
 
     if not api_key:
         return None, "API key required"
@@ -126,7 +130,14 @@ async def validate_api_key_db(
 
     # Look up key
     stmt = select(APIKey).where(APIKey.key_hash == key_hash)
-    db_key = session.exec(stmt).first()
+    result = session.exec(stmt).first()
+    # Handle both Row tuple and direct model returns
+    if result is None:
+        db_key = None
+    elif hasattr(result, 'key_hash'):  # Already a model
+        db_key = result
+    else:  # Row tuple
+        db_key = result[0]
 
     if not db_key:
         logger.warning("api_key_not_found", extra={"key_prefix": api_key[:12]})
@@ -142,7 +153,14 @@ async def validate_api_key_db(
 
     # Get tenant
     stmt = select(Tenant).where(Tenant.id == db_key.tenant_id)
-    tenant = session.exec(stmt).first()
+    result = session.exec(stmt).first()
+    # Handle both Row tuple and direct model returns
+    if result is None:
+        tenant = None
+    elif hasattr(result, 'id'):  # Already a model
+        tenant = result
+    else:  # Row tuple
+        tenant = result[0]
 
     if not tenant:
         logger.error("tenant_not_found", extra={"tenant_id": db_key.tenant_id})
@@ -194,13 +212,14 @@ async def validate_api_key_db(
             "tenant_id": tenant.id,
             "tenant_slug": tenant.slug,
             "key_name": db_key.name,
-        }
+        },
     )
 
     return context, None
 
 
 # ============== FastAPI Dependencies ==============
+
 
 async def get_tenant_context(
     request: Request,
@@ -235,7 +254,7 @@ async def get_tenant_context(
     # Get database session
     try:
         session = get_db_session()
-    except Exception as e:
+    except Exception:
         logger.exception("db_session_error")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -245,7 +264,7 @@ async def get_tenant_context(
     # Validate key
     try:
         context, error = await validate_api_key_db(api_key, session)
-    except Exception as e:
+    except Exception:
         logger.exception("api_key_validation_error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -279,6 +298,7 @@ async def require_permission(permission: str):
         ):
             ...
     """
+
     async def checker(ctx: TenantContext = Depends(get_tenant_context)):
         if not ctx.has_permission(permission):
             raise HTTPException(
@@ -286,6 +306,7 @@ async def require_permission(permission: str):
                 detail=f"Permission denied: {permission}",
             )
         return None
+
     return checker
 
 
@@ -302,6 +323,7 @@ async def require_worker_access(worker_id: str):
         ):
             ...
     """
+
     async def checker(ctx: TenantContext = Depends(get_tenant_context)):
         if not ctx.can_use_worker(worker_id):
             raise HTTPException(
@@ -309,12 +331,14 @@ async def require_worker_access(worker_id: str):
                 detail=f"Worker access denied: {worker_id}",
             )
         return None
+
     return checker
 
 
 # ============== Optional: Legacy Fallback ==============
 
 import os
+
 _LEGACY_API_KEY = os.getenv("AOS_API_KEY", "")
 _USE_LEGACY_AUTH = os.getenv("AOS_USE_LEGACY_AUTH", "false").lower() == "true"
 
@@ -396,6 +420,7 @@ def is_operator_user(user_email: Optional[str]) -> bool:
 
 class ConsoleRole:
     """Role identifier for console access control."""
+
     CUSTOMER = ROLE_CUSTOMER
     OPERATOR = ROLE_OPERATOR
 

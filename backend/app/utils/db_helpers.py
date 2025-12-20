@@ -19,12 +19,13 @@ Usage:
     count = scalar_or_default(row, default=0)
 
     # For model queries with potential Row wrapping
-    for row in session.exec(stmt).all():
+    results = session.exec(stmt).all()
+    for row in results:
         model = extract_model(row, 'id')
 """
-from typing import TypeVar, Optional, Any, List
+from typing import Any, List, Optional, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def scalar_or_default(row: Optional[Any], default: Any = 0) -> Any:
@@ -80,7 +81,7 @@ def scalar_or_none(row: Optional[Any]) -> Optional[Any]:
         return row
 
 
-def extract_model(row: Any, model_attr: str = 'id') -> Any:
+def extract_model(row: Any, model_attr: str = "id") -> Any:
     """Extract model instance from Row or return as-is.
 
     When using session.exec(stmt).all(), results may be:
@@ -106,7 +107,7 @@ def extract_model(row: Any, model_attr: str = 'id') -> Any:
         return row
 
     # If row is indexable (Row object), extract first element
-    if hasattr(row, '__getitem__'):
+    if hasattr(row, "__getitem__"):
         try:
             return row[0]
         except (TypeError, IndexError):
@@ -116,7 +117,7 @@ def extract_model(row: Any, model_attr: str = 'id') -> Any:
     return row
 
 
-def extract_models(results: List[Any], model_attr: str = 'id') -> List[Any]:
+def extract_models(results: List[Any], model_attr: str = "id") -> List[Any]:
     """Extract model instances from a list of results.
 
     Convenience wrapper around extract_model for processing .all() results.

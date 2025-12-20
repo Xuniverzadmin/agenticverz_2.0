@@ -33,20 +33,19 @@ Usage:
     )
 """
 
+import hashlib
 import json
 import logging
-import hashlib
-from datetime import datetime, timezone
-from decimal import Decimal
-from enum import Enum
-from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, field
-from pydantic import BaseModel
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 # ============== DETERMINISM LEVELS ==============
+
 
 class DeterminismLevel(str, Enum):
     """
@@ -66,6 +65,7 @@ class DeterminismLevel(str, Enum):
         - Passes if: Semantic meaning preserved
         - Fails if: Meaning fundamentally changed
     """
+
     STRICT = "strict"
     LOGICAL = "logical"
     SEMANTIC = "semantic"
@@ -73,9 +73,11 @@ class DeterminismLevel(str, Enum):
 
 # ============== VERSION TRACKING ==============
 
+
 @dataclass
 class ModelVersion:
     """Track the model version used for a call."""
+
     provider: str  # "openai", "anthropic", etc.
     model_id: str  # "gpt-4o-mini", "claude-sonnet-4-20250514"
     model_version: Optional[str] = None  # Snapshot version if available
@@ -108,6 +110,7 @@ class ModelVersion:
 @dataclass
 class PolicyDecision:
     """Record of a policy enforcement decision."""
+
     guardrail_id: str
     guardrail_name: str
     passed: bool
@@ -128,8 +131,10 @@ class PolicyDecision:
 
 # ============== REPLAY RESULT ==============
 
+
 class ReplayMatch(str, Enum):
     """Result of replay comparison."""
+
     EXACT = "exact"  # Byte-for-byte match
     LOGICAL = "logical"  # Policy decisions match
     SEMANTIC = "semantic"  # Meaning equivalent
@@ -139,6 +144,7 @@ class ReplayMatch(str, Enum):
 @dataclass
 class ReplayResult:
     """Result of replay validation."""
+
     match_level: ReplayMatch
     passed: bool
     level_required: DeterminismLevel
@@ -175,9 +181,11 @@ class ReplayResult:
 
 # ============== CALL RECORD FOR REPLAY ==============
 
+
 @dataclass
 class CallRecord:
     """Record of a call for replay validation."""
+
     call_id: str
     request_hash: str  # Hash of request for matching
     response_hash: str  # Hash of response for comparison
@@ -211,6 +219,7 @@ class CallRecord:
 
 
 # ============== REPLAY VALIDATOR ==============
+
 
 class ReplayValidator:
     """
@@ -254,23 +263,17 @@ class ReplayValidator:
         )
 
         # Check model drift
-        result.model_drift_detected = self._detect_model_drift(
-            original.model_version,
-            replay.model_version
-        )
+        result.model_drift_detected = self._detect_model_drift(original.model_version, replay.model_version)
 
         # Compare content hashes
         result.content_hash_original = original.response_hash
         result.content_hash_replay = replay.response_hash
-        result.content_match = (original.response_hash == replay.response_hash)
+        result.content_match = original.response_hash == replay.response_hash
 
         # Compare policy decisions
         result.original_policies = original.policy_decisions
         result.replay_policies = replay.policy_decisions
-        result.policy_match = self._compare_policies(
-            original.policy_decisions,
-            replay.policy_decisions
-        )
+        result.policy_match = self._compare_policies(original.policy_decisions, replay.policy_decisions)
 
         # Determine match level achieved
         if result.content_match:
@@ -283,10 +286,7 @@ class ReplayValidator:
             result.match_level = ReplayMatch.MISMATCH
 
         # Check if achieved level meets required level
-        result.passed = self._level_meets_requirement(
-            result.match_level,
-            level
-        )
+        result.passed = self._level_meets_requirement(result.match_level, level)
 
         # Add details
         result.details = {
@@ -305,11 +305,7 @@ class ReplayValidator:
 
         return result
 
-    def _detect_model_drift(
-        self,
-        original: ModelVersion,
-        replay: ModelVersion
-    ) -> bool:
+    def _detect_model_drift(self, original: ModelVersion, replay: ModelVersion) -> bool:
         """Detect if the model has drifted between original and replay."""
         # Different provider = definitely drift
         if original.provider != replay.provider:
@@ -320,23 +316,20 @@ class ReplayValidator:
             return True
 
         # Different version (if available) = drift
-        if (original.model_version and replay.model_version and
-            original.model_version != replay.model_version):
+        if original.model_version and replay.model_version and original.model_version != replay.model_version:
             return True
 
         # Different temperature might cause different output
-        if (original.temperature is not None and
-            replay.temperature is not None and
-            abs(original.temperature - replay.temperature) > 0.01):
+        if (
+            original.temperature is not None
+            and replay.temperature is not None
+            and abs(original.temperature - replay.temperature) > 0.01
+        ):
             return True
 
         return False
 
-    def _compare_policies(
-        self,
-        original: List[PolicyDecision],
-        replay: List[PolicyDecision]
-    ) -> bool:
+    def _compare_policies(self, original: List[PolicyDecision], replay: List[PolicyDecision]) -> bool:
         """Compare policy decisions for logical equivalence."""
         if len(original) != len(replay):
             return False
@@ -362,11 +355,7 @@ class ReplayValidator:
 
         return True
 
-    def _semantic_equivalent(
-        self,
-        original: CallRecord,
-        replay: CallRecord
-    ) -> bool:
+    def _semantic_equivalent(self, original: CallRecord, replay: CallRecord) -> bool:
         """
         Check if two responses are semantically equivalent.
 
@@ -398,11 +387,7 @@ class ReplayValidator:
         # Default to False for safety
         return False
 
-    def _level_meets_requirement(
-        self,
-        achieved: ReplayMatch,
-        required: DeterminismLevel
-    ) -> bool:
+    def _level_meets_requirement(self, achieved: ReplayMatch, required: DeterminismLevel) -> bool:
         """Check if achieved match level meets the required determinism level."""
         # Level hierarchy: EXACT > LOGICAL > SEMANTIC
         level_order = {
@@ -422,10 +407,11 @@ class ReplayValidator:
 
     def hash_content(self, content: str) -> str:
         """Create a deterministic hash of content."""
-        return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 # ============== REPLAY CONTEXT BUILDER ==============
+
 
 class ReplayContextBuilder:
     """

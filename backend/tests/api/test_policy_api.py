@@ -32,8 +32,12 @@ def mock_db_session():
     session.exec = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
     session.get = MagicMock(return_value=None)
     session.add = MagicMock()
-    session.commit = MagicMock()
     session.refresh = MagicMock()
+    # Support async operations for escalation check
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    session.execute = AsyncMock(return_value=mock_result)
+    session.commit = AsyncMock()
     return session
 
 

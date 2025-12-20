@@ -137,7 +137,14 @@ def sync_file_to_db(
                 FeatureFlag.name == name,
                 FeatureFlag.environment == environment
             )
-            existing = session.exec(stmt).first()
+            result = session.exec(stmt).first()
+            # Handle both Row tuple and direct model returns
+            if result is None:
+                existing = None
+            elif hasattr(result, 'name'):  # Already a model
+                existing = result
+            else:  # Row tuple
+                existing = result[0]
 
             if existing:
                 # Update if different
@@ -262,7 +269,12 @@ def check_consistency(
     session = get_db_session()
     try:
         stmt = select(FeatureFlag).where(FeatureFlag.environment == environment)
-        db_flags = {f.name: f.enabled for f in session.exec(stmt).all()}
+        results = session.exec(stmt).all()
+        # Handle both Row tuple and direct model returns
+        db_flags = {}
+        for r in results:
+            flag = r if hasattr(r, 'name') else r[0]
+            db_flags[flag.name] = flag.enabled
 
         # Check file flags against DB
         for name, config in all_flags.items():

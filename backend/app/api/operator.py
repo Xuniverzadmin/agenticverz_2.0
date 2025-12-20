@@ -28,29 +28,25 @@ import csv
 import io
 import uuid
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
-from sqlalchemy import select, and_, desc, or_, func
+from pydantic import BaseModel
+from sqlalchemy import and_, desc, func, or_, select
 from sqlmodel import Session
 
+from app.auth.tenant_auth import require_operator_role
 from app.db import get_session
 from app.models.killswitch import (
+    DefaultGuardrail,
+    Incident,
+    IncidentStatus,
     KillSwitchState,
     ProxyCall,
-    Incident,
-    IncidentEvent,
-    DefaultGuardrail,
     TriggerType,
-    IncidentSeverity,
-    IncidentStatus,
 )
-from app.models.tenant import Tenant, APIKey
-from app.auth.tenant_auth import require_operator_role
-
+from app.models.tenant import APIKey, Tenant
 
 # =============================================================================
 # Router - GA Lock: Operator-only access required
@@ -69,8 +65,10 @@ router = APIRouter(
 # Response Models
 # =============================================================================
 
+
 class SystemStatus(BaseModel):
     """System-wide status."""
+
     status: str  # healthy, degraded, critical
     total_tenants: int
     active_tenants_24h: int
@@ -83,6 +81,7 @@ class SystemStatus(BaseModel):
 
 class TopTenant(BaseModel):
     """Top tenant by metric."""
+
     tenant_id: str
     tenant_name: str
     metric_value: float
@@ -91,6 +90,7 @@ class TopTenant(BaseModel):
 
 class IncidentStream(BaseModel):
     """Incident for stream."""
+
     id: str
     tenant_id: str
     tenant_name: str
@@ -107,6 +107,7 @@ class IncidentStream(BaseModel):
 
 class TenantProfile(BaseModel):
     """Full tenant profile."""
+
     tenant_id: str
     tenant_name: str
     email: Optional[str] = None
@@ -120,6 +121,7 @@ class TenantProfile(BaseModel):
 
 class TenantMetrics(BaseModel):
     """Tenant usage metrics."""
+
     requests_24h: int
     requests_7d: int
     spend_24h_cents: int
@@ -133,6 +135,7 @@ class TenantMetrics(BaseModel):
 
 class TenantGuardrail(BaseModel):
     """Tenant guardrail configuration."""
+
     id: str
     name: str
     enabled: bool
@@ -143,6 +146,7 @@ class TenantGuardrail(BaseModel):
 
 class PolicyEnforcement(BaseModel):
     """Policy enforcement audit record."""
+
     id: str
     call_id: str
     tenant_id: str
@@ -160,12 +164,14 @@ class PolicyEnforcement(BaseModel):
 
 class GuardrailType(BaseModel):
     """Guardrail type for filtering."""
+
     id: str
     name: str
 
 
 class ReplayResult(BaseModel):
     """Operator replay result with tenant info."""
+
     call_id: str
     tenant_id: str
     tenant_name: str
@@ -180,6 +186,7 @@ class ReplayResult(BaseModel):
 
 class BatchReplayResult(BaseModel):
     """Batch replay summary."""
+
     total: int
     completed: int
     exact_matches: int
@@ -194,6 +201,7 @@ class BatchReplayResult(BaseModel):
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -211,6 +219,7 @@ def get_system_health(active_incidents: int, frozen_tenants: int) -> str:
 # =============================================================================
 # System Status Endpoints
 # =============================================================================
+
 
 @router.get("/status", response_model=SystemStatus)
 async def get_system_status(
@@ -230,9 +239,7 @@ async def get_system_status(
     total_tenants = row[0] if row else 0
 
     # Count active tenants (with calls in 24h)
-    stmt = select(func.count(func.distinct(ProxyCall.tenant_id))).where(
-        ProxyCall.created_at >= yesterday
-    )
+    stmt = select(func.count(func.distinct(ProxyCall.tenant_id))).where(ProxyCall.created_at >= yesterday)
     row = session.exec(stmt).first()
     active_tenants = row[0] if row else 0
 
@@ -247,23 +254,17 @@ async def get_system_status(
     frozen_tenants = row[0] if row else 0
 
     # Total requests in 24h
-    stmt = select(func.count(ProxyCall.id)).where(
-        ProxyCall.created_at >= yesterday
-    )
+    stmt = select(func.count(ProxyCall.id)).where(ProxyCall.created_at >= yesterday)
     row = session.exec(stmt).first()
     total_requests = row[0] if row else 0
 
     # Total spend in 24h
-    stmt = select(func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
-        ProxyCall.created_at >= yesterday
-    )
+    stmt = select(func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(ProxyCall.created_at >= yesterday)
     row = session.exec(stmt).first()
     total_spend = row[0] if row else 0
 
     # Active incidents
-    stmt = select(func.count(Incident.id)).where(
-        Incident.status == IncidentStatus.OPEN.value
-    )
+    stmt = select(func.count(Incident.id)).where(Incident.status == IncidentStatus.OPEN.value)
     row = session.exec(stmt).first()
     active_incidents = row[0] if row else 0
 
@@ -295,14 +296,13 @@ async def get_top_tenants(
 
     if metric == "spend":
         # Top by spend
-        stmt = select(
-            ProxyCall.tenant_id,
-            func.sum(ProxyCall.cost_cents).label("total_spend")
-        ).where(
-            ProxyCall.created_at >= yesterday
-        ).group_by(ProxyCall.tenant_id).order_by(
-            desc("total_spend")
-        ).limit(limit)
+        stmt = (
+            select(ProxyCall.tenant_id, func.sum(ProxyCall.cost_cents).label("total_spend"))
+            .where(ProxyCall.created_at >= yesterday)
+            .group_by(ProxyCall.tenant_id)
+            .order_by(desc("total_spend"))
+            .limit(limit)
+        )
 
         results = session.exec(stmt).all()
 
@@ -312,25 +312,26 @@ async def get_top_tenants(
             tenant_stmt = select(Tenant).where(Tenant.id == tenant_id)
             tenant_row = session.exec(tenant_stmt).first()
             tenant = tenant_row[0] if tenant_row else None
-            tenant_name = tenant.name if tenant and hasattr(tenant, 'name') else tenant_id
+            tenant_name = tenant.name if tenant and hasattr(tenant, "name") else tenant_id
 
-            items.append(TopTenant(
-                tenant_id=tenant_id,
-                tenant_name=tenant_name,
-                metric_value=float(spend or 0),
-                metric_label=f"${(spend or 0) / 100:.2f}",
-            ))
+            items.append(
+                TopTenant(
+                    tenant_id=tenant_id,
+                    tenant_name=tenant_name,
+                    metric_value=float(spend or 0),
+                    metric_label=f"${(spend or 0) / 100:.2f}",
+                )
+            )
 
     elif metric == "incidents":
         # Top by incidents
-        stmt = select(
-            Incident.tenant_id,
-            func.count(Incident.id).label("incident_count")
-        ).where(
-            Incident.created_at >= yesterday
-        ).group_by(Incident.tenant_id).order_by(
-            desc("incident_count")
-        ).limit(limit)
+        stmt = (
+            select(Incident.tenant_id, func.count(Incident.id).label("incident_count"))
+            .where(Incident.created_at >= yesterday)
+            .group_by(Incident.tenant_id)
+            .order_by(desc("incident_count"))
+            .limit(limit)
+        )
 
         results = session.exec(stmt).all()
 
@@ -339,14 +340,16 @@ async def get_top_tenants(
             tenant_stmt = select(Tenant).where(Tenant.id == tenant_id)
             tenant_row = session.exec(tenant_stmt).first()
             tenant = tenant_row[0] if tenant_row else None
-            tenant_name = tenant.name if tenant and hasattr(tenant, 'name') else tenant_id
+            tenant_name = tenant.name if tenant and hasattr(tenant, "name") else tenant_id
 
-            items.append(TopTenant(
-                tenant_id=tenant_id,
-                tenant_name=tenant_name,
-                metric_value=float(count),
-                metric_label=f"{count} incidents",
-            ))
+            items.append(
+                TopTenant(
+                    tenant_id=tenant_id,
+                    tenant_name=tenant_name,
+                    metric_value=float(count),
+                    metric_label=f"{count} incidents",
+                )
+            )
     else:
         raise HTTPException(status_code=400, detail="Invalid metric. Use: spend, incidents")
 
@@ -365,9 +368,9 @@ async def get_recent_incidents(
     items = []
     for row in results:
         # Extract Incident from row (SQLModel may return Row objects or model instances)
-        if hasattr(row, 'tenant_id'):
+        if hasattr(row, "tenant_id"):
             incident = row
-        elif hasattr(row, '__getitem__'):
+        elif hasattr(row, "__getitem__"):
             incident = row[0]
         else:
             incident = row
@@ -376,22 +379,24 @@ async def get_recent_incidents(
         tenant_stmt = select(Tenant).where(Tenant.id == incident.tenant_id)
         tenant_row = session.exec(tenant_stmt).first()
         tenant = tenant_row[0] if tenant_row else None
-        tenant_name = tenant.name if tenant and hasattr(tenant, 'name') else incident.tenant_id
+        tenant_name = tenant.name if tenant and hasattr(tenant, "name") else incident.tenant_id
 
-        items.append(IncidentStream(
-            id=incident.id,
-            tenant_id=incident.tenant_id,
-            tenant_name=tenant_name,
-            title=incident.title,
-            severity=incident.severity,
-            status=incident.status,
-            trigger_type=incident.trigger_type,
-            action_taken=incident.auto_action,
-            calls_affected=incident.calls_affected,
-            cost_avoided_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
-            started_at=incident.started_at.isoformat() if incident.started_at else incident.created_at.isoformat(),
-            ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
-        ))
+        items.append(
+            IncidentStream(
+                id=incident.id,
+                tenant_id=incident.tenant_id,
+                tenant_name=tenant_name,
+                title=incident.title,
+                severity=incident.severity,
+                status=incident.status,
+                trigger_type=incident.trigger_type,
+                action_taken=incident.auto_action,
+                calls_affected=incident.calls_affected,
+                cost_avoided_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
+                started_at=incident.started_at.isoformat() if incident.started_at else incident.created_at.isoformat(),
+                ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
+            )
+        )
 
     return {"items": items}
 
@@ -423,9 +428,9 @@ async def get_incident_stream(
     items = []
     for row in results:
         # Extract Incident from row (SQLModel may return Row objects or model instances)
-        if hasattr(row, 'tenant_id'):
+        if hasattr(row, "tenant_id"):
             incident = row
-        elif hasattr(row, '__getitem__'):
+        elif hasattr(row, "__getitem__"):
             incident = row[0]
         else:
             incident = row
@@ -433,22 +438,24 @@ async def get_incident_stream(
         tenant_stmt = select(Tenant).where(Tenant.id == incident.tenant_id)
         tenant_row = session.exec(tenant_stmt).first()
         tenant = tenant_row[0] if tenant_row else None
-        tenant_name = tenant.name if tenant and hasattr(tenant, 'name') else incident.tenant_id
+        tenant_name = tenant.name if tenant and hasattr(tenant, "name") else incident.tenant_id
 
-        items.append(IncidentStream(
-            id=incident.id,
-            tenant_id=incident.tenant_id,
-            tenant_name=tenant_name,
-            title=incident.title,
-            severity=incident.severity,
-            status=incident.status,
-            trigger_type=incident.trigger_type,
-            action_taken=incident.auto_action,
-            calls_affected=incident.calls_affected,
-            cost_avoided_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
-            started_at=incident.started_at.isoformat() if incident.started_at else incident.created_at.isoformat(),
-            ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
-        ))
+        items.append(
+            IncidentStream(
+                id=incident.id,
+                tenant_id=incident.tenant_id,
+                tenant_name=tenant_name,
+                title=incident.title,
+                severity=incident.severity,
+                status=incident.status,
+                trigger_type=incident.trigger_type,
+                action_taken=incident.auto_action,
+                calls_affected=incident.calls_affected,
+                cost_avoided_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
+                started_at=incident.started_at.isoformat() if incident.started_at else incident.created_at.isoformat(),
+                ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
+            )
+        )
 
     return {"items": items, "total": len(items)}
 
@@ -501,6 +508,7 @@ async def resolve_incident(
 # Tenant Management Endpoints
 # =============================================================================
 
+
 @router.get("/tenants/{tenant_id}", response_model=TenantProfile)
 async def get_tenant_profile(
     tenant_id: str,
@@ -528,9 +536,9 @@ async def get_tenant_profile(
 
     return TenantProfile(
         tenant_id=tenant.id,
-        tenant_name=tenant.name if hasattr(tenant, 'name') else tenant.id,
-        email=tenant.email if hasattr(tenant, 'email') else None,
-        plan=tenant.plan if hasattr(tenant, 'plan') else "starter",
+        tenant_name=tenant.name if hasattr(tenant, "name") else tenant.id,
+        email=tenant.email if hasattr(tenant, "email") else None,
+        plan=tenant.plan if hasattr(tenant, "plan") else "starter",
         created_at=tenant.created_at.isoformat() if tenant.created_at else utc_now().isoformat(),
         status=status,
         frozen_at=state.frozen_at.isoformat() if state and state.frozen_at else None,
@@ -604,9 +612,7 @@ async def get_tenant_metrics(
     incidents_24h = row[0] if row else 0
 
     # Incidents 7d
-    stmt = select(func.count(Incident.id)).where(
-        and_(Incident.tenant_id == tenant_id, Incident.created_at >= week_ago)
-    )
+    stmt = select(func.count(Incident.id)).where(and_(Incident.tenant_id == tenant_id, Incident.created_at >= week_ago))
     row = session.exec(stmt).first()
     incidents_7d = row[0] if row else 0
 
@@ -649,14 +655,18 @@ async def get_tenant_guardrails(
         # This is simplified - in production you'd track per-guardrail triggers
         triggers_24h = 0
 
-        items.append(TenantGuardrail(
-            id=guardrail.id,
-            name=guardrail.name,
-            enabled=guardrail.is_enabled,
-            threshold_value=float(guardrail.threshold_value) if hasattr(guardrail, 'threshold_value') and guardrail.threshold_value else 0,
-            threshold_unit=guardrail.threshold_unit if hasattr(guardrail, 'threshold_unit') else "per/hour",
-            triggers_24h=triggers_24h,
-        ))
+        items.append(
+            TenantGuardrail(
+                id=guardrail.id,
+                name=guardrail.name,
+                enabled=guardrail.is_enabled,
+                threshold_value=float(guardrail.threshold_value)
+                if hasattr(guardrail, "threshold_value") and guardrail.threshold_value
+                else 0,
+                threshold_unit=guardrail.threshold_unit if hasattr(guardrail, "threshold_unit") else "per/hour",
+                triggers_24h=triggers_24h,
+            )
+        )
 
     return {"items": items}
 
@@ -668,9 +678,7 @@ async def get_tenant_incidents(
     session: Session = Depends(get_session),
 ):
     """Get tenant incidents."""
-    stmt = select(Incident).where(
-        Incident.tenant_id == tenant_id
-    ).order_by(desc(Incident.created_at)).limit(limit)
+    stmt = select(Incident).where(Incident.tenant_id == tenant_id).order_by(desc(Incident.created_at)).limit(limit)
 
     results = session.exec(stmt).all()
 
@@ -678,19 +686,21 @@ async def get_tenant_incidents(
     items = []
     for row in results:
         # Extract Incident from row (SQLModel may return Row objects or model instances)
-        if hasattr(row, 'id'):
+        if hasattr(row, "id"):
             i = row
-        elif hasattr(row, '__getitem__'):
+        elif hasattr(row, "__getitem__"):
             i = row[0]
         else:
             i = row
-        items.append({
-            "id": i.id,
-            "severity": i.severity,
-            "title": i.title,
-            "status": i.status,
-            "started_at": i.started_at.isoformat() if i.started_at else i.created_at.isoformat(),
-        })
+        items.append(
+            {
+                "id": i.id,
+                "severity": i.severity,
+                "title": i.title,
+                "status": i.status,
+                "started_at": i.started_at.isoformat() if i.started_at else i.created_at.isoformat(),
+            }
+        )
 
     return {"items": items}
 
@@ -709,9 +719,9 @@ async def get_tenant_keys(
     items = []
     for row in key_rows:
         # Extract APIKey from row (SQLModel may return Row objects or model instances)
-        if hasattr(row, 'id'):
+        if hasattr(row, "id"):
             key = row
-        elif hasattr(row, '__getitem__'):
+        elif hasattr(row, "__getitem__"):
             key = row[0]
         else:
             key = row
@@ -736,13 +746,15 @@ async def get_tenant_keys(
         if key.revoked_at:
             status = "revoked"
 
-        items.append({
-            "id": key.id,
-            "name": key.name or f"Key {key.id[:8]}",
-            "prefix": key.key_prefix or key.id[:8],
-            "status": status,
-            "requests_24h": requests_24h,
-        })
+        items.append(
+            {
+                "id": key.id,
+                "name": key.name or f"Key {key.id[:8]}",
+                "prefix": key.key_prefix or key.id[:8],
+                "status": status,
+                "requests_24h": requests_24h,
+            }
+        )
 
     return {"items": items}
 
@@ -828,6 +840,7 @@ async def unfreeze_tenant(
 # Audit Log Endpoints
 # =============================================================================
 
+
 @router.get("/audit/policy")
 async def get_policy_audit_log(
     guardrail_id: Optional[str] = Query(None),
@@ -886,32 +899,34 @@ async def get_policy_audit_log(
         tenant_stmt = select(Tenant).where(Tenant.id == call.tenant_id)
         tenant_row = session.exec(tenant_stmt).first()
         tenant = tenant_row[0] if tenant_row else None
-        tenant_name = tenant.name if tenant and hasattr(tenant, 'name') else call.tenant_id
+        tenant_name = tenant.name if tenant and hasattr(tenant, "name") else call.tenant_id
 
         # Get policy decisions if available
-        decisions = call.get_policy_decisions() if hasattr(call, 'get_policy_decisions') else []
+        decisions = call.get_policy_decisions() if hasattr(call, "get_policy_decisions") else []
         guardrail_name = decisions[0].get("guardrail_name", "Default") if decisions else "Default"
         guardrail_id_val = decisions[0].get("guardrail_id", "default") if decisions else "default"
 
-        items.append(PolicyEnforcement(
-            id=call.id,
-            call_id=call.id,
-            tenant_id=call.tenant_id,
-            tenant_name=tenant_name,
-            guardrail_id=guardrail_id_val,
-            guardrail_name=guardrail_name,
-            passed=not call.was_blocked,
-            action_taken=call.block_reason if call.was_blocked else None,
-            reason=call.block_reason or "Passed all guardrails",
-            confidence=1.0,
-            latency_ms=call.latency_ms or 0,
-            created_at=call.created_at.isoformat(),
-            request_context={
-                "model": call.model or "unknown",
-                "tokens_estimated": (call.input_tokens or 0) + (call.output_tokens or 0),
-                "cost_estimated_cents": int(call.cost_cents) if call.cost_cents else 0,
-            },
-        ))
+        items.append(
+            PolicyEnforcement(
+                id=call.id,
+                call_id=call.id,
+                tenant_id=call.tenant_id,
+                tenant_name=tenant_name,
+                guardrail_id=guardrail_id_val,
+                guardrail_name=guardrail_name,
+                passed=not call.was_blocked,
+                action_taken=call.block_reason if call.was_blocked else None,
+                reason=call.block_reason or "Passed all guardrails",
+                confidence=1.0,
+                latency_ms=call.latency_ms or 0,
+                created_at=call.created_at.isoformat(),
+                request_context={
+                    "model": call.model or "unknown",
+                    "tokens_estimated": (call.input_tokens or 0) + (call.output_tokens or 0),
+                    "cost_estimated_cents": int(call.cost_cents) if call.cost_cents else 0,
+                },
+            )
+        )
 
     return {
         "items": items,
@@ -961,23 +976,24 @@ async def export_policy_audit_log(
     # Build CSV
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "call_id", "tenant_id", "timestamp", "model", "passed",
-        "action_taken", "latency_ms", "tokens", "cost_cents"
-    ])
+    writer.writerow(
+        ["call_id", "tenant_id", "timestamp", "model", "passed", "action_taken", "latency_ms", "tokens", "cost_cents"]
+    )
 
     for call in results:
-        writer.writerow([
-            call.id,
-            call.tenant_id,
-            call.created_at.isoformat(),
-            call.model or "",
-            "true" if not call.was_blocked else "false",
-            call.block_reason or "",
-            call.latency_ms or 0,
-            (call.input_tokens or 0) + (call.output_tokens or 0),
-            int(call.cost_cents) if call.cost_cents else 0,
-        ])
+        writer.writerow(
+            [
+                call.id,
+                call.tenant_id,
+                call.created_at.isoformat(),
+                call.model or "",
+                "true" if not call.was_blocked else "false",
+                call.block_reason or "",
+                call.latency_ms or 0,
+                (call.input_tokens or 0) + (call.output_tokens or 0),
+                int(call.cost_cents) if call.cost_cents else 0,
+            ]
+        )
 
     output.seek(0)
 
@@ -996,10 +1012,7 @@ async def list_guardrail_types(
     stmt = select(DefaultGuardrail)
     guardrails = session.exec(stmt).all()
 
-    items = [
-        GuardrailType(id=g[0].id, name=g[0].name)
-        for g in guardrails
-    ]
+    items = [GuardrailType(id=g[0].id, name=g[0].name) for g in guardrails]
 
     return {"items": items}
 
@@ -1007,6 +1020,7 @@ async def list_guardrail_types(
 # =============================================================================
 # Replay Endpoints
 # =============================================================================
+
 
 @router.post("/replay/{call_id}", response_model=ReplayResult)
 async def replay_call(
@@ -1029,7 +1043,7 @@ async def replay_call(
     tenant_stmt = select(Tenant).where(Tenant.id == call.tenant_id)
     tenant_row = session.exec(tenant_stmt).first()
     tenant = tenant_row[0] if tenant_row else None
-    tenant_name = tenant.name if tenant and hasattr(tenant, 'name') else call.tenant_id
+    tenant_name = tenant.name if tenant and hasattr(tenant, "name") else call.tenant_id
 
     # Build snapshots
     original = {
@@ -1037,7 +1051,7 @@ async def replay_call(
         "model_id": call.model or "unknown",
         "model_version": None,
         "temperature": None,
-        "policy_decisions": call.get_policy_decisions() if hasattr(call, 'get_policy_decisions') else [],
+        "policy_decisions": call.get_policy_decisions() if hasattr(call, "get_policy_decisions") else [],
         "response_hash": call.response_hash or "",
         "tokens_used": (call.input_tokens or 0) + (call.output_tokens or 0),
         "cost_cents": int(call.cost_cents) if call.cost_cents else 0,
@@ -1093,9 +1107,7 @@ async def batch_replay(
     """
     time_cutoff = utc_now() - timedelta(hours=request.time_range_hours)
 
-    stmt = select(ProxyCall).where(
-        ProxyCall.created_at >= time_cutoff
-    )
+    stmt = select(ProxyCall).where(ProxyCall.created_at >= time_cutoff)
 
     if request.tenant_id:
         stmt = stmt.where(ProxyCall.tenant_id == request.tenant_id)
