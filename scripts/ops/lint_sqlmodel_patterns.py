@@ -23,7 +23,7 @@ RCA Reference: PIN-118 M24.2 Bug Fix
 import re
 import sys
 from pathlib import Path
-from typing import List, NamedTuple, Optional
+from typing import List
 from dataclasses import dataclass
 from enum import Enum
 
@@ -82,7 +82,6 @@ UNSAFE_PATTERNS = [
         "suggestion": "Use: result = session.exec(query).one(); value = result[0]",
         "severity": Severity.WARNING,
     },
-
     # =========================================================================
     # CATEGORY 2: DetachedInstanceError Prevention (NEW - from M24 RCA)
     # =========================================================================
@@ -108,7 +107,6 @@ UNSAFE_PATTERNS = [
         "suggestion": "Extract to dict after refresh: user_data = {'id': user.id, ...}; return user_data",
         "severity": Severity.WARNING,
     },
-
     # =========================================================================
     # CATEGORY 3: session.get() vs select() Pattern
     # =========================================================================
@@ -119,7 +117,6 @@ UNSAFE_PATTERNS = [
         "suggestion": "Replace with: obj = session.get(Model, id) - simpler and returns model directly",
         "severity": Severity.WARNING,
     },
-
     # =========================================================================
     # CATEGORY 4: Raw SQL Safety
     # =========================================================================
@@ -130,7 +127,6 @@ UNSAFE_PATTERNS = [
         "suggestion": "Use session.execute(text(...), params) for raw SQL with parameters",
         "severity": Severity.ERROR,
     },
-
     # =========================================================================
     # CATEGORY 5: Session Scope Issues
     # =========================================================================
@@ -338,7 +334,9 @@ def main():
     print()
 
     for issue in sorted(issues, key=lambda x: (x.severity.value, x.file, x.line)):
-        severity_icon = {"critical": "🔴", "error": "🟠", "warning": "🟡"}[issue.severity.value]
+        severity_icon = {"critical": "🔴", "error": "🟠", "warning": "🟡"}[
+            issue.severity.value
+        ]
         print(f"{severity_icon} [{issue.rule_id}] {issue.file}:{issue.line}")
         print(f"   Pattern: {issue.pattern}")
         print(f"   Issue: {issue.message}")

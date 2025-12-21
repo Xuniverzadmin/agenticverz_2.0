@@ -928,4 +928,5 @@ def log_status_change(
     session.commit()
     session.refresh(record)
 
+    # Safe: session is DI-managed and stays open for caller
     return record

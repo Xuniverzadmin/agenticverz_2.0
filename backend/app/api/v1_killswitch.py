@@ -140,6 +140,7 @@ async def freeze_tenant(
     session.commit()
     session.refresh(state)
 
+    # Extract values while session is open
     return KillSwitchStatus(
         entity_type="tenant",
         entity_id=tenant_id,
@@ -191,6 +192,7 @@ async def freeze_key(
     session.commit()
     session.refresh(state)
 
+    # Extract values while session is open
     return KillSwitchStatus(
         entity_type="key",
         entity_id=key_id,

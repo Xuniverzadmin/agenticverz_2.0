@@ -476,6 +476,8 @@ async def log_proxy_call(
     session.commit()
     session.refresh(call)
 
+    # Note: Returning ORM object is safe here because session is DI-managed
+    # and stays open for the request duration. Caller accesses within same request.
     return call
 
 

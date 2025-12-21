@@ -262,6 +262,7 @@ class IncidentAggregator:
         session.commit()
         session.refresh(incident)
 
+        # Safe: session is DI-managed and stays open for caller
         return incident
 
     def _create_incident(
@@ -305,7 +306,7 @@ class IncidentAggregator:
         session.commit()
         session.refresh(incident)
 
-        # Create initial event
+        # Create initial event (session still open, accessing incident is safe)
         self._add_incident_event(
             session=session,
             incident=incident,
@@ -316,6 +317,7 @@ class IncidentAggregator:
 
         logger.info(f"Created incident {incident.id} for tenant {key.tenant_id}: " f"{key.trigger_type} - {title}")
 
+        # Safe: session is DI-managed and stays open for caller
         return incident
 
     def _add_call_to_incident(

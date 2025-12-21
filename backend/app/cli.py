@@ -57,7 +57,9 @@ def create_agent(name: str) -> str:
         session.add(agent)
         session.commit()
         session.refresh(agent)
-        return agent.id
+        # Extract ID while session is open (returns scalar, not ORM object)
+        agent_id = agent.id
+    return agent_id
 
 
 def list_agents() -> list:

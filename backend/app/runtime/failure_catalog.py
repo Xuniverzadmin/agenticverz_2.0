@@ -646,6 +646,9 @@ def persist_failure_match(
             session.commit()
             session.refresh(record)
 
+            # Extract ID while session is open to avoid DetachedInstanceError
+            record_id = record.id
+
             # Update metrics
             if result.matched and result.entry:
                 if _failure_match_hits:
@@ -661,10 +664,11 @@ def persist_failure_match(
                     _failure_match_misses.labels(error_code=safe_code).inc()
 
             logger.debug(
-                f"M9: Persisted failure match {record.id} "
+                f"M9: Persisted failure match {record_id} "
                 f"(matched={result.matched}, code={error_code})"
             )
-            return record.id
+
+        return record_id
 
     except ImportError:
         logger.warning("M9: Database not available, skipping persistence")

@@ -438,7 +438,8 @@ async def get_failure(
             except ValueError:
                 raise HTTPException(status_code=400, detail=f"Invalid failure ID format: {failure_id}")
 
-            failure = session.exec(select(FailureMatch).where(FailureMatch.id == failure_uuid)).first()
+            # Use session.get() for direct ID lookup
+            failure = session.get(FailureMatch, failure_uuid)
 
             if not failure:
                 raise HTTPException(status_code=404, detail=f"Failure not found: {failure_id}")
@@ -490,8 +491,8 @@ async def update_recovery_status(
             except ValueError:
                 raise HTTPException(status_code=400, detail=f"Invalid failure ID format: {failure_id}")
 
-            # Get failure
-            failure = session.exec(select(FailureMatch).where(FailureMatch.id == failure_uuid)).first()
+            # Use session.get() for direct ID lookup
+            failure = session.get(FailureMatch, failure_uuid)
 
             if not failure:
                 raise HTTPException(status_code=404, detail=f"Failure not found: {failure_id}")
@@ -506,30 +507,35 @@ async def update_recovery_status(
             session.commit()
             session.refresh(failure)
 
-            # Update metrics
-            try:
-                update_metrics(
-                    succeeded=request.recovery_succeeded,
-                    recovery_mode=failure.recovery_mode or "unknown",
-                    error_code=failure.error_code[:50] if failure.error_code else "unknown",
-                )
-            except Exception as e:
-                logger.warning(f"Failed to update recovery metrics: {e}")
+            # Extract values while session is open to avoid DetachedInstanceError
+            response_data = {
+                "id": str(failure.id),
+                "run_id": failure.run_id,
+                "recovery_attempted": failure.recovery_attempted,
+                "recovery_succeeded": failure.recovery_succeeded,
+                "recovered_at": failure.recovered_at.isoformat() if failure.recovered_at else None,
+                "recovered_by": failure.recovered_by,
+                "recovery_notes": failure.recovery_notes,
+            }
+            recovery_mode = failure.recovery_mode or "unknown"
+            error_code = failure.error_code[:50] if failure.error_code else "unknown"
 
-            logger.info(
-                f"M9: Recovery status updated for {failure_id}: "
-                f"succeeded={request.recovery_succeeded}, by={request.recovered_by}"
+        # Update metrics (outside session)
+        try:
+            update_metrics(
+                succeeded=request.recovery_succeeded,
+                recovery_mode=recovery_mode,
+                error_code=error_code,
             )
+        except Exception as e:
+            logger.warning(f"Failed to update recovery metrics: {e}")
 
-            return RecoveryUpdateResponse(
-                id=str(failure.id),
-                run_id=failure.run_id,
-                recovery_attempted=failure.recovery_attempted,
-                recovery_succeeded=failure.recovery_succeeded,
-                recovered_at=failure.recovered_at.isoformat() if failure.recovered_at else None,
-                recovered_by=failure.recovered_by,
-                recovery_notes=failure.recovery_notes,
-            )
+        logger.info(
+            f"M9: Recovery status updated for {failure_id}: "
+            f"succeeded={request.recovery_succeeded}, by={request.recovered_by}"
+        )
+
+        return RecoveryUpdateResponse(**response_data)
 
     except HTTPException:
         raise

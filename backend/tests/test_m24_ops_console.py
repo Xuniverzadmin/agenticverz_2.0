@@ -51,7 +51,7 @@ class TestEventEmitter:
         session.commit()
 
         # Verify event was stored
-        result = session.exec(
+        result = session.execute(
             text("SELECT event_type, severity FROM ops_events WHERE event_id = :event_id"), {"event_id": str(event_id)}
         ).first()
 
@@ -74,7 +74,7 @@ class TestEventEmitter:
 
         session.commit()
 
-        result = session.exec(
+        result = session.execute(
             text("SELECT event_type, latency_ms, metadata FROM ops_events WHERE event_id = :event_id"),
             {"event_id": str(event_id)},
         ).first()
@@ -101,7 +101,7 @@ class TestEventEmitter:
 
         session.commit()
 
-        result = session.exec(
+        result = session.execute(
             text("SELECT event_type, cost_usd FROM ops_events WHERE event_id = :event_id"), {"event_id": str(event_id)}
         ).first()
 
@@ -127,7 +127,7 @@ class TestEventEmitter:
             )
 
         # Nothing committed yet
-        count_before = session.exec(
+        count_before = session.execute(
             text("SELECT COUNT(*) FROM ops_events WHERE tenant_id = :tenant_id"), {"tenant_id": str(tenant_id)}
         ).first()
 
@@ -138,7 +138,7 @@ class TestEventEmitter:
         assert len(event_ids) == 5
 
         # Now events are committed
-        count_after = session.exec(
+        count_after = session.execute(
             text("SELECT COUNT(*) FROM ops_events WHERE tenant_id = :tenant_id"), {"tenant_id": str(tenant_id)}
         ).first()
 
@@ -264,7 +264,7 @@ class TestStickinessComputation:
         # Total = 2.9
 
         # Compute stickiness
-        result = session.exec(
+        result = session.execute(
             text(
                 """
             SELECT
@@ -315,7 +315,7 @@ class TestSilentChurnDetection:
         session.commit()
 
         # Check silent churn detection query
-        result = session.exec(
+        result = session.execute(
             text(
                 """
             SELECT tenant_id
@@ -358,10 +358,10 @@ def session():
     with Session(engine) as session:
         # Ensure table exists
         try:
-            session.exec(text("SELECT 1 FROM ops_events LIMIT 1"))
+            session.execute(text("SELECT 1 FROM ops_events LIMIT 1"))
         except Exception:
             # Table doesn't exist, run migration
-            session.exec(
+            session.execute(
                 text(
                     """
                 CREATE TABLE IF NOT EXISTS ops_events (
@@ -381,7 +381,7 @@ def session():
             """
                 )
             )
-            session.exec(
+            session.execute(
                 text(
                     """
                 CREATE TABLE IF NOT EXISTS ops_customer_segments (
@@ -409,6 +409,6 @@ def session():
         yield session
 
         # Cleanup test data
-        session.exec(text("DELETE FROM ops_events"))
-        session.exec(text("DELETE FROM ops_customer_segments"))
+        session.execute(text("DELETE FROM ops_events"))
+        session.execute(text("DELETE FROM ops_customer_segments"))
         session.commit()
