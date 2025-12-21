@@ -2,13 +2,14 @@
  * Founder Ops Console - AI Mission Control
  *
  * Single-page, read-only, signal-first dashboard for founders and ops.
- * Displays system health, at-risk customers, and founder playbooks.
+ * Displays system health, at-risk customers, all customers, and founder playbooks.
  *
  * Layout:
  * - TOP STRIP: System Truth (always visible)
- * - LEFT PANEL: Customers at Risk
- * - CENTER: Founder Playbooks
- * - RIGHT PANEL: Timeline/Events (placeholder)
+ * - TOP LEFT: Customers at Risk
+ * - TOP RIGHT: All Customers
+ * - BOTTOM LEFT: Founder Playbooks
+ * - BOTTOM RIGHT: Timeline/Events (placeholder)
  */
 
 import { useEffect, useState, useCallback } from 'react';
@@ -37,9 +38,11 @@ import {
 import { cn } from '@/lib/utils';
 import {
   fetchOpsConsoleData,
+  getCustomerSegments,
   type SystemPulse,
   type InfraMetrics,
   type CustomerAtRisk,
+  type CustomerSegment,
   type FounderPlaybook,
   type FounderIntervention,
 } from '@/api/ops';
@@ -377,7 +380,174 @@ function InterventionCard({ intervention }: { intervention: FounderIntervention 
   );
 }
 
-// CENTER - Founder Playbooks
+// TOP RIGHT - All Customers
+function CustomersPanel({ customers }: { customers: CustomerSegment[] }) {
+  const [sortBy, setSortBy] = useState<'stickiness' | 'friction' | 'recent'>('stickiness');
+
+  const sortedCustomers = [...customers].sort((a, b) => {
+    switch (sortBy) {
+      case 'stickiness':
+        return b.current_stickiness - a.current_stickiness;
+      case 'friction':
+        return b.friction_score - a.friction_score;
+      case 'recent':
+        return new Date(b.last_api_call || 0).getTime() - new Date(a.last_api_call || 0).getTime();
+      default:
+        return 0;
+    }
+  });
+
+  if (customers.length === 0) {
+    return (
+      <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 h-full">
+        <div className="flex items-center gap-2 mb-6">
+          <Users className="w-5 h-5 text-blue-500" />
+          <h2 className="text-lg font-bold text-white">ALL CUSTOMERS</h2>
+          <span className="ml-auto px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 text-xs font-mono">
+            0
+          </span>
+        </div>
+        <div className="flex flex-col items-center justify-center h-48 text-center">
+          <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-gray-600" />
+          </div>
+          <p className="text-gray-400 text-sm">No customers yet</p>
+          <p className="text-gray-600 text-xs mt-2">
+            Customers will appear after API activity
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 h-full overflow-hidden flex flex-col">
+      <div className="flex items-center gap-2 mb-4">
+        <Users className="w-5 h-5 text-blue-500" />
+        <h2 className="text-lg font-bold text-white">ALL CUSTOMERS</h2>
+        <span className="ml-auto px-2 py-0.5 rounded-full bg-blue-900/50 text-blue-400 text-xs font-mono">
+          {customers.length}
+        </span>
+      </div>
+
+      {/* Sort Controls */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setSortBy('stickiness')}
+          className={cn(
+            'px-2 py-1 rounded text-xs font-medium transition-colors',
+            sortBy === 'stickiness'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          )}
+        >
+          Stickiness
+        </button>
+        <button
+          onClick={() => setSortBy('friction')}
+          className={cn(
+            'px-2 py-1 rounded text-xs font-medium transition-colors',
+            sortBy === 'friction'
+              ? 'bg-orange-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          )}
+        >
+          Friction
+        </button>
+        <button
+          onClick={() => setSortBy('recent')}
+          className={cn(
+            'px-2 py-1 rounded text-xs font-medium transition-colors',
+            sortBy === 'recent'
+              ? 'bg-green-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          )}
+        >
+          Recent
+        </button>
+      </div>
+
+      {/* Customer List */}
+      <div className="flex-1 overflow-y-auto space-y-2">
+        {sortedCustomers.map((customer) => (
+          <div
+            key={customer.tenant_id}
+            className="p-3 rounded-lg bg-gray-950 border border-gray-800 hover:border-gray-700 transition-colors"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white font-mono text-sm">
+                {customer.tenant_name || formatTenantId(customer.tenant_id)}
+              </span>
+              <div className="flex items-center gap-2">
+                {getTrendIcon(customer.stickiness_delta)}
+                <span
+                  className={cn(
+                    'px-1.5 py-0.5 rounded text-xs font-bold',
+                    customer.stickiness_trend === 'rising'
+                      ? 'bg-green-900/30 text-green-400'
+                      : customer.stickiness_trend === 'falling'
+                      ? 'bg-red-900/30 text-red-400'
+                      : 'bg-gray-800 text-gray-400'
+                  )}
+                >
+                  {customer.stickiness_trend}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <span className="text-gray-500">Stickiness</span>
+                <div className="text-white font-mono">
+                  {customer.stickiness_7d.toFixed(1)}
+                  <span className="text-gray-600 ml-1">/ {customer.stickiness_30d.toFixed(1)}</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500">Friction</span>
+                <div
+                  className={cn(
+                    'font-mono',
+                    customer.friction_score > 20
+                      ? 'text-red-400'
+                      : customer.friction_score > 10
+                      ? 'text-yellow-400'
+                      : 'text-green-400'
+                  )}
+                >
+                  {customer.friction_score.toFixed(1)}
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500">Delta</span>
+                <div
+                  className={cn(
+                    'font-mono',
+                    customer.stickiness_delta > 1.1
+                      ? 'text-green-400'
+                      : customer.stickiness_delta < 0.9
+                      ? 'text-red-400'
+                      : 'text-gray-400'
+                  )}
+                >
+                  {customer.stickiness_delta.toFixed(2)}x
+                </div>
+              </div>
+            </div>
+
+            {customer.last_api_call && (
+              <div className="mt-2 text-xs text-gray-600">
+                Last seen: {new Date(customer.last_api_call).toLocaleString()}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// BOTTOM LEFT - Founder Playbooks
 function PlaybooksPanel({ playbooks }: { playbooks: FounderPlaybook[] }) {
   const [expandedPlaybook, setExpandedPlaybook] = useState<string | null>(null);
 
@@ -529,6 +699,7 @@ export default function FounderOpsConsole() {
   const [pulse, setPulse] = useState<SystemPulse | null>(null);
   const [infra, setInfra] = useState<InfraMetrics | null>(null);
   const [atRiskCustomers, setAtRiskCustomers] = useState<CustomerAtRisk[]>([]);
+  const [customers, setCustomers] = useState<CustomerSegment[]>([]);
   const [playbooks, setPlaybooks] = useState<FounderPlaybook[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -536,11 +707,15 @@ export default function FounderOpsConsole() {
 
   const fetchData = useCallback(async () => {
     try {
-      const data = await fetchOpsConsoleData();
-      setPulse(data.pulse);
-      setInfra(data.infra);
-      setAtRiskCustomers(data.atRiskCustomers);
-      setPlaybooks(data.playbooks);
+      const [opsData, customerData] = await Promise.all([
+        fetchOpsConsoleData(),
+        getCustomerSegments(50).catch(() => []),
+      ]);
+      setPulse(opsData.pulse);
+      setInfra(opsData.infra);
+      setAtRiskCustomers(opsData.atRiskCustomers);
+      setPlaybooks(opsData.playbooks);
+      setCustomers(customerData);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -561,12 +736,57 @@ export default function FounderOpsConsole() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Show skeleton layout while loading (faster perceived load)
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading Mission Control...</p>
+      <div className="min-h-screen bg-gray-950 flex flex-col">
+        {/* Skeleton Top Strip */}
+        <div className="bg-gray-900 border-b border-gray-800 px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <div className="h-4 w-32 bg-gray-800 rounded animate-pulse" />
+              <div className="h-4 w-24 bg-gray-800 rounded animate-pulse" />
+              <div className="h-4 w-28 bg-gray-800 rounded animate-pulse" />
+            </div>
+            <div className="flex items-center gap-8">
+              <div className="h-4 w-36 bg-gray-800 rounded animate-pulse" />
+              <div className="h-4 w-32 bg-gray-800 rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton Header */}
+        <div className="px-6 py-4 flex items-center justify-between border-b border-gray-800">
+          <div>
+            <div className="h-7 w-48 bg-gray-800 rounded animate-pulse mb-2" />
+            <div className="h-4 w-64 bg-gray-800 rounded animate-pulse" />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="h-8 w-24 bg-gray-800 rounded animate-pulse" />
+          </div>
+        </div>
+
+        {/* Skeleton 2x2 Grid */}
+        <div className="flex-1 p-6 grid grid-cols-2 grid-rows-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-5 h-5 bg-gray-800 rounded animate-pulse" />
+                <div className="h-5 w-32 bg-gray-800 rounded animate-pulse" />
+              </div>
+              <div className="space-y-3">
+                <div className="h-16 bg-gray-800 rounded animate-pulse" />
+                <div className="h-16 bg-gray-800 rounded animate-pulse" />
+                <div className="h-12 bg-gray-800 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Footer */}
+        <div className="px-6 py-2 bg-gray-900 border-t border-gray-800 flex items-center justify-between">
+          <div className="h-3 w-48 bg-gray-800 rounded animate-pulse" />
+          <div className="h-3 w-64 bg-gray-800 rounded animate-pulse" />
         </div>
       </div>
     );
@@ -605,23 +825,26 @@ export default function FounderOpsConsole() {
         </div>
       </div>
 
-      {/* Main Content - 3 Column Layout */}
-      <div className="flex-1 p-6 grid grid-cols-3 gap-6">
-        {/* LEFT - At Risk Customers */}
+      {/* Main Content - 2x2 Grid Layout */}
+      <div className="flex-1 p-6 grid grid-cols-2 grid-rows-2 gap-4">
+        {/* TOP LEFT - At Risk Customers */}
         <AtRiskPanel customers={atRiskCustomers} />
 
-        {/* CENTER - Founder Playbooks */}
+        {/* TOP RIGHT - All Customers */}
+        <CustomersPanel customers={customers} />
+
+        {/* BOTTOM LEFT - Founder Playbooks */}
         <PlaybooksPanel playbooks={playbooks} />
 
-        {/* RIGHT - Timeline */}
+        {/* BOTTOM RIGHT - Timeline */}
         <TimelinePanel />
       </div>
 
       {/* Footer Status Bar */}
       <div className="px-6 py-2 bg-gray-900 border-t border-gray-800 flex items-center justify-between text-xs text-gray-500">
         <span>
-          Polling every {POLL_INTERVAL_MS / 1000}s • {atRiskCustomers.length} at-risk •{' '}
-          {playbooks.length} playbooks
+          Polling every {POLL_INTERVAL_MS / 1000}s • {customers.length} customers •{' '}
+          {atRiskCustomers.length} at-risk • {playbooks.length} playbooks
         </span>
         <span>
           Replays (24h): {pulse?.replays_executed_24h || 0} • Error Rate:{' '}

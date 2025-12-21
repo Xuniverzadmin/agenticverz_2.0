@@ -21,9 +21,10 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, List, Any, Dict
-from sqlmodel import Field, SQLModel, Relationship
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
+from sqlmodel import Field, SQLModel
 
 
 def utc_now() -> datetime:
@@ -35,6 +36,7 @@ def generate_uuid() -> str:
 
 
 # ============== ENUMS ==============
+
 
 class EntityType(str, Enum):
     TENANT = "tenant"
@@ -84,9 +86,9 @@ class GuardrailCategory(str, Enum):
 # If you need different behavior, create a v2 with explicit migration.
 
 GROUPING_WINDOW_SECONDS = 300  # 5 minute correlation window
-GROUPING_MIN_ERRORS = 3       # Minimum errors to trigger incident
+GROUPING_MIN_ERRORS = 3  # Minimum errors to trigger incident
 GROUPING_ERROR_RATE_THRESHOLD = 0.5  # 50% error rate triggers incident
-GROUPING_COST_SPIKE_MULTIPLIER = 5   # 5x normal cost triggers incident
+GROUPING_COST_SPIKE_MULTIPLIER = 5  # 5x normal cost triggers incident
 
 # v1 Rules (Immutable):
 # 1. Single root cause: Each incident has exactly one trigger_type
@@ -100,8 +102,10 @@ GROUPING_COST_SPIKE_MULTIPLIER = 5   # 5x normal cost triggers incident
 
 # ============== KILLSWITCH STATE ==============
 
+
 class KillSwitchState(SQLModel, table=True):
     """Track freeze state for tenants and API keys."""
+
     __tablename__ = "killswitch_state"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -144,8 +148,10 @@ class KillSwitchState(SQLModel, table=True):
 
 # ============== PROXY CALLS ==============
 
+
 class ProxyCall(SQLModel, table=True):
     """Log of OpenAI proxy calls for replay and analysis."""
+
     __tablename__ = "proxy_calls"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -213,8 +219,10 @@ class ProxyCall(SQLModel, table=True):
 
 # ============== INCIDENTS ==============
 
+
 class Incident(SQLModel, table=True):
     """Auto-grouped failure incidents."""
+
     __tablename__ = "incidents"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -280,6 +288,7 @@ class Incident(SQLModel, table=True):
 
 class IncidentEvent(SQLModel, table=True):
     """Timeline events within an incident."""
+
     __tablename__ = "incident_events"
 
     id: str = Field(default_factory=generate_uuid, primary_key=True)
@@ -304,8 +313,10 @@ class IncidentEvent(SQLModel, table=True):
 
 # ============== DEFAULT GUARDRAILS ==============
 
+
 class DefaultGuardrail(SQLModel, table=True):
     """Read-only default policy pack."""
+
     __tablename__ = "default_guardrails"
 
     id: str = Field(primary_key=True, max_length=100)
@@ -374,8 +385,10 @@ class DefaultGuardrail(SQLModel, table=True):
 
 # ============== PYDANTIC SCHEMAS (API) ==============
 
+
 class KillSwitchStatus(BaseModel):
     """Response schema for kill switch status."""
+
     entity_type: str
     entity_id: str
     is_frozen: bool
@@ -388,12 +401,14 @@ class KillSwitchStatus(BaseModel):
 
 class KillSwitchAction(BaseModel):
     """Request schema for kill switch actions."""
+
     reason: str
     actor: Optional[str] = "system"
 
 
 class IncidentSummary(BaseModel):
     """Summary view of an incident."""
+
     id: str
     title: str
     severity: str
@@ -408,6 +423,7 @@ class IncidentSummary(BaseModel):
 
 class IncidentDetail(BaseModel):
     """Detailed view of an incident with timeline."""
+
     id: str
     title: str
     severity: str
@@ -426,6 +442,7 @@ class IncidentDetail(BaseModel):
 
 class GuardrailSummary(BaseModel):
     """Summary of active guardrails."""
+
     id: str
     name: str
     description: Optional[str] = None
@@ -437,6 +454,7 @@ class GuardrailSummary(BaseModel):
 
 class ProxyCallSummary(BaseModel):
     """Summary of a proxy call."""
+
     id: str
     endpoint: str
     model: str
@@ -452,6 +470,7 @@ class ProxyCallSummary(BaseModel):
 
 class ProxyCallDetail(BaseModel):
     """Detailed view of a proxy call for replay."""
+
     id: str
     endpoint: str
     model: str
@@ -473,6 +492,7 @@ class ProxyCallDetail(BaseModel):
 
 class ReplayRequest(BaseModel):
     """Request to replay a call."""
+
     dry_run: bool = False
 
 
@@ -482,6 +502,7 @@ class ReplayResult(BaseModel):
     Language layer: "Replay proves enforcement" not "request re-executed"
     This shows PROOF that your guardrails work consistently.
     """
+
     original_call_id: str
     replay_call_id: Optional[str] = None
     dry_run: bool
@@ -494,6 +515,7 @@ class ReplayResult(BaseModel):
 
 class DemoSimulationRequest(BaseModel):
     """Request to simulate an incident."""
+
     scenario: str = "budget_breach"  # 'budget_breach', 'failure_spike', 'rate_limit'
 
 
@@ -506,6 +528,7 @@ class DemoSimulationResult(BaseModel):
     - before/after show clear value deltas
     - without_killswitch shows what would have happened
     """
+
     incident_id: str
     scenario: str
     timeline: List[Dict[str, Any]]
@@ -517,5 +540,5 @@ class DemoSimulationResult(BaseModel):
     is_demo: bool = True
     demo_warning: str = "⚠️ This is a DEMO simulation. No real billing or tenant state was affected."
     before: Optional[Dict[str, Any]] = None  # State before incident
-    after: Optional[Dict[str, Any]] = None   # State after KillSwitch intervention
+    after: Optional[Dict[str, Any]] = None  # State after KillSwitch intervention
     without_killswitch: Optional[Dict[str, Any]] = None  # What would have happened

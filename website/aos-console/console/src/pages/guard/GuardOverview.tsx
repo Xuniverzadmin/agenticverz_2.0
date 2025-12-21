@@ -131,8 +131,13 @@ export function GuardOverview() {
   const killMutation = useMutation({
     mutationFn: guardApi.activateKillSwitch,
     onSuccess: () => {
+      console.log('[GUARD] Traffic stopped');
       queryClient.invalidateQueries({ queryKey: ['guard'] });
       setShowKillConfirm(false);
+    },
+    onError: (error) => {
+      console.error('[GUARD] Failed to stop traffic', error);
+      alert(`Failed to stop traffic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     },
   });
 
@@ -140,8 +145,13 @@ export function GuardOverview() {
   const resumeMutation = useMutation({
     mutationFn: guardApi.deactivateKillSwitch,
     onSuccess: () => {
+      console.log('[GUARD] Traffic resumed');
       queryClient.invalidateQueries({ queryKey: ['guard'] });
       setShowResumeConfirm(false);
+    },
+    onError: (error) => {
+      console.error('[GUARD] Failed to resume traffic', error);
+      alert(`Failed to resume traffic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     },
   });
 

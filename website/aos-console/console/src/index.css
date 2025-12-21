@@ -2,20 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * DARK MODE ONLY CONSOLE
+ * This console is designed for dark mode only.
+ * No light mode support - founders/ops prefer dark interfaces.
+ */
+
 :root {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8fafc;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-border: #e2e8f0;
+  /* Dark mode colors - no light mode alternative */
+  --color-bg-primary: #0f172a;    /* slate-900 */
+  --color-bg-secondary: #030712;  /* gray-950 */
+  --color-bg-card: #1e293b;       /* slate-800 */
+  --color-text-primary: #f8fafc;  /* slate-50 */
+  --color-text-secondary: #94a3b8; /* slate-400 */
+  --color-text-muted: #64748b;    /* slate-500 */
+  --color-border: #334155;        /* slate-700 */
+  --color-border-light: #475569;  /* slate-600 */
 }
 
-[data-theme='dark'] {
-  --color-bg-primary: #0f172a;
-  --color-bg-secondary: #1e293b;
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
-  --color-border: #334155;
+html {
+  background-color: #030712;
+  color-scheme: dark;
 }
 
 body {
@@ -26,4 +33,23 @@ body {
 
 .font-mono {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* Ensure scrollbars are dark */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-light);
 }

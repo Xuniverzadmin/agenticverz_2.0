@@ -54,6 +54,9 @@ from app.services.replay_determinism import (
     ReplayValidator as RealReplayValidator,
 )
 
+# Guard Cache for latency optimization (EU server -> Singapore DB)
+from app.utils.guard_cache import get_guard_cache
+
 # =============================================================================
 # Router - GA Lock: Customer-only access (tenant-scoped)
 # =============================================================================
@@ -110,6 +113,7 @@ class IncidentSummary(BaseModel):
     started_at: str
     ended_at: Optional[str] = None
     duration_seconds: Optional[int] = None
+    call_id: Optional[str] = None  # First related call for replay
 
 
 class IncidentEventResponse(BaseModel):
@@ -262,7 +266,15 @@ async def get_guard_status(
     - Active guardrails
     - 24h incident count
     - Last incident time
+
+    Cached for 5 seconds to reduce cross-region DB latency.
     """
+    # Check cache first
+    cache = get_guard_cache()
+    cached = await cache.get_status(tenant_id)
+    if cached:
+        return GuardStatus(**cached)
+
     # Get tenant state
     stmt = select(KillSwitchState).where(
         and_(
@@ -294,7 +306,7 @@ async def get_guard_status(
     last_incident_row = session.exec(stmt).first()
     last_incident = last_incident_row[0] if last_incident_row else None
 
-    return GuardStatus(
+    result = GuardStatus(
         is_frozen=tenant_state.is_frozen if tenant_state else False,
         frozen_at=tenant_state.frozen_at.isoformat() if tenant_state and tenant_state.frozen_at else None,
         frozen_by=tenant_state.frozen_by if tenant_state else None,
@@ -302,6 +314,11 @@ async def get_guard_status(
         active_guardrails=active_guardrails,
         last_incident_time=last_incident.created_at.isoformat() if last_incident else None,
     )
+
+    # Cache result
+    await cache.set_status(tenant_id, result.model_dump())
+
+    return result
 
 
 @router.get("/snapshot/today", response_model=TodaySnapshot)
@@ -311,11 +328,20 @@ async def get_today_snapshot(
 ):
     """
     Get today's metrics - "What did it cost/save me?"
+
+    Cached for 10 seconds to reduce cross-region DB latency.
     """
+    # Check cache first
+    cache = get_guard_cache()
+    cached = await cache.get_snapshot(tenant_id)
+    if cached:
+        return TodaySnapshot(**cached)
+
     today_start = utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Count requests today
-    stmt = select(func.count(ProxyCall.id)).where(
+    # Combine queries for better performance
+    # Query 1: Count and sum for all requests today
+    stmt = select(func.count(ProxyCall.id), func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
         and_(
             ProxyCall.tenant_id == tenant_id,
             ProxyCall.created_at >= today_start,
@@ -323,19 +349,10 @@ async def get_today_snapshot(
     )
     row = session.exec(stmt).first()
     requests_today = row[0] if row else 0
+    spend_today = row[1] if row else 0
 
-    # Sum spend today
-    stmt = select(func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
-        and_(
-            ProxyCall.tenant_id == tenant_id,
-            ProxyCall.created_at >= today_start,
-        )
-    )
-    row = session.exec(stmt).first()
-    spend_today = row[0] if row else 0
-
-    # Count incidents prevented (blocked calls)
-    stmt = select(func.count(ProxyCall.id)).where(
+    # Query 2: Count and sum for blocked requests
+    stmt = select(func.count(ProxyCall.id), func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
         and_(
             ProxyCall.tenant_id == tenant_id,
             ProxyCall.created_at >= today_start,
@@ -344,30 +361,25 @@ async def get_today_snapshot(
     )
     row = session.exec(stmt).first()
     incidents_prevented = row[0] if row else 0
+    cost_avoided = row[1] if row else 0
 
-    # Sum cost avoided (blocked calls' estimated cost)
-    stmt = select(func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
-        and_(
-            ProxyCall.tenant_id == tenant_id,
-            ProxyCall.created_at >= today_start,
-            ProxyCall.was_blocked == True,
-        )
-    )
-    row = session.exec(stmt).first()
-    cost_avoided = row[0] if row else 0
-
-    # Get last incident time
+    # Query 3: Last incident time
     stmt = select(Incident).where(Incident.tenant_id == tenant_id).order_by(desc(Incident.created_at)).limit(1)
     last_incident_row = session.exec(stmt).first()
     last_incident = last_incident_row[0] if last_incident_row else None
 
-    return TodaySnapshot(
+    result = TodaySnapshot(
         requests_today=requests_today,
         spend_today_cents=int(spend_today),
         incidents_prevented=incidents_prevented,
         last_incident_time=last_incident.created_at.isoformat() if last_incident else None,
         cost_avoided_cents=int(cost_avoided),
     )
+
+    # Cache result
+    await cache.set_snapshot(tenant_id, result.model_dump())
+
+    return result
 
 
 # =============================================================================
@@ -420,6 +432,10 @@ async def activate_killswitch(
     session.add(state)
     session.commit()
 
+    # Invalidate cache on mutation
+    cache = get_guard_cache()
+    await cache.invalidate_tenant(tenant_id)
+
     return {"status": "frozen", "message": "All traffic stopped"}
 
 
@@ -448,6 +464,10 @@ async def deactivate_killswitch(
     state.unfreeze(by="customer")
     session.add(state)
     session.commit()
+
+    # Invalidate cache on mutation
+    cache = get_guard_cache()
+    await cache.invalidate_tenant(tenant_id)
 
     return {"status": "active", "message": "Traffic resumed"}
 
@@ -494,6 +514,9 @@ async def list_incidents(
             i = r[0]
         else:
             i = r
+        # Get first related call_id for replay
+        related_calls = i.get_related_call_ids() if hasattr(i, "get_related_call_ids") else []
+        first_call_id = related_calls[0] if related_calls else None
         items.append(
             IncidentSummary(
                 id=i.id,
@@ -508,6 +531,7 @@ async def list_incidents(
                 started_at=i.started_at.isoformat() if i.started_at else i.created_at.isoformat(),
                 ended_at=i.ended_at.isoformat() if i.ended_at else None,
                 duration_seconds=i.duration_seconds,
+                call_id=first_call_id,
             )
         )
 
@@ -541,6 +565,10 @@ async def get_incident_detail(
     event_rows = session.exec(stmt).all()
     events = [r[0] if isinstance(r, tuple) else r for r in event_rows]
 
+    # Get first related call_id for replay
+    related_calls = incident.get_related_call_ids() if hasattr(incident, "get_related_call_ids") else []
+    first_call_id = related_calls[0] if related_calls else None
+
     incident_summary = IncidentSummary(
         id=incident.id,
         title=incident.title,
@@ -554,6 +582,7 @@ async def get_incident_detail(
         started_at=incident.started_at.isoformat() if incident.started_at else incident.created_at.isoformat(),
         ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
         duration_seconds=incident.duration_seconds,
+        call_id=first_call_id,
     )
 
     timeline = [
@@ -1887,19 +1916,29 @@ async def export_incident_evidence(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # Get incident events for timeline
-    event_stmt = select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
-    timeline_rows = session.exec(event_stmt).all()
+    event_stmt = (
+        select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
+    )
+    # Use scalars() to get actual model instances, not Row objects
+    timeline_events_db = session.exec(event_stmt).all()
     timeline_events = []
 
-    for row in timeline_rows:
-        event = row[0] if isinstance(row, tuple) else row
-        timeline_events.append(
-            {
-                "time": event.created_at.strftime("%H:%M:%S.%f")[:-3] if event.created_at else "",
-                "event": event.event_type.value if hasattr(event.event_type, "value") else str(event.event_type),
-                "details": event.description or "",
-            }
-        )
+    for event in timeline_events_db:
+        # Handle both tuple results and direct model instances
+        if hasattr(event, "__iter__") and not isinstance(event, str):
+            try:
+                event = event[0]
+            except (TypeError, IndexError):
+                pass
+        # Now event should be the model instance
+        if hasattr(event, "created_at"):
+            timeline_events.append(
+                {
+                    "time": event.created_at.strftime("%H:%M:%S.%f")[:-3] if event.created_at else "",
+                    "event": event.event_type.value if hasattr(event.event_type, "value") else str(event.event_type),
+                    "details": event.description or "",
+                }
+            )
 
     # If no events, create synthetic timeline from incident data
     if not timeline_events:

@@ -8,6 +8,7 @@ This document outlines the process for maintaining and updating our prevention s
 |--------|----------|---------|
 | SQLModel Pattern Linter | `scripts/ops/lint_sqlmodel_patterns.py` | Detect Row tuple extraction bugs |
 | API Wiring Check | `scripts/ops/check_api_wiring.py` | Validate endpoint configuration |
+| Frontend API ID Linter | `scripts/ops/lint_frontend_api_calls.py` | Detect ID type mismatches in API calls |
 | DB Helpers | `backend/app/db_helpers.py` | Safe query helper functions |
 | CI Consistency Check | `scripts/ops/ci_consistency_check.sh` | Comprehensive CI validation |
 | Pre-commit Hooks | `.pre-commit-config.yaml` | Pre-push code quality gates |
@@ -124,6 +125,44 @@ def query_one(session: Session, stmt) -> Optional[Any]:
     row = session.exec(stmt).first()
     return row[0] if row else None
 ```
+
+## Example: Adding the ID Type Mismatch Pattern (2025-12-21)
+
+This is how we added the Frontend API ID Type detection:
+
+### The Issue
+```
+Error: POST /guard/replay/inc_demo_4a5e594b 404 (Not Found)
+Root cause: onReplay(incident.id) passed incident_id but endpoint expected call_id
+```
+
+### The Pattern Added
+```python
+# In scripts/ops/lint_frontend_api_calls.py
+{
+    "name": "incident_id_in_replay",
+    "description": "incident.id used in replay context (should be call_id)",
+    "regex": r"(?:onReplay|replay|Replay)\s*\(\s*(?:incident|inc)\.id\s*\)",
+    "suggestion": "Use incident.call_id instead of incident.id for replay",
+    "severity": "error",
+}
+```
+
+### The Fix Applied
+```typescript
+// Before (wrong):
+onReplay(incident.id);
+
+// After (correct):
+onReplay(incident.call_id);
+```
+
+### API ID Type Contracts
+| Endpoint Pattern | Expected ID Type | Prefix |
+|-----------------|------------------|--------|
+| `/replay/{id}` | call_id | `call_` |
+| `/incidents/{id}` | incident_id | `inc_` |
+| `/keys/{id}` | key_id | varies |
 
 ## Checklist for New Bug Patterns
 

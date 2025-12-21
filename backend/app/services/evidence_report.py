@@ -76,6 +76,8 @@ class IncidentEvidence:
     root_cause: str
     impact_assessment: List[str]
     certificate: Optional[CertificateEvidence] = None  # M23: Cryptographic proof
+    severity: str = "HIGH"  # HIGH, MEDIUM, LOW
+    status: str = "RESOLVED"  # OPEN, INVESTIGATING, RESOLVED
 
 
 class EvidenceReportGenerator:
@@ -243,6 +245,10 @@ class EvidenceReportGenerator:
         # Build story (content)
         story = []
 
+        # Incident Snapshot (1-page scannable summary for executives)
+        story.extend(self._build_incident_snapshot(evidence))
+        story.append(PageBreak())
+
         # Cover page
         story.extend(self._build_cover_page(evidence))
         story.append(PageBreak())
@@ -306,6 +312,127 @@ class EvidenceReportGenerator:
 
         canvas.restoreState()
 
+    def _build_incident_snapshot(self, evidence: IncidentEvidence) -> List:
+        """
+        Build 1-page Incident Snapshot - scannable summary for executives.
+
+        This page answers: What happened? Is it fixed? Should I worry?
+        """
+        story = []
+
+        # Title
+        story.append(Spacer(1, 0.5 * inch))
+        story.append(Paragraph("INCIDENT SNAPSHOT", self.styles["ReportTitle"]))
+        story.append(Spacer(1, 0.3 * inch))
+
+        # Severity box with color coding
+        severity = getattr(evidence, "severity", "HIGH")
+        severity_colors = {
+            "CRITICAL": ("#dc2626", "#fee2e2"),  # Red
+            "HIGH": ("#ea580c", "#ffedd5"),  # Orange
+            "MEDIUM": ("#ca8a04", "#fef9c3"),  # Yellow
+            "LOW": ("#2563eb", "#dbeafe"),  # Blue
+        }
+        text_color, bg_color = severity_colors.get(severity, severity_colors["HIGH"])
+
+        # Key facts table
+        status = getattr(evidence, "status", "RESOLVED")
+        would_prevent = evidence.prevention_result and evidence.prevention_result.get("would_prevent_incident", False)
+
+        snapshot_data = [
+            ["Incident ID", evidence.incident_id],
+            ["Severity", severity],
+            ["Status", status],
+            ["Customer", evidence.tenant_name if evidence.tenant_name != "Unknown Customer" else "Demo Tenant"],
+            ["Occurred", evidence.timestamp],
+            ["Prevented in Future", "✅ YES" if would_prevent else "⚠️ Requires Review"],
+            ["Current Risk", "MITIGATED" if status == "RESOLVED" else "ACTIVE"],
+        ]
+
+        snapshot_table = Table(snapshot_data, colWidths=[2.5 * inch, 3.5 * inch])
+        snapshot_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 12),
+                    ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#4b5563")),
+                    ("TEXTCOLOR", (1, 0), (1, -1), colors.HexColor("#1f2937")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 12),
+                    ("ALIGN", (0, 0), (0, -1), "RIGHT"),
+                    ("ALIGN", (1, 0), (1, -1), "LEFT"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    # Highlight severity row
+                    ("BACKGROUND", (1, 1), (1, 1), colors.HexColor(bg_color)),
+                    ("TEXTCOLOR", (1, 1), (1, 1), colors.HexColor(text_color)),
+                    ("FONTNAME", (1, 1), (1, 1), "Helvetica-Bold"),
+                ]
+            )
+        )
+        story.append(snapshot_table)
+        story.append(Spacer(1, 0.4 * inch))
+
+        # What Happened (plain English)
+        story.append(Paragraph("What Happened", self.styles["SubsectionHeader"]))
+        story.append(
+            Paragraph(
+                "The AI responded with certainty despite missing required data, creating a risk of "
+                "customer misinformation. The system stated a fact when it should have expressed uncertainty.",
+                self.styles["BodyText"],
+            )
+        )
+        story.append(Spacer(1, 0.2 * inch))
+
+        # What Changed
+        story.append(Paragraph("What Changed", self.styles["SubsectionHeader"]))
+        if would_prevent:
+            story.append(
+                Paragraph(
+                    "✅ Policy enforcement is now active. Similar incidents will be automatically blocked or modified.",
+                    self.styles["Success"],
+                )
+            )
+        else:
+            story.append(
+                Paragraph(
+                    "⚠️ Review required. Additional policy configuration may be needed.",
+                    self.styles["Warning"],
+                )
+            )
+        story.append(Spacer(1, 0.3 * inch))
+
+        # Severity Definition Box
+        story.append(Paragraph("Severity Definitions", self.styles["SubsectionHeader"]))
+
+        severity_defs = [
+            ["CRITICAL", "System-wide failure affecting multiple customers"],
+            ["HIGH", "Customer-facing misinformation with legal/contractual implications"],
+            ["MEDIUM", "Incorrect internal reasoning, no direct customer impact"],
+            ["LOW", "Policy warning triggered, no actual harm occurred"],
+        ]
+
+        sev_table = Table(severity_defs, colWidths=[1.2 * inch, 4.8 * inch])
+        sev_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (0, 0), colors.HexColor("#dc2626")),  # CRITICAL
+                    ("TEXTCOLOR", (0, 1), (0, 1), colors.HexColor("#ea580c")),  # HIGH
+                    ("TEXTCOLOR", (0, 2), (0, 2), colors.HexColor("#ca8a04")),  # MEDIUM
+                    ("TEXTCOLOR", (0, 3), (0, 3), colors.HexColor("#2563eb")),  # LOW
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f9fafb")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#e5e7eb")),
+                ]
+            )
+        )
+        story.append(sev_table)
+
+        return story
+
     def _build_cover_page(self, evidence: IncidentEvidence) -> List:
         """Build cover page with metadata."""
         story = []
@@ -324,11 +451,16 @@ class EvidenceReportGenerator:
         # Metadata table
         generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
+        # Fix "Unknown Customer" display
+        customer_display = evidence.tenant_name
+        if customer_display in ("Unknown Customer", "unknown", "", None):
+            customer_display = "Demo Tenant" if self.is_demo else evidence.tenant_id
+
         metadata = [
             ["Generated By", "AI Incident Console (Agenticverz)"],
             ["Incident ID", evidence.incident_id],
+            ["Customer", customer_display],
             ["Generated At", generated_at],
-            ["Classification", "Confidential – Internal / Legal Review"],
         ]
 
         table = Table(metadata, colWidths=[2 * inch, 4 * inch])
@@ -365,9 +497,14 @@ class EvidenceReportGenerator:
         # Incident Overview subsection
         story.append(Paragraph("Incident Overview", self.styles["SubsectionHeader"]))
 
+        # Fix "Unknown Customer" display
+        customer_display = evidence.tenant_name
+        if customer_display in ("Unknown Customer", "unknown", "", None):
+            customer_display = "Demo Tenant"
+
         overview_data = [
-            ["Customer", evidence.tenant_name],
-            ["User ID", evidence.user_id],
+            ["Customer", customer_display],
+            ["User ID", evidence.user_id if evidence.user_id not in ("unknown", "", None) else "Demo User"],
             ["Product", evidence.product_name],
             ["Model", evidence.model_id],
             ["Timestamp", evidence.timestamp],
@@ -888,8 +1025,9 @@ class EvidenceReportGenerator:
 
         story.append(
             Paragraph(
-                "This report is automatically generated from deterministic system logs. "
-                "No manual reconstruction or interpretation was performed.",
+                "This report was generated automatically from system logs without manual alteration "
+                "of incident data. The evidence presented reflects the state of the system at the "
+                "time of the incident.",
                 self.styles["Legal"],
             )
         )
@@ -947,6 +1085,8 @@ def generate_evidence_report(
     root_cause: str = "Policy enforcement gap: system asserted fact when required data was NULL.",
     impact_assessment: Optional[List[str]] = None,
     certificate: Optional[Dict[str, Any]] = None,  # M23: Cryptographic certificate
+    severity: str = "HIGH",  # CRITICAL, HIGH, MEDIUM, LOW
+    status: str = "RESOLVED",  # OPEN, INVESTIGATING, RESOLVED
     is_demo: bool = True,
 ) -> bytes:
     """
@@ -997,6 +1137,8 @@ def generate_evidence_report(
         root_cause=root_cause,
         impact_assessment=impact_assessment,
         certificate=cert_evidence,  # M23: Cryptographic certificate
+        severity=severity,
+        status=status,
     )
 
     generator = EvidenceReportGenerator(is_demo=is_demo)

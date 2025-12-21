@@ -53,6 +53,8 @@ ARCHITECTURE NOTES (Phase-2):
    Use playbooks BEFORE automating - learn what works first.
 """
 
+import json
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -62,6 +64,48 @@ from sqlalchemy import text
 from sqlmodel import Session
 
 from app.db import get_session
+
+# Redis caching for ops endpoints (optional - degrades gracefully)
+try:
+    import os
+
+    import redis
+
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+    REDIS_AVAILABLE = True
+except Exception:
+    redis_client = None
+    REDIS_AVAILABLE = False
+
+logger = logging.getLogger("nova.api.ops")
+
+# Cache TTL in seconds (ops data refreshes every 15s, cache for 12s)
+OPS_CACHE_TTL = 12
+
+
+def cache_get(key: str) -> Optional[dict]:
+    """Get cached value if Redis is available."""
+    if not REDIS_AVAILABLE or not redis_client:
+        return None
+    try:
+        data = redis_client.get(f"ops:{key}")
+        if data:
+            return json.loads(data)
+    except Exception as e:
+        logger.debug(f"Redis cache get failed: {e}")
+    return None
+
+
+def cache_set(key: str, value: dict, ttl: int = OPS_CACHE_TTL) -> None:
+    """Set cached value if Redis is available."""
+    if not REDIS_AVAILABLE or not redis_client:
+        return
+    try:
+        redis_client.setex(f"ops:{key}", ttl, json.dumps(value, default=str))
+    except Exception as e:
+        logger.debug(f"Redis cache set failed: {e}")
+
 
 # =============================================================================
 # FOUNDER PLAYBOOKS v1 (Phase-2.1)
@@ -446,7 +490,13 @@ async def get_system_pulse(
     System Pulse - "Is my business healthy right now?"
 
     Real-time view of system health with 24h deltas.
+    Cached for 12 seconds to reduce DB load.
     """
+    # Check cache first
+    cached = cache_get("pulse")
+    if cached:
+        return SystemPulse(**cached)
+
     now = utc_now()
     h24_ago = get_window(24)
     h48_ago = get_window(48)
@@ -570,7 +620,7 @@ async def get_system_pulse(
     else:
         system_state = "healthy"
 
-    return SystemPulse(
+    result = SystemPulse(
         active_tenants_24h=active_current,
         active_tenants_delta_pct=round(active_delta, 1),
         incidents_created_24h=incidents_cnt,
@@ -587,6 +637,9 @@ async def get_system_pulse(
         alerts=alerts,
         computed_at=now.isoformat(),
     )
+    # Cache the result
+    cache_set("pulse", result.model_dump())
+    return result
 
 
 # =============================================================================
@@ -602,7 +655,14 @@ async def get_customer_segments(
 ):
     """
     Customer Intelligence - All tenant profiles with stickiness and risk.
+    Cached for 12 seconds to reduce DB load.
     """
+    # Check cache first (keyed by risk_level and limit)
+    cache_key = f"customers:{risk_level or 'all'}:{limit}"
+    cached = cache_get(cache_key)
+    if cached:
+        return [CustomerSegment(**c) for c in cached]
+
     try:
         stmt = text(
             """
@@ -641,7 +701,7 @@ async def get_customer_segments(
         )
         rows = exec_sql(session, stmt, {"risk_level": risk_level, "limit": limit}).all()
 
-        return [
+        result = [
             CustomerSegment(
                 tenant_id=str(r[0]),
                 first_action=r[1],
@@ -665,6 +725,9 @@ async def get_customer_segments(
             )
             for r in rows
         ]
+        # Cache the result
+        cache_set(cache_key, [c.model_dump() for c in result])
+        return result
     except Exception:
         return []
 
@@ -841,7 +904,14 @@ async def get_customers_at_risk(
     - Suggested founder interventions
 
     This is THE endpoint for "who should I call today?"
+    Cached for 12 seconds to reduce DB load.
     """
+    # Check cache first
+    cache_key = f"customers-at-risk:{limit}"
+    cached = cache_get(cache_key)
+    if cached:
+        return [CustomerAtRisk(**c) for c in cached]
+
     h7d_ago = get_window(168)  # 7 days
     now = utc_now()
 
@@ -1014,6 +1084,8 @@ async def get_customers_at_risk(
                 )
             )
 
+        # Cache the result
+        cache_set(cache_key, [c.model_dump() for c in result])
         return result
 
     except Exception as e:
@@ -1465,9 +1537,13 @@ async def get_infra_limits(
     Infra & Limits - What breaks first if I grow?
 
     Database, Redis, and API capacity metrics with days-to-limit projections.
-
-    Phase-2: Added growth rate tracking and days_to_limit projections.
+    Cached for 30 seconds (infra metrics change slowly).
     """
+    # Check cache first (longer TTL for infra)
+    cached = cache_get("infra")
+    if cached:
+        return InfraLimits(**cached)
+
     warnings = []
 
     # Database connection check
@@ -1627,7 +1703,7 @@ async def get_infra_limits(
             }
         )
 
-    return InfraLimits(
+    result = InfraLimits(
         db_connections_current=db_connections,
         db_connections_max=db_max,
         db_storage_used_gb=round(db_size_gb, 2),
@@ -1643,6 +1719,9 @@ async def get_infra_limits(
         api_growth_rate_pct_per_week=round(api_growth_rate, 1),
         limit_warnings=warnings,
     )
+    # Cache with longer TTL (infra metrics change slowly)
+    cache_set("infra", result.model_dump(), 30)
+    return result
 
 
 # =============================================================================

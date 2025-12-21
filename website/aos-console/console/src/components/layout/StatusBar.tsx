@@ -29,7 +29,7 @@ function StatusDot({ label, status }: { label: string; status?: string }) {
           !status && 'bg-gray-400 animate-pulse'
         )}
       />
-      <span className="text-gray-600 dark:text-gray-400">{label}</span>
+      <span className="text-gray-400">{label}</span>
     </div>
   );
 }
@@ -45,14 +45,14 @@ export function StatusBar() {
   const services = (health as HealthStatus)?.services || {};
 
   return (
-    <footer className="h-8 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 flex items-center justify-between text-xs">
+    <footer className="h-8 border-t border-gray-700 bg-gray-800 px-6 flex items-center justify-between text-xs">
       <div className="flex items-center gap-4">
         <StatusDot label="API" status={services.api?.status} />
         <StatusDot label="DB" status={services.database?.status} />
         <StatusDot label="Redis" status={services.redis?.status} />
         <StatusDot label="Workers" status={services.workers?.status} />
       </div>
-      <div className="text-gray-500 dark:text-gray-400 flex items-center gap-4">
+      <div className="text-gray-400 flex items-center gap-4">
         <span>v1.0.0</span>
         <span>{new Date().toISOString().slice(0, 19).replace('T', ' ')} UTC</span>
       </div>

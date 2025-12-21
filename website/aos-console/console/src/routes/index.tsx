@@ -21,9 +21,13 @@ const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome
 const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExecutionConsole'));
 const FounderOpsConsolePage = lazy(() => import('@/pages/ops/FounderOpsConsole'));
 
+// Standalone console entry points (handle their own auth)
+const GuardConsoleEntry = lazy(() => import('@/pages/guard/GuardConsoleEntry'));
+const OpsConsoleEntry = lazy(() => import('@/pages/ops/OpsConsoleEntry'));
+
 function LoadingFallback() {
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex items-center justify-center h-screen bg-gray-900">
       <Spinner size="lg" />
     </div>
   );
@@ -36,7 +40,13 @@ export function AppRoutes() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected routes */}
+        {/* Standalone console entry points (handle their own auth) */}
+        <Route path="/guard" element={<GuardConsoleEntry />} />
+        <Route path="/guard/*" element={<GuardConsoleEntry />} />
+        <Route path="/ops" element={<OpsConsoleEntry />} />
+        <Route path="/ops/*" element={<OpsConsoleEntry />} />
+
+        {/* Protected routes (main AOS console) */}
         <Route
           path="/"
           element={
@@ -68,8 +78,7 @@ export function AppRoutes() {
           {/* Governance */}
           <Route path="sba" element={<SBAInspectorPage />} />
 
-          {/* Ops */}
-          <Route path="ops" element={<FounderOpsConsolePage />} />
+          {/* Note: /ops is now a standalone console entry - see public routes above */}
 
           {/* System */}
           <Route path="credits" element={<CreditsPage />} />

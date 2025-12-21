@@ -82,7 +82,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -93,10 +93,10 @@ export default function LoginPage() {
               </svg>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-white">
             AOS Console
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-gray-400 mt-2">
             Agentic Operating System
           </p>
         </div>
@@ -142,14 +142,14 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+            <div className="mt-6 p-4 bg-gray-700/50 rounded-lg">
+              <h3 className="text-sm font-medium text-white mb-2">
                 Test Credentials
               </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                API Key: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">test</code>
+              <p className="text-xs text-gray-400">
+                API Key: <code className="bg-gray-600 px-1 rounded">test</code>
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 mt-2">
                 Backend: {API_BASE}
               </p>
             </div>

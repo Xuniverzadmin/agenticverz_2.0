@@ -1,4 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './Button';
@@ -40,6 +41,14 @@ export function Modal({
             }
           )}
         >
+          {/* Hidden description for accessibility when no visible description provided */}
+          {!description && (
+            <VisuallyHidden.Root asChild>
+              <Dialog.Description>
+                {title ? `${title} dialog` : 'Modal dialog'}
+              </Dialog.Description>
+            </VisuallyHidden.Root>
+          )}
           {(title || description) && (
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between">
               <div>
@@ -62,7 +71,8 @@ export function Modal({
             </div>
           )}
 
-          <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
+          {/* Content: only show scroll when content exceeds container */}
+          <div className="px-6 py-4 flex-1 overflow-y-auto max-h-[calc(90vh-120px)]">{children}</div>
 
           {footer && (
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">

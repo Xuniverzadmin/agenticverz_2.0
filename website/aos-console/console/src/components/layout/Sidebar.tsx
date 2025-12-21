@@ -34,8 +34,8 @@ function NavItem({ icon: Icon, label, href, collapsed }: NavItemProps) {
         cn(
           'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
           isActive
-            ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+            ? 'bg-primary-900/30 text-primary-400'
+            : 'text-gray-300 hover:bg-gray-700'
         )
       }
     >
@@ -86,7 +86,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-16 h-[calc(100vh-4rem-2rem)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-200 z-10 flex flex-col',
+        'fixed left-0 top-16 h-[calc(100vh-4rem-2rem)] bg-gray-800 border-r border-gray-700 transition-all duration-200 z-10 flex flex-col',
         collapsed ? 'w-16' : 'w-60'
       )}
     >
@@ -172,7 +172,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
       {/* Collapse Button */}
       <button
         onClick={toggleSidebar}
-        className="absolute -right-3 top-6 w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        className="absolute -right-3 top-6 w-6 h-6 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-700 transition-colors"
       >
         {collapsed ? (
           <ChevronRight size={14} className="text-gray-500" />

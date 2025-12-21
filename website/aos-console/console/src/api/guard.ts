@@ -6,6 +6,28 @@
  */
 
 import { apiClient } from './client';
+import { useAuthStore } from '@/stores/authStore';
+
+// Helper to get tenant_id for guard API calls
+const getTenantId = (): string => {
+  const tenantId = useAuthStore.getState().tenantId;
+  return tenantId || 'tenant_demo'; // Fallback for demo mode
+};
+
+// Safe API wrapper with error logging
+const safeApiCall = async <T>(
+  fn: () => Promise<T>,
+  fallback: T,
+  endpoint: string
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error: any) {
+    console.warn(`[Guard API] ${endpoint} failed:`, error?.response?.status || error?.message);
+    // Re-throw for react-query to handle, but with better context
+    throw error;
+  }
+};
 
 // ============== TYPES ==============
 
@@ -16,6 +38,7 @@ export interface GuardStatus {
   incidents_blocked_24h: number;
   active_guardrails: string[];
   last_incident_time: string | null;
+  mode?: 'live' | 'demo' | 'staging';  // M23: Console mode indicator
 }
 
 export interface TodaySnapshot {
@@ -39,6 +62,7 @@ export interface Incident {
   started_at: string;
   ended_at: string | null;
   duration_seconds: number | null;
+  call_id: string | null;  // First related call for replay
 }
 
 export interface IncidentEvent {
@@ -208,22 +232,30 @@ export interface DemoSeedResponse {
 export const guardApi = {
   // Status
   getStatus: async (): Promise<GuardStatus> => {
-    const response = await apiClient.get('/guard/status');
+    const response = await apiClient.get('/guard/status', {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   getTodaySnapshot: async (): Promise<TodaySnapshot> => {
-    const response = await apiClient.get('/guard/snapshot/today');
+    const response = await apiClient.get('/guard/snapshot/today', {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   // Kill Switch
   activateKillSwitch: async (): Promise<void> => {
-    await apiClient.post('/guard/killswitch/activate');
+    await apiClient.post('/guard/killswitch/activate', null, {
+      params: { tenant_id: getTenantId() }
+    });
   },
 
   deactivateKillSwitch: async (): Promise<void> => {
-    await apiClient.post('/guard/killswitch/deactivate');
+    await apiClient.post('/guard/killswitch/deactivate', null, {
+      params: { tenant_id: getTenantId() }
+    });
   },
 
   // Incidents
@@ -233,46 +265,64 @@ export const guardApi = {
     status?: string;
     severity?: string;
   }): Promise<PaginatedResponse<Incident>> => {
-    const response = await apiClient.get('/guard/incidents', { params });
+    const response = await apiClient.get('/guard/incidents', {
+      params: { ...params, tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   getIncidentDetail: async (incidentId: string): Promise<IncidentDetail> => {
-    const response = await apiClient.get(`/guard/incidents/${incidentId}`);
+    const response = await apiClient.get(`/guard/incidents/${incidentId}`, {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   acknowledgeIncident: async (incidentId: string): Promise<void> => {
-    await apiClient.post(`/guard/incidents/${incidentId}/acknowledge`);
+    await apiClient.post(`/guard/incidents/${incidentId}/acknowledge`, null, {
+      params: { tenant_id: getTenantId() }
+    });
   },
 
   resolveIncident: async (incidentId: string): Promise<void> => {
-    await apiClient.post(`/guard/incidents/${incidentId}/resolve`);
+    await apiClient.post(`/guard/incidents/${incidentId}/resolve`, null, {
+      params: { tenant_id: getTenantId() }
+    });
   },
 
   // Replay
   replayCall: async (callId: string): Promise<ReplayResult> => {
-    const response = await apiClient.post(`/guard/replay/${callId}`);
+    const response = await apiClient.post(`/guard/replay/${callId}`, null, {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   // API Keys
   getApiKeys: async (): Promise<PaginatedResponse<ApiKey>> => {
-    const response = await apiClient.get('/guard/keys');
+    const response = await apiClient.get('/guard/keys', {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   freezeApiKey: async (keyId: string): Promise<void> => {
-    await apiClient.post(`/guard/keys/${keyId}/freeze`);
+    await apiClient.post(`/guard/keys/${keyId}/freeze`, null, {
+      params: { tenant_id: getTenantId() }
+    });
   },
 
   unfreezeApiKey: async (keyId: string): Promise<void> => {
-    await apiClient.post(`/guard/keys/${keyId}/unfreeze`);
+    await apiClient.post(`/guard/keys/${keyId}/unfreeze`, null, {
+      params: { tenant_id: getTenantId() }
+    });
   },
 
   // Settings (read-only for customers)
   getSettings: async (): Promise<TenantSettings> => {
-    const response = await apiClient.get('/guard/settings');
+    const response = await apiClient.get('/guard/settings', {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
@@ -280,19 +330,25 @@ export const guardApi = {
 
   // Search incidents with filters
   searchIncidents: async (request: IncidentSearchRequest): Promise<IncidentSearchResponse> => {
-    const response = await apiClient.post('/guard/incidents/search', request);
+    const response = await apiClient.post('/guard/incidents/search', request, {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   // Get decision timeline for an incident
   getDecisionTimeline: async (incidentId: string): Promise<DecisionTimelineResponse> => {
-    const response = await apiClient.get(`/guard/incidents/${incidentId}/timeline`);
+    const response = await apiClient.get(`/guard/incidents/${incidentId}/timeline`, {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
   // Seed demo incident for 7-minute demo flow
   seedDemoIncident: async (scenario: string = 'contract_autorenew'): Promise<DemoSeedResponse> => {
-    const response = await apiClient.post('/guard/demo/seed-incident', { scenario });
+    const response = await apiClient.post('/guard/demo/seed-incident', { scenario }, {
+      params: { tenant_id: getTenantId() }
+    });
     return response.data;
   },
 
@@ -308,6 +364,7 @@ export const guardApi = {
     }
   ): Promise<Blob> => {
     const params = {
+      tenant_id: getTenantId(),
       include_replay: options?.includeReplay ?? true,
       include_prevention: options?.includePrevention ?? true,
       is_demo: options?.isDemo ?? true,

@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-05
+**Last Updated:** 2025-12-20
 
 ---
 
@@ -116,12 +116,14 @@ See `agentiverz_mn/` for detailed checklists.
 │   ├── python/              # Python SDK (10/10 tests, needs packaging)
 │   └── js/                  # JS SDK (needs types, machine-native methods)
 ├── docs/
-│   ├── memory-pins/         # 33 PINs
+│   ├── memory-pins/         # 112+ PINs (project memory)
+│   ├── test_reports/        # Test reports + REGISTER.md
 │   └── API_WORKFLOW_GUIDE.md
 ├── scripts/
 │   └── ops/
 │       ├── session_start.sh  # Run before each session
-│       └── hygiene_check.sh  # Weekly automated check
+│       ├── hygiene_check.sh  # Weekly automated check
+│       └── memory_trail.py   # Auto-create PINs & test reports
 └── monitoring/
 ```
 
@@ -238,6 +240,157 @@ Run weekly (or via cron):
 4. **Work:** Use relevant checklist
 5. **Update:** Mark checklist items complete
 6. **End:** Update `repo_snapshot.md` if major changes
+
+---
+
+## Memory Trail Automation (MANDATORY)
+
+After completing any significant job, **ALWAYS** use the memory trail workflow.
+
+### ⚠️ CRITICAL: Find First, Update Existing, Create Only for NEW
+
+**DO NOT** create new PINs for work related to existing topics. Instead:
+
+1. **FIND** existing PINs first
+2. **UPDATE** if a related PIN exists
+3. **CREATE** only for genuinely NEW topics
+
+```bash
+# STEP 1: Always search first
+python scripts/ops/memory_trail.py find "ops console"
+python scripts/ops/memory_trail.py find 111
+
+# STEP 2: Update existing PIN (PREFERRED)
+python scripts/ops/memory_trail.py update 111 \
+    --section "Updates" \
+    --content "Added customers panel with sort controls..."
+
+# STEP 3: Only create NEW PIN if no related PIN exists
+python scripts/ops/memory_trail.py pin \
+    --title "Completely New Feature" \
+    --category "Category" \
+    --summary "Description"
+```
+
+### When to Update vs Create
+
+| Situation | Action | Example |
+|-----------|--------|---------|
+| Adding panel to existing console | **UPDATE** existing console PIN | Update PIN-111 |
+| Bug fix in existing feature | **UPDATE** that feature's PIN | Update PIN-XXX |
+| Enhancement to existing feature | **UPDATE** that feature's PIN | Update PIN-XXX |
+| Brand new feature/system | **CREATE** new PIN | Create new |
+| New milestone (M25, M26...) | **CREATE** new PIN | Create new |
+| Test run completed | **CREATE** Test Report | TR-XXX |
+
+### Find Existing PINs
+
+```bash
+# Search by keyword
+python scripts/ops/memory_trail.py find "ops console"
+python scripts/ops/memory_trail.py find "stickiness"
+
+# Search by PIN number
+python scripts/ops/memory_trail.py find 111
+
+# Output shows matching PINs with titles and paths
+```
+
+### Update Existing PIN (PREFERRED)
+
+```bash
+python scripts/ops/memory_trail.py update 111 \
+    --section "Updates" \
+    --content "## 2025-12-20: Added Customers Panel
+
+- Added CustomersPanel component
+- Changed layout to 2x2 grid
+- Wired /ops/customers endpoint"
+
+# Optionally update status
+python scripts/ops/memory_trail.py update 111 \
+    --section "Updates" \
+    --content "..." \
+    --status "ENHANCED"
+```
+
+### Create New PIN (Only for NEW Topics)
+
+```bash
+# Basic usage
+python scripts/ops/memory_trail.py pin \
+    --title "Feature Name" \
+    --category "Category / Subcategory" \
+    --status "COMPLETE" \
+    --summary "Brief description of what was done" \
+    --content "Detailed markdown content"
+
+# With milestone and related PINs
+python scripts/ops/memory_trail.py pin \
+    --title "M24 Feature" \
+    --category "Ops Console / Feature" \
+    --milestone "M24 Phase-2" \
+    --status "COMPLETE" \
+    --summary "Summary here" \
+    --related 110 111 \
+    --commits "abc123" "def456"
+
+# From file (for complex content)
+python scripts/ops/memory_trail.py pin \
+    --title "Big Feature" \
+    --category "Architecture" \
+    --from-file /tmp/pin_content.md
+```
+
+### Create a Test Report
+
+```bash
+python scripts/ops/memory_trail.py report \
+    --title "Test Name" \
+    --type "Integration" \
+    --status "PASS" \
+    --run-id "uuid-here" \
+    --tokens 5000 \
+    --findings "Key findings summary"
+
+# With gaps identified
+python scripts/ops/memory_trail.py report \
+    --title "Adversarial Test" \
+    --type "Adversarial" \
+    --status "GAPS" \
+    --gaps "Issue 1" "Issue 2"
+```
+
+### Check Next Available IDs
+
+```bash
+python scripts/ops/memory_trail.py next
+# Output:
+# 📌 Next PIN number: PIN-113
+# 📋 Next Test Report number: TR-006
+```
+
+### What Gets Updated Automatically
+
+1. **PIN Creation:**
+   - Creates `docs/memory-pins/PIN-XXX-title.md`
+   - Updates `docs/memory-pins/INDEX.md` (Last Updated, Active PINs table, Changelog)
+
+2. **Test Report Creation:**
+   - Creates `docs/test_reports/TR-XXX_TITLE_DATE.md`
+   - Updates `docs/test_reports/REGISTER.md` (Test Report Index, Changelog)
+
+### Categories Reference
+
+| Category | When to Use |
+|----------|-------------|
+| `Ops Console / Feature` | Ops console features |
+| `Frontend / UI` | UI components |
+| `Infrastructure / Automation` | Systemd, cron, schedulers |
+| `Milestone / Completion` | Major milestone completion |
+| `Bug Fix / Feature` | Bug fixes |
+| `Testing / Verification` | Test infrastructure |
+| `Developer Tooling / CI` | Dev tools, CI/CD |
 
 ---
 

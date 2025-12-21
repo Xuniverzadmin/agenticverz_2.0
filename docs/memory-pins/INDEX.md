@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-21 (PIN-100 M23 AI Incident Console - Production Ready - Updates)
+**Last Updated:** 2025-12-21 (PIN-117 Evidence Report Enhancements & ID Type Safety)
 
 ---
 
@@ -135,6 +135,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-111](PIN-111-founder-ops-console-ui.md) | **Founder Ops Console UI** | Frontend / Ops Console / M24 | **✅ COMPLETE** | 2025-12-20 |
 | [PIN-112](PIN-112-compute-stickiness-scheduler.md) | **Compute Stickiness Scheduler** | Ops Console / Automation | **✅ COMPLETE** | 2025-12-20 |
 | [PIN-113](PIN-113-memory-trail-automation-system.md) | **Memory Trail Automation System** | Developer Tooling / Automation | **✅ COMPLETE** | 2025-12-20 |
+| [PIN-114](PIN-114-m23-guard-console-health-prevention.md) | **M23 Guard Console - Health Detection & Prevention** | Frontend / Reliability | **✅ COMPLETE** | 2025-12-21 |
+| [PIN-115](PIN-115-guard-console-8-phase-implementation.md) | **Guard Console 8-Phase Implementation & Health Scripts** | Frontend / Console | **✅ COMPLETE** | 2025-12-21 |
+| [PIN-116](PIN-116-guard-console-latency-optimization.md) | **Guard Console Latency Optimization** | Performance / Backend | **✅ COMPLETE** | 2025-12-21 |
+| [PIN-117](PIN-117-evidence-report-enhancements.md) | **Evidence Report Enhancements & ID Type Safety** | M23 / Prevention / PDF Export | **✅ COMPLETE** | 2025-12-21 |
 
 ---
 
@@ -900,6 +904,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-21 | **PIN-117 Evidence Report Enhancements & ID Type Safety** - (1) Added 1-page Incident Snapshot at front of PDF with executive summary, (2) Added Severity Definition Box (HIGH/MEDIUM/LOW), (3) Fixed "Unknown Customer" → "Demo Tenant" display, (4) Softened legal attestation language, (5) Added severity/status fields to IncidentEvidence dataclass. **Replay ID Fix:** Fixed 404 error where `onReplay(incident.id)` passed `inc_` prefix but endpoint expected `call_` prefix - added `call_id` field to backend/frontend. **Prevention:** Created `lint_frontend_api_calls.py` linter to catch ID type mismatches, added to CI. |
+| 2025-12-21 | **PIN-116 Guard Console Latency Optimization** - Implemented Redis caching layer for Guard Console API endpoints to reduce latency from 4-7 seconds to ~300ms (94% improvement). Root cause: cross-region database queries (EU server → Singapore Neon DB). Solution: Created `backend/app/utils/guard_cache.py` with 5s TTL for status, 10s for snapshot. Added cache invalidation on kill switch mutations. Combined snapshot queries from 5 to 3. Added `staleTime` to frontend React Query hooks (`GuardDashboard.tsx`, `GuardLayout.tsx`). Cold cache: 1.8-2.2s, warm cache: 0.28-0.33s. |
+| 2025-12-21 | **PIN-115 Guard Console 8-Phase Implementation** - Complete customer console with unified navigation. NEW components: `GuardLayout.tsx` (sidebar), `LiveActivityPage.tsx` (real-time streaming), `KillSwitchPage.tsx` (blast radius), `LogsPage.tsx` (history), `GuardSettingsPage.tsx` (configuration). NEW scripts: `aos_console_health_test.sh` (36 tests, 100% pass), updated `guard_health_test.sh` (17 tests). Build: 98.83 KB gzipped. Navigation: Overview → Live Activity → Incidents → Kill Switch → Logs → Settings. All 3 consoles accessible: `/console`, `/console/guard`, `/console/ops`. |
+| 2025-12-21 | **PIN-114 M23 Guard Console Health Prevention** - Comprehensive health detection & prevention system for Guard Console. Components: (1) Circuit Breaker (`/lib/healthCheck.ts`) - 3 failure threshold, 30s recovery, half-open state. (2) Health Monitor - periodic checks every 30s, response time tracking, critical vs non-critical endpoints. (3) Error Boundary (`ErrorBoundary.tsx`) - React error boundary to catch rendering errors. (4) Health Indicator (`HealthIndicator.tsx`) - visual status badge with expandable details. (5) Fallback Data - default values when API fails, console remains usable. Test script: `scripts/ops/guard_health_test.sh` (8 test sections, all passing). Production: https://agenticverz.com/console/guard |
 | 2025-12-21 | **PIN-100 M23 AI Incident Console - Production Ready** - Updated: Updates |
 | 2025-12-20 | **PIN-111 Dark Mode Only Console** - Converted entire AOS Console to dark mode only. Changes: (1) Added `class="dark"` to HTML element, (2) Updated Tailwind to class-based dark mode strategy, (3) Rewrote index.css with dark-only CSS variables and dark scrollbars, (4) Removed theme toggle from Header.tsx, (5) Removed all `dark:` prefixed Tailwind classes from Header, Sidebar, StatusBar, AppLayout, LoginPage. Result: Zero white flash, consistent dark theme, smaller bundle size. |
 | 2025-12-20 | **PIN-111 Founder Ops Console UI** - Updated: Updates |

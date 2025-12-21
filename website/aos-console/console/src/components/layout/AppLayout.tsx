@@ -9,7 +9,7 @@ export function AppLayout() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-screen bg-gray-900">
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} />

@@ -904,6 +904,40 @@ website/aos-console/console/src/
 
 ---
 
+
+---
+
+## Updates
+
+### 2025-12-20: Redis Caching for Ops Endpoints
+
+**Problem:** High latency on ops endpoints (3-26 seconds) due to Neon DB network latency (~2s per query).
+
+**Solution:** Added Redis caching using Upstash Redis for all ops endpoints.
+
+**Changes to `backend/app/api/ops.py`:**
+- Added `cache_get()` and `cache_set()` helper functions (lines 85-105)
+- Graceful degradation if Redis unavailable
+- Endpoints cached:
+  - `/ops/pulse` - 12s TTL
+  - `/ops/customers` - 12s TTL (keyed by risk_level & limit)
+  - `/ops/customers/at-risk` - 12s TTL (keyed by limit)
+  - `/ops/infra` - 30s TTL (infra metrics change slowly)
+
+**Performance Results:**
+
+| Endpoint | Before (cache miss) | After (cache hit) | Improvement |
+|----------|---------------------|-------------------|-------------|
+| `/ops/pulse` | 3.4s | 0.18s | **18x faster** |
+| `/ops/infra` | 3.2s | 0.14s | **21x faster** |
+| `/ops/customers` | 1.3s | 0.15s | **8x faster** |
+| `/ops/customers/at-risk` | 1.6s | 0.15s | **10x faster** |
+
+**Cache Strategy:**
+- Cache TTL (12s) < Frontend polling (15s) = Most requests hit cache
+- Uses Upstash Redis (production) for durability
+- Falls back gracefully if Redis unavailable
+
 ## Related PINs
 
 | PIN | Relationship |

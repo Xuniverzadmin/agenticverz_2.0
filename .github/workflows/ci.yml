@@ -296,6 +296,81 @@ jobs:
 
           echo "✅ All baseline secrets are verified false positives"
 
+  # UI Hygiene Check - blocks merge on stale buttons, orphaned pages, silent mutations
+  ui-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install console dependencies
+        run: |
+          cd website/aos-console/console
+          npm ci
+
+      - name: Run UI Hygiene Check (CI mode)
+        id: hygiene
+        run: |
+          cd website/aos-console/console
+          echo "🔍 Running UI Hygiene Check v2.0 (CI mode)"
+          echo ""
+          echo "CI mode enforces:"
+          echo "  - ORPHANED_PAGE → ERROR (dead code blocks build)"
+          echo "  - Warning budget cap (regression detection)"
+          echo ""
+
+          # Run hygiene check in CI mode
+          node scripts/ui-hygiene-check.cjs --ci 2>&1 | tee hygiene-output.txt
+
+          # Capture exit code
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          # Extract counts for summary
+          ERRORS=$(grep -oP 'Found \K\d+(?= errors)' hygiene-output.txt || echo "0")
+          WARNINGS=$(grep -oP 'Found \d+ errors, \K\d+(?= warnings)' hygiene-output.txt || echo "0")
+
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+
+          exit $EXIT_CODE
+
+      - name: Generate hygiene summary
+        if: always()
+        run: |
+          echo "## 🔍 UI Hygiene Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          ERRORS="${{ steps.hygiene.outputs.errors }}"
+          WARNINGS="${{ steps.hygiene.outputs.warnings }}"
+
+          if [ "$ERRORS" == "0" ]; then
+            echo "✅ **No blocking errors**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **$ERRORS blocking errors found**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Errors | $ERRORS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Warnings | $WARNINGS |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Budget: 35 warnings max" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload hygiene report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-hygiene-report
+          path: |
+            website/aos-console/console/hygiene-report.json
+            website/aos-console/console/hygiene-output.txt
+          if-no-files-found: ignore
+
   # Fast unit tests (no external deps)
   unit-tests:
     runs-on: ubuntu-latest

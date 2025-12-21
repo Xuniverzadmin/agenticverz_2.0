@@ -1574,6 +1574,37 @@ check_api_wiring() {
     return 0
 }
 
+check_frontend_api_calls() {
+    header "Frontend API ID Type Check"
+
+    local LINT_SCRIPT="$REPO_ROOT/scripts/ops/lint_frontend_api_calls.py"
+    local CONSOLE_SRC="$REPO_ROOT/website/aos-console/console/src"
+
+    if [[ ! -f "$LINT_SCRIPT" ]]; then
+        log_info "Frontend API linter not found (optional)"
+        return 0
+    fi
+
+    if [[ ! -d "$CONSOLE_SRC" ]]; then
+        log_info "Console source not found (optional)"
+        return 0
+    fi
+
+    if $QUICK_MODE; then
+        log_info "Skipping (use full mode)"
+        return 0
+    fi
+
+    # Run the linter (checks for ID type mismatches: incident.id vs call_id)
+    if python3 "$LINT_SCRIPT" "$CONSOLE_SRC" 2>/dev/null; then
+        log_ok "No frontend API ID type issues"
+    else
+        log_fail "Frontend API ID type mismatch (incident.id used where call_id expected)"
+        ((FAIL_COUNT++))
+    fi
+    return 0
+}
+
 # ============================================================================
 # DASHBOARD & MATRIX
 # ============================================================================
@@ -1888,6 +1919,7 @@ main() {
     check_alembic_health
     check_sqlmodel_patterns
     check_api_wiring
+    check_frontend_api_calls
     check_secrets_baseline
 
     # MISSING #1-3: Test enforcement (optional flags)

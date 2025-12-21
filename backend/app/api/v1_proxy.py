@@ -22,33 +22,30 @@ HTTP Status Codes:
 - 503: Service Unavailable (upstream error)
 """
 
-import asyncio
 import hashlib
 import json
 import logging
 import os
 import time
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel, Field
-from sqlalchemy import select, and_
+from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy import and_, select
 from sqlmodel import Session
 
 from app.db import get_session
 from app.models.killswitch import (
-    ProxyCall,
-    KillSwitchState,
     DefaultGuardrail,
     Incident,
-    IncidentEvent,
+    KillSwitchState,
+    ProxyCall,
 )
-from app.models.tenant import Tenant, APIKey
-
+from app.models.tenant import APIKey, Tenant
 
 logger = logging.getLogger("nova.proxy")
 
@@ -87,6 +84,7 @@ DEFAULT_MODEL = os.getenv("PROXY_DEFAULT_MODEL", "gpt-4o-mini")
 # =============================================================================
 # Request/Response Schemas (OpenAI-compatible)
 # =============================================================================
+
 
 class ChatMessage(BaseModel):
     role: str
@@ -159,6 +157,7 @@ class ErrorResponse(BaseModel):
 # Auth Dependency
 # =============================================================================
 
+
 async def get_auth_context(
     authorization: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
@@ -182,7 +181,9 @@ async def get_auth_context(
     if not api_key:
         raise HTTPException(
             status_code=401,
-            detail={"error": {"message": "Missing API key", "type": "invalid_request_error", "code": "missing_api_key"}}
+            detail={
+                "error": {"message": "Missing API key", "type": "invalid_request_error", "code": "missing_api_key"}
+            },
         )
 
     # Look up API key
@@ -195,13 +196,21 @@ async def get_auth_context(
     if not db_key:
         raise HTTPException(
             status_code=401,
-            detail={"error": {"message": "Invalid API key", "type": "invalid_request_error", "code": "invalid_api_key"}}
+            detail={
+                "error": {"message": "Invalid API key", "type": "invalid_request_error", "code": "invalid_api_key"}
+            },
         )
 
     if not db_key.is_valid():
         raise HTTPException(
             status_code=401,
-            detail={"error": {"message": f"API key is {db_key.status}", "type": "invalid_request_error", "code": "invalid_api_key"}}
+            detail={
+                "error": {
+                    "message": f"API key is {db_key.status}",
+                    "type": "invalid_request_error",
+                    "code": "invalid_api_key",
+                }
+            },
         )
 
     # Get tenant
@@ -212,7 +221,9 @@ async def get_auth_context(
     if not tenant:
         raise HTTPException(
             status_code=401,
-            detail={"error": {"message": "Tenant not found", "type": "invalid_request_error", "code": "invalid_tenant"}}
+            detail={
+                "error": {"message": "Tenant not found", "type": "invalid_request_error", "code": "invalid_tenant"}
+            },
         )
 
     # NOTE: Do NOT record usage here.
@@ -232,6 +243,7 @@ async def get_auth_context(
 # =============================================================================
 # Usage Recording (AFTER KillSwitch)
 # =============================================================================
+
 
 def record_usage_after_killswitch(auth: Dict[str, Any], session: Session) -> None:
     """
@@ -253,6 +265,7 @@ def record_usage_after_killswitch(auth: Dict[str, Any], session: Session) -> Non
 # KillSwitch Check
 # =============================================================================
 
+
 async def check_killswitch(
     tenant_id: str,
     api_key_id: str,
@@ -267,7 +280,7 @@ async def check_killswitch(
         and_(
             KillSwitchState.entity_type == "tenant",
             KillSwitchState.entity_id == tenant_id,
-            KillSwitchState.is_frozen == True
+            KillSwitchState.is_frozen == True,
         )
     )
     row = session.exec(stmt).first()
@@ -291,7 +304,7 @@ async def check_killswitch(
         and_(
             KillSwitchState.entity_type == "key",
             KillSwitchState.entity_id == api_key_id,
-            KillSwitchState.is_frozen == True
+            KillSwitchState.is_frozen == True,
         )
     )
     row = session.exec(stmt).first()
@@ -317,6 +330,7 @@ async def check_killswitch(
 # Guardrail Evaluation
 # =============================================================================
 
+
 async def evaluate_guardrails(
     request_body: Dict[str, Any],
     session: Session,
@@ -326,9 +340,7 @@ async def evaluate_guardrails(
     Returns (passed, decisions) where passed=False means blocked.
     """
     # Get enabled guardrails ordered by priority
-    stmt = select(DefaultGuardrail).where(
-        DefaultGuardrail.is_enabled == True
-    ).order_by(DefaultGuardrail.priority)
+    stmt = select(DefaultGuardrail).where(DefaultGuardrail.is_enabled == True).order_by(DefaultGuardrail.priority)
     result = session.exec(stmt)
     guardrails = result.all()
 
@@ -351,7 +363,9 @@ async def evaluate_guardrails(
             input_text = context["text"]
             input_tokens = len(input_text) // 4
             pricing = COST_MODELS.get(model, COST_MODELS[DEFAULT_MODEL])
-            context["cost_cents"] = (input_tokens / 1_000_000) * pricing["input"] + (max_tokens / 1_000_000) * pricing["output"]
+            context["cost_cents"] = (input_tokens / 1_000_000) * pricing["input"] + (max_tokens / 1_000_000) * pricing[
+                "output"
+            ]
 
         passed, reason = guardrail.evaluate(context)
 
@@ -374,6 +388,7 @@ async def evaluate_guardrails(
 # Cost Calculation
 # =============================================================================
 
+
 def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> Decimal:
     """Calculate cost in cents."""
     pricing = COST_MODELS.get(model, COST_MODELS[DEFAULT_MODEL])
@@ -391,21 +406,26 @@ def estimate_tokens(text: str) -> int:
 # OpenAI Client
 # =============================================================================
 
+
 def get_openai_client():
     """Get OpenAI client (lazy loaded)."""
     try:
         from openai import OpenAI
+
         return OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     except ImportError:
         raise HTTPException(
             status_code=503,
-            detail={"error": {"message": "OpenAI SDK not available", "type": "service_error", "code": "sdk_unavailable"}}
+            detail={
+                "error": {"message": "OpenAI SDK not available", "type": "service_error", "code": "sdk_unavailable"}
+            },
         )
 
 
 # =============================================================================
 # Call Logging
 # =============================================================================
+
 
 async def log_proxy_call(
     session: Session,
@@ -462,6 +482,7 @@ async def log_proxy_call(
 # =============================================================================
 # Chat Completions Endpoint
 # =============================================================================
+
 
 @router.post("/chat/completions", response_model=ChatCompletionResponse)
 async def chat_completions(
@@ -579,8 +600,14 @@ async def chat_completions(
         if request.stream:
             # Streaming response
             return await stream_chat_completion(
-                client, openai_request, request_body, auth, session, start_time, decisions,
-                user_id=request.user  # M23: Track end-user
+                client,
+                openai_request,
+                request_body,
+                auth,
+                session,
+                start_time,
+                decisions,
+                user_id=request.user,  # M23: Track end-user
             )
         else:
             response = client.chat.completions.create(**openai_request)
@@ -600,7 +627,7 @@ async def chat_completions(
                 ChatCompletionChoice(
                     index=i,
                     message=ChatMessage(role=c.message.role, content=c.message.content or ""),
-                    finish_reason=c.finish_reason or "stop"
+                    finish_reason=c.finish_reason or "stop",
                 )
                 for i, c in enumerate(response.choices)
             ],
@@ -608,7 +635,7 @@ async def chat_completions(
                 prompt_tokens=input_tokens,
                 completion_tokens=output_tokens,
                 total_tokens=input_tokens + output_tokens,
-            )
+            ),
         )
 
         # Log successful call
@@ -706,7 +733,7 @@ async def stream_chat_completion(
                             "finish_reason": c.finish_reason,
                         }
                         for c in chunk.choices
-                    ]
+                    ],
                 }
 
                 # Track content
@@ -724,8 +751,10 @@ async def stream_chat_completion(
             cost_cents = calculate_cost(openai_request["model"], input_tokens, output_tokens)
 
             # Need a new session for the commit since we're in a generator
-            from app.db import engine
             from sqlmodel import Session as SQLSession
+
+            from app.db import engine
+
             with SQLSession(engine) as new_session:
                 await log_proxy_call(
                     session=new_session,
@@ -759,13 +788,14 @@ async def stream_chat_completion(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
-        }
+        },
     )
 
 
 # =============================================================================
 # Embeddings Endpoint
 # =============================================================================
+
 
 @router.post("/embeddings", response_model=EmbeddingResponse)
 async def embeddings(
@@ -847,7 +877,7 @@ async def embeddings(
                 prompt_tokens=input_tokens,
                 completion_tokens=0,
                 total_tokens=input_tokens,
-            )
+            ),
         )
 
         await log_proxy_call(
@@ -910,6 +940,7 @@ async def embeddings(
 # Status Endpoint (Buyer Signal)
 # =============================================================================
 
+
 @router.get("/status")
 async def proxy_status(
     authorization: Optional[str] = Header(None),
@@ -929,7 +960,7 @@ async def proxy_status(
     When authenticated, shows tenant-specific protection metrics.
     When unauthenticated, shows global system health.
     """
-    from sqlalchemy import func, text
+    from sqlalchemy import func
 
     now = datetime.now(timezone.utc)
 
@@ -959,7 +990,7 @@ async def proxy_status(
                     and_(
                         KillSwitchState.entity_type == "tenant",
                         KillSwitchState.entity_id == tenant_id,
-                        KillSwitchState.is_frozen == True
+                        KillSwitchState.is_frozen == True,
                     )
                 )
             ).first()
@@ -969,7 +1000,7 @@ async def proxy_status(
                     and_(
                         KillSwitchState.entity_type == "key",
                         KillSwitchState.entity_id == api_key_id,
-                        KillSwitchState.is_frozen == True
+                        KillSwitchState.is_frozen == True,
                     )
                 )
             ).first()
@@ -978,8 +1009,12 @@ async def proxy_status(
             freeze_status = {
                 "tenant_frozen": tenant_freeze is not None,
                 "key_frozen": key_freeze is not None,
-                "frozen_at": (tenant_freeze.frozen_at if tenant_freeze else (key_freeze.frozen_at if key_freeze else None)),
-                "freeze_reason": (tenant_freeze.freeze_reason if tenant_freeze else (key_freeze.freeze_reason if key_freeze else None)),
+                "frozen_at": (
+                    tenant_freeze.frozen_at if tenant_freeze else (key_freeze.frozen_at if key_freeze else None)
+                ),
+                "freeze_reason": (
+                    tenant_freeze.freeze_reason if tenant_freeze else (key_freeze.freeze_reason if key_freeze else None)
+                ),
             }
             if freeze_status["tenant_frozen"] or freeze_status["key_frozen"]:
                 freeze_status["message"] = "⚠️ TRAFFIC STOPPED - Your API access is currently frozen"
@@ -993,10 +1028,12 @@ async def proxy_status(
             base_filter.append(ProxyCall.tenant_id == tenant_id)
 
         # Get latency p95 from recent calls
-        latency_query = select(ProxyCall.latency_ms).where(
-            *base_filter,
-            ProxyCall.created_at >= now - timedelta(hours=1)
-        ).order_by(ProxyCall.created_at.desc()).limit(1000)
+        latency_query = (
+            select(ProxyCall.latency_ms)
+            .where(*base_filter, ProxyCall.created_at >= now - timedelta(hours=1))
+            .order_by(ProxyCall.created_at.desc())
+            .limit(1000)
+        )
 
         latencies = [row[0] for row in session.exec(latency_query).all() if row[0]]
         if latencies:
@@ -1007,9 +1044,7 @@ async def proxy_status(
 
         # Count blocked calls (incidents prevented)
         blocked_query = select(func.count(ProxyCall.id)).where(
-            *base_filter,
-            ProxyCall.was_blocked == True,
-            ProxyCall.created_at >= now - timedelta(hours=24)
+            *base_filter, ProxyCall.was_blocked == True, ProxyCall.created_at >= now - timedelta(hours=24)
         )
         result = session.exec(blocked_query).one()
         enforcement_stats["incidents_blocked"] = result[0] if result else 0
@@ -1036,7 +1071,9 @@ async def proxy_status(
 
     # Build protection summary
     protection = {
-        "status": "🛡️ PROTECTING" if not (freeze_status.get("tenant_frozen") or freeze_status.get("key_frozen")) else "⛔ FROZEN",
+        "status": "🛡️ PROTECTING"
+        if not (freeze_status.get("tenant_frozen") or freeze_status.get("key_frozen"))
+        else "⛔ FROZEN",
         "enforcement_latency_p95_ms": enforcement_stats["p95_ms"],
         "incidents_blocked_24h": enforcement_stats["incidents_blocked"],
         "calls_monitored_1h": enforcement_stats["calls_last_hour"],
