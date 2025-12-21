@@ -12,9 +12,11 @@
  * - No charts, no knobs
  * - Big, obvious kill switch
  * - Today's snapshot only
+ *
+ * M23: Added Mode Badge to indicate DEMO vs LIVE mode
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -22,6 +24,41 @@ import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { Spinner } from '../../components/common/Spinner';
 import { guardApi } from '../../api/guard';
+
+// M23: Mode Badge - Indicates whether console is in DEMO or LIVE mode
+type ConsoleMode = 'live' | 'demo' | 'staging';
+
+interface ModeConfig {
+  label: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  description: string;
+}
+
+const MODE_CONFIG: Record<ConsoleMode, ModeConfig> = {
+  live: {
+    label: 'LIVE',
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/20',
+    borderColor: 'border-green-500/50',
+    description: 'Production traffic - Real data',
+  },
+  demo: {
+    label: 'DEMO',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-500/20',
+    borderColor: 'border-amber-500/50',
+    description: 'Demo mode - Simulated data',
+  },
+  staging: {
+    label: 'STAGING',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/20',
+    borderColor: 'border-blue-500/50',
+    description: 'Staging environment',
+  },
+};
 
 // Status types
 type ProtectionStatus = 'protected' | 'at_risk' | 'stopped';
@@ -69,6 +106,27 @@ export function GuardOverview() {
     refetchInterval: 30000, // Poll every 30 seconds
   });
 
+  // M23: Determine console mode from API response or environment
+  const consoleMode = useMemo((): ConsoleMode => {
+    // Check if API returns mode indicator
+    if (status?.mode) return status.mode as ConsoleMode;
+
+    // Check for demo tenant ID patterns
+    const apiKey = localStorage.getItem('guard-api-key') || '';
+    const isDemo = apiKey.startsWith('demo_') ||
+                   apiKey.includes('test') ||
+                   window.location.hostname === 'localhost';
+
+    // Check for staging environment
+    const isStaging = window.location.hostname.includes('staging');
+
+    if (isStaging) return 'staging';
+    if (isDemo) return 'demo';
+    return 'live';
+  }, [status]);
+
+  const modeConfig = MODE_CONFIG[consoleMode];
+
   // Kill switch mutation
   const killMutation = useMutation({
     mutationFn: guardApi.activateKillSwitch,
@@ -108,13 +166,27 @@ export function GuardOverview() {
 
   return (
     <div className="space-y-8 p-6 max-w-4xl mx-auto">
+      {/* M23: Mode Badge - Top right corner indicator */}
+      <div className="flex justify-end">
+        <div
+          className={`
+            inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium
+            ${modeConfig.bgColor} ${modeConfig.borderColor}
+          `}
+          title={modeConfig.description}
+        >
+          <span className={`w-2 h-2 rounded-full ${modeConfig.color} bg-current animate-pulse`} />
+          <span className={modeConfig.color}>{modeConfig.label}</span>
+        </div>
+      </div>
+
       {/* Status Badge - THE MOST IMPORTANT ELEMENT */}
       <div className="text-center">
         <div className={`
           inline-flex items-center gap-3 px-8 py-4 rounded-full text-2xl font-bold
-          ${statusInfo.color === 'green' ? 'bg-green-100 text-green-800' : ''}
-          ${statusInfo.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : ''}
-          ${statusInfo.color === 'red' ? 'bg-red-100 text-red-800' : ''}
+          ${statusInfo.color === 'green' ? 'bg-green-900/50 text-green-300 border border-green-600' : ''}
+          ${statusInfo.color === 'yellow' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-600' : ''}
+          ${statusInfo.color === 'red' ? 'bg-red-900/50 text-red-300 border border-red-600' : ''}
         `}>
           <span className={`
             w-4 h-4 rounded-full animate-pulse
@@ -124,17 +196,17 @@ export function GuardOverview() {
           `} />
           {statusInfo.label}
         </div>
-        <p className="mt-2 text-gray-600">{statusInfo.description}</p>
+        <p className="mt-2 text-gray-400">{statusInfo.description}</p>
       </div>
 
       {/* Kill Switch - Big, Obvious, Immediate */}
-      <Card className="text-center py-8">
+      <Card className="text-center py-8 bg-slate-800/50 border-slate-700">
         {protectionStatus === 'stopped' ? (
           <>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-xl font-semibold text-slate-100 mb-4">
               Traffic is Currently Stopped
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-slate-400 mb-6">
               All API traffic is being blocked. Click below to resume.
             </p>
             <Button
@@ -148,10 +220,10 @@ export function GuardOverview() {
           </>
         ) : (
           <>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-xl font-semibold text-slate-100 mb-4">
               Emergency Stop
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-slate-400 mb-6">
               Instantly stop all API traffic. This will block all requests.
             </p>
             <Button
@@ -192,16 +264,16 @@ export function GuardOverview() {
       </div>
 
       {/* Active Guardrails Summary */}
-      <Card>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Active Protection</h3>
+      <Card className="bg-slate-800/50 border-slate-700">
+        <h3 className="text-lg font-medium text-slate-100 mb-4">Active Protection</h3>
         <div className="space-y-2">
           {status?.active_guardrails?.map((guardrail: string, index: number) => (
-            <div key={index} className="flex items-center gap-2 text-sm text-gray-700">
+            <div key={index} className="flex items-center gap-2 text-sm text-slate-300">
               <span className="w-2 h-2 bg-green-500 rounded-full" />
               {guardrail}
             </div>
           )) ?? (
-            <p className="text-gray-500">Default guardrails active</p>
+            <p className="text-slate-400">Default guardrails active</p>
           )}
         </div>
       </Card>
@@ -282,9 +354,9 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon, highlight }: StatCardProps) {
   return (
-    <Card className={`text-center p-4 ${highlight ? 'ring-2 ring-green-500' : ''}`}>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className={`text-2xl font-bold mt-1 ${highlight ? 'text-green-600' : 'text-gray-900'}`}>
+    <Card className={`text-center p-4 bg-slate-800/50 border-slate-700 ${highlight ? 'ring-2 ring-green-500' : ''}`}>
+      <p className="text-sm text-slate-400">{label}</p>
+      <p className={`text-2xl font-bold mt-1 ${highlight ? 'text-green-400' : 'text-slate-100'}`}>
         {value}
       </p>
     </Card>

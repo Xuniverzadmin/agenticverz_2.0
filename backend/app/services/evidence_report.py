@@ -39,6 +39,23 @@ from reportlab.platypus import (
 
 
 @dataclass
+class CertificateEvidence:
+    """M23: Certificate data for cryptographic proof."""
+
+    certificate_id: str
+    certificate_type: str
+    issued_at: str
+    valid_until: str
+    validation_passed: bool
+    signature: str
+    pem_format: str
+    determinism_level: str
+    match_achieved: str
+    policies_passed: int
+    policies_total: int
+
+
+@dataclass
 class IncidentEvidence:
     """Evidence data for an incident."""
 
@@ -58,6 +75,7 @@ class IncidentEvidence:
     prevention_result: Optional[Dict[str, Any]]
     root_cause: str
     impact_assessment: List[str]
+    certificate: Optional[CertificateEvidence] = None  # M23: Cryptographic proof
 
 
 class EvidenceReportGenerator:
@@ -245,6 +263,10 @@ class EvidenceReportGenerator:
 
         # Section 5: Replay Verification
         story.extend(self._build_replay_verification(evidence))
+
+        # Section 5.5: M23 Cryptographic Certificate (if available)
+        if evidence.certificate:
+            story.extend(self._build_certificate_section(evidence))
 
         # Section 6: Prevention Proof
         story.extend(self._build_prevention_proof(evidence))
@@ -675,6 +697,105 @@ class EvidenceReportGenerator:
 
         return story
 
+    def _build_certificate_section(self, evidence: IncidentEvidence) -> List:
+        """M23: Build cryptographic certificate section - HMAC-signed proof."""
+        story = []
+
+        story.append(Spacer(1, 0.3 * inch))
+        story.append(Paragraph("Section 5.5 — Cryptographic Certificate (M23)", self.styles["SectionHeader"]))
+
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e5e7eb")))
+        story.append(Spacer(1, 0.2 * inch))
+
+        story.append(
+            Paragraph(
+                "This certificate provides HMAC-SHA256 signed proof of the replay validation. "
+                "It can be independently verified using the same secret key.",
+                self.styles["BodyText"],
+            )
+        )
+        story.append(Spacer(1, 0.15 * inch))
+
+        cert = evidence.certificate
+
+        # Certificate Metadata
+        story.append(Paragraph("Certificate Metadata", self.styles["SubsectionHeader"]))
+
+        cert_data = [
+            ["Certificate ID", cert.certificate_id],
+            ["Type", cert.certificate_type],
+            ["Issued At", cert.issued_at],
+            ["Valid Until", cert.valid_until],
+            ["Validation Passed", "✅ Yes" if cert.validation_passed else "❌ No"],
+        ]
+
+        cert_table = Table(cert_data, colWidths=[2 * inch, 4 * inch])
+        cert_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#6b7280")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ]
+            )
+        )
+        story.append(cert_table)
+        story.append(Spacer(1, 0.15 * inch))
+
+        # Validation Details
+        story.append(Paragraph("Validation Details", self.styles["SubsectionHeader"]))
+
+        validation_data = [
+            ["Determinism Level", cert.determinism_level],
+            ["Match Achieved", cert.match_achieved],
+            ["Policies Passed", f"{cert.policies_passed}/{cert.policies_total}"],
+        ]
+
+        validation_table = Table(validation_data, colWidths=[2 * inch, 4 * inch])
+        validation_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#6b7280")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ]
+            )
+        )
+        story.append(validation_table)
+        story.append(Spacer(1, 0.15 * inch))
+
+        # HMAC Signature
+        story.append(Paragraph("HMAC-SHA256 Signature", self.styles["SubsectionHeader"]))
+        story.append(
+            Paragraph(
+                f"Signature: {cert.signature[:32]}...{cert.signature[-8:]}",
+                self.styles["CodeText"],
+            )
+        )
+        story.append(Spacer(1, 0.15 * inch))
+
+        # PEM-like Format
+        story.append(Paragraph("Certificate (PEM-like Format)", self.styles["SubsectionHeader"]))
+        story.append(Paragraph(cert.pem_format, self.styles["CodeText"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+        # Verification Instructions
+        story.append(Paragraph("Verification Instructions", self.styles["SubsectionHeader"]))
+        story.append(
+            Paragraph(
+                "To verify this certificate, recompute the HMAC-SHA256 signature using the same "
+                "secret key (CERTIFICATE_SECRET or GOLDEN_SECRET) and compare with the signature above. "
+                "The payload is signed as canonical JSON with sorted keys.",
+                self.styles["BodyText"],
+            )
+        )
+
+        return story
+
     def _build_prevention_proof(self, evidence: IncidentEvidence) -> List:
         """Build counterfactual prevention proof."""
         story = []
@@ -825,6 +946,7 @@ def generate_evidence_report(
     prevention_result: Optional[Dict[str, Any]] = None,
     root_cause: str = "Policy enforcement gap: system asserted fact when required data was NULL.",
     impact_assessment: Optional[List[str]] = None,
+    certificate: Optional[Dict[str, Any]] = None,  # M23: Cryptographic certificate
     is_demo: bool = True,
 ) -> bytes:
     """
@@ -839,6 +961,23 @@ def generate_evidence_report(
             "Potential contractual misrepresentation",
             "Elevated legal risk",
         ]
+
+    # M23: Convert certificate dict to CertificateEvidence if provided
+    cert_evidence = None
+    if certificate:
+        cert_evidence = CertificateEvidence(
+            certificate_id=certificate.get("certificate_id", ""),
+            certificate_type=certificate.get("certificate_type", "replay_proof"),
+            issued_at=certificate.get("issued_at", ""),
+            valid_until=certificate.get("valid_until", ""),
+            validation_passed=certificate.get("validation_passed", False),
+            signature=certificate.get("signature", ""),
+            pem_format=certificate.get("pem_format", ""),
+            determinism_level=certificate.get("determinism_level", "logical"),
+            match_achieved=certificate.get("match_achieved", "logical"),
+            policies_passed=certificate.get("policies_passed", 0),
+            policies_total=certificate.get("policies_total", 0),
+        )
 
     evidence = IncidentEvidence(
         incident_id=incident_id,
@@ -857,6 +996,7 @@ def generate_evidence_report(
         prevention_result=prevention_result,
         root_cause=root_cause,
         impact_assessment=impact_assessment,
+        certificate=cert_evidence,  # M23: Cryptographic certificate
     )
 
     generator = EvidenceReportGenerator(is_demo=is_demo)

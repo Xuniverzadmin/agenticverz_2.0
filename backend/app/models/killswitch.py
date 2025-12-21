@@ -152,6 +152,9 @@ class ProxyCall(SQLModel, table=True):
     tenant_id: str = Field(max_length=100, index=True)
     api_key_id: Optional[str] = Field(default=None, max_length=100, index=True)
 
+    # M23 User Tracking: OpenAI standard `user` field for end-user identification
+    user_id: Optional[str] = Field(default=None, max_length=255, index=True)
+
     # Request
     endpoint: str = Field(max_length=100)  # '/v1/chat/completions', '/v1/embeddings'
     model: str = Field(max_length=100)

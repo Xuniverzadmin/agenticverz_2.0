@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-20 (PIN-108 Developer Tooling - Preflight/Postflight)
+**Last Updated:** 2025-12-21 (PIN-100 M23 AI Incident Console - Production Ready - Updates)
 
 ---
 
@@ -131,6 +131,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-107](PIN-107-m24-phase2-friction-intel.md) | **M24 Phase-2 - Friction Intelligence & Founder Actions** | Ops Console / Founder Intelligence | **✅ ACTIVE** | 2025-12-20 |
 | [PIN-108](PIN-108-developer-tooling-preflight-postflight.md) | **Developer Tooling - Preflight, Postflight & Dev Sync** | Developer Experience / CI / Code Quality | **✅ ACTIVE** | 2025-12-20 |
 | [PIN-109](PIN-109-preflight-postflight-v2.md) | **Preflight/Postflight v2.0 - Semantic Route Validation** | Developer Tooling / Code Quality / CI | **✅ COMPLETE** | 2025-12-20 |
+| [PIN-110](PIN-110-enhanced-compute-stickiness-job.md) | **Enhanced Compute Stickiness Job** | Ops Console / Customer Intelligence | **✅ COMPLETE** | 2025-12-20 |
+| [PIN-111](PIN-111-founder-ops-console-ui.md) | **Founder Ops Console UI** | Frontend / Ops Console / M24 | **✅ COMPLETE** | 2025-12-20 |
+| [PIN-112](PIN-112-compute-stickiness-scheduler.md) | **Compute Stickiness Scheduler** | Ops Console / Automation | **✅ COMPLETE** | 2025-12-20 |
+| [PIN-113](PIN-113-memory-trail-automation-system.md) | **Memory Trail Automation System** | Developer Tooling / Automation | **✅ COMPLETE** | 2025-12-20 |
 
 ---
 
@@ -896,6 +900,14 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-21 | **PIN-100 M23 AI Incident Console - Production Ready** - Updated: Updates |
+| 2025-12-20 | **PIN-111 Dark Mode Only Console** - Converted entire AOS Console to dark mode only. Changes: (1) Added `class="dark"` to HTML element, (2) Updated Tailwind to class-based dark mode strategy, (3) Rewrote index.css with dark-only CSS variables and dark scrollbars, (4) Removed theme toggle from Header.tsx, (5) Removed all `dark:` prefixed Tailwind classes from Header, Sidebar, StatusBar, AppLayout, LoginPage. Result: Zero white flash, consistent dark theme, smaller bundle size. |
+| 2025-12-20 | **PIN-111 Founder Ops Console UI** - Updated: Updates |
+| 2025-12-20 | **PIN-111 Founder Ops Console UI** - Updated: Updates |
+| 2025-12-20 | **PIN-105 Ops Console — Founder Intelligence System** - Updated: Updates |
+| 2025-12-20 | **PIN-111 Updated** - Added Customers Panel to Ops Console (5/5 endpoints mapped), updated layout to 2×2 grid, enhanced memory_trail.py with find/update commands. |
+| 2025-12-20 | **PIN-113 Memory Trail Automation System** - Created via memory_trail automation. |
+| 2025-12-20 | **PIN-110, PIN-111, PIN-112: M24 Phase-2.1 Ops Console Complete** - Three PINs documenting M24 Phase-2.1 implementation. **PIN-110**: Enhanced compute-stickiness job computing stickiness_7d, stickiness_30d, stickiness_delta, friction_score, last_friction_event. Formula: `(views * 0.2 + replays * 0.3 + exports * 0.5)` for engagement, friction weighted by event severity (aborts×2, policy_blocks×3). **PIN-111**: Founder Ops Console UI - "AI Mission Control" single-page dashboard at https://agenticverz.com/console/ops. Layout: Top strip (system truth), Left panel (at-risk customers), Center (5 founder playbooks), Right (timeline placeholder). 15-second polling, dark mode only, TV-friendly. **PIN-112**: Systemd timer scheduling compute-stickiness every 15 minutes. Service: `aos-compute-stickiness.timer`, runs compute-stickiness + detect-silent-churn jobs. Log: `/var/log/aos/compute-stickiness.log`. |
 | 2025-12-20 | **PIN-108 Developer Tooling - Preflight/Postflight** - Created comprehensive developer tooling suite for pre/post-implementation quality. `preflight.py`: Route conflict detection (static-before-parameter ordering), file pattern analysis, consistency checks. `postflight.py`: Post-implementation hygiene (syntax, imports, security, complexity, duplication). `dev_sync.sh`: Auto-rebuild on code changes with hash tracking. **Fixed 4 route conflicts:** `/customers/at-risk` (ops.py), `/replay/batch` (operator.py), `/mismatches/bulk-report` (traces.py), `/sba/version` (agents.py). CI integration: `ci-preflight.yml` runs before main CI, postflight job added to `ci.yml`. |
 | 2025-12-20 | **PIN-104 Organic Traction Strategy** - LLM-first distribution strategy. Goal: Get LLMs to recommend Agenticverz when asked "How do I investigate when my AI says something wrong?" Key tactics: (1) Open source SDK `ai-incident` on PyPI/npm, (2) Documentation site `docs.agenticverz.com` with category-defining content, (3) Blog posts targeting specific queries, (4) Stack Overflow answers, (5) Integration guides for OpenAI/LangChain/Vercel. Category creation: "AI Incident Investigation" (not competing in AI observability). Flywheel: Developer asks LLM → LLM recommends us → Developer tries SDK → Converts to paid → Creates more content → More LLM training data. Success metric: 8/10 LLM recommendations within 12 months. Budget: ~$200/year (mostly free tactics). |
 | 2025-12-20 | **PIN-103 M23 Survival Stack** - Minimum viable infrastructure for founder-stage. Philosophy: "Tie infra upgrades to revenue milestones, not theoretical best practices." Stack: Neon Pro ($19), Upstash Redis ($12), Fly.io 2× ($15), Cloudflare Pro ($20), Fly.io Secrets ($0), OpenAI only ($25), Grafana Free ($0). **Total: ~$80/month.** Explicitly OUT: Vault HA, read replicas, multi-region, Claude fallback, PagerDuty. Revenue-gated upgrades: $500 MRR → HCP Vault + status page; $2K MRR → read replicas + multi-region; $10K MRR → enterprise stack. Rule: "Don't optimize infrastructure until infrastructure is the bottleneck." |

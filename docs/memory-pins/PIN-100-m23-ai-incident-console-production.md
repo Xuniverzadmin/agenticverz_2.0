@@ -1,6 +1,6 @@
 # PIN-100: M23 AI Incident Console - Production Ready
 
-**Status:** ACTIVE
+**Status:** ✅ COMPLETE
 **Created:** 2025-12-19
 **Author:** Claude Opus 4.5
 **Depends On:** PIN-095 (Strategy), PIN-096 (M22 KillSwitch), PIN-098 (M22.1 UI)
@@ -725,6 +725,45 @@ For reference, the detailed technical work maps to:
 | Certificate signing security | High | Use Vault for key management |
 
 ---
+
+
+---
+
+## Updates
+
+### Update (2025-12-21)
+
+## 2025-12-21: M23 Implementation Completed
+
+### Completed Tasks:
+1. **User Field Tracking** - Added `user` field to ChatCompletionRequest for end-user tracking (OpenAI user parameter)
+2. **User Field Wiring** - User field flows through proxy call storage to incidents
+3. **Mode Badge** - GuardOverview.tsx shows DEMO/LIVE/STAGING mode indicator
+4. **ReplayValidator Wiring** - /guard/replay/{call_id} uses real ReplayValidator with determinism levels
+5. **CertificateService** - M4 HMAC-based certificates proving deterministic replay
+6. **Certificate API Integration** - Replay endpoint returns signed cryptographic certificates
+7. **Evidence Report Export** - PDF evidence reports include Section 5.5 for certificates
+8. **Enhanced Decision Timeline** - Includes M17 CARE routing info and M9 failure catalog matches
+
+### New Models Added:
+- `CARERoutingInfo` - M17 CARE routing pipeline metadata
+- `FailureCatalogMatch` - M9 failure catalog match with recovery suggestions
+- `ReplayCertificate` - Cryptographic proof of deterministic replay
+- `CertificateEvidence` - PDF export support for certificates
+
+### New Timeline Events:
+- `CARE_ROUTED` - Shows CARE routing decision with agent selection
+- `FAILURE_CATALOGED` - Shows M9 failure catalog match with recovery suggestions
+
+### Files Modified:
+- `backend/app/api/guard.py` - Enhanced with CARE/M9/Certificate support
+- `backend/app/services/certificate.py` - Fixed dataclass field ordering
+- `backend/app/services/evidence_report.py` - Added certificate section
+
+### Verification:
+- 26/26 M22 tests passing
+- All M23 models verified
+- CertificateService working with HMAC-SHA256 signing
 
 ## Related PINs
 

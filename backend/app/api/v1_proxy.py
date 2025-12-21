@@ -424,6 +424,7 @@ async def log_proxy_call(
     was_blocked: bool,
     block_reason: Optional[str],
     policy_decisions: List[Dict[str, Any]],
+    user_id: Optional[str] = None,
 ) -> ProxyCall:
     """Log a proxy call for replay and analysis."""
 
@@ -431,6 +432,7 @@ async def log_proxy_call(
         id=str(uuid.uuid4()),
         tenant_id=tenant_id,
         api_key_id=api_key_id,
+        user_id=user_id,  # M23: Track end-user from OpenAI standard `user` field
         endpoint=endpoint,
         model=request_body.get("model", DEFAULT_MODEL),
         request_hash=ProxyCall.hash_request(request_body),
@@ -506,6 +508,7 @@ async def chat_completions(
             was_blocked=True,
             block_reason="killswitch",
             policy_decisions=[],
+            user_id=request.user,  # M23: Track end-user
         )
         raise HTTPException(status_code=423, detail=killswitch_error)
 
@@ -547,6 +550,7 @@ async def chat_completions(
             was_blocked=True,
             block_reason=guardrail_name,
             policy_decisions=decisions,
+            user_id=request.user,  # M23: Track end-user
         )
         raise HTTPException(status_code=400, detail=error)
 
@@ -567,12 +571,16 @@ async def chat_completions(
             openai_request["seed"] = request.seed
         if request.stop:
             openai_request["stop"] = request.stop
+        # M23: Pass user field to OpenAI for end-user tracking
+        if request.user:
+            openai_request["user"] = request.user
 
         # Make request
         if request.stream:
             # Streaming response
             return await stream_chat_completion(
-                client, openai_request, request_body, auth, session, start_time, decisions
+                client, openai_request, request_body, auth, session, start_time, decisions,
+                user_id=request.user  # M23: Track end-user
             )
         else:
             response = client.chat.completions.create(**openai_request)
@@ -621,6 +629,7 @@ async def chat_completions(
             was_blocked=False,
             block_reason=None,
             policy_decisions=decisions,
+            user_id=request.user,  # M23: Track end-user
         )
 
         return result
@@ -654,6 +663,7 @@ async def chat_completions(
             was_blocked=False,
             block_reason=None,
             policy_decisions=decisions,
+            user_id=request.user,  # M23: Track end-user
         )
         raise HTTPException(status_code=503, detail=error)
 
@@ -666,6 +676,7 @@ async def stream_chat_completion(
     session: Session,
     start_time: float,
     decisions: List[Dict[str, Any]],
+    user_id: Optional[str] = None,  # M23: Track end-user
 ) -> StreamingResponse:
     """Handle streaming chat completion."""
 
@@ -733,6 +744,7 @@ async def stream_chat_completion(
                     was_blocked=False,
                     block_reason=None,
                     policy_decisions=decisions,
+                    user_id=user_id,  # M23: Track end-user
                 )
 
         except Exception as e:
@@ -790,6 +802,7 @@ async def embeddings(
             was_blocked=True,
             block_reason="killswitch",
             policy_decisions=[],
+            user_id=request.user,  # M23: Track end-user
         )
         raise HTTPException(status_code=423, detail=killswitch_error)
 
@@ -801,12 +814,18 @@ async def embeddings(
         client = get_openai_client()
         upstream_start = time.perf_counter()
 
-        response = client.embeddings.create(
-            model=request.model,
-            input=request.input,
-            encoding_format=request.encoding_format,
-            dimensions=request.dimensions,
-        )
+        # M23: Build embeddings request with user tracking
+        embed_kwargs = {
+            "model": request.model,
+            "input": request.input,
+            "encoding_format": request.encoding_format,
+        }
+        if request.dimensions:
+            embed_kwargs["dimensions"] = request.dimensions
+        if request.user:
+            embed_kwargs["user"] = request.user
+
+        response = client.embeddings.create(**embed_kwargs)
 
         upstream_latency_ms = int((time.perf_counter() - upstream_start) * 1000)
 
@@ -848,6 +867,7 @@ async def embeddings(
             was_blocked=False,
             block_reason=None,
             policy_decisions=[],
+            user_id=request.user,  # M23: Track end-user
         )
 
         return result
@@ -881,6 +901,7 @@ async def embeddings(
             was_blocked=False,
             block_reason=None,
             policy_decisions=[],
+            user_id=request.user,  # M23: Track end-user
         )
         raise HTTPException(status_code=503, detail=error)
 
