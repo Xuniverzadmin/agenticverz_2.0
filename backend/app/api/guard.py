@@ -706,11 +706,11 @@ async def replay_call(
     from app.models.killswitch import DefaultGuardrail as GuardrailModel
 
     guardrail_stmt = select(GuardrailModel).where(GuardrailModel.is_enabled == True).order_by(GuardrailModel.priority)
-    guardrail_result = session.exec(guardrail_stmt)
-    guardrails = guardrail_result.all()
+    guardrail_rows = session.exec(guardrail_stmt).all()
 
     replay_decisions = []
-    for guardrail in guardrails:
+    for row in guardrail_rows:
+        guardrail = row[0]  # Extract model from SQLModel result tuple
         context = {
             "max_tokens": request_body.get("max_tokens", 4096),
             "model": request_body.get("model", original_call.model),
