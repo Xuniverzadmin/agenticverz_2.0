@@ -221,13 +221,17 @@ def revoke_refresh_token(token: str):
 # ============== User/Tenant Management ==============
 
 
-def get_or_create_user_from_oauth(user_info: OAuthUserInfo) -> tuple[User, bool]:
-    """Get or create user from OAuth provider info."""
+def get_or_create_user_from_oauth(user_info: OAuthUserInfo) -> tuple[dict, bool]:
+    """Get or create user from OAuth provider info.
+
+    Returns a dict with user data (not the ORM object) to avoid detached session issues.
+    """
     with Session(engine) as session:
         # Try to find existing user by email
         statement = select(User).where(User.email == user_info.email)
-        row = session.exec(statement).first()
-        user = row[0] if row else None
+        result = session.exec(statement).first()
+        # Handle both Row tuple and direct model return (SQLModel version differences)
+        user = result if isinstance(result, User) else (result[0] if result else None)
 
         is_new = False
         if not user:
@@ -253,16 +257,29 @@ def get_or_create_user_from_oauth(user_info: OAuthUserInfo) -> tuple[User, bool]
             session.commit()
             session.refresh(user)
 
-        return user, is_new
+        # Extract values before session closes to avoid DetachedInstanceError
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "avatar_url": user.avatar_url,
+            "default_tenant_id": user.default_tenant_id,
+            "status": user.status,
+        }
+        return user_data, is_new
 
 
-def get_or_create_user_from_email(email: str, name: Optional[str] = None) -> tuple[User, bool]:
-    """Get or create user from email verification."""
+def get_or_create_user_from_email(email: str, name: Optional[str] = None) -> tuple[dict, bool]:
+    """Get or create user from email verification.
+
+    Returns a dict with user data (not the ORM object) to avoid detached session issues.
+    """
     with Session(engine) as session:
         # Try to find existing user
         statement = select(User).where(User.email == email)
-        row = session.exec(statement).first()
-        user = row[0] if row else None
+        result = session.exec(statement).first()
+        # Handle both Row tuple and direct model return (SQLModel version differences)
+        user = result if isinstance(result, User) else (result[0] if result else None)
 
         is_new = False
         if not user:
@@ -287,16 +304,36 @@ def get_or_create_user_from_email(email: str, name: Optional[str] = None) -> tup
             session.commit()
             session.refresh(user)
 
-        return user, is_new
+        # Extract values before session closes to avoid DetachedInstanceError
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "avatar_url": user.avatar_url,
+            "default_tenant_id": user.default_tenant_id,
+            "status": user.status,
+        }
+        return user_data, is_new
 
 
-def create_default_tenant_for_user(user: User) -> Tenant:
-    """Create a default personal tenant for a new user."""
+def create_default_tenant_for_user(user_data: dict) -> dict:
+    """Create a default personal tenant for a new user.
+
+    Args:
+        user_data: Dict with user info (id, email, name)
+
+    Returns:
+        Dict with tenant_id
+    """
     with Session(engine) as session:
+        user_id = user_data["id"]
+        user_name = user_data.get("name")
+        user_email = user_data.get("email")
+
         # Create personal tenant
-        slug = f"personal-{user.id[:8]}"
+        slug = f"personal-{user_id[:8]}"
         tenant = Tenant(
-            name=f"{user.name or user.email}'s Workspace",
+            name=f"{user_name or user_email}'s Workspace",
             slug=slug,
             plan="free",
             status="active",
@@ -308,19 +345,21 @@ def create_default_tenant_for_user(user: User) -> Tenant:
         # Create membership (owner)
         membership = TenantMembership(
             tenant_id=tenant.id,
-            user_id=user.id,
+            user_id=user_id,
             role="owner",
         )
         session.add(membership)
 
-        # Set as default tenant
-        user.default_tenant_id = tenant.id
-        session.add(user)
+        # Set as default tenant on user
+        user = session.get(User, user_id)
+        if user:
+            user.default_tenant_id = tenant.id
+            session.add(user)
         session.commit()
 
         logger.info(f"Created default tenant for user: {tenant.id[:8]}...")
 
-        return tenant
+        return {"tenant_id": tenant.id}
 
 
 def user_to_dict(user: User) -> dict:
@@ -404,15 +443,18 @@ async def callback_google(
         if not user_info.email_verified:
             return RedirectResponse(f"{FRONTEND_URL}/auth/error?error=email_not_verified")
 
-        # Create or get user
-        user, is_new = get_or_create_user_from_oauth(user_info)
+        # Create or get user (returns dict to avoid DetachedInstanceError)
+        user_data, is_new = get_or_create_user_from_oauth(user_info)
 
         # Create default tenant for new users
         if is_new:
-            create_default_tenant_for_user(user)
+            tenant_result = create_default_tenant_for_user(user_data)
+            user_data["default_tenant_id"] = tenant_result["tenant_id"]
 
         # Create session tokens
-        access_token, refresh_token = create_tokens(user.id, user.default_tenant_id)
+        access_token, refresh_token = create_tokens(
+            user_data["id"], user_data["default_tenant_id"]
+        )
 
         # Redirect to frontend with tokens
         redirect_url = (
@@ -488,15 +530,18 @@ async def callback_azure(
         # Get user info
         user_info = await provider.get_user_info(access_token)
 
-        # Create or get user
-        user, is_new = get_or_create_user_from_oauth(user_info)
+        # Create or get user (returns dict to avoid DetachedInstanceError)
+        user_data, is_new = get_or_create_user_from_oauth(user_info)
 
         # Create default tenant for new users
         if is_new:
-            create_default_tenant_for_user(user)
+            tenant_result = create_default_tenant_for_user(user_data)
+            user_data["default_tenant_id"] = tenant_result["tenant_id"]
 
         # Create session tokens
-        access_token, refresh_token = create_tokens(user.id, user.default_tenant_id)
+        access_token, refresh_token = create_tokens(
+            user_data["id"], user_data["default_tenant_id"]
+        )
 
         # Redirect to frontend with tokens
         redirect_url = (
@@ -550,21 +595,24 @@ async def verify_email(request: EmailVerifyRequest):
         }
         raise HTTPException(status_code=400, detail=error_detail)
 
-    # Create or get user
-    user, is_new = get_or_create_user_from_email(result.email)
+    # Create or get user (returns dict to avoid DetachedInstanceError)
+    user_data, is_new = get_or_create_user_from_email(result.email)
 
     # Create default tenant for new users
     if is_new:
-        create_default_tenant_for_user(user)
+        tenant_result = create_default_tenant_for_user(user_data)
+        user_data["default_tenant_id"] = tenant_result["tenant_id"]
 
     # Create session tokens
-    access_token, refresh_token = create_tokens(user.id, user.default_tenant_id)
+    access_token, refresh_token = create_tokens(
+        user_data["id"], user_data["default_tenant_id"]
+    )
 
     return AuthResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         expires_in=SESSION_TTL_HOURS * 3600,
-        user=user_to_dict(user),
+        user=user_data,
     )
 
 
@@ -582,11 +630,13 @@ async def refresh_token(request: RefreshRequest):
     user_id = payload.get("sub")
     tenant_id = payload.get("tenant_id")
 
-    # Get user
+    # Get user and extract data before session closes
     with Session(engine) as session:
         user = session.get(User, user_id)
         if not user or user.status != "active":
             raise HTTPException(status_code=401, detail="User not found or inactive")
+        # Extract user data before session closes
+        user_data = user_to_dict(user)
 
     # Revoke old refresh token
     revoke_refresh_token(request.refresh_token)
@@ -598,7 +648,7 @@ async def refresh_token(request: RefreshRequest):
         access_token=access_token,
         refresh_token=new_refresh_token,
         expires_in=SESSION_TTL_HOURS * 3600,
-        user=user_to_dict(user),
+        user=user_data,
     )
 
 

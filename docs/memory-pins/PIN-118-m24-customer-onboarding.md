@@ -357,3 +357,72 @@ curl "https://agenticverz.com/guard/incidents?tenant_id=demo-tenant"
 ```
 
 **Key Insight:** Replace perceived safety with experienced safety.
+
+---
+
+## M24.2 Bug Fix: Email OTP 500 Error (2025-12-21)
+
+### Problem
+Email OTP verification returned 500 Internal Server Error when OTP was correct.
+
+**Root Causes:**
+1. `DetachedInstanceError` - User object accessed after SQLModel session closed
+2. `TypeError: 'User' object is not subscriptable` - SQLModel version differences in `.first()` return type
+
+### Solution
+
+**1. Return dicts instead of User objects:**
+```python
+# Before (broken - User object becomes detached when session closes)
+def get_or_create_user_from_email(email: str) -> tuple[User, bool]:
+    with Session(engine) as session:
+        ...
+        return user, is_new  # User object is detached after this!
+
+# After (fixed - extract values before session closes)
+def get_or_create_user_from_email(email: str) -> tuple[dict, bool]:
+    with Session(engine) as session:
+        ...
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            ...
+        }
+        return user_data, is_new
+```
+
+**2. Handle SQLModel version differences:**
+```python
+# SQLModel behavior varies - .first() may return Row tuple or model directly
+result = session.exec(statement).first()
+user = result if isinstance(result, User) else (result[0] if result else None)
+```
+
+**3. Use session.get() for direct ID lookups:**
+```python
+# session.get() always returns the model directly
+user = session.get(User, user_id)
+```
+
+### Files Modified
+- `backend/app/api/onboarding.py`:
+  - `get_or_create_user_from_oauth()` - returns dict
+  - `get_or_create_user_from_email()` - returns dict
+  - `create_default_tenant_for_user()` - accepts dict, uses session.get()
+  - `verify_email()` - uses dict access
+  - `callback_google()` / `callback_azure()` - uses dict access
+
+### Verification
+```bash
+# Email OTP flow now works end-to-end
+curl -X POST "https://agenticverz.com/api/v1/auth/signup/email" \
+  -d '{"email": "test@example.com"}'
+# → {"success": true, "message": "Verification code sent"}
+
+curl -X POST "https://agenticverz.com/api/v1/auth/verify/email" \
+  -d '{"email": "test@example.com", "otp": "XXXXXX"}'
+# → {"access_token": "...", "refresh_token": "...", "user": {...}}
+```
+
+**Status: FIXED AND DEPLOYED**
