@@ -1,18 +1,35 @@
 /**
- * Kill Switch Page - Phase 5 Implementation
+ * Kill Switch Page - Ops-Grade Console (v3)
  *
- * Complete kill switch control surface:
- * - Current status with visual prominence
- * - Kill history with timestamps
- * - Post-kill analysis (blast radius)
- * - Before/after traffic comparison
+ * HARD CONSTRAINTS (non-negotiable):
+ * - Everything fits in 1366×768 viewport
+ * - Zero scrolling
+ * - Status strip: 56-64px max
+ * - Demo banner: 32px
+ * - History rows: 44px each
+ * - Max 3 rows shown
+ * - Font: 13-14px
  *
- * "What did stopping traffic actually do?"
+ * Layout:
+ * ┌─────────────────────────────────────────────────┐
+ * │ ⚠ Demo mode — actions do not affect live traffic│  32px
+ * ├─────────────────────────────────────────────────┤
+ * │ ● GREEN  Traffic flowing   Guardrails: ON [STOP]│  56px
+ * ├─────────────────────────────────────────────────┤
+ * │ Kill Switch History                    timezone │  40px
+ * ├─────────────────────────────────────────────────┤
+ * │ ▶ Traffic Resumed    reason             1h ago │  44px
+ * │ ■ Kill Switch        reason             2h ago │  44px
+ * │ ▶ Traffic Resumed    reason             1d ago │  44px
+ * ├─────────────────────────────────────────────────┤
+ * │ View full history →                            │  32px
+ * └─────────────────────────────────────────────────┘
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { guardApi } from '../../api/guard';
+import { logger } from '../../lib/consoleLogger';
 
 interface KillEvent {
   id: string;
@@ -20,13 +37,9 @@ interface KillEvent {
   triggered_by: string;
   reason: string;
   timestamp: string;
-  scope: 'global' | 'project' | 'key';
   blast_radius?: {
     requests_blocked: number;
-    users_affected: number;
-    apis_halted: number;
     cost_avoided_cents: number;
-    duration_seconds: number;
   };
 }
 
@@ -36,24 +49,16 @@ const DEMO_KILL_HISTORY: KillEvent[] = [
     id: 'kill_001',
     action: 'deactivated',
     triggered_by: 'admin@company.com',
-    reason: 'Incident resolved - safe to resume',
+    reason: 'Incident resolved — safe to resume',
     timestamp: new Date(Date.now() - 3600000).toISOString(),
-    scope: 'global',
   },
   {
     id: 'kill_002',
     action: 'activated',
-    triggered_by: 'auto_trigger',
-    reason: 'Cost threshold exceeded ($50.00)',
+    triggered_by: 'auto-trigger',
+    reason: 'Cost threshold exceeded ($50)',
     timestamp: new Date(Date.now() - 7200000).toISOString(),
-    scope: 'global',
-    blast_radius: {
-      requests_blocked: 1247,
-      users_affected: 89,
-      apis_halted: 3,
-      cost_avoided_cents: 2340,
-      duration_seconds: 3600,
-    },
+    blast_radius: { requests_blocked: 1247, cost_avoided_cents: 2340 },
   },
   {
     id: 'kill_003',
@@ -61,344 +66,199 @@ const DEMO_KILL_HISTORY: KillEvent[] = [
     triggered_by: 'admin@company.com',
     reason: 'Manual resume after investigation',
     timestamp: new Date(Date.now() - 86400000).toISOString(),
-    scope: 'global',
-  },
-  {
-    id: 'kill_004',
-    action: 'activated',
-    triggered_by: 'admin@company.com',
-    reason: 'Suspicious activity detected',
-    timestamp: new Date(Date.now() - 90000000).toISOString(),
-    scope: 'global',
-    blast_radius: {
-      requests_blocked: 456,
-      users_affected: 23,
-      apis_halted: 1,
-      cost_avoided_cents: 890,
-      duration_seconds: 7200,
-    },
   },
 ];
 
 export function KillSwitchPage() {
   const queryClient = useQueryClient();
-  const [showActivateConfirm, setShowActivateConfirm] = useState(false);
-  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
-  const [selectedKillEvent, setSelectedKillEvent] = useState<KillEvent | null>(null);
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [showFullHistory, setShowFullHistory] = useState(false);
   const [activationReason, setActivationReason] = useState('');
 
+  useEffect(() => {
+    logger.componentMount('KillSwitchPage');
+    return () => logger.componentUnmount('KillSwitchPage');
+  }, []);
+
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   // Fetch current status
-  const { data: status, isLoading } = useQuery({
+  const { data: status } = useQuery({
     queryKey: ['guard', 'status'],
     queryFn: guardApi.getStatus,
-    refetchInterval: 2000, // Fast polling for kill switch
+    refetchInterval: 2000,
   });
 
-  const { data: snapshot } = useQuery({
-    queryKey: ['guard', 'snapshot'],
-    queryFn: guardApi.getTodaySnapshot,
-    refetchInterval: 30000,
-  });
-
-  // Kill switch mutations
+  // Mutations
   const activateMutation = useMutation({
     mutationFn: guardApi.activateKillSwitch,
     onSuccess: () => {
-      console.log('[KILLSWITCH] Activated');
       queryClient.invalidateQueries({ queryKey: ['guard'] });
-      setShowActivateConfirm(false);
+      setShowActivateModal(false);
       setActivationReason('');
-    },
-    onError: (error) => {
-      console.error('[KILLSWITCH] Activation failed', error);
-      alert(`Failed to activate: ${error instanceof Error ? error.message : 'Unknown error'}`);
     },
   });
 
   const deactivateMutation = useMutation({
     mutationFn: guardApi.deactivateKillSwitch,
     onSuccess: () => {
-      console.log('[KILLSWITCH] Deactivated');
       queryClient.invalidateQueries({ queryKey: ['guard'] });
-      setShowDeactivateConfirm(false);
-    },
-    onError: (error) => {
-      console.error('[KILLSWITCH] Deactivation failed', error);
-      alert(`Failed to deactivate: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowDeactivateModal(false);
     },
   });
 
   const isActive = status?.is_frozen ?? false;
-
-  // Calculate current blast radius (if active)
-  const currentBlastRadius = isActive ? {
-    requests_blocked: Math.floor(Math.random() * 500) + 100,
-    users_affected: Math.floor(Math.random() * 50) + 10,
-    cost_avoided_cents: (snapshot?.cost_avoided_cents ?? 0) + Math.floor(Math.random() * 1000),
-    duration_seconds: status?.frozen_at
-      ? Math.floor((Date.now() - new Date(status.frozen_at).getTime()) / 1000)
-      : 0,
-  } : null;
+  const historyToShow = showFullHistory ? DEMO_KILL_HISTORY : DEMO_KILL_HISTORY.slice(0, 3);
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      {/* ============== MAIN STATUS CARD ============== */}
+    <div className="p-3 max-w-4xl mx-auto text-[13px]">
+      {/* ══════════ DEMO BANNER (32px) ══════════ */}
+      <div className="h-8 flex items-center text-amber-400/80 mb-3">
+        <span>⚠</span>
+        <span className="ml-2">Demo mode — actions do not affect live traffic</span>
+      </div>
+
+      {/* ══════════ STATUS STRIP (56px) ══════════ */}
       <div className={`
-        rounded-xl p-8 border-2 text-center
-        ${isActive
-          ? 'bg-red-500/20 border-red-500'
-          : 'bg-green-500/20 border-green-500'
-        }
+        h-14 flex items-center justify-between px-4 rounded-lg mb-3
+        border ${isActive ? 'border-red-500/50' : 'border-emerald-500/30'}
       `}>
-        <div className={`
-          w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-4
-          ${isActive ? 'bg-red-500/30' : 'bg-green-500/30'}
-        `}>
-          <span className="text-5xl">{isActive ? '🚨' : '✅'}</span>
+        {/* Left: Status */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className={`w-3 h-3 rounded-full ${isActive ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+            <span className={`font-bold ${isActive ? 'text-red-400' : 'text-emerald-400'}`}>
+              {isActive ? 'STOPPED' : 'GREEN'}
+            </span>
+          </div>
+          <span className="text-slate-400">
+            {isActive ? 'All traffic halted' : 'Traffic flowing normally'}
+          </span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400">
+            Guardrails: <span className="text-emerald-400">ON</span>
+          </span>
         </div>
 
-        <h1 className={`text-3xl font-bold mb-2 ${isActive ? 'text-red-400' : 'text-green-400'}`}>
-          {isActive ? 'TRAFFIC STOPPED' : 'TRAFFIC FLOWING'}
-        </h1>
-
-        <p className="text-slate-300 mb-6">
-          {isActive
-            ? `Kill switch activated ${status?.frozen_at ? formatTimeAgo(new Date(status.frozen_at)) : ''}`
-            : 'All API traffic is flowing normally. Guardrails are active.'
-          }
-        </p>
-
-        {/* Main Action Button */}
+        {/* Right: Action Button */}
         {isActive ? (
           <button
-            onClick={() => setShowDeactivateConfirm(true)}
-            className="px-12 py-4 bg-green-600 hover:bg-green-700 rounded-xl text-xl font-bold transition-colors"
+            onClick={() => setShowDeactivateModal(true)}
+            className="h-9 px-4 bg-transparent border border-emerald-500/50 text-emerald-400
+                       hover:bg-emerald-500/10 rounded text-[13px] font-medium transition-colors"
           >
-            ▶️ RESUME TRAFFIC
+            ▶ RESUME TRAFFIC
           </button>
         ) : (
           <button
-            onClick={() => setShowActivateConfirm(true)}
-            className="px-12 py-4 bg-red-600 hover:bg-red-700 rounded-xl text-xl font-bold transition-colors"
+            onClick={() => setShowActivateModal(true)}
+            className="h-9 px-4 bg-transparent border border-red-500/50 text-red-400
+                       hover:bg-red-500/10 rounded text-[13px] font-medium transition-colors"
           >
-            ⏹ STOP ALL TRAFFIC
+            ⏹ STOP TRAFFIC
           </button>
         )}
-
-        {/* Active Info */}
-        {isActive && status?.frozen_by && (
-          <p className="mt-4 text-sm text-slate-400">
-            Activated by: {status.frozen_by}
-          </p>
-        )}
       </div>
 
-      {/* ============== CURRENT BLAST RADIUS (if active) ============== */}
-      {isActive && currentBlastRadius && (
-        <div className="bg-slate-800 rounded-xl border border-red-500/50 p-6">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <span>💥</span> Current Blast Radius
-            <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded animate-pulse">LIVE</span>
-          </h2>
+      {/* ══════════ HISTORY HEADER (40px) ══════════ */}
+      <div className="h-10 flex items-center justify-between px-3 border-b border-slate-700/50">
+        <span className="font-medium text-slate-300">Kill Switch History</span>
+        <span className="text-slate-500 text-[12px]">{timezone}</span>
+      </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <BlastRadiusStat
-              label="Requests Blocked"
-              value={currentBlastRadius.requests_blocked.toLocaleString()}
-              icon="🚫"
-            />
-            <BlastRadiusStat
-              label="Users Affected"
-              value={currentBlastRadius.users_affected.toLocaleString()}
-              icon="👥"
-            />
-            <BlastRadiusStat
-              label="Cost Avoided"
-              value={`$${(currentBlastRadius.cost_avoided_cents / 100).toFixed(2)}`}
-              icon="💰"
-              highlight
-            />
-            <BlastRadiusStat
-              label="Duration"
-              value={formatDuration(currentBlastRadius.duration_seconds)}
-              icon="⏱️"
-            />
-          </div>
+      {/* ══════════ HISTORY ROWS (44px each) ══════════ */}
+      <div className="divide-y divide-slate-700/30">
+        {historyToShow.map((event, idx) => (
+          <HistoryRow key={event.id} event={event} isLatest={idx === 0} />
+        ))}
+      </div>
 
-          {/* Traffic Comparison Chart */}
-          <div className="mt-6">
-            <h3 className="text-sm font-medium text-slate-400 mb-3">Before vs After Kill Switch</h3>
-            <div className="relative h-20 bg-slate-900 rounded overflow-hidden">
-              {/* Before (green area) */}
-              <div className="absolute left-0 top-0 w-1/2 h-full bg-gradient-to-r from-green-500/30 to-green-500/10 flex items-center justify-center">
-                <div className="text-center">
-                  <span className="text-xs text-slate-400">BEFORE</span>
-                  <span className="block text-xl font-bold text-green-400">247 req/min</span>
-                </div>
-              </div>
-              {/* Kill Line */}
-              <div className="absolute left-1/2 top-0 w-1 h-full bg-red-500 z-10">
-                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                  HALTED
-                </div>
-              </div>
-              {/* After (dark area) */}
-              <div className="absolute right-0 top-0 w-1/2 h-full bg-slate-800 flex items-center justify-center">
-                <div className="text-center">
-                  <span className="text-xs text-slate-400">AFTER</span>
-                  <span className="block text-xl font-bold text-red-400">0 req/min</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* ══════════ VIEW FULL HISTORY (32px) ══════════ */}
+      {!showFullHistory && DEMO_KILL_HISTORY.length > 3 && (
+        <button
+          onClick={() => setShowFullHistory(true)}
+          className="h-8 w-full text-left px-3 text-blue-400 hover:text-blue-300 text-[12px]"
+        >
+          View full history →
+        </button>
       )}
 
-      {/* ============== KILL HISTORY ============== */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-slate-700">
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <span>📜</span> Kill Switch History
-          </h2>
-        </div>
-
-        <div className="divide-y divide-slate-700">
-          {DEMO_KILL_HISTORY.map((event) => (
-            <div
-              key={event.id}
-              onClick={() => setSelectedKillEvent(event.id === selectedKillEvent?.id ? null : event)}
-              className={`
-                p-4 cursor-pointer transition-colors
-                ${selectedKillEvent?.id === event.id ? 'bg-slate-700/50' : 'hover:bg-slate-700/30'}
-              `}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className={`text-xl ${event.action === 'activated' ? 'text-red-400' : 'text-green-400'}`}>
-                    {event.action === 'activated' ? '🔴' : '🟢'}
-                  </span>
-                  <div>
-                    <span className="font-medium">
-                      {event.action === 'activated' ? 'Kill Switch Activated' : 'Traffic Resumed'}
-                    </span>
-                    <span className="block text-sm text-slate-400">{event.reason}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm text-slate-400">{formatTimeAgo(new Date(event.timestamp))}</span>
-                  <span className="block text-xs text-slate-500">{event.triggered_by}</span>
-                </div>
-              </div>
-
-              {/* Expanded: Blast Radius */}
-              {selectedKillEvent?.id === event.id && event.blast_radius && (
-                <div className="mt-4 p-4 bg-slate-900 rounded-lg">
-                  <h4 className="text-sm font-medium text-slate-400 mb-3">Impact Analysis</h4>
-                  <div className="grid grid-cols-4 gap-4">
-                    <BlastRadiusStat
-                      label="Blocked"
-                      value={event.blast_radius.requests_blocked.toLocaleString()}
-                      icon="🚫"
-                      small
-                    />
-                    <BlastRadiusStat
-                      label="Users"
-                      value={event.blast_radius.users_affected.toLocaleString()}
-                      icon="👥"
-                      small
-                    />
-                    <BlastRadiusStat
-                      label="Saved"
-                      value={`$${(event.blast_radius.cost_avoided_cents / 100).toFixed(2)}`}
-                      icon="💰"
-                      highlight
-                      small
-                    />
-                    <BlastRadiusStat
-                      label="Duration"
-                      value={formatDuration(event.blast_radius.duration_seconds)}
-                      icon="⏱️"
-                      small
-                    />
-                  </div>
-                </div>
-              )}
+      {/* ══════════ ACTIVATE MODAL ══════════ */}
+      {showActivateModal && (
+        <Modal onClose={() => setShowActivateModal(false)}>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="text-red-400 text-xl">⏹</span>
+              <h2 className="text-lg font-bold">Stop All Traffic?</h2>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* ============== ACTIVATE CONFIRMATION MODAL ============== */}
-      {showActivateConfirm && (
-        <Modal onClose={() => setShowActivateConfirm(false)}>
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto rounded-full bg-red-500/20 flex items-center justify-center mb-4">
-              <span className="text-4xl">🚨</span>
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Stop All Traffic?</h2>
-            <p className="text-slate-400 mb-6">
-              This will immediately block all API requests. Active requests will be terminated.
+            <p className="text-slate-400 text-[13px]">
+              This will immediately block all API traffic for all users.
             </p>
 
-            <div className="mb-6">
-              <label className="block text-sm text-slate-400 mb-2">Reason (optional)</label>
+            <div>
+              <label className="block text-[12px] text-slate-500 mb-1">Reason (required)</label>
               <input
                 type="text"
                 value={activationReason}
                 onChange={(e) => setActivationReason(e.target.value)}
                 placeholder="Why are you stopping traffic?"
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2"
+                className="w-full h-9 bg-transparent border border-slate-600 rounded px-3 text-[13px]
+                           focus:border-slate-500 focus:outline-none"
               />
             </div>
 
-            <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-3 mb-6">
-              <p className="text-amber-300 text-sm">
-                <strong>⚠️ Warning:</strong> All connected clients will receive errors until you resume.
-              </p>
+            <div className="text-[12px] text-red-400/80 border-l-2 border-red-500/50 pl-3">
+              Nuclear action: All connected clients will receive errors until you resume.
             </div>
 
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-2 justify-end pt-2">
               <button
-                onClick={() => setShowActivateConfirm(false)}
-                className="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg"
+                onClick={() => setShowActivateModal(false)}
+                className="h-9 px-4 text-slate-400 hover:text-white transition-colors"
               >
                 Cancel
               </button>
-              <button
-                onClick={() => activateMutation.mutate()}
-                disabled={activateMutation.isPending}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold"
-              >
-                {activateMutation.isPending ? 'Stopping...' : 'STOP ALL TRAFFIC'}
-              </button>
+              <HoldToConfirmButton
+                onConfirm={() => {
+                  logger.userEvent('click', 'kill_switch_activated', { reason: activationReason });
+                  activateMutation.mutate();
+                }}
+                disabled={!activationReason.trim() || activateMutation.isPending}
+                isPending={activateMutation.isPending}
+              />
             </div>
           </div>
         </Modal>
       )}
 
-      {/* ============== DEACTIVATE CONFIRMATION MODAL ============== */}
-      {showDeactivateConfirm && (
-        <Modal onClose={() => setShowDeactivateConfirm(false)}>
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-              <span className="text-4xl">▶️</span>
+      {/* ══════════ DEACTIVATE MODAL ══════════ */}
+      {showDeactivateModal && (
+        <Modal onClose={() => setShowDeactivateModal(false)}>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="text-emerald-400 text-xl">▶</span>
+              <h2 className="text-lg font-bold">Resume Traffic?</h2>
             </div>
-            <h2 className="text-2xl font-bold mb-2">Resume Traffic?</h2>
-            <p className="text-slate-400 mb-6">
-              This will resume all API traffic. Guardrails will continue to protect you.
+
+            <p className="text-slate-400 text-[13px]">
+              Traffic will resume. Guardrails remain active.
             </p>
 
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-2 justify-end pt-2">
               <button
-                onClick={() => setShowDeactivateConfirm(false)}
-                className="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg"
+                onClick={() => setShowDeactivateModal(false)}
+                className="h-9 px-4 text-slate-400 hover:text-white transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => deactivateMutation.mutate()}
                 disabled={deactivateMutation.isPending}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold"
+                className="h-9 px-4 bg-transparent border border-emerald-500/50 text-emerald-400
+                           hover:bg-emerald-500/10 rounded text-[13px] font-medium transition-colors
+                           disabled:opacity-50"
               >
                 {deactivateMutation.isPending ? 'Resuming...' : 'Resume Traffic'}
               </button>
@@ -410,43 +270,176 @@ export function KillSwitchPage() {
   );
 }
 
-// Sub-components
-function BlastRadiusStat({ label, value, icon, highlight, small }: {
-  label: string;
-  value: string;
-  icon: string;
-  highlight?: boolean;
-  small?: boolean;
-}) {
+// ═══════════════════════════════════════════════════════════════════════════
+// HISTORY ROW - 44px height, dense, informative
+// ═══════════════════════════════════════════════════════════════════════════
+
+function HistoryRow({ event, isLatest }: { event: KillEvent; isLatest: boolean }) {
+  const isActivation = event.action === 'activated';
+  const isAuto = event.triggered_by === 'auto-trigger';
+
   return (
-    <div className={`text-center p-3 rounded-lg ${highlight ? 'bg-green-500/20' : 'bg-slate-700/50'}`}>
-      <span className={small ? 'text-xl' : 'text-2xl'}>{icon}</span>
-      <span className={`block font-bold mt-1 ${small ? 'text-lg' : 'text-2xl'} ${highlight ? 'text-green-400' : 'text-slate-100'}`}>
-        {value}
-      </span>
-      <span className="text-xs text-slate-400">{label}</span>
+    <div className={`
+      h-11 flex items-center justify-between px-3
+      border-l-3 ${isActivation ? 'border-l-red-500' : 'border-l-emerald-500'}
+    `} style={{ borderLeftWidth: '3px' }}>
+      {/* Left: Icon + Title + Reason */}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <span className={isActivation ? 'text-red-400' : 'text-emerald-400'}>
+          {isActivation ? '■' : '▶'}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-slate-200 truncate">
+              {isActivation ? 'Kill Switch Activated' : 'Traffic Resumed'}
+            </span>
+            {isAuto && (
+              <span className="text-[10px] text-slate-500 border border-slate-600 px-1 rounded">auto</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-[12px] text-slate-500 truncate">
+            <span className="truncate">{event.reason}</span>
+            {event.blast_radius && (
+              <>
+                <span>·</span>
+                <span className="text-emerald-400/70">
+                  {event.blast_radius.requests_blocked.toLocaleString()} blocked
+                </span>
+                <span>·</span>
+                <span className="text-emerald-400/70">
+                  ${(event.blast_radius.cost_avoided_cents / 100).toFixed(2)} saved
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Time + Actor + Link */}
+      <div className="flex items-center gap-4 flex-shrink-0 text-right">
+        <div>
+          <span className="text-slate-400">{formatTimeAgo(new Date(event.timestamp))}</span>
+          <span className="block text-[11px] text-slate-600">{event.triggered_by}</span>
+        </div>
+        {isActivation && (
+          <button className="text-blue-400/70 hover:text-blue-400 text-[12px]">
+            View →
+          </button>
+        )}
+        {!isActivation && (
+          <span className="text-emerald-500/70">✓</span>
+        )}
+      </div>
     </div>
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MODAL - Minimal, dark
+// ═══════════════════════════════════════════════════════════════════════════
+
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-md w-full mx-4">
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="relative bg-slate-900 border border-slate-700 rounded-lg p-5 max-w-sm w-full mx-4">
         {children}
       </div>
     </div>
   );
 }
 
-// Helpers
+// ═══════════════════════════════════════════════════════════════════════════
+// HOLD-TO-CONFIRM BUTTON
+// ═══════════════════════════════════════════════════════════════════════════
+
+function HoldToConfirmButton({
+  onConfirm,
+  disabled,
+  isPending,
+}: {
+  onConfirm: () => void;
+  disabled: boolean;
+  isPending: boolean;
+}) {
+  const [progress, setProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+  const holdDuration = 1500;
+  const intervalRef = React.useRef<number | null>(null);
+
+  const startHold = useCallback(() => {
+    if (disabled) return;
+    setIsHolding(true);
+    const startTime = Date.now();
+
+    intervalRef.current = window.setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.min((elapsed / holdDuration) * 100, 100);
+      setProgress(newProgress);
+
+      if (newProgress >= 100) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setIsHolding(false);
+        setProgress(0);
+        onConfirm();
+      }
+    }, 30);
+  }, [disabled, onConfirm]);
+
+  const stopHold = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setIsHolding(false);
+    setProgress(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return (
+    <button
+      onMouseDown={startHold}
+      onMouseUp={stopHold}
+      onMouseLeave={stopHold}
+      onTouchStart={startHold}
+      onTouchEnd={stopHold}
+      disabled={disabled}
+      className={`
+        relative h-9 px-4 rounded text-[13px] font-medium overflow-hidden
+        ${disabled
+          ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+          : 'bg-transparent border border-red-500/50 text-red-400 hover:bg-red-500/10'
+        }
+      `}
+    >
+      {isHolding && (
+        <div
+          className="absolute left-0 top-0 h-full bg-red-500/20 transition-none"
+          style={{ width: `${progress}%` }}
+        />
+      )}
+      <span className="relative">
+        {isPending ? 'Stopping...' : isHolding ? 'Hold...' : 'HOLD TO STOP'}
+      </span>
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
 function formatTimeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
-  if (diffMins < 1) return 'just now';
+  if (diffMins < 1) return 'now';
   if (diffMins < 60) return `${diffMins}m ago`;
 
   const diffHours = Math.floor(diffMins / 60);
@@ -454,12 +447,6 @@ function formatTimeAgo(date: Date): string {
 
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays}d ago`;
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
 
 export default KillSwitchPage;

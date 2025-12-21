@@ -37,6 +37,30 @@ export interface SystemHealth {
   lastFullCheck: Date;
 }
 
+// Simplified health state for UI components
+export interface HealthState {
+  status: 'healthy' | 'degraded' | 'down';
+  latency: number | null;
+  lastCheck: Date | null;
+  circuitOpen: boolean;
+}
+
+// Convert SystemHealth to simplified HealthState
+export function toHealthState(system: SystemHealth): HealthState {
+  const endpoints = Object.values(system.endpoints);
+  const avgLatency = endpoints.length > 0
+    ? endpoints.reduce((sum, ep) => sum + ep.responseTime, 0) / endpoints.length
+    : null;
+  const anyCircuitOpen = Object.values(system.circuits).some(c => c.state === 'open');
+
+  return {
+    status: system.overall,
+    latency: avgLatency ? Math.round(avgLatency) : null,
+    lastCheck: system.lastFullCheck,
+    circuitOpen: anyCircuitOpen,
+  };
+}
+
 // ============== CIRCUIT BREAKER ==============
 
 const CIRCUIT_CONFIG = {
@@ -74,9 +98,13 @@ class CircuitBreaker {
     circuit.lastFailure = new Date();
 
     if (circuit.failures >= CIRCUIT_CONFIG.failureThreshold) {
+      // Only log when circuit first opens, not on every failure
+      const wasOpen = circuit.state === 'open';
       circuit.state = 'open';
       circuit.nextRetry = new Date(Date.now() + CIRCUIT_CONFIG.recoveryTimeout);
-      console.warn(`[CircuitBreaker] Circuit OPEN for ${endpoint} after ${circuit.failures} failures`);
+      if (!wasOpen) {
+        console.debug(`[CircuitBreaker] Circuit OPEN for ${endpoint}`);
+      }
     }
   }
 
@@ -91,7 +119,6 @@ class CircuitBreaker {
       // Check if recovery timeout has passed
       if (circuit.nextRetry && new Date() >= circuit.nextRetry) {
         circuit.state = 'half-open';
-        console.log(`[CircuitBreaker] Circuit HALF-OPEN for ${endpoint}, allowing test request`);
         return true;
       }
       return false;
@@ -141,7 +168,7 @@ class HealthMonitor {
     });
   }
 
-  async checkEndpoint(path: string, tenantId: string = 'tenant_demo'): Promise<EndpointHealth> {
+  async checkEndpoint(path: string, tenantId: string = 'demo-tenant'): Promise<EndpointHealth> {
     const health = this.health.get(path) || {
       endpoint: path,
       status: 'healthy' as const,
@@ -189,7 +216,7 @@ class HealthMonitor {
     return health;
   }
 
-  async checkAll(tenantId: string = 'tenant_demo'): Promise<SystemHealth> {
+  async checkAll(tenantId: string = 'demo-tenant'): Promise<SystemHealth> {
     const results = await Promise.all(
       GUARD_ENDPOINTS.map(ep => this.checkEndpoint(ep.path, tenantId))
     );
@@ -227,7 +254,7 @@ class HealthMonitor {
     return systemHealth;
   }
 
-  startPeriodicCheck(intervalMs: number = 30000, tenantId: string = 'tenant_demo'): void {
+  startPeriodicCheck(intervalMs: number = 30000, tenantId: string = 'demo-tenant'): void {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
     }
@@ -278,9 +305,8 @@ export async function safeApiCall<T>(
   fn: () => Promise<T>,
   fallback: T
 ): Promise<{ data: T; fromCache: boolean; error?: string }> {
-  // Check circuit breaker
+  // Check circuit breaker - silent fallback when circuit is open
   if (!circuitBreaker.canRequest(endpoint)) {
-    console.warn(`[SafeAPI] Circuit open for ${endpoint}, returning fallback`);
     return { data: fallback, fromCache: true, error: 'Circuit breaker open' };
   }
 
@@ -293,7 +319,6 @@ export async function safeApiCall<T>(
     const errorMsg = error?.response?.status
       ? `HTTP ${error.response.status}`
       : error?.message || 'Unknown error';
-    console.warn(`[SafeAPI] ${endpoint} failed: ${errorMsg}`);
     return { data: fallback, fromCache: true, error: errorMsg };
   }
 }
@@ -304,4 +329,5 @@ export default {
   circuitBreaker,
   healthMonitor,
   safeApiCall,
+  toHealthState,
 };

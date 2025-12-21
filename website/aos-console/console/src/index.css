@@ -3,32 +3,107 @@
 @tailwind utilities;
 
 /*
- * DARK MODE ONLY CONSOLE
- * This console is designed for dark mode only.
- * No light mode support - founders/ops prefer dark interfaces.
+ * NAVY-FIRST DESIGN SYSTEM v1.0
+ *
+ * CORE PRINCIPLE: Only ONE background color family. Everything else is an accent.
+ *
+ * This fixes the "muddy dark mode" problem caused by:
+ * - Mixing semantic colors with surface colors (amber/indigo/green backgrounds)
+ * - Stacking too many colored backgrounds (5+ hues on one screen)
+ * - Status-driven surfaces instead of surface-driven design
+ *
+ * RULE: Surfaces are neutral navy. Meaning is conveyed via text, borders, icons ONLY.
  */
 
 :root {
-  /* Dark mode colors - no light mode alternative */
-  --color-bg-primary: #0f172a;    /* slate-900 */
-  --color-bg-secondary: #030712;  /* gray-950 */
-  --color-bg-card: #1e293b;       /* slate-800 */
-  --color-text-primary: #f8fafc;  /* slate-50 */
-  --color-text-secondary: #94a3b8; /* slate-400 */
-  --color-text-muted: #64748b;    /* slate-500 */
-  --color-border: #334155;        /* slate-700 */
-  --color-border-light: #475569;  /* slate-600 */
+  /* ===== BASE SURFACES (Navy Family - NEVER use other bg colors) ===== */
+  --bg-app:       #0b1020;   /* Deepest navy - app background */
+  --bg-surface:   #0f172a;   /* Cards, modals, containers */
+  --bg-elevated:  #131c3a;   /* Hover states, focus, interactive */
+  --bg-subtle:    #0c142e;   /* Rows, separators, subtle sections */
+  --bg-inset:     #080d1a;   /* Inset areas, code blocks */
+
+  /* ===== BORDERS (Navy Family) ===== */
+  --border-default: #1f2a55;
+  --border-subtle:  #161f42;
+  --border-strong:  #2a3a6e;
+
+  /* ===== TEXT (Neutral grays) ===== */
+  --text-primary:   #f8fafc;  /* Primary content */
+  --text-secondary: #94a3b8;  /* Secondary content */
+  --text-muted:     #64748b;  /* Hints, timestamps */
+  --text-dim:       #475569;  /* Disabled, placeholders */
+
+  /* ===== ACCENT COLORS (Text/Icons/Borders ONLY - never backgrounds) ===== */
+  --accent-success: #4ade80;   /* green-400 */
+  --accent-warning: #fbbf24;   /* amber-400 */
+  --accent-danger:  #f87171;   /* red-400 */
+  --accent-info:    #60a5fa;   /* blue-400 */
+  --accent-primary: #818cf8;   /* indigo-400 */
+
+  /* ===== STATUS INDICATORS (Very subtle backgrounds for minimal semantic) ===== */
+  --status-success-bg: rgba(74, 222, 128, 0.08);
+  --status-warning-bg: rgba(251, 191, 36, 0.08);
+  --status-danger-bg:  rgba(248, 113, 113, 0.08);
+  --status-info-bg:    rgba(96, 165, 250, 0.08);
+
+  /* ===== LEGACY COMPAT (map old vars to new) ===== */
+  --color-bg-primary: var(--bg-surface);
+  --color-bg-secondary: var(--bg-app);
+  --color-bg-card: var(--bg-elevated);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border-default);
+  --color-border-light: var(--border-strong);
 }
 
 html {
-  background-color: #030712;
+  background-color: var(--bg-app);
   color-scheme: dark;
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text-primary);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+}
+
+/* ===== UTILITY CLASSES (Navy-First) ===== */
+.bg-navy-app { background-color: var(--bg-app); }
+.bg-navy-surface { background-color: var(--bg-surface); }
+.bg-navy-elevated { background-color: var(--bg-elevated); }
+.bg-navy-subtle { background-color: var(--bg-subtle); }
+.bg-navy-inset { background-color: var(--bg-inset); }
+
+.border-navy { border-color: var(--border-default); }
+.border-navy-subtle { border-color: var(--border-subtle); }
+.border-navy-strong { border-color: var(--border-strong); }
+
+.text-navy-primary { color: var(--text-primary); }
+.text-navy-secondary { color: var(--text-secondary); }
+.text-navy-muted { color: var(--text-muted); }
+
+/* Status badges - minimal bg, colored border + text */
+.status-success {
+  background: var(--status-success-bg);
+  border: 1px solid var(--accent-success);
+  color: var(--accent-success);
+}
+.status-warning {
+  background: var(--status-warning-bg);
+  border: 1px solid var(--accent-warning);
+  color: var(--accent-warning);
+}
+.status-danger {
+  background: var(--status-danger-bg);
+  border: 1px solid var(--accent-danger);
+  color: var(--accent-danger);
+}
+.status-info {
+  background: var(--status-info-bg);
+  border: 1px solid var(--accent-info);
+  color: var(--accent-info);
 }
 
 .font-mono {

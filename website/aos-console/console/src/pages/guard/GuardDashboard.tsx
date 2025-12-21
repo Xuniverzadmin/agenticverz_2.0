@@ -19,29 +19,30 @@ import { circuitBreaker } from '../../lib/healthCheck';
 import { logger } from '../../lib/consoleLogger';
 
 // ============== STATUS SECTION ==============
+// Navy-First: minimal backgrounds, status via text/border/icon only
 type ProtectionStatus = 'protected' | 'at_risk' | 'stopped';
 type ConsoleMode = 'live' | 'demo' | 'staging';
 
 const STATUS_CONFIG: Record<ProtectionStatus, { label: string; color: string; bg: string; border: string; description: string }> = {
   protected: {
     label: 'PROTECTED',
-    color: 'text-green-400',
-    bg: 'bg-green-500/20',
-    border: 'border-green-500',
+    color: 'text-accent-success',
+    bg: 'bg-navy-surface',
+    border: 'border-accent-success/40',
     description: 'All systems nominal. AI guardrails active.',
   },
   at_risk: {
     label: 'AT RISK',
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/20',
-    border: 'border-amber-500',
+    color: 'text-accent-warning',
+    bg: 'bg-navy-surface',
+    border: 'border-accent-warning/40',
     description: 'Incidents detected. Review recommended.',
   },
   stopped: {
     label: 'TRAFFIC STOPPED',
-    color: 'text-red-400',
-    bg: 'bg-red-500/20',
-    border: 'border-red-500',
+    color: 'text-accent-danger',
+    bg: 'bg-navy-surface',
+    border: 'border-accent-danger/40',
     description: 'Kill switch active. All traffic halted.',
   },
 };
@@ -194,17 +195,17 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
 
   if (statusLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center h-screen bg-navy-app">
+        <div className="animate-spin w-12 h-12 border-4 border-accent-info border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
     <ErrorBoundary>
-    <div className="min-h-screen bg-slate-900 text-slate-100">
+    <div className="min-h-screen bg-navy-app text-slate-100">
       {/* ============== HEADER ============== */}
-      <header className="bg-slate-800 border-b border-slate-700 px-6 py-4">
+      <header className="bg-navy-surface border-b border-navy-border px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -242,17 +243,17 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
       <main className="max-w-7xl mx-auto p-6 space-y-6">
         {/* ============== ERROR BANNER (if any) ============== */}
         {hasErrors && (
-          <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-4 flex items-center gap-3">
+          <div className="bg-navy-surface border border-accent-warning/40 rounded-lg p-4 flex items-center gap-3">
             <span className="text-2xl">⚠️</span>
             <div>
-              <p className="font-medium text-amber-300">Connection Issue</p>
-              <p className="text-sm text-amber-200/70">
+              <p className="font-medium text-accent-warning">Connection Issue</p>
+              <p className="text-sm text-slate-400">
                 Some data may be unavailable. Showing cached/default values.
               </p>
             </div>
             <button
               onClick={() => queryClient.invalidateQueries({ queryKey: ['guard'] })}
-              className="ml-auto px-3 py-1 bg-amber-500/30 hover:bg-amber-500/50 rounded text-sm"
+              className="ml-auto px-3 py-1 bg-navy-elevated hover:bg-navy-elevated/80 border border-accent-warning/30 text-accent-warning rounded text-sm"
             >
               Retry
             </button>
@@ -263,8 +264,8 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
         <section className={`rounded-xl ${statusInfo.bg} border-2 ${statusInfo.border} p-6`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className={`w-16 h-16 rounded-full ${statusInfo.bg} border-2 ${statusInfo.border} flex items-center justify-center`}>
-                <span className={`w-8 h-8 rounded-full bg-current ${statusInfo.color} animate-pulse`} />
+              <div className={`w-16 h-16 rounded-full bg-navy-elevated border-2 ${statusInfo.border} flex items-center justify-center`}>
+                <span className={`w-8 h-8 rounded-full ${statusInfo.color} animate-pulse`} style={{backgroundColor: 'currentColor', opacity: 0.8}} />
               </div>
               <div>
                 <h2 className={`text-3xl font-bold ${statusInfo.color}`}>{statusInfo.label}</h2>
@@ -278,19 +279,19 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
               </div>
             </div>
 
-            {/* Control Buttons */}
+            {/* Control Buttons - Navy-First: outline style with accent colors */}
             <div className="flex gap-3">
               {protectionStatus === 'stopped' ? (
                 <button
                   onClick={() => setShowResumeConfirm(true)}
-                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
+                  className="px-6 py-3 bg-navy-elevated hover:bg-navy-elevated/80 border-2 border-accent-success text-accent-success font-bold rounded-lg transition-colors flex items-center gap-2"
                 >
                   <span>▶</span> RESUME TRAFFIC
                 </button>
               ) : (
                 <button
                   onClick={() => setShowKillConfirm(true)}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
+                  className="px-6 py-3 bg-navy-elevated hover:bg-navy-elevated/80 border-2 border-accent-danger text-accent-danger font-bold rounded-lg transition-colors flex items-center gap-2"
                 >
                   <span>⏹</span> STOP ALL TRAFFIC
                 </button>
@@ -326,7 +327,7 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
         </section>
 
         {/* ============== ACTIVE GUARDRAILS ============== */}
-        <section className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+        <section className="bg-navy-surface rounded-xl border border-navy-border p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span>🔒</span> Active Guardrails
           </h3>
@@ -334,7 +335,7 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
             {safeStatus.active_guardrails?.map((guardrail, i) => (
               <span
                 key={i}
-                className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/50 rounded-full text-sm"
+                className="px-3 py-1 bg-navy-elevated text-accent-success border border-accent-success/30 rounded-full text-sm"
               >
                 ✓ {guardrail.replace(/_/g, ' ')}
               </span>
@@ -345,8 +346,8 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
         {/* ============== TWO COLUMN LAYOUT ============== */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* INCIDENT HISTORY */}
-          <section className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+          <section className="bg-navy-surface rounded-xl border border-navy-border overflow-hidden">
+            <div className="p-4 border-b border-navy-border flex items-center justify-between">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <span>📋</span> Incident History
               </h3>
@@ -355,7 +356,7 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
               </span>
             </div>
 
-            <div className="divide-y divide-slate-700 max-h-96 overflow-y-auto">
+            <div className="divide-y divide-navy-border max-h-96 overflow-y-auto">
               {incidents?.items?.length === 0 ? (
                 <div className="p-8 text-center text-slate-400">
                   <span className="text-4xl mb-2 block">✨</span>
@@ -380,8 +381,8 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
           </section>
 
           {/* DECISION TIMELINE */}
-          <section className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <div className="p-4 border-b border-slate-700">
+          <section className="bg-navy-surface rounded-xl border border-navy-border overflow-hidden">
+            <div className="p-4 border-b border-navy-border">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <span>🔍</span> Decision Timeline
               </h3>
@@ -399,35 +400,31 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Root Cause Badge */}
+                  {/* Root Cause Badge - Navy-First: text/border emphasis only */}
                   {timeline.root_cause && (
-                    <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
+                    <div className="bg-navy-elevated border border-accent-danger/40 rounded-lg p-3">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">
+                        <span className="px-2 py-0.5 border border-accent-danger text-accent-danger text-xs font-bold rounded">
                           ROOT CAUSE
                         </span>
-                        <span className="text-red-300 font-medium">{timeline.root_cause}</span>
+                        <span className="text-accent-danger font-medium">{timeline.root_cause}</span>
                       </div>
                     </div>
                   )}
 
-                  {/* Policy Evaluations */}
+                  {/* Policy Evaluations - Navy-First: same bg, color via text */}
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium text-slate-400 uppercase">Policy Decisions</h4>
                     {timeline.policy_evaluations?.map((policy, i) => (
                       <div
                         key={i}
-                        className={`flex items-center justify-between p-2 rounded ${
-                          policy.result === 'PASS' ? 'bg-green-500/10' :
-                          policy.result === 'FAIL' ? 'bg-red-500/10' :
-                          'bg-amber-500/10'
-                        }`}
+                        className="flex items-center justify-between p-2 rounded bg-navy-subtle"
                       >
                         <span className="text-sm">{policy.policy}</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                          policy.result === 'PASS' ? 'bg-green-500 text-white' :
-                          policy.result === 'FAIL' ? 'bg-red-500 text-white' :
-                          'bg-amber-500 text-white'
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                          policy.result === 'PASS' ? 'border-accent-success text-accent-success' :
+                          policy.result === 'FAIL' ? 'border-accent-danger text-accent-danger' :
+                          'border-accent-warning text-accent-warning'
                         }`}>
                           {policy.result}
                         </span>
@@ -438,13 +435,13 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
                   {/* Event Timeline */}
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium text-slate-400 uppercase">Event Log</h4>
-                    <div className="relative pl-4 border-l-2 border-slate-600 space-y-3">
+                    <div className="relative pl-4 border-l-2 border-navy-border space-y-3">
                       {timeline.events?.map((event, i) => (
                         <div key={i} className="relative">
-                          <div className="absolute -left-[21px] w-3 h-3 bg-blue-500 rounded-full border-2 border-slate-800" />
-                          <div className="bg-slate-700/50 rounded p-2">
+                          <div className="absolute -left-[21px] w-3 h-3 bg-accent-info rounded-full border-2 border-navy-surface" />
+                          <div className="bg-navy-subtle rounded p-2">
                             <div className="flex justify-between text-xs">
-                              <span className="font-medium text-blue-400">{event.event}</span>
+                              <span className="font-medium text-accent-info">{event.event}</span>
                               <span className="text-slate-400">{event.duration_ms}ms</span>
                             </div>
                           </div>
@@ -455,19 +452,19 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
 
                   {/* Metadata */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="bg-slate-700/50 rounded p-2">
+                    <div className="bg-navy-subtle rounded p-2">
                       <span className="text-slate-400">Model:</span>
                       <span className="ml-2 text-slate-200">{timeline.model}</span>
                     </div>
-                    <div className="bg-slate-700/50 rounded p-2">
+                    <div className="bg-navy-subtle rounded p-2">
                       <span className="text-slate-400">Latency:</span>
                       <span className="ml-2 text-slate-200">{timeline.latency_ms}ms</span>
                     </div>
-                    <div className="bg-slate-700/50 rounded p-2">
+                    <div className="bg-navy-subtle rounded p-2">
                       <span className="text-slate-400">Cost:</span>
                       <span className="ml-2 text-slate-200">${(timeline.cost_cents / 100).toFixed(4)}</span>
                     </div>
-                    <div className="bg-slate-700/50 rounded p-2">
+                    <div className="bg-navy-subtle rounded p-2">
                       <span className="text-slate-400">User:</span>
                       <span className="ml-2 text-slate-200">{timeline.user_id || 'N/A'}</span>
                     </div>
@@ -479,7 +476,7 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
         </div>
 
         {/* ============== QUICK ACTIONS ============== */}
-        <section className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+        <section className="bg-navy-surface rounded-xl border border-navy-border p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span>⚡</span> Quick Actions
           </h3>
@@ -519,7 +516,7 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
       {showKillConfirm && (
         <Modal onClose={() => setShowKillConfirm(false)}>
           <div className="text-center">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-navy-elevated border-2 border-accent-danger/40 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-4xl">⚠️</span>
             </div>
             <h3 className="text-xl font-bold mb-2">Stop All Traffic?</h3>
@@ -529,14 +526,14 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setShowKillConfirm(false)}
-                className="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg"
+                className="px-6 py-2 bg-navy-elevated hover:bg-navy-subtle border border-navy-border rounded-lg"
               >
                 Cancel
               </button>
               <button
                 onClick={() => killMutation.mutate()}
                 disabled={killMutation.isPending}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold"
+                className="px-6 py-2 bg-navy-elevated hover:bg-navy-subtle border-2 border-accent-danger text-accent-danger rounded-lg font-bold"
               >
                 {killMutation.isPending ? 'Stopping...' : 'STOP ALL TRAFFIC'}
               </button>
@@ -549,7 +546,7 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
       {showResumeConfirm && (
         <Modal onClose={() => setShowResumeConfirm(false)}>
           <div className="text-center">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-navy-elevated border-2 border-accent-success/40 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-4xl">▶️</span>
             </div>
             <h3 className="text-xl font-bold mb-2">Resume Traffic?</h3>
@@ -559,14 +556,14 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setShowResumeConfirm(false)}
-                className="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg"
+                className="px-6 py-2 bg-navy-elevated hover:bg-navy-subtle border border-navy-border rounded-lg"
               >
                 Cancel
               </button>
               <button
                 onClick={() => resumeMutation.mutate()}
                 disabled={resumeMutation.isPending}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-bold"
+                className="px-6 py-2 bg-navy-elevated hover:bg-navy-subtle border-2 border-accent-success text-accent-success rounded-lg font-bold"
               >
                 {resumeMutation.isPending ? 'Resuming...' : 'Resume Traffic'}
               </button>
@@ -589,31 +586,31 @@ export function GuardDashboard({ onLogout }: GuardDashboardProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Match Level</span>
-                <span className={`font-bold ${replayResult.match_level === 'exact' ? 'text-green-400' : 'text-amber-400'}`}>
+                <span className={`font-bold ${replayResult.match_level === 'exact' ? 'text-accent-success' : 'text-accent-warning'}`}>
                   {replayResult.match_level?.toUpperCase() || 'UNKNOWN'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Policy Match</span>
-                <span className={replayResult.policy_match ? 'text-green-400' : 'text-amber-400'}>
+                <span className={replayResult.policy_match ? 'text-accent-success' : 'text-accent-warning'}>
                   {replayResult.policy_match ? 'Yes' : 'No'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Model Drift</span>
-                <span className={!replayResult.model_drift_detected ? 'text-green-400' : 'text-red-400'}>
+                <span className={!replayResult.model_drift_detected ? 'text-accent-success' : 'text-accent-danger'}>
                   {replayResult.model_drift_detected ? 'Detected' : 'None'}
                 </span>
               </div>
               {replayResult.details?.message && (
-                <div className="mt-4 p-3 bg-slate-700 rounded-lg">
+                <div className="mt-4 p-3 bg-navy-subtle rounded-lg">
                   <p className="text-slate-200">{replayResult.details.message}</p>
                 </div>
               )}
             </div>
             <button
               onClick={() => setShowReplayResult(false)}
-              className="w-full mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium"
+              className="w-full mt-6 px-4 py-2 bg-navy-elevated hover:bg-navy-subtle border border-accent-info text-accent-info rounded-lg font-medium"
             >
               Close
             </button>
@@ -634,12 +631,12 @@ function MetricCard({ label, value, icon, highlight }: {
   highlight?: boolean;
 }) {
   return (
-    <div className={`bg-slate-800 rounded-xl border p-4 ${highlight ? 'border-green-500 ring-2 ring-green-500/20' : 'border-slate-700'}`}>
+    <div className={`bg-navy-surface rounded-xl border p-4 ${highlight ? 'border-accent-success/50' : 'border-navy-border'}`}>
       <div className="flex items-center gap-2 mb-2">
         <span>{icon}</span>
         <span className="text-sm text-slate-400">{label}</span>
       </div>
-      <div className={`text-2xl font-bold ${highlight ? 'text-green-400' : 'text-slate-100'}`}>
+      <div className={`text-2xl font-bold ${highlight ? 'text-accent-success' : 'text-slate-100'}`}>
         {value}
       </div>
     </div>
@@ -653,28 +650,29 @@ function IncidentRow({ incident, isSelected, onSelect, onReplay, isReplaying }: 
   onReplay: (callId: string) => void;
   isReplaying: boolean;
 }) {
+  // Navy-First: severity shown via text color, not background
   const severityColors = {
-    critical: 'bg-red-500',
-    high: 'bg-orange-500',
-    medium: 'bg-amber-500',
-    low: 'bg-blue-500',
+    critical: 'text-accent-danger',
+    high: 'text-orange-400',
+    medium: 'text-accent-warning',
+    low: 'text-accent-info',
   };
 
   return (
     <div
-      className={`p-4 cursor-pointer transition-colors ${isSelected ? 'bg-blue-500/20' : 'hover:bg-slate-700/50'}`}
+      className={`p-4 cursor-pointer transition-colors ${isSelected ? 'bg-navy-elevated' : 'hover:bg-navy-subtle'}`}
       onClick={onSelect}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`w-2 h-2 rounded-full ${severityColors[incident.severity]}`} />
+            <span className={`w-2 h-2 rounded-full ${severityColors[incident.severity]} bg-current`} />
             <span className="font-medium">{incident.title}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-400">
             <span>{new Date(incident.started_at).toLocaleString()}</span>
-            <span className="px-1.5 py-0.5 bg-slate-700 rounded">{incident.trigger_type}</span>
-            <span className="text-green-400">+${(incident.cost_avoided_cents / 100).toFixed(2)} saved</span>
+            <span className="px-1.5 py-0.5 bg-navy-inset rounded">{incident.trigger_type}</span>
+            <span className="text-accent-success">+${(incident.cost_avoided_cents / 100).toFixed(2)} saved</span>
           </div>
         </div>
         <button
@@ -686,7 +684,7 @@ function IncidentRow({ incident, isSelected, onSelect, onReplay, isReplaying }: 
           }}
           disabled={isReplaying || !incident.call_id}
           title={!incident.call_id ? 'No call associated with this incident' : 'Replay this call'}
-          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded text-xs font-medium transition-colors"
+          className="px-3 py-1 bg-navy-elevated hover:bg-navy-subtle border border-accent-info/50 text-accent-info disabled:border-navy-border disabled:text-slate-500 disabled:cursor-not-allowed rounded text-xs font-medium transition-colors"
         >
           {isReplaying ? '⏳' : '🔄'} Replay
         </button>
@@ -705,7 +703,7 @@ function ActionButton({ icon, label, onClick, disabled }: {
     <button
       onClick={onClick}
       disabled={disabled}
-      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500 rounded-lg flex items-center gap-2 transition-colors"
+      className="px-4 py-2 bg-navy-elevated hover:bg-navy-subtle border border-navy-border disabled:opacity-50 disabled:cursor-not-allowed rounded-lg flex items-center gap-2 transition-colors"
     >
       <span>{icon}</span>
       <span>{label}</span>
@@ -716,8 +714,8 @@ function ActionButton({ icon, label, onClick, disabled }: {
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-md w-full mx-4">
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="relative bg-navy-surface rounded-xl border border-navy-border p-6 max-w-md w-full mx-4">
         {children}
       </div>
     </div>

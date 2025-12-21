@@ -30,6 +30,8 @@ import { IncidentsPage } from './incidents/IncidentsPage';
 import { KillSwitchPage } from './KillSwitchPage';
 import { LogsPage } from './LogsPage';
 import { GuardSettingsPage } from './GuardSettingsPage';
+import { AccountPage } from './AccountPage';
+import { SupportPage } from './SupportPage';
 
 // API key storage key
 const API_KEY_STORAGE_KEY = 'guard-api-key';
@@ -63,7 +65,7 @@ export function GuardConsoleApp() {
 
       // Set auth store
       useAuthStore.getState().setTokens(storedKey, '');
-      useAuthStore.getState().setTenant(storedTenant || 'tenant_demo');
+      useAuthStore.getState().setTenant(storedTenant || 'demo-tenant');
     }
 
     setIsLoading(false);
@@ -72,11 +74,11 @@ export function GuardConsoleApp() {
   const handleLogin = (key: string) => {
     // Store credentials
     localStorage.setItem(API_KEY_STORAGE_KEY, key);
-    localStorage.setItem(TENANT_STORAGE_KEY, 'tenant_demo');
+    localStorage.setItem(TENANT_STORAGE_KEY, 'demo-tenant');
 
     // Set auth store
     useAuthStore.getState().setTokens(key, '');
-    useAuthStore.getState().setTenant('tenant_demo');
+    useAuthStore.getState().setTenant('demo-tenant');
 
     setApiKey(key);
     setIsAuthenticated(true);
@@ -118,6 +120,10 @@ export function GuardConsoleApp() {
         return <LogsPage />;
       case 'settings':
         return <GuardSettingsPage />;
+      case 'account':
+        return <AccountPage />;
+      case 'support':
+        return <SupportPage />;
       default:
         return <GuardDashboard onLogout={handleLogout} />;
     }

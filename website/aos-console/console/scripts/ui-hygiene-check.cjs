@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * UI Hygiene Checker v2.0 - Enforced Quality Gates
+ * UI Hygiene Checker v2.1 - Enforced Quality Gates
  *
  * Checks for:
  * 1. STALE_BUTTON - Empty or TODO onClick handlers (ERROR)
@@ -10,6 +10,7 @@
  * 5. MUTATION_NO_LOADING - Mutation without loading state (WARNING)
  * 6. PAGE_NO_LOGGER - Page missing componentMount (WARNING)
  * 7. ORPHANED_PAGE - Page not imported anywhere (WARNING/ERROR in CI)
+ * 8. NAV_PAGE_MISMATCH - Guard nav items without renderPage case (ERROR)
  *
  * Budget Caps:
  * - Max 30 warnings allowed
@@ -85,6 +86,11 @@ const FIX_HINTS = {
     1. Add route in src/routes/index.tsx
     2. Import in another component
     3. Delete if truly unused`,
+  NAV_PAGE_MISMATCH: `
+  Fix: GuardConsoleEntry.tsx is the PRODUCTION entry point!
+    1. Add import for missing page (e.g., import { AccountPage } from './AccountPage')
+    2. Add case in renderPage() switch (e.g., case 'account': return <AccountPage />)
+    3. Ensure NAV_ITEMS in GuardLayout.tsx matches cases in GuardConsoleEntry.tsx`,
 };
 
 // ============== PATTERNS ==============
@@ -294,6 +300,45 @@ function checkButtonFeedback(filePath, content) {
   }
 }
 
+function checkGuardNavMismatch() {
+  // Check that GuardLayout NAV_ITEMS match GuardConsoleEntry renderPage cases
+  const layoutPath = path.join(SRC_DIR, 'pages', 'guard', 'GuardLayout.tsx');
+  const entryPath = path.join(SRC_DIR, 'pages', 'guard', 'GuardConsoleEntry.tsx');
+
+  if (!fs.existsSync(layoutPath) || !fs.existsSync(entryPath)) return;
+
+  const layoutContent = fs.readFileSync(layoutPath, 'utf-8');
+  const entryContent = fs.readFileSync(entryPath, 'utf-8');
+
+  // Extract nav item IDs from layout (e.g., id: 'account')
+  const navItemPattern = /id:\s*['"]([^'"]+)['"]/g;
+  const navItems = new Set();
+  let match;
+  while ((match = navItemPattern.exec(layoutContent)) !== null) {
+    navItems.add(match[1]);
+  }
+
+  // Extract case IDs from entry (e.g., case 'account':)
+  const casePattern = /case\s*['"]([^'"]+)['"]:/g;
+  const caseItems = new Set();
+  while ((match = casePattern.exec(entryContent)) !== null) {
+    caseItems.add(match[1]);
+  }
+
+  // Check for mismatches - nav items without corresponding cases
+  for (const navItem of navItems) {
+    if (!caseItems.has(navItem) && navItem !== 'overview') { // overview is default
+      issues.push({
+        file: 'src/pages/guard/GuardConsoleEntry.tsx',
+        line: 1,
+        type: 'error',
+        category: 'NAV_PAGE_MISMATCH',
+        message: `Navigation item "${navItem}" has no renderPage() case in GuardConsoleEntry.tsx - page will not render!`,
+      });
+    }
+  }
+}
+
 function checkOrphanedPages(isCI) {
   // Read routes file
   const routesPath = path.join(SRC_DIR, 'routes', 'index.tsx');
@@ -382,6 +427,7 @@ function main() {
   }
 
   checkOrphanedPages(isCI);
+  checkGuardNavMismatch();
 
   // Group issues by category
   const byCategory = {};

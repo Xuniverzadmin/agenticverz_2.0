@@ -1036,8 +1036,13 @@ async def get_settings(
 
     Customers can see what's configured but can't change it.
     Contact support to modify.
+
+    In demo mode (tenant_demo or non-existent tenant), returns demo defaults.
     """
-    tenant = get_tenant_from_auth(session, tenant_id)
+    # Try to get tenant, but don't fail if not found (demo mode)
+    stmt = select(Tenant).where(Tenant.id == tenant_id)
+    row = session.exec(stmt).first()
+    tenant = row[0] if row else None
 
     # Get active guardrails
     stmt = select(DefaultGuardrail).order_by(DefaultGuardrail.priority)
@@ -1068,19 +1073,20 @@ async def get_settings(
     )
     state_row = session.exec(stmt).first()
 
+    # Return settings (with demo defaults if tenant not found)
     return TenantSettings(
         tenant_id=tenant_id,
-        tenant_name=tenant.name if hasattr(tenant, "name") else tenant_id,
-        plan=tenant.plan if hasattr(tenant, "plan") else "starter",
+        tenant_name=tenant.name if tenant and hasattr(tenant, "name") else "Demo Organization",
+        plan=tenant.plan if tenant and hasattr(tenant, "plan") else "starter",
         guardrails=guardrails,
-        budget_limit_cents=tenant.budget_limit_cents if hasattr(tenant, "budget_limit_cents") else 10000,
-        budget_period=tenant.budget_period if hasattr(tenant, "budget_period") else "daily",
+        budget_limit_cents=tenant.budget_limit_cents if tenant and hasattr(tenant, "budget_limit_cents") else 10000,
+        budget_period=tenant.budget_period if tenant and hasattr(tenant, "budget_period") else "daily",
         kill_switch_enabled=True,  # Always available
         kill_switch_auto_trigger=True,  # Default on
         auto_trigger_threshold_cents=tenant.auto_trigger_threshold_cents
-        if hasattr(tenant, "auto_trigger_threshold_cents")
+        if tenant and hasattr(tenant, "auto_trigger_threshold_cents")
         else 5000,
-        notification_email=tenant.email if hasattr(tenant, "email") else None,
+        notification_email=tenant.email if tenant and hasattr(tenant, "email") else "demo@example.com",
         notification_slack_webhook=None,  # Not exposed in MVP
     )
 

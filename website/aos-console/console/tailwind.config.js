@@ -6,6 +6,26 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Navy-First Design System
+        navy: {
+          app: '#0b1020',       // Deepest - app bg
+          surface: '#0f172a',   // Cards, modals
+          elevated: '#131c3a',  // Hover, focus
+          subtle: '#0c142e',    // Rows, separators
+          inset: '#080d1a',     // Code blocks
+          border: '#1f2a55',    // Default border
+          'border-subtle': '#161f42',
+          'border-strong': '#2a3a6e',
+        },
+        // Accent colors (text/icons only)
+        accent: {
+          success: '#4ade80',
+          warning: '#fbbf24',
+          danger: '#f87171',
+          info: '#60a5fa',
+          primary: '#818cf8',
+        },
+        // Legacy primary (for compatibility)
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',

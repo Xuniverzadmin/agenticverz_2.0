@@ -9,7 +9,9 @@
  * - Logs (Phase 4)
  * - Settings
  *
- * Consistent dark theme matching PIN-100 specifications.
+ * Uses Navy-First Design System v1.0:
+ * - Surfaces are neutral navy family
+ * - Meaning conveyed via text, borders, icons (not colored backgrounds)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +22,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { healthMonitor } from '../../lib/healthCheck';
 import { useAuthStore } from '../../stores/authStore';
 
-// Navigation items matching target IA
+// Navigation items matching target IA (with Account & Support)
 const NAV_ITEMS = [
   { id: 'overview', label: 'Overview', icon: '🛡️', description: 'Control plane & status' },
   { id: 'live', label: 'Live Activity', icon: '📡', description: 'Real-time event stream' },
@@ -28,6 +30,8 @@ const NAV_ITEMS = [
   { id: 'killswitch', label: 'Kill Switch', icon: '🚨', description: 'Emergency controls' },
   { id: 'logs', label: 'Logs', icon: '📜', description: 'Event history' },
   { id: 'settings', label: 'Settings', icon: '⚙️', description: 'Configuration' },
+  { id: 'account', label: 'Account', icon: '👤', description: 'Organization & team' },
+  { id: 'support', label: 'Support', icon: '💬', description: 'Help & feedback' },
 ] as const;
 
 type NavItemId = typeof NAV_ITEMS[number]['id'];
@@ -40,10 +44,11 @@ const MODE_CONFIG: Record<ConsoleMode, { label: string; color: string; pulse: bo
   staging: { label: 'STAGING', color: 'text-blue-400', pulse: false },
 };
 
+// Navy-First: minimal backgrounds, status via text/border only
 const STATUS_CONFIG: Record<ProtectionStatus, { label: string; color: string; bg: string; border: string }> = {
-  protected: { label: 'Protected', color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/50' },
-  at_risk: { label: 'At Risk', color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/50' },
-  stopped: { label: 'Stopped', color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/50' },
+  protected: { label: 'Protected', color: 'text-accent-success', bg: 'bg-navy-elevated', border: 'border-accent-success/30' },
+  at_risk: { label: 'At Risk', color: 'text-accent-warning', bg: 'bg-navy-elevated', border: 'border-accent-warning/30' },
+  stopped: { label: 'Stopped', color: 'text-accent-danger', bg: 'bg-navy-elevated', border: 'border-accent-danger/30' },
 };
 
 interface GuardLayoutProps {
@@ -63,7 +68,7 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
 
     // Small delay to ensure auth headers are ready
     const timer = setTimeout(() => {
-      healthMonitor.startPeriodicCheck(30000, tenantId || 'tenant_demo');
+      healthMonitor.startPeriodicCheck(30000, tenantId || 'demo-tenant');
     }, 500);
 
     return () => {
@@ -101,13 +106,13 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-900 text-slate-100 flex">
+      <div className="min-h-screen bg-navy-app text-slate-100 flex">
         {/* ============== SIDEBAR ============== */}
-        <aside className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
+        <aside className="w-64 bg-navy-surface border-r border-navy-border flex flex-col">
           {/* Logo */}
-          <div className="p-4 border-b border-slate-700">
+          <div className="p-4 border-b border-navy-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-accent-info to-accent-primary rounded-lg flex items-center justify-center">
                 <span className="text-xl">🛡️</span>
               </div>
               <div>
@@ -118,19 +123,19 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
           </div>
 
           {/* Status Summary */}
-          <div className="p-4 border-b border-slate-700">
+          <div className="p-4 border-b border-navy-border">
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${statusConfig.bg} ${statusConfig.border} border`}>
               <span className={`w-2 h-2 rounded-full bg-current ${statusConfig.color} animate-pulse`} />
               <span className={`font-medium ${statusConfig.color}`}>{statusConfig.label}</span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-700/50 rounded p-2">
+              <div className="bg-navy-subtle rounded p-2">
                 <span className="text-slate-400">Today</span>
                 <span className="block font-bold">{snapshot?.requests_today?.toLocaleString() ?? '0'}</span>
               </div>
-              <div className="bg-slate-700/50 rounded p-2">
+              <div className="bg-navy-subtle rounded p-2">
                 <span className="text-slate-400">Blocked</span>
-                <span className="block font-bold text-green-400">{snapshot?.incidents_prevented ?? 0}</span>
+                <span className="block font-bold text-accent-success">{snapshot?.incidents_prevented ?? 0}</span>
               </div>
             </div>
           </div>
@@ -144,8 +149,8 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
                 className={`
                   w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors
                   ${activeTab === item.id
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                    : 'hover:bg-slate-700/50 text-slate-300'
+                    ? 'bg-navy-elevated text-accent-info border border-accent-info/30'
+                    : 'hover:bg-navy-elevated text-slate-300'
                   }
                 `}
               >
@@ -161,7 +166,7 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-700">
+          <div className="p-4 border-t border-navy-border">
             <HealthIndicator showDetails={true} position="inline" />
           </div>
         </aside>
@@ -169,7 +174,7 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
         {/* ============== MAIN CONTENT ============== */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="h-14 bg-slate-800 border-b border-slate-700 px-6 flex items-center justify-between">
+          <header className="h-14 bg-navy-surface border-b border-navy-border px-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h2 className="text-lg font-semibold">
                 {NAV_ITEMS.find(i => i.id === activeTab)?.label}
@@ -185,13 +190,13 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
                 <span className="text-sm font-medium">{modeConfig.label}</span>
               </div>
 
-              {/* Quick Actions */}
+              {/* Quick Actions - text-only buttons with accent borders */}
               {status?.is_frozen ? (
-                <button className="px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                <button className="px-3 py-1.5 border border-accent-success/50 text-accent-success hover:bg-navy-elevated rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
                   <span>▶</span> Resume
                 </button>
               ) : (
-                <button className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                <button className="px-3 py-1.5 border border-accent-danger/50 text-accent-danger hover:bg-navy-elevated rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
                   <span>⏹</span> Stop
                 </button>
               )}
@@ -199,7 +204,7 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
               {onLogout && (
                 <button
                   onClick={onLogout}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg text-sm transition-colors"
+                  className="px-3 py-1.5 text-slate-400 hover:text-white hover:bg-navy-elevated rounded-lg text-sm transition-colors"
                 >
                   Logout
                 </button>
@@ -208,7 +213,7 @@ export function GuardLayout({ children, activeTab, onTabChange, onLogout }: Guar
           </header>
 
           {/* Content */}
-          <main className="flex-1 overflow-auto bg-slate-900">
+          <main className="flex-1 overflow-auto bg-navy-app">
             {children}
           </main>
         </div>

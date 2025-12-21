@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/authStore';
 // Helper to get tenant_id for guard API calls
 const getTenantId = (): string => {
   const tenantId = useAuthStore.getState().tenantId;
-  return tenantId || 'tenant_demo'; // Fallback for demo mode
+  return tenantId || 'demo-tenant'; // Fallback for demo mode
 };
 
 // Safe API wrapper with error logging

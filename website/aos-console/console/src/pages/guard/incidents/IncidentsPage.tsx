@@ -1,38 +1,31 @@
 /**
- * Incidents Page - Customer Console (M23 Enhanced)
+ * Incidents Page - Customer Console (Navy-First Design)
  *
- * Human narrative, not logs.
- *
- * M23 Enhancements:
- * - Search bar with debounced search
- * - Filters panel (user_id, severity, policy_status, model, date range)
- * - Decision timeline in detail view
+ * Navy-First Design Rules Applied:
+ * 1. All surfaces use navy family ONLY (no white, no gray, no colored backgrounds)
+ * 2. Meaning conveyed via text color, borders, icons - never backgrounds
+ * 3. Max 3 accent colors: amber (severity), green (savings), blue (actions)
+ * 4. Severity = left border, not colored pill
+ * 5. Status = outline pill, not filled
  *
  * Component Map:
  * IncidentsPage
  * ├── IncidentSearchBar
  * ├── IncidentFilters
  * ├── IncidentList
- * │   └── IncidentRow
+ * │   └── IncidentRow (left-border severity, structured layout)
  * └── Decision Inspector Modal
- *     ├── DecisionSummary
- *     └── DecisionTimeline
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Card } from '../../../components/common/Card';
-import { Badge } from '../../../components/common/Badge';
-import { Button } from '../../../components/common/Button';
-import { Modal } from '../../../components/common/Modal';
-import { Spinner } from '../../../components/common/Spinner';
 import { guardApi, IncidentSearchRequest, IncidentSearchResult, DecisionTimelineResponse } from '../../../api/guard';
 import { IncidentSearchBar } from './IncidentSearchBar';
 import { IncidentFilters } from './IncidentFilters';
 import { DecisionTimeline } from './DecisionTimeline';
 import { logger } from '../../../lib/consoleLogger';
 
-// Legacy incident type (for backwards compatibility with existing endpoints)
+// Legacy incident type (for backwards compatibility)
 interface Incident {
   id: string;
   title: string;
@@ -48,17 +41,19 @@ interface Incident {
   duration_seconds: number | null;
 }
 
+// Navy-First: Severity uses border color only (no background)
 const SEVERITY_CONFIG = {
-  critical: { label: 'Critical', bgColor: 'bg-red-100', textColor: 'text-red-800' },
-  high: { label: 'High', bgColor: 'bg-orange-100', textColor: 'text-orange-800' },
-  medium: { label: 'Medium', bgColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
-  low: { label: 'Low', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
+  critical: { label: 'Critical', borderColor: 'border-l-red-500', textColor: 'text-red-400' },
+  high: { label: 'High', borderColor: 'border-l-amber-500', textColor: 'text-amber-400' },
+  medium: { label: 'Medium', borderColor: 'border-l-yellow-500', textColor: 'text-yellow-400' },
+  low: { label: 'Low', borderColor: 'border-l-slate-500', textColor: 'text-slate-400' },
 };
 
+// Navy-First: Status uses outline only
 const STATUS_CONFIG = {
-  open: { label: 'Active', color: 'red' },
-  acknowledged: { label: 'Acknowledged', color: 'yellow' },
-  resolved: { label: 'Resolved', color: 'green' },
+  open: { label: 'Active', textColor: 'text-amber-400', borderColor: 'border-amber-400/40' },
+  acknowledged: { label: 'Ack', textColor: 'text-blue-400', borderColor: 'border-blue-400/40' },
+  resolved: { label: 'Resolved', textColor: 'text-green-400', borderColor: 'border-green-400/40' },
 };
 
 export function IncidentsPage() {
@@ -78,7 +73,7 @@ export function IncidentsPage() {
     return () => logger.componentUnmount('IncidentsPage');
   }, []);
 
-  // Use search API when filters are active, otherwise use basic list
+  // Use search API when filters are active
   const hasActiveFilters = Boolean(
     filters.user_id || filters.severity || filters.policy_status ||
     filters.model || filters.time_from || filters.time_to || searchQuery
@@ -116,7 +111,6 @@ export function IncidentsPage() {
     },
     onError: (error) => {
       logger.error('INCIDENTS', 'Failed to seed demo incident', error);
-      alert(`Failed to seed demo: ${error instanceof Error ? error.message : 'Unknown error'}`);
     },
   });
 
@@ -144,25 +138,33 @@ export function IncidentsPage() {
     ? (searchResults?.total || 0)
     : (basicIncidents?.total || 0);
 
+  // Count by severity
+  const severityCounts = {
+    critical: incidentItems.filter(i => i.severity === 'critical').length,
+    high: incidentItems.filter(i => i.severity === 'high').length,
+    medium: incidentItems.filter(i => i.severity === 'medium').length,
+    low: incidentItems.filter(i => i.severity === 'low').length,
+  };
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Header - Navy-First */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Incidents</h1>
-          <p className="text-sm text-gray-500">
-            {totalCount} total | {incidentItems.filter(i => i.status === 'open').length} active
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <span>📋</span> Incidents
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            AI safety events requiring attention
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => seedDemoMutation.mutate()}
-            disabled={seedDemoMutation.isPending}
-          >
-            {seedDemoMutation.isPending ? 'Creating...' : 'Seed Demo'}
-          </Button>
-        </div>
+        <button
+          onClick={() => seedDemoMutation.mutate()}
+          disabled={seedDemoMutation.isPending}
+          className="px-4 py-2 bg-navy-elevated hover:bg-navy-subtle border border-navy-border text-slate-300 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {seedDemoMutation.isPending ? 'Creating...' : '+ Seed Demo'}
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -180,21 +182,31 @@ export function IncidentsPage() {
         open={showFilters}
       />
 
-      {/* Sticky Incident Summary Bar */}
+      {/* Summary Bar - Navy surface, text-only counts */}
       {!isLoading && incidentItems.length > 0 && (
-        <div className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-4 py-2 mb-4 rounded-lg flex items-center gap-4 text-sm">
-          <span className="font-medium text-gray-700">{totalCount} incidents</span>
-          <span className="text-gray-400">|</span>
-          <SeverityCount items={incidentItems} severity="critical" />
-          <SeverityCount items={incidentItems} severity="high" />
-          <SeverityCount items={incidentItems} severity="medium" />
-          <SeverityCount items={incidentItems} severity="low" />
+        <div className="bg-navy-surface border border-navy-border rounded-lg px-4 py-3 mb-4 flex items-center gap-6 text-sm">
+          <span className="text-slate-300">
+            <span className="font-semibold text-white">{totalCount}</span> incidents
+          </span>
+          <span className="text-navy-border">|</span>
+          {severityCounts.critical > 0 && (
+            <span className="text-red-400">{severityCounts.critical} critical</span>
+          )}
+          {severityCounts.high > 0 && (
+            <span className="text-amber-400">{severityCounts.high} high</span>
+          )}
+          {severityCounts.medium > 0 && (
+            <span className="text-yellow-400">{severityCounts.medium} medium</span>
+          )}
+          {severityCounts.low > 0 && (
+            <span className="text-slate-400">{severityCounts.low} low</span>
+          )}
         </div>
       )}
 
       {/* Results Info */}
       {hasActiveFilters && searchResults && (
-        <div className="mb-4 text-sm text-gray-500">
+        <div className="mb-4 text-sm text-slate-400">
           Found {searchResults.total} incidents
           {searchQuery && ` matching "${searchQuery}"`}
         </div>
@@ -203,44 +215,40 @@ export function IncidentsPage() {
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center h-48">
-          <Spinner size="lg" />
+          <div className="w-8 h-8 border-2 border-accent-info border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {/* Empty State - Educational */}
+      {/* Empty State - Navy surface */}
       {!isLoading && incidentItems.length === 0 && (
-        <Card className="text-center py-12 px-8">
-          <div className="text-gray-400 text-5xl mb-4">
+        <div className="bg-navy-surface border border-navy-border rounded-xl text-center py-12 px-8">
+          <div className="text-4xl mb-4">
             {hasActiveFilters ? '🔍' : '✨'}
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-white mb-2">
             {hasActiveFilters ? 'No Matches' : 'All Clear'}
           </h3>
-          <p className="text-gray-500 mb-4">
+          <p className="text-slate-400 mb-4 max-w-md mx-auto">
             {hasActiveFilters
               ? 'Try adjusting your search or filters.'
-              : 'No incidents recorded. This means all your policies are passing.'}
+              : 'No incidents recorded. Your guardrails are working.'}
           </p>
           {!hasActiveFilters && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg text-left max-w-md mx-auto">
-              <p className="text-sm font-medium text-blue-800 mb-2">What does this mean?</p>
-              <ul className="text-sm text-blue-700 space-y-1">
+            <div className="mt-6 p-4 bg-navy-elevated border border-accent-info/20 rounded-lg text-left max-w-md mx-auto">
+              <p className="text-sm font-medium text-accent-info mb-2">What this means:</p>
+              <ul className="text-sm text-slate-300 space-y-1">
                 <li>• All AI requests passed policy checks</li>
-                <li>• No cost thresholds were exceeded</li>
-                <li>• No content policy violations detected</li>
-                <li>• Your guardrails are actively protecting</li>
+                <li>• No cost thresholds exceeded</li>
+                <li>• No content violations detected</li>
               </ul>
-              <p className="text-xs text-blue-600 mt-3">
-                Incidents appear here when policies fail or anomalies are detected.
-              </p>
             </div>
           )}
-        </Card>
+        </div>
       )}
 
-      {/* Incident List */}
+      {/* Incident List - Navy rows with left-border severity */}
       {!isLoading && incidentItems.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {incidentItems.map((incident) => (
             <IncidentRow
               key={incident.id}
@@ -252,48 +260,60 @@ export function IncidentsPage() {
       )}
 
       {/* Decision Inspector Modal */}
-      <Modal
-        open={!!selectedIncident}
-        onClose={() => setSelectedIncident(null)}
-        title="Decision Inspector"
-        size="xl"
-      >
-        {timelineLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="lg" />
+      {selectedIncident && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+          <div className="bg-navy-surface border border-navy-border rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-navy-border">
+              <h2 className="text-lg font-semibold text-white">Decision Inspector</h2>
+              <button
+                onClick={() => setSelectedIncident(null)}
+                className="text-slate-400 hover:text-white text-xl"
+              >
+                ×
+              </button>
+            </div>
+            {/* Modal Content */}
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+              {timelineLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-2 border-accent-info border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : timeline ? (
+                <DecisionTimeline
+                  timeline={timeline}
+                  onReplay={() => {
+                    window.location.href = `/guard/replay?call_id=${timeline.call_id || timeline.incident_id}`;
+                  }}
+                  onExport={async () => {
+                    try {
+                      await guardApi.downloadEvidenceReport(timeline.incident_id, {
+                        includeReplay: true,
+                        includePrevention: true,
+                        isDemo: true,
+                      });
+                    } catch (error) {
+                      console.error('Failed to download evidence report:', error);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="text-center py-8 text-slate-400">
+                  Unable to load timeline
+                </div>
+              )}
+            </div>
           </div>
-        ) : timeline ? (
-          <DecisionTimeline
-            timeline={timeline}
-            onReplay={() => {
-              // Navigate to replay page with this call
-              window.location.href = `/guard/replay?call_id=${timeline.call_id || timeline.incident_id}`;
-            }}
-            onExport={async () => {
-              // Download PDF evidence report
-              try {
-                await guardApi.downloadEvidenceReport(timeline.incident_id, {
-                  includeReplay: true,
-                  includePrevention: true,
-                  isDemo: true,
-                });
-              } catch (error) {
-                console.error('Failed to download evidence report:', error);
-                alert('Failed to download evidence report. Please try again.');
-              }
-            }}
-          />
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            Unable to load timeline
-          </div>
-        )}
-      </Modal>
+        </div>
+      )}
     </div>
   );
 }
 
-// Incident Row Component
+// ============================================================================
+// IncidentRow - Navy-First with left-border severity
+// ============================================================================
+
 interface IncidentRowProps {
   incident: Incident;
   onClick: () => void;
@@ -305,68 +325,90 @@ function IncidentRow({ incident, onClick }: IncidentRowProps) {
   const timeAgo = formatTimeAgo(new Date(incident.started_at));
   const actionLabel = formatAction(incident.action_taken);
   const costAvoided = incident.cost_avoided_cents > 0
-    ? `$${(incident.cost_avoided_cents / 100).toFixed(2)} saved`
+    ? `$${(incident.cost_avoided_cents / 100).toFixed(2)}`
     : null;
 
   return (
-    <Card
-      className="cursor-pointer hover:shadow-md hover:border-blue-200 transition-all"
+    <div
       onClick={onClick}
+      className={`
+        bg-navy-surface border border-navy-border rounded-lg
+        border-l-4 ${severity.borderColor}
+        hover:bg-navy-elevated hover:-translate-y-0.5
+        transition-all cursor-pointer
+        p-4
+      `}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {/* Severity Badge */}
-          <div className={`px-3 py-1 rounded-full text-sm font-medium ${severity.bgColor} ${severity.textColor}`}>
+      <div className="flex items-center justify-between gap-4">
+        {/* Left: Severity + Title + Meta */}
+        <div className="flex-1 min-w-0">
+          {/* Severity label (text only) */}
+          <span className={`text-xs font-medium uppercase tracking-wide ${severity.textColor}`}>
             {severity.label}
-          </div>
+          </span>
 
-          {/* Title and Time */}
-          <div>
-            <h3 className="font-medium text-gray-900">{incident.title}</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>{timeAgo}</span>
-              {incident.calls_affected > 0 && (
-                <>
-                  <span>•</span>
-                  <span>{incident.calls_affected} calls</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+          {/* Title */}
+          <h3 className="font-medium text-white mt-1 truncate">
+            {incident.title}
+          </h3>
 
-        <div className="flex items-center gap-4">
-          {/* Action & Cost */}
-          <div className="text-right">
-            <p className="text-sm font-medium text-gray-700">{actionLabel}</p>
-            {costAvoided && (
-              <p className="text-sm text-green-600">{costAvoided}</p>
+          {/* Metadata - muted */}
+          <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+            <span>{incident.trigger_type || 'Policy check'}</span>
+            <span>•</span>
+            <span>{timeAgo}</span>
+            {incident.calls_affected > 0 && (
+              <>
+                <span>•</span>
+                <span>{incident.calls_affected} call{incident.calls_affected > 1 ? 's' : ''}</span>
+              </>
             )}
           </div>
+        </div>
 
-          {/* Status & Inspect */}
-          <Badge
-            variant={status.color === 'green' ? 'success' : status.color === 'red' ? 'error' : 'warning'}
-          >
+        {/* Right: Savings + Status + Action */}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          {/* Cost saved - green text only */}
+          {costAvoided && (
+            <div className="text-right">
+              <span className="text-green-400 text-sm">{costAvoided}</span>
+              <span className="block text-xs text-slate-500">saved</span>
+            </div>
+          )}
+
+          {/* Action taken */}
+          <div className="text-right">
+            <span className="text-slate-300 text-sm">{actionLabel}</span>
+          </div>
+
+          {/* Status - outline pill only */}
+          <span className={`
+            px-2 py-1 rounded border text-xs font-medium
+            bg-transparent ${status.textColor} ${status.borderColor}
+          `}>
             {status.label}
-          </Badge>
+          </span>
 
-          <button className="text-blue-600 hover:text-blue-800 font-medium text-sm">
+          {/* Inspect link */}
+          <span className="text-accent-info text-sm font-medium hover:underline">
             Inspect →
-          </button>
+          </span>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
-// Helper: Map search result to legacy incident format
+// ============================================================================
+// Helpers
+// ============================================================================
+
 function mapSearchResultToIncident(result: IncidentSearchResult): Incident {
   return {
     id: result.incident_id,
     title: result.output_preview || 'Incident',
     severity: (result.severity as Incident['severity']) || 'medium',
-    status: 'open', // Search results don't include status
+    status: 'open',
     trigger_type: result.policy_status.replace('_FAILED', ''),
     trigger_value: '',
     action_taken: 'logged',
@@ -378,14 +420,13 @@ function mapSearchResultToIncident(result: IncidentSearchResult): Incident {
   };
 }
 
-// Helper: Format time ago
 function formatTimeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
   if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffMins < 60) return `${diffMins}m ago`;
 
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
@@ -394,39 +435,19 @@ function formatTimeAgo(date: Date): string {
   return `${diffDays}d ago`;
 }
 
-// Helper: Format action
 function formatAction(action: string | null): string {
   if (!action) return 'Monitored';
 
   const actionMap: Record<string, string> = {
-    'freeze': 'Traffic Stopped',
-    'block': 'Request Blocked',
-    'throttle': 'Rate Limited',
-    'warn': 'Warning Issued',
-    'aggregate': 'Events Grouped',
+    'freeze': 'Stopped',
+    'block': 'Blocked',
+    'throttle': 'Throttled',
+    'warn': 'Warning',
+    'aggregate': 'Grouped',
     'logged': 'Logged',
   };
 
   return actionMap[action] || action.replace(/_/g, ' ');
-}
-
-// Severity count pill for summary bar
-function SeverityCount({ items, severity }: { items: Incident[]; severity: Incident['severity'] }) {
-  const count = items.filter(i => i.severity === severity).length;
-  if (count === 0) return null;
-
-  const colors: Record<string, string> = {
-    critical: 'bg-red-100 text-red-700',
-    high: 'bg-orange-100 text-orange-700',
-    medium: 'bg-yellow-100 text-yellow-700',
-    low: 'bg-gray-100 text-gray-600',
-  };
-
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[severity]}`}>
-      {count} {severity}
-    </span>
-  );
 }
 
 export default IncidentsPage;
