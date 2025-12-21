@@ -147,3 +147,268 @@ def sum_or_zero(row: Optional[Any]) -> float:
     """Extract sum value, guaranteed to return numeric."""
     result = scalar_or_default(row, 0)
     return float(result) if result is not None else 0.0
+
+
+# =============================================================================
+# Enhanced Helpers (v2.0) - Added from M24 RCA (PIN-118)
+# =============================================================================
+
+
+def query_one(
+    session: Any,
+    statement: Any,
+    model_class: Optional[type] = None,
+) -> Optional[Any]:
+    """
+    Safe single-row query with automatic Row/Model detection.
+
+    Handles SQLModel version differences where .first() may return:
+    - Row tuple (needs [0] extraction)
+    - Model directly (no extraction needed)
+
+    Args:
+        session: SQLModel Session
+        statement: Select statement
+        model_class: Optional model class for isinstance check
+
+    Returns:
+        Model instance or None
+
+    Example:
+        user = query_one(session, select(User).where(User.email == email), User)
+    """
+    result = session.exec(statement).first()
+    if result is None:
+        return None
+
+    # Check if it's already the model
+    if model_class and isinstance(result, model_class):
+        return result
+
+    # Check for model attributes (duck typing)
+    if hasattr(result, "id") or hasattr(result, "__table__"):
+        return result
+
+    # Try to extract from Row tuple
+    try:
+        extracted = result[0]
+        if model_class and isinstance(extracted, model_class):
+            return extracted
+        return extracted
+    except (TypeError, IndexError):
+        return result
+
+
+def query_all(
+    session: Any,
+    statement: Any,
+    model_class: Optional[type] = None,
+) -> list:
+    """
+    Safe multi-row query with automatic Row/Model detection.
+
+    Handles SQLModel version differences where .all() may return:
+    - List of Row tuples (needs [0] extraction)
+    - List of Models directly (no extraction needed)
+
+    Args:
+        session: SQLModel Session
+        statement: Select statement
+        model_class: Optional model class for isinstance check
+
+    Returns:
+        List of model instances
+
+    Example:
+        users = query_all(session, select(User).where(User.status == 'active'), User)
+    """
+    results = session.exec(statement).all()
+    if not results:
+        return []
+
+    # Check first item to determine extraction strategy
+    first = results[0]
+
+    if model_class and isinstance(first, model_class):
+        return list(results)
+
+    if hasattr(first, "id") or hasattr(first, "__table__"):
+        return list(results)
+
+    # Try to extract from Row tuples
+    try:
+        extracted = [r[0] for r in results]
+        return extracted
+    except (TypeError, IndexError):
+        return list(results)
+
+
+def model_to_dict(model: Any, include: Optional[list] = None, exclude: Optional[list] = None) -> dict:
+    """
+    Convert ORM model to dict to prevent DetachedInstanceError.
+
+    Call this BEFORE the session closes to extract values safely.
+
+    Args:
+        model: ORM model instance
+        include: List of attributes to include (None = all)
+        exclude: List of attributes to exclude
+
+    Returns:
+        Dictionary with model values
+
+    Example:
+        with Session(engine) as session:
+            user = session.get(User, user_id)
+            user_data = model_to_dict(user, exclude=['password_hash'])
+        # user_data is safe to use after session closes
+        return user_data
+    """
+    if model is None:
+        return {}
+
+    exclude = exclude or []
+    exclude.extend(["_sa_instance_state", "registry", "metadata"])
+
+    result = {}
+
+    # Get attributes from model
+    if hasattr(model, "__table__"):
+        # SQLModel/SQLAlchemy model
+        for column in model.__table__.columns:
+            key = column.name
+            if include and key not in include:
+                continue
+            if key in exclude:
+                continue
+            try:
+                value = getattr(model, key, None)
+                # Handle datetime serialization
+                if hasattr(value, "isoformat"):
+                    value = value.isoformat()
+                result[key] = value
+            except Exception:
+                pass
+    elif hasattr(model, "__dict__"):
+        # Regular object
+        for key, value in model.__dict__.items():
+            if key.startswith("_"):
+                continue
+            if include and key not in include:
+                continue
+            if key in exclude:
+                continue
+            if hasattr(value, "isoformat"):
+                value = value.isoformat()
+            result[key] = value
+
+    return result
+
+
+def models_to_dicts(models: list, include: Optional[list] = None, exclude: Optional[list] = None) -> list:
+    """
+    Convert list of ORM models to list of dicts.
+
+    Args:
+        models: List of ORM model instances
+        include: List of attributes to include
+        exclude: List of attributes to exclude
+
+    Returns:
+        List of dictionaries
+    """
+    return [model_to_dict(m, include, exclude) for m in models]
+
+
+def safe_get(
+    session: Any,
+    model_class: type,
+    id: Any,
+    to_dict: bool = False,
+    include: Optional[list] = None,
+    exclude: Optional[list] = None,
+) -> Any:
+    """
+    Safe session.get() wrapper with optional dict conversion.
+
+    Use session.get() for direct ID lookups - it's simpler and always
+    returns the model directly (not a Row tuple).
+
+    Args:
+        session: SQLModel Session
+        model_class: Model class to query
+        id: Primary key value
+        to_dict: If True, convert to dict before returning
+        include: Attributes to include in dict
+        exclude: Attributes to exclude from dict
+
+    Returns:
+        Model instance, dict, or None
+
+    Example:
+        # Simple get
+        user = safe_get(session, User, user_id)
+
+        # Get as dict (safe after session closes)
+        user_data = safe_get(session, User, user_id, to_dict=True)
+    """
+    model = session.get(model_class, id)
+    if model is None:
+        return None
+
+    if to_dict:
+        return model_to_dict(model, include, exclude)
+
+    return model
+
+
+def get_or_create(
+    session: Any,
+    model_class: type,
+    defaults: Optional[dict] = None,
+    **kwargs,
+) -> tuple:
+    """
+    Get existing model or create new one.
+
+    Similar to Django's get_or_create, but with proper SQLModel handling.
+
+    Args:
+        session: SQLModel Session
+        model_class: Model class
+        defaults: Dict of fields to set on creation only
+        **kwargs: Fields to filter by
+
+    Returns:
+        Tuple of (instance, created: bool)
+
+    Example:
+        user, created = get_or_create(
+            session, User,
+            defaults={'status': 'active'},
+            email='test@example.com'
+        )
+    """
+    from sqlmodel import select
+
+    # Build filter conditions
+    statement = select(model_class)
+    for key, value in kwargs.items():
+        statement = statement.where(getattr(model_class, key) == value)
+
+    instance = query_one(session, statement, model_class)
+
+    if instance:
+        return instance, False
+
+    # Create new instance
+    create_kwargs = {**kwargs}
+    if defaults:
+        create_kwargs.update(defaults)
+
+    instance = model_class(**create_kwargs)
+    session.add(instance)
+    session.commit()
+    session.refresh(instance)
+
+    return instance, True

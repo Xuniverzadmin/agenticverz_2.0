@@ -452,9 +452,7 @@ async def callback_google(
             user_data["default_tenant_id"] = tenant_result["tenant_id"]
 
         # Create session tokens
-        access_token, refresh_token = create_tokens(
-            user_data["id"], user_data["default_tenant_id"]
-        )
+        access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
 
         # Redirect to frontend with tokens
         redirect_url = (
@@ -539,9 +537,7 @@ async def callback_azure(
             user_data["default_tenant_id"] = tenant_result["tenant_id"]
 
         # Create session tokens
-        access_token, refresh_token = create_tokens(
-            user_data["id"], user_data["default_tenant_id"]
-        )
+        access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
 
         # Redirect to frontend with tokens
         redirect_url = (
@@ -604,9 +600,7 @@ async def verify_email(request: EmailVerifyRequest):
         user_data["default_tenant_id"] = tenant_result["tenant_id"]
 
     # Create session tokens
-    access_token, refresh_token = create_tokens(
-        user_data["id"], user_data["default_tenant_id"]
-    )
+    access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
 
     return AuthResponse(
         access_token=access_token,
