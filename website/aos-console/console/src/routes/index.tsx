@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
+import { OnboardingRoute } from './OnboardingRoute';
 import { Spinner } from '@/components/common';
 
 // Lazy load pages
@@ -21,6 +22,13 @@ const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome
 const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExecutionConsole'));
 const FounderOpsConsolePage = lazy(() => import('@/pages/ops/FounderOpsConsole'));
 
+// Onboarding pages
+const ConnectPage = lazy(() => import('@/pages/onboarding/ConnectPage'));
+const SafetyPage = lazy(() => import('@/pages/onboarding/SafetyPage'));
+const AlertsPage = lazy(() => import('@/pages/onboarding/AlertsPage'));
+const VerifyPage = lazy(() => import('@/pages/onboarding/VerifyPage'));
+const CompletePage = lazy(() => import('@/pages/onboarding/CompletePage'));
+
 // Standalone console entry points (handle their own auth)
 const GuardConsoleEntry = lazy(() => import('@/pages/guard/GuardConsoleEntry'));
 const OpsConsoleEntry = lazy(() => import('@/pages/ops/OpsConsoleEntry'));
@@ -39,6 +47,48 @@ export function AppRoutes() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Onboarding routes (requires auth but not onboarding complete) */}
+        <Route
+          path="/onboarding/connect"
+          element={
+            <OnboardingRoute>
+              <ConnectPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/safety"
+          element={
+            <OnboardingRoute>
+              <SafetyPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/alerts"
+          element={
+            <OnboardingRoute>
+              <AlertsPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/verify"
+          element={
+            <OnboardingRoute>
+              <VerifyPage />
+            </OnboardingRoute>
+          }
+        />
+        <Route
+          path="/onboarding/complete"
+          element={
+            <OnboardingRoute>
+              <CompletePage />
+            </OnboardingRoute>
+          }
+        />
 
         {/* Standalone console entry points (handle their own auth) */}
         <Route path="/guard" element={<GuardConsoleEntry />} />

@@ -12,9 +12,9 @@
  *
  * Access: https://agenticverz.com/console/guard
  *
- * Authentication:
- * - API key can be provided via URL query param: ?key=xxx
- * - Or entered in the login form
+ * Authentication (Hybrid - M24):
+ * - Primary: OAuth tokens from main auth store (after onboarding)
+ * - Fallback: API key via URL query param or login form
  * - Stored in localStorage for session persistence
  *
  * Navigation (must match GuardLayout.tsx NAV_ITEMS):
@@ -29,7 +29,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { GuardLayout, type NavItemId } from './GuardLayout';
@@ -58,25 +58,47 @@ const queryClient = new QueryClient({
 });
 
 export default function GuardConsoleEntry() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Get OAuth state from main auth store
+  const {
+    isAuthenticated: oauthAuthenticated,
+    token: oauthToken,
+    tenantId: oauthTenantId,
+    user,
+    logout: oauthLogout
+  } = useAuthStore();
+
   const [apiKey, setApiKey] = useState('');
   const [inputKey, setInputKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isApiKeyAuthenticated, setIsApiKeyAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<NavItemId>('overview');
+  const [authMode, setAuthMode] = useState<'oauth' | 'apikey' | null>(null);
 
-  // Check for API key from URL or localStorage on mount
+  // Check authentication on mount
   useEffect(() => {
-    const urlKey = searchParams.get('key');
-    const storedKey = localStorage.getItem(STORAGE_KEY);
+    // Priority 1: OAuth from main auth store (after onboarding)
+    if (oauthAuthenticated && oauthToken) {
+      setAuthMode('oauth');
+      return;
+    }
 
+    // Priority 2: API key from URL param
+    const urlKey = searchParams.get('key');
     if (urlKey) {
       validateAndSetKey(urlKey);
-    } else if (storedKey) {
+      return;
+    }
+
+    // Priority 3: Stored API key
+    const storedKey = localStorage.getItem(STORAGE_KEY);
+    if (storedKey) {
       validateAndSetKey(storedKey);
     }
-  }, [searchParams]);
+  }, [oauthAuthenticated, oauthToken, searchParams]);
 
   const validateAndSetKey = async (key: string) => {
     if (!key.trim()) return;
@@ -91,7 +113,8 @@ export default function GuardConsoleEntry() {
 
       if (response.ok) {
         setApiKey(key);
-        setIsAuthenticated(true);
+        setIsApiKeyAuthenticated(true);
+        setAuthMode('apikey');
         localStorage.setItem(STORAGE_KEY, key);
 
         // Set auth store for guard API calls
@@ -110,7 +133,8 @@ export default function GuardConsoleEntry() {
     } catch (err) {
       // Allow demo mode even if validation fails
       setApiKey(key);
-      setIsAuthenticated(true);
+      setIsApiKeyAuthenticated(true);
+      setAuthMode('apikey');
       localStorage.setItem(STORAGE_KEY, key);
       const tenantId = localStorage.getItem(TENANT_STORAGE_KEY) || 'demo-tenant';
       useAuthStore.getState().setTokens(key, '');
@@ -126,16 +150,30 @@ export default function GuardConsoleEntry() {
   };
 
   const handleLogout = () => {
-    setApiKey('');
-    setIsAuthenticated(false);
-    setActiveTab('overview');
-    localStorage.removeItem(STORAGE_KEY);
-    useAuthStore.getState().logout();
+    if (authMode === 'oauth') {
+      // OAuth logout - go back to login
+      oauthLogout();
+      navigate('/login', { replace: true });
+    } else {
+      // API key logout - stay on guard login
+      setApiKey('');
+      setIsApiKeyAuthenticated(false);
+      setAuthMode(null);
+      setActiveTab('overview');
+      localStorage.removeItem(STORAGE_KEY);
+    }
   };
 
   const handleDemoLogin = () => {
     validateAndSetKey('edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf');
   };
+
+  const handleOAuthLogin = () => {
+    navigate('/login', { replace: true });
+  };
+
+  // Check if authenticated (either OAuth or API key)
+  const isAuthenticated = authMode === 'oauth' || (authMode === 'apikey' && isApiKeyAuthenticated);
 
   // Show login form if not authenticated - Navy-First design
   if (!isAuthenticated) {
@@ -157,6 +195,23 @@ export default function GuardConsoleEntry() {
           </div>
 
           <div className="bg-navy-surface rounded-xl p-6 border border-navy-border">
+            {/* OAuth Login Button */}
+            <button
+              onClick={handleOAuthLogin}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 mb-4"
+            >
+              Sign in with Google or Microsoft
+            </button>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-navy-border" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-navy-surface px-4 text-sm text-slate-400">or use API key</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -168,7 +223,6 @@ export default function GuardConsoleEntry() {
                   onChange={(e) => setInputKey(e.target.value)}
                   placeholder="Enter your Guard API key"
                   className="w-full px-4 py-3 bg-navy-inset border border-navy-border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-info focus:border-transparent"
-                  autoFocus
                   disabled={isValidating}
                 />
               </div>
@@ -184,11 +238,11 @@ export default function GuardConsoleEntry() {
                 disabled={isValidating || !inputKey.trim()}
                 className="w-full py-3 bg-navy-elevated hover:bg-navy-subtle border border-accent-info text-accent-info disabled:border-navy-border disabled:text-slate-500 disabled:cursor-not-allowed font-medium rounded-lg transition-colors"
               >
-                {isValidating ? 'Connecting...' : 'Sign In'}
+                {isValidating ? 'Connecting...' : 'Sign In with API Key'}
               </button>
             </form>
 
-            <div className="relative my-6">
+            <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-navy-border" />
               </div>
@@ -207,8 +261,8 @@ export default function GuardConsoleEntry() {
 
             <div className="mt-6 pt-6 border-t border-navy-border">
               <p className="text-xs text-slate-500 text-center">
-                Need an API key?{' '}
-                <a href="https://agenticverz.com" className="text-accent-info hover:underline">
+                New customer?{' '}
+                <a href="/login" className="text-accent-info hover:underline">
                   Sign up for access
                 </a>
               </p>
@@ -265,6 +319,7 @@ export default function GuardConsoleEntry() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onLogout={handleLogout}
+        user={authMode === 'oauth' ? user : undefined}
       >
         {renderPage()}
       </GuardLayout>

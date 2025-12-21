@@ -116,7 +116,7 @@ PLAN_QUOTAS = {
 
 
 class User(SQLModel, table=True):
-    """User account linked to Clerk."""
+    """User account - supports OAuth (Google/Azure) and email signup."""
 
     __tablename__ = "users"
 
@@ -125,6 +125,14 @@ class User(SQLModel, table=True):
     email: str = Field(max_length=255, index=True)
     name: Optional[str] = Field(default=None, max_length=255)
     avatar_url: Optional[str] = Field(default=None, max_length=500)
+
+    # OAuth provider info (M24 Customer Onboarding)
+    oauth_provider: Optional[str] = Field(default=None, max_length=50)  # google, azure, email
+    oauth_provider_id: Optional[str] = Field(default=None, max_length=255)
+
+    # Email verification (M24)
+    email_verified: bool = Field(default=False)
+    email_verified_at: Optional[datetime] = None
 
     # Default tenant
     default_tenant_id: Optional[str] = Field(default=None, foreign_key="tenants.id")

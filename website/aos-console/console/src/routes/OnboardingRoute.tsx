@@ -1,22 +1,22 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 
-interface ProtectedRouteProps {
+interface OnboardingRouteProps {
   children: React.ReactNode;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function OnboardingRoute({ children }: OnboardingRouteProps) {
   const { isAuthenticated, onboardingComplete } = useAuthStore();
   const location = useLocation();
 
+  // Not authenticated - redirect to login
   if (!isAuthenticated) {
-    // Redirect to login page, saving the current location
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If authenticated but onboarding not complete, redirect to onboarding
-  if (!onboardingComplete) {
-    return <Navigate to="/onboarding/connect" replace />;
+  // Already completed onboarding - redirect to dashboard
+  if (onboardingComplete) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

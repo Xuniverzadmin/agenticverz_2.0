@@ -313,6 +313,7 @@ from .api.failures import router as failures_router
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
 from .api.health import router as health_router
 from .api.memory_pins import router as memory_pins_router
+from .api.onboarding import router as onboarding_router  # M24 Customer Onboarding
 from .api.operator import router as operator_router  # Operator Console (/operator/*)
 from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
 from .api.policy import router as policy_router
@@ -355,6 +356,7 @@ app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v
 app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
 app.include_router(operator_router)  # /operator/* - Operator Console (truth + oversight)
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
+app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
 
 # CORS middleware
 app.add_middleware(

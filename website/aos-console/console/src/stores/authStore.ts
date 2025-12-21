@@ -6,6 +6,8 @@ interface User {
   email: string;
   name: string;
   role: string;
+  oauth_provider?: string;
+  email_verified?: boolean;
 }
 
 interface AuthState {
@@ -14,10 +16,14 @@ interface AuthState {
   tenantId: string | null;
   user: User | null;
   isAuthenticated: boolean;
+  onboardingComplete: boolean;
+  onboardingStep: number;
 
   setTokens: (token: string, refreshToken: string) => void;
   setUser: (user: User) => void;
   setTenant: (tenantId: string) => void;
+  setOnboardingComplete: (complete: boolean) => void;
+  setOnboardingStep: (step: number) => void;
   logout: () => void;
 }
 
@@ -29,6 +35,8 @@ export const useAuthStore = create<AuthState>()(
       tenantId: null,
       user: null,
       isAuthenticated: false,
+      onboardingComplete: false,
+      onboardingStep: 0,
 
       setTokens: (token, refreshToken) =>
         set({ token, refreshToken, isAuthenticated: true }),
@@ -37,6 +45,10 @@ export const useAuthStore = create<AuthState>()(
 
       setTenant: (tenantId) => set({ tenantId }),
 
+      setOnboardingComplete: (complete) => set({ onboardingComplete: complete }),
+
+      setOnboardingStep: (step) => set({ onboardingStep: step }),
+
       logout: () =>
         set({
           token: null,
@@ -44,6 +56,8 @@ export const useAuthStore = create<AuthState>()(
           tenantId: null,
           user: null,
           isAuthenticated: false,
+          onboardingComplete: false,
+          onboardingStep: 0,
         }),
     }),
     {
@@ -52,6 +66,8 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         refreshToken: state.refreshToken,
         tenantId: state.tenantId,
+        onboardingComplete: state.onboardingComplete,
+        onboardingStep: state.onboardingStep,
       }),
     }
   )

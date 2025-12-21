@@ -51,14 +51,22 @@ const STATUS_CONFIG: Record<ProtectionStatus, { label: string; color: string; bg
   stopped: { label: 'Stopped', color: 'text-accent-danger', bg: 'bg-navy-elevated', border: 'border-accent-danger/30' },
 };
 
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
 interface GuardLayoutProps {
   children: React.ReactNode;
   activeTab: NavItemId;
   onTabChange: (tab: NavItemId) => void;
   onLogout?: () => void;
+  user?: User | null;
 }
 
-export function GuardLayout({ children, activeTab, onTabChange, onLogout }: GuardLayoutProps) {
+export function GuardLayout({ children, activeTab, onTabChange, onLogout, user }: GuardLayoutProps) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const tenantId = useAuthStore((state) => state.tenantId);
 

@@ -72,6 +72,19 @@ services:
       # GitHub Integration (M8 - Mismatch Issue Automation)
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       GITHUB_REPO: ${GITHUB_REPO:-}
+      # Customer Onboarding (M24)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-common}
+      OAUTH_REDIRECT_BASE: ${OAUTH_REDIRECT_BASE:-https://agenticverz.com}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-"Agenticverz <noreply@agenticverz.com>"}
+      JWT_SECRET: ${JWT_SECRET:-}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-24}
+      REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS:-7}
+      FRONTEND_URL: ${FRONTEND_URL:-https://agenticverz.com}
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import httpx; r=httpx.get('http://localhost:8000/health'); exit(0 if r.status_code==200 else 1)\""]
       interval: 10s

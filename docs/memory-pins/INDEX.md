@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-21 (PIN-117 Evidence Report Enhancements & ID Type Safety)
+**Last Updated:** 2025-12-21 (PIN-118 M24.1 REAL Safety Verification)
 
 ---
 
@@ -139,6 +139,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-115](PIN-115-guard-console-8-phase-implementation.md) | **Guard Console 8-Phase Implementation & Health Scripts** | Frontend / Console | **✅ COMPLETE** | 2025-12-21 |
 | [PIN-116](PIN-116-guard-console-latency-optimization.md) | **Guard Console Latency Optimization** | Performance / Backend | **✅ COMPLETE** | 2025-12-21 |
 | [PIN-117](PIN-117-evidence-report-enhancements.md) | **Evidence Report Enhancements & ID Type Safety** | M23 / Prevention / PDF Export | **✅ COMPLETE** | 2025-12-21 |
+| [PIN-118](PIN-118-m24-customer-onboarding.md) | **M24 Customer Onboarding - OAuth & Email Verification** | Authentication / Onboarding | **🚀 DEPLOYED** | 2025-12-21 |
 
 ---
 
@@ -904,6 +905,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-21 | **PIN-118 M24.1 REAL Safety Verification** - Fixed 3 onboarding gaps: (1) Step 4 now fires REAL guardrails instead of simulation - evaluates prompt_injection_block pattern, creates real incidents, (2) Added killswitch_demo test type to show cost-spike protection, (3) CompletePage updated to "Your AI is Now Protected" with active status messaging. New endpoint: `POST /guard/onboarding/verify?tenant_id=X` returns `{incident_id, was_blocked, blocked_by}`. Key insight: Replace perceived safety with experienced safety. |
+| 2025-12-21 | **PIN-118 M24 Customer Onboarding COMPLETE** - Full OAuth + Email onboarding system. Backend: Google OAuth, Azure AD OAuth, Email OTP (6-digit via Resend), JWT tokens, Redis session management. Frontend: 5-step onboarding wizard (Connect→Safety→Alerts→Verify→Complete), hybrid auth in Guard Console (OAuth primary, API key fallback). Migration 040 applied. Verified: `/api/v1/auth/providers` → google, azure, email all enabled. Guard Console at `/console/guard` loads with "Sign in with Google or Microsoft", "or use API key", and "Try Demo Mode". Pending: OAuth redirect URIs in Google Cloud Console and Azure Portal. |
 | 2025-12-21 | **PIN-117 Evidence Report Enhancements & ID Type Safety** - (1) Added 1-page Incident Snapshot at front of PDF with executive summary, (2) Added Severity Definition Box (HIGH/MEDIUM/LOW), (3) Fixed "Unknown Customer" → "Demo Tenant" display, (4) Softened legal attestation language, (5) Added severity/status fields to IncidentEvidence dataclass. **Replay ID Fix:** Fixed 404 error where `onReplay(incident.id)` passed `inc_` prefix but endpoint expected `call_` prefix - added `call_id` field to backend/frontend. **Prevention:** Created `lint_frontend_api_calls.py` linter to catch ID type mismatches, added to CI. |
 | 2025-12-21 | **PIN-116 Guard Console Latency Optimization** - Implemented Redis caching layer for Guard Console API endpoints to reduce latency from 4-7 seconds to ~300ms (94% improvement). Root cause: cross-region database queries (EU server → Singapore Neon DB). Solution: Created `backend/app/utils/guard_cache.py` with 5s TTL for status, 10s for snapshot. Added cache invalidation on kill switch mutations. Combined snapshot queries from 5 to 3. Added `staleTime` to frontend React Query hooks (`GuardDashboard.tsx`, `GuardLayout.tsx`). Cold cache: 1.8-2.2s, warm cache: 0.28-0.33s. |
 | 2025-12-21 | **PIN-115 Guard Console 8-Phase Implementation** - Complete customer console with unified navigation. NEW components: `GuardLayout.tsx` (sidebar), `LiveActivityPage.tsx` (real-time streaming), `KillSwitchPage.tsx` (blast radius), `LogsPage.tsx` (history), `GuardSettingsPage.tsx` (configuration). NEW scripts: `aos_console_health_test.sh` (36 tests, 100% pass), updated `guard_health_test.sh` (17 tests). Build: 98.83 KB gzipped. Navigation: Overview → Live Activity → Incidents → Kill Switch → Logs → Settings. All 3 consoles accessible: `/console`, `/console/guard`, `/console/ops`. |
