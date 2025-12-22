@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-131 M27 Cost Loop Integration Blueprint)
+**Last Updated:** 2025-12-22 (PIN-132 M28 Unified Console Blueprint)
 
 ---
 
@@ -153,6 +153,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-129](PIN-129-m25-pillar-integration-blueprint.md) | **M25 Pillar Integration Blueprint** | Milestone / Architecture / Integration | **📋 SPECIFICATION** | 2025-12-22 |
 | [PIN-130](PIN-130-m26-cost-intelligence-blueprint.md) | **M26 Cost Intelligence Blueprint** | Milestone / Cost Management / Dashboard | **📋 SPECIFICATION** | 2025-12-22 |
 | [PIN-131](PIN-131-m27-cost-loop-integration-blueprint.md) | **M27 Cost Loop Integration Blueprint** | Milestone / Cost Management / Integration | **📋 SPECIFICATION** | 2025-12-22 |
+| [PIN-132](PIN-132-m28-unified-console-blueprint.md) | **M28 Unified Console Blueprint** | Milestone / Console / UI Architecture | **📋 SPECIFICATION** | 2025-12-22 |
 
 ---
 
@@ -918,6 +919,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-132 M28 Unified Console Blueprint** - Consolidates Guard, Ops, and Main consoles into one "Control Center" with 4 views (Cost, Incident, Self-Heal, Governance). Key features: TopNavBar (4 view tabs), MetricsStrip (cross-cutting metrics), UnifiedSearch (Cmd+K, searches all views), ActorBadge (human/agent/system attribution), CrossViewLink (deep linking between views). Migration 045 adds actors table, actor_events table, actor_id to incidents/patterns/recoveries/policies/costs. Materialized view for unified_search_index with PostgreSQL full-text search. 10-day implementation across 4 phases. Replaces /guard/* and /ops/* with /control-center?view=X. |
 | 2025-12-22 | **PIN-131 M27 Cost Loop Integration Blueprint** - Wires M26 cost intelligence into M25 feedback loop. 5 cost-specific bridges (C1-C5): Cost Anomaly→Incident, Pattern Matcher, Recovery Generator, Policy Generator, Routing Adjuster. CostEstimationProbe for CARE routing. Cost-aware recovery strategies (rate limiting, model downgrade, budget enforcement). Migration 044 adds cost_routing_adjustments table. 7-day implementation (Phase 1: C1-C2, Phase 2: C3-C4, Phase 3: C5+Probe, Phase 4: Testing). Integration points: CostAnomalyDetector→IntegrationDispatcher, RecoveryEvaluator+CostRecoveryGenerator, PolicyGenerator+CostPolicyTemplates, CARE+CostEstimationProbe. |
 | 2025-12-22 | **PIN-130 M26 Cost Intelligence Blueprint** - Full cost intelligence dashboard spec. Feature Tagging API, Cost Attribution Dashboard (by feature/user/model/time), Cost Anomaly Detection (z-score, budget, rate-of-change), Budget Alert System (configurable thresholds), Cost Projection Engine (30-day forecasts). Migration 043 with feature_tags, cost_records, cost_anomalies, cost_budgets, cost_daily_aggregates. Console UI: CostDashboardPage, CostByFeatureChart, CostByUserTable, AnomalyAlertPanel, ProjectionChart, FeatureTagManager. 11-day implementation (Phase 1: Feature tagging, Phase 2: Dashboard, Phase 3: Anomaly detection, Phase 4: Alerts+Projection, Phase 5: M25 Loop Integration). |
 | 2025-12-22 | **PIN-129 M25 Pillar Integration Blueprint** - First detailed blueprint from PIN-128. 5 integration bridges: (1) Incident→Catalog, (2) Pattern→Recovery, (3) Recovery→Policy, (4) Policy→CARE, (5) Status→Console. IntegrationDispatcher event-driven architecture with Redis pub/sub + PostgreSQL durability. LoopEvent/LoopStage tracking. Migration 042_m25_integration_loop adds integration_events, loop_telemetry, bridge_configs tables. 14-day implementation across 6 phases. Success criteria: <5s incident-to-catalog, <2s pattern-to-recovery, <1s policy-to-CARE, <500ms status-to-console. |
