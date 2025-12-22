@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-132 M28 Unified Console Blueprint)
+**Last Updated:** 2025-12-22 (PIN-133 M29 Quality Score Blueprint)
 
 ---
 
@@ -154,6 +154,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-130](PIN-130-m26-cost-intelligence-blueprint.md) | **M26 Cost Intelligence Blueprint** | Milestone / Cost Management / Dashboard | **📋 SPECIFICATION** | 2025-12-22 |
 | [PIN-131](PIN-131-m27-cost-loop-integration-blueprint.md) | **M27 Cost Loop Integration Blueprint** | Milestone / Cost Management / Integration | **📋 SPECIFICATION** | 2025-12-22 |
 | [PIN-132](PIN-132-m28-unified-console-blueprint.md) | **M28 Unified Console Blueprint** | Milestone / Console / UI Architecture | **📋 SPECIFICATION** | 2025-12-22 |
+| [PIN-133](PIN-133-m29-quality-score-blueprint.md) | **M29 Quality Score Blueprint** | Milestone / Quality Assurance / AI Observability | **📋 SPECIFICATION** | 2025-12-22 |
 
 ---
 
@@ -919,6 +920,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-133 M29 Quality Score Blueprint** - CONDITIONAL milestone (only if 3+ customers ask "Is our AI accurate?"). Key components: (1) User Feedback API (thumbs up/down, 1-5 ratings, comments), (2) LLM-as-Judge evaluation skill (claude-3-haiku judge), (3) Ground Truth dataset management, (4) Hallucination Detection (multi-signal: semantic consistency, self-consistency, source attribution, claim verification), (5) Quality Score Engine (30% user feedback + 40% LLM eval + 30% safety). Migration 046 adds user_feedback, llm_evaluations, ground_truth_entries, ground_truth_datasets, quality_scores, quality_metrics_hourly tables. Console UI: QualityDashboard, FeedbackWidget (inline/modal), HallucinationReview panel. 21-day implementation across 5 phases. Cost: ~$30-50/month for LLM-as-judge evaluations. |
 | 2025-12-22 | **PIN-132 M28 Unified Console Blueprint** - Consolidates Guard, Ops, and Main consoles into one "Control Center" with 4 views (Cost, Incident, Self-Heal, Governance). Key features: TopNavBar (4 view tabs), MetricsStrip (cross-cutting metrics), UnifiedSearch (Cmd+K, searches all views), ActorBadge (human/agent/system attribution), CrossViewLink (deep linking between views). Migration 045 adds actors table, actor_events table, actor_id to incidents/patterns/recoveries/policies/costs. Materialized view for unified_search_index with PostgreSQL full-text search. 10-day implementation across 4 phases. Replaces /guard/* and /ops/* with /control-center?view=X. |
 | 2025-12-22 | **PIN-131 M27 Cost Loop Integration Blueprint** - Wires M26 cost intelligence into M25 feedback loop. 5 cost-specific bridges (C1-C5): Cost Anomaly→Incident, Pattern Matcher, Recovery Generator, Policy Generator, Routing Adjuster. CostEstimationProbe for CARE routing. Cost-aware recovery strategies (rate limiting, model downgrade, budget enforcement). Migration 044 adds cost_routing_adjustments table. 7-day implementation (Phase 1: C1-C2, Phase 2: C3-C4, Phase 3: C5+Probe, Phase 4: Testing). Integration points: CostAnomalyDetector→IntegrationDispatcher, RecoveryEvaluator+CostRecoveryGenerator, PolicyGenerator+CostPolicyTemplates, CARE+CostEstimationProbe. |
 | 2025-12-22 | **PIN-130 M26 Cost Intelligence Blueprint** - Full cost intelligence dashboard spec. Feature Tagging API, Cost Attribution Dashboard (by feature/user/model/time), Cost Anomaly Detection (z-score, budget, rate-of-change), Budget Alert System (configurable thresholds), Cost Projection Engine (30-day forecasts). Migration 043 with feature_tags, cost_records, cost_anomalies, cost_budgets, cost_daily_aggregates. Console UI: CostDashboardPage, CostByFeatureChart, CostByUserTable, AnomalyAlertPanel, ProjectionChart, FeatureTagManager. 11-day implementation (Phase 1: Feature tagging, Phase 2: Dashboard, Phase 3: Anomaly detection, Phase 4: Alerts+Projection, Phase 5: M25 Loop Integration). |
