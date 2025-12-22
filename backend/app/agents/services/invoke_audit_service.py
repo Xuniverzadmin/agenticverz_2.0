@@ -7,7 +7,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
@@ -21,6 +21,7 @@ logger = logging.getLogger("nova.agents.invoke_audit")
 @dataclass
 class InvokeAuditEntry:
     """Audit entry for an agent_invoke call."""
+
     id: UUID
     invoke_id: str
     caller_instance_id: str
@@ -47,7 +48,7 @@ class InvokeAuditService:
     """
 
     def __init__(self, database_url: Optional[str] = None):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not self.database_url:
             raise RuntimeError("DATABASE_URL required for InvokeAuditService")
 
@@ -85,7 +86,8 @@ class InvokeAuditService:
         with self.Session() as session:
             try:
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.invoke_audit (
                             id, invoke_id, caller_instance_id, target_instance_id,
                             job_id, request_payload, status, started_at
@@ -94,15 +96,18 @@ class InvokeAuditService:
                             CAST(:job_id AS UUID), CAST(:payload AS JSONB),
                             'pending', now()
                         )
-                    """),
+                    """
+                    ),
                     {
                         "id": str(entry_id),
                         "invoke_id": invoke_id,
                         "caller": caller_instance_id,
                         "target": target_instance_id,
                         "job_id": str(job_id) if job_id else None,
-                        "payload": json.dumps(request_payload) if not isinstance(request_payload, str) else request_payload,
-                    }
+                        "payload": json.dumps(request_payload)
+                        if not isinstance(request_payload, str)
+                        else request_payload,
+                    },
                 )
                 session.commit()
 
@@ -112,7 +117,7 @@ class InvokeAuditService:
                         "invoke_id": invoke_id,
                         "caller": caller_instance_id,
                         "target": target_instance_id,
-                    }
+                    },
                 )
 
                 return entry_id
@@ -143,7 +148,8 @@ class InvokeAuditService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.invoke_audit
                         SET status = 'completed',
                             response_payload = CAST(:payload AS JSONB),
@@ -152,12 +158,15 @@ class InvokeAuditService:
                             duration_ms = EXTRACT(MILLISECONDS FROM (now() - started_at))::INTEGER
                         WHERE invoke_id = :invoke_id AND status = 'pending'
                         RETURNING id
-                    """),
+                    """
+                    ),
                     {
                         "invoke_id": invoke_id,
-                        "payload": json.dumps(response_payload) if not isinstance(response_payload, str) else response_payload,
+                        "payload": json.dumps(response_payload)
+                        if not isinstance(response_payload, str)
+                        else response_payload,
                         "credits": float(credits_charged) if credits_charged else None,
-                    }
+                    },
                 )
                 row = result.fetchone()
                 session.commit()
@@ -193,7 +202,8 @@ class InvokeAuditService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.invoke_audit
                         SET status = :status,
                             error_message = :error,
@@ -201,12 +211,13 @@ class InvokeAuditService:
                             duration_ms = EXTRACT(MILLISECONDS FROM (now() - started_at))::INTEGER
                         WHERE invoke_id = :invoke_id AND status = 'pending'
                         RETURNING id
-                    """),
+                    """
+                    ),
                     {
                         "invoke_id": invoke_id,
                         "status": status,
                         "error": error_message[:1000] if error_message else None,
-                    }
+                    },
                 )
                 row = result.fetchone()
                 session.commit()
@@ -226,7 +237,8 @@ class InvokeAuditService:
         """Get audit entry by invoke ID."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, invoke_id, caller_instance_id, target_instance_id,
                         job_id, request_payload, response_payload, status,
@@ -234,8 +246,9 @@ class InvokeAuditService:
                         duration_ms, error_message
                     FROM agents.invoke_audit
                     WHERE invoke_id = :invoke_id
-                """),
-                {"invoke_id": invoke_id}
+                """
+                ),
+                {"invoke_id": invoke_id},
             )
             row = result.fetchone()
 
@@ -252,7 +265,8 @@ class InvokeAuditService:
         """List invoke audit entries for a job."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, invoke_id, caller_instance_id, target_instance_id,
                         job_id, request_payload, response_payload, status,
@@ -262,8 +276,9 @@ class InvokeAuditService:
                     WHERE job_id = :job_id
                     ORDER BY started_at DESC
                     LIMIT :limit
-                """),
-                {"job_id": str(job_id), "limit": limit}
+                """
+                ),
+                {"job_id": str(job_id), "limit": limit},
             )
 
             return [self._row_to_entry(row) for row in result]
@@ -276,7 +291,8 @@ class InvokeAuditService:
         """List invoke audit entries by caller."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, invoke_id, caller_instance_id, target_instance_id,
                         job_id, request_payload, response_payload, status,
@@ -286,8 +302,9 @@ class InvokeAuditService:
                     WHERE caller_instance_id = :caller
                     ORDER BY started_at DESC
                     LIMIT :limit
-                """),
-                {"caller": caller_instance_id, "limit": limit}
+                """
+                ),
+                {"caller": caller_instance_id, "limit": limit},
             )
 
             return [self._row_to_entry(row) for row in result]
@@ -299,7 +316,8 @@ class InvokeAuditService:
         """Get invoke statistics."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         status,
                         COUNT(*) as count,
@@ -308,8 +326,9 @@ class InvokeAuditService:
                     FROM agents.invoke_audit
                     WHERE started_at > now() - make_interval(hours => :hours)
                     GROUP BY status
-                """),
-                {"hours": since_hours}
+                """
+                ),
+                {"hours": since_hours},
             )
 
             stats = {

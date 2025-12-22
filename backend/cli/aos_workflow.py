@@ -16,12 +16,13 @@ Installation:
 """
 
 from __future__ import annotations
+
 import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Optional
 
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,6 +32,7 @@ def get_db_connection():
     """Get database connection using environment config."""
     try:
         import psycopg2
+
         db_url = os.getenv("DATABASE_URL", "postgresql://nova:novapass@localhost:5433/nova_aos")
         return psycopg2.connect(db_url)
     except ImportError:
@@ -64,6 +66,7 @@ def format_json(obj: Any, indent: int = 2) -> str:
 
 # ============== Inspect Command ==============
 
+
 def cmd_inspect(args):
     """
     Inspect a workflow run - shows checkpoint state, golden events, and recovery hints.
@@ -81,7 +84,8 @@ def cmd_inspect(args):
         conn = get_db_connection()
         cur = conn.cursor()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT
                 run_id, workflow_id, tenant_id, next_step_index,
                 last_result_hash, status, version,
@@ -89,15 +93,25 @@ def cmd_inspect(args):
                 step_outputs_json
             FROM workflow_checkpoints
             WHERE run_id = %s
-        """, (run_id,))
+        """,
+            (run_id,),
+        )
 
         row = cur.fetchone()
         if row:
             (
-                run_id, workflow_id, tenant_id, next_step_index,
-                last_result_hash, status, version,
-                created_at, updated_at, started_at, ended_at,
-                step_outputs_json
+                run_id,
+                workflow_id,
+                tenant_id,
+                next_step_index,
+                last_result_hash,
+                status,
+                version,
+                created_at,
+                updated_at,
+                started_at,
+                ended_at,
+                step_outputs_json,
             ) = row
 
             print(f"  Run ID:           {run_id}")
@@ -132,13 +146,13 @@ def cmd_inspect(args):
         print(f"  Error loading checkpoint: {e}")
 
     # 2. Load golden file (last 20 events)
-    print(f"\n## Golden File (last 20 events)\n")
+    print("\n## Golden File (last 20 events)\n")
     golden_dir = os.getenv("GOLDEN_DIR", "/tmp/golden")
     golden_path = os.path.join(golden_dir, f"{run_id}.steps.jsonl")
 
     if os.path.exists(golden_path):
         try:
-            with open(golden_path, 'r') as f:
+            with open(golden_path, "r") as f:
                 lines = f.readlines()
 
             print(f"  Golden file: {golden_path}")
@@ -146,7 +160,7 @@ def cmd_inspect(args):
             print()
 
             # Show last 20 events
-            for i, line in enumerate(lines[-20:], start=max(1, len(lines)-19)):
+            for i, line in enumerate(lines[-20:], start=max(1, len(lines) - 19)):
                 try:
                     event = json.loads(line)
                     event_type = event.get("event_type", "unknown")
@@ -158,7 +172,9 @@ def cmd_inspect(args):
                         budget = event.get("data", {}).get("budget_snapshot", {})
                         print(f"  [{i:3d}] {timestamp} | START | spec={spec_id} seed={seed}")
                         if budget:
-                            print(f"        Budget: step_ceiling={budget.get('step_ceiling_cents')}c workflow_ceiling={budget.get('workflow_ceiling_cents')}c")
+                            print(
+                                f"        Budget: step_ceiling={budget.get('step_ceiling_cents')}c workflow_ceiling={budget.get('workflow_ceiling_cents')}c"
+                            )
 
                     elif event_type == "step":
                         step_id = event.get("data", {}).get("step_id", "")
@@ -182,10 +198,10 @@ def cmd_inspect(args):
             print(f"  Error reading golden file: {e}")
     else:
         print(f"  No golden file found at: {golden_path}")
-        print(f"  Set GOLDEN_DIR environment variable if using different path.")
+        print("  Set GOLDEN_DIR environment variable if using different path.")
 
     # 3. Recovery suggestions
-    print(f"\n## Recovery Suggestions\n")
+    print("\n## Recovery Suggestions\n")
 
     if row:
         if status == "running":
@@ -199,7 +215,7 @@ def cmd_inspect(args):
             print("  - Check error_code in the last step event above")
             print("  - Review golden file for the failing step's inputs")
             print("  - Fix the issue and use admin/rerun endpoint to retry")
-            print(f"  - Rerun command: curl -X POST /admin/rerun -d '{{\"run_id\": \"{run_id}\"}}'")
+            print(f'  - Rerun command: curl -X POST /admin/rerun -d \'{{"run_id": "{run_id}"}}\'')
 
         elif status == "completed":
             print("  Status: COMPLETED")
@@ -227,6 +243,7 @@ def cmd_inspect(args):
 
 # ============== List Running Command ==============
 
+
 def cmd_list_running(args):
     """
     List all currently running workflows.
@@ -241,14 +258,16 @@ def cmd_list_running(args):
         conn = get_db_connection()
         cur = conn.cursor()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT run_id, workflow_id, tenant_id, next_step_index,
                    started_at, updated_at, version
             FROM workflow_checkpoints
             WHERE status = 'running'
             ORDER BY started_at DESC
             LIMIT 100
-        """)
+        """
+        )
 
         rows = cur.fetchall()
 
@@ -275,6 +294,7 @@ def cmd_list_running(args):
 
 # ============== Golden Tail Command ==============
 
+
 def cmd_golden_tail(args):
     """
     Show last N events from golden file.
@@ -296,12 +316,12 @@ def cmd_golden_tail(args):
         return
 
     try:
-        with open(golden_path, 'r') as f:
+        with open(golden_path, "r") as f:
             all_lines = f.readlines()
 
         tail_lines = all_lines[-lines_count:]
 
-        for i, line in enumerate(tail_lines, start=max(1, len(all_lines)-lines_count+1)):
+        for i, line in enumerate(tail_lines, start=max(1, len(all_lines) - lines_count + 1)):
             try:
                 event = json.loads(line)
                 print(f"[{i}] {json.dumps(event, indent=2)}")
@@ -316,6 +336,7 @@ def cmd_golden_tail(args):
 
 
 # ============== Stats Command ==============
+
 
 def cmd_stats(args):
     """
@@ -334,13 +355,16 @@ def cmd_stats(args):
         cur = conn.cursor()
 
         # Count by status
-        cur.execute("""
+        cur.execute(
+            """
             SELECT status, COUNT(*) as count
             FROM workflow_checkpoints
             WHERE workflow_id = %s
             GROUP BY status
             ORDER BY count DESC
-        """, (spec_id,))
+        """,
+            (spec_id,),
+        )
 
         rows = cur.fetchall()
 
@@ -349,7 +373,7 @@ def cmd_stats(args):
             total = sum(r[1] for r in rows)
             for status, count in rows:
                 pct = (count / total * 100) if total > 0 else 0
-                bar = '#' * int(pct / 5)
+                bar = "#" * int(pct / 5)
                 print(f"    {status:<20} {count:>5} ({pct:5.1f}%) {bar}")
             print(f"    {'TOTAL':<20} {total:>5}")
         else:
@@ -357,13 +381,16 @@ def cmd_stats(args):
 
         # Recent runs
         print("\n  Recent Runs (last 10):")
-        cur.execute("""
+        cur.execute(
+            """
             SELECT run_id, status, started_at, ended_at
             FROM workflow_checkpoints
             WHERE workflow_id = %s
             ORDER BY created_at DESC
             LIMIT 10
-        """, (spec_id,))
+        """,
+            (spec_id,),
+        )
 
         rows = cur.fetchall()
         for run_id, status, started_at, ended_at in rows:
@@ -386,6 +413,7 @@ def cmd_stats(args):
 
 
 # ============== Replay Local Command ==============
+
 
 def cmd_replay_local(args):
     """
@@ -412,7 +440,7 @@ def cmd_replay_local(args):
 
     # Load golden events
     events = []
-    with open(golden_path, 'r') as f:
+    with open(golden_path, "r") as f:
         for line in f:
             try:
                 events.append(json.loads(line))
@@ -460,16 +488,16 @@ def cmd_replay_local(args):
         print(f"\n  Final Status: {final_status}")
 
     print("\n  Note: This is a read-only replay. For actual re-execution, use:")
-    print(f"    curl -X POST /admin/rerun -d '{{\"run_id\": \"{run_id}\"}}'")
+    print(f'    curl -X POST /admin/rerun -d \'{{"run_id": "{run_id}"}}\'')
     print()
 
 
 # ============== Main ==============
 
+
 def main():
     parser = argparse.ArgumentParser(
-        prog="aos-workflow",
-        description="AOS Workflow Engine CLI - Inspection & Forensics Tool"
+        prog="aos-workflow", description="AOS Workflow Engine CLI - Inspection & Forensics Tool"
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")

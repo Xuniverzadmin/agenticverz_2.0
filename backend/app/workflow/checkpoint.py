@@ -18,21 +18,21 @@ Design:
 """
 
 from __future__ import annotations
+
 import asyncio
+import hashlib
+import json
+import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-import json
-import hashlib
-import logging
-import os
-import threading
 
-from sqlmodel import SQLModel, Field, select, text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import DateTime
+from sqlalchemy import create_engine as create_sync_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine as create_sync_engine, DateTime
-from sqlmodel import Session
+from sqlmodel import Field, SQLModel, select, text
 
 logger = logging.getLogger("nova.workflow.checkpoint")
 
@@ -41,9 +41,7 @@ class CheckpointVersionConflictError(Exception):
     """Raised when concurrent update detected via version mismatch."""
 
     def __init__(self, run_id: str, expected_version: int, actual_version: int):
-        super().__init__(
-            f"Version conflict for run_id={run_id}: expected={expected_version}, actual={actual_version}"
-        )
+        super().__init__(f"Version conflict for run_id={run_id}: expected={expected_version}, actual={actual_version}")
         self.run_id = run_id
         self.expected_version = expected_version
         self.actual_version = actual_version
@@ -57,6 +55,7 @@ class WorkflowCheckpoint(SQLModel, table=True):
     Primary key: run_id
     Concurrency: version column for optimistic locking
     """
+
     __tablename__ = "workflow_checkpoints"
 
     run_id: str = Field(primary_key=True, index=True, max_length=255)
@@ -118,6 +117,7 @@ class CheckpointData:
 
     Separates DB model from business logic.
     """
+
     run_id: str
     workflow_id: str
     tenant_id: str
@@ -252,9 +252,7 @@ class CheckpointStore:
         async with self._async_session_factory() as session:
             async with session.begin():
                 # Use raw SQL for get to work with async session
-                result = await session.execute(
-                    select(WorkflowCheckpoint).where(WorkflowCheckpoint.run_id == run_id)
-                )
+                result = await session.execute(select(WorkflowCheckpoint).where(WorkflowCheckpoint.run_id == run_id))
                 existing = result.scalar_one_or_none()
 
                 if existing:
@@ -306,9 +304,7 @@ class CheckpointStore:
             "status": status,
             "step_outputs": step_outputs or {},
         }
-        content_hash = hashlib.sha256(
-            json.dumps(content, sort_keys=True).encode()
-        ).hexdigest()[:16]
+        content_hash = hashlib.sha256(json.dumps(content, sort_keys=True).encode()).hexdigest()[:16]
 
         logger.debug(
             "checkpoint_saved",
@@ -317,7 +313,7 @@ class CheckpointStore:
                 "next_step_index": next_step_index,
                 "status": status,
                 "content_hash": content_hash,
-            }
+            },
         )
 
         return content_hash
@@ -379,7 +375,7 @@ class CheckpointStore:
                         "attempt": attempt + 1,
                         "expected": e.expected_version,
                         "actual": e.actual_version,
-                    }
+                    },
                 )
                 continue
 
@@ -396,9 +392,7 @@ class CheckpointStore:
             CheckpointData if found, None otherwise
         """
         async with self._async_session_factory() as session:
-            result = await session.execute(
-                select(WorkflowCheckpoint).where(WorkflowCheckpoint.run_id == run_id)
-            )
+            result = await session.execute(select(WorkflowCheckpoint).where(WorkflowCheckpoint.run_id == run_id))
             checkpoint = result.scalar_one_or_none()
 
             if checkpoint is None:
@@ -431,9 +425,7 @@ class CheckpointStore:
         """
         async with self._async_session_factory() as session:
             async with session.begin():
-                result = await session.execute(
-                    select(WorkflowCheckpoint).where(WorkflowCheckpoint.run_id == run_id)
-                )
+                result = await session.execute(select(WorkflowCheckpoint).where(WorkflowCheckpoint.run_id == run_id))
                 checkpoint = result.scalar_one_or_none()
                 if checkpoint:
                     await session.delete(checkpoint)
@@ -452,9 +444,7 @@ class CheckpointStore:
             List of CheckpointData for running workflows
         """
         async with self._async_session_factory() as session:
-            statement = select(WorkflowCheckpoint).where(
-                WorkflowCheckpoint.status == "running"
-            )
+            statement = select(WorkflowCheckpoint).where(WorkflowCheckpoint.status == "running")
             if tenant_id:
                 statement = statement.where(WorkflowCheckpoint.tenant_id == tenant_id)
             statement = statement.limit(limit)
@@ -565,9 +555,7 @@ class InMemoryCheckpointStore:
             "status": status,
             "step_outputs": step_outputs or {},
         }
-        return hashlib.sha256(
-            json.dumps(content, sort_keys=True).encode()
-        ).hexdigest()[:16]
+        return hashlib.sha256(json.dumps(content, sort_keys=True).encode()).hexdigest()[:16]
 
     async def save_with_retry(
         self,
@@ -643,20 +631,22 @@ class InMemoryCheckpointStore:
                 if data["status"] == "running":
                     if tenant_id and data.get("tenant_id") != tenant_id:
                         continue
-                    results.append(CheckpointData(
-                        run_id=data["run_id"],
-                        workflow_id=data["workflow_id"],
-                        tenant_id=data.get("tenant_id", ""),
-                        next_step_index=data["next_step_index"],
-                        last_result_hash=data["last_result_hash"],
-                        step_outputs=data["step_outputs"],
-                        status=data["status"],
-                        version=data["version"],
-                        created_at=data["created_at"],
-                        updated_at=data["updated_at"],
-                        started_at=data.get("started_at"),
-                        ended_at=data.get("ended_at"),
-                    ))
+                    results.append(
+                        CheckpointData(
+                            run_id=data["run_id"],
+                            workflow_id=data["workflow_id"],
+                            tenant_id=data.get("tenant_id", ""),
+                            next_step_index=data["next_step_index"],
+                            last_result_hash=data["last_result_hash"],
+                            step_outputs=data["step_outputs"],
+                            status=data["status"],
+                            version=data["version"],
+                            created_at=data["created_at"],
+                            updated_at=data["updated_at"],
+                            started_at=data.get("started_at"),
+                            ended_at=data.get("ended_at"),
+                        )
+                    )
                     if len(results) >= limit:
                         break
         return results

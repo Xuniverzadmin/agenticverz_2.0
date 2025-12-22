@@ -9,7 +9,9 @@ These tests MUST pass before any merge to main.
 """
 
 import math
+
 import pytest
+
 from app.worker.simulate import CostSimulator, FeasibilityStatus
 
 
@@ -158,7 +160,7 @@ class TestIterationsRiskCompounding:
         result = simulator.simulate(plan)
 
         # P(at least one failure in 10 tries) = 1 - (0.9)^10 = ~0.6513
-        expected_risk = 1.0 - (0.9 ** 10)
+        expected_risk = 1.0 - (0.9**10)
         assert len(result.risks) == 1
         assert math.isclose(result.risks[0].probability, expected_risk, rel_tol=1e-4)
 
@@ -220,24 +222,27 @@ class TestIterationsAPIModel:
 
     def test_planstep_rejects_zero_iterations(self):
         """PlanStep should reject iterations < 1."""
-        from app.api.runtime import PlanStep
         from pydantic import ValidationError
+
+        from app.api.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="llm_invoke", params={}, iterations=0)
 
     def test_planstep_rejects_negative_iterations(self):
         """PlanStep should reject negative iterations."""
-        from app.api.runtime import PlanStep
         from pydantic import ValidationError
+
+        from app.api.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="llm_invoke", params={}, iterations=-5)
 
     def test_planstep_rejects_excessive_iterations(self):
         """PlanStep should reject iterations > 100."""
-        from app.api.runtime import PlanStep
         from pydantic import ValidationError
+
+        from app.api.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="llm_invoke", params={}, iterations=101)
@@ -310,8 +315,9 @@ class TestM13AcceptanceCriteria:
 
     def test_ac7_rejects_invalid_iterations(self):
         """AC7: Backend rejects negative or zero iterations."""
-        from app.api.runtime import PlanStep
         from pydantic import ValidationError
+
+        from app.api.runtime import PlanStep
 
         with pytest.raises(ValidationError):
             PlanStep(skill="test", params={}, iterations=0)

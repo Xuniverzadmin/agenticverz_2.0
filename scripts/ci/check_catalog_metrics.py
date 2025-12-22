@@ -17,11 +17,13 @@ import re
 import sys
 from pathlib import Path
 
-CATALOG_PATH = Path(__file__).parent.parent.parent / "backend/app/data/failure_catalog.json"
+CATALOG_PATH = (
+    Path(__file__).parent.parent.parent / "backend/app/data/failure_catalog.json"
+)
 
 # Prometheus label naming rules
-LABEL_REGEX = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
-LABEL_VALUE_REGEX = re.compile(r'^[a-zA-Z0-9_\-\.]+$')
+LABEL_REGEX = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+LABEL_VALUE_REGEX = re.compile(r"^[a-zA-Z0-9_\-\.]+$")
 
 
 def validate_label_name(name: str) -> bool:
@@ -54,7 +56,9 @@ def check_catalog_labels(catalog_path: Path) -> list:
                 errors.append(f"{code}: invalid label name '{label_name}'")
 
             if not validate_label_value(str(label_value)):
-                errors.append(f"{code}: invalid label value '{label_value}' for '{label_name}'")
+                errors.append(
+                    f"{code}: invalid label value '{label_value}' for '{label_name}'"
+                )
 
     return errors
 
@@ -88,15 +92,23 @@ def check_label_consistency(catalog_path: Path) -> list:
         label_category = entry.get("metrics_labels", {}).get("category", "")
 
         if declared_category != label_category:
-            errors.append(f"{code}: category mismatch - entry={declared_category}, label={label_category}")
+            errors.append(
+                f"{code}: category mismatch - entry={declared_category}, label={label_category}"
+            )
 
     return errors
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Validate failure catalog metric labels")
-    parser.add_argument("--staging-url", help="Optional staging URL to compare against live metrics")
-    parser.add_argument("--catalog", type=Path, default=CATALOG_PATH, help="Path to catalog JSON")
+    parser = argparse.ArgumentParser(
+        description="Validate failure catalog metric labels"
+    )
+    parser.add_argument(
+        "--staging-url", help="Optional staging URL to compare against live metrics"
+    )
+    parser.add_argument(
+        "--catalog", type=Path, default=CATALOG_PATH, help="Path to catalog JSON"
+    )
     args = parser.parse_args()
 
     print("=" * 60)

@@ -15,75 +15,59 @@ Key Design:
 Based on: M15.1 SBA Foundations (Hard Enforcement Layer)
 """
 
-revision = '028_m15_1_sba_schema'
-down_revision = '027_m15_llm_governance'
+revision = "028_m15_1_sba_schema"
+down_revision = "027_m15_llm_governance"
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+from alembic import op
 
 
 def upgrade():
     # 1. Create agent_registry table for agent definitions
     op.create_table(
-        'agent_registry',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('agent_id', sa.String(128), nullable=False, unique=True),  # Unique agent identifier
-        sa.Column('agent_name', sa.String(256), nullable=True),  # Human-readable name
-        sa.Column('description', sa.Text(), nullable=True),  # Agent description
-        sa.Column('agent_type', sa.String(64), nullable=False, server_default='worker'),  # worker, orchestrator, aggregator
-
+        "agent_registry",
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("agent_id", sa.String(128), nullable=False, unique=True),  # Unique agent identifier
+        sa.Column("agent_name", sa.String(256), nullable=True),  # Human-readable name
+        sa.Column("description", sa.Text(), nullable=True),  # Agent description
+        sa.Column(
+            "agent_type", sa.String(64), nullable=False, server_default="worker"
+        ),  # worker, orchestrator, aggregator
         # SBA Schema (Strategy Cascade) - JSONB for flexibility
-        sa.Column('sba', JSONB, nullable=True),  # The 5-element Strategy Cascade
-        sa.Column('sba_version', sa.String(16), nullable=True),  # SBA schema version
-        sa.Column('sba_validated', sa.Boolean(), nullable=False, server_default='false'),  # Has SBA been validated
-        sa.Column('sba_validated_at', sa.DateTime(timezone=True), nullable=True),  # When SBA was validated
-
+        sa.Column("sba", JSONB, nullable=True),  # The 5-element Strategy Cascade
+        sa.Column("sba_version", sa.String(16), nullable=True),  # SBA schema version
+        sa.Column("sba_validated", sa.Boolean(), nullable=False, server_default="false"),  # Has SBA been validated
+        sa.Column("sba_validated_at", sa.DateTime(timezone=True), nullable=True),  # When SBA was validated
         # Capabilities and config
-        sa.Column('capabilities', JSONB, server_default='{}', nullable=False),  # Skills, rate limits
-        sa.Column('config', JSONB, server_default='{}', nullable=False),  # Default configuration
-
+        sa.Column("capabilities", JSONB, server_default="{}", nullable=False),  # Skills, rate limits
+        sa.Column("config", JSONB, server_default="{}", nullable=False),  # Default configuration
         # Status and lifecycle
-        sa.Column('status', sa.String(32), nullable=False, server_default='active'),  # active, deprecated, disabled
-        sa.Column('enabled', sa.Boolean(), nullable=False, server_default='true'),
-
+        sa.Column("status", sa.String(32), nullable=False, server_default="active"),  # active, deprecated, disabled
+        sa.Column("enabled", sa.Boolean(), nullable=False, server_default="true"),
         # Tenant isolation
-        sa.Column('tenant_id', sa.String(128), nullable=False, server_default='default', index=True),
-
+        sa.Column("tenant_id", sa.String(128), nullable=False, server_default="default", index=True),
         # Timestamps
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-
-        schema='agents'
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        schema="agents",
     )
 
     # Index for agent lookups by type
-    op.create_index(
-        'idx_agent_registry_type',
-        'agent_registry',
-        ['agent_type', 'enabled'],
-        schema='agents'
-    )
+    op.create_index("idx_agent_registry_type", "agent_registry", ["agent_type", "enabled"], schema="agents")
 
     # Index for SBA validation status
-    op.create_index(
-        'idx_agent_registry_sba_validated',
-        'agent_registry',
-        ['sba_validated'],
-        schema='agents'
-    )
+    op.create_index("idx_agent_registry_sba_validated", "agent_registry", ["sba_validated"], schema="agents")
 
     # 2. Add agent_name column to instances table (for better tracking)
-    op.add_column(
-        'instances',
-        sa.Column('agent_name', sa.String(256), nullable=True),
-        schema='agents'
-    )
+    op.add_column("instances", sa.Column("agent_name", sa.String(256), nullable=True), schema="agents")
 
     # 3. Create validation function for SBA at spawn time
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.validate_agent_sba(
             p_agent_id TEXT
         ) RETURNS TABLE(
@@ -186,10 +170,12 @@ def upgrade():
                 NULL::TEXT;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # 4. Create function to get or register agent
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.get_or_create_agent(
             p_agent_id TEXT,
             p_agent_type TEXT DEFAULT 'worker',
@@ -220,10 +206,12 @@ def upgrade():
             RETURN v_id;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # 5. Create trigger to update updated_at
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.update_agent_registry_timestamp()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -236,12 +224,14 @@ def upgrade():
         BEFORE UPDATE ON agents.agent_registry
         FOR EACH ROW
         EXECUTE FUNCTION agents.update_agent_registry_timestamp();
-    """)
+    """
+    )
 
     # 6. Update job_progress view to include SBA info
     # Must drop and recreate because we're changing column types
     op.execute("DROP VIEW IF EXISTS agents.job_progress CASCADE")
-    op.execute("""
+    op.execute(
+        """
         CREATE VIEW agents.job_progress AS
         SELECT
             j.id,
@@ -271,12 +261,14 @@ def upgrade():
             j.completed_at,
             EXTRACT(EPOCH FROM (COALESCE(j.completed_at, now()) - j.started_at)) AS duration_seconds
         FROM agents.jobs j;
-    """)
+    """
+    )
 
 
 def downgrade():
     # Drop updated view
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW agents.job_progress AS
         SELECT
             j.id,
@@ -299,7 +291,8 @@ def downgrade():
             j.completed_at,
             EXTRACT(EPOCH FROM (COALESCE(j.completed_at, now()) - j.started_at)) AS duration_seconds
         FROM agents.jobs j;
-    """)
+    """
+    )
 
     # Drop trigger
     op.execute("DROP TRIGGER IF EXISTS agent_registry_updated_at ON agents.agent_registry")
@@ -310,11 +303,11 @@ def downgrade():
     op.execute("DROP FUNCTION IF EXISTS agents.validate_agent_sba(TEXT)")
 
     # Drop column from instances
-    op.drop_column('instances', 'agent_name', schema='agents')
+    op.drop_column("instances", "agent_name", schema="agents")
 
     # Drop indexes
-    op.drop_index('idx_agent_registry_sba_validated', table_name='agent_registry', schema='agents')
-    op.drop_index('idx_agent_registry_type', table_name='agent_registry', schema='agents')
+    op.drop_index("idx_agent_registry_sba_validated", table_name="agent_registry", schema="agents")
+    op.drop_index("idx_agent_registry_type", table_name="agent_registry", schema="agents")
 
     # Drop table
-    op.drop_table('agent_registry', schema='agents')
+    op.drop_table("agent_registry", schema="agents")

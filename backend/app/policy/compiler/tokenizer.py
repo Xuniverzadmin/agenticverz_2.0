@@ -14,14 +14,12 @@ Token types include:
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import List, Optional, Iterator
-import re
-
-from app.policy.compiler.grammar import PLANG_GRAMMAR
+from typing import Iterator, List, Optional
 
 
 class TokenType(Enum):
     """Token types for PLang v2.0."""
+
     # Keywords
     POLICY = auto()
     RULE = auto()
@@ -53,21 +51,21 @@ class TokenType(Enum):
     STRING = auto()
 
     # Operators
-    EQ = auto()        # ==
-    NE = auto()        # !=
-    LT = auto()        # <
-    GT = auto()        # >
-    LE = auto()        # <=
-    GE = auto()        # >=
+    EQ = auto()  # ==
+    NE = auto()  # !=
+    LT = auto()  # <
+    GT = auto()  # >
+    LE = auto()  # <=
+    GE = auto()  # >=
 
     # Delimiters
-    LBRACE = auto()    # {
-    RBRACE = auto()    # }
-    LPAREN = auto()    # (
-    RPAREN = auto()    # )
-    COLON = auto()     # :
-    COMMA = auto()     # ,
-    DOT = auto()       # .
+    LBRACE = auto()  # {
+    RBRACE = auto()  # }
+    LPAREN = auto()  # (
+    RPAREN = auto()  # )
+    COLON = auto()  # :
+    COMMA = auto()  # ,
+    DOT = auto()  # .
 
     # Special
     NEWLINE = auto()
@@ -105,6 +103,7 @@ KEYWORD_TOKENS = {
 @dataclass
 class Token:
     """A token in PLang source code."""
+
     type: TokenType
     value: str
     line: int
@@ -117,21 +116,22 @@ class Token:
     def is_category(self) -> bool:
         """Check if token is a category."""
         return self.type in {
-            TokenType.SAFETY, TokenType.PRIVACY,
-            TokenType.OPERATIONAL, TokenType.ROUTING, TokenType.CUSTOM
+            TokenType.SAFETY,
+            TokenType.PRIVACY,
+            TokenType.OPERATIONAL,
+            TokenType.ROUTING,
+            TokenType.CUSTOM,
         }
 
     @property
     def is_action(self) -> bool:
         """Check if token is an action."""
-        return self.type in {
-            TokenType.DENY, TokenType.ALLOW,
-            TokenType.ESCALATE, TokenType.ROUTE
-        }
+        return self.type in {TokenType.DENY, TokenType.ALLOW, TokenType.ESCALATE, TokenType.ROUTE}
 
 
 class TokenizerError(Exception):
     """Error during tokenization."""
+
     def __init__(self, message: str, line: int, column: int):
         self.message = message
         self.line = line
@@ -172,22 +172,22 @@ class Tokenizer:
         """Advance to next character."""
         char = self.current_char
         self.pos += 1
-        if char == '\n':
+        if char == "\n":
             self.line += 1
             self.column = 1
         else:
             self.column += 1
-        return char or ''
+        return char or ""
 
     def skip_whitespace(self) -> None:
         """Skip whitespace characters (except newlines for statement separation)."""
-        while self.current_char and self.current_char in ' \t\r':
+        while self.current_char and self.current_char in " \t\r":
             self.advance()
 
     def skip_comment(self) -> None:
         """Skip single-line comments starting with #."""
-        if self.current_char == '#':
-            while self.current_char and self.current_char != '\n':
+        if self.current_char == "#":
+            while self.current_char and self.current_char != "\n":
                 self.advance()
 
     def read_string(self) -> Token:
@@ -198,10 +198,10 @@ class Tokenizer:
         value = ""
 
         while self.current_char and self.current_char != quote:
-            if self.current_char == '\\':
+            if self.current_char == "\\":
                 self.advance()
                 escape_char = self.advance()
-                escape_map = {'n': '\n', 't': '\t', 'r': '\r', '\\': '\\', '"': '"', "'": "'"}
+                escape_map = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'"}
                 value += escape_map.get(escape_char, escape_char)
             else:
                 value += self.advance()
@@ -218,7 +218,7 @@ class Tokenizer:
         start_col = self.column
         value = ""
 
-        while self.current_char and (self.current_char.isdigit() or self.current_char == '.'):
+        while self.current_char and (self.current_char.isdigit() or self.current_char == "."):
             value += self.advance()
 
         return Token(TokenType.NUMBER, value, start_line, start_col)
@@ -229,7 +229,7 @@ class Tokenizer:
         start_col = self.column
         value = ""
 
-        while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
+        while self.current_char and (self.current_char.isalnum() or self.current_char == "_"):
             value += self.advance()
 
         # Check if it's a keyword
@@ -243,27 +243,27 @@ class Tokenizer:
         char = self.current_char
 
         # Two-character operators
-        if char in '=!<>':
+        if char in "=!<>":
             next_char = self.peek()
-            if next_char == '=':
+            if next_char == "=":
                 self.advance()
                 self.advance()
-                op_map = {'=': TokenType.EQ, '!': TokenType.NE, '<': TokenType.LE, '>': TokenType.GE}
-                return Token(op_map[char], char + '=', start_line, start_col)
-            elif char in '<>':
+                op_map = {"=": TokenType.EQ, "!": TokenType.NE, "<": TokenType.LE, ">": TokenType.GE}
+                return Token(op_map[char], char + "=", start_line, start_col)
+            elif char in "<>":
                 self.advance()
-                return Token(TokenType.LT if char == '<' else TokenType.GT, char, start_line, start_col)
+                return Token(TokenType.LT if char == "<" else TokenType.GT, char, start_line, start_col)
 
         # Single-character operators and delimiters
         self.advance()
         token_map = {
-            '{': TokenType.LBRACE,
-            '}': TokenType.RBRACE,
-            '(': TokenType.LPAREN,
-            ')': TokenType.RPAREN,
-            ':': TokenType.COLON,
-            ',': TokenType.COMMA,
-            '.': TokenType.DOT,
+            "{": TokenType.LBRACE,
+            "}": TokenType.RBRACE,
+            "(": TokenType.LPAREN,
+            ")": TokenType.RPAREN,
+            ":": TokenType.COLON,
+            ",": TokenType.COMMA,
+            ".": TokenType.DOT,
         }
 
         if char in token_map:
@@ -287,17 +287,17 @@ class Tokenizer:
                 break
 
             # Skip comments
-            if self.current_char == '#':
+            if self.current_char == "#":
                 self.skip_comment()
                 continue
 
             # Newlines
-            if self.current_char == '\n':
+            if self.current_char == "\n":
                 self.advance()
                 continue
 
             # String literals
-            if self.current_char in '"\'':
+            if self.current_char in "\"'":
                 self.tokens.append(self.read_string())
                 continue
 
@@ -307,19 +307,16 @@ class Tokenizer:
                 continue
 
             # Identifiers and keywords
-            if self.current_char.isalpha() or self.current_char == '_':
+            if self.current_char.isalpha() or self.current_char == "_":
                 self.tokens.append(self.read_identifier())
                 continue
 
             # Operators and delimiters
-            if self.current_char in '=!<>{}():,.' :
+            if self.current_char in "=!<>{}():,.":
                 self.tokens.append(self.read_operator())
                 continue
 
-            raise TokenizerError(
-                f"Unexpected character: {self.current_char!r}",
-                self.line, self.column
-            )
+            raise TokenizerError(f"Unexpected character: {self.current_char!r}", self.line, self.column)
 
         # Add EOF token
         self.tokens.append(Token(TokenType.EOF, "", self.line, self.column))

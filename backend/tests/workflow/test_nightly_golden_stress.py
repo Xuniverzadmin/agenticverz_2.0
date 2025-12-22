@@ -18,13 +18,11 @@ Environment:
 """
 
 from __future__ import annotations
+
 import asyncio
 import hashlib
 import os
-import tempfile
-from datetime import datetime, timezone
 from typing import Any, Dict, List
-from uuid import uuid4
 
 import pytest
 
@@ -123,39 +121,48 @@ class RepresentativeWorkflow:
     @classmethod
     def compute_pipeline(cls) -> "RepresentativeWorkflow":
         """5-step compute pipeline (hash -> transform -> hash -> transform -> llm)."""
-        return cls("compute_pipeline", [
-            {"skill_id": "compute_hash", "params": {"data": "input_data_step_1"}},
-            {"skill_id": "transform_json", "params": {"input": {"a": 1, "b": 2, "c": 3}}},
-            {"skill_id": "compute_hash", "params": {"data": "step_2_output"}},
-            {"skill_id": "transform_json", "params": {"input": [1, 2, 3, 4, 5]}},
-            {"skill_id": "llm_stub", "params": {"prompt": "Summarize the computation"}},
-        ])
+        return cls(
+            "compute_pipeline",
+            [
+                {"skill_id": "compute_hash", "params": {"data": "input_data_step_1"}},
+                {"skill_id": "transform_json", "params": {"input": {"a": 1, "b": 2, "c": 3}}},
+                {"skill_id": "compute_hash", "params": {"data": "step_2_output"}},
+                {"skill_id": "transform_json", "params": {"input": [1, 2, 3, 4, 5]}},
+                {"skill_id": "llm_stub", "params": {"prompt": "Summarize the computation"}},
+            ],
+        )
 
     @classmethod
     def io_heavy(cls) -> "RepresentativeWorkflow":
         """8-step I/O heavy workflow."""
-        return cls("io_heavy", [
-            {"skill_id": "mock_io", "params": {"file": "file1.txt"}},
-            {"skill_id": "mock_io", "params": {"file": "file2.txt"}},
-            {"skill_id": "transform_json", "params": {"input": {"files": ["f1", "f2"]}}},
-            {"skill_id": "mock_io", "params": {"file": "file3.txt"}},
-            {"skill_id": "compute_hash", "params": {"data": "combined_content"}},
-            {"skill_id": "mock_io", "params": {"file": "output.txt", "mode": "write"}},
-            {"skill_id": "transform_json", "params": {"input": {"status": "complete"}}},
-            {"skill_id": "llm_stub", "params": {"prompt": "Verify IO operations"}},
-        ])
+        return cls(
+            "io_heavy",
+            [
+                {"skill_id": "mock_io", "params": {"file": "file1.txt"}},
+                {"skill_id": "mock_io", "params": {"file": "file2.txt"}},
+                {"skill_id": "transform_json", "params": {"input": {"files": ["f1", "f2"]}}},
+                {"skill_id": "mock_io", "params": {"file": "file3.txt"}},
+                {"skill_id": "compute_hash", "params": {"data": "combined_content"}},
+                {"skill_id": "mock_io", "params": {"file": "output.txt", "mode": "write"}},
+                {"skill_id": "transform_json", "params": {"input": {"status": "complete"}}},
+                {"skill_id": "llm_stub", "params": {"prompt": "Verify IO operations"}},
+            ],
+        )
 
     @classmethod
     def llm_intensive(cls) -> "RepresentativeWorkflow":
         """6-step LLM-intensive workflow."""
-        return cls("llm_intensive", [
-            {"skill_id": "llm_stub", "params": {"prompt": "Step 1: Analyze"}},
-            {"skill_id": "transform_json", "params": {"input": {"analysis": True}}},
-            {"skill_id": "llm_stub", "params": {"prompt": "Step 2: Plan"}},
-            {"skill_id": "llm_stub", "params": {"prompt": "Step 3: Execute"}},
-            {"skill_id": "transform_json", "params": {"input": {"execution": "done"}}},
-            {"skill_id": "llm_stub", "params": {"prompt": "Step 4: Summarize"}},
-        ])
+        return cls(
+            "llm_intensive",
+            [
+                {"skill_id": "llm_stub", "params": {"prompt": "Step 1: Analyze"}},
+                {"skill_id": "transform_json", "params": {"input": {"analysis": True}}},
+                {"skill_id": "llm_stub", "params": {"prompt": "Step 2: Plan"}},
+                {"skill_id": "llm_stub", "params": {"prompt": "Step 3: Execute"}},
+                {"skill_id": "transform_json", "params": {"input": {"execution": "done"}}},
+                {"skill_id": "llm_stub", "params": {"prompt": "Step 4: Summarize"}},
+            ],
+        )
 
 
 async def run_workflow_once(
@@ -215,12 +222,14 @@ class TestNightlyGoldenStress:
         for i in range(1, STRESS_ITERATIONS):
             result = await run_workflow_once(workflow, registry, seed)
             if result["workflow_hash"] != reference_hash:
-                mismatches.append({
-                    "iteration": i,
-                    "expected": reference_hash,
-                    "actual": result["workflow_hash"],
-                    "step_hashes": result["step_hashes"],
-                })
+                mismatches.append(
+                    {
+                        "iteration": i,
+                        "expected": reference_hash,
+                        "actual": result["workflow_hash"],
+                        "step_hashes": result["step_hashes"],
+                    }
+                )
 
         assert not mismatches, (
             f"Determinism failure in compute_pipeline: "
@@ -241,11 +250,13 @@ class TestNightlyGoldenStress:
         for i in range(1, STRESS_ITERATIONS):
             result = await run_workflow_once(workflow, registry, seed)
             if result["workflow_hash"] != reference_hash:
-                mismatches.append({
-                    "iteration": i,
-                    "expected": reference_hash,
-                    "actual": result["workflow_hash"],
-                })
+                mismatches.append(
+                    {
+                        "iteration": i,
+                        "expected": reference_hash,
+                        "actual": result["workflow_hash"],
+                    }
+                )
 
         assert not mismatches, (
             f"Determinism failure in io_heavy: "
@@ -265,11 +276,13 @@ class TestNightlyGoldenStress:
         for i in range(1, STRESS_ITERATIONS):
             result = await run_workflow_once(workflow, registry, seed)
             if result["workflow_hash"] != reference_hash:
-                mismatches.append({
-                    "iteration": i,
-                    "expected": reference_hash,
-                    "actual": result["workflow_hash"],
-                })
+                mismatches.append(
+                    {
+                        "iteration": i,
+                        "expected": reference_hash,
+                        "actual": result["workflow_hash"],
+                    }
+                )
 
         assert not mismatches, (
             f"Determinism failure in llm_intensive: "
@@ -287,9 +300,7 @@ class TestNightlyGoldenStress:
             result1 = await run_workflow_once(workflow, registry, seed)
             result2 = await run_workflow_once(workflow, registry, seed)
 
-            assert result1["workflow_hash"] == result2["workflow_hash"], (
-                f"Same seed {seed} produced different results"
-            )
+            assert result1["workflow_hash"] == result2["workflow_hash"], f"Same seed {seed} produced different results"
 
         # Verify different seeds produce different results
         results = []
@@ -298,9 +309,9 @@ class TestNightlyGoldenStress:
             results.append(result["workflow_hash"])
 
         unique_hashes = len(set(results))
-        assert unique_hashes >= len(seeds) - 1, (
-            f"Expected mostly unique hashes for different seeds, got {unique_hashes}/{len(seeds)}"
-        )
+        assert (
+            unique_hashes >= len(seeds) - 1
+        ), f"Expected mostly unique hashes for different seeds, got {unique_hashes}/{len(seeds)}"
 
     @pytest.mark.asyncio
     async def test_concurrent_execution_determinism(self, registry: MockSkillRegistry):
@@ -309,19 +320,14 @@ class TestNightlyGoldenStress:
         seed = 99999
 
         # Run 10 concurrent executions
-        tasks = [
-            run_workflow_once(workflow, registry, seed)
-            for _ in range(10)
-        ]
+        tasks = [run_workflow_once(workflow, registry, seed) for _ in range(10)]
         results = await asyncio.gather(*tasks)
 
         # All should have the same hash
         hashes = [r["workflow_hash"] for r in results]
         unique = set(hashes)
 
-        assert len(unique) == 1, (
-            f"Concurrent executions produced {len(unique)} different hashes: {unique}"
-        )
+        assert len(unique) == 1, f"Concurrent executions produced {len(unique)} different hashes: {unique}"
 
     @pytest.mark.asyncio
     async def test_all_workflows_stress(self, registry: MockSkillRegistry):
@@ -341,9 +347,9 @@ class TestNightlyGoldenStress:
 
             for i in range(iterations):
                 result = await run_workflow_once(workflow, registry, seed)
-                assert result["workflow_hash"] == reference["workflow_hash"], (
-                    f"Mismatch in {workflow.name} at iteration {i}"
-                )
+                assert (
+                    result["workflow_hash"] == reference["workflow_hash"]
+                ), f"Mismatch in {workflow.name} at iteration {i}"
 
     @pytest.mark.asyncio
     async def test_memory_stability(self, registry: MockSkillRegistry):
@@ -386,6 +392,4 @@ class TestNightlyGoldenStress:
             seen_hashes[h] = seed
 
         # No collisions expected for SHA256
-        assert collision_count == 0, (
-            f"Found {collision_count} hash collisions in {STRESS_ITERATIONS * 2} runs"
-        )
+        assert collision_count == 0, f"Found {collision_count} hash collisions in {STRESS_ITERATIONS * 2} runs"

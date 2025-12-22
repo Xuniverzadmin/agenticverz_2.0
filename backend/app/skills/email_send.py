@@ -5,13 +5,13 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, Optional, Type
 
 import httpx
 from pydantic import BaseModel
 
+from ..schemas.skill import EmailSendInput, EmailSendOutput
 from .registry import skill
-from ..schemas.skill import EmailSendInput, EmailSendOutput, SkillStatus
 
 logger = logging.getLogger("nova.skills.email_send")
 
@@ -23,6 +23,7 @@ DEFAULT_FROM_ADDRESS = os.getenv("RESEND_FROM_ADDRESS", "notifications@agenticve
 
 class EmailSendConfig(BaseModel):
     """Configuration schema for email_send skill."""
+
     allow_external: bool = True
     api_key: Optional[str] = None
     from_address: Optional[str] = None
@@ -125,7 +126,7 @@ class EmailSendSkill:
                 "skill": "email_send",
                 "recipients_count": len(all_recipients),
                 "subject_preview": subject[:50] if subject else "",
-            }
+            },
         )
 
         # Check if external calls are allowed
@@ -137,7 +138,7 @@ class EmailSendSkill:
                     "skill": "email_send",
                     "reason": "external_calls_disabled",
                     "recipients": all_recipients,
-                }
+                },
             )
             return {
                 "skill": "email_send",
@@ -163,8 +164,7 @@ class EmailSendSkill:
         if not self.api_key:
             duration = time.time() - start_time
             logger.error(
-                "skill_execution_failed",
-                extra={"skill": "email_send", "error": "RESEND_API_KEY not configured"}
+                "skill_execution_failed", extra={"skill": "email_send", "error": "RESEND_API_KEY not configured"}
             )
             return {
                 "skill": "email_send",
@@ -272,7 +272,7 @@ class EmailSendSkill:
                             "message_id": message_id,
                             "recipients_count": len(all_recipients),
                             "duration": round(duration, 3),
-                        }
+                        },
                     )
 
                     return {
@@ -303,7 +303,7 @@ class EmailSendSkill:
                             "skill": "email_send",
                             "http_status": response.status_code,
                             "error": error_body,
-                        }
+                        },
                     )
 
                     return {
@@ -325,10 +325,7 @@ class EmailSendSkill:
 
         except httpx.TimeoutException:
             duration = time.time() - start_time
-            logger.warning(
-                "skill_execution_timeout",
-                extra={"skill": "email_send", "timeout": self.timeout}
-            )
+            logger.warning("skill_execution_timeout", extra={"skill": "email_send", "timeout": self.timeout})
             return {
                 "skill": "email_send",
                 "skill_version": self.VERSION,
@@ -348,10 +345,7 @@ class EmailSendSkill:
 
         except httpx.RequestError as e:
             duration = time.time() - start_time
-            logger.error(
-                "skill_execution_failed",
-                extra={"skill": "email_send", "error": str(e)[:200]}
-            )
+            logger.error("skill_execution_failed", extra={"skill": "email_send", "error": str(e)[:200]})
             return {
                 "skill": "email_send",
                 "skill_version": self.VERSION,

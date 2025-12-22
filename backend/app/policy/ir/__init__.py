@@ -7,40 +7,40 @@
 # - Symbol table with policy hierarchy
 # - SSA-like form for optimization
 
-from app.policy.ir.ir_nodes import (
-    # Base
-    IRNode,
-    IRType,
-    # Instructions
-    IRInstruction,
-    IRLoadConst,
-    IRLoadVar,
-    IRStoreVar,
-    IRBinaryOp,
-    IRUnaryOp,
-    IRCompare,
-    IRJump,
-    IRJumpIf,
-    IRCall,
-    IRReturn,
-    IRAction,
-    IRCheckPolicy,
-    IREmitIntent,
-    # Blocks
-    IRBlock,
-    IRFunction,
-    IRModule,
-    # Metadata
-    IRGovernance,
-)
-from app.policy.ir.symbol_table import (
-    Symbol,
-    SymbolType,
-    SymbolTable,
-    Scope,
-)
 from app.policy.ir.ir_builder import (
     IRBuilder,
+)
+from app.policy.ir.ir_nodes import (
+    IRAction,
+    IRBinaryOp,
+    # Blocks
+    IRBlock,
+    IRCall,
+    IRCheckPolicy,
+    IRCompare,
+    IREmitIntent,
+    IRFunction,
+    # Metadata
+    IRGovernance,
+    # Instructions
+    IRInstruction,
+    IRJump,
+    IRJumpIf,
+    IRLoadConst,
+    IRLoadVar,
+    IRModule,
+    # Base
+    IRNode,
+    IRReturn,
+    IRStoreVar,
+    IRType,
+    IRUnaryOp,
+)
+from app.policy.ir.symbol_table import (
+    Scope,
+    Symbol,
+    SymbolTable,
+    SymbolType,
 )
 
 __all__ = [

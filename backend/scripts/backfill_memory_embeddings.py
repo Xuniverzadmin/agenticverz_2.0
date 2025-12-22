@@ -32,16 +32,12 @@ import os
 import signal
 import sys
 import time
-from datetime import datetime
 from typing import List, Optional, Tuple
 
 # Add parent to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 # Graceful shutdown flag
@@ -63,12 +59,16 @@ async def get_pending_count(session) -> Tuple[int, int]:
     """Get count of rows with and without embeddings."""
     from sqlalchemy import text as sql_text
 
-    result = await session.execute(sql_text("""
+    result = await session.execute(
+        sql_text(
+            """
         SELECT
             count(*) FILTER (WHERE embedding IS NULL) AS pending,
             count(*) FILTER (WHERE embedding IS NOT NULL) AS completed
         FROM memories
-    """))
+    """
+        )
+    )
     row = result.fetchone()
     return row.pending, row.completed
 
@@ -82,14 +82,16 @@ async def get_batch_without_embeddings(
     from sqlalchemy import text as sql_text
 
     result = await session.execute(
-        sql_text("""
+        sql_text(
+            """
             SELECT id, text
             FROM memories
             WHERE embedding IS NULL
             ORDER BY created_at ASC
             LIMIT :limit OFFSET :offset
-        """),
-        {"limit": batch_size, "offset": offset}
+        """
+        ),
+        {"limit": batch_size, "offset": offset},
     )
 
     return [{"id": row.id, "text": row.text} for row in result.fetchall()]
@@ -103,12 +105,14 @@ async def update_embedding(session, memory_id: str, embedding: List[float]) -> b
         embedding_str = f"[{','.join(str(x) for x in embedding)}]"
         # Use CAST instead of :: to avoid asyncpg parameter parsing issues
         await session.execute(
-            sql_text("""
+            sql_text(
+                """
                 UPDATE memories
                 SET embedding = CAST(:embedding AS vector)
                 WHERE id = :id
-            """),
-            {"id": memory_id, "embedding": embedding_str}
+            """
+            ),
+            {"id": memory_id, "embedding": embedding_str},
         )
         return True
     except Exception as e:
@@ -119,6 +123,7 @@ async def update_embedding(session, memory_id: str, embedding: List[float]) -> b
 async def generate_embedding(text: str, provider: str = "openai") -> Optional[List[float]]:
     """Generate embedding for text using configured provider."""
     import httpx
+
     from app.memory.embedding_metrics import (
         EMBEDDING_API_CALLS,
         EMBEDDING_API_LATENCY,
@@ -217,7 +222,7 @@ async def backfill_batch(
                     break
             else:
                 if attempt < retry_count - 1:
-                    delay = 2 ** attempt  # Exponential backoff
+                    delay = 2**attempt  # Exponential backoff
                     logger.warning(f"Retrying {row['id']} in {delay}s (attempt {attempt + 1})")
                     await asyncio.sleep(delay)
                 else:
@@ -311,53 +316,30 @@ async def run_backfill(
                 await asyncio.sleep(delay_seconds)
 
         # Final summary
-        logger.info(
-            f"Backfill complete: {total_success} success, {total_failed} failed. "
-            f"Pending: {pending}"
-        )
+        logger.info(f"Backfill complete: {total_success} success, {total_failed} failed. " f"Pending: {pending}")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Backfill memory embeddings")
+    parser.add_argument("--batch-size", type=int, default=100, help="Number of rows per batch (default: 100)")
+    parser.add_argument("--delay", type=float, default=30.0, help="Delay between batches in seconds (default: 30)")
+    parser.add_argument("--limit", type=int, default=None, help="Maximum rows to process (default: all)")
+    parser.add_argument("--dry-run", action="store_true", help="Only count rows, don't process")
     parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=100,
-        help="Number of rows per batch (default: 100)"
-    )
-    parser.add_argument(
-        "--delay",
-        type=float,
-        default=30.0,
-        help="Delay between batches in seconds (default: 30)"
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="Maximum rows to process (default: all)"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Only count rows, don't process"
-    )
-    parser.add_argument(
-        "--provider",
-        choices=["openai", "anthropic"],
-        default="openai",
-        help="Embedding provider (default: openai)"
+        "--provider", choices=["openai", "anthropic"], default="openai", help="Embedding provider (default: openai)"
     )
 
     args = parser.parse_args()
 
-    asyncio.run(run_backfill(
-        batch_size=args.batch_size,
-        delay_seconds=args.delay,
-        limit=args.limit,
-        dry_run=args.dry_run,
-        provider=args.provider,
-    ))
+    asyncio.run(
+        run_backfill(
+            batch_size=args.batch_size,
+            delay_seconds=args.delay,
+            limit=args.limit,
+            dry_run=args.dry_run,
+            provider=args.provider,
+        )
+    )
 
 
 if __name__ == "__main__":

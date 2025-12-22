@@ -49,15 +49,13 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import requests
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger("seed_memory_pins")
 
@@ -95,7 +93,9 @@ def wait_for_api(base_url: str, timeout: int = None) -> bool:
             try:
                 response = requests.get(endpoint, timeout=3)
                 if response.status_code < 500:
-                    logger.info(f"API available at {endpoint} (status: {response.status_code})")
+                    logger.info(
+                        f"API available at {endpoint} (status: {response.status_code})"
+                    )
                     return True
             except requests.exceptions.RequestException:
                 pass
@@ -107,11 +107,7 @@ def wait_for_api(base_url: str, timeout: int = None) -> bool:
 
 
 def retry_request(
-    func,
-    *args,
-    retries: int = None,
-    delay: float = 1.0,
-    **kwargs
+    func, *args, retries: int = None, delay: float = 1.0, **kwargs
 ) -> Any:
     """
     Retry a request function with exponential backoff.
@@ -139,8 +135,10 @@ def retry_request(
         except requests.exceptions.RequestException as e:
             last_exception = e
             if attempt < retries:
-                wait_time = delay * (2 ** attempt)
-                logger.warning(f"Request failed (attempt {attempt + 1}/{retries + 1}), retrying in {wait_time}s: {e}")
+                wait_time = delay * (2**attempt)
+                logger.warning(
+                    f"Request failed (attempt {attempt + 1}/{retries + 1}), retrying in {wait_time}s: {e}"
+                )
                 time.sleep(wait_time)
             else:
                 logger.error(f"Request failed after {retries + 1} attempts: {e}")
@@ -169,12 +167,15 @@ def verify_pin_sql(tenant_id: str, key: str) -> Optional[Dict[str, Any]]:
         conn = psycopg2.connect(database_url)
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
                     FROM system.memory_pins
                     WHERE tenant_id = %s AND key = %s
                       AND (expires_at IS NULL OR expires_at > now())
-                """, (tenant_id, key))
+                """,
+                    (tenant_id, key),
+                )
                 row = cur.fetchone()
                 if row:
                     return dict(row)
@@ -220,7 +221,9 @@ def get_auth_headers() -> Dict[str, str]:
         headers["X-Machine-Token"] = machine_token
         return headers
 
-    logger.warning("No MACHINE_JWT or MACHINE_TOKEN set - requests may fail with RBAC enabled")
+    logger.warning(
+        "No MACHINE_JWT or MACHINE_TOKEN set - requests may fail with RBAC enabled"
+    )
     return headers
 
 
@@ -231,7 +234,7 @@ def upsert_pin(
     value: Any,
     source: str = "seed",
     ttl_seconds: Optional[int] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
     """
     Create or update a memory pin.
@@ -252,12 +255,7 @@ def upsert_pin(
     headers = get_auth_headers()
     timeout = float(os.getenv("SEED_TIMEOUT", "10"))
 
-    payload = {
-        "tenant_id": tenant_id,
-        "key": key,
-        "value": value,
-        "source": source
-    }
+    payload = {"tenant_id": tenant_id, "key": key, "value": value, "source": source}
 
     if ttl_seconds is not None:
         payload["ttl_seconds"] = ttl_seconds
@@ -270,7 +268,9 @@ def upsert_pin(
         response = requests.post(url, json=payload, headers=headers, timeout=timeout)
 
         if response.status_code not in (200, 201):
-            logger.error(f"Failed to upsert {tenant_id}/{key}: {response.status_code} - {response.text}")
+            logger.error(
+                f"Failed to upsert {tenant_id}/{key}: {response.status_code} - {response.text}"
+            )
             response.raise_for_status()
 
         logger.info(f"Upserted: {tenant_id}/{key}")
@@ -292,10 +292,7 @@ def verify_pin(base_url: str, tenant_id: str, key: str) -> Optional[Dict[str, An
 
     try:
         response = requests.get(
-            url,
-            params={"tenant_id": tenant_id},
-            headers=headers,
-            timeout=timeout
+            url, params={"tenant_id": tenant_id}, headers=headers, timeout=timeout
         )
 
         if response.status_code == 200:
@@ -303,7 +300,9 @@ def verify_pin(base_url: str, tenant_id: str, key: str) -> Optional[Dict[str, An
         elif response.status_code == 404:
             return None
         else:
-            logger.warning(f"Unexpected status {response.status_code} verifying {tenant_id}/{key}")
+            logger.warning(
+                f"Unexpected status {response.status_code} verifying {tenant_id}/{key}"
+            )
             return None
 
     except Exception as e:
@@ -316,7 +315,7 @@ def process_seed_entry(
     entry: Dict[str, Any],
     dry_run: bool = False,
     verify: bool = False,
-    sql_verify: bool = False
+    sql_verify: bool = False,
 ) -> Dict[str, int]:
     """
     Process a single seed entry.
@@ -353,7 +352,7 @@ def process_seed_entry(
                     value=value,
                     source=source,
                     ttl_seconds=ttl_seconds,
-                    dry_run=dry_run
+                    dry_run=dry_run,
                 )
 
             if dry_run:
@@ -417,49 +416,39 @@ Examples:
         --file ops/memory_pins_seed.json \\
         --base http://localhost:8000 \\
         --wait --wait-timeout 60
-        """
+        """,
     )
 
+    parser.add_argument("--file", "-f", required=True, help="Path to seed JSON file")
     parser.add_argument(
-        "--file", "-f",
-        required=True,
-        help="Path to seed JSON file"
-    )
-    parser.add_argument(
-        "--base", "-b",
-        required=True,
-        help="API base URL (e.g., http://localhost:8000)"
+        "--base", "-b", required=True, help="API base URL (e.g., http://localhost:8000)"
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Don't actually make requests, just log what would happen"
+        help="Don't actually make requests, just log what would happen",
     )
     parser.add_argument(
-        "--verify",
-        action="store_true",
-        help="Verify each pin via API after upserting"
+        "--verify", action="store_true", help="Verify each pin via API after upserting"
     )
     parser.add_argument(
         "--sql-verify",
         action="store_true",
-        help="Verify each pin via direct SQL after upserting (requires DATABASE_URL)"
+        help="Verify each pin via direct SQL after upserting (requires DATABASE_URL)",
     )
     parser.add_argument(
         "--wait",
         action="store_true",
-        help="Wait for API to become available before seeding"
+        help="Wait for API to become available before seeding",
     )
     parser.add_argument(
         "--wait-timeout",
         type=int,
         default=30,
-        help="Timeout in seconds to wait for API (default: 30)"
+        help="Timeout in seconds to wait for API (default: 30)",
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose logging"
+        "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
 
     args = parser.parse_args()
@@ -494,7 +483,9 @@ Examples:
 
     # Check if SQL verification is possible
     if args.sql_verify and not os.getenv("DATABASE_URL"):
-        logger.warning("--sql-verify specified but DATABASE_URL not set, SQL verification will be skipped")
+        logger.warning(
+            "--sql-verify specified but DATABASE_URL not set, SQL verification will be skipped"
+        )
 
     # Process entries
     total_stats = {"success": 0, "failed": 0, "verified_api": 0, "verified_sql": 0}
@@ -502,14 +493,16 @@ Examples:
     for i, entry in enumerate(entries, 1):
         tenant_id = entry.get("tenant_id", "global")
         pin_count = len(entry.get("pins", {}))
-        logger.info(f"Processing entry {i}/{len(entries)}: tenant={tenant_id}, pins={pin_count}")
+        logger.info(
+            f"Processing entry {i}/{len(entries)}: tenant={tenant_id}, pins={pin_count}"
+        )
 
         stats = process_seed_entry(
             base_url=args.base,
             entry=entry,
             dry_run=args.dry_run,
             verify=args.verify,
-            sql_verify=args.sql_verify
+            sql_verify=args.sql_verify,
         )
 
         for k in total_stats:
@@ -531,11 +524,19 @@ Examples:
 
     # Verify counts match
     if args.verify and total_stats["verified_api"] < total_stats["success"]:
-        logger.warning(f"API verification incomplete: {total_stats['verified_api']}/{total_stats['success']}")
+        logger.warning(
+            f"API verification incomplete: {total_stats['verified_api']}/{total_stats['success']}"
+        )
         sys.exit(1)
 
-    if args.sql_verify and os.getenv("DATABASE_URL") and total_stats["verified_sql"] < total_stats["success"]:
-        logger.warning(f"SQL verification incomplete: {total_stats['verified_sql']}/{total_stats['success']}")
+    if (
+        args.sql_verify
+        and os.getenv("DATABASE_URL")
+        and total_stats["verified_sql"] < total_stats["success"]
+    ):
+        logger.warning(
+            f"SQL verification incomplete: {total_stats['verified_sql']}/{total_stats['success']}"
+        )
         sys.exit(1)
 
     logger.info("All pins seeded and verified successfully!")

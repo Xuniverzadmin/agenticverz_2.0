@@ -1,7 +1,6 @@
 # M11 Replay Verifier
 # Compare workflow executions for determinism
 
-import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
@@ -14,6 +13,7 @@ logger = logging.getLogger("m11.verifier")
 @dataclass
 class DiffEntry:
     """Single difference between original and replay."""
+
     op_index: int
     op_type: str
     field: str
@@ -25,6 +25,7 @@ class DiffEntry:
 @dataclass
 class VerificationResult:
     """Result of verification comparison."""
+
     verified: bool
     total_ops: int
     matched_ops: int
@@ -83,14 +84,16 @@ class ReplayVerifier:
         replay_norm = normalize_status(replay_status)
 
         if orig_norm != replay_norm:
-            diffs.append(DiffEntry(
-                op_index=original.op_index,
-                op_type=original.op_type,
-                field="status",
-                original_value=original_status,
-                replay_value=replay_status,
-                severity="critical",
-            ))
+            diffs.append(
+                DiffEntry(
+                    op_index=original.op_index,
+                    op_type=original.op_type,
+                    field="status",
+                    original_value=original_status,
+                    replay_value=replay_status,
+                    severity="critical",
+                )
+            )
 
         # Check error codes if both failed
         if orig_norm != "success" and replay_norm != "success":
@@ -98,14 +101,16 @@ class ReplayVerifier:
             replay_error = replay_result.get("error") or replay_result.get("result", {}).get("error")
 
             if orig_error != replay_error:
-                diffs.append(DiffEntry(
-                    op_index=original.op_index,
-                    op_type=original.op_type,
-                    field="error_code",
-                    original_value=orig_error,
-                    replay_value=replay_error,
-                    severity="warning",
-                ))
+                diffs.append(
+                    DiffEntry(
+                        op_index=original.op_index,
+                        op_type=original.op_type,
+                        field="error_code",
+                        original_value=orig_error,
+                        replay_value=replay_error,
+                        severity="warning",
+                    )
+                )
 
         # Strict mode - compare full result hash
         if strict:
@@ -113,14 +118,16 @@ class ReplayVerifier:
             replay_hash = compute_hash(replay_result)
 
             if original_hash != replay_hash:
-                diffs.append(DiffEntry(
-                    op_index=original.op_index,
-                    op_type=original.op_type,
-                    field="result_hash",
-                    original_value=original_hash,
-                    replay_value=replay_hash,
-                    severity="warning",
-                ))
+                diffs.append(
+                    DiffEntry(
+                        op_index=original.op_index,
+                        op_type=original.op_type,
+                        field="result_hash",
+                        original_value=original_hash,
+                        replay_value=replay_hash,
+                        severity="warning",
+                    )
+                )
 
         # Check skill-specific fields
         if original.op_type == "voyage_embed":
@@ -128,28 +135,32 @@ class ReplayVerifier:
             orig_dims = original.result.get("result", {}).get("dimensions")
             replay_dims = replay_result.get("result", {}).get("dimensions")
             if orig_dims != replay_dims:
-                diffs.append(DiffEntry(
-                    op_index=original.op_index,
-                    op_type=original.op_type,
-                    field="dimensions",
-                    original_value=orig_dims,
-                    replay_value=replay_dims,
-                    severity="critical",
-                ))
+                diffs.append(
+                    DiffEntry(
+                        op_index=original.op_index,
+                        op_type=original.op_type,
+                        field="dimensions",
+                        original_value=orig_dims,
+                        replay_value=replay_dims,
+                        severity="critical",
+                    )
+                )
 
         elif original.op_type == "kv_store":
             # For KV, check operation type matches
             orig_op = original.result.get("operation")
             replay_op = replay_result.get("operation")
             if orig_op != replay_op:
-                diffs.append(DiffEntry(
-                    op_index=original.op_index,
-                    op_type=original.op_type,
-                    field="operation",
-                    original_value=orig_op,
-                    replay_value=replay_op,
-                    severity="critical",
-                ))
+                diffs.append(
+                    DiffEntry(
+                        op_index=original.op_index,
+                        op_type=original.op_type,
+                        field="operation",
+                        original_value=orig_op,
+                        replay_value=replay_op,
+                        severity="critical",
+                    )
+                )
 
         return diffs
 
@@ -180,14 +191,16 @@ class ReplayVerifier:
                 matched_ops=0,
                 mismatched_ops=0,
                 skipped_ops=0,
-                diffs=[DiffEntry(
-                    op_index=0,
-                    op_type="workflow",
-                    field="op_count",
-                    original_value=len(recorded_ops),
-                    replay_value=len(replay_results),
-                    severity="critical",
-                )],
+                diffs=[
+                    DiffEntry(
+                        op_index=0,
+                        op_type="workflow",
+                        field="op_count",
+                        original_value=len(recorded_ops),
+                        replay_value=len(replay_results),
+                        severity="critical",
+                    )
+                ],
                 summary=f"Operation count mismatch: {len(recorded_ops)} vs {len(replay_results)}",
             )
 

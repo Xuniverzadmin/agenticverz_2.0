@@ -4,14 +4,13 @@ AOS Configuration Verification Script
 Validates all configuration files before deployment.
 """
 
-import os
 import re
 import sys
-import json
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 
 class ConfigValidator:
     def __init__(self):
@@ -28,9 +27,9 @@ class ConfigValidator:
         content = path.read_text()
         vars_found = set()
 
-        for line in content.split('\n'):
-            if '=' in line and not line.startswith('#'):
-                var = line.split('=')[0].strip()
+        for line in content.split("\n"):
+            if "=" in line and not line.startswith("#"):
+                var = line.split("=")[0].strip()
                 vars_found.add(var)
 
         missing = set(required_vars) - vars_found
@@ -47,17 +46,15 @@ class ConfigValidator:
             return True
 
         content = path.read_text()
-        localhost_patterns = [
-            r'localhost',
-            r'127\.0\.0\.1',
-            r'0\.0\.0\.0'
-        ]
+        localhost_patterns = [r"localhost", r"127\.0\.0\.1", r"0\.0\.0\.0"]
 
         for pattern in localhost_patterns:
             if re.search(pattern, content):
                 # Only warn if it's a production file
-                if 'production' in str(path).lower():
-                    self.warnings.append(f"Found localhost in production config: {path.name}")
+                if "production" in str(path).lower():
+                    self.warnings.append(
+                        f"Found localhost in production config: {path.name}"
+                    )
                     return False
 
         return True
@@ -69,10 +66,10 @@ class ConfigValidator:
 
         content = path.read_text()
         secret_patterns = [
-            (r'sk-[a-zA-Z0-9]{20,}', 'OpenAI API key'),
-            (r'ghp_[a-zA-Z0-9]{36}', 'GitHub token'),
-            (r'hvs\.[a-zA-Z0-9]{20,}', 'Vault token'),
-            (r'password\s*=\s*["\'][^"\']{8,}["\']', 'Hardcoded password'),
+            (r"sk-[a-zA-Z0-9]{20,}", "OpenAI API key"),
+            (r"ghp_[a-zA-Z0-9]{36}", "GitHub token"),
+            (r"hvs\.[a-zA-Z0-9]{20,}", "Vault token"),
+            (r'password\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded password"),
         ]
 
         for pattern, name in secret_patterns:
@@ -91,10 +88,10 @@ class ConfigValidator:
         content = path.read_text()
 
         required_directives = [
-            'ServerName',
-            'SSLEngine',
-            'ProxyPass',
-            'DocumentRoot',
+            "ServerName",
+            "SSLEngine",
+            "ProxyPass",
+            "DocumentRoot",
         ]
 
         for directive in required_directives:
@@ -104,10 +101,10 @@ class ConfigValidator:
 
         # Check for security headers
         security_headers = [
-            'X-Frame-Options',
-            'X-XSS-Protection',
-            'X-Content-Type-Options',
-            'Strict-Transport-Security',
+            "X-Frame-Options",
+            "X-XSS-Protection",
+            "X-Content-Type-Options",
+            "Strict-Transport-Security",
         ]
 
         for header in security_headers:
@@ -149,7 +146,7 @@ class ConfigValidator:
         if 'allow_origins=["*"]' in content:
             self.warnings.append("CORS allows all origins - restrict in production")
 
-        if 'CORSMiddleware' not in content:
+        if "CORSMiddleware" not in content:
             self.errors.append("Missing CORS middleware")
             return False
 
@@ -166,7 +163,7 @@ class ConfigValidator:
         # Console env files
         self.validate_env_file(
             PROJECT_ROOT / "website/aos-console/console/.env.production",
-            ["VITE_API_BASE", "VITE_APP_NAME"]
+            ["VITE_API_BASE", "VITE_APP_NAME"],
         )
 
         # No localhost in production
@@ -188,7 +185,7 @@ class ConfigValidator:
         # No secrets
         for pattern in ["**/*.env*", "**/*.conf"]:
             for path in PROJECT_ROOT.glob(pattern):
-                if '.git' not in str(path):
+                if ".git" not in str(path):
                     self.validate_no_secrets(path)
 
         # Print results
@@ -208,15 +205,19 @@ class ConfigValidator:
 
         print()
         print("=" * 60)
-        print(f"Results: {len(self.passes)} passed, {len(self.warnings)} warnings, {len(self.errors)} errors")
+        print(
+            f"Results: {len(self.passes)} passed, {len(self.warnings)} warnings, {len(self.errors)} errors"
+        )
         print("=" * 60)
 
         return len(self.passes), len(self.warnings), len(self.errors)
+
 
 def main():
     validator = ConfigValidator()
     passed, warnings, errors = validator.run_all()
     sys.exit(0 if errors == 0 else 1)
+
 
 if __name__ == "__main__":
     main()

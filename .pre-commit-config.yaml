@@ -28,7 +28,7 @@ repos:
         language: python
         types: [python]
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: sqlmodel-patterns
         name: SQLModel Pattern Linter

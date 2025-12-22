@@ -5,9 +5,10 @@ This module provides a thin wrapper around Vault's KV v2 secrets engine
 for loading secrets at application startup.
 """
 
-import os
 import logging
+import os
 from typing import Dict, Optional
+
 import httpx
 
 logger = logging.getLogger(__name__)

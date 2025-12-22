@@ -15,23 +15,23 @@ Security:
 """
 
 from __future__ import annotations
+
 import csv
-import json
-import io
-import os
 import hashlib
 import hmac
+import json
+import os
 import time
 import uuid
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
-from app.db import get_session, StatusHistory
+from app.db import StatusHistory, get_session
 
 router = APIRouter(prefix="/status_history", tags=["status_history"])
 
@@ -133,11 +133,7 @@ def generate_signed_url(export_id: str, format: str) -> tuple[str, datetime]:
 
     # Create signature
     message = f"{export_id}:{format}:{expires_ts}"
-    signature = hmac.new(
-        SIGNED_URL_SECRET.encode(),
-        message.encode(),
-        hashlib.sha256
-    ).hexdigest()[:32]
+    signature = hmac.new(SIGNED_URL_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()[:32]
 
     # Build URL (relative - would be full URL in production)
     url = f"/status_history/download/{export_id}?format={format}&expires={expires_ts}&sig={signature}"
@@ -164,11 +160,7 @@ def verify_signed_url(export_id: str, format: str, expires_ts: int, signature: s
 
     # Verify signature
     message = f"{export_id}:{format}:{expires_ts}"
-    expected_signature = hmac.new(
-        SIGNED_URL_SECRET.encode(),
-        message.encode(),
-        hashlib.sha256
-    ).hexdigest()[:32]
+    expected_signature = hmac.new(SIGNED_URL_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()[:32]
 
     return hmac.compare_digest(signature, expected_signature)
 
@@ -399,9 +391,7 @@ async def download_export(
     return Response(
         content=content,
         media_type=media_type,
-        headers={
-            "Content-Disposition": f"attachment; filename=status_history_{export_id}.{extension}"
-        }
+        headers={"Content-Disposition": f"attachment; filename=status_history_{export_id}.{extension}"},
     )
 
 
@@ -425,40 +415,28 @@ async def get_stats(
     total_records = session.exec(total_query).one()
 
     # By entity type
-    entity_type_query = (
-        select(StatusHistory.entity_type, func.count())
-        .group_by(StatusHistory.entity_type)
-    )
+    entity_type_query = select(StatusHistory.entity_type, func.count()).group_by(StatusHistory.entity_type)
     if tenant_id:
         entity_type_query = entity_type_query.where(StatusHistory.tenant_id == tenant_id)
     entity_type_results = session.exec(entity_type_query).all()
     records_by_entity_type = {et: count for et, count in entity_type_results}
 
     # By actor type
-    actor_type_query = (
-        select(StatusHistory.actor_type, func.count())
-        .group_by(StatusHistory.actor_type)
-    )
+    actor_type_query = select(StatusHistory.actor_type, func.count()).group_by(StatusHistory.actor_type)
     if tenant_id:
         actor_type_query = actor_type_query.where(StatusHistory.tenant_id == tenant_id)
     actor_type_results = session.exec(actor_type_query).all()
     records_by_actor_type = {at: count for at, count in actor_type_results}
 
     # By status
-    status_query = (
-        select(StatusHistory.new_status, func.count())
-        .group_by(StatusHistory.new_status)
-    )
+    status_query = select(StatusHistory.new_status, func.count()).group_by(StatusHistory.new_status)
     if tenant_id:
         status_query = status_query.where(StatusHistory.tenant_id == tenant_id)
     status_results = session.exec(status_query).all()
     records_by_status = {s: count for s, count in status_results}
 
     # Time range
-    time_query = select(
-        func.min(StatusHistory.created_at),
-        func.max(StatusHistory.created_at)
-    )
+    time_query = select(func.min(StatusHistory.created_at), func.max(StatusHistory.created_at))
     if tenant_id:
         time_query = time_query.where(StatusHistory.tenant_id == tenant_id)
     oldest, newest = session.exec(time_query).one()

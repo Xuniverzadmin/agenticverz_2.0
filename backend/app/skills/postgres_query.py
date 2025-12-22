@@ -29,33 +29,22 @@ FORBIDDEN_PATTERNS = [
     r"\bEXECUTE\b",
     r"\bCALL\b",
     r";\s*--",  # Comment injection
-    r";\s*$",   # Multiple statements
+    r";\s*$",  # Multiple statements
 ]
 
 
 class PostgresQueryInput(BaseModel):
     """Input schema for postgres_query skill."""
+
     query: str = Field(
         description="Parameterized SQL query using %(name)s placeholders",
         min_length=1,
         max_length=10000,
     )
-    params: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Parameters for the query"
-    )
-    readonly: bool = Field(
-        default=True,
-        description="If true, only SELECT queries allowed"
-    )
-    max_rows: Optional[int] = Field(
-        default=None,
-        description="Maximum rows to return (capped at system limit)"
-    )
-    database_url: Optional[str] = Field(
-        default=None,
-        description="Override database URL (must be pre-approved)"
-    )
+    params: Optional[Dict[str, Any]] = Field(default=None, description="Parameters for the query")
+    readonly: bool = Field(default=True, description="If true, only SELECT queries allowed")
+    max_rows: Optional[int] = Field(default=None, description="Maximum rows to return (capped at system limit)")
+    database_url: Optional[str] = Field(default=None, description="Override database URL (must be pre-approved)")
 
     @field_validator("query")
     @classmethod
@@ -64,12 +53,13 @@ class PostgresQueryInput(BaseModel):
         query_upper = v.upper()
         for pattern in FORBIDDEN_PATTERNS:
             if re.search(pattern, query_upper, re.IGNORECASE):
-                raise ValueError(f"Query contains forbidden pattern")
+                raise ValueError("Query contains forbidden pattern")
         return v
 
 
 class PostgresQueryOutput(BaseModel):
     """Output schema for postgres_query skill."""
+
     status: str = Field(description="'ok' or 'error'")
     rows: List[Dict[str, Any]] = Field(default_factory=list, description="Query results")
     row_count: int = Field(default=0, description="Number of rows returned")
@@ -132,10 +122,7 @@ class PostgresQuerySkill:
         import psycopg2
         from psycopg2.extras import RealDictCursor
 
-        logger.info(
-            "skill_execution_start",
-            extra={"skill": "postgres_query"}
-        )
+        logger.info("skill_execution_start", extra={"skill": "postgres_query"})
 
         query = params.get("query", "")
         query_params = params.get("params") or {}
@@ -149,21 +136,17 @@ class PostgresQuerySkill:
 
         # Check read-only mode
         if readonly and not is_read_only_query(query):
-            return self._error_result(
-                "Query is not read-only. Set readonly=false to allow write operations."
-            )
+            return self._error_result("Query is not read-only. Set readonly=false to allow write operations.")
 
         # Even if not readonly, block writes unless explicitly allowed
         if not readonly and not ALLOW_WRITE_QUERIES:
-            return self._error_result(
-                "Write queries are disabled. Set PG_ALLOW_WRITE=true to enable."
-            )
+            return self._error_result("Write queries are disabled. Set PG_ALLOW_WRITE=true to enable.")
 
         # Validate forbidden patterns (already done by Pydantic, but double-check)
         query_upper = query.upper()
         for pattern in FORBIDDEN_PATTERNS:
             if re.search(pattern, query_upper, re.IGNORECASE):
-                return self._error_result(f"Query contains forbidden pattern")
+                return self._error_result("Query contains forbidden pattern")
 
         # Add LIMIT if not present for SELECT queries
         if is_read_only_query(query) and "LIMIT" not in query_upper:
@@ -206,7 +189,7 @@ class PostgresQuerySkill:
                     "status": "ok",
                     "row_count": len(result_rows),
                     "truncated": truncated,
-                }
+                },
             )
 
             return {
@@ -224,17 +207,11 @@ class PostgresQuerySkill:
             }
 
         except psycopg2.Error as e:
-            logger.exception(
-                "skill_execution_error",
-                extra={"skill": "postgres_query", "error": str(e)}
-            )
+            logger.exception("skill_execution_error", extra={"skill": "postgres_query", "error": str(e)})
             return self._error_result(f"Database error: {str(e)[:200]}")
 
         except Exception as e:
-            logger.exception(
-                "skill_execution_error",
-                extra={"skill": "postgres_query", "error": str(e)}
-            )
+            logger.exception("skill_execution_error", extra={"skill": "postgres_query", "error": str(e)})
             return self._error_result(f"Unexpected error: {str(e)[:200]}")
 
         finally:

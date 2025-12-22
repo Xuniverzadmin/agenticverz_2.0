@@ -17,17 +17,18 @@ Alert Rules:
 """
 
 from __future__ import annotations
+
 import logging
 from typing import Optional
 
 try:
-    from prometheus_client import Counter, Histogram, Gauge, Info
+    from prometheus_client import Counter, Gauge, Histogram, Info
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
 
 from app.costsim.config import get_config
-from app.costsim.models import ComparisonVerdict
 
 logger = logging.getLogger("nova.costsim.metrics")
 
@@ -146,10 +147,12 @@ class CostSimMetrics:
         )
 
         config = get_config()
-        self._version_info.info({
-            "model_version": config.model_version,
-            "adapter_version": config.adapter_version,
-        })
+        self._version_info.info(
+            {
+                "model_version": config.model_version,
+                "adapter_version": config.adapter_version,
+            }
+        )
 
         # ============================================================
         # Circuit Breaker Event Metrics (M6 Critical Gaps)

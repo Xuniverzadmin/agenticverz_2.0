@@ -10,13 +10,12 @@ Tests:
 """
 
 from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import os
 from io import StringIO
-from unittest.mock import MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
@@ -28,9 +27,7 @@ class TestLoggingContext:
 
     def test_set_and_get_run_id(self):
         """Test setting and getting run_id from context."""
-        from app.workflow.logging_context import (
-            set_run_id, get_run_id, clear_context
-        )
+        from app.workflow.logging_context import clear_context, get_run_id, set_run_id
 
         clear_context()
         assert get_run_id() is None
@@ -44,8 +41,11 @@ class TestLoggingContext:
     def test_workflow_context_manager(self):
         """Test workflow context manager sets and clears context."""
         from app.workflow.logging_context import (
-            workflow_context, get_run_id, get_workflow_id, get_correlation_id,
-            clear_context
+            clear_context,
+            get_correlation_id,
+            get_run_id,
+            get_workflow_id,
+            workflow_context,
         )
 
         clear_context()
@@ -62,8 +62,12 @@ class TestLoggingContext:
     def test_step_context_manager(self):
         """Test step context manager is scoped correctly."""
         from app.workflow.logging_context import (
-            workflow_context, step_context, get_step_id, get_step_index,
-            get_run_id, clear_context
+            clear_context,
+            get_run_id,
+            get_step_id,
+            get_step_index,
+            step_context,
+            workflow_context,
         )
 
         clear_context()
@@ -83,8 +87,11 @@ class TestLoggingContext:
     def test_nested_step_contexts(self):
         """Test nested step contexts work correctly."""
         from app.workflow.logging_context import (
-            workflow_context, step_context, get_step_id, get_step_index,
-            clear_context
+            clear_context,
+            get_step_id,
+            get_step_index,
+            step_context,
+            workflow_context,
         )
 
         clear_context()
@@ -104,9 +111,7 @@ class TestLoggingContext:
 
     def test_get_logging_context(self):
         """Test get_logging_context returns correct dict."""
-        from app.workflow.logging_context import (
-            workflow_context, step_context, get_logging_context, clear_context
-        )
+        from app.workflow.logging_context import clear_context, get_logging_context, step_context, workflow_context
 
         clear_context()
 
@@ -129,9 +134,7 @@ class TestLoggingContext:
 
     def test_correlation_id_auto_generation(self):
         """Test correlation ID is auto-generated if not provided."""
-        from app.workflow.logging_context import (
-            workflow_context, get_correlation_id, clear_context
-        )
+        from app.workflow.logging_context import clear_context, get_correlation_id, workflow_context
 
         clear_context()
 
@@ -147,9 +150,7 @@ class TestLoggingContext:
 
     def test_explicit_correlation_id(self):
         """Test explicit correlation ID is used when provided."""
-        from app.workflow.logging_context import (
-            workflow_context, get_correlation_id, clear_context
-        )
+        from app.workflow.logging_context import clear_context, get_correlation_id, workflow_context
 
         clear_context()
 
@@ -219,10 +220,7 @@ class TestContextualLoggerAdapter:
 
     def test_adapter_adds_context(self):
         """Test that adapter automatically adds context to logs."""
-        from app.workflow.logging_context import (
-            ContextualLoggerAdapter, workflow_context, step_context,
-            clear_context
-        )
+        from app.workflow.logging_context import ContextualLoggerAdapter, clear_context, workflow_context
 
         clear_context()
 
@@ -246,9 +244,7 @@ class TestContextualLoggerAdapter:
 
     def test_adapter_merges_extra(self):
         """Test adapter merges provided extra with context."""
-        from app.workflow.logging_context import (
-            ContextualLoggerAdapter, workflow_context, clear_context
-        )
+        from app.workflow.logging_context import ContextualLoggerAdapter, clear_context, workflow_context
 
         clear_context()
 
@@ -257,10 +253,12 @@ class TestContextualLoggerAdapter:
 
         class CapturingHandler(logging.Handler):
             def emit(self, record):
-                captured_extras.append({
-                    "run_id": getattr(record, "run_id", None),
-                    "custom_field": getattr(record, "custom_field", None),
-                })
+                captured_extras.append(
+                    {
+                        "run_id": getattr(record, "run_id", None),
+                        "custom_field": getattr(record, "custom_field", None),
+                    }
+                )
 
         base_logger = logging.getLogger("test.adapter.merge")
         base_logger.handlers = []
@@ -284,9 +282,7 @@ class TestConcurrentContextIsolation:
     @pytest.mark.asyncio
     async def test_concurrent_workflows_isolated(self):
         """Test that concurrent workflows have isolated contexts."""
-        from app.workflow.logging_context import (
-            workflow_context, get_run_id, get_correlation_id, clear_context
-        )
+        from app.workflow.logging_context import clear_context, get_correlation_id, get_run_id, workflow_context
 
         clear_context()
 
@@ -324,10 +320,7 @@ class TestConcurrentContextIsolation:
     @pytest.mark.asyncio
     async def test_concurrent_steps_isolated(self):
         """Test that concurrent steps within a workflow have isolated step contexts."""
-        from app.workflow.logging_context import (
-            workflow_context, step_context, get_step_id, get_run_id,
-            clear_context
-        )
+        from app.workflow.logging_context import clear_context, get_run_id, get_step_id, step_context, workflow_context
 
         clear_context()
 
@@ -336,10 +329,12 @@ class TestConcurrentContextIsolation:
         async def run_step(step_id: str, step_index: int):
             with step_context(step_id=step_id, step_index=step_index):
                 await asyncio.sleep(0.01)
-                results.append({
-                    "step_id": get_step_id(),
-                    "run_id": get_run_id(),  # Should be from parent context
-                })
+                results.append(
+                    {
+                        "step_id": get_step_id(),
+                        "run_id": get_run_id(),  # Should be from parent context
+                    }
+                )
 
         with workflow_context(run_id="concurrent-steps"):
             await asyncio.gather(
@@ -363,23 +358,19 @@ class TestConfigureStructuredLogging:
         """Test structured logging configuration."""
         from app.workflow.logging_context import configure_structured_logging
 
-        logger = configure_structured_logging(
-            level=logging.DEBUG,
-            logger_name="test.structured"
-        )
+        logger = configure_structured_logging(level=logging.DEBUG, logger_name="test.structured")
 
         assert logger.level == logging.DEBUG
         assert len(logger.handlers) == 1
 
         # Handler should have StructuredFormatter
         from app.workflow.logging_context import StructuredFormatter
+
         assert isinstance(logger.handlers[0].formatter, StructuredFormatter)
 
     def test_get_contextual_logger(self):
         """Test getting a contextual logger."""
-        from app.workflow.logging_context import (
-            get_contextual_logger, ContextualLoggerAdapter
-        )
+        from app.workflow.logging_context import ContextualLoggerAdapter, get_contextual_logger
 
         logger = get_contextual_logger("test.contextual")
 
@@ -393,8 +384,10 @@ class TestLoggingIntegration:
     async def test_logging_during_workflow_execution(self):
         """Test logging captures context during simulated workflow execution."""
         from app.workflow.logging_context import (
-            workflow_context, step_context, get_contextual_logger,
-            get_logging_context, clear_context
+            clear_context,
+            get_logging_context,
+            step_context,
+            workflow_context,
         )
 
         clear_context()

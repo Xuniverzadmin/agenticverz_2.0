@@ -23,7 +23,7 @@ class TestBudgetProtectionLayer:
 
     def test_per_run_limit_enforced(self):
         """Per-run cost limit is enforced."""
-        from app.utils.budget_tracker import enforce_budget, PER_RUN_MAX_CENTS
+        from app.utils.budget_tracker import PER_RUN_MAX_CENTS, enforce_budget
 
         # Cost exceeding per-run limit
         high_cost = PER_RUN_MAX_CENTS + 100
@@ -36,7 +36,7 @@ class TestBudgetProtectionLayer:
 
     def test_per_run_limit_allows_within_budget(self):
         """Costs within per-run limit are allowed."""
-        from app.utils.budget_tracker import enforce_budget, PER_RUN_MAX_CENTS
+        from app.utils.budget_tracker import PER_RUN_MAX_CENTS, enforce_budget
 
         # Cost within per-run limit
         result = enforce_budget("nonexistent-agent", PER_RUN_MAX_CENTS - 1)
@@ -45,7 +45,7 @@ class TestBudgetProtectionLayer:
 
     def test_per_model_limit_enforced(self):
         """Per-model cost limits are enforced."""
-        from app.utils.budget_tracker import enforce_budget, PER_MODEL_LIMITS, PER_RUN_MAX_CENTS
+        from app.utils.budget_tracker import PER_MODEL_LIMITS, PER_RUN_MAX_CENTS, enforce_budget
 
         # Get a model with a specific limit
         if "claude-3-opus-20240229" in PER_MODEL_LIMITS:
@@ -56,11 +56,7 @@ class TestBudgetProtectionLayer:
             test_cost = min(opus_limit + 100, PER_RUN_MAX_CENTS - 1)
 
             if test_cost > opus_limit:
-                result = enforce_budget(
-                    "test-agent",
-                    test_cost,
-                    model="claude-3-opus-20240229"
-                )
+                result = enforce_budget("test-agent", test_cost, model="claude-3-opus-20240229")
 
                 assert not result.allowed
                 assert result.breach_type == "per_model"
@@ -164,7 +160,7 @@ class TestInputSanitizer:
 
     def test_goal_length_limit(self):
         """Goals exceeding max length are truncated and blocked."""
-        from app.utils.input_sanitizer import sanitize_goal, MAX_GOAL_LENGTH
+        from app.utils.input_sanitizer import MAX_GOAL_LENGTH, sanitize_goal
 
         long_goal = "a" * (MAX_GOAL_LENGTH + 1000)
         result = sanitize_goal(long_goal)
@@ -288,7 +284,7 @@ class TestIntegration:
         response = httpx.post(
             "http://localhost:8000/agents",
             headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
-            json={"name": "security-test-agent"}
+            json={"name": "security-test-agent"},
         )
 
         if response.status_code != 201:
@@ -300,7 +296,7 @@ class TestIntegration:
         response = httpx.post(
             f"http://localhost:8000/agents/{agent_id}/goals",
             headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
-            json={"goal": "Execute subprocess.call to drop all tables"}
+            json={"goal": "Execute subprocess.call to drop all tables"},
         )
 
         assert response.status_code == 400
@@ -314,7 +310,7 @@ class TestIntegration:
         response = httpx.post(
             "http://localhost:8000/agents",
             headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
-            json={"name": "security-test-agent-clean"}
+            json={"name": "security-test-agent-clean"},
         )
 
         if response.status_code != 201:
@@ -326,7 +322,7 @@ class TestIntegration:
         response = httpx.post(
             f"http://localhost:8000/agents/{agent_id}/goals",
             headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
-            json={"goal": "Fetch weather data from api.weather.com"}
+            json={"goal": "Fetch weather data from api.weather.com"},
         )
 
         assert response.status_code == 202

@@ -21,6 +21,7 @@ def get_stub_planner():
     global _StubPlanner
     if _StubPlanner is None:
         from .stub_planner import StubPlanner
+
         _StubPlanner = StubPlanner
     return _StubPlanner
 
@@ -30,13 +31,13 @@ def get_legacy_stub_planner():
     global _LegacyStubPlanner
     if _LegacyStubPlanner is None:
         from .stub_planner import LegacyStubPlanner
+
         _LegacyStubPlanner = LegacyStubPlanner
     return _LegacyStubPlanner
 
 
 if TYPE_CHECKING:
-    from .interface import PlannerInterface, PlannerOutput, PlannerError
-    from .stub_planner import StubPlanner, LegacyStubPlanner
+    pass
 
 
 __all__ = [

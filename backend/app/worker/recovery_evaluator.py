@@ -22,7 +22,6 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
-from uuid import uuid4
 
 logger = logging.getLogger("nova.worker.recovery_evaluator")
 
@@ -36,9 +35,11 @@ MIN_CONFIDENCE = float(os.getenv("RECOVERY_MIN_CONFIDENCE", "0.3"))
 # Data Classes
 # =============================================================================
 
+
 @dataclass
 class FailureEvent:
     """Event representing a failure that needs recovery evaluation."""
+
     failure_match_id: str
     error_code: str
     error_message: str
@@ -59,6 +60,7 @@ class FailureEvent:
 @dataclass
 class EvaluationOutcome:
     """Outcome of recovery evaluation."""
+
     failure_match_id: str
     candidate_id: Optional[int]
     suggested_action: Optional[str]
@@ -72,6 +74,7 @@ class EvaluationOutcome:
 # =============================================================================
 # Hooks Registry
 # =============================================================================
+
 
 class RecoveryHooks:
     """
@@ -133,6 +136,7 @@ hooks = RecoveryHooks()
 # Recovery Evaluator
 # =============================================================================
 
+
 class RecoveryEvaluator:
     """
     Evaluates failures and generates recovery suggestions.
@@ -182,7 +186,6 @@ class RecoveryEvaluator:
             # Step 1: Evaluate rules
             from app.services.recovery_rule_engine import (
                 evaluate_rules,
-                RuleContext,
             )
 
             rule_result = evaluate_rules(
@@ -203,16 +206,18 @@ class RecoveryEvaluator:
             from app.services.recovery_matcher import RecoveryMatcher
 
             matcher = RecoveryMatcher()
-            match_result = matcher.suggest({
-                "failure_match_id": event.failure_match_id,
-                "failure_payload": {
-                    "error_type": event.error_code,
-                    "raw": event.error_message,
-                    "meta": event.metadata,
-                },
-                "source": "worker",
-                "occurred_at": event.occurred_at.isoformat() if event.occurred_at else None,
-            })
+            match_result = matcher.suggest(
+                {
+                    "failure_match_id": event.failure_match_id,
+                    "failure_payload": {
+                        "error_type": event.error_code,
+                        "raw": event.error_message,
+                        "meta": event.metadata,
+                    },
+                    "source": "worker",
+                    "occurred_at": event.occurred_at.isoformat() if event.occurred_at else None,
+                }
+            )
 
             candidate_id = match_result.candidate_id
 
@@ -279,6 +284,7 @@ class RecoveryEvaluator:
             # Update metrics
             try:
                 from app.metrics import recovery_suggestions_total
+
                 recovery_suggestions_total.labels(
                     source="worker",
                     decision="pending" if not auto_executed else "auto_executed",
@@ -329,11 +335,13 @@ class RecoveryEvaluator:
             with Session(engine) as session:
                 # Find action by code
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id FROM m10_recovery.suggestion_action
                         WHERE action_code = :code AND is_active = TRUE
-                    """),
-                    {"code": action_code}
+                    """
+                    ),
+                    {"code": action_code},
                 )
                 row = result.fetchone()
 
@@ -342,12 +350,14 @@ class RecoveryEvaluator:
 
                     # Update candidate with selected action
                     session.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE recovery_candidates
                             SET selected_action_id = :action_id
                             WHERE id = :candidate_id
-                        """),
-                        {"action_id": action_id, "candidate_id": candidate_id}
+                        """
+                        ),
+                        {"action_id": action_id, "candidate_id": candidate_id},
                     )
                     session.commit()
 
@@ -382,14 +392,16 @@ class RecoveryEvaluator:
 
             with Session(engine) as session:
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO m10_recovery.suggestion_provenance
                         (suggestion_id, event_type, details, rule_id, action_id,
                          confidence_before, confidence_after, actor, actor_type, duration_ms)
                         VALUES (:suggestion_id, :event_type, CAST(:details AS jsonb),
                                 :rule_id, :action_id, :confidence_before, :confidence_after,
                                 :actor, 'system', :duration_ms)
-                    """),
+                    """
+                    ),
                     {
                         "suggestion_id": candidate_id,
                         "event_type": event_type,
@@ -400,7 +412,7 @@ class RecoveryEvaluator:
                         "confidence_after": confidence_after,
                         "actor": actor,
                         "duration_ms": duration_ms,
-                    }
+                    },
                 )
                 session.commit()
 
@@ -433,12 +445,14 @@ class RecoveryEvaluator:
             with Session(engine) as session:
                 # Check if action can be auto-executed
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT action_code, template, is_automated, requires_approval
                         FROM m10_recovery.suggestion_action
                         WHERE id = :id
-                    """),
-                    {"id": action_id}
+                    """
+                    ),
+                    {"id": action_id},
                 )
                 row = result.fetchone()
 
@@ -462,24 +476,24 @@ class RecoveryEvaluator:
                 # will get no rows and skip execution.
                 # =============================================================
                 claim_result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE recovery_candidates
                         SET execution_status = 'executing',
                             updated_at = now()
                         WHERE id = :id
                           AND (executed_at IS NULL OR execution_status = 'pending')
                         RETURNING id
-                    """),
-                    {"id": candidate_id}
+                    """
+                    ),
+                    {"id": candidate_id},
                 )
                 claimed_row = claim_result.fetchone()
                 session.commit()
 
                 if not claimed_row:
                     # Another worker already claimed/executed this
-                    logger.info(
-                        f"Candidate {candidate_id} already executed or claimed by another worker"
-                    )
+                    logger.info(f"Candidate {candidate_id} already executed or claimed by another worker")
                     return False, {"skipped": True, "reason": "already_executed"}
 
                 # Trigger execution start hook
@@ -503,18 +517,20 @@ class RecoveryEvaluator:
                 status = "succeeded" if execution_result.get("success") else "failed"
 
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE recovery_candidates
                         SET execution_status = :status,
                             executed_at = now(),
                             execution_result = CAST(:result AS jsonb)
                         WHERE id = :id
-                    """),
+                    """
+                    ),
                     {
                         "id": candidate_id,
                         "status": status,
                         "result": json.dumps(execution_result),
-                    }
+                    },
                 )
                 session.commit()
 
@@ -604,12 +620,8 @@ class RecoveryEvaluator:
 # Convenience Functions
 # =============================================================================
 
-async def evaluate_failure(
-    failure_match_id: str,
-    error_code: str,
-    error_message: str,
-    **kwargs
-) -> EvaluationOutcome:
+
+async def evaluate_failure(failure_match_id: str, error_code: str, error_message: str, **kwargs) -> EvaluationOutcome:
     """
     Convenience function to evaluate a failure.
 

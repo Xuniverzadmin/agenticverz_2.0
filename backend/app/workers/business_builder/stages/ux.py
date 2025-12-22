@@ -6,13 +6,14 @@ Uses:
 - M18: Drift detection for visual consistency
 """
 
-from typing import Any, Dict
 from dataclasses import dataclass
+from typing import Any, Dict
 
 
 @dataclass
 class UXOutput:
     """Structured output from UX stage."""
+
     landing_html: str
     landing_css: str
     component_map: Dict[str, bool]

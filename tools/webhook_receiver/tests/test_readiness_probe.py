@@ -12,8 +12,7 @@ Run with:
 """
 
 import os
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -25,14 +24,14 @@ def fastapi_available():
     try:
         import fastapi
         from fastapi.testclient import TestClient
+
         return True
     except ImportError:
         return False
 
 
 requires_fastapi = pytest.mark.skipif(
-    not fastapi_available(),
-    reason="FastAPI not available"
+    not fastapi_available(), reason="FastAPI not available"
 )
 
 
@@ -44,6 +43,7 @@ def redis_available():
     """Check if Redis is available for testing."""
     try:
         import redis
+
         client = redis.from_url(REDIS_TEST_URL, socket_connect_timeout=1)
         client.ping()
         client.close()
@@ -53,8 +53,7 @@ def redis_available():
 
 
 requires_redis = pytest.mark.skipif(
-    not redis_available(),
-    reason="Redis not available at REDIS_TEST_URL"
+    not redis_available(), reason="Redis not available at REDIS_TEST_URL"
 )
 
 
@@ -62,6 +61,7 @@ def get_test_client():
     """Get FastAPI TestClient - import inside function to avoid import errors."""
     from app.main import app
     from fastapi.testclient import TestClient
+
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -101,16 +101,22 @@ class TestReadinessProbeJSONFormat:
 
             # Verify exact expected format
             assert "status" in data, "Response must have 'status' field"
-            assert data["status"] == "ok", f"Status should be 'ok', got: {data['status']}"
+            assert (
+                data["status"] == "ok"
+            ), f"Status should be 'ok', got: {data['status']}"
 
             assert "redis" in data, "Response must have 'redis' field"
             assert data["redis"] == "ok", f"Redis should be 'ok', got: {data['redis']}"
 
             assert "version" in data, "Response must have 'version' field"
-            assert data["version"] == "v1", f"Version should be 'v1', got: {data['version']}"
+            assert (
+                data["version"] == "v1"
+            ), f"Version should be 'v1', got: {data['version']}"
 
             assert "uptime_seconds" in data, "Response must have 'uptime_seconds' field"
-            assert isinstance(data["uptime_seconds"], int), "uptime_seconds should be integer"
+            assert isinstance(
+                data["uptime_seconds"], int
+            ), "uptime_seconds should be integer"
             assert data["uptime_seconds"] >= 0, "uptime_seconds should be non-negative"
 
         finally:
@@ -133,7 +139,9 @@ class TestReadinessProbeJSONFormat:
         mock_limiter = RedisRateLimiter()
         mock_limiter._connected = True
         mock_client = MagicMock()
-        mock_client.ping = AsyncMock(side_effect=ConnectionError("Redis connection failed"))
+        mock_client.ping = AsyncMock(
+            side_effect=ConnectionError("Redis connection failed")
+        )
         mock_limiter._client = mock_client
         main_module.redis_rate_limiter = mock_limiter
 
@@ -141,17 +149,23 @@ class TestReadinessProbeJSONFormat:
             client = get_test_client()
             response = client.get("/ready")
 
-            assert response.status_code == 200, "Should return 200 even when degraded (fail-open)"
+            assert (
+                response.status_code == 200
+            ), "Should return 200 even when degraded (fail-open)"
             data = response.json()
 
             # Verify degraded response format
             assert "status" in data, "Response must have 'status' field"
-            assert data["status"] == "degraded", f"Status should be 'degraded', got: {data['status']}"
+            assert (
+                data["status"] == "degraded"
+            ), f"Status should be 'degraded', got: {data['status']}"
 
             assert "redis" in data, "Response must have 'redis' field"
             # Redis field should indicate error
-            assert "error" in data["redis"].lower() or data["redis"] in ("disconnected", "not_initialized"), \
-                f"Redis should indicate error state, got: {data['redis']}"
+            assert "error" in data["redis"].lower() or data["redis"] in (
+                "disconnected",
+                "not_initialized",
+            ), f"Redis should indicate error state, got: {data['redis']}"
 
         finally:
             main_module.redis_rate_limiter = original
@@ -224,8 +238,11 @@ class TestReadinessProbeFields:
             response = client.get("/ready")
             data = response.json()
 
-            assert data["status"] in ("ok", "ready", "degraded"), \
-                f"Unexpected status value: {data['status']}"
+            assert data["status"] in (
+                "ok",
+                "ready",
+                "degraded",
+            ), f"Unexpected status value: {data['status']}"
 
         finally:
             main_module.redis_rate_limiter = original
@@ -260,8 +277,9 @@ class TestReadinessProbeFields:
                 response = client.get("/ready")
                 data = response.json()
 
-                assert expected in data["redis"].lower(), \
-                    f"Expected redis to contain '{expected}', got: {data['redis']}"
+                assert (
+                    expected in data["redis"].lower()
+                ), f"Expected redis to contain '{expected}', got: {data['redis']}"
 
         finally:
             main_module.redis_rate_limiter = original
@@ -317,8 +335,9 @@ class TestReadinessProbeErrorMessages:
             data = response.json()
 
             # Error should be truncated to reasonable length
-            assert len(data["redis"]) <= 60, \
-                f"Error message should be truncated, got length {len(data['redis'])}"
+            assert (
+                len(data["redis"]) <= 60
+            ), f"Error message should be truncated, got length {len(data['redis'])}"
             assert "error:" in data["redis"], "Should prefix with 'error:'"
 
         finally:
@@ -392,7 +411,9 @@ class TestHealthVsReadinessProbe:
 
             assert response.status_code == 200
             data = response.json()
-            assert data["status"] == "degraded", "Readiness should show degraded when Redis unavailable"
+            assert (
+                data["status"] == "degraded"
+            ), "Readiness should show degraded when Redis unavailable"
 
         finally:
             main_module.redis_rate_limiter = original
@@ -430,8 +451,11 @@ class TestReadinessProbeIntegration:
             # which can cause event loop issues with async Redis clients.
             # We verify the setup is correct; the endpoint behavior is
             # thoroughly tested in unit tests with mocked clients.
-            assert data["status"] in ("ready", "ok", "degraded"), \
-                f"Unexpected status: {data['status']}"
+            assert data["status"] in (
+                "ready",
+                "ok",
+                "degraded",
+            ), f"Unexpected status: {data['status']}"
 
         finally:
             await limiter.close()

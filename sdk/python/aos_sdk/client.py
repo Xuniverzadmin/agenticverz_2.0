@@ -15,23 +15,27 @@ Usage:
     status = client.poll_run(agent_id, run_id)
 """
 
-from typing import Optional, Dict, Any, List
+import os
 import time
 import uuid
-import os
+from typing import Any, Dict, List, Optional
 
 try:
     import httpx
+
     _USE_HTTPX = True
 except ImportError:
     import requests
+
     _USE_HTTPX = False
 
 
 class AOSError(Exception):
     """Base exception for AOS SDK errors."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None, response: Optional[Dict] = None):
+    def __init__(
+        self, message: str, status_code: Optional[int] = None, response: Optional[Dict] = None
+    ):
         super().__init__(message)
         self.status_code = status_code
         self.response = response
@@ -58,7 +62,7 @@ class AOSClient:
         self,
         api_key: Optional[str] = None,
         base_url: str = "http://127.0.0.1:8000",
-        timeout: int = 30
+        timeout: int = 30,
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key or os.getenv("AOS_API_KEY")
@@ -78,11 +82,7 @@ class AOSClient:
         return f"{self.base_url}{path}"
 
     def _request(
-        self,
-        method: str,
-        path: str,
-        json: Optional[Dict] = None,
-        params: Optional[Dict] = None
+        self, method: str, path: str, json: Optional[Dict] = None, params: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """Make an HTTP request and return JSON response."""
         url = self._url(path)
@@ -94,19 +94,21 @@ class AOSClient:
                     raise AOSError(
                         f"Request failed: {resp.status_code}",
                         status_code=resp.status_code,
-                        response=resp.json() if resp.content else None
+                        response=resp.json() if resp.content else None,
                     )
                 return resp.json() if resp.content else {}
             else:
-                resp = self._session.request(method, url, json=json, params=params, timeout=self.timeout)
+                resp = self._session.request(
+                    method, url, json=json, params=params, timeout=self.timeout
+                )
                 if resp.status_code >= 400:
                     raise AOSError(
                         f"Request failed: {resp.status_code}",
                         status_code=resp.status_code,
-                        response=resp.json() if resp.content else None
+                        response=resp.json() if resp.content else None,
                     )
                 return resp.json() if resp.content else {}
-        except (httpx.HTTPError if _USE_HTTPX else requests.RequestException) as e:
+        except httpx.HTTPError if _USE_HTTPX else requests.RequestException as e:
             raise AOSError(f"Request error: {e}") from e
 
     # =========== Machine-Native APIs ===========
@@ -116,7 +118,7 @@ class AOSClient:
         plan: List[Dict[str, Any]],
         budget_cents: int = 1000,
         agent_id: Optional[str] = None,
-        tenant_id: Optional[str] = None
+        tenant_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Simulate a plan before execution.
@@ -157,7 +159,7 @@ class AOSClient:
         query_type: str,
         params: Optional[Dict[str, Any]] = None,
         agent_id: Optional[str] = None,
-        run_id: Optional[str] = None
+        run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Query runtime state.
@@ -216,9 +218,7 @@ class AOSClient:
         return self._request("GET", f"/api/v1/runtime/skills/{skill_id}")
 
     def get_capabilities(
-        self,
-        agent_id: Optional[str] = None,
-        tenant_id: Optional[str] = None
+        self, agent_id: Optional[str] = None, tenant_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Get available capabilities for an agent/tenant.
@@ -270,12 +270,7 @@ class AOSClient:
         data = self._request("POST", "/agents", json={"name": name})
         return data.get("agent_id") or data.get("id") or str(uuid.uuid4())
 
-    def post_goal(
-        self,
-        agent_id: str,
-        goal: str,
-        force_skill: Optional[str] = None
-    ) -> str:
+    def post_goal(self, agent_id: str, goal: str, force_skill: Optional[str] = None) -> str:
         """
         Post a goal for an agent to execute.
 
@@ -293,18 +288,14 @@ class AOSClient:
 
         data = self._request("POST", f"/agents/{agent_id}/goals", json=payload)
         return (
-            data.get("run_id") or
-            data.get("run", {}).get("id") or
-            data.get("plan", {}).get("plan_id") or
-            ""
+            data.get("run_id")
+            or data.get("run", {}).get("id")
+            or data.get("plan", {}).get("plan_id")
+            or ""
         )
 
     def poll_run(
-        self,
-        agent_id: str,
-        run_id: str,
-        timeout: int = 30,
-        interval: float = 0.5
+        self, agent_id: str, run_id: str, timeout: int = 30, interval: float = 0.5
     ) -> Dict[str, Any]:
         """
         Poll for run completion.
@@ -326,9 +317,9 @@ class AOSClient:
             try:
                 data = self._request("GET", f"/agents/{agent_id}/runs/{run_id}")
                 status = (
-                    data.get("status") or
-                    data.get("run", {}).get("status") or
-                    data.get("plan", {}).get("status")
+                    data.get("status")
+                    or data.get("run", {}).get("status")
+                    or data.get("plan", {}).get("status")
                 )
                 if status and status in ("succeeded", "failed"):
                     return data
@@ -337,12 +328,7 @@ class AOSClient:
             time.sleep(interval)
         raise TimeoutError(f"Run {run_id} did not complete in {timeout}s")
 
-    def recall(
-        self,
-        agent_id: str,
-        query: str,
-        k: int = 5
-    ) -> Dict[str, Any]:
+    def recall(self, agent_id: str, query: str, k: int = 5) -> Dict[str, Any]:
         """
         Query agent memory.
 
@@ -354,19 +340,12 @@ class AOSClient:
         Returns:
             Memory recall results
         """
-        return self._request(
-            "GET",
-            f"/agents/{agent_id}/recall",
-            params={"query": query, "k": k}
-        )
+        return self._request("GET", f"/agents/{agent_id}/recall", params={"query": query, "k": k})
 
     # =========== Run Management APIs ===========
 
     def create_run(
-        self,
-        agent_id: str,
-        goal: str,
-        plan: Optional[List[Dict]] = None
+        self, agent_id: str, goal: str, plan: Optional[List[Dict]] = None
     ) -> Dict[str, Any]:
         """
         Create a new run for an agent.

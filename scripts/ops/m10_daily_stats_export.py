@@ -36,7 +36,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
 logger = logging.getLogger("m10.daily_stats")
 
@@ -70,43 +70,59 @@ def collect_stats() -> dict:
 
         with Session(engine) as session:
             # Dead letter stats
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 SELECT
                     COUNT(*) as count,
                     COALESCE(EXTRACT(DAY FROM NOW() - MIN(dead_lettered_at)), 0) as oldest_days
                 FROM m10_recovery.dead_letter_archive
-            """))
+            """
+                )
+            )
             row = result.fetchone()
             stats["dead_letter_count"] = row[0] if row else 0
             stats["dead_letter_oldest_days"] = float(row[1]) if row and row[1] else 0
 
             # Replay log stats
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 SELECT
                     COUNT(*) as count,
                     COALESCE(EXTRACT(DAY FROM NOW() - MIN(replayed_at)), 0) as oldest_days
                 FROM m10_recovery.replay_log
-            """))
+            """
+                )
+            )
             row = result.fetchone()
             stats["replay_log_count"] = row[0] if row else 0
             stats["replay_log_oldest_days"] = float(row[1]) if row and row[1] else 0
 
             # Outbox stats
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 SELECT
                     COUNT(*) FILTER (WHERE processed_at IS NULL) as pending,
                     COUNT(*) FILTER (WHERE processed_at IS NOT NULL) as processed
                 FROM m10_recovery.outbox
-            """))
+            """
+                )
+            )
             row = result.fetchone()
             stats["outbox_pending"] = row[0] if row else 0
             stats["outbox_processed"] = row[1] if row else 0
 
             # Active locks
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 SELECT COUNT(*) FROM m10_recovery.distributed_locks
                 WHERE expires_at > NOW()
-            """))
+            """
+                )
+            )
             row = result.fetchone()
             stats["active_locks"] = row[0] if row else 0
 

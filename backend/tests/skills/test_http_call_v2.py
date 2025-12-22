@@ -6,9 +6,10 @@ Tests error contract enforcement, idempotency, deterministic retry,
 and response canonicalization.
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -16,27 +17,25 @@ if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
 from app.skills.http_call_v2 import (
-    http_call_execute,
-    http_call_handler,
     HTTP_CALL_DESCRIPTOR,
     HTTP_ERROR_MAP,
-    NETWORK_ERROR_MAP,
     MUTATING_METHODS,
+    NETWORK_ERROR_MAP,
     SAFE_METHODS,
     ErrorCategory,
-    ErrorMapping,
-    RetryConfig,
-    compute_retry_delay,
-    validate_idempotency,
-    validate_url,
-    map_http_error,
-    map_network_error,
     MockResponse,
-    set_mock_response,
-    clear_mock_responses,
+    RetryConfig,
     _canonical_json,
     _content_hash,
     _generate_call_id,
+    clear_mock_responses,
+    compute_retry_delay,
+    http_call_execute,
+    map_http_error,
+    map_network_error,
+    set_mock_response,
+    validate_idempotency,
+    validate_url,
 )
 
 
@@ -53,8 +52,8 @@ class TestCanonicalJson:
         """No extra whitespace in output."""
         data = {"key": "value", "nested": {"a": 1}}
         canonical = _canonical_json(data)
-        assert ' ' not in canonical
-        assert '\n' not in canonical
+        assert " " not in canonical
+        assert "\n" not in canonical
 
     def test_content_hash_deterministic(self):
         """Same input produces same hash."""
@@ -246,6 +245,7 @@ class TestMapNetworkError:
 
     def test_timeout_error(self):
         """Timeout exception maps correctly."""
+
         class TimeoutError(Exception):
             pass
 
@@ -256,6 +256,7 @@ class TestMapNetworkError:
 
     def test_connection_error(self):
         """Connection exception maps correctly."""
+
         class ConnectionError(Exception):
             pass
 
@@ -266,6 +267,7 @@ class TestMapNetworkError:
 
     def test_ssl_error(self):
         """SSL exception maps correctly and is not retryable."""
+
         class SSLError(Exception):
             pass
 
@@ -288,16 +290,12 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_get_success(self):
         """GET request succeeds."""
-        set_mock_response("https://api.example.com/data", MockResponse(
-            status_code=200,
-            headers={"Content-Type": "application/json"},
-            body={"result": "ok"}
-        ))
+        set_mock_response(
+            "https://api.example.com/data",
+            MockResponse(status_code=200, headers={"Content-Type": "application/json"}, body={"result": "ok"}),
+        )
 
-        result = await http_call_execute({
-            "url": "https://api.example.com/data",
-            "method": "GET"
-        })
+        result = await http_call_execute({"url": "https://api.example.com/data", "method": "GET"})
 
         assert result.ok is True
         assert result.result["status_code"] == 200
@@ -308,11 +306,9 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_post_requires_idempotency_key(self):
         """POST without idempotency key fails."""
-        result = await http_call_execute({
-            "url": "https://api.example.com/create",
-            "method": "POST",
-            "body": {"name": "test"}
-        })
+        result = await http_call_execute(
+            {"url": "https://api.example.com/create", "method": "POST", "body": {"name": "test"}}
+        )
 
         assert result.ok is False
         assert result.error["code"] == "ERR_MISSING_IDEMPOTENCY_KEY"
@@ -322,17 +318,16 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_post_with_idempotency_key(self):
         """POST with idempotency key succeeds."""
-        set_mock_response("https://api.example.com/create", MockResponse(
-            status_code=201,
-            body={"id": "123"}
-        ))
+        set_mock_response("https://api.example.com/create", MockResponse(status_code=201, body={"id": "123"}))
 
-        result = await http_call_execute({
-            "url": "https://api.example.com/create",
-            "method": "POST",
-            "body": {"name": "test"},
-            "idempotency_key": "create-123-001"
-        })
+        result = await http_call_execute(
+            {
+                "url": "https://api.example.com/create",
+                "method": "POST",
+                "body": {"name": "test"},
+                "idempotency_key": "create-123-001",
+            }
+        )
 
         assert result.ok is True
         assert result.result["status_code"] == 201
@@ -341,10 +336,7 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_blocked_host_rejected(self):
         """Blocked host returns validation error."""
-        result = await http_call_execute({
-            "url": "http://localhost/internal",
-            "method": "GET"
-        })
+        result = await http_call_execute({"url": "http://localhost/internal", "method": "GET"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_BLOCKED_HOST"
@@ -353,9 +345,7 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_missing_url(self):
         """Missing URL returns validation error."""
-        result = await http_call_execute({
-            "method": "GET"
-        })
+        result = await http_call_execute({"method": "GET"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_VALIDATION_FAILED"
@@ -363,15 +353,11 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_http_error_response(self):
         """HTTP error status is handled correctly."""
-        set_mock_response("https://api.example.com/notfound", MockResponse(
-            status_code=404,
-            body={"error": "Not found"}
-        ))
+        set_mock_response(
+            "https://api.example.com/notfound", MockResponse(status_code=404, body={"error": "Not found"})
+        )
 
-        result = await http_call_execute({
-            "url": "https://api.example.com/notfound",
-            "method": "GET"
-        })
+        result = await http_call_execute({"url": "https://api.example.com/notfound", "method": "GET"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_HTTP_404_NOT_FOUND"
@@ -381,16 +367,17 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_rate_limit_is_retryable(self):
         """429 is marked as retryable."""
-        set_mock_response("https://api.example.com/limited", MockResponse(
-            status_code=429,
-            body={"error": "Rate limited"}
-        ))
+        set_mock_response(
+            "https://api.example.com/limited", MockResponse(status_code=429, body={"error": "Rate limited"})
+        )
 
-        result = await http_call_execute({
-            "url": "https://api.example.com/limited",
-            "method": "GET",
-            "retry_config": {"max_retries": 0}  # No actual retries
-        })
+        result = await http_call_execute(
+            {
+                "url": "https://api.example.com/limited",
+                "method": "GET",
+                "retry_config": {"max_retries": 0},  # No actual retries
+            }
+        )
 
         assert result.ok is False
         assert result.error["code"] == "ERR_HTTP_429_RATE_LIMITED"
@@ -401,19 +388,14 @@ class TestHttpCallExecute:
     @pytest.mark.asyncio
     async def test_response_hash_deterministic(self):
         """Response hashes are deterministic."""
-        set_mock_response("https://api.example.com/data", MockResponse(
-            status_code=200,
-            headers={"Content-Type": "application/json"},
-            body={"z": 1, "a": 2}
-        ))
+        set_mock_response(
+            "https://api.example.com/data",
+            MockResponse(status_code=200, headers={"Content-Type": "application/json"}, body={"z": 1, "a": 2}),
+        )
 
-        result1 = await http_call_execute({
-            "url": "https://api.example.com/data"
-        })
+        result1 = await http_call_execute({"url": "https://api.example.com/data"})
 
-        result2 = await http_call_execute({
-            "url": "https://api.example.com/data"
-        })
+        result2 = await http_call_execute({"url": "https://api.example.com/data"})
 
         # Body hash should be deterministic
         assert result1.result["body_hash"] == result2.result["body_hash"]
@@ -460,9 +442,7 @@ class TestDeterminism:
     @pytest.mark.asyncio
     async def test_call_id_deterministic(self):
         """Call ID is deterministic from params."""
-        set_mock_response("https://api.example.com/test", MockResponse(
-            status_code=200, body={"ok": True}
-        ))
+        set_mock_response("https://api.example.com/test", MockResponse(status_code=200, body={"ok": True}))
 
         params = {"url": "https://api.example.com/test", "method": "GET"}
 
@@ -475,10 +455,7 @@ class TestDeterminism:
     @pytest.mark.asyncio
     async def test_seeded_retry_delay_deterministic(self):
         """Retry delays are deterministic with seed."""
-        config = RetryConfig(
-            initial_delay_ms=100,
-            retry_seed=42
-        )
+        config = RetryConfig(initial_delay_ms=100, retry_seed=42)
 
         delays1 = [compute_retry_delay(i, config) for i in range(5)]
         delays2 = [compute_retry_delay(i, config) for i in range(5)]

@@ -6,24 +6,21 @@ These tests verify that the AOS runtime produces deterministic behavior
 for the same inputs, regardless of external service responses.
 """
 
-import asyncio
-import json
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import sys
+from datetime import datetime, timezone
+
+import pytest
+
 sys.path.insert(0, "/root/agenticverz2.0/backend")
 
+from app.runtime.replay import ReplayEngine, validate_determinism
 from app.traces.models import (
-    TraceStep,
     TraceRecord,
     TraceStatus,
-    ParityResult,
+    TraceStep,
     compare_traces,
 )
-from app.traces.store import InMemoryTraceStore, generate_run_id, generate_correlation_id
-from app.runtime.replay import ReplayEngine, replay_run, validate_determinism
+from app.traces.store import InMemoryTraceStore, generate_correlation_id, generate_run_id
 
 
 class TestTraceDeterminism:

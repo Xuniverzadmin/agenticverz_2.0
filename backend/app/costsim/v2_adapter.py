@@ -13,21 +13,20 @@ to provide more accurate estimates than V1's static lookup.
 """
 
 from __future__ import annotations
+
 import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-import hashlib
-import json
 
-from app.costsim.config import get_config, get_commit_sha
+from app.costsim.config import get_commit_sha, get_config
 from app.costsim.models import (
-    V2SimulationResult,
-    V2SimulationStatus,
     ComparisonResult,
     ComparisonVerdict,
+    V2SimulationResult,
+    V2SimulationStatus,
 )
-from app.costsim.provenance import get_provenance_logger, compute_hash
+from app.costsim.provenance import get_provenance_logger
 from app.worker.simulate import CostSimulator, SimulationResult
 
 logger = logging.getLogger("nova.costsim.v2_adapter")
@@ -182,9 +181,7 @@ class CostSimV2Adapter:
         """Get V2 model coefficients for a skill."""
         return self.coefficients.get(skill_id, V2_UNKNOWN_SKILL)
 
-    def _estimate_step_v2(
-        self, step_index: int, step: Dict[str, Any]
-    ) -> V2StepEstimate:
+    def _estimate_step_v2(self, step_index: int, step: Dict[str, Any]) -> V2StepEstimate:
         """
         Estimate cost and latency using V2 model.
 
@@ -274,9 +271,7 @@ class CostSimV2Adapter:
             risk_factors=risk_factors,
         )
 
-    async def simulate(
-        self, plan: List[Dict[str, Any]]
-    ) -> V2SimulationResult:
+    async def simulate(self, plan: List[Dict[str, Any]]) -> V2SimulationResult:
         """
         Run V2 simulation on a plan.
 
@@ -332,12 +327,14 @@ class CostSimV2Adapter:
             # Collect risks
             for risk_type, probability in estimate.risk_factors.items():
                 if probability > 0.02:  # Only significant risks
-                    all_risks.append({
-                        "step_index": i,
-                        "skill_id": skill_id,
-                        "risk_type": risk_type,
-                        "probability": probability,
-                    })
+                    all_risks.append(
+                        {
+                            "step_index": i,
+                            "skill_id": skill_id,
+                            "risk_type": risk_type,
+                            "probability": probability,
+                        }
+                    )
 
         # Round cost to integer cents
         estimated_cost_cents = int(round(total_cost))
@@ -421,9 +418,7 @@ class CostSimV2Adapter:
 
         return result
 
-    async def simulate_with_comparison(
-        self, plan: List[Dict[str, Any]]
-    ) -> tuple[V2SimulationResult, ComparisonResult]:
+    async def simulate_with_comparison(self, plan: List[Dict[str, Any]]) -> tuple[V2SimulationResult, ComparisonResult]:
         """
         Run V2 simulation and compare with V1.
 
@@ -444,9 +439,7 @@ class CostSimV2Adapter:
 
         return v2_result, comparison
 
-    def _compare_results(
-        self, v1: SimulationResult, v2: V2SimulationResult
-    ) -> ComparisonResult:
+    def _compare_results(self, v1: SimulationResult, v2: V2SimulationResult) -> ComparisonResult:
         """Compare V1 and V2 simulation results."""
         config = get_config()
 

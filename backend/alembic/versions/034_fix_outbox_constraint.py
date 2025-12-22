@@ -12,11 +12,12 @@ an actual named constraint.
 
 Fix: Replace the function to use proper partial unique index conflict syntax.
 """
-from alembic import op
 from sqlalchemy import text
 
-revision = '034_fix_outbox_constraint'
-down_revision = '033_m19_1_gaps'
+from alembic import op
+
+revision = "034_fix_outbox_constraint"
+down_revision = "033_m19_1_gaps"
 branch_labels = None
 depends_on = None
 
@@ -26,7 +27,9 @@ def upgrade() -> None:
 
     # Drop and recreate the function with correct ON CONFLICT syntax
     # For partial unique indexes, specify the conflict target with WHERE clause
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.publish_outbox(
             p_aggregate_type TEXT,
             p_aggregate_id TEXT,
@@ -56,10 +59,14 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.publish_outbox IS
             'Publish event to outbox for external delivery (fixed for partial unique index)';
-    """))
+    """
+        )
+    )
 
     # Also ensure the partial unique index exists (idempotent)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -73,14 +80,18 @@ def upgrade() -> None:
                     WHERE processed_at IS NULL;
             END IF;
         END $$;
-    """))
+    """
+        )
+    )
 
 
 def downgrade() -> None:
     conn = op.get_bind()
 
     # Restore original function with ON CONFLICT ON CONSTRAINT
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.publish_outbox(
             p_aggregate_type TEXT,
             p_aggregate_id TEXT,
@@ -104,4 +115,6 @@ def downgrade() -> None:
             RETURN v_id;
         END;
         $$ LANGUAGE plpgsql;
-    """))
+    """
+        )
+    )

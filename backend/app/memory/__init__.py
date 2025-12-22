@@ -1,14 +1,14 @@
 # NOVA Memory Module
 # Provides memory storage and retrieval for agent context
 
+from .retriever import (
+    MemoryRetriever,
+    get_retriever,
+)
 from .store import (
     MemoryStore,
     PostgresMemoryStore,
     get_memory_store,
-)
-from .retriever import (
-    MemoryRetriever,
-    get_retriever,
 )
 
 __all__ = [

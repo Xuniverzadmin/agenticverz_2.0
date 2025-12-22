@@ -18,12 +18,13 @@ Heavy indexes for production performance:
 - idx_fm_error_code_created: For failure_matches lookup
 - idx_sp_suggestion_created: For provenance queries
 """
-from alembic import op
 from sqlalchemy import text
 
+from alembic import op
+
 # revision identifiers
-revision = '020_m10_concurrent_indexes'
-down_revision = '019_m10_recovery_enhancements'
+revision = "020_m10_concurrent_indexes"
+down_revision = "019_m10_recovery_enhancements"
 branch_labels = None
 depends_on = None
 
@@ -44,32 +45,48 @@ def upgrade() -> None:
     # ==========================================================================
 
     # Confidence DESC for dashboard ranking queries
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE INDEX IF NOT EXISTS idx_rc_confidence_desc
         ON public.recovery_candidates (confidence DESC NULLS LAST);
-    """))
+    """
+        )
+    )
 
     # Decision + created_at for filtered listing
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE INDEX IF NOT EXISTS idx_rc_decision_created
         ON public.recovery_candidates (decision, created_at DESC);
-    """))
+    """
+        )
+    )
 
     # Error code for pattern analysis
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE INDEX IF NOT EXISTS idx_rc_error_code
         ON public.recovery_candidates (error_code)
         WHERE error_code IS NOT NULL;
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # failure_matches indexes (if table exists)
     # ==========================================================================
     try:
-        conn.execute(text("""
+        conn.execute(
+            text(
+                """
             CREATE INDEX IF NOT EXISTS idx_fm_error_code_created
             ON public.failure_matches (error_code, created_at DESC);
-        """))
+        """
+            )
+        )
     except Exception:
         pass  # Table may not exist
 
@@ -77,15 +94,23 @@ def upgrade() -> None:
     # m10_recovery.suggestion_provenance indexes
     # ==========================================================================
     try:
-        conn.execute(text("""
+        conn.execute(
+            text(
+                """
             CREATE INDEX IF NOT EXISTS idx_sp_suggestion_created
             ON m10_recovery.suggestion_provenance (suggestion_id, created_at DESC);
-        """))
+        """
+            )
+        )
 
-        conn.execute(text("""
+        conn.execute(
+            text(
+                """
             CREATE INDEX IF NOT EXISTS idx_sp_event_created
             ON m10_recovery.suggestion_provenance (event_type, created_at DESC);
-        """))
+        """
+            )
+        )
     except Exception:
         pass  # Schema may not exist
 
@@ -93,10 +118,14 @@ def upgrade() -> None:
     # m10_recovery.suggestion_input indexes
     # ==========================================================================
     try:
-        conn.execute(text("""
+        conn.execute(
+            text(
+                """
             CREATE INDEX IF NOT EXISTS idx_si_suggestion_type
             ON m10_recovery.suggestion_input (suggestion_id, input_type);
-        """))
+        """
+            )
+        )
     except Exception:
         pass  # Schema may not exist
 
@@ -104,11 +133,15 @@ def upgrade() -> None:
     # m10_recovery.suggestion_action indexes
     # ==========================================================================
     try:
-        conn.execute(text("""
+        conn.execute(
+            text(
+                """
             CREATE INDEX IF NOT EXISTS idx_sa_type_priority
             ON m10_recovery.suggestion_action (action_type, priority DESC)
             WHERE is_active = TRUE;
-        """))
+        """
+            )
+        )
     except Exception:
         pass  # Schema may not exist
 

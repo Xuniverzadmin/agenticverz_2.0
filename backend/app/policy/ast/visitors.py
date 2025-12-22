@@ -11,25 +11,24 @@ Visitors for:
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, Set
+from typing import Any, Dict, List
+
 from app.policy.ast.nodes import (
-    ASTNode,
-    ProgramNode,
-    PolicyDeclNode,
-    RuleDeclNode,
-    ImportNode,
-    RuleRefNode,
-    PriorityNode,
-    ConditionBlockNode,
     ActionBlockNode,
-    RouteTargetNode,
-    BinaryOpNode,
-    UnaryOpNode,
-    IdentNode,
-    LiteralNode,
-    FuncCallNode,
     AttrAccessNode,
-    GovernanceMetadata,
+    BinaryOpNode,
+    ConditionBlockNode,
+    FuncCallNode,
+    IdentNode,
+    ImportNode,
+    LiteralNode,
+    PolicyDeclNode,
+    PriorityNode,
+    ProgramNode,
+    RouteTargetNode,
+    RuleDeclNode,
+    RuleRefNode,
+    UnaryOpNode,
 )
 from app.policy.compiler.grammar import PolicyCategory
 
@@ -271,9 +270,7 @@ class CategoryCollector(BaseVisitor):
     """
 
     def __init__(self):
-        self.categories: Dict[PolicyCategory, List[str]] = {
-            cat: [] for cat in PolicyCategory
-        }
+        self.categories: Dict[PolicyCategory, List[str]] = {cat: [] for cat in PolicyCategory}
         self._current_policy: str = ""
 
     def get_categories(self) -> Dict[PolicyCategory, List[str]]:

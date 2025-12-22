@@ -15,13 +15,13 @@ M10 Recovery Enhancement Migration:
 
 Safe, additive migration - does not alter existing table structures.
 """
-from alembic import op
-import sqlalchemy as sa
 from sqlalchemy import text
 
+from alembic import op
+
 # revision identifiers
-revision = '019_m10_recovery_enhancements'
-down_revision = '018_m10_recovery_enhancements'
+revision = "019_m10_recovery_enhancements"
+down_revision = "018_m10_recovery_enhancements"
 branch_labels = None
 depends_on = None
 
@@ -42,18 +42,24 @@ def upgrade() -> None:
     # ==========================================================================
     # 3. Add idempotency_key to recovery_candidates for request deduplication
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         ALTER TABLE public.recovery_candidates
         ADD COLUMN IF NOT EXISTS idempotency_key UUID UNIQUE;
 
         COMMENT ON COLUMN public.recovery_candidates.idempotency_key IS
             'Optional client-provided idempotency key for deduplicating ingest requests';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 4. Add recovery_candidate_id FK column to suggestion_input for linking
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -69,12 +75,16 @@ def upgrade() -> None:
                     'Link to public.recovery_candidates.id for cross-reference';
             END IF;
         END$$;
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 5. Create materialized view for top pending candidates (dashboard perf)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DROP MATERIALIZED VIEW IF EXISTS m10_recovery.mv_top_pending;
 
         CREATE MATERIALIZED VIEW m10_recovery.mv_top_pending AS
@@ -113,48 +123,64 @@ def upgrade() -> None:
 
         COMMENT ON MATERIALIZED VIEW m10_recovery.mv_top_pending IS
             'Performance view: top pending recovery candidates for quick dashboard lookup. Refresh with: REFRESH MATERIALIZED VIEW CONCURRENTLY m10_recovery.mv_top_pending;';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 6. Worker claim index on suggestion_input (unevaluated inputs)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE INDEX IF NOT EXISTS idx_si_unevaluated_created
             ON m10_recovery.suggestion_input(created_at)
             WHERE normalized_value IS NULL;
 
         COMMENT ON INDEX m10_recovery.idx_si_unevaluated_created IS
             'Worker claim index for polling unevaluated inputs';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 7. Partial index for executing candidates
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE INDEX IF NOT EXISTS idx_rc_executing
             ON public.recovery_candidates(executed_at)
             WHERE execution_status = 'executing';
 
         COMMENT ON INDEX public.idx_rc_executing IS
             'Partial index for tracking currently executing candidates';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 8. Partial index for pending candidates with high confidence
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE INDEX IF NOT EXISTS idx_rc_pending_high_confidence
             ON public.recovery_candidates(confidence DESC, created_at DESC)
             WHERE decision = 'pending' AND confidence >= 0.5;
 
         COMMENT ON INDEX public.idx_rc_pending_high_confidence IS
             'Index for high-confidence pending candidates for priority processing';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 9. Create retention_jobs metadata table for archival tracking
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.retention_jobs (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL UNIQUE,
@@ -176,12 +202,16 @@ def upgrade() -> None:
 
         COMMENT ON TABLE m10_recovery.retention_jobs IS
             'Tracks data retention/archival job metadata for compliance';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 10. Create archive tables for provenance and inputs
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.suggestion_provenance_archive (
             LIKE m10_recovery.suggestion_provenance INCLUDING ALL,
             archived_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -196,12 +226,16 @@ def upgrade() -> None:
             'Archive table for aged-out provenance records (>90 days by default)';
         COMMENT ON TABLE m10_recovery.suggestion_input_archive IS
             'Archive table for aged-out input records (>90 days by default)';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 11. Create function for refreshing materialized view (for cron/scheduler)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.refresh_mv_top_pending()
         RETURNS void AS $$
         BEGIN
@@ -211,12 +245,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.refresh_mv_top_pending IS
             'Refresh mv_top_pending materialized view. Call from cron or scheduler.';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 12. Grants for application role (safe - handles missing roles)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         BEGIN
             -- Grant to 'nova' role if it exists
@@ -239,7 +277,9 @@ def upgrade() -> None:
         EXCEPTION WHEN OTHERS THEN
             RAISE NOTICE 'Grant failed (non-fatal): %', SQLERRM;
         END$$;
-    """))
+    """
+        )
+    )
 
 
 def downgrade() -> None:

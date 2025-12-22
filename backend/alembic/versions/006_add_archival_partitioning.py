@@ -11,20 +11,20 @@ This migration:
 
 For native partitioning, see docs/ops/partition-migration.md
 """
-from alembic import op
-import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '006_add_archival_partitioning'
-down_revision = '005_add_approval_requests'
+revision = "006_add_archival_partitioning"
+down_revision = "005_add_approval_requests"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     # Create archive table with same structure
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS archived_approval_requests (
             id VARCHAR PRIMARY KEY,
             correlation_id VARCHAR,
@@ -53,28 +53,38 @@ def upgrade() -> None:
             resolved_at TIMESTAMP,
             archived_at TIMESTAMP NOT NULL DEFAULT NOW()
         );
-    """)
+    """
+    )
 
     # Add indexes on archive table
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_archived_approval_requests_tenant_id
         ON archived_approval_requests (tenant_id);
-    """)
-    op.execute("""
+    """
+    )
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_archived_approval_requests_created_at
         ON archived_approval_requests (created_at);
-    """)
-    op.execute("""
+    """
+    )
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_archived_approval_requests_archived_at
         ON archived_approval_requests (archived_at);
-    """)
-    op.execute("""
+    """
+    )
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_archived_approval_requests_status
         ON archived_approval_requests (status);
-    """)
+    """
+    )
 
     # Create archival function
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION archive_old_approval_requests(
             retention_days INTEGER DEFAULT 90
         ) RETURNS INTEGER AS $$
@@ -101,10 +111,12 @@ def upgrade() -> None:
             RETURN archived_count;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Create view for unified access
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW all_approval_requests AS
         SELECT
             id, correlation_id, policy_type, skill_id, tenant_id, agent_id,
@@ -127,7 +139,8 @@ def upgrade() -> None:
             archived_at,
             'archived' as source
         FROM archived_approval_requests;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

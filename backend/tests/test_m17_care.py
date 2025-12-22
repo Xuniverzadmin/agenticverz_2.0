@@ -1,26 +1,28 @@
 # M17 CARE Routing Engine Tests
 # Tests for Cascade-Aware Routing Engine
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+
+from app.routing.care import CAREEngine
 
 # Import CARE components
 from app.routing.models import (
-    SuccessMetric,
+    DifficultyLevel,
     OrchestratorMode,
     RiskPolicy,
-    DifficultyLevel,
     RoutingRequest,
     RoutingStage,
-    infer_success_metric,
+    SuccessMetric,
     infer_orchestrator_mode,
+    infer_success_metric,
 )
-from app.routing.care import CAREEngine
-
 
 # =============================================================================
 # Stage 1: Aspiration → Success Metric Tests
 # =============================================================================
+
 
 class TestAspirationMetricInference:
     """Test success metric inference from winning aspiration."""
@@ -75,6 +77,7 @@ class TestAspirationMetricInference:
 # Stage 5: Orchestrator Mode Inference Tests
 # =============================================================================
 
+
 class TestOrchestratorModeInference:
     """Test orchestrator mode inference."""
 
@@ -110,6 +113,7 @@ class TestOrchestratorModeInference:
 # CARE Engine Stage Tests
 # =============================================================================
 
+
 class TestCAREEngineStages:
     """Test individual CARE pipeline stages."""
 
@@ -122,9 +126,7 @@ class TestCAREEngineStages:
     def valid_sba(self):
         """Create a valid SBA for testing."""
         return {
-            "winning_aspiration": {
-                "description": "Fast and accurate data processing for batch jobs"
-            },
+            "winning_aspiration": {"description": "Fast and accurate data processing for batch jobs"},
             "where_to_play": {
                 "domain": "data-processing",
                 "allowed_tools": ["extract", "transform", "validate"],
@@ -246,6 +248,7 @@ class TestCAREEngineStages:
 # Full Pipeline Tests
 # =============================================================================
 
+
 class TestCAREFullPipeline:
     """Test full CARE routing pipeline."""
 
@@ -281,15 +284,16 @@ class TestCAREFullPipeline:
         )
 
         # Mock capability check to avoid real infra probes
-        with patch.object(care_engine, '_evaluate_capabilities', new_callable=AsyncMock) as mock_cap:
+        with patch.object(care_engine, "_evaluate_capabilities", new_callable=AsyncMock) as mock_cap:
             from app.routing.models import CapabilityCheckResult, StageResult
+
             mock_cap.return_value = (
                 StageResult(
                     stage=RoutingStage.CAPABILITY,
                     passed=True,
                     reason="All capabilities available",
                 ),
-                CapabilityCheckResult(passed=True, probes=[], failed_probes=[])
+                CapabilityCheckResult(passed=True, probes=[], failed_probes=[]),
             )
 
             result = await care_engine.evaluate_agent(
@@ -343,6 +347,7 @@ class TestCAREFullPipeline:
 # Routing Score Tests
 # =============================================================================
 
+
 class TestRoutingScore:
     """Test routing score calculation."""
 
@@ -363,8 +368,11 @@ class TestRoutingScore:
 
         # Create mock stage results
         from app.routing.models import StageResult
+
         stages = [
-            StageResult(stage=RoutingStage.ASPIRATION, passed=True, reason="ok", details={"success_metric": "balanced"}),
+            StageResult(
+                stage=RoutingStage.ASPIRATION, passed=True, reason="ok", details={"success_metric": "balanced"}
+            ),
             StageResult(stage=RoutingStage.DOMAIN_FILTER, passed=True, reason="ok"),
             StageResult(stage=RoutingStage.STRATEGY, passed=True, reason="ok"),
             StageResult(stage=RoutingStage.CAPABILITY, passed=True, reason="ok"),
@@ -381,6 +389,7 @@ class TestRoutingScore:
 # Error Handling Tests
 # =============================================================================
 
+
 class TestCAREErrorHandling:
     """Test CARE error handling and actionable fixes."""
 
@@ -391,6 +400,7 @@ class TestCAREErrorHandling:
     def test_no_agent_error_message(self, care_engine):
         """Test error message when no agents eligible."""
         from app.routing.models import RouteEvaluationResult
+
         evaluated = [
             RouteEvaluationResult(
                 agent_id="agent1",
@@ -419,6 +429,7 @@ class TestCAREErrorHandling:
     def test_actionable_fix_domain(self, care_engine):
         """Test actionable fix for domain mismatch."""
         from app.routing.models import RouteEvaluationResult
+
         evaluated = [
             RouteEvaluationResult(
                 agent_id="agent1",
@@ -442,12 +453,13 @@ class TestCAREErrorHandling:
 # Capability Hardness Tests (Soft vs Hard Dependencies)
 # =============================================================================
 
+
 class TestCapabilityHardness:
     """Test hard vs soft dependency classification."""
 
     def test_hardness_classification(self):
         """Test that probe types are correctly classified as HARD or SOFT."""
-        from app.routing.models import ProbeType, CapabilityHardness, PROBE_HARDNESS
+        from app.routing.models import PROBE_HARDNESS, CapabilityHardness, ProbeType
 
         # HARD dependencies - should block routing
         hard_deps = [
@@ -472,7 +484,7 @@ class TestCapabilityHardness:
 
     def test_probe_result_is_blocking(self):
         """Test is_blocking() method for probe results."""
-        from app.routing.models import CapabilityProbeResult, ProbeType, CapabilityHardness
+        from app.routing.models import CapabilityHardness, CapabilityProbeResult, ProbeType
 
         # HARD failure should block
         hard_fail = CapabilityProbeResult(
@@ -507,9 +519,9 @@ class TestCapabilityHardness:
         """Test degraded mode when only soft dependencies fail."""
         from app.routing.models import (
             CapabilityCheckResult,
+            CapabilityHardness,
             CapabilityProbeResult,
             ProbeType,
-            CapabilityHardness,
         )
 
         db_ok = CapabilityProbeResult(
@@ -544,9 +556,9 @@ class TestCapabilityHardness:
         """Test routing blocked when hard dependency fails."""
         from app.routing.models import (
             CapabilityCheckResult,
+            CapabilityHardness,
             CapabilityProbeResult,
             ProbeType,
-            CapabilityHardness,
         )
 
         db_fail = CapabilityProbeResult(
@@ -574,6 +586,7 @@ class TestCapabilityHardness:
 # =============================================================================
 # Fallback Agent Chain Tests
 # =============================================================================
+
 
 class TestFallbackAgentChain:
     """Test fallback agent chain in routing decisions."""
@@ -635,12 +648,13 @@ class TestFallbackAgentChain:
 # Rate Limiting Tests
 # =============================================================================
 
+
 class TestRateLimiting:
     """Test rate limiting per risk policy."""
 
     def test_rate_limits_per_policy(self):
         """Test different rate limits per risk policy."""
-        from app.routing.models import RiskPolicy, RATE_LIMITS
+        from app.routing.models import RATE_LIMITS, RiskPolicy
 
         assert RATE_LIMITS[RiskPolicy.STRICT] < RATE_LIMITS[RiskPolicy.BALANCED]
         assert RATE_LIMITS[RiskPolicy.BALANCED] < RATE_LIMITS[RiskPolicy.FAST]
@@ -674,6 +688,7 @@ class TestRateLimiting:
 # =============================================================================
 # M17.2 Confidence Score Tests
 # =============================================================================
+
 
 class TestConfidenceScore:
     """Test routing confidence score calculation."""
@@ -716,7 +731,7 @@ class TestConfidenceScore:
 
     def test_confidence_score_calculation(self):
         """Test confidence score calculation from stage results."""
-        from app.routing.models import StageResult, RoutingStage, STAGE_CONFIDENCE_WEIGHTS
+        from app.routing.models import RoutingStage, StageResult
 
         engine = CAREEngine(persist_decisions=False, rate_limit_enabled=False)
 
@@ -742,6 +757,7 @@ class TestConfidenceScore:
 # =============================================================================
 # M17.2 Fairness Tracking Tests
 # =============================================================================
+
 
 class TestFairnessTracking:
     """Test capacity fairness scoring."""
@@ -799,6 +815,7 @@ class TestFairnessTracking:
 # =============================================================================
 # M17.2 Performance Vector Tests
 # =============================================================================
+
 
 class TestPerformanceVector:
     """Test agent performance vector for feedback loop."""
@@ -862,6 +879,7 @@ class TestPerformanceVector:
 # =============================================================================
 # Adversarial / Chaos Tests
 # =============================================================================
+
 
 class TestAdversarialScenarios:
     """Test adversarial and chaos scenarios."""
@@ -986,16 +1004,14 @@ class TestAdversarialScenarios:
     async def test_concurrent_fairness_tracking(self):
         """Test concurrent access to fairness tracker."""
         import asyncio
+
         from app.routing.care import FairnessTracker
 
         tracker = FairnessTracker(redis_url="redis://invalid:9999/0")
 
         # Simulate concurrent requests
         async def get_scores():
-            return await tracker.get_fairness_scores(
-                ["agent1", "agent2"],
-                "tenant1"
-            )
+            return await tracker.get_fairness_scores(["agent1", "agent2"], "tenant1")
 
         # Run 10 concurrent requests
         results = await asyncio.gather(*[get_scores() for _ in range(10)])
@@ -1008,6 +1024,7 @@ class TestAdversarialScenarios:
 # =============================================================================
 # Chaos / Edge Case Tests
 # =============================================================================
+
 
 class TestChaosScenarios:
     """Test chaos engineering scenarios."""
@@ -1172,8 +1189,9 @@ class TestChaosScenarios:
     async def test_care_engine_record_outcome(self):
         """Test CARE engine outcome recording."""
         import uuid
-        from app.routing.models import RoutingOutcome
+
         from app.routing.care import PerformanceStore
+        from app.routing.models import RoutingOutcome
 
         # Use unique agent ID to avoid test pollution
         unique_agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"

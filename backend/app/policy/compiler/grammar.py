@@ -30,11 +30,12 @@ import_stmt     ::= 'import' STRING
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import List, Dict, Optional, Set
+from typing import Dict, List, Set
 
 
 class GrammarNodeType(Enum):
     """Grammar node types for PLang v2.0."""
+
     PROGRAM = auto()
     POLICY_DECL = auto()
     RULE_DECL = auto()
@@ -65,6 +66,7 @@ class GrammarNodeType(Enum):
 
 class PolicyCategory(Enum):
     """M19 Policy Categories."""
+
     SAFETY = "SAFETY"
     PRIVACY = "PRIVACY"
     OPERATIONAL = "OPERATIONAL"
@@ -74,6 +76,7 @@ class PolicyCategory(Enum):
 
 class ActionType(Enum):
     """Policy action types."""
+
     DENY = "deny"
     ALLOW = "allow"
     ESCALATE = "escalate"
@@ -85,6 +88,7 @@ class ActionType(Enum):
 @dataclass
 class GrammarProduction:
     """A production rule in the grammar."""
+
     name: str
     node_type: GrammarNodeType
     alternatives: List[List[str]]  # Each alternative is a list of symbols
@@ -96,37 +100,73 @@ class PLangGrammar:
     """PLang v2.0 Grammar Definition."""
 
     # Keywords
-    KEYWORDS: Set[str] = field(default_factory=lambda: {
-        "policy", "rule", "when", "then", "import",
-        "deny", "allow", "escalate", "route", "to",
-        "and", "or", "not", "true", "false",
-        "priority", "SAFETY", "PRIVACY", "OPERATIONAL", "ROUTING", "CUSTOM",
-    })
+    KEYWORDS: Set[str] = field(
+        default_factory=lambda: {
+            "policy",
+            "rule",
+            "when",
+            "then",
+            "import",
+            "deny",
+            "allow",
+            "escalate",
+            "route",
+            "to",
+            "and",
+            "or",
+            "not",
+            "true",
+            "false",
+            "priority",
+            "SAFETY",
+            "PRIVACY",
+            "OPERATIONAL",
+            "ROUTING",
+            "CUSTOM",
+        }
+    )
 
     # Operators
-    OPERATORS: Set[str] = field(default_factory=lambda: {
-        "==", "!=", "<", ">", "<=", ">=",
-        "(", ")", "{", "}", ":", ",", ".",
-    })
+    OPERATORS: Set[str] = field(
+        default_factory=lambda: {
+            "==",
+            "!=",
+            "<",
+            ">",
+            "<=",
+            ">=",
+            "(",
+            ")",
+            "{",
+            "}",
+            ":",
+            ",",
+            ".",
+        }
+    )
 
     # Category mapping for governance
-    CATEGORY_PRIORITY: Dict[str, int] = field(default_factory=lambda: {
-        "SAFETY": 100,      # Highest priority - safety first
-        "PRIVACY": 90,      # High priority - data protection
-        "OPERATIONAL": 50,  # Medium priority - business rules
-        "ROUTING": 30,      # Lower priority - routing decisions
-        "CUSTOM": 10,       # Lowest priority - custom policies
-    })
+    CATEGORY_PRIORITY: Dict[str, int] = field(
+        default_factory=lambda: {
+            "SAFETY": 100,  # Highest priority - safety first
+            "PRIVACY": 90,  # High priority - data protection
+            "OPERATIONAL": 50,  # Medium priority - business rules
+            "ROUTING": 30,  # Lower priority - routing decisions
+            "CUSTOM": 10,  # Lowest priority - custom policies
+        }
+    )
 
     # Action precedence (higher = more restrictive)
-    ACTION_PRECEDENCE: Dict[str, int] = field(default_factory=lambda: {
-        "deny": 100,        # Most restrictive
-        "escalate": 80,
-        "route": 50,
-        "allow": 10,        # Least restrictive
-        "log": 5,
-        "alert": 5,
-    })
+    ACTION_PRECEDENCE: Dict[str, int] = field(
+        default_factory=lambda: {
+            "deny": 100,  # Most restrictive
+            "escalate": 80,
+            "route": 50,
+            "allow": 10,  # Least restrictive
+            "log": 5,
+            "alert": 5,
+        }
+    )
 
     def get_category_priority(self, category: str) -> int:
         """Get priority for a policy category."""

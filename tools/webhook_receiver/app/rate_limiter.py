@@ -33,28 +33,27 @@ logger = logging.getLogger("webhook.rate_limiter")
 RATE_LIMIT_EXCEEDED = Counter(
     "webhook_rate_limit_exceeded_total",
     "Number of requests rejected due to rate limiting",
-    ["limit_type"]  # "ip" or "tenant"
+    ["limit_type"],  # "ip" or "tenant"
 )
 
 RATE_LIMIT_REDIS_ERRORS = Counter(
     "webhook_rate_limit_redis_errors_total",
-    "Redis errors when rate-limiting (fail-open triggered)"
+    "Redis errors when rate-limiting (fail-open triggered)",
 )
 
 RATE_LIMIT_ALLOWED = Counter(
-    "webhook_rate_limit_allowed_total",
-    "Number of requests allowed by rate limiter"
+    "webhook_rate_limit_allowed_total", "Number of requests allowed by rate limiter"
 )
 
 RATE_LIMIT_REDIS_CONNECTED = Gauge(
     "webhook_rate_limit_redis_connected",
-    "Whether Redis connection is healthy (1=connected, 0=disconnected)"
+    "Whether Redis connection is healthy (1=connected, 0=disconnected)",
 )
 
 RATE_LIMIT_REDIS_LATENCY = Histogram(
     "webhook_rate_limit_redis_latency_seconds",
     "Redis operation latency for rate limiting",
-    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0]
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0],
 )
 
 # Configuration
@@ -77,7 +76,7 @@ class RedisRateLimiter:
         self,
         redis_url: str = REDIS_URL,
         default_rpm: int = DEFAULT_RPM,
-        window_seconds: int = DEFAULT_WINDOW_SECONDS
+        window_seconds: int = DEFAULT_WINDOW_SECONDS,
     ):
         self.redis_url = redis_url
         self.default_rpm = default_rpm
@@ -104,7 +103,7 @@ class RedisRateLimiter:
                 encoding="utf-8",
                 decode_responses=True,
                 socket_connect_timeout=5,
-                socket_timeout=5
+                socket_timeout=5,
             )
 
             # Test connection
@@ -115,13 +114,17 @@ class RedisRateLimiter:
             return True
 
         except ImportError:
-            logger.error("redis package not installed. Install with: pip install redis>=4.2.0")
+            logger.error(
+                "redis package not installed. Install with: pip install redis>=4.2.0"
+            )
             self._connected = False
             RATE_LIMIT_REDIS_CONNECTED.set(0)
             return False
 
         except Exception as e:
-            logger.warning(f"Redis connection failed: {e}. Rate limiting will fail-open.")
+            logger.warning(
+                f"Redis connection failed: {e}. Rate limiting will fail-open."
+            )
             self._connected = False
             RATE_LIMIT_REDIS_CONNECTED.set(0)
             return False
@@ -157,7 +160,7 @@ class RedisRateLimiter:
         tenant_id: str,
         ip: str,
         rpm: Optional[int] = None,
-        request_id: Optional[str] = None
+        request_id: Optional[str] = None,
     ) -> bool:
         """
         Check if request should be allowed.
@@ -203,7 +206,7 @@ class RedisRateLimiter:
             # Increment both counters concurrently
             ip_count, tenant_count = await asyncio.gather(
                 self._incr_with_expiry(per_ip_key, self.window_seconds + 1),
-                self._incr_with_expiry(per_tenant_key, self.window_seconds + 1)
+                self._incr_with_expiry(per_tenant_key, self.window_seconds + 1),
             )
 
             # Record latency
@@ -266,12 +269,14 @@ class RedisRateLimiter:
                 "ip_count": int(ip_count) if ip_count else 0,
                 "tenant_count": int(tenant_count) if tenant_count else 0,
                 "window": window,
-                "rpm_limit": self.default_rpm
+                "rpm_limit": self.default_rpm,
             }
         except Exception as e:
             return {"error": str(e)}
 
-    async def reset_limits(self, tenant_id: Optional[str] = None, ip: Optional[str] = None):
+    async def reset_limits(
+        self, tenant_id: Optional[str] = None, ip: Optional[str] = None
+    ):
         """
         Reset rate limit counters (for testing/admin).
 

@@ -20,9 +20,8 @@ Design Principles (from PIN-005):
 import logging
 import os
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app.middleware.rate_limit import rate_limit_dependency
@@ -40,8 +39,10 @@ router = APIRouter(prefix="/api/v1/runtime", tags=["runtime"])
 # Request/Response Models
 # =============================================================================
 
+
 class PlanStep(BaseModel):
     """A single step in a plan to simulate."""
+
     skill: str = Field(..., description="Skill ID to execute")
     params: Dict[str, Any] = Field(default_factory=dict, description="Parameters for the skill")
     iterations: int = Field(default=1, ge=1, le=100, description="Number of times to execute this step")
@@ -49,6 +50,7 @@ class PlanStep(BaseModel):
 
 class SimulateRequest(BaseModel):
     """Request to simulate a plan before execution."""
+
     plan: List[PlanStep] = Field(..., description="List of steps to simulate")
     budget_cents: int = Field(default=1000, description="Available budget in cents")
     agent_id: Optional[str] = Field(default=None, description="Agent ID for permission checking")
@@ -61,6 +63,7 @@ class SimulateRequest(BaseModel):
 
 class SimulateResponse(BaseModel):
     """Response from plan simulation."""
+
     feasible: bool
     status: str
     estimated_cost_cents: int
@@ -80,6 +83,7 @@ class SimulateResponse(BaseModel):
 
 class QueryRequest(BaseModel):
     """Request to query runtime state."""
+
     query_type: str = Field(..., description="Type of query to execute")
     params: Dict[str, Any] = Field(default_factory=dict, description="Query-specific parameters")
     agent_id: Optional[str] = Field(default=None, description="Agent ID for context")
@@ -88,6 +92,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     """Response from runtime query."""
+
     query_type: str
     result: Dict[str, Any]
     supported_queries: List[str]
@@ -95,6 +100,7 @@ class QueryResponse(BaseModel):
 
 class SkillDescriptorResponse(BaseModel):
     """Response describing a skill."""
+
     skill_id: str
     name: str
     version: str
@@ -109,6 +115,7 @@ class SkillDescriptorResponse(BaseModel):
 
 class SkillListResponse(BaseModel):
     """Response listing available skills."""
+
     skills: List[str]
     count: int
     descriptors: Dict[str, Dict[str, Any]]
@@ -116,6 +123,7 @@ class SkillListResponse(BaseModel):
 
 class CapabilitiesResponse(BaseModel):
     """Response with agent capabilities."""
+
     agent_id: Optional[str]
     skills: Dict[str, Dict[str, Any]]
     budget: Dict[str, Any]
@@ -127,10 +135,12 @@ class CapabilitiesResponse(BaseModel):
 # Helper Functions
 # =============================================================================
 
+
 def _get_cost_simulator():
     """Get CostSimulator instance."""
     try:
         from app.worker.simulate import CostSimulator
+
         return CostSimulator()
     except ImportError as e:
         logger.warning(f"CostSimulator not available: {e}")
@@ -141,6 +151,7 @@ def _get_runtime():
     """Get Runtime instance."""
     try:
         from app.worker.runtime.core import Runtime
+
         return Runtime()
     except ImportError as e:
         logger.warning(f"Runtime not available: {e}")
@@ -151,6 +162,7 @@ def _get_skill_registry():
     """Get skill registry."""
     try:
         from app.skills import get_skill_manifest, list_skills
+
         return {"manifest": get_skill_manifest, "list": list_skills}
     except ImportError as e:
         logger.warning(f"Skill registry not available: {e}")
@@ -172,8 +184,8 @@ DEFAULT_SKILL_METADATA = {
         "composition_hints": {
             "often_followed_by": ["json_transform", "llm_invoke"],
             "often_preceded_by": ["cache_lookup"],
-            "anti_patterns": ["calling same URL repeatedly without cache"]
-        }
+            "anti_patterns": ["calling same URL repeatedly without cache"],
+        },
     },
     "llm_invoke": {
         "cost_cents": 5,
@@ -187,8 +199,8 @@ DEFAULT_SKILL_METADATA = {
         "composition_hints": {
             "often_followed_by": ["json_transform", "http_call"],
             "often_preceded_by": ["http_call", "fs_read"],
-            "anti_patterns": ["chaining multiple LLM calls without caching"]
-        }
+            "anti_patterns": ["chaining multiple LLM calls without caching"],
+        },
     },
     "json_transform": {
         "cost_cents": 0,
@@ -201,8 +213,8 @@ DEFAULT_SKILL_METADATA = {
         "composition_hints": {
             "often_followed_by": ["http_call", "llm_invoke"],
             "often_preceded_by": ["http_call", "llm_invoke"],
-            "anti_patterns": []
-        }
+            "anti_patterns": [],
+        },
     },
     "fs_read": {
         "cost_cents": 0,
@@ -215,8 +227,8 @@ DEFAULT_SKILL_METADATA = {
         "composition_hints": {
             "often_followed_by": ["llm_invoke", "json_transform"],
             "often_preceded_by": ["fs_write"],
-            "anti_patterns": ["reading same file multiple times without caching"]
-        }
+            "anti_patterns": ["reading same file multiple times without caching"],
+        },
     },
     "fs_write": {
         "cost_cents": 0,
@@ -229,8 +241,8 @@ DEFAULT_SKILL_METADATA = {
         "composition_hints": {
             "often_followed_by": ["fs_read"],
             "often_preceded_by": ["llm_invoke", "http_call"],
-            "anti_patterns": []
-        }
+            "anti_patterns": [],
+        },
     },
     "webhook_send": {
         "cost_cents": 0,
@@ -240,11 +252,7 @@ DEFAULT_SKILL_METADATA = {
             {"code": "HTTP_5XX", "category": "TRANSIENT", "probability": 0.05},
         ],
         "constraints": {"max_payload_bytes": 1048576},
-        "composition_hints": {
-            "often_followed_by": [],
-            "often_preceded_by": ["json_transform"],
-            "anti_patterns": []
-        }
+        "composition_hints": {"often_followed_by": [], "often_preceded_by": ["json_transform"], "anti_patterns": []},
     },
     "email_send": {
         "cost_cents": 1,
@@ -257,8 +265,8 @@ DEFAULT_SKILL_METADATA = {
         "composition_hints": {
             "often_followed_by": [],
             "often_preceded_by": ["llm_invoke", "json_transform"],
-            "anti_patterns": ["sending same email multiple times"]
-        }
+            "anti_patterns": ["sending same email multiple times"],
+        },
     },
 }
 
@@ -266,6 +274,7 @@ DEFAULT_SKILL_METADATA = {
 # =============================================================================
 # Endpoints
 # =============================================================================
+
 
 @router.post("/simulate", response_model=SimulateResponse)
 async def simulate_plan(
@@ -291,10 +300,7 @@ async def simulate_plan(
     ```
     """
     # Convert plan to format expected by CostSimulator
-    plan_steps = [
-        {"skill": step.skill, "params": step.params, "iterations": step.iterations}
-        for step in request.plan
-    ]
+    plan_steps = [{"skill": step.skill, "params": step.params, "iterations": step.iterations} for step in request.plan]
 
     # Try to use CostSimulator if available
     simulator = _get_cost_simulator()
@@ -304,7 +310,7 @@ async def simulate_plan(
                 plan=plan_steps,
                 budget_cents=request.budget_cents,
                 agent_id=request.agent_id,
-                tenant_id=request.tenant_id
+                tenant_id=request.tenant_id,
             )
             return SimulateResponse(
                 feasible=result.feasible,
@@ -314,14 +320,17 @@ async def simulate_plan(
                 budget_remaining_cents=result.budget_remaining_cents,
                 budget_sufficient=result.budget_sufficient,
                 permission_gaps=result.permission_gaps,
-                risks=[{
-                    "step_index": r.step_index,
-                    "skill_id": r.skill_id,
-                    "risk_type": r.risk_type,
-                    "probability": r.probability,
-                    "description": r.description,
-                    "mitigation": r.mitigation,
-                } for r in result.risks],
+                risks=[
+                    {
+                        "step_index": r.step_index,
+                        "skill_id": r.skill_id,
+                        "risk_type": r.risk_type,
+                        "probability": r.probability,
+                        "description": r.description,
+                        "mitigation": r.mitigation,
+                    }
+                    for r in result.risks
+                ],
                 step_estimates=result.step_estimates,
                 alternatives=result.alternatives,
                 warnings=result.warnings,
@@ -341,12 +350,15 @@ async def simulate_plan(
     for i, step in enumerate(plan_steps):
         skill_id = step["skill"]
         iterations = step.get("iterations", 1)
-        meta = DEFAULT_SKILL_METADATA.get(skill_id, {
-            "cost_cents": 0,
-            "latency_ms": 100,
-            "failure_modes": [],
-            "constraints": {},
-        })
+        meta = DEFAULT_SKILL_METADATA.get(
+            skill_id,
+            {
+                "cost_cents": 0,
+                "latency_ms": 100,
+                "failure_modes": [],
+                "constraints": {},
+            },
+        )
 
         base_cost = meta.get("cost_cents", 0)
         base_latency = meta.get("latency_ms", 100)
@@ -358,27 +370,31 @@ async def simulate_plan(
         total_cost += cost
         total_latency += latency
 
-        step_estimates.append({
-            "step_index": i,
-            "skill_id": skill_id,
-            "iterations": iterations,
-            "base_cost_cents": base_cost,
-            "estimated_cost_cents": cost,
-            "base_latency_ms": base_latency,
-            "estimated_latency_ms": latency,
-        })
+        step_estimates.append(
+            {
+                "step_index": i,
+                "skill_id": skill_id,
+                "iterations": iterations,
+                "base_cost_cents": base_cost,
+                "estimated_cost_cents": cost,
+                "base_latency_ms": base_latency,
+                "estimated_latency_ms": latency,
+            }
+        )
 
         # Add risks from failure modes
         for fm in meta.get("failure_modes", []):
             if fm.get("probability", 0) > 0.05:  # Only report significant risks
-                risks.append({
-                    "step_index": i,
-                    "skill_id": skill_id,
-                    "risk_type": fm.get("code", "UNKNOWN"),
-                    "probability": fm.get("probability", 0),
-                    "description": f"Step {i} ({skill_id}) may fail with {fm.get('code')}",
-                    "mitigation": f"Retry if category is TRANSIENT" if fm.get("category") == "TRANSIENT" else None,
-                })
+                risks.append(
+                    {
+                        "step_index": i,
+                        "skill_id": skill_id,
+                        "risk_type": fm.get("code", "UNKNOWN"),
+                        "probability": fm.get("probability", 0),
+                        "description": f"Step {i} ({skill_id}) may fail with {fm.get('code')}",
+                        "mitigation": "Retry if category is TRANSIENT" if fm.get("category") == "TRANSIENT" else None,
+                    }
+                )
 
         if skill_id not in DEFAULT_SKILL_METADATA:
             warnings.append(f"Unknown skill '{skill_id}' - using default estimates")
@@ -593,7 +609,7 @@ async def describe_skill(skill_id: str):
                 "error": "SKILL_NOT_FOUND",
                 "message": f"Skill '{skill_id}' not found",
                 "available_skills": list(DEFAULT_SKILL_METADATA.keys()),
-            }
+            },
         )
 
     meta = DEFAULT_SKILL_METADATA[skill_id]
@@ -637,8 +653,7 @@ async def get_capabilities(
             "avg_latency_ms": meta.get("latency_ms", 100),
             "rate_limit_remaining": 95,  # Default
             "known_failure_patterns": [
-                fm.get("code") for fm in meta.get("failure_modes", [])
-                if fm.get("probability", 0) > 0.05
+                fm.get("code") for fm in meta.get("failure_modes", []) if fm.get("probability", 0) > 0.05
             ],
         }
 
@@ -714,8 +729,10 @@ async def get_resource_contract(resource_id: str):
 # Replay Endpoint (M6)
 # =============================================================================
 
+
 class ReplayRequest(BaseModel):
     """Request to replay a stored run."""
+
     verify_parity: bool = Field(default=True, description="Verify determinism parity with original")
     dry_run: bool = Field(default=False, description="Don't execute skills, just validate")
     timeout_seconds: float = Field(default=300.0, description="Maximum time for replay")
@@ -723,6 +740,7 @@ class ReplayRequest(BaseModel):
 
 class ReplayResponse(BaseModel):
     """Response from replay operation."""
+
     success: bool = Field(..., description="Whether replay completed successfully")
     run_id: str = Field(..., description="New run ID for this replay")
     original_run_id: str = Field(..., description="Original run that was replayed")
@@ -782,16 +800,10 @@ async def replay_run(
 
     except ImportError as e:
         logger.error(f"Replay module not available: {e}")
-        raise HTTPException(
-            status_code=501,
-            detail="Replay functionality not available - module not found"
-        )
+        raise HTTPException(status_code=501, detail="Replay functionality not available - module not found")
     except Exception as e:
         logger.error(f"Replay error for {run_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Replay failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Replay failed: {str(e)}")
 
 
 @router.get("/traces")
@@ -832,16 +844,10 @@ async def list_traces(
 
     except ImportError as e:
         logger.error(f"Trace store not available: {e}")
-        raise HTTPException(
-            status_code=501,
-            detail="Trace functionality not available - module not found"
-        )
+        raise HTTPException(status_code=501, detail="Trace functionality not available - module not found")
     except Exception as e:
         logger.error(f"List traces error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to list traces: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to list traces: {str(e)}")
 
 
 @router.get("/traces/{run_id}")
@@ -864,10 +870,7 @@ async def get_trace(run_id: str):
         trace = await store.get_trace(run_id)
 
         if trace is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Trace not found: {run_id}"
-            )
+            raise HTTPException(status_code=404, detail=f"Trace not found: {run_id}")
 
         return trace.to_dict()
 
@@ -875,13 +878,7 @@ async def get_trace(run_id: str):
         raise
     except ImportError as e:
         logger.error(f"Trace store not available: {e}")
-        raise HTTPException(
-            status_code=501,
-            detail="Trace functionality not available - module not found"
-        )
+        raise HTTPException(status_code=501, detail="Trace functionality not available - module not found")
     except Exception as e:
         logger.error(f"Get trace error for {run_id}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get trace: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to get trace: {str(e)}")

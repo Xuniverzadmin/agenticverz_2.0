@@ -8,13 +8,11 @@ These tests validate:
 - Dead-letter archival
 - Reclaim attempt GC
 """
-import asyncio
 import os
-import pytest
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Test configuration
 TEST_DB_URL = os.getenv("DATABASE_URL", "postgresql://nova:novapass@localhost:6432/nova_aos")
@@ -27,7 +25,6 @@ class TestDistributedLocks:
     @pytest.fixture
     def db_session(self):
         """Create a database session for tests."""
-        from sqlalchemy import text
         from sqlmodel import Session, create_engine
 
         engine = create_engine(TEST_DB_URL, pool_pre_ping=True)
@@ -45,7 +42,7 @@ class TestDistributedLocks:
             # Acquire lock
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60}
+                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60},
             )
             acquired = result.scalar()
             db_session.commit()
@@ -54,12 +51,14 @@ class TestDistributedLocks:
 
             # Verify lock exists
             result = db_session.execute(
-                text("""
+                text(
+                    """
                     SELECT holder_id, expires_at > now() AS valid
                     FROM m10_recovery.distributed_locks
                     WHERE lock_name = :lock_name
-                """),
-                {"lock_name": lock_name}
+                """
+                ),
+                {"lock_name": lock_name},
             )
             row = result.fetchone()
             assert row is not None
@@ -70,7 +69,7 @@ class TestDistributedLocks:
             # Cleanup
             db_session.execute(
                 text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             db_session.commit()
 
@@ -86,7 +85,7 @@ class TestDistributedLocks:
             # First holder acquires lock
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_1, "ttl": 600}
+                {"lock_name": lock_name, "holder_id": holder_1, "ttl": 600},
             )
             assert result.scalar() is True
 
@@ -95,7 +94,7 @@ class TestDistributedLocks:
             # Second holder tries to acquire - should fail
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_2, "ttl": 600}
+                {"lock_name": lock_name, "holder_id": holder_2, "ttl": 600},
             )
             acquired = result.scalar()
             db_session.commit()
@@ -106,7 +105,7 @@ class TestDistributedLocks:
             # Cleanup
             db_session.execute(
                 text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             db_session.commit()
 
@@ -121,7 +120,7 @@ class TestDistributedLocks:
             # First acquisition
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60}
+                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60},
             )
             assert result.scalar() is True
             db_session.commit()
@@ -129,7 +128,7 @@ class TestDistributedLocks:
             # Same holder reacquires (extend)
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 120}
+                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 120},
             )
             reacquired = result.scalar()
             db_session.commit()
@@ -139,7 +138,7 @@ class TestDistributedLocks:
         finally:
             db_session.execute(
                 text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             db_session.commit()
 
@@ -154,7 +153,7 @@ class TestDistributedLocks:
             # Acquire
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 600}
+                {"lock_name": lock_name, "holder_id": holder_id, "ttl": 600},
             )
             assert result.scalar() is True
             db_session.commit()
@@ -162,7 +161,7 @@ class TestDistributedLocks:
             # Release
             result = db_session.execute(
                 text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                {"lock_name": lock_name, "holder_id": holder_id}
+                {"lock_name": lock_name, "holder_id": holder_id},
             )
             released = result.scalar()
             db_session.commit()
@@ -172,7 +171,7 @@ class TestDistributedLocks:
             # Verify lock is gone
             result = db_session.execute(
                 text("SELECT COUNT(*) FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             assert result.scalar() == 0
 
@@ -180,7 +179,7 @@ class TestDistributedLocks:
             # Cleanup just in case
             db_session.execute(
                 text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             db_session.commit()
 
@@ -196,7 +195,7 @@ class TestDistributedLocks:
             # Acquire as holder_1
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_1, "ttl": 600}
+                {"lock_name": lock_name, "holder_id": holder_1, "ttl": 600},
             )
             assert result.scalar() is True
             db_session.commit()
@@ -204,7 +203,7 @@ class TestDistributedLocks:
             # Try to release as holder_2
             result = db_session.execute(
                 text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                {"lock_name": lock_name, "holder_id": holder_2}
+                {"lock_name": lock_name, "holder_id": holder_2},
             )
             released = result.scalar()
             db_session.commit()
@@ -214,14 +213,14 @@ class TestDistributedLocks:
             # Lock should still exist
             result = db_session.execute(
                 text("SELECT COUNT(*) FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             assert result.scalar() == 1
 
         finally:
             db_session.execute(
                 text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             db_session.commit()
 
@@ -236,20 +235,22 @@ class TestDistributedLocks:
         try:
             # Insert an expired lock directly
             db_session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO m10_recovery.distributed_locks
                         (lock_name, holder_id, acquired_at, expires_at)
                     VALUES
                         (:lock_name, :holder_id, now() - interval '10 minutes', now() - interval '5 minutes')
-                """),
-                {"lock_name": lock_name, "holder_id": holder_1}
+                """
+                ),
+                {"lock_name": lock_name, "holder_id": holder_1},
             )
             db_session.commit()
 
             # New holder should be able to acquire expired lock
             result = db_session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": holder_2, "ttl": 600}
+                {"lock_name": lock_name, "holder_id": holder_2, "ttl": 600},
             )
             acquired = result.scalar()
             db_session.commit()
@@ -259,14 +260,14 @@ class TestDistributedLocks:
             # Verify new holder owns it
             result = db_session.execute(
                 text("SELECT holder_id FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             assert result.scalar() == holder_2
 
         finally:
             db_session.execute(
                 text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                {"lock_name": lock_name}
+                {"lock_name": lock_name},
             )
             db_session.commit()
 
@@ -277,7 +278,6 @@ class TestReplayLog:
     @pytest.fixture
     def db_session(self):
         """Create a database session for tests."""
-        from sqlalchemy import text
         from sqlmodel import Session, create_engine
 
         engine = create_engine(TEST_DB_URL, pool_pre_ping=True)
@@ -293,17 +293,19 @@ class TestReplayLog:
 
         try:
             result = db_session.execute(
-                text("""
+                text(
+                    """
                     SELECT already_replayed, replay_id
                     FROM m10_recovery.record_replay(
                         :original_msg_id, :dl_msg_id, NULL, NULL, :new_msg_id, 'test'
                     )
-                """),
+                """
+                ),
                 {
                     "original_msg_id": original_msg_id,
                     "dl_msg_id": dl_msg_id,
-                    "new_msg_id": f"new-{uuid.uuid4().hex[:16]}"
-                }
+                    "new_msg_id": f"new-{uuid.uuid4().hex[:16]}",
+                },
             )
             row = result.fetchone()
             db_session.commit()
@@ -315,8 +317,7 @@ class TestReplayLog:
 
         finally:
             db_session.execute(
-                text("DELETE FROM m10_recovery.replay_log WHERE original_msg_id = :id"),
-                {"id": original_msg_id}
+                text("DELETE FROM m10_recovery.replay_log WHERE original_msg_id = :id"), {"id": original_msg_id}
             )
             db_session.commit()
 
@@ -330,17 +331,19 @@ class TestReplayLog:
         try:
             # First record
             result = db_session.execute(
-                text("""
+                text(
+                    """
                     SELECT already_replayed, replay_id
                     FROM m10_recovery.record_replay(
                         :original_msg_id, :dl_msg_id, NULL, NULL, :new_msg_id, 'test'
                     )
-                """),
+                """
+                ),
                 {
                     "original_msg_id": original_msg_id,
                     "dl_msg_id": dl_msg_id,
-                    "new_msg_id": f"new-{uuid.uuid4().hex[:16]}"
-                }
+                    "new_msg_id": f"new-{uuid.uuid4().hex[:16]}",
+                },
             )
             row = result.fetchone()
             db_session.commit()
@@ -350,17 +353,19 @@ class TestReplayLog:
 
             # Second record (same original_msg_id)
             result = db_session.execute(
-                text("""
+                text(
+                    """
                     SELECT already_replayed, replay_id
                     FROM m10_recovery.record_replay(
                         :original_msg_id, :dl_msg_id, NULL, NULL, :new_msg_id, 'test'
                     )
-                """),
+                """
+                ),
                 {
                     "original_msg_id": original_msg_id,
                     "dl_msg_id": f"dl-other-{uuid.uuid4().hex[:16]}",
-                    "new_msg_id": f"new-other-{uuid.uuid4().hex[:16]}"
-                }
+                    "new_msg_id": f"new-other-{uuid.uuid4().hex[:16]}",
+                },
             )
             row = result.fetchone()
             db_session.commit()
@@ -370,8 +375,7 @@ class TestReplayLog:
 
         finally:
             db_session.execute(
-                text("DELETE FROM m10_recovery.replay_log WHERE original_msg_id = :id"),
-                {"id": original_msg_id}
+                text("DELETE FROM m10_recovery.replay_log WHERE original_msg_id = :id"), {"id": original_msg_id}
             )
             db_session.commit()
 
@@ -382,7 +386,6 @@ class TestDeadLetterArchive:
     @pytest.fixture
     def db_session(self):
         """Create a database session for tests."""
-        from sqlalchemy import text
         from sqlmodel import Session, create_engine
 
         engine = create_engine(TEST_DB_URL, pool_pre_ping=True)
@@ -397,7 +400,8 @@ class TestDeadLetterArchive:
 
         try:
             result = db_session.execute(
-                text("""
+                text(
+                    """
                     SELECT m10_recovery.archive_dead_letter(
                         :dl_msg_id,
                         :original_msg_id,
@@ -409,14 +413,15 @@ class TestDeadLetterArchive:
                         now(),
                         'test'
                     )
-                """),
+                """
+                ),
                 {
                     "dl_msg_id": dl_msg_id,
                     "original_msg_id": f"orig-{uuid.uuid4().hex[:16]}",
                     "candidate_id": 12345,
                     "payload_json": '{"test": "data", "candidate_id": 12345}',
-                    "reason": "max_reclaims_exceeded"
-                }
+                    "reason": "max_reclaims_exceeded",
+                },
             )
             archive_id = result.scalar()
             db_session.commit()
@@ -426,7 +431,7 @@ class TestDeadLetterArchive:
             # Verify archived
             result = db_session.execute(
                 text("SELECT dl_msg_id, reason FROM m10_recovery.dead_letter_archive WHERE id = :id"),
-                {"id": archive_id}
+                {"id": archive_id},
             )
             row = result.fetchone()
             assert row is not None
@@ -435,8 +440,7 @@ class TestDeadLetterArchive:
 
         finally:
             db_session.execute(
-                text("DELETE FROM m10_recovery.dead_letter_archive WHERE dl_msg_id = :id"),
-                {"id": dl_msg_id}
+                text("DELETE FROM m10_recovery.dead_letter_archive WHERE dl_msg_id = :id"), {"id": dl_msg_id}
             )
             db_session.commit()
 
@@ -449,32 +453,30 @@ class TestDeadLetterArchive:
         try:
             # First archive
             result = db_session.execute(
-                text("""
+                text(
+                    """
                     SELECT m10_recovery.archive_dead_letter(
                         :dl_msg_id, :original_msg_id, NULL, NULL,
                         '{"test": 1}'::jsonb, 'test', 0, now(), 'test'
                     )
-                """),
-                {
-                    "dl_msg_id": dl_msg_id,
-                    "original_msg_id": f"orig-{uuid.uuid4().hex[:16]}"
-                }
+                """
+                ),
+                {"dl_msg_id": dl_msg_id, "original_msg_id": f"orig-{uuid.uuid4().hex[:16]}"},
             )
             first_id = result.scalar()
             db_session.commit()
 
             # Second archive (same dl_msg_id)
             result = db_session.execute(
-                text("""
+                text(
+                    """
                     SELECT m10_recovery.archive_dead_letter(
                         :dl_msg_id, :original_msg_id, NULL, NULL,
                         '{"test": 2}'::jsonb, 'test', 0, now(), 'test'
                     )
-                """),
-                {
-                    "dl_msg_id": dl_msg_id,
-                    "original_msg_id": f"orig-other-{uuid.uuid4().hex[:16]}"
-                }
+                """
+                ),
+                {"dl_msg_id": dl_msg_id, "original_msg_id": f"orig-other-{uuid.uuid4().hex[:16]}"},
             )
             second_id = result.scalar()
             db_session.commit()
@@ -483,8 +485,7 @@ class TestDeadLetterArchive:
 
         finally:
             db_session.execute(
-                text("DELETE FROM m10_recovery.dead_letter_archive WHERE dl_msg_id = :id"),
-                {"id": dl_msg_id}
+                text("DELETE FROM m10_recovery.dead_letter_archive WHERE dl_msg_id = :id"), {"id": dl_msg_id}
             )
             db_session.commit()
 
@@ -495,7 +496,6 @@ class TestReconcileLeaderElection:
     @pytest.fixture
     def db_session(self):
         """Create a database session for tests."""
-        from sqlalchemy import text
         from sqlmodel import Session, create_engine
 
         engine = create_engine(TEST_DB_URL, pool_pre_ping=True)
@@ -507,13 +507,12 @@ class TestReconcileLeaderElection:
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "reconcile_dl",
-            str(Path(__file__).parent.parent / "scripts" / "ops" / "reconcile_dl.py")
+            "reconcile_dl", str(Path(__file__).parent.parent / "scripts" / "ops" / "reconcile_dl.py")
         )
         if spec and spec.loader:
             module = importlib.util.module_from_spec(spec)
             # Just verify the module has the functions
-            assert hasattr(module, '__file__')
+            assert hasattr(module, "__file__")
             # Read the source to verify lock usage
             script_path = Path(__file__).parent.parent / "scripts" / "ops" / "reconcile_dl.py"
             with open(script_path) as f:
@@ -541,9 +540,9 @@ class TestReclaimAttemptsGC:
     async def test_gc_cleans_stale_entries(self):
         """Test that GC removes entries not in pending list."""
         from app.tasks.recovery_queue_stream import (
-            get_redis,
-            gc_reclaim_attempts,
             RECLAIM_ATTEMPTS_KEY,
+            gc_reclaim_attempts,
+            get_redis,
         )
 
         # This test requires Redis to be available

@@ -15,31 +15,34 @@ Design Principles:
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+
 import hashlib
 import hmac
 import json
-import os
 import logging
+import os
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
-from .canonicalize import canonicalize_for_golden, DEFAULT_VOLATILE_FIELDS
+from .canonicalize import canonicalize_for_golden
 
 logger = logging.getLogger("nova.workflow.golden")
 
 
 def _canonical_json(obj: Any) -> str:
     """Canonical JSON for deterministic outputs."""
+
     def _serializer(o: Any) -> Any:
-        if hasattr(o, 'to_dict'):
+        if hasattr(o, "to_dict"):
             return o.to_dict()
-        if hasattr(o, '__dict__'):
-            return {k: v for k, v in o.__dict__.items() if not k.startswith('_')}
+        if hasattr(o, "__dict__"):
+            return {k: v for k, v in o.__dict__.items() if not k.startswith("_")}
         if isinstance(o, datetime):
             return o.isoformat()
         raise TypeError(f"Object of type {type(o).__name__} not serializable")
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'), default=_serializer)
+
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=_serializer)
 
 
 @dataclass
@@ -47,6 +50,7 @@ class GoldenEvent:
     """
     A single event in the golden file.
     """
+
     event_type: str  # run_start, step, run_end
     run_id: str
     timestamp: str  # ISO format (non-deterministic, excluded from hash)
@@ -74,16 +78,20 @@ class GoldenEvent:
     def _strip_volatile_fields(self, data: Any) -> Any:
         """Recursively strip volatile timing fields from data."""
         VOLATILE_FIELDS = {
-            'duration_ms', 'latency_ms', 'timestamp', 'ts', 'created_at',
-            'updated_at', 'started_at', 'ended_at', 'execution_time_ms',
-            'wall_clock', 'elapsed_ms'
+            "duration_ms",
+            "latency_ms",
+            "timestamp",
+            "ts",
+            "created_at",
+            "updated_at",
+            "started_at",
+            "ended_at",
+            "execution_time_ms",
+            "wall_clock",
+            "elapsed_ms",
         }
         if isinstance(data, dict):
-            return {
-                k: self._strip_volatile_fields(v)
-                for k, v in data.items()
-                if k not in VOLATILE_FIELDS
-            }
+            return {k: self._strip_volatile_fields(v) for k, v in data.items() if k not in VOLATILE_FIELDS}
         elif isinstance(data, list):
             return [self._strip_volatile_fields(item) for item in data]
         return data
@@ -193,10 +201,7 @@ class GoldenRecorder:
         )
         await self._append(run_id, event)
 
-        logger.debug(
-            "golden_run_start",
-            extra={"run_id": run_id, "spec_id": spec.id, "seed": seed}
-        )
+        logger.debug("golden_run_start", extra={"run_id": run_id, "spec_id": spec.id, "seed": seed})
 
     async def record_step(
         self,
@@ -217,7 +222,7 @@ class GoldenRecorder:
             seed: Seed used for this step
         """
         # Determine canonical output
-        if hasattr(result, 'to_dict'):
+        if hasattr(result, "to_dict"):
             output = result.to_dict()
         elif isinstance(result, dict):
             output = result
@@ -227,7 +232,7 @@ class GoldenRecorder:
         # Canonicalize output for hash (excludes volatile fields like duration_ms)
         canonical_output = canonicalize_for_golden(
             output,
-            ignore_fields={'duration_ms', 'latency_ms'},
+            ignore_fields={"duration_ms", "latency_ms"},
             redact_sensitive=False,
         )
 
@@ -238,7 +243,7 @@ class GoldenRecorder:
             "skill_id": step.skill_id,
             "inputs": step.inputs,
             "seed": seed,
-            "success": result.success if hasattr(result, 'success') else True,
+            "success": result.success if hasattr(result, "success") else True,
             "output": output,  # Keep full output for debugging
             "output_hash": hashlib.sha256(
                 json.dumps(canonical_output, sort_keys=True, separators=(",", ":")).encode()
@@ -246,9 +251,9 @@ class GoldenRecorder:
         }
 
         # Add error_code and recovery_hint if step failed
-        if hasattr(result, 'error_code') and result.error_code:
+        if hasattr(result, "error_code") and result.error_code:
             step_data["error_code"] = result.error_code
-        if hasattr(result, 'recovery_hint') and result.recovery_hint:
+        if hasattr(result, "recovery_hint") and result.recovery_hint:
             step_data["recovery_hint"] = result.recovery_hint
 
         event = GoldenEvent(
@@ -265,8 +270,8 @@ class GoldenRecorder:
                 "run_id": run_id,
                 "step_index": step_index,
                 "step_id": step.id,
-                "error_code": getattr(result, 'error_code', None),
-            }
+                "error_code": getattr(result, "error_code", None),
+            },
         )
 
     async def record_run_end(
@@ -295,10 +300,7 @@ class GoldenRecorder:
         filepath = self._filepath(run_id)
         self.sign_golden(filepath)
 
-        logger.info(
-            "golden_run_end",
-            extra={"run_id": run_id, "status": status, "filepath": filepath}
-        )
+        logger.info("golden_run_end", extra={"run_id": run_id, "status": status, "filepath": filepath})
 
     async def _append(self, run_id: str, event: GoldenEvent) -> None:
         """
@@ -343,6 +345,7 @@ class GoldenRecorder:
         # Atomic write pattern: write to unique temp, then rename
         # Use PID and thread ID to ensure unique temp file per concurrent process
         import threading
+
         sig_path = filepath + ".sig"
         tmp_sig_path = f"{filepath}.sig.tmp.{os.getpid()}.{threading.get_ident()}"
 
@@ -400,12 +403,14 @@ class GoldenRecorder:
                 line = line.strip()
                 if line:
                     data = json.loads(line)
-                    events.append(GoldenEvent(
-                        event_type=data["event_type"],
-                        run_id=data["run_id"],
-                        timestamp=data["timestamp"],
-                        data=data["data"],
-                    ))
+                    events.append(
+                        GoldenEvent(
+                            event_type=data["event_type"],
+                            run_id=data["run_id"],
+                            timestamp=data["timestamp"],
+                            data=data["data"],
+                        )
+                    )
         return events
 
     def compare_golden(
@@ -431,11 +436,13 @@ class GoldenRecorder:
         diffs = []
 
         if len(actual_events) != len(expected_events):
-            diffs.append({
-                "type": "event_count_mismatch",
-                "actual": len(actual_events),
-                "expected": len(expected_events),
-            })
+            diffs.append(
+                {
+                    "type": "event_count_mismatch",
+                    "actual": len(actual_events),
+                    "expected": len(expected_events),
+                }
+            )
 
         for i, (actual, expected) in enumerate(zip(actual_events, expected_events)):
             if ignore_timestamps:
@@ -446,12 +453,14 @@ class GoldenRecorder:
                 expected_dict = expected.to_dict()
 
             if actual_dict != expected_dict:
-                diffs.append({
-                    "type": "event_mismatch",
-                    "index": i,
-                    "actual": actual_dict,
-                    "expected": expected_dict,
-                })
+                diffs.append(
+                    {
+                        "type": "event_mismatch",
+                        "index": i,
+                        "actual": actual_dict,
+                        "expected": expected_dict,
+                    }
+                )
 
         return {
             "match": len(diffs) == 0,
@@ -510,7 +519,7 @@ class InMemoryGoldenRecorder:
         if run_id not in self._events:
             self._events[run_id] = []
 
-        if hasattr(result, 'to_dict'):
+        if hasattr(result, "to_dict"):
             output = result.to_dict()
         elif isinstance(result, dict):
             output = result
@@ -523,14 +532,14 @@ class InMemoryGoldenRecorder:
             "step_id": step.id,
             "skill_id": step.skill_id,
             "seed": seed,
-            "success": result.success if hasattr(result, 'success') else True,
+            "success": result.success if hasattr(result, "success") else True,
             "output": output,
         }
 
         # Add error_code and recovery_hint if present
-        if hasattr(result, 'error_code') and result.error_code:
+        if hasattr(result, "error_code") and result.error_code:
             step_data["error_code"] = result.error_code
-        if hasattr(result, 'recovery_hint') and result.recovery_hint:
+        if hasattr(result, "recovery_hint") and result.recovery_hint:
             step_data["recovery_hint"] = result.recovery_hint
 
         event = GoldenEvent(
@@ -565,4 +574,4 @@ class InMemoryGoldenRecorder:
 
 
 # Import dependencies at end to avoid circular imports
-from .engine import WorkflowSpec, StepDescriptor, StepResult
+from .engine import StepDescriptor, StepResult, WorkflowSpec

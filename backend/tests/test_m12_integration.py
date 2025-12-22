@@ -1,19 +1,14 @@
 # M12 Multi-Agent System Integration Tests
 # Tests for DoD validation - 100-item jobs, concurrent claiming, credits
-import asyncio
-import json
 import os
-import pytest
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Set
-from unittest.mock import MagicMock, patch
+from typing import List, Set
 
-import redis
+import pytest
 
 # Test configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -21,10 +16,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 
 # Skip if DB not available
-pytestmark = pytest.mark.skipif(
-    not DATABASE_URL,
-    reason="DATABASE_URL not set"
-)
+pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="DATABASE_URL not set")
 
 
 class TestDOD1_100ItemJob:
@@ -32,7 +24,7 @@ class TestDOD1_100ItemJob:
 
     def test_100_item_job_creation(self):
         """Test creating a 100-item job."""
-        from app.agents.services.job_service import JobService, JobConfig
+        from app.agents.services.job_service import JobConfig, JobService
 
         service = JobService()
 
@@ -44,13 +36,11 @@ class TestDOD1_100ItemJob:
             items=[{"url": f"https://example.com/{i}"} for i in range(100)],
             parallelism=10,
             timeout_per_item=60,
-            max_retries=3
+            max_retries=3,
         )
 
         job = service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-001",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-001", tenant_id="test-tenant"
         )
 
         assert job is not None
@@ -60,7 +50,7 @@ class TestDOD1_100ItemJob:
 
     def test_parallel_claiming_produces_unique_items(self):
         """Test that parallel claiming produces unique items (no duplicates)."""
-        from app.agents.services.job_service import JobService, JobConfig
+        from app.agents.services.job_service import JobConfig, JobService
         from app.agents.services.worker_service import WorkerService
 
         job_service = JobService()
@@ -72,13 +62,11 @@ class TestDOD1_100ItemJob:
             worker_agent="test_worker",
             task="parallel_test",
             items=[{"url": f"https://example.com/{i}"} for i in range(50)],
-            parallelism=10
+            parallelism=10,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-002",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-002", tenant_id="test-tenant"
         )
 
         job_id = str(job.id)
@@ -93,25 +81,19 @@ class TestDOD1_100ItemJob:
             worker_svc = WorkerService()  # New service per thread
             for _ in range(count):
                 try:
-                    item = worker_svc.claim_item(
-                        job_id=job_id,
-                        worker_instance_id=worker_id
-                    )
+                    item = worker_svc.claim_item(job_id=job_id, worker_instance_id=worker_id)
                     if item:
                         with claim_lock:
                             if str(item.id) in claimed_items:
                                 claim_errors.append(f"Duplicate claim: {item.id}")
                             claimed_items.add(str(item.id))
-                except Exception as e:
+                except Exception:
                     pass  # No more items or DB contention
 
         # Use 10 workers, each claiming 8 items (80 attempts for 50 items)
         workers = []
         for i in range(10):
-            t = threading.Thread(
-                target=worker_claim_loop,
-                args=(f"worker-{i:03d}", 8)
-            )
+            t = threading.Thread(target=worker_claim_loop, args=(f"worker-{i:03d}", 8))
             workers.append(t)
 
         # Start all workers
@@ -128,9 +110,9 @@ class TestDOD1_100ItemJob:
 
     def test_job_completion_deterministic(self):
         """Test that job completes deterministically with correct aggregate."""
-        from app.agents.services.job_service import JobService, JobConfig
-        from app.agents.services.worker_service import WorkerService
         from app.agents.services.blackboard_service import BlackboardService
+        from app.agents.services.job_service import JobConfig, JobService
+        from app.agents.services.worker_service import WorkerService
 
         job_service = JobService()
         worker_service = WorkerService()
@@ -142,13 +124,11 @@ class TestDOD1_100ItemJob:
             worker_agent="test_worker",
             task="aggregate_test",
             items=[{"value": i} for i in range(20)],
-            parallelism=5
+            parallelism=5,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-003",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-003", tenant_id="test-tenant"
         )
 
         job_id = str(job.id)
@@ -163,10 +143,7 @@ class TestDOD1_100ItemJob:
             worker_id = f"worker-{i:03d}"
 
             while True:
-                item = worker_service.claim_item(
-                    job_id=job_id,
-                    worker_instance_id=worker_id
-                )
+                item = worker_service.claim_item(job_id=job_id, worker_instance_id=worker_id)
 
                 if not item:
                     break
@@ -176,10 +153,7 @@ class TestDOD1_100ItemJob:
                 blackboard_service.increment(blackboard_key, value)
 
                 # Mark complete
-                worker_service.complete_item(
-                    item_id=str(item.id),
-                    output={"processed": True, "value": value}
-                )
+                worker_service.complete_item(item_id=str(item.id), output={"processed": True, "value": value})
                 processed += 1
 
         # Check job status
@@ -199,7 +173,7 @@ class TestDOD2_NoDuplicateClaims:
 
     def test_20_concurrent_workers_no_duplicates(self):
         """Test 20 concurrent workers claiming items without duplicates."""
-        from app.agents.services.job_service import JobService, JobConfig
+        from app.agents.services.job_service import JobConfig, JobService
         from app.agents.services.worker_service import WorkerService
 
         job_service = JobService()
@@ -210,13 +184,11 @@ class TestDOD2_NoDuplicateClaims:
             worker_agent="test_worker",
             task="concurrency_test",
             items=[{"id": i} for i in range(50)],
-            parallelism=20
+            parallelism=20,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-004",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-004", tenant_id="test-tenant"
         )
 
         job_id = str(job.id)
@@ -231,10 +203,7 @@ class TestDOD2_NoDuplicateClaims:
             worker_claims = []
             for _ in range(10):  # Try 10 times per worker
                 try:
-                    item = worker_svc.claim_item(
-                        job_id=job_id,
-                        worker_instance_id=worker_id
-                    )
+                    item = worker_svc.claim_item(job_id=job_id, worker_instance_id=worker_id)
                     if item:
                         worker_claims.append(str(item.id))
                 except Exception:
@@ -245,17 +214,15 @@ class TestDOD2_NoDuplicateClaims:
 
         # Start 20 concurrent workers
         with ThreadPoolExecutor(max_workers=20) as executor:
-            futures = [
-                executor.submit(worker_claim_all, f"worker-{i:03d}")
-                for i in range(20)
-            ]
+            futures = [executor.submit(worker_claim_all, f"worker-{i:03d}") for i in range(20)]
             for f in futures:
                 f.result(timeout=30)
 
         # Check for duplicates
         unique_claims = set(all_claims)
-        assert len(all_claims) == len(unique_claims), \
-            f"Duplicate claims detected: {len(all_claims)} claims, {len(unique_claims)} unique"
+        assert len(all_claims) == len(
+            unique_claims
+        ), f"Duplicate claims detected: {len(all_claims)} claims, {len(unique_claims)} unique"
 
         # All items should be claimed
         assert len(unique_claims) == 50, f"Expected 50 items claimed, got {len(unique_claims)}"
@@ -280,23 +247,15 @@ class TestDOD3_AgentInvokeCorrelation:
             from_instance_id=from_instance,
             to_instance_id=to_instance,
             message_type="invoke_request",
-            payload={
-                "invoke_id": invoke_id,
-                "skill": "process_data",
-                "params": {"data": "test"}
-            },
-            job_id=None
+            payload={"invoke_id": invoke_id, "skill": "process_data", "params": {"data": "test"}},
+            job_id=None,
         )
 
         assert result.success
         request_message_id = result.message_id
 
         # Worker receives message
-        inbox = message_service.get_inbox(
-            instance_id=to_instance,
-            status="pending",
-            limit=10
-        )
+        inbox = message_service.get_inbox(instance_id=to_instance, status="pending", limit=10)
 
         assert len(inbox) >= 1
         # Find our message
@@ -308,27 +267,17 @@ class TestDOD3_AgentInvokeCorrelation:
             from_instance_id=to_instance,
             to_instance_id=from_instance,
             message_type="invoke_response",
-            payload={
-                "invoke_id": invoke_id,
-                "result": {"status": "success", "output": "processed"}
-            },
-            reply_to_id=request_message_id
+            payload={"invoke_id": invoke_id, "result": {"status": "success", "output": "processed"}},
+            reply_to_id=request_message_id,
         )
 
         assert response_result.success
 
         # Orchestrator receives response
-        responses = message_service.get_inbox(
-            instance_id=from_instance,
-            message_type="invoke_response",
-            limit=10
-        )
+        responses = message_service.get_inbox(instance_id=from_instance, message_type="invoke_response", limit=10)
 
         # Find our response by correlation ID
-        our_response = next(
-            (r for r in responses if r.payload.get("invoke_id") == invoke_id),
-            None
-        )
+        our_response = next((r for r in responses if r.payload.get("invoke_id") == invoke_id), None)
 
         assert our_response is not None
         assert our_response.payload["result"]["status"] == "success"
@@ -450,8 +399,8 @@ class TestDOD5_CreditsAccuracy:
 
     def test_credit_reservation_on_job_create(self):
         """Test credits are reserved when job is created."""
-        from app.agents.services.job_service import JobService, JobConfig
         from app.agents.services.credit_service import CREDIT_COSTS
+        from app.agents.services.job_service import JobConfig, JobService
 
         job_service = JobService()
 
@@ -461,13 +410,11 @@ class TestDOD5_CreditsAccuracy:
             worker_agent="test_worker",
             task="credit_test",
             items=[{"id": i} for i in range(10)],
-            parallelism=5
+            parallelism=5,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-005",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-005", tenant_id="test-tenant"
         )
 
         # Check credits reserved
@@ -479,7 +426,7 @@ class TestDOD5_CreditsAccuracy:
 
     def test_credit_spend_on_item_completion(self):
         """Test credits are spent when items complete."""
-        from app.agents.services.job_service import JobService, JobConfig
+        from app.agents.services.job_service import JobConfig, JobService
         from app.agents.services.worker_service import WorkerService
 
         job_service = JobService()
@@ -491,28 +438,20 @@ class TestDOD5_CreditsAccuracy:
             worker_agent="test_worker",
             task="credit_spend_test",
             items=[{"id": i} for i in range(5)],
-            parallelism=5
+            parallelism=5,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-006",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-006", tenant_id="test-tenant"
         )
 
         job_id = str(job.id)
 
         # Complete 3 items
         for i in range(3):
-            item = worker_service.claim_item(
-                job_id=job_id,
-                worker_instance_id=f"worker-{i}"
-            )
+            item = worker_service.claim_item(job_id=job_id, worker_instance_id=f"worker-{i}")
             if item:
-                worker_service.complete_item(
-                    item_id=str(item.id),
-                    output={"done": True}
-                )
+                worker_service.complete_item(item_id=str(item.id), output={"done": True})
 
         # Check credits spent
         job_status = job_service.get_job(job_id)
@@ -520,7 +459,7 @@ class TestDOD5_CreditsAccuracy:
 
     def test_credit_refund_on_item_failure(self):
         """Test credits are refunded when items fail."""
-        from app.agents.services.job_service import JobService, JobConfig
+        from app.agents.services.job_service import JobConfig, JobService
         from app.agents.services.worker_service import WorkerService
 
         job_service = JobService()
@@ -533,28 +472,23 @@ class TestDOD5_CreditsAccuracy:
             task="credit_refund_test",
             items=[{"id": i} for i in range(5)],
             parallelism=5,
-            max_retries=0
+            max_retries=0,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-007",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-007", tenant_id="test-tenant"
         )
 
         job_id = str(job.id)
 
         # Fail 2 items
         for i in range(2):
-            item = worker_service.claim_item(
-                job_id=job_id,
-                worker_instance_id=f"worker-{i}"
-            )
+            item = worker_service.claim_item(job_id=job_id, worker_instance_id=f"worker-{i}")
             if item:
                 worker_service.fail_item(
                     item_id=str(item.id),
                     error_message="Test failure",
-                    retry=False  # Don't retry
+                    retry=False,  # Don't retry
                 )
 
         # Check failures tracked
@@ -568,12 +502,12 @@ class TestDOD6_Metrics:
     def test_m12_metrics_registered(self):
         """Test that M12 metrics are registered."""
         from app.metrics import (
-            m12_jobs_started_total,
-            m12_jobs_completed_total,
-            m12_job_items_total,
             m12_agent_invoke_latency_seconds,
             m12_blackboard_ops_total,
             m12_credits_spent_total,
+            m12_job_items_total,
+            m12_jobs_completed_total,
+            m12_jobs_started_total,
         )
 
         # All metrics should be importable
@@ -602,18 +536,14 @@ class TestDOD7_P2PMessages:
                 from_instance_id=f"sender-{i % 5}",
                 to_instance_id=f"receiver-{i % 3}",
                 message_type="test_latency",
-                payload={"index": i}
+                payload={"index": i},
             )
 
         send_duration = time.time() - start_time
 
         # Read all messages for receiver-0
         start_time = time.time()
-        inbox = message_service.get_inbox(
-            instance_id="receiver-0",
-            message_type="test_latency",
-            limit=100
-        )
+        inbox = message_service.get_inbox(instance_id="receiver-0", message_type="test_latency", limit=100)
         read_duration = time.time() - start_time
 
         # Verify messages received (should be ~3-4 for receiver-0)

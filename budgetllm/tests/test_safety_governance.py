@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # PROMPT CLASSIFIER TESTS
 # =============================================================================
 
+
 class TestPromptClassifier:
     """Tests for prompt classification."""
 
@@ -53,7 +54,9 @@ class TestPromptClassifier:
         """Coding prompts should be classified correctly."""
         from budgetllm.core.prompt_classifier import classify_prompt
 
-        messages = [{"role": "user", "content": "Write a Python function to sort a list"}]
+        messages = [
+            {"role": "user", "content": "Write a Python function to sort a list"}
+        ]
         prompt_type, confidence = classify_prompt(messages)
 
         assert prompt_type == "coding"
@@ -63,7 +66,12 @@ class TestPromptClassifier:
         """Analytical prompts should be classified correctly."""
         from budgetllm.core.prompt_classifier import classify_prompt
 
-        messages = [{"role": "user", "content": "Compare the pros and cons of electric cars versus gasoline cars"}]
+        messages = [
+            {
+                "role": "user",
+                "content": "Compare the pros and cons of electric cars versus gasoline cars",
+            }
+        ]
         prompt_type, confidence = classify_prompt(messages)
 
         assert prompt_type == "analytical"
@@ -91,6 +99,7 @@ class TestPromptClassifier:
 # =============================================================================
 # OUTPUT ANALYSIS TESTS
 # =============================================================================
+
 
 class TestOutputAnalysis:
     """Tests for output analysis."""
@@ -149,6 +158,7 @@ class TestOutputAnalysis:
 # RISK FORMULA TESTS
 # =============================================================================
 
+
 class TestRiskFormula:
     """Tests for risk scoring formula."""
 
@@ -196,14 +206,24 @@ class TestRiskFormula:
         factual_score, _ = calculate_risk_score(
             prompt_type="factual",
             input_params={"temperature": 0.7, "top_p": 1.0, "max_tokens": 500},
-            output_signals={"unsupported_claims": 0.3, "hedging": 0.2, "self_contradiction": 0.0, "numeric_inconsistency": 0.0},
+            output_signals={
+                "unsupported_claims": 0.3,
+                "hedging": 0.2,
+                "self_contradiction": 0.0,
+                "numeric_inconsistency": 0.0,
+            },
             model="gpt-4o-mini",
         )
 
         creative_score, _ = calculate_risk_score(
             prompt_type="creative",
             input_params={"temperature": 0.7, "top_p": 1.0, "max_tokens": 500},
-            output_signals={"unsupported_claims": 0.3, "hedging": 0.2, "self_contradiction": 0.0, "numeric_inconsistency": 0.0},
+            output_signals={
+                "unsupported_claims": 0.3,
+                "hedging": 0.2,
+                "self_contradiction": 0.0,
+                "numeric_inconsistency": 0.0,
+            },
             model="gpt-4o-mini",
         )
 
@@ -216,14 +236,24 @@ class TestRiskFormula:
         gpt4_score, _ = calculate_risk_score(
             prompt_type="factual",
             input_params={"temperature": 0.5, "top_p": 1.0, "max_tokens": 500},
-            output_signals={"unsupported_claims": 0.0, "hedging": 0.0, "self_contradiction": 0.0, "numeric_inconsistency": 0.0},
+            output_signals={
+                "unsupported_claims": 0.0,
+                "hedging": 0.0,
+                "self_contradiction": 0.0,
+                "numeric_inconsistency": 0.0,
+            },
             model="gpt-4o",
         )
 
         gpt35_score, _ = calculate_risk_score(
             prompt_type="factual",
             input_params={"temperature": 0.5, "top_p": 1.0, "max_tokens": 500},
-            output_signals={"unsupported_claims": 0.0, "hedging": 0.0, "self_contradiction": 0.0, "numeric_inconsistency": 0.0},
+            output_signals={
+                "unsupported_claims": 0.0,
+                "hedging": 0.0,
+                "self_contradiction": 0.0,
+                "numeric_inconsistency": 0.0,
+            },
             model="gpt-3.5-turbo",
         )
 
@@ -236,7 +266,12 @@ class TestRiskFormula:
         risk_score, factors = calculate_risk_score(
             prompt_type="factual",
             input_params={"temperature": 0.5, "top_p": 1.0, "max_tokens": 500},
-            output_signals={"unsupported_claims": 0.1, "hedging": 0.1, "self_contradiction": 0.0, "numeric_inconsistency": 0.0},
+            output_signals={
+                "unsupported_claims": 0.1,
+                "hedging": 0.1,
+                "self_contradiction": 0.0,
+                "numeric_inconsistency": 0.0,
+            },
             model="gpt-4o-mini",
         )
 
@@ -251,6 +286,7 @@ class TestRiskFormula:
 # =============================================================================
 # SAFETY CONTROLLER TESTS
 # =============================================================================
+
 
 class TestSafetyController:
     """Tests for SafetyController class."""
@@ -294,8 +330,12 @@ class TestSafetyController:
         controller = SafetyController(max_temperature=0.7)
 
         clamped = controller.was_clamped(
-            original_temp=1.0, original_top_p=None, original_max_tokens=None,
-            clamped_temp=0.7, clamped_top_p=None, clamped_max_tokens=None,
+            original_temp=1.0,
+            original_top_p=None,
+            original_max_tokens=None,
+            clamped_temp=0.7,
+            clamped_top_p=None,
+            clamped_max_tokens=None,
         )
 
         assert "temperature" in clamped
@@ -360,6 +400,7 @@ class TestSafetyController:
 # =============================================================================
 # CLIENT INTEGRATION TESTS
 # =============================================================================
+
 
 class TestClientSafetyIntegration:
     """Tests for safety governance integration with Client."""
@@ -475,7 +516,12 @@ class TestClientSafetyIntegration:
         with pytest.raises(HighRiskOutputError):
             client.chat.completions.create(
                 model="gpt-3.5-turbo",  # Lower quality model adds risk
-                messages=[{"role": "user", "content": "What is the exact GDP of every country?"}],  # Factual prompt
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "What is the exact GDP of every country?",
+                    }
+                ],  # Factual prompt
                 temperature=1.0,  # High temperature adds risk
             )
 
@@ -485,7 +531,9 @@ class TestClientSafetyIntegration:
 
         # Make mock return risky content
         mock_response = mock_client.chat.completions.create.return_value
-        mock_response.choices[0].message.content = (
+        mock_response.choices[
+            0
+        ].message.content = (
             "Studies show that this is always true. Research indicates everyone agrees."
         )
 
@@ -510,6 +558,7 @@ class TestClientSafetyIntegration:
 # =============================================================================
 # EDGE CASES
 # =============================================================================
+
 
 class TestEdgeCases:
     """Edge case tests."""

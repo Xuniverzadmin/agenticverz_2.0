@@ -11,34 +11,34 @@ Produces an AST from tokens, supporting:
 - Expression evaluation
 """
 
-from dataclasses import dataclass
-from typing import List, Optional, Any
-from app.policy.compiler.tokenizer import Token, TokenType, Tokenizer
-from app.policy.compiler.grammar import PLANG_GRAMMAR, PolicyCategory, ActionType
+from typing import List, Optional
+
 from app.policy.ast.nodes import (
-    ASTNode,
-    ProgramNode,
-    PolicyDeclNode,
-    RuleDeclNode,
-    ImportNode,
-    ConditionBlockNode,
     ActionBlockNode,
-    ExprNode,
-    BinaryOpNode,
-    UnaryOpNode,
-    ValueNode,
-    IdentNode,
-    LiteralNode,
-    FuncCallNode,
+    ASTNode,
     AttrAccessNode,
-    RuleRefNode,
+    BinaryOpNode,
+    ConditionBlockNode,
+    ExprNode,
+    FuncCallNode,
+    IdentNode,
+    ImportNode,
+    LiteralNode,
+    PolicyDeclNode,
     PriorityNode,
+    ProgramNode,
     RouteTargetNode,
+    RuleDeclNode,
+    RuleRefNode,
+    UnaryOpNode,
 )
+from app.policy.compiler.grammar import ActionType, PolicyCategory
+from app.policy.compiler.tokenizer import Token, Tokenizer, TokenType
 
 
 class ParseError(Exception):
     """Error during parsing."""
+
     def __init__(self, message: str, token: Token):
         self.message = message
         self.token = token
@@ -86,10 +86,7 @@ class Parser:
     def expect(self, token_type: TokenType) -> Token:
         """Expect current token to be of given type."""
         if self.current.type != token_type:
-            raise ParseError(
-                f"Expected {token_type.name}, got {self.current.type.name}",
-                self.current
-            )
+            raise ParseError(f"Expected {token_type.name}, got {self.current.type.name}", self.current)
         return self.advance()
 
     def match(self, *token_types: TokenType) -> bool:
@@ -113,10 +110,7 @@ class Parser:
             elif self.match(TokenType.IMPORT):
                 statements.append(self.parse_import())
             else:
-                raise ParseError(
-                    f"Unexpected token: {self.current.type.name}",
-                    self.current
-                )
+                raise ParseError(f"Unexpected token: {self.current.type.name}", self.current)
 
         return ProgramNode(statements=statements)
 
@@ -153,10 +147,7 @@ class Parser:
                 self.advance()
                 return category
 
-        raise ParseError(
-            "Expected policy category (SAFETY, PRIVACY, OPERATIONAL, ROUTING, CUSTOM)",
-            self.current
-        )
+        raise ParseError("Expected policy category (SAFETY, PRIVACY, OPERATIONAL, ROUTING, CUSTOM)", self.current)
 
     def parse_policy_body(self) -> List[ASTNode]:
         """Parse policy body contents."""
@@ -176,10 +167,7 @@ class Parser:
             elif self.match(TokenType.PRIORITY):
                 body.append(self.parse_priority())
             else:
-                raise ParseError(
-                    f"Unexpected token in policy body: {self.current.type.name}",
-                    self.current
-                )
+                raise ParseError(f"Unexpected token in policy body: {self.current.type.name}", self.current)
 
         return body
 
@@ -213,10 +201,7 @@ class Parser:
             elif self.match(TokenType.DENY, TokenType.ALLOW, TokenType.ESCALATE, TokenType.ROUTE):
                 body.append(self.parse_action_block())
             else:
-                raise ParseError(
-                    f"Unexpected token in rule body: {self.current.type.name}",
-                    self.current
-                )
+                raise ParseError(f"Unexpected token in rule body: {self.current.type.name}", self.current)
 
         return body
 
@@ -359,9 +344,12 @@ class Parser:
         left = self.parse_value()
 
         comp_ops = {
-            TokenType.EQ, TokenType.NE,
-            TokenType.LT, TokenType.GT,
-            TokenType.LE, TokenType.GE,
+            TokenType.EQ,
+            TokenType.NE,
+            TokenType.LT,
+            TokenType.GT,
+            TokenType.LE,
+            TokenType.GE,
         }
 
         if self.current.type in comp_ops:
@@ -384,7 +372,7 @@ class Parser:
         # Literals
         if self.match(TokenType.NUMBER):
             value = self.advance().value
-            if '.' in value:
+            if "." in value:
                 return LiteralNode(value=float(value), line=start_token.line, column=start_token.column)
             return LiteralNode(value=int(value), line=start_token.line, column=start_token.column)
 

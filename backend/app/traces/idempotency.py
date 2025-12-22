@@ -10,28 +10,30 @@ Features:
 - Async Redis support
 """
 
-import os
 import hashlib
 import json
 import logging
-from typing import Optional, Tuple, Any, Dict
+import os
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class IdempotencyResult(Enum):
     """Result of idempotency check."""
-    NEW = "new"           # First time, lock acquired
+
+    NEW = "new"  # First time, lock acquired
     DUPLICATE = "duplicate"  # Same hash, safe to replay
-    CONFLICT = "conflict"    # Different hash, conflict
+    CONFLICT = "conflict"  # Different hash, conflict
 
 
 @dataclass
 class IdempotencyResponse:
     """Response from idempotency check."""
+
     result: IdempotencyResult
     stored_hash: str
     stored_trace_id: str
@@ -62,7 +64,7 @@ def _load_lua_script() -> str:
             _LUA_SCRIPT = _LUA_SCRIPT_PATH.read_text()
         else:
             # Inline fallback
-            _LUA_SCRIPT = '''
+            _LUA_SCRIPT = """
 local key = KEYS[1]
 local request_hash = ARGV[1]
 local ttl = tonumber(ARGV[2]) or 86400
@@ -98,7 +100,7 @@ if stored_hash == request_hash then
 else
     return {"conflict", stored_hash, stored_trace_id}
 end
-'''
+"""
     return _LUA_SCRIPT
 
 
@@ -136,7 +138,7 @@ class RedisIdempotencyStore:
         self,
         redis_client: Any,
         key_prefix: str = "idem",
-        default_ttl: int = 86400  # 24 hours
+        default_ttl: int = 86400,  # 24 hours
     ):
         self.redis = redis_client
         self.key_prefix = key_prefix
@@ -160,7 +162,7 @@ class RedisIdempotencyStore:
         request_data: Dict[str, Any],
         tenant_id: str = "default",
         trace_id: str = "",
-        ttl: Optional[int] = None
+        ttl: Optional[int] = None,
     ) -> IdempotencyResponse:
         """
         Check idempotency key atomically.
@@ -188,63 +190,56 @@ class RedisIdempotencyStore:
                 request_hash,
                 str(ttl),
                 tenant_id,
-                trace_id
+                trace_id,
             )
 
             result_type = IdempotencyResult(result[0].decode() if isinstance(result[0], bytes) else result[0])
             stored_hash = result[1].decode() if isinstance(result[1], bytes) else result[1]
             stored_trace_id = result[2].decode() if isinstance(result[2], bytes) else result[2]
 
-            return IdempotencyResponse(
-                result=result_type,
-                stored_hash=stored_hash,
-                stored_trace_id=stored_trace_id
-            )
+            return IdempotencyResponse(result=result_type, stored_hash=stored_hash, stored_trace_id=stored_trace_id)
 
         except Exception as e:
             logger.error(f"Redis idempotency check failed: {e}")
             # Fallback: allow through (fail open for availability)
-            return IdempotencyResponse(
-                result=IdempotencyResult.NEW,
-                stored_hash=request_hash,
-                stored_trace_id=""
-            )
+            return IdempotencyResponse(result=IdempotencyResult.NEW, stored_hash=request_hash, stored_trace_id="")
 
     async def mark_completed(
         self,
         idempotency_key: str,
         trace_id: str,
         tenant_id: str = "default",
-        response_data: Optional[Dict[str, Any]] = None
+        response_data: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Mark idempotency key as completed with trace result."""
         key = self._make_key(idempotency_key, tenant_id)
 
         try:
-            await self.redis.hset(key, mapping={
-                "status": "completed",
-                "trace_id": trace_id,
-                "response_hash": hash_request(response_data) if response_data else ""
-            })
+            await self.redis.hset(
+                key,
+                mapping={
+                    "status": "completed",
+                    "trace_id": trace_id,
+                    "response_hash": hash_request(response_data) if response_data else "",
+                },
+            )
             return True
         except Exception as e:
             logger.error(f"Failed to mark idempotency key completed: {e}")
             return False
 
-    async def mark_failed(
-        self,
-        idempotency_key: str,
-        tenant_id: str = "default",
-        error: str = ""
-    ) -> bool:
+    async def mark_failed(self, idempotency_key: str, tenant_id: str = "default", error: str = "") -> bool:
         """Mark idempotency key as failed (allows retry)."""
         key = self._make_key(idempotency_key, tenant_id)
 
         try:
-            await self.redis.hset(key, mapping={
-                "status": "failed",
-                "error": error[:500]  # Truncate error
-            })
+            await self.redis.hset(
+                key,
+                mapping={
+                    "status": "failed",
+                    "error": error[:500],  # Truncate error
+                },
+            )
             # Reduce TTL to allow faster retry
             await self.redis.expire(key, 300)  # 5 minutes
             return True
@@ -252,11 +247,7 @@ class RedisIdempotencyStore:
             logger.error(f"Failed to mark idempotency key failed: {e}")
             return False
 
-    async def delete(
-        self,
-        idempotency_key: str,
-        tenant_id: str = "default"
-    ) -> bool:
+    async def delete(self, idempotency_key: str, tenant_id: str = "default") -> bool:
         """Delete idempotency key (admin operation)."""
         key = self._make_key(idempotency_key, tenant_id)
         try:
@@ -266,11 +257,7 @@ class RedisIdempotencyStore:
             logger.error(f"Failed to delete idempotency key: {e}")
             return False
 
-    async def get_status(
-        self,
-        idempotency_key: str,
-        tenant_id: str = "default"
-    ) -> Optional[Dict[str, str]]:
+    async def get_status(self, idempotency_key: str, tenant_id: str = "default") -> Optional[Dict[str, str]]:
         """Get current status of idempotency key."""
         key = self._make_key(idempotency_key, tenant_id)
         try:
@@ -278,8 +265,7 @@ class RedisIdempotencyStore:
             if not data:
                 return None
             return {
-                k.decode() if isinstance(k, bytes) else k:
-                v.decode() if isinstance(v, bytes) else v
+                k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v
                 for k, v in data.items()
             }
         except Exception as e:
@@ -307,36 +293,25 @@ class InMemoryIdempotencyStore:
         request_data: Dict[str, Any],
         tenant_id: str = "default",
         trace_id: str = "",
-        ttl: Optional[int] = None
+        ttl: Optional[int] = None,
     ) -> IdempotencyResponse:
         key = self._make_key(idempotency_key, tenant_id)
         request_hash = hash_request(request_data)
 
         if key not in self._store:
-            self._store[key] = {
-                "hash": request_hash,
-                "tenant_id": tenant_id,
-                "trace_id": trace_id,
-                "status": "pending"
-            }
-            return IdempotencyResponse(
-                result=IdempotencyResult.NEW,
-                stored_hash=request_hash,
-                stored_trace_id=""
-            )
+            self._store[key] = {"hash": request_hash, "tenant_id": tenant_id, "trace_id": trace_id, "status": "pending"}
+            return IdempotencyResponse(result=IdempotencyResult.NEW, stored_hash=request_hash, stored_trace_id="")
 
         stored = self._store[key]
         if stored["hash"] == request_hash:
             return IdempotencyResponse(
                 result=IdempotencyResult.DUPLICATE,
                 stored_hash=stored["hash"],
-                stored_trace_id=stored.get("trace_id", "")
+                stored_trace_id=stored.get("trace_id", ""),
             )
 
         return IdempotencyResponse(
-            result=IdempotencyResult.CONFLICT,
-            stored_hash=stored["hash"],
-            stored_trace_id=stored.get("trace_id", "")
+            result=IdempotencyResult.CONFLICT, stored_hash=stored["hash"], stored_trace_id=stored.get("trace_id", "")
         )
 
     async def mark_completed(
@@ -344,7 +319,7 @@ class InMemoryIdempotencyStore:
         idempotency_key: str,
         trace_id: str,
         tenant_id: str = "default",
-        response_data: Optional[Dict[str, Any]] = None
+        response_data: Optional[Dict[str, Any]] = None,
     ) -> bool:
         key = self._make_key(idempotency_key, tenant_id)
         if key in self._store:
@@ -352,32 +327,19 @@ class InMemoryIdempotencyStore:
             self._store[key]["trace_id"] = trace_id
         return True
 
-    async def mark_failed(
-        self,
-        idempotency_key: str,
-        tenant_id: str = "default",
-        error: str = ""
-    ) -> bool:
+    async def mark_failed(self, idempotency_key: str, tenant_id: str = "default", error: str = "") -> bool:
         key = self._make_key(idempotency_key, tenant_id)
         if key in self._store:
             self._store[key]["status"] = "failed"
             self._store[key]["error"] = error
         return True
 
-    async def delete(
-        self,
-        idempotency_key: str,
-        tenant_id: str = "default"
-    ) -> bool:
+    async def delete(self, idempotency_key: str, tenant_id: str = "default") -> bool:
         key = self._make_key(idempotency_key, tenant_id)
         self._store.pop(key, None)
         return True
 
-    async def get_status(
-        self,
-        idempotency_key: str,
-        tenant_id: str = "default"
-    ) -> Optional[Dict[str, str]]:
+    async def get_status(self, idempotency_key: str, tenant_id: str = "default") -> Optional[Dict[str, str]]:
         key = self._make_key(idempotency_key, tenant_id)
         return self._store.get(key)
 
@@ -398,6 +360,7 @@ async def get_idempotency_store() -> Any:
     if redis_url:
         try:
             import redis.asyncio as aioredis
+
             client = aioredis.from_url(redis_url, decode_responses=False)
             await client.ping()
             _idempotency_store = RedisIdempotencyStore(client)

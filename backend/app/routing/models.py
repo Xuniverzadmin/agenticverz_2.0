@@ -1,47 +1,53 @@
 # M17 CARE - Routing Models
 # Pydantic models for Cascade-Aware Routing Engine
 
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
 class SuccessMetric(str, Enum):
     """Success metrics derived from winning aspiration."""
-    COST = "cost"           # Minimize cost/resource usage
-    LATENCY = "latency"     # Minimize response time
-    ACCURACY = "accuracy"   # Maximize correctness
-    RISK_MIN = "risk_min"   # Minimize risk exposure
-    BALANCED = "balanced"   # Balance all factors
+
+    COST = "cost"  # Minimize cost/resource usage
+    LATENCY = "latency"  # Minimize response time
+    ACCURACY = "accuracy"  # Maximize correctness
+    RISK_MIN = "risk_min"  # Minimize risk exposure
+    BALANCED = "balanced"  # Balance all factors
 
 
 class OrchestratorMode(str, Enum):
     """Orchestrator execution modes."""
-    PARALLEL = "parallel"           # Independent tasks scattered to workers
-    HIERARCHICAL = "hierarchical"   # Parent delegates to sub-agents
-    BLACKBOARD = "blackboard"       # Shared memory, opportunistic picking
-    SEQUENTIAL = "sequential"       # One-by-one execution
+
+    PARALLEL = "parallel"  # Independent tasks scattered to workers
+    HIERARCHICAL = "hierarchical"  # Parent delegates to sub-agents
+    BLACKBOARD = "blackboard"  # Shared memory, opportunistic picking
+    SEQUENTIAL = "sequential"  # One-by-one execution
 
 
 class RoutingStage(str, Enum):
     """CARE pipeline stages."""
-    ASPIRATION = "aspiration"       # Stage 1: Success metric selection
-    DOMAIN_FILTER = "domain_filter" # Stage 2: Where-to-play filter
-    STRATEGY = "strategy"           # Stage 3: How-to-win expansion
-    CAPABILITY = "capability"       # Stage 4: Capability/capacity gate
-    ORCHESTRATOR = "orchestrator"   # Stage 5: Mode selection
+
+    ASPIRATION = "aspiration"  # Stage 1: Success metric selection
+    DOMAIN_FILTER = "domain_filter"  # Stage 2: Where-to-play filter
+    STRATEGY = "strategy"  # Stage 3: How-to-win expansion
+    CAPABILITY = "capability"  # Stage 4: Capability/capacity gate
+    ORCHESTRATOR = "orchestrator"  # Stage 5: Mode selection
 
 
 class RiskPolicy(str, Enum):
     """Risk policies for execution."""
-    STRICT = "strict"       # Extra validation, retry on failure
-    BALANCED = "balanced"   # Standard validation
-    FAST = "fast"           # Skip validation, no retry
+
+    STRICT = "strict"  # Extra validation, retry on failure
+    BALANCED = "balanced"  # Standard validation
+    FAST = "fast"  # Skip validation, no retry
 
 
 class DifficultyLevel(str, Enum):
     """Task difficulty levels."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -51,8 +57,10 @@ class DifficultyLevel(str, Enum):
 # Capability Probe Models
 # =============================================================================
 
+
 class ProbeType(str, Enum):
     """Types of capability probes."""
+
     SMTP = "smtp"
     DNS = "dns"
     API_KEY = "api_key"
@@ -71,26 +79,28 @@ class CapabilityHardness(str, Enum):
     HARD: Failure blocks routing entirely
     SOFT: Failure degrades performance but allows fallback
     """
+
     HARD = "hard"
     SOFT = "soft"
 
 
 # Probe type to hardness mapping
 PROBE_HARDNESS: Dict[ProbeType, CapabilityHardness] = {
-    ProbeType.SMTP: CapabilityHardness.HARD,      # Can't send mail without SMTP
-    ProbeType.DNS: CapabilityHardness.HARD,       # Can't resolve anything without DNS
-    ProbeType.API_KEY: CapabilityHardness.HARD,   # Can't call APIs without keys
-    ProbeType.S3: CapabilityHardness.HARD,        # Can't store without S3
-    ProbeType.HTTP: CapabilityHardness.SOFT,      # May have fallback endpoints
-    ProbeType.REDIS: CapabilityHardness.SOFT,     # Caching, can use slow path
+    ProbeType.SMTP: CapabilityHardness.HARD,  # Can't send mail without SMTP
+    ProbeType.DNS: CapabilityHardness.HARD,  # Can't resolve anything without DNS
+    ProbeType.API_KEY: CapabilityHardness.HARD,  # Can't call APIs without keys
+    ProbeType.S3: CapabilityHardness.HARD,  # Can't store without S3
+    ProbeType.HTTP: CapabilityHardness.SOFT,  # May have fallback endpoints
+    ProbeType.REDIS: CapabilityHardness.SOFT,  # Caching, can use slow path
     ProbeType.DATABASE: CapabilityHardness.HARD,  # Can't persist without DB
-    ProbeType.AGENT: CapabilityHardness.SOFT,     # May have fallback agents
-    ProbeType.SERVICE: CapabilityHardness.SOFT,   # May have fallback services
+    ProbeType.AGENT: CapabilityHardness.SOFT,  # May have fallback agents
+    ProbeType.SERVICE: CapabilityHardness.SOFT,  # May have fallback services
 }
 
 
 class CapabilityProbeResult(BaseModel):
     """Result of a single capability probe."""
+
     probe_type: ProbeType
     name: str
     available: bool
@@ -128,6 +138,7 @@ class CapabilityProbeResult(BaseModel):
 
 class CapabilityCheckResult(BaseModel):
     """Aggregated capability check results."""
+
     passed: bool
     probes: List[CapabilityProbeResult] = Field(default_factory=list)
     failed_probes: List[CapabilityProbeResult] = Field(default_factory=list)
@@ -154,8 +165,10 @@ class CapabilityCheckResult(BaseModel):
 # Routing Decision Models
 # =============================================================================
 
+
 class StageResult(BaseModel):
     """Result of a single CARE pipeline stage."""
+
     stage: RoutingStage
     passed: bool
     reason: str
@@ -165,6 +178,7 @@ class StageResult(BaseModel):
 
 class RouteEvaluationResult(BaseModel):
     """Evaluation of a single agent for routing."""
+
     agent_id: str
     agent_name: Optional[str] = None
     eligible: bool
@@ -187,6 +201,7 @@ class RouteEvaluationResult(BaseModel):
 
 class RoutingRequest(BaseModel):
     """Request for CARE routing."""
+
     task_description: str = Field(..., min_length=1)
     task_domain: Optional[str] = None
     required_tools: List[str] = Field(default_factory=list)
@@ -200,6 +215,7 @@ class RoutingRequest(BaseModel):
 
 class RoutingDecision(BaseModel):
     """Final routing decision from CARE."""
+
     request_id: str
     task_description: str
     selected_agent_id: Optional[str] = None
@@ -273,9 +289,9 @@ class RoutingDecision(BaseModel):
 
 # Requests per minute per risk policy
 RATE_LIMITS: Dict[RiskPolicy, int] = {
-    RiskPolicy.STRICT: 10,    # Extra validation, lower throughput
+    RiskPolicy.STRICT: 10,  # Extra validation, lower throughput
     RiskPolicy.BALANCED: 30,  # Standard rate limit
-    RiskPolicy.FAST: 100,     # High throughput, minimal validation
+    RiskPolicy.FAST: 100,  # High throughput, minimal validation
 }
 
 # Rate limit window in seconds
@@ -288,16 +304,16 @@ RATE_LIMIT_WINDOW = 60
 
 # Stage weights for confidence calculation
 STAGE_CONFIDENCE_WEIGHTS: Dict[RoutingStage, float] = {
-    RoutingStage.ASPIRATION: 0.20,      # Stage 1: 20%
-    RoutingStage.DOMAIN_FILTER: 0.25,   # Stage 2: 25%
-    RoutingStage.STRATEGY: 0.20,        # Stage 3: 20%
-    RoutingStage.CAPABILITY: 0.25,      # Stage 4: 25%
-    RoutingStage.ORCHESTRATOR: 0.10,    # Stage 5: 10%
+    RoutingStage.ASPIRATION: 0.20,  # Stage 1: 20%
+    RoutingStage.DOMAIN_FILTER: 0.25,  # Stage 2: 25%
+    RoutingStage.STRATEGY: 0.20,  # Stage 3: 20%
+    RoutingStage.CAPABILITY: 0.25,  # Stage 4: 25%
+    RoutingStage.ORCHESTRATOR: 0.10,  # Stage 5: 10%
 }
 
 # Confidence thresholds
-CONFIDENCE_FALLBACK_THRESHOLD = 0.55   # Below this → enforce fallback
-CONFIDENCE_BLOCK_THRESHOLD = 0.35      # Below this → block routing
+CONFIDENCE_FALLBACK_THRESHOLD = 0.55  # Below this → enforce fallback
+CONFIDENCE_BLOCK_THRESHOLD = 0.35  # Below this → block routing
 
 # Fairness window (seconds) for recent assignment tracking
 FAIRNESS_WINDOW = 300  # 5 minutes
@@ -307,12 +323,14 @@ FAIRNESS_WINDOW = 300  # 5 minutes
 # M17.2 - Agent Performance Vector (Success Metrics Feedback)
 # =============================================================================
 
+
 class AgentPerformanceVector(BaseModel):
     """
     Performance metrics for an agent, updated after each routing outcome.
 
     These metrics feed back into routing decisions, making CARE adaptive.
     """
+
     agent_id: str
 
     # Latency metrics
@@ -380,6 +398,7 @@ class RoutingOutcome(BaseModel):
 
     Submit this after task completion to make CARE adaptive.
     """
+
     request_id: str
     agent_id: str
 
@@ -404,12 +423,14 @@ class RoutingOutcome(BaseModel):
 # Routing Configuration
 # =============================================================================
 
+
 class RoutingConfig(BaseModel):
     """
     M17 Routing configuration extension for SBA.
 
     This extends the base SBA schema with routing-specific settings.
     """
+
     # Derived from winning_aspiration
     success_metric: SuccessMetric = SuccessMetric.BALANCED
 
@@ -436,20 +457,57 @@ class RoutingConfig(BaseModel):
 
 ASPIRATION_METRIC_KEYWORDS: Dict[SuccessMetric, List[str]] = {
     SuccessMetric.COST: [
-        "cost", "budget", "cheap", "efficient", "economical", "save", "minimize spend",
-        "resource", "token", "credit", "affordable"
+        "cost",
+        "budget",
+        "cheap",
+        "efficient",
+        "economical",
+        "save",
+        "minimize spend",
+        "resource",
+        "token",
+        "credit",
+        "affordable",
     ],
     SuccessMetric.LATENCY: [
-        "fast", "quick", "speed", "latency", "response time", "real-time", "instant",
-        "immediate", "rapid", "urgent", "low latency"
+        "fast",
+        "quick",
+        "speed",
+        "latency",
+        "response time",
+        "real-time",
+        "instant",
+        "immediate",
+        "rapid",
+        "urgent",
+        "low latency",
     ],
     SuccessMetric.ACCURACY: [
-        "accurate", "correct", "precise", "quality", "reliable", "thorough", "complete",
-        "valid", "verify", "check", "ensure", "careful"
+        "accurate",
+        "correct",
+        "precise",
+        "quality",
+        "reliable",
+        "thorough",
+        "complete",
+        "valid",
+        "verify",
+        "check",
+        "ensure",
+        "careful",
     ],
     SuccessMetric.RISK_MIN: [
-        "safe", "secure", "risk", "cautious", "careful", "protect", "prevent",
-        "avoid", "compliance", "audit", "governance"
+        "safe",
+        "secure",
+        "risk",
+        "cautious",
+        "careful",
+        "protect",
+        "prevent",
+        "avoid",
+        "compliance",
+        "audit",
+        "governance",
     ],
 }
 

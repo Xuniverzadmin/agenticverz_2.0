@@ -6,13 +6,14 @@ Brand strategy stage that uses:
 - M19: Policy validation for forbidden claims
 """
 
-from typing import Any, Dict, List
 from dataclasses import dataclass
+from typing import Any, Dict, List
 
 
 @dataclass
 class StrategyOutput:
     """Structured output from strategy stage."""
+
     positioning: str
     messaging_framework: Dict[str, str]
     tone_guidelines: Dict[str, Any]

@@ -10,25 +10,25 @@ Executes policies in topologically sorted order:
 - Full execution trace
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
-from datetime import datetime, timezone
 import asyncio
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
+from app.policy.compiler.grammar import ActionType
 from app.policy.ir.ir_nodes import IRModule
-from app.policy.optimizer.dag_sorter import ExecutionPlan, DAGSorter
+from app.policy.optimizer.dag_sorter import DAGSorter, ExecutionPlan
 from app.policy.runtime.deterministic_engine import (
     DeterministicEngine,
     ExecutionContext,
     ExecutionResult,
 )
-from app.policy.runtime.intent import Intent, IntentType
-from app.policy.compiler.grammar import ActionType
+from app.policy.runtime.intent import Intent
 
 
 @dataclass
 class StageResult:
     """Result of executing a single stage."""
+
     stage_index: int
     policies_executed: List[str]
     results: Dict[str, ExecutionResult]
@@ -50,6 +50,7 @@ class StageResult:
 @dataclass
 class ExecutionTrace:
     """Full execution trace across all stages."""
+
     execution_id: str
     total_stages: int
     stage_results: List[StageResult] = field(default_factory=list)
@@ -224,9 +225,7 @@ class DAGExecutor:
                     variables=dict(context.variables),
                     max_steps=context.max_steps,
                 )
-                tasks.append(
-                    self._execute_policy(policy_name, module, policy_context)
-                )
+                tasks.append(self._execute_policy(policy_name, module, policy_context))
 
             # Wait for all to complete
             parallel_results = await asyncio.gather(*tasks, return_exceptions=True)

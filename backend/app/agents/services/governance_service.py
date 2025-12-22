@@ -12,9 +12,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy import create_engine, text
@@ -27,9 +25,11 @@ logger = logging.getLogger("nova.agents.governance_service")
 # Data Types
 # =============================================================================
 
+
 @dataclass
 class BudgetStatus:
     """Budget status for a job or worker."""
+
     budget_cents: Optional[int]  # None = unlimited
     used_cents: int
     remaining_cents: Optional[int]
@@ -40,6 +40,7 @@ class BudgetStatus:
 @dataclass
 class RiskMetrics:
     """Risk metrics for a job or worker."""
+
     total_items: int
     blocked_items: int
     avg_risk_score: float
@@ -51,6 +52,7 @@ class RiskMetrics:
 @dataclass
 class GovernanceStatus:
     """Combined governance status."""
+
     job_id: UUID
     budget: BudgetStatus
     risk: RiskMetrics
@@ -60,6 +62,7 @@ class GovernanceStatus:
 @dataclass
 class WorkerBudgetCheck:
     """Result of worker budget check."""
+
     can_proceed: bool
     budget_remaining: Optional[int]
     reason: str
@@ -68,6 +71,7 @@ class WorkerBudgetCheck:
 # =============================================================================
 # Governance Service
 # =============================================================================
+
 
 class GovernanceService:
     """
@@ -85,7 +89,7 @@ class GovernanceService:
         database_url: Optional[str] = None,
         safety_margin_cents: int = DEFAULT_SAFETY_MARGIN_CENTS,
     ):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not self.database_url:
             raise RuntimeError("DATABASE_URL required for GovernanceService")
 
@@ -107,15 +111,17 @@ class GovernanceService:
         """Get budget status for a job."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         llm_budget_cents,
                         llm_budget_used,
                         llm_risk_violations
                     FROM agents.jobs
                     WHERE id = :job_id
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
             row = result.fetchone()
 
@@ -130,17 +136,15 @@ class GovernanceService:
                 used_cents=used_cents or 0,
                 remaining_cents=remaining,
                 is_exceeded=budget_cents is not None and (used_cents or 0) >= budget_cents,
-                utilization_pct=(
-                    round((used_cents / budget_cents) * 100, 2)
-                    if budget_cents and used_cents else None
-                ),
+                utilization_pct=(round((used_cents / budget_cents) * 100, 2) if budget_cents and used_cents else None),
             )
 
     def get_job_risk_metrics(self, job_id: UUID) -> Optional[RiskMetrics]:
         """Get risk metrics for a job."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         COUNT(*) as total_items,
                         COUNT(*) FILTER (WHERE blocked = true) as blocked_items,
@@ -151,8 +155,9 @@ class GovernanceService:
                         COUNT(*) FILTER (WHERE risk_score >= 0.6) as high_risk
                     FROM agents.job_items
                     WHERE job_id = :job_id AND risk_score IS NOT NULL
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
             row = result.fetchone()
 
@@ -161,8 +166,7 @@ class GovernanceService:
 
             # Get violations count from job
             job_result = session.execute(
-                text("SELECT llm_risk_violations FROM agents.jobs WHERE id = :job_id"),
-                {"job_id": str(job_id)}
+                text("SELECT llm_risk_violations FROM agents.jobs WHERE id = :job_id"), {"job_id": str(job_id)}
             )
             job_row = job_result.fetchone()
             violations = job_row[0] if job_row else 0
@@ -191,8 +195,7 @@ class GovernanceService:
         # Get config
         with self.Session() as session:
             result = session.execute(
-                text("SELECT llm_config FROM agents.jobs WHERE id = :job_id"),
-                {"job_id": str(job_id)}
+                text("SELECT llm_config FROM agents.jobs WHERE id = :job_id"), {"job_id": str(job_id)}
             )
             row = result.fetchone()
             config = row[0] if row and row[0] else {}
@@ -202,9 +205,14 @@ class GovernanceService:
         return GovernanceStatus(
             job_id=job_id,
             budget=budget,
-            risk=risk or RiskMetrics(
-                total_items=0, blocked_items=0, avg_risk_score=0,
-                max_risk_score=0, risk_violations=0, risk_distribution={}
+            risk=risk
+            or RiskMetrics(
+                total_items=0,
+                blocked_items=0,
+                avg_risk_score=0,
+                max_risk_score=0,
+                risk_violations=0,
+                risk_distribution={},
             ),
             config=config,
         )
@@ -228,18 +236,20 @@ class GovernanceService:
         """
         with self.Session() as session:
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE agents.jobs
                     SET
                         llm_budget_used = llm_budget_used + :cost,
                         llm_risk_violations = llm_risk_violations + CASE WHEN :blocked THEN 1 ELSE 0 END
                     WHERE id = :job_id
-                """),
+                """
+                ),
                 {
                     "job_id": str(job_id),
                     "cost": int(cost_cents),
                     "blocked": blocked,
-                }
+                },
             )
             session.commit()
 
@@ -269,23 +279,21 @@ class GovernanceService:
         """
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT can_proceed, budget_remaining, reason
                     FROM agents.check_worker_budget(:instance_id, :estimated_cost)
-                """),
+                """
+                ),
                 {
                     "instance_id": instance_id,
                     "estimated_cost": estimated_cost_cents,
-                }
+                },
             )
             row = result.fetchone()
 
             if not row:
-                return WorkerBudgetCheck(
-                    can_proceed=True,
-                    budget_remaining=None,
-                    reason="no_worker_found"
-                )
+                return WorkerBudgetCheck(can_proceed=True, budget_remaining=None, reason="no_worker_found")
 
             can_proceed = row[0]
             budget_remaining = row[1]
@@ -324,11 +332,13 @@ class GovernanceService:
         with self.Session() as session:
             # Get job budget info
             job_result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT llm_budget_cents, llm_budget_used, config
                     FROM agents.jobs WHERE id = :job_id
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
             job_row = job_result.fetchone()
 
@@ -346,7 +356,7 @@ class GovernanceService:
                 worker_budget = config.get("llm_budget_per_item")
                 if not worker_budget:
                     # Equal share of remaining
-                    remaining = (job_budget - (job_used or 0))
+                    remaining = job_budget - (job_used or 0)
                     parallelism = config.get("parallelism", 1)
                     worker_budget = max(1, remaining // parallelism)
 
@@ -359,18 +369,20 @@ class GovernanceService:
             }
 
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE agents.instances
                     SET
                         llm_budget_cents = :budget,
                         llm_config = CAST(:config AS JSONB)
                     WHERE instance_id = :instance_id
-                """),
+                """
+                ),
                 {
                     "instance_id": instance_id,
                     "budget": worker_budget,
                     "config": json.dumps(llm_config),
-                }
+                },
             )
             session.commit()
 
@@ -380,7 +392,7 @@ class GovernanceService:
                     "instance_id": instance_id,
                     "job_id": str(job_id),
                     "budget_cents": worker_budget,
-                }
+                },
             )
 
             return True
@@ -389,15 +401,17 @@ class GovernanceService:
         """Get budget status for a worker."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         llm_budget_cents,
                         llm_budget_used,
                         llm_risk_violations
                     FROM agents.instances
                     WHERE instance_id = :instance_id
-                """),
-                {"instance_id": instance_id}
+                """
+                ),
+                {"instance_id": instance_id},
             )
             row = result.fetchone()
 
@@ -412,10 +426,7 @@ class GovernanceService:
                 used_cents=used_cents or 0,
                 remaining_cents=remaining,
                 is_exceeded=budget_cents is not None and (used_cents or 0) >= budget_cents,
-                utilization_pct=(
-                    round((used_cents / budget_cents) * 100, 2)
-                    if budget_cents and used_cents else None
-                ),
+                utilization_pct=(round((used_cents / budget_cents) * 100, 2) if budget_cents and used_cents else None),
             )
 
     # =========================================================================
@@ -453,7 +464,8 @@ class GovernanceService:
         """
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT agents.record_llm_usage(
                         :item_id,
                         :cost_cents,
@@ -464,7 +476,8 @@ class GovernanceService:
                         :blocked_reason,
                         CAST(:params_clamped AS JSONB)
                     )
-                """),
+                """
+                ),
                 {
                     "item_id": str(item_id),
                     "cost_cents": cost_cents,
@@ -474,7 +487,7 @@ class GovernanceService:
                     "blocked": blocked,
                     "blocked_reason": blocked_reason,
                     "params_clamped": json.dumps(params_clamped),
-                }
+                },
             )
             session.commit()
 
@@ -502,7 +515,8 @@ class GovernanceService:
         with self.Session() as session:
             # Job-level aggregations
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         COUNT(*) as total_jobs,
                         SUM(llm_budget_cents) as total_budget,
@@ -511,14 +525,16 @@ class GovernanceService:
                     FROM agents.jobs
                     WHERE tenant_id = :tenant_id
                       AND created_at >= now() - interval ':hours hours'
-                """.replace(":hours", str(time_range_hours))),
-                {"tenant_id": tenant_id}
+                """.replace(":hours", str(time_range_hours))
+                ),
+                {"tenant_id": tenant_id},
             )
             job_row = result.fetchone()
 
             # Item-level aggregations
             item_result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         COUNT(*) as total_items,
                         COUNT(*) FILTER (WHERE blocked = true) as blocked_items,
@@ -529,8 +545,9 @@ class GovernanceService:
                     JOIN agents.jobs j ON ji.job_id = j.id
                     WHERE j.tenant_id = :tenant_id
                       AND j.created_at >= now() - interval ':hours hours'
-                """.replace(":hours", str(time_range_hours))),
-                {"tenant_id": tenant_id}
+                """.replace(":hours", str(time_range_hours))
+                ),
+                {"tenant_id": tenant_id},
             )
             item_row = item_result.fetchone()
 
@@ -549,10 +566,7 @@ class GovernanceService:
                     "total_cost_cents": float(item_row[3] or 0) if item_row else 0,
                     "total_tokens": item_row[4] or 0 if item_row else 0,
                 },
-                "utilization_pct": (
-                    round((job_row[2] / job_row[1]) * 100, 2)
-                    if job_row and job_row[1] else None
-                ),
+                "utilization_pct": (round((job_row[2] / job_row[1]) * 100, 2) if job_row and job_row[1] else None),
             }
 
     def get_high_risk_items(
@@ -588,16 +602,18 @@ class GovernanceService:
 
             items = []
             for row in result:
-                items.append({
-                    "id": str(row[0]),
-                    "job_id": str(row[1]),
-                    "item_index": row[2],
-                    "risk_score": float(row[3]) if row[3] else 0,
-                    "risk_factors": row[4] if isinstance(row[4], dict) else {},
-                    "blocked": row[5],
-                    "blocked_reason": row[6],
-                    "cost_cents": float(row[7]) if row[7] else 0,
-                })
+                items.append(
+                    {
+                        "id": str(row[0]),
+                        "job_id": str(row[1]),
+                        "item_index": row[2],
+                        "risk_score": float(row[3]) if row[3] else 0,
+                        "risk_factors": row[4] if isinstance(row[4], dict) else {},
+                        "blocked": row[5],
+                        "blocked_reason": row[6],
+                        "cost_cents": float(row[7]) if row[7] else 0,
+                    }
+                )
 
             return items
 
@@ -668,16 +684,18 @@ class GovernanceService:
                     except json.JSONDecodeError:
                         pass
 
-                items.append({
-                    "id": str(row[0]),
-                    "item_index": row[1],
-                    "output": output,
-                    "risk_score": float(row[3]) if row[3] is not None else None,
-                    "blocked": row[4] or False,
-                    "blocked_reason": row[5],
-                    "cost_cents": float(row[6]) if row[6] else 0,
-                    "status": row[7],
-                })
+                items.append(
+                    {
+                        "id": str(row[0]),
+                        "item_index": row[1],
+                        "output": output,
+                        "risk_score": float(row[3]) if row[3] is not None else None,
+                        "blocked": row[4] or False,
+                        "blocked_reason": row[5],
+                        "cost_cents": float(row[6]) if row[6] else 0,
+                        "status": row[7],
+                    }
+                )
 
             return items
 
@@ -698,7 +716,8 @@ class GovernanceService:
         """
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         i.instance_id,
                         i.agent_name,
@@ -719,28 +738,31 @@ class GovernanceService:
                     GROUP BY i.instance_id, i.agent_name, i.llm_budget_cents,
                              i.llm_budget_used, i.llm_risk_violations
                     ORDER BY i.instance_id
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
 
             workers = []
             for row in result:
                 budget = row[2]
                 used = row[3] or 0
-                workers.append({
-                    "instance_id": row[0],
-                    "agent_name": row[1],
-                    "budget_cents": budget,
-                    "budget_used_cents": used,
-                    "budget_remaining_cents": (budget - used) if budget else None,
-                    "utilization_pct": round((used / budget) * 100, 2) if budget else None,
-                    "risk_violations": row[4] or 0,
-                    "items_processed": row[5] or 0,
-                    "total_cost_cents": float(row[6]) if row[6] else 0,
-                    "total_tokens": row[7] or 0,
-                    "avg_risk_score": float(row[8]) if row[8] else 0,
-                    "blocked_items": row[9] or 0,
-                })
+                workers.append(
+                    {
+                        "instance_id": row[0],
+                        "agent_name": row[1],
+                        "budget_cents": budget,
+                        "budget_used_cents": used,
+                        "budget_remaining_cents": (budget - used) if budget else None,
+                        "utilization_pct": round((used / budget) * 100, 2) if budget else None,
+                        "risk_violations": row[4] or 0,
+                        "items_processed": row[5] or 0,
+                        "total_cost_cents": float(row[6]) if row[6] else 0,
+                        "total_tokens": row[7] or 0,
+                        "avg_risk_score": float(row[8]) if row[8] else 0,
+                        "blocked_items": row[9] or 0,
+                    }
+                )
 
             return workers
 
@@ -764,7 +786,8 @@ class GovernanceService:
         with self.Session() as session:
             # Get raw risk scores
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         risk_score,
                         blocked,
@@ -772,8 +795,9 @@ class GovernanceService:
                     FROM agents.job_items
                     WHERE job_id = :job_id AND risk_score IS NOT NULL
                     ORDER BY risk_score
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
 
             scores = []
@@ -870,15 +894,17 @@ class GovernanceService:
         with self.Session() as session:
             # Get total items count
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         COUNT(*) as total,
                         COUNT(*) FILTER (WHERE status = 'completed') as completed,
                         COUNT(*) FILTER (WHERE blocked = true) as blocked
                     FROM agents.job_items
                     WHERE job_id = :job_id
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
             row = result.fetchone()
 

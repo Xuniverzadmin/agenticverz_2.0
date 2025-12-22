@@ -42,11 +42,13 @@ JWKS_CACHE_TTL = 3600  # 1 hour
 
 class OIDCError(Exception):
     """Base exception for OIDC-related errors."""
+
     pass
 
 
 class TokenValidationError(OIDCError):
     """Raised when token validation fails."""
+
     def __init__(self, message: str, error_code: str = "invalid_token"):
         self.message = message
         self.error_code = error_code
@@ -73,11 +75,7 @@ def _get_jwks_client() -> PyJWKClient:
         jwks_url = f"{OIDC_ISSUER_URL}/protocol/openid-connect/certs"
         logger.info(f"Initializing JWKS client from {jwks_url}")
 
-        _jwks_client = PyJWKClient(
-            jwks_url,
-            cache_keys=True,
-            lifespan=JWKS_CACHE_TTL
-        )
+        _jwks_client = PyJWKClient(jwks_url, cache_keys=True, lifespan=JWKS_CACHE_TTL)
         _jwks_client_timestamp = now
 
     return _jwks_client
@@ -143,7 +141,7 @@ def validate_token(token: str) -> Dict[str, Any]:
                 "verify_iat": True,
                 "verify_aud": True,
                 "verify_iss": True,
-            }
+            },
         )
 
         logger.debug(f"Token validated successfully for sub={claims.get('sub')}")
@@ -254,22 +252,18 @@ KEYCLOAK_TO_AOS_ROLE_MAP = {
     "admin": "admin",
     "realm-admin": "admin",
     "aos-admin": "admin",
-
     # Infrastructure roles
     "infra": "infra",
     "infrastructure": "infra",
     "platform": "infra",
-
     # Developer roles
     "developer": "dev",
     "dev": "dev",
     "engineer": "dev",
-
     # Machine/service roles
     "machine": "machine",
     "service": "machine",
     "service-account": "machine",
-
     # Readonly roles
     "readonly": "readonly",
     "viewer": "readonly",

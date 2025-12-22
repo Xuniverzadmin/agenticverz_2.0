@@ -7,36 +7,36 @@
 # - Visitor pattern for AST traversal
 
 from app.policy.ast.nodes import (
+    ActionBlockNode,
     # Base
     ASTNode,
-    ExprNode,
-    # Program
-    ProgramNode,
-    # Declarations
-    PolicyDeclNode,
-    RuleDeclNode,
-    ImportNode,
-    RuleRefNode,
-    PriorityNode,
-    # Blocks
-    ConditionBlockNode,
-    ActionBlockNode,
-    RouteTargetNode,
+    AttrAccessNode,
     # Expressions
     BinaryOpNode,
-    UnaryOpNode,
-    ValueNode,
-    IdentNode,
-    LiteralNode,
+    # Blocks
+    ConditionBlockNode,
+    ExprNode,
     FuncCallNode,
-    AttrAccessNode,
     # Metadata
     GovernanceMetadata,
+    IdentNode,
+    ImportNode,
+    LiteralNode,
+    # Declarations
+    PolicyDeclNode,
+    PriorityNode,
+    # Program
+    ProgramNode,
+    RouteTargetNode,
+    RuleDeclNode,
+    RuleRefNode,
+    UnaryOpNode,
+    ValueNode,
 )
 from app.policy.ast.visitors import (
     ASTVisitor,
-    PrintVisitor,
     CategoryCollector,
+    PrintVisitor,
     RuleExtractor,
 )
 

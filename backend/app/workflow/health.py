@@ -14,10 +14,11 @@ Design Principles:
 """
 
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+
 import logging
 import os
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("nova.workflow.health")
 
@@ -26,6 +27,7 @@ try:
     from fastapi import APIRouter
     from fastapi import status as http_status
     from fastapi.responses import JSONResponse
+
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
@@ -75,6 +77,7 @@ def record_checkpoint_activity() -> None:
 # ============== Core Health Functions ==============
 # These work without FastAPI for testing
 
+
 async def healthz() -> Dict[str, Any]:
     """
     Liveness probe - returns OK if process is running.
@@ -111,11 +114,11 @@ async def readyz():
     if _checkpoint_store:
         try:
             # Use ping() for actual DB connectivity check
-            if hasattr(_checkpoint_store, 'ping'):
+            if hasattr(_checkpoint_store, "ping"):
                 checks["checkpoint_store"] = await _checkpoint_store.ping()
             else:
                 # Fallback for stores without ping (in-memory)
-                checks["checkpoint_store"] = hasattr(_checkpoint_store, 'load')
+                checks["checkpoint_store"] = hasattr(_checkpoint_store, "load")
         except Exception as e:
             logger.warning(f"Checkpoint store health check failed: {e}")
             checks["checkpoint_store"] = False
@@ -126,7 +129,7 @@ async def readyz():
     # Check golden writer if configured
     if _golden_recorder:
         try:
-            if hasattr(_golden_recorder, 'dir'):
+            if hasattr(_golden_recorder, "dir"):
                 # File-based recorder - check directory exists and is writable
                 golden_dir = _golden_recorder.dir
                 dir_exists = os.path.isdir(golden_dir)
@@ -134,6 +137,7 @@ async def readyz():
                 # Also try to create a temp file to verify actual write access
                 if dir_exists and dir_writable:
                     import tempfile
+
                     try:
                         with tempfile.NamedTemporaryFile(dir=golden_dir, delete=True) as tf:
                             tf.write(b"health_check")
@@ -175,6 +179,7 @@ async def readyz():
                 self.body = body
 
         import json
+
         if not ready:
             return MockResponse(503, json.dumps(response_data).encode())
         return MockResponse(200, json.dumps(response_data).encode())

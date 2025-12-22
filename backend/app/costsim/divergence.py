@@ -17,15 +17,16 @@ Reports can be generated:
 """
 
 from __future__ import annotations
+
 import logging
 import math
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 
 from app.costsim.config import get_config
-from app.costsim.models import DivergenceReport, ComparisonResult, ComparisonVerdict
-from app.costsim.provenance import get_provenance_logger, ProvenanceLog
+from app.costsim.models import DivergenceReport
+from app.costsim.provenance import ProvenanceLog, get_provenance_logger
 
 logger = logging.getLogger("nova.costsim.divergence")
 
@@ -183,9 +184,7 @@ class DivergenceAnalyzer:
 
         return samples
 
-    def _parse_provenance_log(
-        self, log: ProvenanceLog
-    ) -> Optional[DivergenceSample]:
+    def _parse_provenance_log(self, log: ProvenanceLog) -> Optional[DivergenceSample]:
         """Parse a provenance log into a divergence sample."""
         try:
             output = log.get_decompressed_output()
@@ -226,9 +225,7 @@ class DivergenceAnalyzer:
             logger.warning(f"Failed to parse log: {e}")
             return None
 
-    def _calculate_metrics(
-        self, samples: List[DivergenceSample]
-    ) -> Dict[str, Any]:
+    def _calculate_metrics(self, samples: List[DivergenceSample]) -> Dict[str, Any]:
         """Calculate divergence metrics from samples."""
         if not samples:
             return {
@@ -256,14 +253,10 @@ class DivergenceAnalyzer:
         kl_divergence = self._calculate_kl_divergence(v1_costs, v2_costs)
 
         # Outliers
-        outlier_count = sum(
-            1 for s in samples if s.drift_score > self.outlier_threshold
-        )
+        outlier_count = sum(1 for s in samples if s.drift_score > self.outlier_threshold)
 
         # Fail ratio (major drift samples)
-        major_drift_count = sum(
-            1 for s in samples if s.drift_score > self.major_drift_threshold
-        )
+        major_drift_count = sum(1 for s in samples if s.drift_score > self.major_drift_threshold)
         fail_ratio = major_drift_count / len(samples) if samples else 0.0
 
         # Matching rate
@@ -279,9 +272,7 @@ class DivergenceAnalyzer:
             "matching_rate": round(matching_rate, 4),
         }
 
-    def _calculate_kl_divergence(
-        self, p: List[int], q: List[int], bins: int = 10
-    ) -> float:
+    def _calculate_kl_divergence(self, p: List[int], q: List[int], bins: int = 10) -> float:
         """
         Calculate KL divergence between two distributions.
 

@@ -22,13 +22,12 @@ import json
 import argparse
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional
 
 
 def parse_pytest_json(filepath: str) -> dict:
     """Parse pytest-json-report output."""
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         data = json.load(f)
 
     tests = []
@@ -42,16 +41,18 @@ def parse_pytest_json(filepath: str) -> dict:
         module = parts[0] if parts else ""
         test_name = parts[-1] if len(parts) > 1 else nodeid
 
-        tests.append({
-            "name": test_name,
-            "nodeid": nodeid,
-            "module": module,
-            "outcome": outcome,
-            "duration_seconds": duration,
-            "call": test.get("call", {}),
-            "setup": test.get("setup", {}),
-            "teardown": test.get("teardown", {}),
-        })
+        tests.append(
+            {
+                "name": test_name,
+                "nodeid": nodeid,
+                "module": module,
+                "outcome": outcome,
+                "duration_seconds": duration,
+                "call": test.get("call", {}),
+                "setup": test.get("setup", {}),
+                "teardown": test.get("teardown", {}),
+            }
+        )
 
     summary = data.get("summary", {})
 
@@ -112,15 +113,17 @@ def parse_junit_xml(filepath: str) -> dict:
                 outcome = "passed"
                 message = ""
 
-            tests.append({
-                "name": name,
-                "nodeid": f"{classname}::{name}",
-                "module": classname,
-                "outcome": outcome,
-                "duration_seconds": time,
-                "message": message,
-                "suite": suite_name,
-            })
+            tests.append(
+                {
+                    "name": name,
+                    "nodeid": f"{classname}::{name}",
+                    "module": classname,
+                    "outcome": outcome,
+                    "duration_seconds": time,
+                    "message": message,
+                    "suite": suite_name,
+                }
+            )
 
     # Calculate summary
     passed = sum(1 for t in tests if t["outcome"] == "passed")
@@ -146,23 +149,25 @@ def parse_junit_xml(filepath: str) -> dict:
 
 def parse_aos_harness(filepath: str) -> dict:
     """Parse AOS custom E2E harness output."""
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         data = json.load(f)
 
     tests = []
     for scenario in data.get("scenarios", []):
         outcome = "passed" if scenario.get("success", False) else "failed"
 
-        tests.append({
-            "name": scenario.get("name", "unknown"),
-            "nodeid": scenario.get("id", scenario.get("name", "")),
-            "module": scenario.get("category", "e2e"),
-            "outcome": outcome,
-            "duration_seconds": scenario.get("duration_ms", 0) / 1000,
-            "parity_check": scenario.get("parity_check"),
-            "replay_hash": scenario.get("replay_hash"),
-            "errors": scenario.get("errors", []),
-        })
+        tests.append(
+            {
+                "name": scenario.get("name", "unknown"),
+                "nodeid": scenario.get("id", scenario.get("name", "")),
+                "module": scenario.get("category", "e2e"),
+                "outcome": outcome,
+                "duration_seconds": scenario.get("duration_ms", 0) / 1000,
+                "parity_check": scenario.get("parity_check"),
+                "replay_hash": scenario.get("replay_hash"),
+                "errors": scenario.get("errors", []),
+            }
+        )
 
     passed = sum(1 for t in tests if t["outcome"] == "passed")
     failed = sum(1 for t in tests if t["outcome"] == "failed")
@@ -189,10 +194,10 @@ def parse_aos_harness(filepath: str) -> dict:
 
 def detect_format(filepath: str) -> str:
     """Detect file format based on content."""
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         content = f.read(1000)  # Read first 1000 chars
 
-    if content.strip().startswith('{'):
+    if content.strip().startswith("{"):
         # JSON file
         try:
             data = json.loads(open(filepath).read())
@@ -202,7 +207,7 @@ def detect_format(filepath: str) -> str:
                 return "aos-harness"
         except json.JSONDecodeError:
             pass
-    elif content.strip().startswith('<?xml') or content.strip().startswith('<'):
+    elif content.strip().startswith("<?xml") or content.strip().startswith("<"):
         return "junit-xml"
 
     raise ValueError(f"Unknown file format: {filepath}")
@@ -247,7 +252,9 @@ def generate_summary(results: dict) -> dict:
         else:
             by_module[module]["skipped"] += 1
 
-    pass_rate = (summary["passed"] / summary["total"] * 100) if summary["total"] > 0 else 0
+    pass_rate = (
+        (summary["passed"] / summary["total"] * 100) if summary["total"] > 0 else 0
+    )
 
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -289,8 +296,8 @@ def format_markdown(summary: dict) -> str:
     s = summary["summary"]
     status_emoji = "✅" if s["failed"] == 0 else "❌"
     lines.append(f"## Summary {status_emoji}\n")
-    lines.append(f"| Metric | Value |")
-    lines.append(f"|--------|-------|")
+    lines.append("| Metric | Value |")
+    lines.append("|--------|-------|")
     lines.append(f"| Total | {s['total']} |")
     lines.append(f"| Passed | {s['passed']} |")
     lines.append(f"| Failed | {s['failed']} |")
@@ -301,8 +308,8 @@ def format_markdown(summary: dict) -> str:
     if summary.get("parity"):
         parity = summary["parity"]
         lines.append("## Parity Check\n")
-        lines.append(f"| Metric | Value |")
-        lines.append(f"|--------|-------|")
+        lines.append("| Metric | Value |")
+        lines.append("|--------|-------|")
         lines.append(f"| Total Replays | {parity.get('total_replays', 0)} |")
         lines.append(f"| Parity Failures | {parity.get('parity_failures', 0)} |")
         lines.append("")
@@ -317,26 +324,28 @@ def format_markdown(summary: dict) -> str:
                 msg = test["message"]
                 if isinstance(msg, list):
                     msg = "\n".join(msg)
-                lines.append(f"- **Error:**")
-                lines.append(f"```")
+                lines.append("- **Error:**")
+                lines.append("```")
                 lines.append(str(msg)[:500])  # Truncate long messages
-                lines.append(f"```")
+                lines.append("```")
             lines.append("")
 
     if summary["slowest_tests"]:
         lines.append("## Slowest Tests\n")
-        lines.append(f"| Test | Duration |")
-        lines.append(f"|------|----------|")
+        lines.append("| Test | Duration |")
+        lines.append("|------|----------|")
         for test in summary["slowest_tests"]:
             lines.append(f"| {test['name']} | {test['duration_seconds']:.2f}s |")
         lines.append("")
 
     if summary["by_module"]:
         lines.append("## Results by Module\n")
-        lines.append(f"| Module | Passed | Failed | Skipped |")
-        lines.append(f"|--------|--------|--------|---------|")
+        lines.append("| Module | Passed | Failed | Skipped |")
+        lines.append("|--------|--------|--------|---------|")
         for module, counts in summary["by_module"].items():
-            lines.append(f"| {module} | {counts['passed']} | {counts['failed']} | {counts['skipped']} |")
+            lines.append(
+                f"| {module} | {counts['passed']} | {counts['failed']} | {counts['skipped']} |"
+            )
         lines.append("")
 
     return "\n".join(lines)
@@ -350,7 +359,9 @@ def format_github_summary(summary: dict) -> str:
     lines = []
     lines.append(f"### E2E Test Results: {status.upper()}")
     lines.append("")
-    lines.append(f"**{s['passed']}/{s['total']}** tests passed ({s['pass_rate_percent']:.1f}%)")
+    lines.append(
+        f"**{s['passed']}/{s['total']}** tests passed ({s['pass_rate_percent']:.1f}%)"
+    )
     lines.append("")
 
     if s["failed"] > 0:
@@ -369,35 +380,26 @@ def main():
     parser = argparse.ArgumentParser(
         description="Parse E2E test results and generate summary reports"
     )
+    parser.add_argument("results_file", help="Path to test results file")
     parser.add_argument(
-        "results_file",
-        help="Path to test results file"
-    )
-    parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         choices=["pytest-json", "junit-xml", "aos-harness", "auto"],
         default="auto",
-        help="Input file format"
+        help="Input file format",
     )
-    parser.add_argument(
-        "--output", "-o",
-        help="Output file for summary"
-    )
+    parser.add_argument("--output", "-o", help="Output file for summary")
     parser.add_argument(
         "--output-format",
         choices=["json", "markdown", "text"],
         default="text",
-        help="Output format"
+        help="Output format",
     )
     parser.add_argument(
-        "--github-summary",
-        action="store_true",
-        help="Write GitHub Actions job summary"
+        "--github-summary", action="store_true", help="Write GitHub Actions job summary"
     )
     parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Exit with code 1 if any test failed"
+        "--strict", action="store_true", help="Exit with code 1 if any test failed"
     )
 
     args = parser.parse_args()
@@ -439,7 +441,7 @@ Duration:   {summary['duration_seconds']:.2f}s
 
     # Write output file
     if args.output:
-        with open(args.output, 'w') as f:
+        with open(args.output, "w") as f:
             if args.output_format == "json":
                 f.write(output)
             else:
@@ -450,7 +452,7 @@ Duration:   {summary['duration_seconds']:.2f}s
     if args.github_summary:
         github_summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
         if github_summary_file:
-            with open(github_summary_file, 'a') as f:
+            with open(github_summary_file, "a") as f:
                 f.write(format_github_summary(summary))
                 f.write("\n")
             print("GitHub summary written", file=sys.stderr)

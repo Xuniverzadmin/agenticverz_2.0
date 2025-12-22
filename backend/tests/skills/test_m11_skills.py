@@ -1,15 +1,14 @@
 # M11 Skills Unit Tests
 # Tests for kv_store, slack_send, webhook_send, voyage_embed
 
-import pytest
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone
 
+import pytest
 
 # ====================
 # KV Store Skill Tests
 # ====================
+
 
 class TestKVStoreSkill:
     """Tests for KVStoreSkill."""
@@ -18,16 +17,13 @@ class TestKVStoreSkill:
     def skill(self):
         """Create skill instance with stubbed mode."""
         from app.skills.kv_store import KVStoreSkill
+
         return KVStoreSkill(allow_external=False)
 
     @pytest.mark.asyncio
     async def test_stubbed_get(self, skill):
         """Test GET operation in stubbed mode."""
-        result = await skill.execute({
-            "operation": "get",
-            "key": "test_key",
-            "namespace": "test"
-        })
+        result = await skill.execute({"operation": "get", "key": "test_key", "namespace": "test"})
 
         assert result["skill"] == "kv_store"
         assert result["status"] == "stubbed"
@@ -35,12 +31,9 @@ class TestKVStoreSkill:
     @pytest.mark.asyncio
     async def test_stubbed_set(self, skill):
         """Test SET operation in stubbed mode."""
-        result = await skill.execute({
-            "operation": "set",
-            "key": "test_key",
-            "value": {"foo": "bar"},
-            "namespace": "test"
-        })
+        result = await skill.execute(
+            {"operation": "set", "key": "test_key", "value": {"foo": "bar"}, "namespace": "test"}
+        )
 
         assert result["skill"] == "kv_store"
         assert result["status"] == "stubbed"
@@ -71,11 +64,7 @@ class TestKVStoreSkill:
         skill = KVStoreSkill(allow_external=True)
         skill._client = mock_client
 
-        result = await skill.execute({
-            "operation": "get",
-            "key": "test_key",
-            "namespace": "test"
-        })
+        result = await skill.execute({"operation": "get", "key": "test_key", "namespace": "test"})
 
         assert result["status"] == "ok"
         assert result["value"] == {"data": "test"}
@@ -94,13 +83,9 @@ class TestKVStoreSkill:
         skill = KVStoreSkill(allow_external=True)
         skill._client = mock_client
 
-        result = await skill.execute({
-            "operation": "set",
-            "key": "test_key",
-            "value": {"foo": "bar"},
-            "namespace": "test",
-            "ttl_seconds": 3600
-        })
+        result = await skill.execute(
+            {"operation": "set", "key": "test_key", "value": {"foo": "bar"}, "namespace": "test", "ttl_seconds": 3600}
+        )
 
         assert result["status"] == "ok"
         assert result["value"] == {"foo": "bar"}
@@ -111,6 +96,7 @@ class TestKVStoreSkill:
 # Slack Send Skill Tests
 # ====================
 
+
 class TestSlackSendSkill:
     """Tests for SlackSendSkill."""
 
@@ -118,15 +104,13 @@ class TestSlackSendSkill:
     def skill(self):
         """Create skill instance with stubbed mode."""
         from app.skills.slack_send import SlackSendSkill
+
         return SlackSendSkill(allow_external=False)
 
     @pytest.mark.asyncio
     async def test_stubbed_send(self, skill):
         """Test send in stubbed mode."""
-        result = await skill.execute({
-            "text": "Hello, World!",
-            "channel": "#test"
-        })
+        result = await skill.execute({"text": "Hello, World!", "channel": "#test"})
 
         assert result["skill"] == "slack_send"
         assert result["result"]["status"] == "stubbed"
@@ -136,11 +120,10 @@ class TestSlackSendSkill:
     async def test_missing_webhook_url(self):
         """Test error when webhook URL not configured."""
         from app.skills.slack_send import SlackSendSkill
+
         skill = SlackSendSkill(allow_external=True, webhook_url="")
 
-        result = await skill.execute({
-            "text": "Hello!"
-        })
+        result = await skill.execute({"text": "Hello!"})
 
         assert result["result"]["status"] == "error"
         assert "configuration_error" in result["result"]["error"]
@@ -162,15 +145,9 @@ class TestSlackSendSkill:
         mock_client.__aexit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        skill = SlackSendSkill(
-            allow_external=True,
-            webhook_url="https://hooks.slack.com/test"
-        )
+        skill = SlackSendSkill(allow_external=True, webhook_url="https://hooks.slack.com/test")
 
-        result = await skill.execute({
-            "text": "Test message",
-            "channel": "#test"
-        })
+        result = await skill.execute({"text": "Test message", "channel": "#test"})
 
         assert result["result"]["status"] == "ok"
         assert result["result"]["webhook_response"] == "ok"
@@ -193,30 +170,22 @@ class TestSlackSendSkill:
         mock_client.__aexit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        skill = SlackSendSkill(
-            allow_external=True,
-            webhook_url="https://hooks.slack.com/test"
-        )
+        skill = SlackSendSkill(allow_external=True, webhook_url="https://hooks.slack.com/test")
 
         # First call - should execute
-        result1 = await skill.execute({
-            "text": "Test",
-            "idempotency_key": "test_123"
-        })
+        result1 = await skill.execute({"text": "Test", "idempotency_key": "test_123"})
         assert result1["result"]["status"] == "ok"
         assert result1["result"].get("from_cache") is not True
 
         # Second call with same key - should be from cache
-        result2 = await skill.execute({
-            "text": "Test",
-            "idempotency_key": "test_123"
-        })
+        result2 = await skill.execute({"text": "Test", "idempotency_key": "test_123"})
         assert result2["result"].get("from_cache") is True
 
 
 # ====================
 # Webhook Send Skill Tests
 # ====================
+
 
 class TestWebhookSendSkill:
     """Tests for WebhookSendSkill."""
@@ -225,15 +194,13 @@ class TestWebhookSendSkill:
     def skill(self):
         """Create skill instance with stubbed mode."""
         from app.skills.webhook_send import WebhookSendSkill
+
         return WebhookSendSkill(allow_external=False, signing_secret="test_secret")
 
     @pytest.mark.asyncio
     async def test_stubbed_send(self, skill):
         """Test webhook send in stubbed mode."""
-        result = await skill.execute({
-            "url": "https://example.com/webhook",
-            "payload": {"event": "test"}
-        })
+        result = await skill.execute({"url": "https://example.com/webhook", "payload": {"event": "test"}})
 
         assert result["skill"] == "webhook_send"
         assert result["result"]["status"] == "stubbed"
@@ -242,9 +209,7 @@ class TestWebhookSendSkill:
     @pytest.mark.asyncio
     async def test_missing_url(self, skill):
         """Test error when URL not provided."""
-        result = await skill.execute({
-            "payload": {"event": "test"}
-        })
+        result = await skill.execute({"payload": {"event": "test"}})
 
         assert result["result"]["status"] == "error"
         assert "validation_error" in result["result"]["error"]
@@ -295,16 +260,11 @@ class TestWebhookSendSkill:
         mock_client.__aexit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        skill = WebhookSendSkill(
-            allow_external=True,
-            signing_secret="test_secret"
-        )
+        skill = WebhookSendSkill(allow_external=True, signing_secret="test_secret")
 
-        result = await skill.execute({
-            "url": "https://example.com/webhook",
-            "payload": {"event": "test"},
-            "sign_payload": True
-        })
+        result = await skill.execute(
+            {"url": "https://example.com/webhook", "payload": {"event": "test"}, "sign_payload": True}
+        )
 
         assert result["result"]["status"] == "ok"
         assert result["result"]["status_code"] == 200
@@ -316,6 +276,7 @@ class TestWebhookSendSkill:
 # Voyage Embed Skill Tests
 # ====================
 
+
 class TestVoyageEmbedSkill:
     """Tests for VoyageEmbedSkill."""
 
@@ -323,15 +284,13 @@ class TestVoyageEmbedSkill:
     def skill(self):
         """Create skill instance with stubbed mode."""
         from app.skills.voyage_embed import VoyageEmbedSkill
+
         return VoyageEmbedSkill(allow_external=False)
 
     @pytest.mark.asyncio
     async def test_stubbed_embed(self, skill):
         """Test embedding generation in stubbed mode."""
-        result = await skill.execute({
-            "input": "Hello, world!",
-            "model": "voyage-3"
-        })
+        result = await skill.execute({"input": "Hello, world!", "model": "voyage-3"})
 
         assert result["skill"] == "voyage_embed"
         assert result["result"]["status"] == "stubbed"
@@ -341,10 +300,7 @@ class TestVoyageEmbedSkill:
     @pytest.mark.asyncio
     async def test_stubbed_batch_embed(self, skill):
         """Test batch embedding generation in stubbed mode."""
-        result = await skill.execute({
-            "input": ["Hello", "World", "Test"],
-            "model": "voyage-3-lite"
-        })
+        result = await skill.execute({"input": ["Hello", "World", "Test"], "model": "voyage-3-lite"})
 
         assert result["result"]["status"] == "stubbed"
         assert len(result["result"]["embeddings"]) == 3
@@ -353,15 +309,9 @@ class TestVoyageEmbedSkill:
     @pytest.mark.asyncio
     async def test_deterministic_stub_embeddings(self, skill):
         """Test that stub embeddings are deterministic."""
-        result1 = await skill.execute({
-            "input": "Test text",
-            "model": "voyage-3"
-        })
+        result1 = await skill.execute({"input": "Test text", "model": "voyage-3"})
 
-        result2 = await skill.execute({
-            "input": "Test text",
-            "model": "voyage-3"
-        })
+        result2 = await skill.execute({"input": "Test text", "model": "voyage-3"})
 
         # Same input should produce same stub embedding
         assert result1["result"]["embeddings"] == result2["result"]["embeddings"]
@@ -369,10 +319,7 @@ class TestVoyageEmbedSkill:
     @pytest.mark.asyncio
     async def test_empty_input_error(self, skill):
         """Test error on empty input."""
-        result = await skill.execute({
-            "input": "",
-            "model": "voyage-3"
-        })
+        result = await skill.execute({"input": "", "model": "voyage-3"})
 
         assert result["result"]["status"] == "error"
         assert "validation_error" in result["result"]["error"]
@@ -381,11 +328,10 @@ class TestVoyageEmbedSkill:
     async def test_missing_api_key(self):
         """Test error when API key not configured."""
         from app.skills.voyage_embed import VoyageEmbedSkill
+
         skill = VoyageEmbedSkill(allow_external=True, api_key="")
 
-        result = await skill.execute({
-            "input": "Test"
-        })
+        result = await skill.execute({"input": "Test"})
 
         assert result["result"]["status"] == "error"
         assert "configuration_error" in result["result"]["error"]
@@ -403,7 +349,7 @@ class TestVoyageEmbedSkill:
                 {"embedding": [0.1, 0.2, 0.3] * 341 + [0.1]}  # 1024 dims
             ],
             "model": "voyage-3",
-            "usage": {"total_tokens": 5}
+            "usage": {"total_tokens": 5},
         }
 
         mock_client = AsyncMock()
@@ -412,15 +358,9 @@ class TestVoyageEmbedSkill:
         mock_client.__aexit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        skill = VoyageEmbedSkill(
-            allow_external=True,
-            api_key="test_key"
-        )
+        skill = VoyageEmbedSkill(allow_external=True, api_key="test_key")
 
-        result = await skill.execute({
-            "input": "Test text",
-            "model": "voyage-3"
-        })
+        result = await skill.execute({"input": "Test text", "model": "voyage-3"})
 
         assert result["result"]["status"] == "ok"
         assert len(result["result"]["embeddings"]) == 1
@@ -432,12 +372,13 @@ class TestVoyageEmbedSkill:
 # Integration Tests
 # ====================
 
+
 class TestSkillRegistry:
     """Test skills are properly registered."""
 
     def test_m11_skills_registered(self):
         """Test all M11 skills are in the registry."""
-        from app.skills import load_all_skills, list_skills
+        from app.skills import list_skills, load_all_skills
 
         load_all_skills()
         skills = list_skills()
@@ -451,7 +392,7 @@ class TestSkillRegistry:
 
     def test_skill_manifest(self):
         """Test skill manifest generation."""
-        from app.skills import load_all_skills, get_skill_manifest
+        from app.skills import get_skill_manifest, load_all_skills
 
         load_all_skills()
         manifest = get_skill_manifest()
@@ -467,20 +408,16 @@ class TestSkillRegistry:
 # Input Schema Tests
 # ====================
 
+
 class TestInputSchemas:
     """Test input schema validation."""
 
     def test_kv_store_input_validation(self):
         """Test KVStoreInput validation."""
-        from app.schemas.skill import KVStoreInput, KVOperation
+        from app.schemas.skill import KVOperation, KVStoreInput
 
         # Valid input
-        input_data = KVStoreInput(
-            operation=KVOperation.SET,
-            key="test_key",
-            value={"foo": "bar"},
-            namespace="test"
-        )
+        input_data = KVStoreInput(operation=KVOperation.SET, key="test_key", value={"foo": "bar"}, namespace="test")
         assert input_data.operation == KVOperation.SET
         assert input_data.key == "test_key"
 
@@ -488,10 +425,7 @@ class TestInputSchemas:
         """Test SlackSendInput validation."""
         from app.schemas.skill import SlackSendInput
 
-        input_data = SlackSendInput(
-            text="Hello!",
-            channel="#test"
-        )
+        input_data = SlackSendInput(text="Hello!", channel="#test")
         assert input_data.text == "Hello!"
         assert input_data.channel == "#test"
 
@@ -499,10 +433,7 @@ class TestInputSchemas:
         """Test WebhookSendInput validation."""
         from app.schemas.skill import WebhookSendInput
 
-        input_data = WebhookSendInput(
-            url="https://example.com/webhook",
-            payload={"event": "test"}
-        )
+        input_data = WebhookSendInput(url="https://example.com/webhook", payload={"event": "test"})
         assert input_data.url == "https://example.com/webhook"
         assert input_data.sign_payload is True  # Default
 
@@ -510,9 +441,6 @@ class TestInputSchemas:
         """Test VoyageEmbedInput validation."""
         from app.schemas.skill import VoyageEmbedInput, VoyageModel
 
-        input_data = VoyageEmbedInput(
-            input="Test text",
-            model=VoyageModel.VOYAGE_3
-        )
+        input_data = VoyageEmbedInput(input="Test text", model=VoyageModel.VOYAGE_3)
         assert input_data.input == "Test text"
         assert input_data.model == VoyageModel.VOYAGE_3

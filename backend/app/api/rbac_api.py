@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from ..auth.rbac_engine import get_rbac_engine, check_permission
+from ..auth.rbac_engine import check_permission, get_rbac_engine
 from ..db import get_session as get_db_session
 
 logger = logging.getLogger("nova.api.rbac")
@@ -30,8 +30,10 @@ router = APIRouter(prefix="/api/v1/rbac", tags=["rbac"])
 # Response Schemas
 # =============================================================================
 
+
 class PolicyInfoResponse(BaseModel):
     """Current policy information."""
+
     version: str
     hash: str
     loaded_at: str
@@ -43,6 +45,7 @@ class PolicyInfoResponse(BaseModel):
 
 class ReloadResponse(BaseModel):
     """Policy reload response."""
+
     success: bool
     message: str
     previous_hash: str
@@ -52,6 +55,7 @@ class ReloadResponse(BaseModel):
 
 class AuditEntry(BaseModel):
     """Single audit log entry."""
+
     id: int
     ts: datetime
     subject: str
@@ -68,6 +72,7 @@ class AuditEntry(BaseModel):
 
 class AuditResponse(BaseModel):
     """Audit log query response."""
+
     entries: List[AuditEntry]
     total: int
     limit: int
@@ -77,6 +82,7 @@ class AuditResponse(BaseModel):
 # =============================================================================
 # Endpoints
 # =============================================================================
+
 
 @router.get("/info", response_model=PolicyInfoResponse)
 async def get_policy_info(request: Request):
@@ -104,7 +110,7 @@ async def get_policy_info(request: Request):
         roles=info.get("roles", []),
         resources=info.get("resources", []),
         enforce_mode=os.getenv("RBAC_ENFORCE", "false").lower() == "true",
-        fail_open=os.getenv("RBAC_FAIL_OPEN", "false").lower() == "true"
+        fail_open=os.getenv("RBAC_FAIL_OPEN", "false").lower() == "true",
     )
 
 
@@ -142,22 +148,19 @@ async def reload_policies(request: Request):
             "success": success,
             "previous_hash": previous_hash,
             "new_hash": new_hash,
-            "by": ",".join(decision.roles) if decision.roles else "unknown"
-        }
+            "by": ",".join(decision.roles) if decision.roles else "unknown",
+        },
     )
 
     if not success:
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "reload_failed", "message": message}
-        )
+        raise HTTPException(status_code=500, detail={"error": "reload_failed", "message": message})
 
     return ReloadResponse(
         success=success,
         message=message,
         previous_hash=previous_hash,
         new_hash=new_hash,
-        timestamp=datetime.now(timezone.utc).isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -180,16 +183,8 @@ async def get_permission_matrix(request: Request) -> Dict[str, Any]:
     # Access internal policy (not ideal but needed for introspection)
     with engine._policy_lock:
         if engine._policy:
-            return {
-                "version": engine._policy.version,
-                "hash": engine._policy.hash,
-                "matrix": engine._policy.matrix
-            }
-        return {
-            "version": "default",
-            "hash": "default",
-            "matrix": engine._default_matrix
-        }
+            return {"version": engine._policy.version, "hash": engine._policy.hash, "matrix": engine._policy.matrix}
+        return {"version": "default", "hash": "default", "matrix": engine._default_matrix}
 
 
 @router.get("/audit", response_model=AuditResponse)
@@ -203,7 +198,7 @@ async def query_audit_logs(
     since: Optional[datetime] = Query(default=None, description="Filter since timestamp"),
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
-    db=Depends(get_db_session)
+    db=Depends(get_db_session),
 ):
     """
     Query RBAC audit logs.
@@ -249,47 +244,43 @@ async def query_audit_logs(
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
         # Get total count
-        count_result = db.execute(
-            text(f"SELECT COUNT(*) FROM system.rbac_audit WHERE {where_sql}"),
-            params
-        )
+        count_result = db.execute(text(f"SELECT COUNT(*) FROM system.rbac_audit WHERE {where_sql}"), params)
         total = count_result.scalar() or 0
 
         # Get entries
         result = db.execute(
-            text(f"""
+            text(
+                f"""
                 SELECT id, ts, subject, resource, action, allowed, reason, roles, path, method, tenant_id, latency_ms
                 FROM system.rbac_audit
                 WHERE {where_sql}
                 ORDER BY ts DESC
                 LIMIT :limit OFFSET :offset
-            """),
-            params
+            """
+            ),
+            params,
         )
 
         entries = []
         for row in result:
-            entries.append(AuditEntry(
-                id=row.id,
-                ts=row.ts,
-                subject=row.subject,
-                resource=row.resource,
-                action=row.action,
-                allowed=row.allowed,
-                reason=row.reason,
-                roles=row.roles,
-                path=row.path,
-                method=row.method,
-                tenant_id=row.tenant_id,
-                latency_ms=row.latency_ms
-            ))
+            entries.append(
+                AuditEntry(
+                    id=row.id,
+                    ts=row.ts,
+                    subject=row.subject,
+                    resource=row.resource,
+                    action=row.action,
+                    allowed=row.allowed,
+                    reason=row.reason,
+                    roles=row.roles,
+                    path=row.path,
+                    method=row.method,
+                    tenant_id=row.tenant_id,
+                    latency_ms=row.latency_ms,
+                )
+            )
 
-        return AuditResponse(
-            entries=entries,
-            total=total,
-            limit=limit,
-            offset=offset
-        )
+        return AuditResponse(entries=entries, total=total, limit=limit, offset=offset)
 
     except Exception as e:
         logger.error(f"Error querying audit logs: {e}")
@@ -298,9 +289,7 @@ async def query_audit_logs(
 
 @router.post("/audit/cleanup")
 async def cleanup_audit_logs(
-    request: Request,
-    retention_days: int = Query(default=90, ge=1, le=365),
-    db=Depends(get_db_session)
+    request: Request, retention_days: int = Query(default=90, ge=1, le=365), db=Depends(get_db_session)
 ):
     """
     Clean up old audit logs.
@@ -315,10 +304,7 @@ async def cleanup_audit_logs(
         raise HTTPException(status_code=403, detail=decision.reason)
 
     try:
-        result = db.execute(
-            text("SELECT system.cleanup_rbac_audit(:days)"),
-            {"days": retention_days}
-        )
+        result = db.execute(text("SELECT system.cleanup_rbac_audit(:days)"), {"days": retention_days})
         db.commit()
         deleted_count = result.scalar() or 0
 
@@ -327,14 +313,14 @@ async def cleanup_audit_logs(
             extra={
                 "deleted_count": deleted_count,
                 "retention_days": retention_days,
-                "by": ",".join(decision.roles) if decision.roles else "unknown"
-            }
+                "by": ",".join(decision.roles) if decision.roles else "unknown",
+            },
         )
 
         return {
             "deleted_count": deleted_count,
             "retention_days": retention_days,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:

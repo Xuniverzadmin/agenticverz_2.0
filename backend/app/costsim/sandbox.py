@@ -11,24 +11,23 @@ the source of truth. V2 runs in shadow mode for validation.
 """
 
 from __future__ import annotations
-import logging
-import asyncio
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass
 
-from app.costsim.config import is_v2_sandbox_enabled, get_config
-from app.costsim.v2_adapter import CostSimV2Adapter
-from app.costsim.models import (
-    V2SimulationResult,
-    ComparisonResult,
-    ComparisonVerdict,
-)
+import logging
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 # Use async circuit breaker for non-blocking DB operations
 from app.costsim.circuit_breaker_async import (
     is_v2_disabled,
     report_drift,
-    get_async_circuit_breaker,
 )
+from app.costsim.config import is_v2_sandbox_enabled
+from app.costsim.models import (
+    ComparisonResult,
+    ComparisonVerdict,
+    V2SimulationResult,
+)
+from app.costsim.v2_adapter import CostSimV2Adapter
 from app.worker.simulate import CostSimulator, SimulationResult
 
 logger = logging.getLogger("nova.costsim.sandbox")
@@ -121,9 +120,7 @@ class CostSimSandbox:
             )
         return self._v2_adapter
 
-    async def simulate(
-        self, plan: List[Dict[str, Any]]
-    ) -> SandboxResult:
+    async def simulate(self, plan: List[Dict[str, Any]]) -> SandboxResult:
         """
         Run simulation through sandbox.
 
@@ -203,10 +200,7 @@ class CostSimSandbox:
         drift = comparison.drift_score
 
         if comparison.verdict == ComparisonVerdict.MATCH:
-            logger.debug(
-                f"V2 sandbox MATCH: drift={drift:.4f}, "
-                f"cost_delta={comparison.cost_delta_cents}"
-            )
+            logger.debug(f"V2 sandbox MATCH: drift={drift:.4f}, " f"cost_delta={comparison.cost_delta_cents}")
         elif comparison.verdict == ComparisonVerdict.MINOR_DRIFT:
             logger.info(
                 f"V2 sandbox MINOR_DRIFT: drift={drift:.4f}, "

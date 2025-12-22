@@ -28,7 +28,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple, AsyncIterator
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("nova.tasks.recovery_queue_stream")
 
@@ -65,6 +65,7 @@ async def get_redis():
     if _redis_client is None:
         try:
             import redis.asyncio as aioredis
+
             _redis_client = aioredis.from_url(
                 REDIS_URL,
                 encoding="utf-8",
@@ -74,6 +75,7 @@ async def get_redis():
         except ImportError:
             try:
                 import aioredis
+
                 _redis_client = await aioredis.from_url(
                     REDIS_URL,
                     encoding="utf-8",
@@ -101,7 +103,7 @@ async def ensure_consumer_group() -> bool:
                 STREAM_KEY,
                 CONSUMER_GROUP,
                 id="$",  # Start from new messages
-                mkstream=True
+                mkstream=True,
             )
             logger.info(f"Created consumer group {CONSUMER_GROUP} for stream {STREAM_KEY}")
         except Exception as e:
@@ -483,9 +485,7 @@ async def move_to_dead_letter(
         try:
             ack_result = await redis.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
             if ack_result == 0:
-                logger.warning(
-                    f"XACK returned 0 for {msg_id} - message may already be acknowledged"
-                )
+                logger.warning(f"XACK returned 0 for {msg_id} - message may already be acknowledged")
         except Exception as ack_error:
             # XADD succeeded, XACK failed - log but return True
             # Message is safely in DL, pending entry will be cleaned up eventually
@@ -494,10 +494,7 @@ async def move_to_dead_letter(
                 f"Message is in dead-letter as {dl_msg_id}, pending entry remains."
             )
 
-        logger.warning(
-            f"Moved message {msg_id} to dead-letter stream: {reason}, "
-            f"dl_msg_id={dl_msg_id}"
-        )
+        logger.warning(f"Moved message {msg_id} to dead-letter stream: {reason}, " f"dl_msg_id={dl_msg_id}")
         return True
 
     except Exception as e:
@@ -585,8 +582,7 @@ async def process_stalled_with_dead_letter(
             if idle_time < required_idle_ms:
                 backoff_deferred += 1
                 logger.debug(
-                    f"Message {msg_id} deferred by backoff: "
-                    f"idle={idle_time}ms < required={required_idle_ms}ms"
+                    f"Message {msg_id} deferred by backoff: " f"idle={idle_time}ms < required={required_idle_ms}ms"
                 )
                 continue
 
@@ -718,7 +714,8 @@ async def archive_dead_letter_to_db(
         engine = create_engine(db_url, pool_pre_ping=True)
         with Session(engine) as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT m10_recovery.archive_dead_letter(
                         :dl_msg_id,
                         :original_msg_id,
@@ -730,7 +727,8 @@ async def archive_dead_letter_to_db(
                         :dead_lettered_at::timestamptz,
                         'stream_trim'
                     )
-                """),
+                """
+                ),
                 {
                     "dl_msg_id": dl_msg_id,
                     "original_msg_id": original_msg_id,
@@ -739,7 +737,7 @@ async def archive_dead_letter_to_db(
                     "payload": payload,
                     "reason": reason,
                     "dead_lettered_at": dead_lettered_at,
-                }
+                },
             )
             archive_id = result.scalar()
             session.commit()
@@ -807,10 +805,7 @@ async def archive_and_trim_dead_letter(
             # XDEL to remove archived entries
             deleted = await redis.xdel(DEAD_LETTER_STREAM, *archived_ids)
             results["trimmed"] = deleted
-            logger.info(
-                f"Archived {results['archived']} DL messages, "
-                f"trimmed {results['trimmed']} from stream"
-            )
+            logger.info(f"Archived {results['archived']} DL messages, " f"trimmed {results['trimmed']} from stream")
 
         return results
 
@@ -926,10 +921,7 @@ async def gc_reclaim_attempts(
         if to_clean:
             await redis.hdel(RECLAIM_ATTEMPTS_KEY, *to_clean)
             results["cleaned"] = len(to_clean)
-            logger.info(
-                f"GC reclaim attempts: checked={results['checked']}, "
-                f"cleaned={results['cleaned']}"
-            )
+            logger.info(f"GC reclaim attempts: checked={results['checked']}, " f"cleaned={results['cleaned']}")
 
         return results
 
@@ -1023,11 +1015,13 @@ async def replay_dead_letter(
                     engine = create_engine(db_url, pool_pre_ping=True)
                     with Session(engine) as session:
                         result = session.execute(
-                            text("""
+                            text(
+                                """
                                 SELECT id FROM m10_recovery.replay_log
                                 WHERE original_msg_id = :original_msg_id
-                            """),
-                            {"original_msg_id": original_msg_id}
+                            """
+                            ),
+                            {"original_msg_id": original_msg_id},
                         )
                         if result.fetchone():
                             logger.info(
@@ -1061,21 +1055,25 @@ async def replay_dead_letter(
                     # Check if candidate was already executed
                     if candidate_id:
                         result = session.execute(
-                            text("""
+                            text(
+                                """
                                 SELECT id FROM recovery_candidates
                                 WHERE id = :id
                                   AND executed_at IS NOT NULL
-                            """),
-                            {"id": int(candidate_id)}
+                            """
+                            ),
+                            {"id": int(candidate_id)},
                         )
                     else:
                         result = session.execute(
-                            text("""
+                            text(
+                                """
                                 SELECT id FROM recovery_candidates
                                 WHERE idempotency_key = CAST(:key AS uuid)
                                   AND executed_at IS NOT NULL
-                            """),
-                            {"key": idempotency_key}
+                            """
+                            ),
+                            {"key": idempotency_key},
                         )
 
                     if result.fetchone():
@@ -1085,9 +1083,7 @@ async def replay_dead_letter(
                         )
                         # Record in replay_log to prevent future attempts
                         if use_db_idempotency:
-                            await _record_replay_to_db(
-                                original_msg_id, msg_id, candidate_id, idempotency_key, None
-                            )
+                            await _record_replay_to_db(original_msg_id, msg_id, candidate_id, idempotency_key, None)
                         await redis.sadd(REPLAY_TRACKING_KEY, msg_id)
                         await redis.expire(REPLAY_TRACKING_KEY, REPLAY_TRACKING_TTL)
                         return None
@@ -1113,16 +1109,14 @@ async def replay_dead_letter(
         # =================================================================
         if use_db_idempotency and db_url:
             already_replayed = await _record_replay_to_db(
-                original_msg_id, msg_id,
+                original_msg_id,
+                msg_id,
                 int(candidate_id) if candidate_id else None,
                 idempotency_key,
-                None  # new_msg_id not known yet
+                None,  # new_msg_id not known yet
             )
             if already_replayed:
-                logger.info(
-                    f"Dead-letter {msg_id} replay recorded by another process "
-                    f"(race condition handled)"
-                )
+                logger.info(f"Dead-letter {msg_id} replay recorded by another process " f"(race condition handled)")
                 return None
 
         # =================================================================
@@ -1151,6 +1145,7 @@ async def replay_dead_letter(
         # Update metrics
         try:
             from app.metrics import recovery_dead_letter_replayed_total
+
             recovery_dead_letter_replayed_total.inc()
         except Exception:
             pass
@@ -1187,7 +1182,8 @@ async def _record_replay_to_db(
         engine = create_engine(db_url, pool_pre_ping=True)
         with Session(engine) as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT already_replayed, replay_id
                     FROM m10_recovery.record_replay(
                         :original_msg_id,
@@ -1197,7 +1193,8 @@ async def _record_replay_to_db(
                         :new_msg_id,
                         :replayed_by
                     )
-                """),
+                """
+                ),
                 {
                     "original_msg_id": original_msg_id,
                     "dl_msg_id": dl_msg_id,
@@ -1205,7 +1202,7 @@ async def _record_replay_to_db(
                     "idempotency_key": idempotency_key,
                     "new_msg_id": new_msg_id,
                     "replayed_by": CONSUMER_NAME,
-                }
+                },
             )
             row = result.fetchone()
             session.commit()

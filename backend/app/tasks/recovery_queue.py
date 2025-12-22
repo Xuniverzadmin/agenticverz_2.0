@@ -43,6 +43,7 @@ async def get_redis():
     if _redis_client is None:
         try:
             import redis.asyncio as aioredis
+
             _redis_client = aioredis.from_url(
                 REDIS_URL,
                 encoding="utf-8",
@@ -53,6 +54,7 @@ async def get_redis():
             # Fallback to aioredis if redis.asyncio not available
             try:
                 import aioredis
+
                 _redis_client = await aioredis.from_url(
                     REDIS_URL,
                     encoding="utf-8",

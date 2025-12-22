@@ -3,9 +3,10 @@ NATS adapter stub. Does not actually require a NATS server by default.
 If NATS is configured in env (NATS_URL), this adapter will attempt a connect.
 In many test/dev setups this remains a logging stub.
 """
+import json
 import logging
 import os
-import json
+
 from .publisher import BasePublisher
 
 logger = logging.getLogger("nova.events.nats")
@@ -25,7 +26,9 @@ class NatsAdapter(BasePublisher):
             # lazy import to avoid hard dependency
             try:
                 import asyncio
+
                 from nats.aio.client import Client as NATS
+
                 self.loop = asyncio.new_event_loop()
                 self.nc = NATS()
                 self.loop.run_until_complete(self.nc.connect(servers=[self.nats_url]))

@@ -8,33 +8,22 @@ with registry-backed skill resolution.
 """
 
 from __future__ import annotations
-import asyncio
-import uuid
-import time
-from typing import Any, Dict, Optional, Mapping, List
-from pathlib import Path
 
+import asyncio
 import sys
+import time
+import uuid
+from pathlib import Path
+from typing import Any, Dict, List, Mapping, Optional
+
 _app_path = str(Path(__file__).parent.parent.parent)
 if _app_path not in sys.path:
     sys.path.insert(0, _app_path)
 
-from .core import (
-    Runtime,
-    StructuredOutcome,
-    SkillDescriptor,
-    ResourceContract,
-    ErrorCategory,
-    SkillHandler
-)
-
 # Import registry_v2 directly to avoid triggering skills/__init__.py with pydantic
-from skills.registry_v2 import (
-    SkillRegistry,
-    get_global_registry,
-    get_skill_handler,
-    get_skill_descriptor
-)
+from skills.registry_v2 import SkillRegistry, get_global_registry
+
+from .core import ErrorCategory, Runtime, SkillDescriptor, SkillHandler, StructuredOutcome
 
 
 class IntegratedRuntime(Runtime):
@@ -67,11 +56,7 @@ class IntegratedRuntime(Runtime):
             return self._registry
         return get_global_registry()
 
-    def register_skill(
-        self,
-        descriptor: SkillDescriptor,
-        handler: SkillHandler
-    ) -> None:
+    def register_skill(self, descriptor: SkillDescriptor, handler: SkillHandler) -> None:
         """
         Register a skill with both runtime and registry.
 
@@ -89,11 +74,7 @@ class IntegratedRuntime(Runtime):
             pass
 
     async def execute(
-        self,
-        skill_id: str,
-        inputs: Mapping[str, Any],
-        timeout_s: Optional[float] = None,
-        version: Optional[str] = None
+        self, skill_id: str, inputs: Mapping[str, Any], timeout_s: Optional[float] = None, version: Optional[str] = None
     ) -> StructuredOutcome:
         """
         Execute a skill with registry-backed resolution.
@@ -114,7 +95,7 @@ class IntegratedRuntime(Runtime):
             "skill_id": skill_id,
             "started_at": start_ts,
             "inputs_hash": hash(frozenset(inputs.items())) if inputs else 0,
-            "version_requested": version
+            "version_requested": version,
         }
 
         # Try registry first
@@ -136,7 +117,7 @@ class IntegratedRuntime(Runtime):
                     message=f"Skill not found: {skill_id}",
                     category=ErrorCategory.PERMANENT,
                     retryable=False,
-                    meta=meta
+                    meta=meta,
                 )
                 self._record_execution(skill_id, inputs, outcome)
                 return outcome
@@ -160,7 +141,7 @@ class IntegratedRuntime(Runtime):
                 message=f"Budget exceeded: {self._budget_spent_cents}/{self._budget_total_cents} cents",
                 category=ErrorCategory.RESOURCE,
                 retryable=False,
-                meta=meta
+                meta=meta,
             )
             self._record_execution(skill_id, inputs, outcome)
             return outcome
@@ -191,7 +172,7 @@ class IntegratedRuntime(Runtime):
                 message=f"Execution timed out after {timeout_s}s",
                 category=ErrorCategory.TRANSIENT,
                 retryable=True,
-                meta=meta
+                meta=meta,
             )
             self._record_execution(skill_id, inputs, outcome)
             return outcome
@@ -205,7 +186,7 @@ class IntegratedRuntime(Runtime):
                 message=str(exc),
                 category=ErrorCategory.PERMANENT,
                 retryable=False,
-                meta={**meta, "exception_type": type(exc).__name__}
+                meta={**meta, "exception_type": type(exc).__name__},
             )
             self._record_execution(skill_id, inputs, outcome)
             return outcome
@@ -229,11 +210,7 @@ class IntegratedRuntime(Runtime):
         # Fallback to internal
         return self._skill_descriptors.get(skill_id)
 
-    async def query(
-        self,
-        query_type: str,
-        **params: Any
-    ) -> Dict[str, Any]:
+    async def query(self, query_type: str, **params: Any) -> Dict[str, Any]:
         """
         Query interface with registry integration.
 
@@ -248,14 +225,12 @@ class IntegratedRuntime(Runtime):
                 "skills": all_skills,
                 "count": len(all_skills),
                 "from_registry": len(registry_skills),
-                "from_internal": len(internal_skills)
+                "from_internal": len(internal_skills),
             }
 
         elif query_type == "skill_manifest":
             # Get full manifest from registry
-            return {
-                "manifest": self.registry.get_manifest()
-            }
+            return {"manifest": self.registry.get_manifest()}
 
         # Delegate other queries to base
         return await super().query(query_type, **params)
@@ -268,8 +243,7 @@ class IntegratedRuntime(Runtime):
 
 
 def create_integrated_runtime(
-    registry: Optional[SkillRegistry] = None,
-    register_stubs: bool = True
+    registry: Optional[SkillRegistry] = None, register_stubs: bool = True
 ) -> IntegratedRuntime:
     """
     Factory function to create an integrated runtime with optional stubs.
@@ -287,11 +261,11 @@ def create_integrated_runtime(
         # Register default stubs
         from skills.stubs import (
             HTTP_CALL_STUB_DESCRIPTOR,
-            http_call_stub_handler,
-            LLM_INVOKE_STUB_DESCRIPTOR,
-            llm_invoke_stub_handler,
             JSON_TRANSFORM_STUB_DESCRIPTOR,
-            json_transform_stub_handler
+            LLM_INVOKE_STUB_DESCRIPTOR,
+            http_call_stub_handler,
+            json_transform_stub_handler,
+            llm_invoke_stub_handler,
         )
 
         runtime.register_skill(HTTP_CALL_STUB_DESCRIPTOR, http_call_stub_handler)

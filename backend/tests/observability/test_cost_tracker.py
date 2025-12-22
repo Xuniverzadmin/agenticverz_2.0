@@ -3,10 +3,10 @@
 Tests for Cost Tracking and Quota Management
 """
 
-import pytest
 import sys
 from pathlib import Path
-from datetime import datetime, timezone
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -14,10 +14,8 @@ if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
 from app.observability.cost_tracker import (
-    CostTracker,
     CostQuota,
-    CostRecord,
-    CostAlert,
+    CostTracker,
 )
 
 
@@ -35,7 +33,7 @@ class TestCostTracking:
             cost_cents=5.0,
             input_tokens=100,
             output_tokens=50,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
 
         # Small cost shouldn't trigger alerts
@@ -52,7 +50,7 @@ class TestCostTracking:
             cost_cents=10.0,
             input_tokens=100,
             output_tokens=50,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
         tracker.record_cost(
             tenant_id="tenant-1",
@@ -61,7 +59,7 @@ class TestCostTracking:
             cost_cents=15.0,
             input_tokens=200,
             output_tokens=100,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
 
         spend = tracker.get_spend("tenant-1", "daily")
@@ -78,7 +76,7 @@ class TestCostTracking:
             cost_cents=7.5,
             input_tokens=100,
             output_tokens=50,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
 
         spend = tracker.get_spend("tenant-1", "hourly")
@@ -100,7 +98,7 @@ class TestCostQuotas:
             cost_cents=75.0,  # Exceeds 50c limit
             input_tokens=1000,
             output_tokens=500,
-            model="claude-opus"
+            model="claude-opus",
         )
 
         assert len(alerts) >= 1
@@ -110,10 +108,7 @@ class TestCostQuotas:
 
     def test_hourly_budget_warning(self):
         """Approaching hourly budget triggers warning."""
-        quota = CostQuota(
-            hourly_limit_cents=100,
-            warn_threshold_percent=0.8
-        )
+        quota = CostQuota(hourly_limit_cents=100, warn_threshold_percent=0.8)
         tracker = CostTracker(quota)
 
         # Spend 85% of hourly budget
@@ -124,7 +119,7 @@ class TestCostQuotas:
             cost_cents=85.0,
             input_tokens=1000,
             output_tokens=500,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
 
         warn_alerts = [a for a in alerts if a.level == "warn" and a.period == "hourly"]
@@ -143,7 +138,7 @@ class TestCostQuotas:
             cost_cents=60.0,
             input_tokens=1000,
             output_tokens=500,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
 
         # Second request pushes over limit
@@ -154,7 +149,7 @@ class TestCostQuotas:
             cost_cents=50.0,
             input_tokens=1000,
             output_tokens=500,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
 
         exceeded = [a for a in alerts if a.level == "exceeded" and a.period == "daily"]
@@ -174,7 +169,7 @@ class TestCostQuotas:
             cost_cents=150.0,
             input_tokens=1000,
             output_tokens=500,
-            model="claude-sonnet-4-20250514"
+            model="claude-sonnet-4-20250514",
         )
 
         assert tracker.is_budget_exceeded("tenant-1") is True

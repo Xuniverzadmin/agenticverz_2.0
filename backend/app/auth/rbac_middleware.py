@@ -49,20 +49,17 @@ JWT_VERIFY_SIGNATURE = os.getenv("JWT_VERIFY_SIGNATURE", "false").lower() == "tr
 
 # Prometheus metrics
 RBAC_DECISIONS = Counter(
-    "rbac_decisions_total",
-    "RBAC authorization decisions",
-    ["resource", "action", "decision", "reason"]
+    "rbac_decisions_total", "RBAC authorization decisions", ["resource", "action", "decision", "reason"]
 )
 RBAC_LATENCY = Histogram(
-    "rbac_latency_seconds",
-    "RBAC decision latency",
-    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1]
+    "rbac_latency_seconds", "RBAC decision latency", buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1]
 )
 
 
 # ============================================================================
 # Policy Objects
 # ============================================================================
+
 
 @dataclass
 class PolicyObject:
@@ -74,6 +71,7 @@ class PolicyObject:
         action: Action type (e.g., "read", "write", "delete", "admin")
         attrs: Optional additional attributes for context-aware decisions
     """
+
     resource: str
     action: str
     attrs: Dict[str, Any] = field(default_factory=dict)
@@ -90,6 +88,7 @@ class Decision:
         roles: Roles that contributed to the decision
         policy: The policy that was evaluated
     """
+
     allowed: bool
     reason: Optional[str] = None
     roles: List[str] = field(default_factory=list)
@@ -140,6 +139,7 @@ RBAC_MATRIX: Dict[str, Dict[str, List[str]]] = {
 # Path to Policy Mapping
 # ============================================================================
 
+
 def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
     """
     Map request path and method to a PolicyObject.
@@ -189,6 +189,7 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
 # Role Extraction
 # ============================================================================
 
+
 def extract_roles_from_request(request: Request) -> List[str]:
     """
     Extract roles from request headers.
@@ -201,10 +202,7 @@ def extract_roles_from_request(request: Request) -> List[str]:
     Returns empty list if no valid credentials.
     """
     # Check machine token
-    machine_token = (
-        request.headers.get("X-Machine-Token") or
-        request.headers.get("Authorization-Machine")
-    )
+    machine_token = request.headers.get("X-Machine-Token") or request.headers.get("Authorization-Machine")
     if machine_token and MACHINE_SECRET_TOKEN and machine_token == MACHINE_SECRET_TOKEN:
         logger.debug("Machine token authenticated")
         return ["machine"]
@@ -258,6 +256,7 @@ def extract_roles_from_request(request: Request) -> List[str]:
 # Enforcement
 # ============================================================================
 
+
 def enforce(policy: PolicyObject, request: Request) -> Decision:
     """
     Evaluate a policy against the request.
@@ -272,12 +271,7 @@ def enforce(policy: PolicyObject, request: Request) -> Decision:
     roles = extract_roles_from_request(request)
 
     if not roles:
-        return Decision(
-            allowed=False,
-            reason="no-credentials",
-            roles=[],
-            policy=policy
-        )
+        return Decision(allowed=False, reason="no-credentials", roles=[], policy=policy)
 
     # Check each role against the RBAC matrix
     for role in roles:
@@ -285,24 +279,15 @@ def enforce(policy: PolicyObject, request: Request) -> Decision:
         allowed_actions = role_perms.get(policy.resource, [])
 
         if policy.action in allowed_actions:
-            return Decision(
-                allowed=True,
-                reason=f"role:{role}",
-                roles=roles,
-                policy=policy
-            )
+            return Decision(allowed=True, reason=f"role:{role}", roles=roles, policy=policy)
 
-    return Decision(
-        allowed=False,
-        reason="insufficient-permissions",
-        roles=roles,
-        policy=policy
-    )
+    return Decision(allowed=False, reason="insufficient-permissions", roles=roles, policy=policy)
 
 
 # ============================================================================
 # Middleware
 # ============================================================================
+
 
 class RBACMiddleware(BaseHTTPMiddleware):
     """
@@ -341,7 +326,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
             resource=policy.resource,
             action=policy.action,
             decision="allowed" if decision.allowed else "denied",
-            reason=decision.reason or "unknown"
+            reason=decision.reason or "unknown",
         ).inc()
         RBAC_LATENCY.observe(latency)
 
@@ -355,7 +340,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
                     "action": policy.action,
                     "reason": decision.reason,
                     "roles": decision.roles,
-                }
+                },
             )
             return JSONResponse(
                 status_code=403,
@@ -364,7 +349,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
                     "reason": decision.reason,
                     "resource": policy.resource,
                     "action": policy.action,
-                }
+                },
             )
 
         logger.debug(
@@ -376,7 +361,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
                 "action": policy.action,
                 "reason": decision.reason,
                 "roles": decision.roles,
-            }
+            },
         )
 
         return await call_next(request)
@@ -386,12 +371,8 @@ class RBACMiddleware(BaseHTTPMiddleware):
 # Utility Functions
 # ============================================================================
 
-def check_permission(
-    resource: str,
-    action: str,
-    request: Request,
-    attrs: Optional[Dict[str, Any]] = None
-) -> Decision:
+
+def check_permission(resource: str, action: str, request: Request, attrs: Optional[Dict[str, Any]] = None) -> Decision:
     """
     Programmatic permission check (for use in route handlers).
 
@@ -413,15 +394,15 @@ def require_permission(resource: str, action: str):
         async def admin_endpoint(request: Request):
             ...
     """
+
     def decorator(func):
         async def wrapper(request: Request, *args, **kwargs):
             if RBAC_ENFORCE:
                 decision = check_permission(resource, action, request)
                 if not decision.allowed:
-                    return JSONResponse(
-                        status_code=403,
-                        content={"error": "forbidden", "reason": decision.reason}
-                    )
+                    return JSONResponse(status_code=403, content={"error": "forbidden", "reason": decision.reason})
             return await func(request, *args, **kwargs)
+
         return wrapper
+
     return decorator

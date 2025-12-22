@@ -9,13 +9,14 @@ import sys
 import pytest
 
 # Add app directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 @pytest.fixture(scope="session")
 def event_loop_policy():
     """Use default event loop policy."""
     import asyncio
+
     return asyncio.DefaultEventLoopPolicy()
 
 

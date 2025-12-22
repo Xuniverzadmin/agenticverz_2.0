@@ -16,13 +16,13 @@ See: app/specs/planner_determinism.md for full specification.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
-import hashlib
 
+import hashlib
 import sys
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 # Add parent to path for imports
 _parent_path = str(Path(__file__).parent.parent)
@@ -31,13 +31,13 @@ if _parent_path not in sys.path:
 
 # Direct import to avoid circular dependency through __init__.py
 from planner.interface import (
-    PlannerInterface,
-    PlannerOutput,
+    DeterminismMode,
+    PlanMetadata,
     PlannerError,
     PlannerErrorCode,
+    PlannerInterface,
+    PlannerOutput,
     PlanStep,
-    PlanMetadata,
-    DeterminismMode,
     normalize_goal,
 )
 
@@ -45,6 +45,7 @@ from planner.interface import (
 @dataclass
 class PlanRule:
     """A rule for generating plans based on goal keywords."""
+
     keywords: List[str]  # Keywords to match in goal
     steps: List[PlanStep]  # Steps to include if matched
     priority: int = 0  # Higher priority rules checked first
@@ -98,26 +99,14 @@ class StubPlanner(PlannerInterface):
             # Echo rule
             PlanRule(
                 keywords=["echo", "say", "print", "output"],
-                steps=[
-                    PlanStep(
-                        step_id="s1",
-                        skill="skill.echo",
-                        params={"message": "{{goal}}"}
-                    )
-                ],
-                priority=1
+                steps=[PlanStep(step_id="s1", skill="skill.echo", params={"message": "{{goal}}"})],
+                priority=1,
             ),
             # HTTP fetch rule
             PlanRule(
                 keywords=["fetch", "http", "api", "get", "request"],
-                steps=[
-                    PlanStep(
-                        step_id="s1",
-                        skill="skill.http_call",
-                        params={"url": "{{url}}", "method": "GET"}
-                    )
-                ],
-                priority=2
+                steps=[PlanStep(step_id="s1", skill="skill.http_call", params={"url": "{{url}}", "method": "GET"})],
+                priority=2,
             ),
             # Analyze rule (multi-step)
             PlanRule(
@@ -127,28 +116,24 @@ class StubPlanner(PlannerInterface):
                         step_id="s1",
                         skill="skill.http_call",
                         params={"url": "{{url}}", "method": "GET"},
-                        description="Fetch data"
+                        description="Fetch data",
                     ),
                     PlanStep(
                         step_id="s2",
                         skill="skill.json_transform",
-                        params={
-                            "data": "{{s1.body}}",
-                            "operation": "extract",
-                            "path": "$.data"
-                        },
+                        params={"data": "{{s1.body}}", "operation": "extract", "path": "$.data"},
                         depends_on=["s1"],
-                        description="Extract data"
+                        description="Extract data",
                     ),
                     PlanStep(
                         step_id="s3",
                         skill="skill.llm_invoke",
                         params={"prompt": "Analyze: {{s2.output}}"},
                         depends_on=["s2"],
-                        description="Analyze data"
-                    )
+                        description="Analyze data",
+                    ),
                 ],
-                priority=3
+                priority=3,
             ),
             # Transform rule
             PlanRule(
@@ -157,27 +142,21 @@ class StubPlanner(PlannerInterface):
                     PlanStep(
                         step_id="s1",
                         skill="skill.json_transform",
-                        params={
-                            "data": "{{data}}",
-                            "operation": "{{operation}}",
-                            "path": "{{path}}"
-                        }
+                        params={"data": "{{data}}", "operation": "{{operation}}", "path": "{{path}}"},
                     )
                 ],
-                priority=2
+                priority=2,
             ),
             # LLM rule
             PlanRule(
                 keywords=["llm", "chat", "generate", "write", "compose"],
                 steps=[
                     PlanStep(
-                        step_id="s1",
-                        skill="skill.llm_invoke",
-                        params={"prompt": "{{goal}}", "model": "stub-model"}
+                        step_id="s1", skill="skill.llm_invoke", params={"prompt": "{{goal}}", "model": "stub-model"}
                     )
                 ],
-                priority=2
-            )
+                priority=2,
+            ),
         ]
 
     def _match_rule(self, goal: str) -> Optional[PlanRule]:
@@ -196,11 +175,7 @@ class StubPlanner(PlannerInterface):
         return max(matched_rules, key=lambda r: r.priority)
 
     def _compute_cache_key(
-        self,
-        agent_id: str,
-        goal: str,
-        context_summary: Optional[str],
-        tool_manifest: Optional[List[Dict]]
+        self, agent_id: str, goal: str, context_summary: Optional[str], tool_manifest: Optional[List[Dict]]
     ) -> str:
         """Compute deterministic cache key for plan inputs."""
         import json
@@ -209,16 +184,12 @@ class StubPlanner(PlannerInterface):
             "agent_id": agent_id,
             "goal": normalize_goal(goal),
             "context": context_summary,
-            "manifest": tool_manifest
+            "manifest": tool_manifest,
         }
-        canonical = json.dumps(data, sort_keys=True, separators=(',', ':'))
+        canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
-    def _filter_steps_by_manifest(
-        self,
-        steps: List[PlanStep],
-        tool_manifest: Optional[List[Dict]]
-    ) -> List[PlanStep]:
+    def _filter_steps_by_manifest(self, steps: List[PlanStep], tool_manifest: Optional[List[Dict]]) -> List[PlanStep]:
         """Filter steps to only include skills available in manifest."""
         if not tool_manifest:
             return steps  # No filtering if no manifest
@@ -227,10 +198,7 @@ class StubPlanner(PlannerInterface):
         return [s for s in steps if s.skill in available_skills]
 
     def _substitute_params(
-        self,
-        steps: List[PlanStep],
-        goal: str,
-        context: Optional[Dict[str, Any]] = None
+        self, steps: List[PlanStep], goal: str, context: Optional[Dict[str, Any]] = None
     ) -> List[PlanStep]:
         """Substitute {{placeholders}} in step params."""
         context = context or {}
@@ -259,7 +227,7 @@ class StubPlanner(PlannerInterface):
                 on_error=s.on_error,
                 retry_count=s.retry_count,
                 output_key=s.output_key,
-                description=s.description
+                description=s.description,
             )
             for s in steps
         ]
@@ -271,7 +239,7 @@ class StubPlanner(PlannerInterface):
         context_summary: Optional[str] = None,
         memory_snippets: Optional[List[Dict[str, Any]]] = None,
         tool_manifest: Optional[List[Dict[str, Any]]] = None,
-        **kwargs
+        **kwargs,
     ) -> Union[PlannerOutput, PlannerError]:
         """
         Generate a deterministic plan based on goal keywords.
@@ -287,20 +255,14 @@ class StubPlanner(PlannerInterface):
             PlannerOutput with steps, or PlannerError if planning fails
         """
         # Record call for testing
-        self._call_history.append({
-            "agent_id": agent_id,
-            "goal": goal,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        })
+        self._call_history.append(
+            {"agent_id": agent_id, "goal": goal, "timestamp": datetime.now(timezone.utc).isoformat()}
+        )
 
         # Validate input
         normalized_goal = normalize_goal(goal)
         if not normalized_goal:
-            return PlannerError(
-                code=PlannerErrorCode.INVALID_GOAL,
-                message="Goal cannot be empty",
-                retryable=False
-            )
+            return PlannerError(code=PlannerErrorCode.INVALID_GOAL, message="Goal cannot be empty", retryable=False)
 
         # Find matching rule
         rule = self._match_rule(normalized_goal)
@@ -309,7 +271,7 @@ class StubPlanner(PlannerInterface):
                 code=PlannerErrorCode.GENERATION_FAILED,
                 message=f"No matching rule for goal: {goal}",
                 retryable=False,
-                details={"goal": normalized_goal}
+                details={"goal": normalized_goal},
             )
 
         # Get steps from rule
@@ -322,7 +284,7 @@ class StubPlanner(PlannerInterface):
                 code=PlannerErrorCode.NO_SKILLS_AVAILABLE,
                 message="No available skills match the required plan",
                 retryable=False,
-                details={"required_skills": [s.skill for s in rule.steps]}
+                details={"required_skills": [s.skill for s in rule.steps]},
             )
 
         # Substitute parameters
@@ -330,9 +292,7 @@ class StubPlanner(PlannerInterface):
         steps = self._substitute_params(steps, normalized_goal, context)
 
         # Build metadata
-        cache_key = self._compute_cache_key(
-            agent_id, goal, context_summary, tool_manifest
-        )
+        cache_key = self._compute_cache_key(agent_id, goal, context_summary, tool_manifest)
 
         metadata = PlanMetadata(
             planner=self.planner_id,
@@ -342,14 +302,10 @@ class StubPlanner(PlannerInterface):
             output_tokens=0,
             cost_cents=0,
             deterministic=True,
-            cache_key=cache_key
+            cache_key=cache_key,
         )
 
-        return PlannerOutput(
-            steps=steps,
-            metadata=metadata,
-            warnings=[]
-        )
+        return PlannerOutput(steps=steps, metadata=metadata, warnings=[])
 
     def add_rule(self, rule: PlanRule) -> None:
         """Add a custom planning rule."""
@@ -372,6 +328,7 @@ class StubPlanner(PlannerInterface):
 # Backwards Compatibility Layer
 # =============================================================================
 
+
 class LegacyStubPlanner:
     """
     Legacy stub planner interface for backwards compatibility.
@@ -388,7 +345,7 @@ class LegacyStubPlanner:
         goal: str,
         context_summary: Optional[str] = None,
         memory_snippets: Optional[List[Dict[str, Any]]] = None,
-        tool_manifest: Optional[List[Dict[str, Any]]] = None
+        tool_manifest: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Generate a plan (legacy interface).
@@ -400,19 +357,12 @@ class LegacyStubPlanner:
             goal=goal,
             context_summary=context_summary,
             memory_snippets=memory_snippets,
-            tool_manifest=tool_manifest
+            tool_manifest=tool_manifest,
         )
 
         if isinstance(result, PlannerError):
             # Return empty plan on error (legacy behavior)
-            return {
-                "steps": [],
-                "metadata": {
-                    "planner": "stub",
-                    "error": result.code,
-                    "error_message": result.message
-                }
-            }
+            return {"steps": [], "metadata": {"planner": "stub", "error": result.code, "error_message": result.message}}
 
         return result.plan
 
@@ -420,6 +370,7 @@ class LegacyStubPlanner:
 # =============================================================================
 # Example Usage
 # =============================================================================
+
 
 async def example_stub_planner_usage():
     """Example demonstrating stub planner usage."""
@@ -429,15 +380,11 @@ async def example_stub_planner_usage():
     manifest = [
         {"skill_id": "skill.http_call", "name": "HTTP Call"},
         {"skill_id": "skill.json_transform", "name": "JSON Transform"},
-        {"skill_id": "skill.llm_invoke", "name": "LLM Invoke"}
+        {"skill_id": "skill.llm_invoke", "name": "LLM Invoke"},
     ]
 
     # Generate plan
-    result = planner.plan(
-        agent_id="test-agent",
-        goal="Fetch user data and analyze it",
-        tool_manifest=manifest
-    )
+    result = planner.plan(agent_id="test-agent", goal="Fetch user data and analyze it", tool_manifest=manifest)
 
     if isinstance(result, PlannerOutput):
         print(f"Plan generated with {len(result.steps)} steps")
@@ -453,4 +400,5 @@ async def example_stub_planner_usage():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(example_stub_planner_usage())

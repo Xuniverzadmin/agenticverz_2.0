@@ -29,7 +29,7 @@ cmd_cycles() {
         local total=$(grep -c "Running cycle" "$LOGFILE" 2>/dev/null || echo 0)
         local success=$(grep -c ", 0 mismatches" "$LOGFILE" 2>/dev/null || echo 0)
         local errors=$(grep -E "[1-9][0-9]* mismatches" "$LOGFILE" 2>/dev/null | grep -v ", 0 mismatches" | wc -l)
-        
+
         echo "Total cycles started: $total"
         echo -e "Successful cycles:    ${GREEN}$success${NC}"
         echo -e "Cycles with errors:   ${RED}$errors${NC}"
@@ -52,7 +52,7 @@ cmd_mismatches() {
             echo -e "${GREEN}No mismatches detected${NC}"
         fi
     fi
-    
+
     # Check cycle reports for details
     if [ -d "$SHADOW_DIR/reports" ]; then
         echo ""
@@ -72,7 +72,7 @@ cmd_mismatches() {
 
 cmd_golden() {
     echo -e "${CYAN}=== Golden File Analysis ===${NC}"
-    
+
     # Check shadow golden dir
     if [ -d "$SHADOW_DIR/golden" ]; then
         local count=$(find "$SHADOW_DIR/golden" -name "*.json" 2>/dev/null | wc -l)
@@ -83,7 +83,7 @@ cmd_golden() {
         echo "  Recent files:"
         ls -lt "$SHADOW_DIR/golden"/*.json 2>/dev/null | head -5 | awk '{print "    " $NF}'
     fi
-    
+
     # Check persistent golden dir
     if [ -d "$GOLDEN_DIR" ]; then
         local count=$(find "$GOLDEN_DIR" -name "*.json" 2>/dev/null | wc -l)
@@ -93,7 +93,7 @@ cmd_golden() {
         echo "  Files: $count"
         echo "  Size:  $size"
     fi
-    
+
     # Sample a golden file
     echo ""
     echo "Sample golden file structure:"
@@ -105,7 +105,7 @@ cmd_golden() {
 
 cmd_process() {
     echo -e "${CYAN}=== Process Information ===${NC}"
-    
+
     local PID=$(pgrep -f "run_shadow_simulation.sh.*--hours 24" | head -1)
     if [ -n "$PID" ]; then
         echo -e "Shadow process: ${GREEN}RUNNING${NC}"
@@ -116,7 +116,7 @@ cmd_process() {
         pgrep -P "$PID" 2>/dev/null | while read cpid; do
             ps -p "$cpid" -o pid,stat,args --no-headers 2>/dev/null | sed 's/^/  /'
         done
-        
+
         echo ""
         echo "Open files:"
         lsof -p "$PID" 2>/dev/null | grep -E "\.log|\.json|shadow" | head -10 | sed 's/^/  /'
@@ -128,7 +128,7 @@ cmd_process() {
 cmd_replay() {
     echo -e "${CYAN}=== Replay Test ===${NC}"
     echo "Running quick replay verification on recent golden files..."
-    
+
     if [ -d "$SHADOW_DIR" ] && [ -f "$SHADOW_DIR/shadow_runner.py" ]; then
         echo ""
         PRIMARY_WORKERS=1 WORKFLOWS_PER_CYCLE=3 GOLDEN_DIR="$SHADOW_DIR/golden" \
@@ -144,7 +144,7 @@ cmd_full() {
     echo -e "${CYAN}══════════════════════════════════════════════════════════════════${NC}"
     echo "Generated: $(date -Iseconds)"
     echo ""
-    
+
     cmd_process
     echo ""
     cmd_cycles
@@ -153,14 +153,14 @@ cmd_full() {
     echo ""
     cmd_golden
     echo ""
-    
+
     echo -e "${CYAN}=== Resource Usage ===${NC}"
     echo "Disk:"
     df -h / | tail -1 | awk '{print "  Used: " $3 " / " $2 " (" $5 ")"}'
     echo "Memory:"
     free -h | grep Mem | awk '{print "  Used: " $3 " / " $2}'
     echo ""
-    
+
     echo -e "${CYAN}=== Log File Info ===${NC}"
     if [ -n "$LOGFILE" ]; then
         echo "Path: $LOGFILE"
@@ -170,7 +170,7 @@ cmd_full() {
         local last=$(tail -1 "$LOGFILE" | grep -oE '[0-9]{2}:[0-9]{2}:[0-9]{2}' | head -1)
         echo "Time range: $first - $last"
     fi
-    
+
     echo ""
     echo -e "${CYAN}══════════════════════════════════════════════════════════════════${NC}"
 }

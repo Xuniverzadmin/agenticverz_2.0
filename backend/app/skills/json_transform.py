@@ -2,7 +2,7 @@
 # Safe, deterministic JSON transformation using dot-path mapping
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,7 @@ logger = logging.getLogger("nova.skills.json_transform")
 
 class TransformMapping(BaseModel):
     """A single transformation mapping."""
+
     target: str = Field(description="Target key in output")
     source: str = Field(description="Dot-path to source value (e.g., 'data.items[0].name')")
     default: Optional[Any] = Field(default=None, description="Default value if source not found")
@@ -20,18 +21,19 @@ class TransformMapping(BaseModel):
 
 class JsonTransformInput(BaseModel):
     """Input schema for json_transform skill."""
+
     payload: Dict[str, Any] = Field(description="Input JSON payload to transform")
     mapping: Dict[str, str] = Field(
         description="Mapping of output keys to source paths (e.g., {'name': 'data.user.name'})"
     )
     defaults: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Default values for keys if source path not found"
+        default=None, description="Default values for keys if source path not found"
     )
 
 
 class JsonTransformOutput(BaseModel):
     """Output schema for json_transform skill."""
+
     status: str = Field(description="'ok' or 'error'")
     result: Dict[str, Any] = Field(default_factory=dict, description="Transformed output")
     errors: List[str] = Field(default_factory=list, description="Any errors during transformation")
@@ -53,8 +55,9 @@ def _get_path(data: Any, path: str) -> tuple[Any, bool]:
 
     # Parse path into segments
     import re
+
     # Split on dots, but handle array brackets
-    segments = re.split(r'\.(?![^\[]*\])', path)
+    segments = re.split(r"\.(?![^\[]*\])", path)
 
     current = data
     for segment in segments:
@@ -62,7 +65,7 @@ def _get_path(data: Any, path: str) -> tuple[Any, bool]:
             return None, False
 
         # Check for array index
-        match = re.match(r'^([^\[]*)\[(-?\d+)\]$', segment)
+        match = re.match(r"^([^\[]*)\[(-?\d+)\]$", segment)
         if match:
             key, idx_str = match.groups()
             idx = int(idx_str)
@@ -93,9 +96,7 @@ def _get_path(data: Any, path: str) -> tuple[Any, bool]:
 
 
 def transform_json(
-    payload: Dict[str, Any],
-    mapping: Dict[str, str],
-    defaults: Optional[Dict[str, Any]] = None
+    payload: Dict[str, Any], mapping: Dict[str, str], defaults: Optional[Dict[str, Any]] = None
 ) -> tuple[Dict[str, Any], List[str]]:
     """Transform JSON payload using mapping.
 
@@ -153,10 +154,7 @@ class JsonTransformSkill:
         Returns:
             Skill result dict with status and transformed result
         """
-        logger.info(
-            "skill_execution_start",
-            extra={"skill": "json_transform"}
-        )
+        logger.info("skill_execution_start", extra={"skill": "json_transform"})
 
         try:
             payload = params.get("payload", {})
@@ -196,7 +194,7 @@ class JsonTransformSkill:
                     "status": "ok" if not errors else "partial",
                     "output_keys": list(result.keys()),
                     "error_count": len(errors),
-                }
+                },
             )
 
             return {
@@ -211,10 +209,7 @@ class JsonTransformSkill:
             }
 
         except Exception as e:
-            logger.exception(
-                "skill_execution_error",
-                extra={"skill": "json_transform", "error": str(e)}
-            )
+            logger.exception("skill_execution_error", extra={"skill": "json_transform", "error": str(e)})
             return {
                 "skill": "json_transform",
                 "skill_version": "1.0.0",

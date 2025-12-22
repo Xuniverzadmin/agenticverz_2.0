@@ -15,12 +15,14 @@ Design Principles:
 """
 
 from __future__ import annotations
-from typing import Optional
+
 import hashlib
 import logging
+from typing import Optional
 
 try:
-    from prometheus_client import Counter, Histogram, Gauge
+    from prometheus_client import Counter, Gauge, Histogram
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
@@ -244,22 +246,27 @@ else:
     class StubCounter:
         def labels(self, **kwargs):
             return self
+
         def inc(self, amount=1):
             pass
 
     class StubHistogram:
         def labels(self, **kwargs):
             return self
+
         def observe(self, value):
             pass
 
     class StubGauge:
         def labels(self, **kwargs):
             return self
+
         def set(self, value):
             pass
+
         def inc(self, amount=1):
             pass
+
         def dec(self, amount=1):
             pass
 
@@ -296,6 +303,7 @@ else:
 
 # ============== Metric Recording Functions ==============
 
+
 def record_workflow_failure(
     error_code: str,
     spec_id: str,
@@ -316,10 +324,7 @@ def record_workflow_failure(
         tenant_hash=tenant_hash,
     ).inc()
 
-    logger.debug(
-        "workflow_failure_recorded",
-        extra={"error_code": error_code, "spec_id": spec_id}
-    )
+    logger.debug("workflow_failure_recorded", extra={"error_code": error_code, "spec_id": spec_id})
 
 
 def record_step_failure(
@@ -419,6 +424,7 @@ def record_workflow_end(spec_id: str, total_cost_cents: int) -> None:
 
 # ============== Capability & Policy Metric Recording Functions (M5) ==============
 
+
 def record_capability_violation(
     violation_type: str,
     skill_id: str,
@@ -439,10 +445,7 @@ def record_capability_violation(
         tenant_hash=tenant_hash,
     ).inc()
 
-    logger.info(
-        "capability_violation_recorded",
-        extra={"violation_type": violation_type, "skill_id": skill_id}
-    )
+    logger.info("capability_violation_recorded", extra={"violation_type": violation_type, "skill_id": skill_id})
 
 
 def record_policy_decision(
@@ -536,6 +539,7 @@ def record_cost_simulation_drift(
 
 # ============== M5 GA Additional Metric Recording Functions ==============
 
+
 def set_emergency_stop(enabled: bool) -> None:
     """Set the emergency stop gauge (0=disabled, 1=enabled)."""
     policy_emergency_stop_enabled.set(1 if enabled else 0)
@@ -604,6 +608,7 @@ def check_m5_signoff() -> bool:
         True if signoff is present
     """
     import os
+
     signoff_path = os.getenv("M5_SIGNOFF_PATH", "/root/agenticverz2.0/.m5_signoff")
     # Also check legacy path
     legacy_path = "/root/agenticverz2.0/.m4_signoff"

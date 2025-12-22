@@ -18,12 +18,11 @@ Design Principles:
 """
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Protocol
+
 import logging
 import os
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Protocol
 
 logger = logging.getLogger("nova.workflow.policies")
 
@@ -31,6 +30,7 @@ logger = logging.getLogger("nova.workflow.policies")
 # ============================================================================
 # Budget Store Protocol (for multi-worker deployments)
 # ============================================================================
+
 
 class BudgetStore(Protocol):
     """Protocol for shared budget storage across workers."""
@@ -96,6 +96,7 @@ class RedisBudgetStore:
         if self._client is None:
             try:
                 import redis.asyncio as aioredis
+
                 self._client = aioredis.from_url(
                     self._redis_url,
                     encoding="utf-8",
@@ -216,6 +217,7 @@ class PolicyViolationError(Exception):
 @dataclass
 class PolicyCheckResult:
     """Result of a policy check."""
+
     allowed: bool
     reason: Optional[str] = None
     policy: Optional[str] = None
@@ -316,7 +318,7 @@ class PolicyEnforcer:
         # Use atomic check-and-increment if available (for race-free budget enforcement)
         run_id = ctx.run_id
 
-        if hasattr(self._budget_store, 'add_workflow_cost_if_below'):
+        if hasattr(self._budget_store, "add_workflow_cost_if_below"):
             # Atomic check-and-increment (race-safe)
             new_total, success = await self._budget_store.add_workflow_cost_if_below(
                 run_id, estimated_cost, self.workflow_ceiling
@@ -377,7 +379,7 @@ class PolicyEnforcer:
                 "run_id": run_id,
                 "estimated_cost": estimated_cost,
                 "accumulated_cost": accumulated,
-            }
+            },
         )
 
         return PolicyCheckResult(allowed=True)
@@ -394,7 +396,7 @@ class PolicyEnforcer:
             PolicyCheckResult with allowed status
         """
         try:
-            from ..utils.budget_tracker import enforce_budget, BudgetCheckResult
+            from ..utils.budget_tracker import BudgetCheckResult, enforce_budget
 
             result: BudgetCheckResult = enforce_budget(
                 agent_id=agent_id,
@@ -512,4 +514,4 @@ class PolicyEnforcer:
 
 
 # Import dependencies at end to avoid circular imports
-from .engine import StepDescriptor, StepContext
+from .engine import StepContext, StepDescriptor

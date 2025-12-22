@@ -9,24 +9,25 @@ Test suite for M20 IR:
 """
 
 import pytest
+
+from app.policy.compiler.grammar import ActionType, PolicyCategory
 from app.policy.compiler.parser import Parser
-from app.policy.compiler.grammar import PolicyCategory, ActionType
+from app.policy.ir.ir_builder import IRBuilder
 from app.policy.ir.ir_nodes import (
-    IRType,
-    IRGovernance,
-    IRLoadConst,
-    IRLoadVar,
-    IRBinaryOp,
-    IRCompare,
     IRAction,
+    IRBinaryOp,
+    IRBlock,
+    IRCompare,
+    IRFunction,
+    IRGovernance,
     IRJump,
     IRJumpIf,
-    IRBlock,
-    IRFunction,
+    IRLoadConst,
+    IRLoadVar,
     IRModule,
+    IRType,
 )
-from app.policy.ir.symbol_table import Symbol, SymbolType, SymbolTable
-from app.policy.ir.ir_builder import IRBuilder
+from app.policy.ir.symbol_table import Symbol, SymbolTable, SymbolType
 
 
 class TestIRNodes:
@@ -221,18 +222,22 @@ class TestSymbolTable:
         """Test symbol lookup by category."""
         st = SymbolTable()
 
-        st.define(Symbol(
-            name="safety_policy",
-            symbol_type=SymbolType.POLICY,
-            category=PolicyCategory.SAFETY,
-            priority=100,
-        ))
-        st.define(Symbol(
-            name="privacy_policy",
-            symbol_type=SymbolType.POLICY,
-            category=PolicyCategory.PRIVACY,
-            priority=90,
-        ))
+        st.define(
+            Symbol(
+                name="safety_policy",
+                symbol_type=SymbolType.POLICY,
+                category=PolicyCategory.SAFETY,
+                priority=100,
+            )
+        )
+        st.define(
+            Symbol(
+                name="privacy_policy",
+                symbol_type=SymbolType.POLICY,
+                category=PolicyCategory.PRIVACY,
+                priority=90,
+            )
+        )
 
         safety_symbols = st.get_symbols_by_category(PolicyCategory.SAFETY)
         assert len(safety_symbols) == 1

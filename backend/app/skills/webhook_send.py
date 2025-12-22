@@ -13,8 +13,8 @@ from typing import Any, Dict, Optional, Type
 import httpx
 from pydantic import BaseModel
 
+from ..schemas.skill import WebhookSendInput, WebhookSendOutput
 from .registry import skill
-from ..schemas.skill import WebhookSendInput, WebhookSendOutput, HttpMethod, SkillStatus
 
 logger = logging.getLogger("nova.skills.webhook_send")
 
@@ -25,6 +25,7 @@ DEFAULT_TIMEOUT = 30.0
 
 class WebhookSendConfig(BaseModel):
     """Configuration schema for webhook_send skill."""
+
     allow_external: bool = True
     signing_secret: Optional[str] = None
     timeout: float = DEFAULT_TIMEOUT
@@ -38,11 +39,7 @@ def sign_payload(payload_bytes: bytes, secret: str, timestamp: int) -> str:
     Message: timestamp.payload
     """
     message = f"{timestamp}.{payload_bytes.decode()}"
-    signature = hmac.new(
-        secret.encode(),
-        message.encode(),
-        hashlib.sha256
-    ).hexdigest()
+    signature = hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
     return f"sha256={signature}"
 
 
@@ -132,7 +129,7 @@ class WebhookSendSkill:
                 "url": url[:100],
                 "method": method,
                 "sign_payload": sign_payload_flag,
-            }
+            },
         )
 
         # Validate URL
@@ -158,10 +155,7 @@ class WebhookSendSkill:
         # Check stub mode
         if not self.allow_external:
             duration = time.time() - start_time
-            logger.info(
-                "webhook_send_stubbed",
-                extra={"skill": "webhook_send", "reason": "external_calls_disabled"}
-            )
+            logger.info("webhook_send_stubbed", extra={"skill": "webhook_send", "reason": "external_calls_disabled"})
             return {
                 "skill": "webhook_send",
                 "skill_version": self.VERSION,
@@ -180,10 +174,7 @@ class WebhookSendSkill:
 
         # Check idempotency
         if idempotency_key and idempotency_key in self._idempotency_cache:
-            logger.info(
-                "webhook_send_idempotency_hit",
-                extra={"idempotency_key": idempotency_key}
-            )
+            logger.info("webhook_send_idempotency_hit", extra={"idempotency_key": idempotency_key})
             cached = self._idempotency_cache[idempotency_key]
             return {**cached, "result": {**cached.get("result", {}), "from_cache": True}}
 
@@ -205,10 +196,7 @@ class WebhookSendSkill:
             request_headers[timestamp_header] = str(timestamp)
             signature_sent = True
         elif sign_payload_flag and not self.signing_secret:
-            logger.warning(
-                "webhook_send_no_secret",
-                extra={"skill": "webhook_send", "url": url[:100]}
-            )
+            logger.warning("webhook_send_no_secret", extra={"skill": "webhook_send", "url": url[:100]})
 
         # Send webhook request
         try:
@@ -237,7 +225,7 @@ class WebhookSendSkill:
                         "url": url[:100],
                         "status_code": response.status_code,
                         "duration": round(duration, 3),
-                    }
+                    },
                 )
 
                 result = {
@@ -271,8 +259,7 @@ class WebhookSendSkill:
         except httpx.TimeoutException:
             duration = time.time() - start_time
             logger.warning(
-                "webhook_send_timeout",
-                extra={"skill": "webhook_send", "url": url[:100], "timeout": timeout_seconds}
+                "webhook_send_timeout", extra={"skill": "webhook_send", "url": url[:100], "timeout": timeout_seconds}
             )
             return {
                 "skill": "webhook_send",
@@ -294,8 +281,7 @@ class WebhookSendSkill:
         except httpx.RequestError as e:
             duration = time.time() - start_time
             logger.error(
-                "webhook_send_failed",
-                extra={"skill": "webhook_send", "url": url[:100], "error": str(e)[:200]}
+                "webhook_send_failed", extra={"skill": "webhook_send", "url": url[:100], "error": str(e)[:200]}
             )
             return {
                 "skill": "webhook_send",

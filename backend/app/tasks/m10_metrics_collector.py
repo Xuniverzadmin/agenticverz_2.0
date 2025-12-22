@@ -27,15 +27,15 @@ from typing import Optional
 from sqlalchemy import text
 
 from app.metrics import (
-    recovery_stream_length,
-    recovery_stream_pending,
-    recovery_stream_consumers,
+    recovery_candidates_pending,
     recovery_db_queue_depth,
     recovery_db_queue_stalled,
+    recovery_dead_letter_length,
     recovery_matview_age_seconds,
     recovery_matview_last_refresh_timestamp,
-    recovery_candidates_pending,
-    recovery_dead_letter_length,
+    recovery_stream_consumers,
+    recovery_stream_length,
+    recovery_stream_pending,
 )
 
 logger = logging.getLogger("nova.tasks.m10_metrics_collector")
@@ -52,7 +52,7 @@ async def collect_redis_stream_metrics() -> dict:
         Dict with stream_length, pending_count, consumers_count, dead_letter_count
     """
     try:
-        from app.tasks.recovery_queue_stream import get_stream_info, get_dead_letter_count
+        from app.tasks.recovery_queue_stream import get_dead_letter_count, get_stream_info
 
         info = await get_stream_info()
 
@@ -100,23 +100,32 @@ async def collect_db_queue_metrics(session=None) -> dict:
     try:
         if session is None:
             from app.db_async import get_async_session
+
             session = await get_async_session()
             close_session = True
 
         # Queue depth (unprocessed items)
-        depth_result = await session.execute(text("""
+        depth_result = await session.execute(
+            text(
+                """
             SELECT COUNT(*) FROM m10_recovery.work_queue
             WHERE processed_at IS NULL
-        """))
+        """
+            )
+        )
         queue_depth = depth_result.scalar() or 0
 
         # Stalled items (claimed but not processed for > 5 min)
-        stalled_result = await session.execute(text("""
+        stalled_result = await session.execute(
+            text(
+                """
             SELECT COUNT(*) FROM m10_recovery.work_queue
             WHERE claimed_at IS NOT NULL
               AND processed_at IS NULL
               AND claimed_at < now() - interval '5 minutes'
-        """))
+        """
+            )
+        )
         stalled_count = stalled_result.scalar() or 0
 
         # Update Prometheus gauges
@@ -152,15 +161,20 @@ async def collect_matview_freshness(session=None) -> dict:
     try:
         if session is None:
             from app.db_async import get_async_session
+
             session = await get_async_session()
             close_session = True
 
         # Get matview freshness from tracking table
-        result = await session.execute(text("""
+        result = await session.execute(
+            text(
+                """
             SELECT view_name, last_refresh,
                    EXTRACT(EPOCH FROM (now() - last_refresh)) as age_seconds
             FROM m10_recovery.matview_freshness
-        """))
+        """
+            )
+        )
 
         rows = result.fetchall()
         metrics = {}
@@ -173,9 +187,7 @@ async def collect_matview_freshness(session=None) -> dict:
             # Update Prometheus gauges
             recovery_matview_age_seconds.labels(view_name=view_name).set(age_seconds)
             if last_refresh:
-                recovery_matview_last_refresh_timestamp.labels(view_name=view_name).set(
-                    last_refresh.timestamp()
-                )
+                recovery_matview_last_refresh_timestamp.labels(view_name=view_name).set(last_refresh.timestamp())
 
             metrics[view_name] = {
                 "age_seconds": age_seconds,
@@ -210,14 +222,19 @@ async def collect_candidate_stats(session=None) -> dict:
     try:
         if session is None:
             from app.db_async import get_async_session
+
             session = await get_async_session()
             close_session = True
 
         # Pending candidates count
-        pending_result = await session.execute(text("""
+        pending_result = await session.execute(
+            text(
+                """
             SELECT COUNT(*) FROM recovery_candidates
             WHERE decision = 'pending'
-        """))
+        """
+            )
+        )
         pending_count = pending_result.scalar() or 0
 
         # Update Prometheus gauge
@@ -342,6 +359,7 @@ async def daemon_main():
     # Systemd watchdog support (optional)
     try:
         import sdnotify
+
         notify = sdnotify.SystemdNotifier()
         notify.notify("READY=1")
         logger.info("Systemd notification: READY")

@@ -50,21 +50,35 @@ async def worker(idx, pool, script_sha, key, ttl, results):
 
 async def main():
     parser = ArgumentParser(description="Test Redis idempotency atomicity")
-    parser.add_argument("--redis-url", default=os.environ.get("REDIS_URL"),
-                        help="Redis connection URL (default: $REDIS_URL)")
-    parser.add_argument("--concurrency", type=int, default=20,
-                        help="Number of concurrent workers (default: 20)")
-    parser.add_argument("--key", default="idemp:atomic:test",
-                        help="Redis key to test (default: idemp:atomic:test)")
-    parser.add_argument("--ttl", type=int, default=3600,
-                        help="TTL in seconds for the key (default: 3600)")
+    parser.add_argument(
+        "--redis-url",
+        default=os.environ.get("REDIS_URL"),
+        help="Redis connection URL (default: $REDIS_URL)",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=20,
+        help="Number of concurrent workers (default: 20)",
+    )
+    parser.add_argument(
+        "--key",
+        default="idemp:atomic:test",
+        help="Redis key to test (default: idemp:atomic:test)",
+    )
+    parser.add_argument(
+        "--ttl",
+        type=int,
+        default=3600,
+        help="TTL in seconds for the key (default: 3600)",
+    )
     args = parser.parse_args()
 
     if not args.redis_url:
         print("ERROR: Missing REDIS_URL env or --redis-url argument")
         return 1
 
-    print(f"Connecting to Redis...")
+    print("Connecting to Redis...")
     print(f"  URL: {args.redis_url[:30]}...")
 
     pool = await aioredis.from_url(args.redis_url, decode_responses=True)
@@ -87,7 +101,7 @@ async def main():
 
     # Clean up any existing key
     await pool.delete(key)
-    print(f"\nRunning atomicity test:")
+    print("\nRunning atomicity test:")
     print(f"  Key: {key}")
     print(f"  Concurrency: {concurrency} workers")
     print(f"  TTL: {ttl}s")
@@ -114,15 +128,15 @@ async def main():
     stored = await pool.get(key)
 
     if len(winners) == 1:
-        print(f"\nRESULT: SUCCESS - Exactly one winner")
-        print(f"\nWinner details:")
+        print("\nRESULT: SUCCESS - Exactly one winner")
+        print("\nWinner details:")
         winner_val = winners[0]["attempted"]
         print(f"  Owner: {winner_val['owner']}")
         print(f"  ID: {winner_val['id']}")
         print(f"\nStored value matches winner: {stored == json.dumps(winner_val)}")
         exit_code = 0
     elif len(winners) == 0:
-        print(f"\nRESULT: ANOMALY - No winners (key may have pre-existed)")
+        print("\nRESULT: ANOMALY - No winners (key may have pre-existed)")
         exit_code = 1
     else:
         print(f"\nRESULT: FAILURE - Multiple winners detected ({len(winners)})")

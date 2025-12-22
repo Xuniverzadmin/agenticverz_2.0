@@ -153,15 +153,11 @@ class WebhookVerifier:
             computed = self._compute_signature(body, key)
             if hmac.compare_digest(computed, provided_sig):
                 if version != key_version and key_version:
-                    logger.info(
-                        f"Signature verified with grace version {version} "
-                        f"(header specified {key_version})"
-                    )
+                    logger.info(f"Signature verified with grace version {version} " f"(header specified {key_version})")
                 return True
 
         logger.warning(
-            f"Signature verification failed. "
-            f"Tried versions: {unique_versions}, header version: {key_version}"
+            f"Signature verification failed. " f"Tried versions: {unique_versions}, header version: {key_version}"
         )
         return False
 
@@ -204,12 +200,14 @@ def create_file_key_loader(keys_path: str) -> Callable[[str], Optional[str]]:
     Returns:
         Function that loads key hex string for a version
     """
+
     def loader(version: str) -> Optional[str]:
         key_file = os.path.join(keys_path, version)
         if os.path.isfile(key_file):
             with open(key_file, "r") as f:
                 return f.read().strip()
         return None
+
     return loader
 
 
@@ -228,9 +226,11 @@ def create_vault_key_loader(
     Returns:
         Function that loads key hex string for a version
     """
+
     def loader(version: str) -> Optional[str]:
         try:
             import hvac
+
             client = hvac.Client(
                 url=os.getenv("VAULT_ADDR"),
                 token=os.getenv("VAULT_TOKEN"),
@@ -243,6 +243,7 @@ def create_vault_key_loader(
         except Exception as e:
             logger.error(f"Vault key load failed: {e}")
             return None
+
     return loader
 
 

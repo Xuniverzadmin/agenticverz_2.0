@@ -11,10 +11,12 @@ Per PIN-024:
 """
 
 from __future__ import annotations
+
 import asyncio
-import pytest
-from unittest.mock import Mock, patch, MagicMock
 from typing import Any, Dict
+from unittest.mock import patch
+
+import pytest
 
 from app.worker.runtime.core import Runtime, SkillDescriptor
 
@@ -108,9 +110,7 @@ class TestMetricsWiring:
         runtime.register_skill(descriptor, mock_skill)
 
         # Patch the metrics functions
-        with patch(
-            "app.worker.runtime.core.record_step_duration"
-        ) as mock_record_duration:
+        with patch("app.worker.runtime.core.record_step_duration") as mock_record_duration:
             with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("test_skill", {"param": "value"})
 
@@ -135,9 +135,7 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("failing_skill", "Failing Skill", "A skill that fails", 0)
         runtime.register_skill(descriptor, failing_skill)
 
-        with patch(
-            "app.worker.runtime.core.record_step_duration"
-        ) as mock_record_duration:
+        with patch("app.worker.runtime.core.record_step_duration") as mock_record_duration:
             with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("failing_skill", {})
 
@@ -163,9 +161,7 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("slow_skill", "Slow Skill", "A slow skill", 0)
         runtime.register_skill(descriptor, slow_skill)
 
-        with patch(
-            "app.worker.runtime.core.record_step_duration"
-        ) as mock_record_duration:
+        with patch("app.worker.runtime.core.record_step_duration") as mock_record_duration:
             with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("slow_skill", {}, timeout_s=0.05)
 
@@ -190,9 +186,7 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("cost_skill", "Cost Skill", "A skill with cost", 25)
         runtime.register_skill(descriptor, cost_skill)
 
-        with patch(
-            "app.worker.runtime.core.record_cost_simulation_drift"
-        ) as mock_record_drift:
+        with patch("app.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
             with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("cost_skill", {})
 
@@ -217,9 +211,7 @@ class TestMetricsWiring:
         descriptor = _make_descriptor("free_skill", "Free Skill", "A free skill", 0)
         runtime.register_skill(descriptor, free_skill)
 
-        with patch(
-            "app.worker.runtime.core.record_cost_simulation_drift"
-        ) as mock_record_drift:
+        with patch("app.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
             with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("free_skill", {})
 
@@ -241,12 +233,8 @@ class TestMetricsWiring:
 
         # Test with METRICS_AVAILABLE = False
         with patch("app.worker.runtime.core.METRICS_AVAILABLE", False):
-            with patch(
-                "app.worker.runtime.core.record_step_duration", None
-            ):
-                with patch(
-                    "app.worker.runtime.core.record_cost_simulation_drift", None
-                ):
+            with patch("app.worker.runtime.core.record_step_duration", None):
+                with patch("app.worker.runtime.core.record_cost_simulation_drift", None):
                     # Should not crash
                     outcome = await runtime.execute("simple_skill", {})
                     assert outcome.ok is True
@@ -258,11 +246,8 @@ class TestDriftMetricRecording:
     def test_record_cost_simulation_drift_positive(self):
         """Test recording when actual cost exceeds simulated."""
         from app.workflow.metrics import (
-            record_cost_simulation_drift,
-            cost_simulation_drift_cents,
-            cost_simulated_cents_total,
-            cost_actual_cents_total,
             PROMETHEUS_AVAILABLE,
+            record_cost_simulation_drift,
         )
 
         if PROMETHEUS_AVAILABLE:
@@ -273,8 +258,8 @@ class TestDriftMetricRecording:
     def test_record_cost_simulation_drift_negative(self):
         """Test recording when simulated cost exceeds actual."""
         from app.workflow.metrics import (
-            record_cost_simulation_drift,
             PROMETHEUS_AVAILABLE,
+            record_cost_simulation_drift,
         )
 
         if PROMETHEUS_AVAILABLE:
@@ -284,8 +269,8 @@ class TestDriftMetricRecording:
     def test_record_cost_simulation_drift_zero(self):
         """Test recording when costs match exactly."""
         from app.workflow.metrics import (
-            record_cost_simulation_drift,
             PROMETHEUS_AVAILABLE,
+            record_cost_simulation_drift,
         )
 
         if PROMETHEUS_AVAILABLE:
@@ -299,8 +284,8 @@ class TestStepDurationMetricRecording:
     def test_record_step_duration_success(self):
         """Test recording successful step duration."""
         from app.workflow.metrics import (
-            record_step_duration,
             PROMETHEUS_AVAILABLE,
+            record_step_duration,
         )
 
         if PROMETHEUS_AVAILABLE:
@@ -309,8 +294,8 @@ class TestStepDurationMetricRecording:
     def test_record_step_duration_failure(self):
         """Test recording failed step duration."""
         from app.workflow.metrics import (
-            record_step_duration,
             PROMETHEUS_AVAILABLE,
+            record_step_duration,
         )
 
         if PROMETHEUS_AVAILABLE:
@@ -330,9 +315,7 @@ class TestMetricsModuleIntegration:
         async def integration_skill(inputs: Dict[str, Any]) -> Dict[str, Any]:
             return {"processed": inputs.get("data", "none")}
 
-        descriptor = _make_descriptor(
-            "integration_skill", "Integration Skill", "For integration testing", 15
-        )
+        descriptor = _make_descriptor("integration_skill", "Integration Skill", "For integration testing", 15)
         runtime.register_skill(descriptor, integration_skill)
 
         # Execute and verify
@@ -364,14 +347,10 @@ class TestMetricsModuleIntegration:
         async def expensive_skill(inputs: Dict[str, Any]) -> Dict[str, Any]:
             return {"expensive": True}
 
-        descriptor = _make_descriptor(
-            "expensive_skill", "Expensive Skill", "Very expensive", 100
-        )
+        descriptor = _make_descriptor("expensive_skill", "Expensive Skill", "Very expensive", 100)
         runtime.register_skill(descriptor, expensive_skill)
 
-        with patch(
-            "app.worker.runtime.core.record_cost_simulation_drift"
-        ) as mock_record_drift:
+        with patch("app.worker.runtime.core.record_cost_simulation_drift") as mock_record_drift:
             with patch("app.worker.runtime.core.METRICS_AVAILABLE", True):
                 outcome = await runtime.execute("expensive_skill", {})
 
@@ -407,7 +386,7 @@ class TestPrometheusLabelsCardinality:
 
     def test_status_labels_are_binary(self):
         """Status labels should only be 'success' or 'failure'."""
-        from app.workflow.metrics import record_step_duration, PROMETHEUS_AVAILABLE
+        from app.workflow.metrics import PROMETHEUS_AVAILABLE, record_step_duration
 
         # This is enforced by the function signature
         # success: bool -> "success" or "failure"

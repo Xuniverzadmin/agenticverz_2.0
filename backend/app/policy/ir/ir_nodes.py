@@ -13,12 +13,14 @@ IR design principles:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import List, Optional, Any, Dict, Set
-from app.policy.compiler.grammar import PolicyCategory, ActionType
+from typing import Any, Dict, List, Optional
+
+from app.policy.compiler.grammar import ActionType, PolicyCategory
 
 
 class IRType(Enum):
     """IR value types."""
+
     VOID = auto()
     BOOL = auto()
     INT = auto()
@@ -38,6 +40,7 @@ class IRGovernance:
     Propagated from AST through compilation to runtime.
     Used by M19 policy engine for validation.
     """
+
     category: PolicyCategory
     priority: int
     source_policy: Optional[str] = None
@@ -72,6 +75,7 @@ class IRGovernance:
 @dataclass
 class IRNode(ABC):
     """Base class for all IR nodes."""
+
     id: int = 0
     governance: Optional[IRGovernance] = None
 
@@ -84,15 +88,18 @@ class IRNode(ABC):
 # Instructions
 # ============================================================================
 
+
 @dataclass
 class IRInstruction(IRNode):
     """Base class for IR instructions."""
+
     result_type: IRType = IRType.VOID
 
 
 @dataclass
 class IRLoadConst(IRInstruction):
     """Load constant value."""
+
     value: Any = None
 
     def __str__(self) -> str:
@@ -102,6 +109,7 @@ class IRLoadConst(IRInstruction):
 @dataclass
 class IRLoadVar(IRInstruction):
     """Load variable value."""
+
     name: str = ""
 
     def __str__(self) -> str:
@@ -111,6 +119,7 @@ class IRLoadVar(IRInstruction):
 @dataclass
 class IRStoreVar(IRInstruction):
     """Store value to variable."""
+
     name: str = ""
     value_id: int = 0
 
@@ -121,6 +130,7 @@ class IRStoreVar(IRInstruction):
 @dataclass
 class IRBinaryOp(IRInstruction):
     """Binary operation."""
+
     op: str = ""
     left_id: int = 0
     right_id: int = 0
@@ -132,6 +142,7 @@ class IRBinaryOp(IRInstruction):
 @dataclass
 class IRUnaryOp(IRInstruction):
     """Unary operation."""
+
     op: str = ""
     operand_id: int = 0
 
@@ -142,6 +153,7 @@ class IRUnaryOp(IRInstruction):
 @dataclass
 class IRCompare(IRInstruction):
     """Comparison operation."""
+
     op: str = ""
     left_id: int = 0
     right_id: int = 0
@@ -154,6 +166,7 @@ class IRCompare(IRInstruction):
 @dataclass
 class IRJump(IRInstruction):
     """Unconditional jump."""
+
     target_block: str = ""
 
     def __str__(self) -> str:
@@ -163,6 +176,7 @@ class IRJump(IRInstruction):
 @dataclass
 class IRJumpIf(IRInstruction):
     """Conditional jump."""
+
     condition_id: int = 0
     true_block: str = ""
     false_block: str = ""
@@ -174,6 +188,7 @@ class IRJumpIf(IRInstruction):
 @dataclass
 class IRCall(IRInstruction):
     """Function call."""
+
     callee: str = ""
     args: List[int] = field(default_factory=list)
 
@@ -185,6 +200,7 @@ class IRCall(IRInstruction):
 @dataclass
 class IRReturn(IRInstruction):
     """Return from function."""
+
     value_id: Optional[int] = None
 
     def __str__(self) -> str:
@@ -200,6 +216,7 @@ class IRAction(IRInstruction):
 
     Actions: deny, allow, escalate, route
     """
+
     action: ActionType = ActionType.DENY
     target: Optional[str] = None  # For route action
     reason_id: Optional[int] = None  # Optional reason expression
@@ -220,6 +237,7 @@ class IRCheckPolicy(IRInstruction):
 
     Emits validation request to policy engine before action.
     """
+
     policy_id: str = ""
     context_id: Optional[int] = None  # Context expression
     result_type: IRType = IRType.BOOL
@@ -236,6 +254,7 @@ class IREmitIntent(IRInstruction):
 
     Intents are executed by M18 with governance constraints.
     """
+
     intent_type: str = ""
     payload_ids: List[int] = field(default_factory=list)
     priority: int = 50
@@ -255,6 +274,7 @@ class IREmitIntent(IRInstruction):
 # Blocks and Functions
 # ============================================================================
 
+
 @dataclass
 class IRBlock:
     """
@@ -262,6 +282,7 @@ class IRBlock:
 
     Contains a sequence of instructions with single entry/exit.
     """
+
     name: str = ""
     instructions: List[IRInstruction] = field(default_factory=list)
     predecessors: List[str] = field(default_factory=list)
@@ -293,6 +314,7 @@ class IRFunction:
 
     Represents a policy or rule as a callable unit.
     """
+
     name: str = ""
     params: List[str] = field(default_factory=list)
     return_type: IRType = IRType.VOID
@@ -324,6 +346,7 @@ class IRModule:
 
     Represents a complete compiled PLang program.
     """
+
     name: str = ""
     functions: Dict[str, IRFunction] = field(default_factory=dict)
     globals: Dict[str, Any] = field(default_factory=dict)
@@ -349,11 +372,7 @@ class IRModule:
         """Get all functions in a category, sorted by priority."""
         names = self.functions_by_category.get(category, [])
         funcs = [self.functions[n] for n in names if n in self.functions]
-        return sorted(
-            funcs,
-            key=lambda f: f.governance.priority if f.governance else 50,
-            reverse=True
-        )
+        return sorted(funcs, key=lambda f: f.governance.priority if f.governance else 50, reverse=True)
 
     def __str__(self) -> str:
         lines = [f"module {self.name}"]

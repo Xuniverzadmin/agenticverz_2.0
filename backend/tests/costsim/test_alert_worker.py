@@ -5,13 +5,10 @@ Test suite for the reliable alert delivery worker.
 Requires PostgreSQL with the costsim_alert_queue table.
 """
 
-import pytest
 import asyncio
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest_asyncio
-
+import pytest
 
 # Skip if dependencies not available
 pytest.importorskip("asyncpg")

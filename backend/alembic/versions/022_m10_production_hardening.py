@@ -11,13 +11,13 @@ M10 Production Hardening:
 - Adds outbox table for transactional external side-effects
 - Adds reclaim_attempts_gc table for tracking TTL cleanup
 """
-from alembic import op
-import sqlalchemy as sa
 from sqlalchemy import text
 
+from alembic import op
+
 # revision identifiers
-revision = '022_m10_production_hardening'
-down_revision = '021_m10_durable_queue_fallback'
+revision = "022_m10_production_hardening"
+down_revision = "021_m10_durable_queue_fallback"
 branch_labels = None
 depends_on = None
 
@@ -28,7 +28,9 @@ def upgrade() -> None:
     # ==========================================================================
     # 1. Create distributed_locks table for leader election
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.distributed_locks (
             lock_name TEXT PRIMARY KEY,
             holder_id TEXT NOT NULL,
@@ -49,12 +51,16 @@ def upgrade() -> None:
             'Identifier of the lock holder (hostname:pid or UUID)';
         COMMENT ON COLUMN m10_recovery.distributed_locks.expires_at IS
             'Lock expiration time - must be refreshed before this';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 2. Create replay_log table for durable idempotency
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.replay_log (
             id BIGSERIAL PRIMARY KEY,
             original_msg_id TEXT NOT NULL,
@@ -88,12 +94,16 @@ def upgrade() -> None:
             'Dead-letter stream message ID';
         COMMENT ON COLUMN m10_recovery.replay_log.new_msg_id IS
             'New message ID after replay (if successful)';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 3. Create dead_letter_archive table
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.dead_letter_archive (
             id BIGSERIAL PRIMARY KEY,
             dl_msg_id TEXT,  -- Nullable: may be called for initial replay before DL
@@ -127,12 +137,16 @@ def upgrade() -> None:
             'Archive of dead-letter messages before trimming from Redis stream';
         COMMENT ON COLUMN m10_recovery.dead_letter_archive.payload IS
             'Full message payload as JSON for debugging';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 4. Create outbox table for transactional side-effects
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.outbox (
             id BIGSERIAL PRIMARY KEY,
             aggregate_type TEXT NOT NULL,
@@ -166,12 +180,16 @@ def upgrade() -> None:
             'Type of aggregate (e.g., recovery_candidate, worker_execution)';
         COMMENT ON COLUMN m10_recovery.outbox.event_type IS
             'Event type (e.g., notify_ops, send_email, webhook_call)';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 5. Create function for acquiring distributed lock
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.acquire_lock(
             p_lock_name TEXT,
             p_holder_id TEXT,
@@ -206,12 +224,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.acquire_lock IS
             'Acquire distributed lock with TTL. Returns TRUE if acquired.';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 6. Create function for releasing distributed lock
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.release_lock(
             p_lock_name TEXT,
             p_holder_id TEXT
@@ -231,12 +253,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.release_lock IS
             'Release distributed lock. Only holder can release.';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 7. Create function for extending lock TTL
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.extend_lock(
             p_lock_name TEXT,
             p_holder_id TEXT,
@@ -258,12 +284,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.extend_lock IS
             'Extend lock TTL. Only holder can extend.';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 8. Create function for recording replay (idempotent)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.record_replay(
             p_original_msg_id TEXT,
             p_dl_msg_id TEXT,
@@ -313,12 +343,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.record_replay IS
             'Record replay with ON CONFLICT for idempotency. Returns (already_replayed, id).';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 9. Create function for archiving DL messages
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.archive_dead_letter(
             p_dl_msg_id TEXT,
             p_original_msg_id TEXT,
@@ -352,12 +386,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.archive_dead_letter IS
             'Archive a dead-letter message before trimming from Redis stream';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 10. Create function for publishing to outbox
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.publish_outbox(
             p_aggregate_type TEXT,
             p_aggregate_id TEXT,
@@ -384,12 +422,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.publish_outbox IS
             'Publish event to outbox for external delivery';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 11. Create function to claim outbox events
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.claim_outbox_events(
             p_processor_id TEXT,
             p_batch_size INTEGER DEFAULT 10
@@ -421,12 +463,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.claim_outbox_events IS
             'Claim batch of outbox events for processing';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 12. Create function to mark outbox event processed/failed
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.complete_outbox_event(
             p_event_id BIGINT,
             p_processor_id TEXT,
@@ -455,12 +501,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.complete_outbox_event IS
             'Mark outbox event as processed or schedule retry';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 13. Create function to cleanup expired locks
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.cleanup_expired_locks()
         RETURNS INTEGER AS $$
         DECLARE
@@ -479,12 +529,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.cleanup_expired_locks IS
             'Remove expired distributed locks';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 14. Grants
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         DECLARE
             v_role TEXT;
@@ -520,7 +574,9 @@ def upgrade() -> None:
         EXCEPTION WHEN OTHERS THEN
             RAISE NOTICE 'Grant failed (non-fatal): %', SQLERRM;
         END$$;
-    """))
+    """
+        )
+    )
 
 
 def downgrade() -> None:

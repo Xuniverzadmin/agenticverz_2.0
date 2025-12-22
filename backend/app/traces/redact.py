@@ -9,11 +9,9 @@ Redacts sensitive data from traces before storage:
 - Custom patterns via configuration
 """
 
-import re
-import json
 import copy
+import re
 from typing import Any
-
 
 # PII patterns with compiled regexes
 PII_PATTERNS = [
@@ -27,33 +25,24 @@ PII_PATTERNS = [
     (re.compile(r'(?i)("refresh_token"\s*:\s*)"[^"]*"'), r'\1"<REDACTED>"'),
     (re.compile(r'(?i)("bearer"\s*:\s*)"[^"]*"'), r'\1"<REDACTED>"'),
     (re.compile(r'(?i)("private_key"\s*:\s*)"[^"]*"'), r'\1"<REDACTED>"'),
-
     # Authorization headers
     (re.compile(r'(?i)("authorization"\s*:\s*)"[^"]*"'), r'\1"<REDACTED>"'),
     (re.compile(r'(?i)("x-api-key"\s*:\s*)"[^"]*"'), r'\1"<REDACTED>"'),
-
     # Bearer tokens in values
-    (re.compile(r'(?i)Bearer\s+[A-Za-z0-9\-_\.]+'), r'Bearer <REDACTED>'),
-
+    (re.compile(r"(?i)Bearer\s+[A-Za-z0-9\-_\.]+"), r"Bearer <REDACTED>"),
     # Credit card numbers (13-19 digits)
-    (re.compile(r'\b\d{13,19}\b'), '<REDACTED_CARD>'),
-
+    (re.compile(r"\b\d{13,19}\b"), "<REDACTED_CARD>"),
     # SSN (XXX-XX-XXXX)
-    (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '<REDACTED_SSN>'),
-
+    (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "<REDACTED_SSN>"),
     # Email addresses
-    (re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'), '<REDACTED_EMAIL>'),
-
+    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "<REDACTED_EMAIL>"),
     # AWS Access Keys
-    (re.compile(r'AKIA[0-9A-Z]{16}'), '<REDACTED_AWS_KEY>'),
-
+    (re.compile(r"AKIA[0-9A-Z]{16}"), "<REDACTED_AWS_KEY>"),
     # GitHub tokens
-    (re.compile(r'ghp_[A-Za-z0-9]{36}'), '<REDACTED_GITHUB_TOKEN>'),
-    (re.compile(r'gho_[A-Za-z0-9]{36}'), '<REDACTED_GITHUB_TOKEN>'),
-
+    (re.compile(r"ghp_[A-Za-z0-9]{36}"), "<REDACTED_GITHUB_TOKEN>"),
+    (re.compile(r"gho_[A-Za-z0-9]{36}"), "<REDACTED_GITHUB_TOKEN>"),
     # Slack tokens
-    (re.compile(r'xox[baprs]-[A-Za-z0-9\-]+'), '<REDACTED_SLACK_TOKEN>'),
-
+    (re.compile(r"xox[baprs]-[A-Za-z0-9\-]+"), "<REDACTED_SLACK_TOKEN>"),
     # Generic long hex strings (likely secrets/hashes - be careful)
     # Only redact if they look like API keys (32+ chars, hex)
     (re.compile(r'(?i)("key"\s*:\s*)"[a-f0-9]{32,}"'), r'\1"<REDACTED_KEY>"'),
@@ -61,14 +50,31 @@ PII_PATTERNS = [
 
 # Fields to always redact (case-insensitive)
 SENSITIVE_FIELD_NAMES = {
-    'password', 'passwd', 'pwd',
-    'secret', 'api_key', 'apikey', 'api-key',
-    'token', 'access_token', 'refresh_token', 'auth_token',
-    'authorization', 'bearer',
-    'private_key', 'privatekey', 'ssh_key',
-    'credentials', 'cred',
-    'ssn', 'social_security',
-    'credit_card', 'creditcard', 'card_number', 'cvv', 'cvc',
+    "password",
+    "passwd",
+    "pwd",
+    "secret",
+    "api_key",
+    "apikey",
+    "api-key",
+    "token",
+    "access_token",
+    "refresh_token",
+    "auth_token",
+    "authorization",
+    "bearer",
+    "private_key",
+    "privatekey",
+    "ssh_key",
+    "credentials",
+    "cred",
+    "ssn",
+    "social_security",
+    "credit_card",
+    "creditcard",
+    "card_number",
+    "cvv",
+    "cvc",
 }
 
 
@@ -145,21 +151,21 @@ def redact_string_value(value: str) -> str:
     result = value
 
     # Check for email
-    if re.search(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', result):
-        result = re.sub(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '<REDACTED_EMAIL>', result)
+    if re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", result):
+        result = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "<REDACTED_EMAIL>", result)
 
     # Check for bearer tokens
-    if 'bearer' in result.lower():
-        result = re.sub(r'(?i)Bearer\s+[A-Za-z0-9\-_\.]+', 'Bearer <REDACTED>', result)
+    if "bearer" in result.lower():
+        result = re.sub(r"(?i)Bearer\s+[A-Za-z0-9\-_\.]+", "Bearer <REDACTED>", result)
 
     # Check for AWS keys
-    result = re.sub(r'AKIA[0-9A-Z]{16}', '<REDACTED_AWS_KEY>', result)
+    result = re.sub(r"AKIA[0-9A-Z]{16}", "<REDACTED_AWS_KEY>", result)
 
     # Check for GitHub tokens
-    result = re.sub(r'gh[poa]_[A-Za-z0-9]{36}', '<REDACTED_GITHUB_TOKEN>', result)
+    result = re.sub(r"gh[poa]_[A-Za-z0-9]{36}", "<REDACTED_GITHUB_TOKEN>", result)
 
     # Check for Slack tokens
-    result = re.sub(r'xox[baprs]-[A-Za-z0-9\-]+', '<REDACTED_SLACK_TOKEN>', result)
+    result = re.sub(r"xox[baprs]-[A-Za-z0-9\-]+", "<REDACTED_SLACK_TOKEN>", result)
 
     return result
 
@@ -194,13 +200,23 @@ def redact_trace_data(trace: dict[str, Any]) -> dict[str, Any]:
 
                 # Redact outcome_data
                 if "outcome_data" in step and step["outcome_data"]:
-                    step["outcome_data"] = redact_dict(step["outcome_data"]) if isinstance(step["outcome_data"], dict) else step["outcome_data"]
+                    step["outcome_data"] = (
+                        redact_dict(step["outcome_data"])
+                        if isinstance(step["outcome_data"], dict)
+                        else step["outcome_data"]
+                    )
 
                 # Redact input/output if present
                 if "input_data" in step:
-                    step["input_data"] = redact_dict(step["input_data"]) if isinstance(step["input_data"], dict) else step["input_data"]
+                    step["input_data"] = (
+                        redact_dict(step["input_data"]) if isinstance(step["input_data"], dict) else step["input_data"]
+                    )
                 if "output_data" in step:
-                    step["output_data"] = redact_dict(step["output_data"]) if isinstance(step["output_data"], dict) else step["output_data"]
+                    step["output_data"] = (
+                        redact_dict(step["output_data"])
+                        if isinstance(step["output_data"], dict)
+                        else step["output_data"]
+                    )
 
     # Redact metadata
     if "metadata" in redacted and isinstance(redacted["metadata"], dict):

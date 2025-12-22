@@ -7,8 +7,8 @@ Provides structured metadata for skill contracts and versioning.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, List
 from datetime import datetime, timezone
+from typing import Any, Dict, List
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,7 @@ class ContractMetadata:
         changelog: Description of changes in this version
         author: Who created/modified this contract
     """
+
     version: str
     frozen_at: str  # ISO date when contract was frozen
     changelog: str = ""
@@ -33,7 +34,7 @@ class ContractMetadata:
         return cls(
             version=version,
             frozen_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            changelog=changelog
+            changelog=changelog,
         )
 
 
@@ -51,6 +52,7 @@ class SkillContract:
         stable_fields: Field -> stability rule mapping
         metadata: Version and lifecycle info
     """
+
     skill_id: str
     inputs_schema: Dict[str, Any]
     outputs_schema: Dict[str, Any]
@@ -68,8 +70,8 @@ class SkillContract:
                 "version": self.metadata.version,
                 "frozen_at": self.metadata.frozen_at,
                 "changelog": self.metadata.changelog,
-                "author": self.metadata.author
-            }
+                "author": self.metadata.author,
+            },
         }
 
 
@@ -87,6 +89,7 @@ class FailureMode:
         recovery_hints: List of recovery suggestions
         retryable: Whether retry might work
     """
+
     code: str
     category: str
     typical_cause: str
@@ -100,7 +103,7 @@ class FailureMode:
             "category": self.category,
             "typical_cause": self.typical_cause,
             "recovery_hints": self.recovery_hints,
-            "retryable": self.retryable
+            "retryable": self.retryable,
         }
 
 
@@ -117,6 +120,7 @@ class CostModel:
         per_token_cents: Cost per token (for LLM skills)
         max_cents: Maximum possible cost
     """
+
     base_cents: int = 0
     per_kb_cents: float = 0.0
     per_token_cents: float = 0.0
@@ -135,7 +139,7 @@ class CostModel:
             "base_cents": self.base_cents,
             "per_kb_cents": self.per_kb_cents,
             "per_token_cents": self.per_token_cents,
-            "max_cents": self.max_cents
+            "max_cents": self.max_cents,
         }
 
 
@@ -151,6 +155,7 @@ class BudgetTracker:
         spent_cents: Amount spent so far
         per_step_max_cents: Max allowed per single step
     """
+
     total_cents: int = 1000
     spent_cents: int = 0
     per_step_max_cents: int = 100
@@ -162,10 +167,7 @@ class BudgetTracker:
 
     def can_spend(self, amount: int) -> bool:
         """Check if amount can be spent."""
-        return (
-            amount <= self.remaining_cents and
-            amount <= self.per_step_max_cents
-        )
+        return amount <= self.remaining_cents and amount <= self.per_step_max_cents
 
     def spend(self, amount: int) -> bool:
         """
@@ -184,5 +186,5 @@ class BudgetTracker:
             "total_cents": self.total_cents,
             "spent_cents": self.spent_cents,
             "remaining_cents": self.remaining_cents,
-            "per_step_max_cents": self.per_step_max_cents
+            "per_step_max_cents": self.per_step_max_cents,
         }

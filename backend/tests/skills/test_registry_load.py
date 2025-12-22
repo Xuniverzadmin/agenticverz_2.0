@@ -11,13 +11,13 @@ Performance tests for SkillRegistry v2 with:
 These tests ensure the registry can handle production-scale deployments.
 """
 
-import asyncio
-import pytest
 import sys
-import time
 import tempfile
+import time
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict
+
+import pytest
 
 # Add paths
 _backend_path = str(Path(__file__).parent.parent.parent)
@@ -28,21 +28,17 @@ for p in [_backend_path, _runtime_path, _skills_path]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
+from core import SkillDescriptor
 from registry_v2 import (
     SkillRegistry,
-    SkillRegistration,
-    SkillVersion,
     diff_contracts,
     is_version_compatible,
     resolve_skill_with_version,
 )
-from core import SkillDescriptor
 
 
 def create_test_descriptor(
-    skill_id: str,
-    version: str = "1.0.0",
-    stable_fields: Dict[str, str] = None
+    skill_id: str, version: str = "1.0.0", stable_fields: Dict[str, str] = None
 ) -> SkillDescriptor:
     """Create a test descriptor."""
     return SkillDescriptor(
@@ -53,10 +49,8 @@ def create_test_descriptor(
         outputs_schema_version="1.0",
         stable_fields=stable_fields or {"output": "DETERMINISTIC"},
         cost_model={"base_cents": 1, "per_call_cents": 0},
-        failure_modes=[
-            {"code": "ERR_TEST", "category": "PERMANENT"}
-        ],
-        constraints={"max_size": 1000}
+        failure_modes=[{"code": "ERR_TEST", "category": "PERMANENT"}],
+        constraints={"max_size": 1000},
     )
 
 
@@ -196,6 +190,7 @@ class TestRegistryPersistencePerformance:
         """Ensure test isolation - no other tests running concurrently."""
         # This fixture ensures each test in this class gets clean state
         import gc
+
         gc.collect()
         yield
 

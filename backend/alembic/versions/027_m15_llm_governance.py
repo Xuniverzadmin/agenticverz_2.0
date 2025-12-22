@@ -18,115 +18,75 @@ Key Design:
 Based on: PIN-070-budgetllm-safety-governance.md
 """
 
-revision = '027_m15_llm_governance'
-down_revision = '026_m12_credit_tables_fix'
+revision = "027_m15_llm_governance"
+down_revision = "026_m12_credit_tables_fix"
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
+
+from alembic import op
 
 
 def upgrade():
     # 1. Add LLM governance columns to jobs table
+    op.add_column("jobs", sa.Column("llm_budget_cents", sa.Integer(), nullable=True), schema="agents")
     op.add_column(
-        'jobs',
-        sa.Column('llm_budget_cents', sa.Integer(), nullable=True),
-        schema='agents'
+        "jobs", sa.Column("llm_budget_used", sa.Integer(), server_default="0", nullable=False), schema="agents"
     )
     op.add_column(
-        'jobs',
-        sa.Column('llm_budget_used', sa.Integer(), server_default='0', nullable=False),
-        schema='agents'
+        "jobs", sa.Column("llm_risk_violations", sa.Integer(), server_default="0", nullable=False), schema="agents"
     )
-    op.add_column(
-        'jobs',
-        sa.Column('llm_risk_violations', sa.Integer(), server_default='0', nullable=False),
-        schema='agents'
-    )
-    op.add_column(
-        'jobs',
-        sa.Column('llm_config', JSONB, server_default='{}', nullable=False),
-        schema='agents'
-    )
+    op.add_column("jobs", sa.Column("llm_config", JSONB, server_default="{}", nullable=False), schema="agents")
 
     # 2. Add LLM governance columns to job_items table
+    op.add_column("job_items", sa.Column("risk_score", sa.Float(), nullable=True), schema="agents")
+    op.add_column("job_items", sa.Column("risk_factors", JSONB, server_default="{}", nullable=False), schema="agents")
     op.add_column(
-        'job_items',
-        sa.Column('risk_score', sa.Float(), nullable=True),
-        schema='agents'
+        "job_items", sa.Column("blocked", sa.Boolean(), server_default="false", nullable=False), schema="agents"
+    )
+    op.add_column("job_items", sa.Column("blocked_reason", sa.Text(), nullable=True), schema="agents")
+    op.add_column("job_items", sa.Column("params_clamped", JSONB, server_default="{}", nullable=False), schema="agents")
+    op.add_column(
+        "job_items", sa.Column("llm_cost_cents", sa.Float(), server_default="0", nullable=False), schema="agents"
     )
     op.add_column(
-        'job_items',
-        sa.Column('risk_factors', JSONB, server_default='{}', nullable=False),
-        schema='agents'
-    )
-    op.add_column(
-        'job_items',
-        sa.Column('blocked', sa.Boolean(), server_default='false', nullable=False),
-        schema='agents'
-    )
-    op.add_column(
-        'job_items',
-        sa.Column('blocked_reason', sa.Text(), nullable=True),
-        schema='agents'
-    )
-    op.add_column(
-        'job_items',
-        sa.Column('params_clamped', JSONB, server_default='{}', nullable=False),
-        schema='agents'
-    )
-    op.add_column(
-        'job_items',
-        sa.Column('llm_cost_cents', sa.Float(), server_default='0', nullable=False),
-        schema='agents'
-    )
-    op.add_column(
-        'job_items',
-        sa.Column('llm_tokens_used', sa.Integer(), server_default='0', nullable=False),
-        schema='agents'
+        "job_items", sa.Column("llm_tokens_used", sa.Integer(), server_default="0", nullable=False), schema="agents"
     )
 
     # 3. Add LLM governance columns to instances table
+    op.add_column("instances", sa.Column("llm_budget_cents", sa.Integer(), nullable=True), schema="agents")
     op.add_column(
-        'instances',
-        sa.Column('llm_budget_cents', sa.Integer(), nullable=True),
-        schema='agents'
+        "instances", sa.Column("llm_budget_used", sa.Integer(), server_default="0", nullable=False), schema="agents"
     )
     op.add_column(
-        'instances',
-        sa.Column('llm_budget_used', sa.Integer(), server_default='0', nullable=False),
-        schema='agents'
+        "instances", sa.Column("llm_risk_violations", sa.Integer(), server_default="0", nullable=False), schema="agents"
     )
-    op.add_column(
-        'instances',
-        sa.Column('llm_risk_violations', sa.Integer(), server_default='0', nullable=False),
-        schema='agents'
-    )
-    op.add_column(
-        'instances',
-        sa.Column('llm_config', JSONB, server_default='{}', nullable=False),
-        schema='agents'
-    )
+    op.add_column("instances", sa.Column("llm_config", JSONB, server_default="{}", nullable=False), schema="agents")
 
     # 4. Create index for blocked items (for aggregation filtering)
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX idx_job_items_blocked
         ON agents.job_items(job_id, blocked)
         WHERE blocked = true
-    """)
+    """
+    )
 
     # 5. Create index for high-risk items (for monitoring)
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX idx_job_items_high_risk
         ON agents.job_items(job_id, risk_score)
         WHERE risk_score > 0.5
-    """)
+    """
+    )
 
     # 6. Update job_progress view to include LLM governance metrics
     op.execute("DROP VIEW IF EXISTS agents.job_progress")
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW agents.job_progress AS
         SELECT
             j.id,
@@ -160,11 +120,13 @@ def upgrade():
             j.completed_at,
             EXTRACT(EPOCH FROM (COALESCE(j.completed_at, now()) - j.started_at)) AS duration_seconds
         FROM agents.jobs j
-    """)
+    """
+    )
 
     # 7. Update active_workers view to include LLM governance metrics
     op.execute("DROP VIEW IF EXISTS agents.active_workers")
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW agents.active_workers AS
         SELECT
             i.id,
@@ -195,10 +157,12 @@ def upgrade():
                AND ji.risk_score IS NOT NULL) AS avg_risk_score
         FROM agents.instances i
         WHERE i.status IN ('running', 'idle')
-    """)
+    """
+    )
 
     # 8. Function to check worker budget before LLM call
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.check_worker_budget(
             p_instance_id TEXT,
             p_estimated_cost INTEGER
@@ -232,10 +196,12 @@ def upgrade():
             END IF;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # 9. Function to record LLM usage
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.record_llm_usage(
             p_item_id UUID,
             p_cost_cents FLOAT,
@@ -291,17 +257,21 @@ def upgrade():
             RETURN TRUE;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
 
 def downgrade():
     # Drop functions
-    op.execute("DROP FUNCTION IF EXISTS agents.record_llm_usage(UUID, FLOAT, INTEGER, FLOAT, JSONB, BOOLEAN, TEXT, JSONB)")
+    op.execute(
+        "DROP FUNCTION IF EXISTS agents.record_llm_usage(UUID, FLOAT, INTEGER, FLOAT, JSONB, BOOLEAN, TEXT, JSONB)"
+    )
     op.execute("DROP FUNCTION IF EXISTS agents.check_worker_budget(TEXT, INTEGER)")
 
     # Restore original views
     op.execute("DROP VIEW IF EXISTS agents.active_workers")
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW agents.active_workers AS
         SELECT
             i.id,
@@ -320,10 +290,12 @@ def downgrade():
                AND ji.status IN ('claimed', 'running')) AS items_in_progress
         FROM agents.instances i
         WHERE i.status IN ('running', 'idle')
-    """)
+    """
+    )
 
     op.execute("DROP VIEW IF EXISTS agents.job_progress")
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW agents.job_progress AS
         SELECT
             j.id,
@@ -346,29 +318,30 @@ def downgrade():
             j.completed_at,
             EXTRACT(EPOCH FROM (COALESCE(j.completed_at, now()) - j.started_at)) AS duration_seconds
         FROM agents.jobs j
-    """)
+    """
+    )
 
     # Drop indexes
     op.execute("DROP INDEX IF EXISTS agents.idx_job_items_high_risk")
     op.execute("DROP INDEX IF EXISTS agents.idx_job_items_blocked")
 
     # Drop columns from instances
-    op.drop_column('instances', 'llm_config', schema='agents')
-    op.drop_column('instances', 'llm_risk_violations', schema='agents')
-    op.drop_column('instances', 'llm_budget_used', schema='agents')
-    op.drop_column('instances', 'llm_budget_cents', schema='agents')
+    op.drop_column("instances", "llm_config", schema="agents")
+    op.drop_column("instances", "llm_risk_violations", schema="agents")
+    op.drop_column("instances", "llm_budget_used", schema="agents")
+    op.drop_column("instances", "llm_budget_cents", schema="agents")
 
     # Drop columns from job_items
-    op.drop_column('job_items', 'llm_tokens_used', schema='agents')
-    op.drop_column('job_items', 'llm_cost_cents', schema='agents')
-    op.drop_column('job_items', 'params_clamped', schema='agents')
-    op.drop_column('job_items', 'blocked_reason', schema='agents')
-    op.drop_column('job_items', 'blocked', schema='agents')
-    op.drop_column('job_items', 'risk_factors', schema='agents')
-    op.drop_column('job_items', 'risk_score', schema='agents')
+    op.drop_column("job_items", "llm_tokens_used", schema="agents")
+    op.drop_column("job_items", "llm_cost_cents", schema="agents")
+    op.drop_column("job_items", "params_clamped", schema="agents")
+    op.drop_column("job_items", "blocked_reason", schema="agents")
+    op.drop_column("job_items", "blocked", schema="agents")
+    op.drop_column("job_items", "risk_factors", schema="agents")
+    op.drop_column("job_items", "risk_score", schema="agents")
 
     # Drop columns from jobs
-    op.drop_column('jobs', 'llm_config', schema='agents')
-    op.drop_column('jobs', 'llm_risk_violations', schema='agents')
-    op.drop_column('jobs', 'llm_budget_used', schema='agents')
-    op.drop_column('jobs', 'llm_budget_cents', schema='agents')
+    op.drop_column("jobs", "llm_config", schema="agents")
+    op.drop_column("jobs", "llm_risk_violations", schema="agents")
+    op.drop_column("jobs", "llm_budget_used", schema="agents")
+    op.drop_column("jobs", "llm_budget_cents", schema="agents")

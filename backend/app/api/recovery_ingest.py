@@ -14,27 +14,26 @@ Features:
 Authentication: Machine token with recovery:write scope.
 """
 
+import json
 import logging
 import os
-import json
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, create_engine
 
-from app.middleware.rate_limit import rate_limit_dependency
 from app.metrics import (
-    recovery_ingest_total,
-    recovery_ingest_latency_seconds,
     recovery_ingest_duplicates_total,
     recovery_ingest_enqueue_total,
+    recovery_ingest_latency_seconds,
+    recovery_ingest_total,
 )
+from app.middleware.rate_limit import rate_limit_dependency
 
 logger = logging.getLogger("nova.api.recovery_ingest")
 
@@ -45,8 +44,10 @@ router = APIRouter(prefix="/api/v1/recovery", tags=["recovery-ingest"])
 # Request/Response Models
 # =============================================================================
 
+
 class IngestRequest(BaseModel):
     """Request to ingest a failure for recovery evaluation."""
+
     failure_match_id: str = Field(..., description="UUID of failure_match record")
     failure_payload: Dict[str, Any] = Field(
         ...,
@@ -54,22 +55,17 @@ class IngestRequest(BaseModel):
         example={
             "error_type": "TIMEOUT",
             "raw": "Connection timed out after 30s",
-            "meta": {"skill": "http_call", "tenant_id": "acme"}
-        }
+            "meta": {"skill": "http_call", "tenant_id": "acme"},
+        },
     )
     source: Optional[str] = Field("api", description="Source system identifier")
-    idempotency_key: Optional[str] = Field(
-        None,
-        description="Optional UUID for request deduplication"
-    )
-    enqueue_evaluation: bool = Field(
-        True,
-        description="Whether to enqueue for background evaluation"
-    )
+    idempotency_key: Optional[str] = Field(None, description="Optional UUID for request deduplication")
+    enqueue_evaluation: bool = Field(True, description="Whether to enqueue for background evaluation")
 
 
 class IngestResponse(BaseModel):
     """Response from ingest endpoint."""
+
     candidate_id: int = Field(..., description="ID of the recovery candidate")
     status: str = Field(..., description="accepted, duplicate, or error")
     message: str = Field(..., description="Human-readable status message")
@@ -81,14 +77,12 @@ class IngestResponse(BaseModel):
 # Database Session Dependency
 # =============================================================================
 
+
 def get_db_session():
     """Create database session for request."""
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
-        raise HTTPException(
-            status_code=500,
-            detail="DATABASE_URL not configured"
-        )
+        raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
 
     engine = create_engine(
         db_url,
@@ -107,6 +101,7 @@ def get_db_session():
 # Ingest Endpoint
 # =============================================================================
 
+
 @router.post(
     "/ingest",
     response_model=IngestResponse,
@@ -116,7 +111,7 @@ def get_db_session():
         409: {"description": "Duplicate request (returns existing candidate)"},
         400: {"description": "Invalid request"},
         500: {"description": "Internal server error"},
-    }
+    },
 )
 async def ingest_failure(
     request: IngestRequest,
@@ -143,10 +138,7 @@ async def ingest_failure(
         payload = request.failure_payload
         idempotency_key = request.idempotency_key
 
-        logger.info(
-            f"Ingest request: failure_match_id={failure_match_id}, "
-            f"idempotency_key={idempotency_key}"
-        )
+        logger.info(f"Ingest request: failure_match_id={failure_match_id}, " f"idempotency_key={idempotency_key}")
 
         # =================================================================
         # Normalize error for candidate
@@ -168,7 +160,8 @@ async def ingest_failure(
         # =================================================================
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO recovery_candidates (
                         failure_match_id,
                         suggestion,
@@ -200,21 +193,24 @@ async def ingest_failure(
                         last_occurrence_at = now(),
                         updated_at = now()
                     RETURNING id, (xmax = 0) AS is_insert, occurrence_count
-                """),
+                """
+                ),
                 {
                     "failure_match_id": failure_match_id,
                     "suggestion": suggestion,
                     "confidence": 0.2,  # Default pending evaluation
-                    "explain": json.dumps({
-                        "method": "pending_evaluation",
-                        "source": request.source,
-                        "ingested_at": datetime.now(timezone.utc).isoformat(),
-                    }),
+                    "explain": json.dumps(
+                        {
+                            "method": "pending_evaluation",
+                            "source": request.source,
+                            "ingested_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ),
                     "error_code": error_type,
                     "error_signature": error_signature,
                     "source": request.source,
                     "idempotency_key": idempotency_key,
-                }
+                },
             )
             row = result.fetchone()
             candidate_id = row[0]
@@ -224,10 +220,7 @@ async def ingest_failure(
 
             if not is_insert:
                 # This was an update (duplicate)
-                logger.info(
-                    f"Updated existing candidate: id={candidate_id}, "
-                    f"occurrence_count={occurrence_count}"
-                )
+                logger.info(f"Updated existing candidate: id={candidate_id}, " f"occurrence_count={occurrence_count}")
                 status_label = "duplicate"
                 recovery_ingest_duplicates_total.labels(detection_method="upsert_conflict").inc()
                 return IngestResponse(
@@ -248,12 +241,14 @@ async def ingest_failure(
             if idempotency_key and "idempotency_key" in msg:
                 # Idempotency key matched different failure_match_id
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id, failure_match_id
                         FROM recovery_candidates
                         WHERE idempotency_key = CAST(:key AS uuid)
-                    """),
-                    {"key": idempotency_key}
+                    """
+                    ),
+                    {"key": idempotency_key},
                 )
                 existing = result.fetchone()
 
@@ -269,10 +264,7 @@ async def ingest_failure(
                     )
 
             # Unknown integrity error
-            raise HTTPException(
-                status_code=500,
-                detail=f"Database integrity error: {str(ie.orig)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Database integrity error: {str(ie.orig)}")
 
         # =================================================================
         # Optionally enqueue for background evaluation
@@ -283,9 +275,7 @@ async def ingest_failure(
                 recovery_ingest_enqueue_total.labels(status="success").inc()
             except Exception as e:
                 # Non-fatal: evaluation will be picked up by polling worker
-                logger.warning(
-                    f"Failed to enqueue evaluation for candidate {candidate_id}: {e}"
-                )
+                logger.warning(f"Failed to enqueue evaluation for candidate {candidate_id}: {e}")
                 recovery_ingest_enqueue_total.labels(status="failed").inc()
         else:
             recovery_ingest_enqueue_total.labels(status="skipped").inc()
@@ -305,10 +295,7 @@ async def ingest_failure(
         raise
     except Exception as e:
         logger.error(f"Ingest error: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to ingest failure: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to ingest failure: {str(e)}")
     finally:
         # Record metrics
         duration = time.perf_counter() - start_time
@@ -319,6 +306,7 @@ async def ingest_failure(
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def _generate_default_suggestion(error_code: str, error_message: str) -> str:
     """Generate default recovery suggestion based on error type."""
@@ -379,10 +367,7 @@ async def _enqueue_evaluation_async(
 
         if msg_id:
             enqueue_method = "redis_stream"
-            logger.info(
-                f"Evaluation enqueued to Redis Stream: candidate_id={candidate_id}, "
-                f"msg_id={msg_id}"
-            )
+            logger.info(f"Evaluation enqueued to Redis Stream: candidate_id={candidate_id}, " f"msg_id={msg_id}")
             return True
         else:
             logger.warning(f"Redis Stream enqueue returned None for candidate {candidate_id}")
@@ -410,24 +395,24 @@ async def _enqueue_evaluation_async(
 
         try:
             session.execute(
-                text("""
+                text(
+                    """
                     SELECT m10_recovery.enqueue_work(
                         :candidate_id,
                         CAST(:idempotency_key AS uuid),
                         0,
                         'db_fallback'
                     )
-                """),
+                """
+                ),
                 {
                     "candidate_id": candidate_id,
                     "idempotency_key": idempotency_key,
-                }
+                },
             )
             session.commit()
             enqueue_method = "db_fallback"
-            logger.info(
-                f"Evaluation enqueued to DB fallback: candidate_id={candidate_id}"
-            )
+            logger.info(f"Evaluation enqueued to DB fallback: candidate_id={candidate_id}")
             return True
         finally:
             if owns_session:
@@ -455,19 +440,14 @@ def _enqueue_evaluation(
         # Try to get running event loop
         loop = asyncio.get_running_loop()
         # Schedule the async enqueue (non-blocking)
-        loop.create_task(
-            _enqueue_evaluation_async(candidate_id, failure_match_id, idempotency_key, session)
-        )
+        loop.create_task(_enqueue_evaluation_async(candidate_id, failure_match_id, idempotency_key, session))
     except RuntimeError:
         # No event loop running, create one
         try:
-            asyncio.run(
-                _enqueue_evaluation_async(candidate_id, failure_match_id, idempotency_key, session)
-            )
+            asyncio.run(_enqueue_evaluation_async(candidate_id, failure_match_id, idempotency_key, session))
         except Exception as e:
             logger.warning(f"Async enqueue failed: {e}")
             # Last resort: log for polling worker
             logger.info(
-                f"Evaluation queued (polling): candidate_id={candidate_id}, "
-                f"failure_match_id={failure_match_id}"
+                f"Evaluation queued (polling): candidate_id={candidate_id}, " f"failure_match_id={failure_match_id}"
             )

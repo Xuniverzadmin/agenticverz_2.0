@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # OPENAI API COMPATIBILITY TESTS
 # =============================================================================
 
+
 class TestOpenAICompatibility:
     """Tests verifying OpenAI API compatibility."""
 
@@ -58,8 +59,7 @@ class TestOpenAICompatibility:
 
         # This is exactly how OpenAI SDK is called
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hello!"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hello!"}]
         )
 
         # Verify response structure matches OpenAI
@@ -78,8 +78,7 @@ class TestOpenAICompatibility:
         client = Client(openai_key="test-key", budget_cents=1000)
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hi"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hi"}]
         )
 
         # Choices structure
@@ -102,15 +101,16 @@ class TestOpenAICompatibility:
         client = Client(openai_key="test-key", budget_cents=1000)
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hi"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hi"}]
         )
 
         usage = response["usage"]
         assert "prompt_tokens" in usage
         assert "completion_tokens" in usage
         assert "total_tokens" in usage
-        assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
+        assert (
+            usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
+        )
 
     def test_chat_shortcut_works(self, mock_openai):
         """client.chat("hi") shortcut must work."""
@@ -123,7 +123,9 @@ class TestOpenAICompatibility:
 
         # Should return same structure
         assert "choices" in response
-        assert response["choices"][0]["message"]["content"] == "Hello! How can I help you?"
+        assert (
+            response["choices"][0]["message"]["content"] == "Hello! How can I help you?"
+        )
 
     def test_kwargs_passthrough(self, mock_openai):
         """All OpenAI parameters must pass through."""
@@ -177,6 +179,7 @@ class TestOpenAICompatibility:
 # COST AND BUDGET TESTS
 # =============================================================================
 
+
 class TestBudgetEnforcement:
     """Tests for budget enforcement with OpenAI-compatible API."""
 
@@ -208,8 +211,7 @@ class TestBudgetEnforcement:
         client = Client(openai_key="test-key", budget_cents=10000)
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hi"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hi"}]
         )
 
         assert "cost_cents" in response
@@ -224,8 +226,7 @@ class TestBudgetEnforcement:
 
         # First call exceeds budget
         client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hi"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hi"}]
         )
 
         # Second call should fail
@@ -245,8 +246,7 @@ class TestBudgetEnforcement:
 
         with pytest.raises(BudgetExceededError) as exc:
             client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": "Hi"}]
+                model="gpt-4o-mini", messages=[{"role": "user", "content": "Hi"}]
             )
 
         assert exc.value.limit_type == "paused"
@@ -255,6 +255,7 @@ class TestBudgetEnforcement:
 # =============================================================================
 # CACHE TESTS
 # =============================================================================
+
 
 class TestCacheWithOpenAIFormat:
     """Tests for caching with OpenAI-compatible responses."""
@@ -289,16 +290,14 @@ class TestCacheWithOpenAIFormat:
 
         # First call - cache miss
         r1 = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hello"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hello"}]
         )
         assert r1["cache_hit"] is False
         assert r1["cost_cents"] >= 0
 
         # Second call - cache hit
         r2 = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hello"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hello"}]
         )
         assert r2["cache_hit"] is True
         assert r2["cost_cents"] == 0.0
@@ -312,21 +311,22 @@ class TestCacheWithOpenAIFormat:
 
         # First call
         r1 = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Test"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Test"}]
         )
 
         # Second call (cached)
         r2 = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Test"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Test"}]
         )
 
         # Structure must match
         assert "id" in r2
         assert "choices" in r2
         assert "usage" in r2
-        assert r2["choices"][0]["message"]["content"] == r1["choices"][0]["message"]["content"]
+        assert (
+            r2["choices"][0]["message"]["content"]
+            == r1["choices"][0]["message"]["content"]
+        )
 
     def test_openai_only_called_once_for_cached(self, mock_openai):
         """OpenAI API must only be called once for cached prompts."""
@@ -337,16 +337,13 @@ class TestCacheWithOpenAIFormat:
 
         # Three calls with same prompt
         client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Same prompt"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Same prompt"}]
         )
         client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Same prompt"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Same prompt"}]
         )
         client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Same prompt"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Same prompt"}]
         )
 
         # OpenAI should only be called once
@@ -356,6 +353,7 @@ class TestCacheWithOpenAIFormat:
 # =============================================================================
 # DROP-IN REPLACEMENT TEST
 # =============================================================================
+
 
 class TestDropInReplacement:
     """
@@ -424,8 +422,7 @@ class TestDropInReplacement:
         client = Client(openai_key="test-key", budget_cents=1000)
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": "Hello"}]
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "Hello"}]
         )
 
         # Pattern 1: Direct content access

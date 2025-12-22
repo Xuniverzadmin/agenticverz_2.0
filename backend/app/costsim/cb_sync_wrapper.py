@@ -22,10 +22,10 @@ Usage:
 """
 
 from __future__ import annotations
+
 import asyncio
 import concurrent.futures
 import logging
-from functools import lru_cache
 from typing import Optional
 
 logger = logging.getLogger("nova.costsim.cb_sync_wrapper")
@@ -38,10 +38,7 @@ def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
     """Get or create the shared thread pool executor."""
     global _executor
     if _executor is None:
-        _executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=2,
-            thread_name_prefix="cb_sync_"
-        )
+        _executor = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="cb_sync_")
     return _executor
 
 
@@ -65,6 +62,7 @@ def _run_async_in_thread(coro, timeout: float = 5.0):
         TimeoutError: If the operation times out
         Exception: Any exception raised by the coroutine
     """
+
     def run_in_new_loop():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -130,7 +128,7 @@ def get_state_sync(timeout: float = 5.0):
         CircuitBreakerState or None on error
     """
     try:
-        from app.costsim.circuit_breaker_async import get_state, CircuitBreakerState
+        from app.costsim.circuit_breaker_async import get_state
 
         try:
             loop = asyncio.get_running_loop()

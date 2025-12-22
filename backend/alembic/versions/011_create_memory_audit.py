@@ -8,13 +8,12 @@ Revises: 010_create_rbac_audit
 Create Date: 2025-12-04
 """
 
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers
-revision = '011_create_memory_audit'
-down_revision = '010_create_rbac_audit'
+revision = "011_create_memory_audit"
+down_revision = "010_create_rbac_audit"
 branch_labels = None
 depends_on = None
 
@@ -26,7 +25,8 @@ def upgrade() -> None:
     op.execute("CREATE SCHEMA IF NOT EXISTS system")
 
     # Create memory_audit table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS system.memory_audit (
             id BIGSERIAL PRIMARY KEY,
             ts TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -43,41 +43,55 @@ def upgrade() -> None:
             new_value_hash TEXT,
             extra JSONB DEFAULT '{}'::jsonb
         )
-    """)
+    """
+    )
 
     # Create indexes for common queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_memory_audit_ts
         ON system.memory_audit(ts DESC)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_memory_audit_tenant
         ON system.memory_audit(tenant_id)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_memory_audit_key
         ON system.memory_audit(key)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_memory_audit_operation
         ON system.memory_audit(operation)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_memory_audit_agent
         ON system.memory_audit(agent_id) WHERE agent_id IS NOT NULL
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_memory_audit_errors
         ON system.memory_audit(success) WHERE success = false
-    """)
+    """
+    )
 
     # Create function for automated cleanup of old audit records
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION system.cleanup_memory_audit(retention_days INTEGER DEFAULT 30)
         RETURNS INTEGER AS $$
         DECLARE
@@ -89,13 +103,16 @@ def upgrade() -> None:
             RETURN deleted_count;
         END;
         $$ LANGUAGE plpgsql
-    """)
+    """
+    )
 
     # Add comment
-    op.execute("""
+    op.execute(
+        """
         COMMENT ON TABLE system.memory_audit IS
         'Audit log for memory operations (pins, retrieval, updates). M7 enhancement.'
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

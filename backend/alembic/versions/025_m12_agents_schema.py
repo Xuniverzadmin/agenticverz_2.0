@@ -23,14 +23,15 @@ Based on: PIN-062-m12-multi-agent-system.md
 Reuse: M10 distributed_locks (100%), claim pattern (95%), outbox pattern (80%)
 """
 
-revision = '025_m12_agents_schema'
-down_revision = '024_m11_skill_audit'
+revision = "025_m12_agents_schema"
+down_revision = "024_m11_skill_audit"
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+from alembic import op
 
 
 def upgrade():
@@ -39,172 +40,193 @@ def upgrade():
 
     # 1. Agent instances table - running agents with heartbeats
     op.create_table(
-        'instances',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('agent_id', sa.String(128), nullable=False, index=True),  # Agent type/name
-        sa.Column('instance_id', sa.String(128), nullable=False, unique=True),  # Unique instance identifier
-        sa.Column('job_id', UUID(as_uuid=True), nullable=True, index=True),  # Associated job if worker
-        sa.Column('status', sa.String(32), nullable=False, server_default='starting'),  # starting, running, idle, stopped
-        sa.Column('capabilities', JSONB, nullable=True),  # Skills, rate limits, etc.
-        sa.Column('heartbeat_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-        schema='agents'
+        "instances",
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("agent_id", sa.String(128), nullable=False, index=True),  # Agent type/name
+        sa.Column("instance_id", sa.String(128), nullable=False, unique=True),  # Unique instance identifier
+        sa.Column("job_id", UUID(as_uuid=True), nullable=True, index=True),  # Associated job if worker
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default="starting"
+        ),  # starting, running, idle, stopped
+        sa.Column("capabilities", JSONB, nullable=True),  # Skills, rate limits, etc.
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        schema="agents",
     )
 
     # 2. Jobs table - parallel work batches
     op.create_table(
-        'jobs',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('orchestrator_instance_id', sa.String(128), nullable=False, index=True),
-        sa.Column('task', sa.String(256), nullable=False),  # Task name/description
-        sa.Column('config', JSONB, nullable=False),  # Job configuration (worker_agent, parallelism, timeout, etc.)
-        sa.Column('status', sa.String(32), nullable=False, server_default='pending'),  # pending, running, completed, failed, cancelled
-        sa.Column('total_items', sa.Integer(), nullable=True),
-        sa.Column('completed_items', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('failed_items', sa.Integer(), nullable=False, server_default='0'),
+        "jobs",
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("orchestrator_instance_id", sa.String(128), nullable=False, index=True),
+        sa.Column("task", sa.String(256), nullable=False),  # Task name/description
+        sa.Column("config", JSONB, nullable=False),  # Job configuration (worker_agent, parallelism, timeout, etc.)
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default="pending"
+        ),  # pending, running, completed, failed, cancelled
+        sa.Column("total_items", sa.Integer(), nullable=True),
+        sa.Column("completed_items", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("failed_items", sa.Integer(), nullable=False, server_default="0"),
         # Credit tracking
-        sa.Column('credits_reserved', sa.Numeric(12, 2), nullable=False, server_default='0'),
-        sa.Column('credits_spent', sa.Numeric(12, 2), nullable=False, server_default='0'),
-        sa.Column('credits_refunded', sa.Numeric(12, 2), nullable=False, server_default='0'),
+        sa.Column("credits_reserved", sa.Numeric(12, 2), nullable=False, server_default="0"),
+        sa.Column("credits_spent", sa.Numeric(12, 2), nullable=False, server_default="0"),
+        sa.Column("credits_refunded", sa.Numeric(12, 2), nullable=False, server_default="0"),
         # Tenant isolation
-        sa.Column('tenant_id', sa.String(128), nullable=False, server_default='default', index=True),
+        sa.Column("tenant_id", sa.String(128), nullable=False, server_default="default", index=True),
         # Timestamps
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-        schema='agents'
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        schema="agents",
     )
 
     # 3. Job items table - individual work units
     op.create_table(
-        'job_items',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('job_id', UUID(as_uuid=True), nullable=False, index=True),
-        sa.Column('item_index', sa.Integer(), nullable=False),  # Order within job
-        sa.Column('input', JSONB, nullable=False),  # Item-specific input data
-        sa.Column('output', JSONB, nullable=True),  # Result after completion
-        sa.Column('worker_instance_id', sa.String(128), nullable=True, index=True),  # Who claimed it
-        sa.Column('status', sa.String(32), nullable=False, server_default='pending'),  # pending, claimed, running, completed, failed
-        sa.Column('claimed_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('error_message', sa.Text(), nullable=True),
-        sa.Column('retry_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('max_retries', sa.Integer(), nullable=False, server_default='3'),
-        schema='agents'
+        "job_items",
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("job_id", UUID(as_uuid=True), nullable=False, index=True),
+        sa.Column("item_index", sa.Integer(), nullable=False),  # Order within job
+        sa.Column("input", JSONB, nullable=False),  # Item-specific input data
+        sa.Column("output", JSONB, nullable=True),  # Result after completion
+        sa.Column("worker_instance_id", sa.String(128), nullable=True, index=True),  # Who claimed it
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default="pending"
+        ),  # pending, claimed, running, completed, failed
+        sa.Column("claimed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("retry_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("max_retries", sa.Integer(), nullable=False, server_default="3"),
+        schema="agents",
     )
 
     # FK constraint for job_items -> jobs
     op.create_foreign_key(
-        'fk_job_items_job',
-        'job_items', 'jobs',
-        ['job_id'], ['id'],
-        source_schema='agents',
-        referent_schema='agents',
-        ondelete='CASCADE'
+        "fk_job_items_job",
+        "job_items",
+        "jobs",
+        ["job_id"],
+        ["id"],
+        source_schema="agents",
+        referent_schema="agents",
+        ondelete="CASCADE",
     )
 
     # Partial index for fast SKIP LOCKED claim queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX idx_job_items_pending
         ON agents.job_items(job_id, item_index)
         WHERE status = 'pending'
-    """)
+    """
+    )
 
     # 4. Messages table - P2P inbox
     op.create_table(
-        'messages',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('from_instance_id', sa.String(128), nullable=False, index=True),
-        sa.Column('to_instance_id', sa.String(128), nullable=False, index=True),
-        sa.Column('job_id', UUID(as_uuid=True), nullable=True, index=True),  # Optional job context
-        sa.Column('message_type', sa.String(64), nullable=False),  # request, response, broadcast, heartbeat
-        sa.Column('payload', JSONB, nullable=False),
-        sa.Column('status', sa.String(32), nullable=False, server_default='pending'),  # pending, delivered, read
-        sa.Column('reply_to_id', UUID(as_uuid=True), nullable=True),  # For request-response patterns
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('delivered_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
-        schema='agents'
+        "messages",
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("from_instance_id", sa.String(128), nullable=False, index=True),
+        sa.Column("to_instance_id", sa.String(128), nullable=False, index=True),
+        sa.Column("job_id", UUID(as_uuid=True), nullable=True, index=True),  # Optional job context
+        sa.Column("message_type", sa.String(64), nullable=False),  # request, response, broadcast, heartbeat
+        sa.Column("payload", JSONB, nullable=False),
+        sa.Column("status", sa.String(32), nullable=False, server_default="pending"),  # pending, delivered, read
+        sa.Column("reply_to_id", UUID(as_uuid=True), nullable=True),  # For request-response patterns
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("read_at", sa.DateTime(timezone=True), nullable=True),
+        schema="agents",
     )
 
     # Composite index for inbox queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX idx_messages_inbox
         ON agents.messages(to_instance_id, status, created_at DESC)
-    """)
+    """
+    )
 
     # Index for reply lookups (request-response pattern latency fix)
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX idx_messages_reply_to
         ON agents.messages(reply_to_id)
         WHERE reply_to_id IS NOT NULL
-    """)
+    """
+    )
 
     # 5. Invocations table - agent_invoke correlation tracking
     op.create_table(
-        'invocations',
-        sa.Column('invoke_id', sa.String(64), primary_key=True),  # Correlation ID
-        sa.Column('caller_instance_id', sa.String(128), nullable=False, index=True),
-        sa.Column('target_instance_id', sa.String(128), nullable=False, index=True),
-        sa.Column('job_id', UUID(as_uuid=True), nullable=True, index=True),
-        sa.Column('request_payload', JSONB, nullable=False),
-        sa.Column('response_payload', JSONB, nullable=True),
-        sa.Column('status', sa.String(32), nullable=False, server_default='pending'),  # pending, completed, timeout, failed
-        sa.Column('timeout_at', sa.DateTime(timezone=True), nullable=True),  # When to timeout
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('error_message', sa.Text(), nullable=True),
-        schema='agents'
+        "invocations",
+        sa.Column("invoke_id", sa.String(64), primary_key=True),  # Correlation ID
+        sa.Column("caller_instance_id", sa.String(128), nullable=False, index=True),
+        sa.Column("target_instance_id", sa.String(128), nullable=False, index=True),
+        sa.Column("job_id", UUID(as_uuid=True), nullable=True, index=True),
+        sa.Column("request_payload", JSONB, nullable=False),
+        sa.Column("response_payload", JSONB, nullable=True),
+        sa.Column(
+            "status", sa.String(32), nullable=False, server_default="pending"
+        ),  # pending, completed, timeout, failed
+        sa.Column("timeout_at", sa.DateTime(timezone=True), nullable=True),  # When to timeout
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        schema="agents",
     )
 
     # Index for pending invocations (for timeout sweeper)
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX idx_invocations_pending_timeout
         ON agents.invocations(timeout_at)
         WHERE status = 'pending'
-    """)
+    """
+    )
 
     # 6. Credit system tables
 
     # Credit balances table - tenant credit tracking
     op.create_table(
-        'credit_balances',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('tenant_id', sa.String(128), nullable=False, unique=True),
-        sa.Column('total_credits', sa.Numeric(12, 2), nullable=False, server_default='1000'),  # Initial grant
-        sa.Column('reserved_credits', sa.Numeric(12, 2), nullable=False, server_default='0'),
-        sa.Column('spent_credits', sa.Numeric(12, 2), nullable=False, server_default='0'),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        schema='agents'
+        "credit_balances",
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("tenant_id", sa.String(128), nullable=False, unique=True),
+        sa.Column("total_credits", sa.Numeric(12, 2), nullable=False, server_default="1000"),  # Initial grant
+        sa.Column("reserved_credits", sa.Numeric(12, 2), nullable=False, server_default="0"),
+        sa.Column("spent_credits", sa.Numeric(12, 2), nullable=False, server_default="0"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        schema="agents",
     )
 
     # Credit ledger table - immutable transaction log
     op.create_table(
-        'credit_ledger',
-        sa.Column('id', UUID(as_uuid=True), primary_key=True, server_default=sa.text('gen_random_uuid()')),
-        sa.Column('job_id', UUID(as_uuid=True), nullable=True, index=True),  # Nullable for pre-job charges
-        sa.Column('tenant_id', sa.String(128), nullable=False, index=True),
-        sa.Column('operation', sa.String(32), nullable=False),  # reserve, spend, refund, charge
-        sa.Column('skill', sa.String(64), nullable=True),  # Skill that triggered the charge
-        sa.Column('amount', sa.Numeric(12, 2), nullable=False),
-        sa.Column('context', JSONB, nullable=True),  # Additional context
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('now()')),
-        schema='agents'
+        "credit_ledger",
+        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column("job_id", UUID(as_uuid=True), nullable=True, index=True),  # Nullable for pre-job charges
+        sa.Column("tenant_id", sa.String(128), nullable=False, index=True),
+        sa.Column("operation", sa.String(32), nullable=False),  # reserve, spend, refund, charge
+        sa.Column("skill", sa.String(64), nullable=True),  # Skill that triggered the charge
+        sa.Column("amount", sa.Numeric(12, 2), nullable=False),
+        sa.Column("context", JSONB, nullable=True),  # Additional context
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        schema="agents",
     )
 
     # Index for job credit lookups
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX idx_credit_ledger_job_tenant
         ON agents.credit_ledger(job_id, tenant_id)
         WHERE job_id IS NOT NULL
-    """)
+    """
+    )
 
     # 7. Create helper functions
 
     # Function to claim next available job item (FOR UPDATE SKIP LOCKED)
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.claim_job_item(
             p_job_id UUID,
             p_worker_instance_id TEXT
@@ -235,10 +257,12 @@ def upgrade():
                       agents.job_items.input;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Function to complete a job item
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.complete_job_item(
             p_item_id UUID,
             p_output JSONB,
@@ -278,10 +302,12 @@ def upgrade():
             RETURN TRUE;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Function to mark stale agents (no heartbeat)
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.mark_stale_instances(
             p_stale_threshold INTERVAL DEFAULT '60 seconds'
         ) RETURNS INTEGER AS $$
@@ -297,10 +323,12 @@ def upgrade():
             RETURN v_count;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Function to reclaim items from stale workers
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.reclaim_stale_items() RETURNS INTEGER AS $$
         DECLARE
             v_count INTEGER;
@@ -320,12 +348,14 @@ def upgrade():
             RETURN v_count;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # 7. Create views
 
     # Job progress view
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW agents.job_progress AS
         SELECT
             j.id,
@@ -348,10 +378,12 @@ def upgrade():
             j.completed_at,
             EXTRACT(EPOCH FROM (COALESCE(j.completed_at, now()) - j.started_at)) AS duration_seconds
         FROM agents.jobs j;
-    """)
+    """
+    )
 
     # Active workers view
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW agents.active_workers AS
         SELECT
             i.id,
@@ -370,7 +402,8 @@ def upgrade():
                AND ji.status IN ('claimed', 'running')) AS items_in_progress
         FROM agents.instances i
         WHERE i.status IN ('running', 'idle');
-    """)
+    """
+    )
 
 
 def downgrade():
@@ -385,13 +418,13 @@ def downgrade():
     op.execute("DROP FUNCTION IF EXISTS agents.claim_job_item(UUID, TEXT)")
 
     # Drop tables (in reverse order due to FK)
-    op.drop_table('credit_ledger', schema='agents')
-    op.drop_table('credit_balances', schema='agents')
-    op.drop_table('invocations', schema='agents')
-    op.drop_table('messages', schema='agents')
-    op.drop_table('job_items', schema='agents')
-    op.drop_table('jobs', schema='agents')
-    op.drop_table('instances', schema='agents')
+    op.drop_table("credit_ledger", schema="agents")
+    op.drop_table("credit_balances", schema="agents")
+    op.drop_table("invocations", schema="agents")
+    op.drop_table("messages", schema="agents")
+    op.drop_table("job_items", schema="agents")
+    op.drop_table("jobs", schema="agents")
+    op.drop_table("instances", schema="agents")
 
     # Drop schema
     op.execute("DROP SCHEMA IF EXISTS agents CASCADE")

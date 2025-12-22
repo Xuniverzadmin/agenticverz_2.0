@@ -16,7 +16,6 @@ import hashlib
 import json
 import logging
 import sys
-import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -37,8 +36,10 @@ logger = logging.getLogger("nova.skills.llm_invoke_v2")
 # Error Category Enum
 # =============================================================================
 
+
 class ErrorCategory(str, Enum):
     """Error categories from error_contract.md"""
+
     TRANSIENT = "TRANSIENT"
     RATE_LIMIT = "RATE_LIMIT"
     CLIENT_ERROR = "CLIENT_ERROR"
@@ -53,9 +54,11 @@ class ErrorCategory(str, Enum):
 # Error Mappings
 # =============================================================================
 
+
 @dataclass(frozen=True)
 class ErrorMapping:
     """Mapping from error type to error info."""
+
     code: str
     category: ErrorCategory
     retryable: bool
@@ -77,9 +80,11 @@ LLM_ERROR_MAP: Dict[str, ErrorMapping] = {
 # Data Types
 # =============================================================================
 
+
 @dataclass
 class Message:
     """Chat message."""
+
     role: str  # system, user, assistant
     content: str
 
@@ -87,6 +92,7 @@ class Message:
 @dataclass
 class LLMConfig:
     """LLM invocation configuration."""
+
     model: Optional[str] = None
     temperature: float = 0.0
     max_tokens: int = 1024
@@ -99,6 +105,7 @@ class LLMConfig:
 @dataclass
 class LLMResponse:
     """LLM response."""
+
     content: str
     input_tokens: int
     output_tokens: int
@@ -134,9 +141,10 @@ def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
 # Canonical JSON Utilities
 # =============================================================================
 
+
 def _canonical_json(obj: Any) -> str:
     """Produce canonical JSON (sorted keys, no whitespace)."""
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def _content_hash(data: Any, length: int = 16) -> str:
@@ -144,9 +152,9 @@ def _content_hash(data: Any, length: int = 16) -> str:
     if isinstance(data, bytes):
         content = data
     elif isinstance(data, str):
-        content = data.encode('utf-8')
+        content = data.encode("utf-8")
     else:
-        content = _canonical_json(data).encode('utf-8')
+        content = _canonical_json(data).encode("utf-8")
     return hashlib.sha256(content).hexdigest()[:length]
 
 
@@ -158,6 +166,7 @@ def _generate_call_id(params: Dict[str, Any]) -> str:
 # =============================================================================
 # Adapter Interface (Abstract Base Class)
 # =============================================================================
+
 
 class LLMAdapter(ABC):
     """
@@ -188,9 +197,7 @@ class LLMAdapter(ABC):
 
     @abstractmethod
     async def invoke(
-        self,
-        prompt: Union[str, List[Message]],
-        config: LLMConfig
+        self, prompt: Union[str, List[Message]], config: LLMConfig
     ) -> Union[LLMResponse, Tuple[str, str, bool]]:
         """
         Invoke the LLM.
@@ -213,6 +220,7 @@ class LLMAdapter(ABC):
 # =============================================================================
 # Stub Adapter (for testing)
 # =============================================================================
+
 
 class StubAdapter(LLMAdapter):
     """
@@ -256,12 +264,11 @@ class StubAdapter(LLMAdapter):
         cls._mock_responses.clear()
 
     async def invoke(
-        self,
-        prompt: Union[str, List[Message]],
-        config: LLMConfig
+        self, prompt: Union[str, List[Message]], config: LLMConfig
     ) -> Union[LLMResponse, Tuple[str, str, bool]]:
         """Generate deterministic stub response."""
         import time
+
         start = time.perf_counter()
 
         # Normalize prompt for hashing
@@ -298,7 +305,7 @@ class StubAdapter(LLMAdapter):
             model="stub",
             finish_reason="end_turn",
             latency_ms=latency,
-            seed=config.seed
+            seed=config.seed,
         )
 
 
@@ -306,9 +313,7 @@ class StubAdapter(LLMAdapter):
 # Adapter Registry
 # =============================================================================
 
-_adapters: Dict[str, LLMAdapter] = {
-    "stub": StubAdapter()
-}
+_adapters: Dict[str, LLMAdapter] = {"stub": StubAdapter()}
 
 
 def register_adapter(adapter: LLMAdapter):
@@ -347,8 +352,8 @@ LLM_INVOKE_DESCRIPTOR = SkillDescriptor(
             "seed": {"type": "integer"},
             "system_prompt": {"type": "string"},
             "stop_sequences": {"type": "array", "items": {"type": "string"}},
-            "timeout_ms": {"type": "integer"}
-        }
+            "timeout_ms": {"type": "integer"},
+        },
     },
     outputs_schema={
         "type": "object",
@@ -362,16 +367,12 @@ LLM_INVOKE_DESCRIPTOR = SkillDescriptor(
             "model": {"type": "string"},
             "finish_reason": {"type": "string"},
             "latency_ms": {"type": "integer"},
-            "seed": {"type": "integer"}
-        }
+            "seed": {"type": "integer"},
+        },
     },
     stable_fields=["content_hash", "input_tokens", "output_tokens", "finish_reason", "seed"],
     idempotent=False,  # LLM calls are non-deterministic unless seeded
-    cost_model={
-        "base_cents": 0,
-        "per_token_input_cents": 0.0003,
-        "per_token_output_cents": 0.0015
-    },
+    cost_model={"base_cents": 0, "per_token_input_cents": 0.0003, "per_token_output_cents": 0.0015},
     failure_modes=[
         "ERR_LLM_RATE_LIMITED",
         "ERR_LLM_OVERLOADED",
@@ -381,19 +382,16 @@ LLM_INVOKE_DESCRIPTOR = SkillDescriptor(
         "ERR_LLM_AUTH_FAILED",
         "ERR_LLM_CONTEXT_TOO_LONG",
         "ERR_LLM_INVALID_MODEL",
-        "ERR_LLM_ADAPTER_NOT_FOUND"
+        "ERR_LLM_ADAPTER_NOT_FOUND",
     ],
-    constraints={
-        "max_prompt_tokens": 100000,
-        "max_output_tokens": 100000,
-        "rate_limit_rpm": 60
-    }
+    constraints={"max_prompt_tokens": 100000, "max_output_tokens": 100000, "rate_limit_rpm": 60},
 )
 
 
 # =============================================================================
 # Main Execute Function
 # =============================================================================
+
 
 async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
     """
@@ -425,7 +423,7 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
             code="ERR_LLM_INVALID_PROMPT",
             message="Missing required parameter: prompt",
             category="VALIDATION",
-            retryable=False
+            retryable=False,
         )
 
     # Get adapter
@@ -437,7 +435,7 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=f"Unknown adapter: {adapter_id}. Available: {list_adapters()}",
             category="VALIDATION",
             retryable=False,
-            details={"adapter": adapter_id, "available": list_adapters()}
+            details={"adapter": adapter_id, "available": list_adapters()},
         )
 
     # Build config
@@ -448,7 +446,7 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
         seed=seed,
         system_prompt=system_prompt,
         stop_sequences=stop_sequences,
-        timeout_ms=timeout_ms
+        timeout_ms=timeout_ms,
     )
 
     # Convert prompt to messages if needed
@@ -465,7 +463,7 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
             code="ERR_LLM_INVALID_PROMPT",
             message="Prompt must be string or list of messages",
             category="VALIDATION",
-            retryable=False
+            retryable=False,
         )
 
     # Invoke adapter
@@ -487,8 +485,8 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
                     meta={
                         "skill_id": LLM_INVOKE_DESCRIPTOR.skill_id,
                         "skill_version": LLM_INVOKE_DESCRIPTOR.version,
-                        "adapter": adapter_id
-                    }
+                        "adapter": adapter_id,
+                    },
                 )
             else:
                 return StructuredOutcome.failure(
@@ -497,7 +495,7 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
                     message=message,
                     category="PERMANENT",
                     retryable=retryable,
-                    details={"error_type": error_type}
+                    details={"error_type": error_type},
                 )
 
         # Success
@@ -515,14 +513,14 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
                 "model": result.model,
                 "finish_reason": result.finish_reason,
                 "latency_ms": result.latency_ms,
-                "seed": result.seed
+                "seed": result.seed,
             },
             meta={
                 "skill_id": LLM_INVOKE_DESCRIPTOR.skill_id,
                 "skill_version": LLM_INVOKE_DESCRIPTOR.version,
                 "adapter": adapter_id,
-                "deterministic": seed is not None and adapter.supports_seeding()
-            }
+                "deterministic": seed is not None and adapter.supports_seeding(),
+            },
         )
 
     except Exception as e:
@@ -551,8 +549,8 @@ async def llm_invoke_execute(params: Dict[str, Any]) -> StructuredOutcome:
             meta={
                 "skill_id": LLM_INVOKE_DESCRIPTOR.skill_id,
                 "skill_version": LLM_INVOKE_DESCRIPTOR.version,
-                "adapter": adapter_id
-            }
+                "adapter": adapter_id,
+            },
         )
 
 
@@ -566,11 +564,12 @@ async def llm_invoke_handler(params: Dict[str, Any]) -> StructuredOutcome:
 # Registration Helper
 # =============================================================================
 
+
 def register_llm_invoke(registry) -> None:
     """Register llm_invoke skill with registry."""
     registry.register(
         descriptor=LLM_INVOKE_DESCRIPTOR,
         handler=llm_invoke_handler,
         is_stub=False,
-        tags=["llm", "ai", "generation", "m3"]
+        tags=["llm", "ai", "generation", "m3"],
     )

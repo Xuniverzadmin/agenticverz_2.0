@@ -21,18 +21,17 @@ Environment Variables:
     DATABASE_URL: Falls back to sync URL and converts to async format
 """
 
-import os
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
-    AsyncSession,
     AsyncEngine,
-    create_async_engine,
+    AsyncSession,
     async_sessionmaker,
+    create_async_engine,
 )
-from sqlalchemy.pool import NullPool
 
 logger = logging.getLogger("nova.db_async")
 
@@ -51,9 +50,7 @@ def get_async_database_url() -> str:
     # Convert sync URL to async format
     sync_url = os.getenv("DATABASE_URL")
     if not sync_url:
-        raise RuntimeError(
-            "DATABASE_URL_ASYNC or DATABASE_URL environment variable is required"
-        )
+        raise RuntimeError("DATABASE_URL_ASYNC or DATABASE_URL environment variable is required")
 
     # Convert postgresql:// to postgresql+asyncpg://
     if sync_url.startswith("postgresql://"):
@@ -61,9 +58,7 @@ def get_async_database_url() -> str:
     elif sync_url.startswith("postgres://"):
         result = sync_url.replace("postgres://", "postgresql+asyncpg://", 1)
     else:
-        raise RuntimeError(
-            f"Unsupported database URL format: {sync_url[:20]}..."
-        )
+        raise RuntimeError(f"Unsupported database URL format: {sync_url[:20]}...")
 
     # asyncpg uses 'ssl' instead of 'sslmode', convert the parameter
     # sslmode=require -> ssl=require (asyncpg interprets this correctly)

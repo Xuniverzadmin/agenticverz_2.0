@@ -13,9 +13,9 @@ This migration creates the workflow_checkpoints table with:
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "001_workflow_checkpoints"
@@ -52,25 +52,25 @@ def upgrade() -> None:
     op.create_index("ix_workflow_checkpoints_status", "workflow_checkpoints", ["status"])
 
     # Create composite index for common query pattern
-    op.create_index(
-        "ix_workflow_checkpoints_tenant_status",
-        "workflow_checkpoints",
-        ["tenant_id", "status"]
-    )
+    op.create_index("ix_workflow_checkpoints_tenant_status", "workflow_checkpoints", ["tenant_id", "status"])
 
     # Add check constraint for step_outputs_json size (10MB max)
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE workflow_checkpoints
         ADD CONSTRAINT ck_step_outputs_size
         CHECK (step_outputs_json IS NULL OR length(step_outputs_json) <= 10485760)
-    """)
+    """
+    )
 
     # Add check constraint for valid status values
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE workflow_checkpoints
         ADD CONSTRAINT ck_valid_status
         CHECK (status IN ('running', 'completed', 'failed', 'aborted', 'paused', 'timeout'))
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

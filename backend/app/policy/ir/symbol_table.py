@@ -12,12 +12,14 @@ Features:
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Dict, List, Optional, Any, Set
+from typing import Any, Dict, List, Optional
+
 from app.policy.compiler.grammar import PolicyCategory
 
 
 class SymbolType(Enum):
     """Types of symbols in PLang."""
+
     POLICY = auto()
     RULE = auto()
     VARIABLE = auto()
@@ -34,6 +36,7 @@ class Symbol:
 
     Represents named entities in PLang: policies, rules, variables, etc.
     """
+
     name: str
     symbol_type: SymbolType
     category: Optional[PolicyCategory] = None
@@ -58,6 +61,7 @@ class Scope:
 
     Scopes form a hierarchy: global -> policy -> rule -> block
     """
+
     name: str
     parent: Optional["Scope"] = None
     symbols: Dict[str, Symbol] = field(default_factory=dict)
@@ -116,9 +120,7 @@ class SymbolTable:
         self._scope_stack: List[Scope] = [self.global_scope]
 
         # Category-indexed symbol lookup
-        self._symbols_by_category: Dict[PolicyCategory, List[Symbol]] = {
-            cat: [] for cat in PolicyCategory
-        }
+        self._symbols_by_category: Dict[PolicyCategory, List[Symbol]] = {cat: [] for cat in PolicyCategory}
 
         # Built-in symbols
         self._define_builtins()
@@ -145,11 +147,13 @@ class SymbolTable:
         ]
 
         for name, sym_type in builtins:
-            self.global_scope.define(Symbol(
-                name=name,
-                symbol_type=sym_type,
-                defined_at="builtin",
-            ))
+            self.global_scope.define(
+                Symbol(
+                    name=name,
+                    symbol_type=sym_type,
+                    defined_at="builtin",
+                )
+            )
 
     def enter_scope(self, name: str, category: Optional[PolicyCategory] = None) -> Scope:
         """
@@ -232,9 +236,7 @@ class SymbolTable:
         return None
 
     def get_symbols_by_category(
-        self,
-        category: PolicyCategory,
-        symbol_type: Optional[SymbolType] = None
+        self, category: PolicyCategory, symbol_type: Optional[SymbolType] = None
     ) -> List[Symbol]:
         """
         Get all symbols in a category.
@@ -253,10 +255,7 @@ class SymbolTable:
 
     def get_policies(self) -> List[Symbol]:
         """Get all policy symbols."""
-        return [
-            s for s in self.global_scope.symbols.values()
-            if s.symbol_type == SymbolType.POLICY
-        ]
+        return [s for s in self.global_scope.symbols.values() if s.symbol_type == SymbolType.POLICY]
 
     def get_rules(self) -> List[Symbol]:
         """Get all rule symbols."""

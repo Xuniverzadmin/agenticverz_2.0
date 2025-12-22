@@ -3,9 +3,9 @@
 
 import logging
 import os
-from typing import Callable, Optional
+from typing import Callable
 
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("nova.middleware.tenancy")
@@ -56,21 +56,12 @@ class TenancyMiddleware(BaseHTTPMiddleware):
 
         if not tenant_id:
             if self.enforce:
-                logger.warning(
-                    "missing_tenant_id",
-                    extra={"path": path, "method": request.method}
-                )
-                raise HTTPException(
-                    status_code=401,
-                    detail=f"Missing required header: {TENANT_HEADER}"
-                )
+                logger.warning("missing_tenant_id", extra={"path": path, "method": request.method})
+                raise HTTPException(status_code=401, detail=f"Missing required header: {TENANT_HEADER}")
             else:
                 # Default tenant for development/migration
                 tenant_id = "default"
-                logger.debug(
-                    "using_default_tenant",
-                    extra={"path": path}
-                )
+                logger.debug("using_default_tenant", extra={"path": path})
 
         # Attach tenant to request state for use in handlers
         request.state.tenant_id = tenant_id
@@ -100,8 +91,5 @@ def get_tenant_id(request: Request) -> str:
     """
     tenant_id = getattr(request.state, "tenant_id", None)
     if not tenant_id:
-        raise HTTPException(
-            status_code=500,
-            detail="Tenant context not available"
-        )
+        raise HTTPException(status_code=500, detail="Tenant context not available")
     return tenant_id

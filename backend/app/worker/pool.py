@@ -4,17 +4,17 @@ Designed to be launched as a separate process: `python -m app.worker.pool`
 
 Supports graceful shutdown via SIGTERM/SIGINT - waits for running tasks to complete.
 """
-import os
-import sys
-import time
 import logging
+import os
 import signal
+import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from sqlmodel import Session, select, col
+from sqlmodel import Session, select
 
 # Add parent to path for module imports when run directly
 if __name__ == "__main__":
@@ -72,14 +72,9 @@ class WorkerPool:
 
                     # Submit to thread pool
                     future = self.executor.submit(self._execute_run, run.id)
-                    future.add_done_callback(
-                        lambda f, rid=run.id: self._on_run_complete(rid, f)
-                    )
+                    future.add_done_callback(lambda f, rid=run.id: self._on_run_complete(rid, f))
 
-                    logger.info("run_dispatched", extra={
-                        "run_id": run.id,
-                        "agent_id": run.agent_id
-                    })
+                    logger.info("run_dispatched", extra={"run_id": run.id, "agent_id": run.agent_id})
 
             except Exception:
                 logger.exception("worker_pool_poll_error")
@@ -92,10 +87,7 @@ class WorkerPool:
             statement = (
                 select(Run)
                 .where(Run.status.in_(["queued", "retry"]))
-                .where(
-                    (Run.next_attempt_at == None) |
-                    (Run.next_attempt_at <= datetime.now(timezone.utc))
-                )
+                .where((Run.next_attempt_at == None) | (Run.next_attempt_at <= datetime.now(timezone.utc)))
                 .order_by(Run.created_at.asc())
                 .limit(MAX_BATCH)
             )
@@ -133,19 +125,18 @@ class WorkerPool:
         if self._stop.is_set():
             return  # Already stopping
 
-        logger.info("worker_pool_shutting_down", extra={
-            "active_runs": len(self._active_runs),
-            "reason": "waiting for running tasks to finish"
-        })
+        logger.info(
+            "worker_pool_shutting_down",
+            extra={"active_runs": len(self._active_runs), "reason": "waiting for running tasks to finish"},
+        )
         self._stop.set()
 
         # Wait for executor to finish all running tasks
         self.executor.shutdown(wait=True)
 
-        self.publisher.publish("worker.pool.stopped", {
-            "graceful": True,
-            "active_runs_at_shutdown": len(self._active_runs)
-        })
+        self.publisher.publish(
+            "worker.pool.stopped", {"graceful": True, "active_runs_at_shutdown": len(self._active_runs)}
+        )
         logger.info("worker_pool_stopped", extra={"graceful": True})
 
 
@@ -153,10 +144,7 @@ def _signal_handler(signum, frame):
     """Handle SIGTERM/SIGINT for graceful shutdown."""
     global _pool_instance
     sig_name = signal.Signals(signum).name
-    logger.info("worker_pool_signal_received", extra={
-        "signal": sig_name,
-        "signum": signum
-    })
+    logger.info("worker_pool_signal_received", extra={"signal": sig_name, "signum": signum})
     if _pool_instance:
         _pool_instance.stop()
 
@@ -168,7 +156,7 @@ def main():
     # Setup logging
     logging.basicConfig(
         level=logging.INFO,
-        format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}'
+        format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}',
     )
 
     # Verify database URL is set
@@ -177,13 +165,11 @@ def main():
         sys.exit(1)
 
     # Initialize skills registry (required for skill execution)
-    from ..skills import load_all_skills, list_skills
+    from ..skills import list_skills, load_all_skills
+
     load_all_skills()
     registered_skills = [s["name"] for s in list_skills()]
-    logger.info("skills_initialized", extra={
-        "count": len(registered_skills),
-        "skills": registered_skills
-    })
+    logger.info("skills_initialized", extra={"count": len(registered_skills), "skills": registered_skills})
 
     pool = WorkerPool()
     _pool_instance = pool
@@ -192,9 +178,7 @@ def main():
     signal.signal(signal.SIGINT, _signal_handler)
     signal.signal(signal.SIGTERM, _signal_handler)
 
-    logger.info("worker_pool_signal_handlers_registered", extra={
-        "signals": ["SIGINT", "SIGTERM"]
-    })
+    logger.info("worker_pool_signal_handlers_registered", extra={"signals": ["SIGINT", "SIGTERM"]})
 
     try:
         pool.poll_and_dispatch()

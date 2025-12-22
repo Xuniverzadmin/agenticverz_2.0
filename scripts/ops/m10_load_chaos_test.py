@@ -33,9 +33,6 @@ import json
 import logging
 import os
 import random
-import signal
-import socket
-import subprocess
 import sys
 import time
 import uuid
@@ -45,8 +42,16 @@ from threading import Thread, Lock
 from typing import Dict, List, Set, Optional
 
 # Add backend to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "backend"))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "backend",
+    ),
+)
 
 logger = logging.getLogger("m10.load_chaos")
 
@@ -114,15 +119,16 @@ class IdempotencyReceiver:
                     receiver.request_count += 1
 
                     # Extract idempotency key
-                    idem_key = (
-                        self.headers.get("Idempotency-Key")
-                        or self.headers.get("X-Idempotency-Key")
+                    idem_key = self.headers.get("Idempotency-Key") or self.headers.get(
+                        "X-Idempotency-Key"
                     )
                     event_id = self.headers.get("X-Outbox-Event-Id")
 
                     # Read body
                     content_length = int(self.headers.get("Content-Length", 0))
-                    body = self.rfile.read(content_length) if content_length > 0 else b""
+                    body = (
+                        self.rfile.read(content_length) if content_length > 0 else b""
+                    )
 
                     # Check for duplicate
                     if idem_key:
@@ -134,11 +140,13 @@ class IdempotencyReceiver:
                             return
                         receiver.received_keys.add(idem_key)
 
-                    receiver.received_events.append({
-                        "idempotency_key": idem_key,
-                        "event_id": event_id,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                    })
+                    receiver.received_events.append(
+                        {
+                            "idempotency_key": idem_key,
+                            "event_id": event_id,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
 
                     self.send_response(200)
                     self.end_headers()
@@ -190,15 +198,17 @@ def create_test_events(
             for j in range(batch_count):
                 event_id = str(uuid.uuid4())
                 event_ids.append(event_id)
-                payload = json.dumps({
-                    "url": webhook_url,
-                    "method": "POST",
-                    "body": {
-                        "test_id": event_id,
-                        "sequence": i + j,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                    },
-                })
+                payload = json.dumps(
+                    {
+                        "url": webhook_url,
+                        "method": "POST",
+                        "body": {
+                            "test_id": event_id,
+                            "sequence": i + j,
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                        },
+                    }
+                )
                 values.append(f"('test', '{event_id}', 'http:webhook', '{payload}')")
 
             sql = f"""
@@ -225,7 +235,9 @@ def get_outbox_stats(db_url: str) -> Dict:
     engine = create_engine(db_url, pool_pre_ping=True)
 
     with Session(engine) as session:
-        result = session.execute(text("""
+        result = session.execute(
+            text(
+                """
             SELECT
                 CASE
                     WHEN processed_at IS NOT NULL THEN 'processed'
@@ -236,7 +248,9 @@ def get_outbox_stats(db_url: str) -> Dict:
                 AVG(retry_count) as avg_retries
             FROM m10_recovery.outbox
             GROUP BY 1
-        """))
+        """
+            )
+        )
 
         stats = {"by_status": {}}
         for row in result:
@@ -246,11 +260,15 @@ def get_outbox_stats(db_url: str) -> Dict:
             }
 
         # Get oldest pending
-        result = session.execute(text("""
+        result = session.execute(
+            text(
+                """
             SELECT EXTRACT(EPOCH FROM (now() - MIN(created_at)))
             FROM m10_recovery.outbox
             WHERE processed_at IS NULL
-        """))
+        """
+            )
+        )
         lag = result.scalar()
         stats["oldest_pending_seconds"] = float(lag) if lag else 0
 
@@ -288,7 +306,7 @@ def run_load_test(
     duration: int = 120,
 ) -> Dict:
     """Run load test with specified number of events."""
-    logger.info(f"=== M10 Load Test ===")
+    logger.info("=== M10 Load Test ===")
     logger.info(f"Events: {event_count}, Duration: {duration}s")
 
     if not DATABASE_URL:
@@ -325,7 +343,7 @@ def run_chaos_test(
     duration: int = 60,
 ) -> Dict:
     """Run chaos test with simulated failures."""
-    logger.info(f"=== M10 Chaos Test ===")
+    logger.info("=== M10 Chaos Test ===")
     logger.info(f"Events: {event_count}, Chaos duration: {duration}s")
 
     if not DATABASE_URL:
@@ -368,22 +386,28 @@ def run_chaos_test(
                 # Simulate crash
                 await processor.stop()
                 results["processor_restarts"] += 1
-                results["chaos_events"].append({
-                    "type": "processor_restart",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "events_processed": batch_results["total_processed"],
-                })
+                results["chaos_events"].append(
+                    {
+                        "type": "processor_restart",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "events_processed": batch_results["total_processed"],
+                    }
+                )
 
-                logger.info(f"Chaos: processor restart #{results['processor_restarts']}")
+                logger.info(
+                    f"Chaos: processor restart #{results['processor_restarts']}"
+                )
                 await asyncio.sleep(random.uniform(0.5, 2))
 
             except Exception as e:
                 logger.error(f"Chaos processor error: {e}")
-                results["chaos_events"].append({
-                    "type": "error",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "error": str(e),
-                })
+                results["chaos_events"].append(
+                    {
+                        "type": "error",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "error": str(e),
+                    }
+                )
 
     asyncio.run(chaos_processor())
 
@@ -409,8 +433,7 @@ def validate_results(receiver: IdempotencyReceiver, expected_count: int) -> Dict
         "all_received": stats["unique_events"] >= expected_count,
         "no_duplicates": stats["duplicate_count"] == 0,
         "passed": (
-            stats["unique_events"] >= expected_count
-            and stats["duplicate_count"] == 0
+            stats["unique_events"] >= expected_count and stats["duplicate_count"] == 0
         ),
     }
 
@@ -422,10 +445,18 @@ def main():
     parser.add_argument("--load", action="store_true", help="Run load test")
     parser.add_argument("--chaos", action="store_true", help="Run chaos test")
     parser.add_argument("--full", action="store_true", help="Run full test suite")
-    parser.add_argument("--validate", action="store_true", help="Only validate (use external receiver)")
-    parser.add_argument("--count", type=int, default=DEFAULT_EVENT_COUNT, help="Number of events")
-    parser.add_argument("--duration", type=int, default=60, help="Test duration in seconds")
-    parser.add_argument("--webhook-url", type=str, help="External webhook URL (skips mock receiver)")
+    parser.add_argument(
+        "--validate", action="store_true", help="Only validate (use external receiver)"
+    )
+    parser.add_argument(
+        "--count", type=int, default=DEFAULT_EVENT_COUNT, help="Number of events"
+    )
+    parser.add_argument(
+        "--duration", type=int, default=60, help="Test duration in seconds"
+    )
+    parser.add_argument(
+        "--webhook-url", type=str, help="External webhook URL (skips mock receiver)"
+    )
     parser.add_argument("--json", action="store_true", help="JSON output")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
@@ -495,7 +526,9 @@ def main():
 
                 if "duration_seconds" in test:
                     print(f"  Duration: {test['duration_seconds']:.2f}s")
-                    print(f"  Throughput: {test.get('events_per_second', 0):.2f} events/s")
+                    print(
+                        f"  Throughput: {test.get('events_per_second', 0):.2f} events/s"
+                    )
 
                 if "processor_restarts" in test:
                     print(f"  Processor restarts: {test['processor_restarts']}")
@@ -515,8 +548,7 @@ def main():
 
             # Overall status
             all_passed = all(
-                t.get("validation", {}).get("passed", True)
-                for t in results["tests"]
+                t.get("validation", {}).get("passed", True) for t in results["tests"]
             )
             print("\n" + "=" * 60)
             print(f"OVERALL: {'PASSED' if all_passed else 'FAILED'}")

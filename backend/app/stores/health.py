@@ -13,13 +13,13 @@ Environment Variables:
 - HEALTH_CHECK_TIMEOUT_SECONDS: Timeout for health checks (default: 5)
 """
 
+import asyncio
+import logging
 import os
 import time
-import logging
-import asyncio
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
 from enum import Enum
+from typing import Dict, Tuple
 
 logger = logging.getLogger("nova.stores.health")
 
@@ -28,6 +28,7 @@ HEALTH_CHECK_TIMEOUT = float(os.getenv("HEALTH_CHECK_TIMEOUT_SECONDS", "5"))
 
 class HealthStatus(Enum):
     """Health status for a component."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -37,6 +38,7 @@ class HealthStatus(Enum):
 @dataclass
 class ComponentHealth:
     """Health status for a single component."""
+
     name: str
     status: HealthStatus
     latency_ms: float
@@ -60,6 +62,7 @@ class ComponentHealth:
 @dataclass
 class OverallHealth:
     """Overall system health."""
+
     status: HealthStatus
     components: Dict[str, ComponentHealth]
     timestamp: str
@@ -77,6 +80,7 @@ class OverallHealth:
 # =============================================================================
 # Database Health Probe
 # =============================================================================
+
 
 async def check_database_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> ComponentHealth:
     """
@@ -102,17 +106,11 @@ async def check_database_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> Compon
         import asyncpg
 
         # Connect with timeout
-        conn = await asyncio.wait_for(
-            asyncpg.connect(database_url),
-            timeout=timeout
-        )
+        conn = await asyncio.wait_for(asyncpg.connect(database_url), timeout=timeout)
 
         try:
             # Simple query
-            result = await asyncio.wait_for(
-                conn.fetchval("SELECT 1"),
-                timeout=timeout
-            )
+            result = await asyncio.wait_for(conn.fetchval("SELECT 1"), timeout=timeout)
 
             latency_ms = (time.perf_counter() - start) * 1000
 
@@ -124,7 +122,7 @@ async def check_database_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> Compon
                     message="Connected and responsive",
                     details={
                         "server_version": conn.get_server_version(),
-                    }
+                    },
                 )
             else:
                 return ComponentHealth(
@@ -166,6 +164,7 @@ async def check_database_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> Compon
 # Redis Health Probe
 # =============================================================================
 
+
 async def check_redis_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> ComponentHealth:
     """
     Check Redis connectivity.
@@ -194,10 +193,7 @@ async def check_redis_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> Component
 
         try:
             # PING
-            ping_result = await asyncio.wait_for(
-                client.ping(),
-                timeout=timeout
-            )
+            ping_result = await asyncio.wait_for(client.ping(), timeout=timeout)
 
             latency_ms = (time.perf_counter() - start) * 1000
 
@@ -213,7 +209,7 @@ async def check_redis_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> Component
                     details={
                         "used_memory_human": info.get("used_memory_human", "unknown"),
                         "connected_clients": info.get("connected_clients", "unknown"),
-                    }
+                    },
                 )
             else:
                 return ComponentHealth(
@@ -255,6 +251,7 @@ async def check_redis_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> Component
 # R2/S3 Health Probe
 # =============================================================================
 
+
 async def check_r2_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> ComponentHealth:
     """
     Check Cloudflare R2 connectivity.
@@ -264,7 +261,7 @@ async def check_r2_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> ComponentHea
     """
     start = time.perf_counter()
 
-    from app.stores import get_r2_client, get_r2_bucket
+    from app.stores import get_r2_bucket, get_r2_client
 
     r2_client = get_r2_client()
     r2_bucket = get_r2_bucket()
@@ -283,10 +280,7 @@ async def check_r2_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> ComponentHea
             return r2_client.head_bucket(Bucket=r2_bucket)
 
         loop = asyncio.get_event_loop()
-        await asyncio.wait_for(
-            loop.run_in_executor(None, _check),
-            timeout=timeout
-        )
+        await asyncio.wait_for(loop.run_in_executor(None, _check), timeout=timeout)
 
         latency_ms = (time.perf_counter() - start) * 1000
 
@@ -295,7 +289,7 @@ async def check_r2_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> ComponentHea
             status=HealthStatus.HEALTHY,
             latency_ms=latency_ms,
             message="Connected and bucket accessible",
-            details={"bucket": r2_bucket}
+            details={"bucket": r2_bucket},
         )
 
     except asyncio.TimeoutError:
@@ -319,6 +313,7 @@ async def check_r2_health(timeout: float = HEALTH_CHECK_TIMEOUT) -> ComponentHea
 # =============================================================================
 # Overall Health Check
 # =============================================================================
+
 
 async def check_health(
     include_database: bool = True,
@@ -386,6 +381,7 @@ async def check_health(
 # Readiness/Liveness Probes (for Kubernetes)
 # =============================================================================
 
+
 async def readiness_probe() -> Tuple[bool, dict]:
     """
     Kubernetes readiness probe.
@@ -417,6 +413,7 @@ async def liveness_probe() -> Tuple[bool, dict]:
 # =============================================================================
 # Prometheus Metrics
 # =============================================================================
+
 
 def _update_health_metrics(health: OverallHealth) -> None:
     """Update Prometheus metrics based on health check results."""

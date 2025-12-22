@@ -10,11 +10,10 @@ Tests:
 - Multi-replica safety (SELECT FOR UPDATE)
 """
 
-import pytest
-import asyncio
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Optional
+from unittest.mock import patch
+
+import pytest
 
 # Skip tests if DB not available
 pytest.importorskip("sqlmodel")
@@ -23,17 +22,13 @@ from sqlmodel import Session, select
 
 # Import circuit breaker components
 from app.costsim.circuit_breaker import (
+    CB_NAME,
     CircuitBreaker,
-    CircuitBreakerState,
-    Incident,
-    get_circuit_breaker,
-    is_v2_disabled,
     disable_v2,
     enable_v2,
-    CB_NAME,
+    is_v2_disabled,
 )
-from app.costsim.config import get_config, CostSimConfig
-from app.db import engine, CostSimCBState, CostSimCBIncident
+from app.db import CostSimCBIncident, CostSimCBState, engine
 
 
 @pytest.fixture
@@ -55,9 +50,7 @@ def clean_circuit_breaker_state(db_session):
         db_session.commit()
 
     # Delete existing incidents
-    statement = select(CostSimCBIncident).where(
-        CostSimCBIncident.circuit_breaker_name == CB_NAME
-    )
+    statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == CB_NAME)
     for incident in db_session.exec(statement):
         db_session.delete(incident)
     db_session.commit()
@@ -78,6 +71,7 @@ def circuit_breaker(clean_circuit_breaker_state):
     """Create a fresh circuit breaker instance."""
     # Clear global instance
     import app.costsim.circuit_breaker as cb_module
+
     cb_module._circuit_breaker = None
 
     return CircuitBreaker(
@@ -106,7 +100,7 @@ class TestCircuitBreakerState:
     ):
         """Disabling V2 should open the circuit breaker."""
         # Mock config to have alertmanager URL
-        with patch.object(circuit_breaker.config, 'alertmanager_url', 'http://alertmanager:9093/api/v2/alerts'):
+        with patch.object(circuit_breaker.config, "alertmanager_url", "http://alertmanager:9093/api/v2/alerts"):
             changed, incident = await circuit_breaker.disable_v2(
                 reason="Test disable",
                 disabled_by="test-suite",
@@ -430,6 +424,7 @@ class TestConvenienceFunctions:
         """is_v2_disabled() should work as convenience function."""
         # Clear global instance
         import app.costsim.circuit_breaker as cb_module
+
         cb_module._circuit_breaker = None
 
         result = await is_v2_disabled()
@@ -443,6 +438,7 @@ class TestConvenienceFunctions:
         """disable_v2() and enable_v2() should work as convenience functions."""
         # Clear global instance
         import app.costsim.circuit_breaker as cb_module
+
         cb_module._circuit_breaker = None
 
         # Disable
@@ -499,9 +495,7 @@ class TestDatabaseConsistency:
             await circuit_breaker.report_drift(drift_score=0.25, sample_count=100)
 
         # Verify incident in DB
-        statement = select(CostSimCBIncident).where(
-            CostSimCBIncident.circuit_breaker_name == CB_NAME
-        )
+        statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == CB_NAME)
         result = db_session.exec(statement)
         incident = result.first()
 

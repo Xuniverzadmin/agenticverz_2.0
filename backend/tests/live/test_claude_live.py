@@ -15,9 +15,10 @@ Exit behavior:
 """
 
 import os
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -29,8 +30,7 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 SKIP_LIVE = os.environ.get("SKIP_LIVE_TESTS", "false").lower() == "true"
 
 skip_if_no_key = pytest.mark.skipif(
-    not ANTHROPIC_API_KEY or SKIP_LIVE,
-    reason="ANTHROPIC_API_KEY not set or SKIP_LIVE_TESTS=true"
+    not ANTHROPIC_API_KEY or SKIP_LIVE, reason="ANTHROPIC_API_KEY not set or SKIP_LIVE_TESTS=true"
 )
 
 
@@ -42,13 +42,13 @@ class TestClaudeLiveSmoke:
     async def test_simple_completion(self):
         """Test simple completion with real API."""
         from app.skills.adapters.claude_adapter import ClaudeAdapter
-        from app.skills.llm_invoke_v2 import LLMConfig, Message, LLMResponse
+        from app.skills.llm_invoke_v2 import LLMConfig, LLMResponse, Message
 
         adapter = ClaudeAdapter(api_key=ANTHROPIC_API_KEY)
 
         config = LLMConfig(
             max_tokens=50,
-            temperature=0.0  # Deterministic
+            temperature=0.0,  # Deterministic
         )
         messages = [Message(role="user", content="Say 'hello' and nothing else.")]
 
@@ -56,7 +56,7 @@ class TestClaudeLiveSmoke:
 
         # Should be LLMResponse or error tuple
         if isinstance(result, LLMResponse):
-            print(f"✓ Live response received")
+            print("✓ Live response received")
             print(f"  Content: {result.content[:100]}...")
             print(f"  Model: {result.model}")
             print(f"  Tokens: {result.input_tokens} in, {result.output_tokens} out")
@@ -82,16 +82,12 @@ class TestClaudeLiveSmoke:
     async def test_deterministic_with_seed(self):
         """Test deterministic fallback behavior."""
         from app.skills.adapters.claude_adapter import ClaudeAdapter
-        from app.skills.llm_invoke_v2 import LLMConfig, Message, LLMResponse
+        from app.skills.llm_invoke_v2 import LLMConfig, LLMResponse, Message
 
         adapter = ClaudeAdapter(api_key=ANTHROPIC_API_KEY)
 
         # With seed, should use temperature=0
-        config = LLMConfig(
-            max_tokens=20,
-            seed=42,
-            temperature=0.0
-        )
+        config = LLMConfig(max_tokens=20, seed=42, temperature=0.0)
         prompt = "What is 2+2? Answer with just the number."
         messages = [Message(role="user", content=prompt)]
 
@@ -133,9 +129,7 @@ class TestClaudeLiveSmoke:
         class MockRateLimitError(Exception):
             pass
 
-        error_type, message, retryable = adapter._map_api_error(
-            MockRateLimitError("Rate limit exceeded - 429")
-        )
+        error_type, message, retryable = adapter._map_api_error(MockRateLimitError("Rate limit exceeded - 429"))
 
         assert error_type == "rate_limited"
         assert retryable is True
@@ -173,19 +167,16 @@ class TestLLMInvokeLiveSmoke:
     @pytest.mark.asyncio
     async def test_execute_with_live_adapter(self):
         """Test full llm_invoke execution with live Claude."""
-        from app.skills.llm_invoke_v2 import llm_invoke_execute, register_adapter
         from app.skills.adapters.claude_adapter import ClaudeAdapter
+        from app.skills.llm_invoke_v2 import llm_invoke_execute, register_adapter
 
         # Register live adapter
         adapter = ClaudeAdapter(api_key=ANTHROPIC_API_KEY)
         register_adapter(adapter)
 
-        result = await llm_invoke_execute({
-            "prompt": "Reply with just the word 'OK'",
-            "adapter": "claude",
-            "max_tokens": 10,
-            "temperature": 0.0
-        })
+        result = await llm_invoke_execute(
+            {"prompt": "Reply with just the word 'OK'", "adapter": "claude", "max_tokens": 10, "temperature": 0.0}
+        )
 
         print(f"Result: ok={result.ok}")
         if result.ok:

@@ -80,9 +80,9 @@ def generate_alert(
         base_labels["trace_id"] = "trace_12345"
         base_annotations["summary"] = f"Replay parity failure for tenant {tenant_id}"
         base_annotations["description"] = (
-            f"Replay of trace_12345 diverged at step 3. "
-            f"Expected hash: abc123, Actual: def456. "
-            f"Review required."
+            "Replay of trace_12345 diverged at step 3. "
+            "Expected hash: abc123, Actual: def456. "
+            "Review required."
         )
         base_annotations["runbook_url"] += "replay-mismatch"
 
@@ -99,7 +99,9 @@ def generate_alert(
     elif alert_type == "custom":
         base_labels["alertname"] = custom_name or "AOSCustomAlert"
         base_annotations["summary"] = custom_name or "Custom synthetic alert"
-        base_annotations["description"] = custom_description or "Synthetic alert for testing"
+        base_annotations["description"] = (
+            custom_description or "Synthetic alert for testing"
+        )
         base_annotations["runbook_url"] += "custom"
 
     else:
@@ -139,10 +141,12 @@ def resolve_alert(fingerprint: str, alertmanager_url: str = None) -> dict:
     now = datetime.now(timezone.utc).isoformat()
 
     # To resolve, we send the same alert with endsAt set
-    payload = [{
-        "labels": {"fingerprint": fingerprint},
-        "endsAt": now,
-    }]
+    payload = [
+        {
+            "labels": {"fingerprint": fingerprint},
+            "endsAt": now,
+        }
+    ]
 
     try:
         response = requests.post(
@@ -176,60 +180,46 @@ def main():
     )
 
     parser.add_argument(
-        "--type", "-t",
-        choices=["cost_overrun", "rate_limit_breach", "replay_mismatch",
-                 "worker_unhealthy", "custom"],
+        "--type",
+        "-t",
+        choices=[
+            "cost_overrun",
+            "rate_limit_breach",
+            "replay_mismatch",
+            "worker_unhealthy",
+            "custom",
+        ],
         default="cost_overrun",
-        help="Type of alert to inject"
+        help="Type of alert to inject",
     )
     parser.add_argument(
-        "--severity", "-s",
+        "--severity",
+        "-s",
         choices=["info", "warning", "critical"],
         default="warning",
-        help="Alert severity level"
+        help="Alert severity level",
     )
     parser.add_argument(
-        "--tenant",
-        default="synthetic-test",
-        help="Tenant ID for the alert"
+        "--tenant", default="synthetic-test", help="Tenant ID for the alert"
+    )
+    parser.add_argument("--name", help="Custom alert name (for --type custom)")
+    parser.add_argument(
+        "--description", help="Custom alert description (for --type custom)"
     )
     parser.add_argument(
-        "--name",
-        help="Custom alert name (for --type custom)"
+        "--resolve", action="store_true", help="Resolve an alert instead of creating"
     )
     parser.add_argument(
-        "--description",
-        help="Custom alert description (for --type custom)"
+        "--fingerprint", help="Alert fingerprint to resolve (with --resolve)"
+    )
+    parser.add_argument("--list", action="store_true", help="List active alerts")
+    parser.add_argument(
+        "--alertmanager-url", default=ALERTMANAGER_URL, help="Alertmanager URL"
     )
     parser.add_argument(
-        "--resolve",
-        action="store_true",
-        help="Resolve an alert instead of creating"
+        "--dry-run", action="store_true", help="Print alert payload without sending"
     )
-    parser.add_argument(
-        "--fingerprint",
-        help="Alert fingerprint to resolve (with --resolve)"
-    )
-    parser.add_argument(
-        "--list",
-        action="store_true",
-        help="List active alerts"
-    )
-    parser.add_argument(
-        "--alertmanager-url",
-        default=ALERTMANAGER_URL,
-        help="Alertmanager URL"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print alert payload without sending"
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output result as JSON"
-    )
+    parser.add_argument("--json", action="store_true", help="Output result as JSON")
 
     args = parser.parse_args()
 
@@ -249,8 +239,10 @@ def main():
                 print(f"Active alerts: {len(alerts)}")
                 for alert in alerts:
                     labels = alert.get("labels", {})
-                    print(f"  - {labels.get('alertname')} [{labels.get('severity')}] "
-                          f"tenant={labels.get('tenant_id', 'N/A')}")
+                    print(
+                        f"  - {labels.get('alertname')} [{labels.get('severity')}] "
+                        f"tenant={labels.get('tenant_id', 'N/A')}"
+                    )
             else:
                 print(f"Error: {result['error']}")
         sys.exit(0 if result["success"] else 1)
@@ -294,7 +286,7 @@ def main():
         print(json.dumps(output, indent=2))
     else:
         if result["success"]:
-            print(f"Alert injected successfully!")
+            print("Alert injected successfully!")
             print(f"  Type: {args.type}")
             print(f"  Severity: {args.severity}")
             print(f"  Alertname: {alert['labels']['alertname']}")

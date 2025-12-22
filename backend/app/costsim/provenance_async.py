@@ -42,13 +42,14 @@ Usage:
 """
 
 from __future__ import annotations
+
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select, and_, func
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db_async import AsyncSessionLocal, async_session_context
@@ -127,10 +128,7 @@ async def write_provenance(
         await session.commit()
         await session.refresh(record)
 
-        logger.debug(
-            f"Provenance record created: id={record.id}, "
-            f"variant={variant_slug}, input_hash={input_hash}"
-        )
+        logger.debug(f"Provenance record created: id={record.id}, " f"variant={variant_slug}, input_hash={input_hash}")
 
         return record.id
 
@@ -265,9 +263,7 @@ async def query_provenance(
         if conditions:
             statement = statement.where(and_(*conditions))
 
-        statement = statement.order_by(
-            CostSimProvenanceModel.created_at.desc()
-        ).limit(limit).offset(offset)
+        statement = statement.order_by(CostSimProvenanceModel.created_at.desc()).limit(limit).offset(offset)
 
         result = await session.execute(statement)
 
@@ -379,9 +375,7 @@ async def check_duplicate(input_hash: str) -> bool:
     """
     async with async_session_context() as session:
         result = await session.execute(
-            select(CostSimProvenanceModel.id).where(
-                CostSimProvenanceModel.input_hash == input_hash
-            ).limit(1)
+            select(CostSimProvenanceModel.id).where(CostSimProvenanceModel.input_hash == input_hash).limit(1)
         )
         return result.scalars().first() is not None
 
@@ -405,6 +399,7 @@ def compute_input_hash(payload: Dict[str, Any]) -> str:
 # V1 BASELINE BACKFILL HELPERS
 # =============================================================================
 
+
 async def backfill_v1_baseline(
     records: List[Dict[str, Any]],
     batch_size: int = 100,
@@ -422,7 +417,7 @@ async def backfill_v1_baseline(
     stats = {"inserted": 0, "skipped": 0, "errors": 0}
 
     for i in range(0, len(records), batch_size):
-        batch = records[i:i + batch_size]
+        batch = records[i : i + batch_size]
 
         for record in batch:
             try:
@@ -447,8 +442,7 @@ async def backfill_v1_baseline(
                 stats["errors"] += 1
 
     logger.info(
-        f"Backfill complete: inserted={stats['inserted']}, "
-        f"skipped={stats['skipped']}, errors={stats['errors']}"
+        f"Backfill complete: inserted={stats['inserted']}, " f"skipped={stats['skipped']}, errors={stats['errors']}"
     )
 
     return stats

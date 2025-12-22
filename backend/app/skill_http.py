@@ -1,7 +1,8 @@
 import asyncio
-import httpx
 from datetime import datetime, timezone
 from typing import Any, Dict
+
+import httpx
 
 # Default configuration
 DEFAULT_TIMEOUT = 5.0
@@ -10,9 +11,7 @@ BACKOFF_MULTIPLIER = 0.5  # 0.5s, 1s, 2s
 
 
 async def run_http_skill(
-    params: Dict[str, Any],
-    max_retries: int = DEFAULT_MAX_RETRIES,
-    timeout: float = DEFAULT_TIMEOUT
+    params: Dict[str, Any], max_retries: int = DEFAULT_MAX_RETRIES, timeout: float = DEFAULT_TIMEOUT
 ) -> Dict[str, Any]:
     """
     Resilient HTTP skill with timeout, retries, and exponential backoff.
@@ -45,7 +44,7 @@ async def run_http_skill(
                 if response.status_code >= 500:
                     last_error = f"Server error: {response.status_code}"
                     if attempt < max_retries - 1:
-                        backoff = BACKOFF_MULTIPLIER * (2 ** attempt)
+                        backoff = BACKOFF_MULTIPLIER * (2**attempt)
                         await asyncio.sleep(backoff)
                         continue
 
@@ -60,7 +59,7 @@ async def run_http_skill(
                         "attempts": attempts,
                         "started_at": started_at.isoformat(),
                         "completed_at": completed_at.isoformat(),
-                        "duration_ms": round(duration_ms, 2)
+                        "duration_ms": round(duration_ms, 2),
                     }
 
                 # Success
@@ -74,7 +73,7 @@ async def run_http_skill(
                     "attempts": attempts,
                     "started_at": started_at.isoformat(),
                     "completed_at": completed_at.isoformat(),
-                    "duration_ms": round(duration_ms, 2)
+                    "duration_ms": round(duration_ms, 2),
                 }
 
         except httpx.TimeoutException:
@@ -86,7 +85,7 @@ async def run_http_skill(
 
         # Exponential backoff before retry
         if attempt < max_retries - 1:
-            backoff = BACKOFF_MULTIPLIER * (2 ** attempt)
+            backoff = BACKOFF_MULTIPLIER * (2**attempt)
             await asyncio.sleep(backoff)
 
     # All retries exhausted
@@ -103,5 +102,5 @@ async def run_http_skill(
         "attempts": attempts,
         "started_at": started_at.isoformat(),
         "completed_at": completed_at.isoformat(),
-        "duration_ms": round(duration_ms, 2)
+        "duration_ms": round(duration_ms, 2),
     }

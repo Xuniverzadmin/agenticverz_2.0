@@ -38,6 +38,7 @@ Note:
 """
 
 from __future__ import annotations
+
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -141,13 +142,15 @@ async def is_lock_held(
         True if lock is held by any session
     """
     result = await session.execute(
-        text("""
+        text(
+            """
             SELECT COUNT(*) > 0
             FROM pg_locks
             WHERE locktype = 'advisory'
               AND objid = :lock_id
               AND granted = true
-        """),
+        """
+        ),
         {"lock_id": lock_id},
     )
     row = result.fetchone()

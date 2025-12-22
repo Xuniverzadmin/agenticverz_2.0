@@ -21,8 +21,8 @@ Environment Variables:
 - OPENAI_API_KEY: Required for openai adapter (from Vault)
 """
 
-import os
 import logging
+import os
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -36,6 +36,7 @@ _adapter_instance: Optional["LLMAdapter"] = None
 
 class AdapterConfigurationError(Exception):
     """Raised when adapter configuration is invalid in strict mode (ENV=prod)."""
+
     pass
 
 
@@ -55,6 +56,7 @@ def _strict_fail(message: str) -> None:
 # =============================================================================
 # Main Factory Function
 # =============================================================================
+
 
 def get_llm_adapter(force_new: bool = False) -> "LLMAdapter":
     """
@@ -89,6 +91,7 @@ def get_llm_adapter(force_new: bool = False) -> "LLMAdapter":
         else:
             try:
                 from app.skills.adapters.openai_adapter import OpenAIAdapter
+
                 _adapter_instance = OpenAIAdapter(api_key=api_key)
                 logger.info("Using OpenAIAdapter")
                 return _adapter_instance
@@ -104,6 +107,7 @@ def get_llm_adapter(force_new: bool = False) -> "LLMAdapter":
         else:
             try:
                 from app.skills.adapters.claude_adapter import ClaudeAdapter
+
                 _adapter_instance = ClaudeAdapter(api_key=api_key)
                 logger.info("Using ClaudeAdapter (Anthropic)")
                 return _adapter_instance
@@ -119,6 +123,7 @@ def get_llm_adapter(force_new: bool = False) -> "LLMAdapter":
         )
 
     from app.skills.llm_invoke_v2 import StubAdapter
+
     _adapter_instance = StubAdapter()
     logger.info("Using StubAdapter (testing mode)")
     return _adapter_instance
@@ -136,10 +141,12 @@ def reset_adapter():
 # Legacy Functions (backwards compatibility)
 # =============================================================================
 
+
 def get_claude_adapter():
     """Get or create ClaudeAdapter instance."""
     if "claude" not in _loaded:
         from .claude_adapter import ClaudeAdapter
+
         _loaded["claude"] = ClaudeAdapter()
     return _loaded["claude"]
 
@@ -148,6 +155,7 @@ def get_claude_stub():
     """Get or create ClaudeAdapterStub instance."""
     if "claude_stub" not in _loaded:
         from .claude_adapter import ClaudeAdapterStub
+
         _loaded["claude_stub"] = ClaudeAdapterStub()
     return _loaded["claude_stub"]
 
@@ -156,6 +164,7 @@ def get_openai_adapter():
     """Get or create OpenAIAdapter instance."""
     if "openai" not in _loaded:
         from .openai_adapter import OpenAIAdapter
+
         _loaded["openai"] = OpenAIAdapter()
     return _loaded["openai"]
 
@@ -163,6 +172,7 @@ def get_openai_adapter():
 def register_all_adapters():
     """Register all adapters with the llm_invoke adapter registry."""
     from .claude_adapter import register_claude_adapter
+
     register_claude_adapter()
     # OpenAI adapter registration can be added here
 

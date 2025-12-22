@@ -1,17 +1,13 @@
 # M11 Workflow Runner
 # Execute workflows with audit logging for deterministic replay
 
-import asyncio
-import json
 import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .audit import AuditStore, OpRecord, compute_hash
+from .audit import AuditStore, compute_hash
 
 logger = logging.getLogger("m11.runner")
 
@@ -19,6 +15,7 @@ logger = logging.getLogger("m11.runner")
 @dataclass
 class RunResult:
     """Result of workflow run."""
+
     workflow_run_id: str
     exit_code: int
     total_ops: int
@@ -32,6 +29,7 @@ class RunResult:
 @dataclass
 class ReplayResult:
     """Result of workflow replay verification."""
+
     replay_id: str
     workflow_run_id: str
     exit_code: int
@@ -61,7 +59,8 @@ class WorkflowRunner:
     def _load_skills(self):
         """Load skill registry."""
         if not self._skill_registry:
-            from app.skills import load_all_skills, get_skill
+            from app.skills import load_all_skills
+
             load_all_skills()
             self._skill_registry = {
                 "kv_store": "KVStoreSkill",
@@ -192,7 +191,7 @@ class WorkflowRunner:
 
         output = f"Workflow {workflow_run_id}: {completed_ops}/{len(steps)} completed"
         if errors:
-            output += f"\nErrors:\n" + "\n".join(f"  - {e}" for e in errors)
+            output += "\nErrors:\n" + "\n".join(f"  - {e}" for e in errors)
 
         logger.info(f"Workflow {workflow_run_id} completed: exit_code={exit_code}")
 
@@ -304,7 +303,11 @@ class WorkflowRunner:
                     original_status = op.result.get("status") or op.result.get("result", {}).get("status")
                     replay_status = replay_result.get("status") or replay_result.get("result", {}).get("status")
 
-                    if original_status in ("ok", "completed", "stubbed") and replay_status in ("ok", "completed", "stubbed"):
+                    if original_status in ("ok", "completed", "stubbed") and replay_status in (
+                        "ok",
+                        "completed",
+                        "stubbed",
+                    ):
                         # Both succeeded - consider verified
                         ops_verified += 1
                         output_lines.append(f"[OK] op_index={op.op_index} {op.op_type}")
@@ -349,10 +352,7 @@ class WorkflowRunner:
                                 "original_result": op.result,
                                 "replay_result": replay_result,
                             }
-                        output_lines.append(
-                            f"[FAIL] op_index={op.op_index} {op.op_type} "
-                            f"(hash mismatch)"
-                        )
+                        output_lines.append(f"[FAIL] op_index={op.op_index} {op.op_type} " f"(hash mismatch)")
 
             except Exception as e:
                 ops_failed += 1

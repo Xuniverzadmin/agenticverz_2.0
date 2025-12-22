@@ -8,23 +8,22 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
 
 from prometheus_client import Counter, Gauge
 
-from ..schemas.skill import (
-    LLMInvokeInput,
-    LLMInvokeOutput,
-    LLMProvider,
-    SkillStatus,
-)
 from ..metrics import (
-    nova_llm_tokens_total,
     nova_llm_cost_cents_total,
     nova_llm_duration_seconds,
     nova_llm_invocations_total,
+    nova_llm_tokens_total,
+)
+from ..schemas.skill import (
+    LLMInvokeInput,
+    LLMInvokeOutput,
+    SkillStatus,
 )
 from .registry import skill
 
@@ -67,9 +66,11 @@ llm_cache_evictions_total = Counter(
 # PROMPT CACHE IMPLEMENTATION
 # =============================================================================
 
+
 @dataclass
 class CacheEntry:
     """A cached LLM response with metadata."""
+
     response: Dict[str, Any]
     created_at: datetime
     expires_at: datetime
@@ -163,9 +164,7 @@ class PromptCache:
         if not self.enabled:
             return None
 
-        cache_key = self._generate_cache_key(
-            provider, model, messages, system_prompt, temperature
-        )
+        cache_key = self._generate_cache_key(provider, model, messages, system_prompt, temperature)
 
         with self._lock:
             entry = self._cache.get(cache_key)
@@ -196,7 +195,7 @@ class PromptCache:
                     "hit_count": entry.hit_count,
                     "age_seconds": (now - entry.created_at).total_seconds(),
                     "saved_cents": entry.estimated_cost_cents,
-                }
+                },
             )
 
             return entry.response
@@ -229,9 +228,7 @@ class PromptCache:
         if not self.enabled:
             return ""
 
-        cache_key = self._generate_cache_key(
-            provider, model, messages, system_prompt, temperature
-        )
+        cache_key = self._generate_cache_key(provider, model, messages, system_prompt, temperature)
 
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(seconds=self.ttl_seconds)
@@ -259,7 +256,7 @@ class PromptCache:
                 "key": cache_key[:16],
                 "ttl_seconds": self.ttl_seconds,
                 "cost_cents": estimated_cost_cents,
-            }
+            },
         )
 
         return cache_key
@@ -342,6 +339,7 @@ def configure_prompt_cache(
     )
     return _prompt_cache
 
+
 # Cost per 1M tokens (in cents) - approximate as of Jan 2025
 COST_PER_1M_TOKENS = {
     "anthropic": {
@@ -415,9 +413,8 @@ class LLMInvokeSkill:
                 raise ValueError("ANTHROPIC_API_KEY not configured")
             try:
                 import anthropic
-                self._anthropic_client = anthropic.Anthropic(
-                    api_key=self.config.anthropic_api_key
-                )
+
+                self._anthropic_client = anthropic.Anthropic(api_key=self.config.anthropic_api_key)
             except ImportError:
                 raise ImportError("anthropic package required: pip install anthropic")
         return self._anthropic_client
@@ -429,9 +426,8 @@ class LLMInvokeSkill:
                 raise ValueError("OPENAI_API_KEY not configured")
             try:
                 import openai
-                self._openai_client = openai.OpenAI(
-                    api_key=self.config.openai_api_key
-                )
+
+                self._openai_client = openai.OpenAI(api_key=self.config.openai_api_key)
             except ImportError:
                 raise ImportError("openai package required: pip install openai")
         return self._openai_client
@@ -483,7 +479,7 @@ class LLMInvokeSkill:
                 "message_count": len(messages),
                 "max_tokens": input_data.max_tokens,
                 "cache_enabled": input_data.enable_cache,
-            }
+            },
         )
 
         # =========================================================
@@ -526,7 +522,7 @@ class LLMInvokeSkill:
                         "model": model,
                         "saved_cents": estimated_cost,
                         "duration_ms": round(duration * 1000, 1),
-                    }
+                    },
                 )
 
                 # Return cached response
@@ -581,16 +577,13 @@ class LLMInvokeSkill:
                     "model": model,
                     "error": str(e)[:200],
                     "duration": round(duration, 3),
-                }
+                },
             )
             # Record error metrics
             nova_llm_invocations_total.labels(
-                provider=provider, model=model, status="error",
-                tenant_id="default", agent_id="skill"
+                provider=provider, model=model, status="error", tenant_id="default", agent_id="skill"
             ).inc()
-            nova_llm_duration_seconds.labels(
-                provider=provider, model=model, tenant_id="default"
-            ).observe(duration)
+            nova_llm_duration_seconds.labels(provider=provider, model=model, tenant_id="default").observe(duration)
 
             return {
                 "skill": "llm_invoke",
@@ -633,30 +626,24 @@ class LLMInvokeSkill:
                 "output_tokens": result["output_tokens"],
                 "cost_cents": cost_cents,
                 "duration": round(duration, 3),
-            }
+            },
         )
 
         # Record success metrics
         nova_llm_invocations_total.labels(
-            provider=provider, model=model, status="success",
-            tenant_id="default", agent_id="skill"
+            provider=provider, model=model, status="success", tenant_id="default", agent_id="skill"
         ).inc()
-        nova_llm_duration_seconds.labels(
-            provider=provider, model=model, tenant_id="default"
-        ).observe(duration)
+        nova_llm_duration_seconds.labels(provider=provider, model=model, tenant_id="default").observe(duration)
         nova_llm_tokens_total.labels(
-            provider=provider, model=model, token_type="input",
-            tenant_id="default", agent_id="skill"
+            provider=provider, model=model, token_type="input", tenant_id="default", agent_id="skill"
         ).inc(result["input_tokens"])
         nova_llm_tokens_total.labels(
-            provider=provider, model=model, token_type="output",
-            tenant_id="default", agent_id="skill"
+            provider=provider, model=model, token_type="output", tenant_id="default", agent_id="skill"
         ).inc(result["output_tokens"])
         if cost_cents:
-            nova_llm_cost_cents_total.labels(
-                provider=provider, model=model,
-                tenant_id="default", agent_id="skill"
-            ).inc(cost_cents)
+            nova_llm_cost_cents_total.labels(provider=provider, model=model, tenant_id="default", agent_id="skill").inc(
+                cost_cents
+            )
 
         # =========================================================
         # CACHE STORAGE - Store successful response in cache
@@ -677,7 +664,7 @@ class LLMInvokeSkill:
                     "provider": provider,
                     "model": model,
                     "cost_cents": cost_cents,
-                }
+                },
             )
 
         return {
@@ -731,10 +718,8 @@ class LLMInvokeSkill:
         # Make synchronous call (Anthropic SDK is sync)
         # In production, use asyncio.to_thread for true async
         import asyncio
-        response = await asyncio.to_thread(
-            client.messages.create,
-            **request_kwargs
-        )
+
+        response = await asyncio.to_thread(client.messages.create, **request_kwargs)
 
         # Extract response
         response_text = ""
@@ -761,10 +746,12 @@ class LLMInvokeSkill:
         # Add system prompt as first message if provided
         openai_messages = []
         if input_data.system_prompt:
-            openai_messages.append({
-                "role": "system",
-                "content": input_data.system_prompt,
-            })
+            openai_messages.append(
+                {
+                    "role": "system",
+                    "content": input_data.system_prompt,
+                }
+            )
         openai_messages.extend(messages)
 
         # Build request
@@ -782,10 +769,8 @@ class LLMInvokeSkill:
 
         # Make synchronous call
         import asyncio
-        response = await asyncio.to_thread(
-            client.chat.completions.create,
-            **request_kwargs
-        )
+
+        response = await asyncio.to_thread(client.chat.completions.create, **request_kwargs)
 
         choice = response.choices[0]
         return {

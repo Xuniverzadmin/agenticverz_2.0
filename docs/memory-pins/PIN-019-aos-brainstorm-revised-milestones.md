@@ -261,4 +261,3 @@ GET /agents/{id}/provenance
 | Date | Change |
 |------|--------|
 | 2025-12-02 | Initial review completed |
-

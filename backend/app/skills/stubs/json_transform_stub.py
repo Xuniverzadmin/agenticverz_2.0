@@ -13,20 +13,20 @@ Features:
 """
 
 from __future__ import annotations
+
 import hashlib
 import json
 import re
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
-from pathlib import Path
-
 import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List
+
 _runtime_path = str(Path(__file__).parent.parent.parent / "worker" / "runtime")
 if _runtime_path not in sys.path:
     sys.path.insert(0, _runtime_path)
 
 from core import SkillDescriptor
-
 
 # Descriptor for json_transform stub
 JSON_TRANSFORM_STUB_DESCRIPTOR = SkillDescriptor(
@@ -35,25 +35,18 @@ JSON_TRANSFORM_STUB_DESCRIPTOR = SkillDescriptor(
     version="1.0.0-stub",
     inputs_schema_version="1.0",
     outputs_schema_version="1.0",
-    stable_fields={
-        "output": "DETERMINISTIC",
-        "output_hash": "DETERMINISTIC",
-        "transform_type": "DETERMINISTIC"
-    },
-    cost_model={
-        "base_cents": 0,
-        "per_kb_cents": 0
-    },
+    stable_fields={"output": "DETERMINISTIC", "output_hash": "DETERMINISTIC", "transform_type": "DETERMINISTIC"},
+    cost_model={"base_cents": 0, "per_kb_cents": 0},
     failure_modes=[
         {"code": "ERR_INVALID_JSON", "category": "PERMANENT", "typical_cause": "malformed input"},
         {"code": "ERR_INVALID_PATH", "category": "PERMANENT", "typical_cause": "JSONPath not found"},
         {"code": "ERR_TRANSFORM_FAILED", "category": "PERMANENT", "typical_cause": "transform error"},
-        {"code": "ERR_SCHEMA_VALIDATION", "category": "PERMANENT", "typical_cause": "output doesn't match schema"}
+        {"code": "ERR_SCHEMA_VALIDATION", "category": "PERMANENT", "typical_cause": "output doesn't match schema"},
     ],
     constraints={
         "max_input_size_bytes": 1048576,  # 1MB
-        "max_depth": 100
-    }
+        "max_depth": 100,
+    },
 )
 
 
@@ -78,6 +71,7 @@ class JsonTransformStub:
             "path": "$.users[0].name"
         })
     """
+
     # Call history for verification
     call_history: List[Dict[str, Any]] = field(default_factory=list)
 
@@ -110,14 +104,14 @@ class JsonTransformStub:
             return current
 
         # Split path into parts
-        parts = re.split(r'\.(?![^\[]*\])', path)
+        parts = re.split(r"\.(?![^\[]*\])", path)
 
         for part in parts:
             if not part:
                 continue
 
             # Check for array access
-            array_match = re.match(r'(\w+)\[(\d+|\*)\]', part)
+            array_match = re.match(r"(\w+)\[(\d+|\*)\]", part)
             if array_match:
                 key = array_match.group(1)
                 index = array_match.group(2)
@@ -214,11 +208,13 @@ class JsonTransformStub:
         path = inputs.get("path", "$")
 
         # Record call
-        self.call_history.append({
-            "operation": operation,
-            "data_hash": self._compute_hash(data),
-            "params": {k: v for k, v in inputs.items() if k not in ("data",)}
-        })
+        self.call_history.append(
+            {
+                "operation": operation,
+                "data_hash": self._compute_hash(data),
+                "params": {k: v for k, v in inputs.items() if k not in ("data",)},
+            }
+        )
 
         output = None
 
@@ -271,7 +267,7 @@ class JsonTransformStub:
             "output": output,
             "output_hash": self._compute_hash(output),
             "transform_type": operation,
-            "input_hash": self._compute_hash(data)
+            "input_hash": self._compute_hash(data),
         }
 
         return result

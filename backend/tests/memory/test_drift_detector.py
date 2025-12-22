@@ -7,16 +7,16 @@ Run with:
     pytest tests/memory/test_drift_detector.py -v
 """
 
+
 import pytest
-from datetime import datetime, timezone
 
 # Import drift detector components
 from app.memory.drift_detector import (
     DriftDetector,
-    DriftResult,
     DriftPoint,
-    TraceStep,
+    DriftResult,
     ExecutionTrace,
+    TraceStep,
     get_drift_detector,
     init_drift_detector,
 )
@@ -648,6 +648,7 @@ class TestGlobalInstance:
     def test_get_drift_detector(self):
         """Test get_drift_detector returns instance."""
         import app.memory.drift_detector as drift_mod
+
         drift_mod._detector = None
 
         detector = get_drift_detector()
@@ -660,12 +661,10 @@ class TestGlobalInstance:
     def test_init_drift_detector(self):
         """Test init_drift_detector with custom config."""
         import app.memory.drift_detector as drift_mod
+
         drift_mod._detector = None
 
-        detector = init_drift_detector(
-            ignored_fields={"my_field"},
-            drift_threshold=10.0
-        )
+        detector = init_drift_detector(ignored_fields={"my_field"}, drift_threshold=10.0)
 
         assert detector is not None
         assert "my_field" in detector._ignored

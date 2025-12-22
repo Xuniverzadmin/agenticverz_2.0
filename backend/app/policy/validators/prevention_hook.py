@@ -10,32 +10,32 @@
 # - Block responses that make unsupported assertions
 # - Log policy violations for incident creation
 
-import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from uuid import uuid4
 
 from app.policy.validators.content_accuracy import (
     ContentAccuracyValidator,
-    ContentAccuracyResult,
     ValidationResult,
 )
 
 
 class PreventionAction(str, Enum):
     """Action to take when prevention hook triggers."""
-    ALLOW = "allow"           # Let response through
-    BLOCK = "block"           # Block response completely
-    MODIFY = "modify"         # Modify response before delivery
-    WARN = "warn"             # Allow but log warning
-    ESCALATE = "escalate"     # Require human approval
+
+    ALLOW = "allow"  # Let response through
+    BLOCK = "block"  # Block response completely
+    MODIFY = "modify"  # Modify response before delivery
+    WARN = "warn"  # Allow but log warning
+    ESCALATE = "escalate"  # Require human approval
 
 
 @dataclass
 class PreventionContext:
     """Context for prevention hook evaluation."""
+
     tenant_id: str
     call_id: str
     user_id: Optional[str]
@@ -63,9 +63,10 @@ class PreventionContext:
 @dataclass
 class PreventionResult:
     """Result of prevention hook evaluation."""
+
     action: PreventionAction
-    policy: str                # Which policy triggered
-    result: str                # PASS/FAIL/WARN
+    policy: str  # Which policy triggered
+    result: str  # PASS/FAIL/WARN
     reason: Optional[str]
     modified_output: Optional[str]  # If action is MODIFY
 
@@ -145,6 +146,7 @@ class PreventionHook:
         Returns a PreventionResult indicating what action to take.
         """
         import time
+
         start = time.time()
 
         # Run content accuracy validation

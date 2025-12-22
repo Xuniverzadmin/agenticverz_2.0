@@ -2,7 +2,7 @@
 # Default fallback planner that returns a basic single-step plan
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("nova.planners.stub")
 
@@ -22,7 +22,7 @@ class StubPlanner:
         goal: str,
         context_summary: Optional[str] = None,
         memory_snippets: Optional[List[Dict[str, Any]]] = None,
-        tool_manifest: Optional[List[Dict[str, Any]]] = None
+        tool_manifest: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Generate a stub plan with a single step.
 
@@ -43,8 +43,8 @@ class StubPlanner:
                 "goal": goal[:100],
                 "has_context": context_summary is not None,
                 "memory_count": len(memory_snippets) if memory_snippets else 0,
-                "tool_count": len(tool_manifest) if tool_manifest else 0
-            }
+                "tool_count": len(tool_manifest) if tool_manifest else 0,
+            },
         )
 
         # Determine skill based on goal keywords
@@ -69,19 +69,12 @@ class StubPlanner:
                     "description": f"Execute goal: {goal[:50]}",
                     "skill": skill,
                     "params": skill_params,
-                    "depends_on": []
+                    "depends_on": [],
                 }
             ],
-            "metadata": {
-                "model": None,
-                "tokens_used": 0,
-                "latency_ms": 0
-            }
+            "metadata": {"model": None, "tokens_used": 0, "latency_ms": 0},
         }
 
-        logger.info(
-            "Stub plan generated",
-            extra={"plan_id": plan["plan_id"], "step_count": len(plan["steps"])}
-        )
+        logger.info("Stub plan generated", extra={"plan_id": plan["plan_id"], "step_count": len(plan["steps"])})
 
         return plan

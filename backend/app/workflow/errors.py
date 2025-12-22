@@ -15,6 +15,7 @@ Design Principles:
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -195,7 +196,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "backoff_base_ms": 3000,
         "recovery": "Gateway timeout, retry with longer timeout",
     },
-
     # Permanent errors
     WorkflowErrorCode.SKILL_NOT_FOUND: {
         "category": ErrorCategory.PERMANENT,
@@ -233,7 +233,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Workflow was intentionally aborted",
     },
-
     # Resource errors
     WorkflowErrorCode.BUDGET_EXCEEDED: {
         "category": ErrorCategory.RESOURCE,
@@ -273,7 +272,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Request quota increase",
     },
-
     # Permission errors
     WorkflowErrorCode.PERMISSION_DENIED: {
         "category": ErrorCategory.PERMISSION,
@@ -299,7 +297,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Contact support to reactivate tenant",
     },
-
     # Validation errors
     WorkflowErrorCode.INVALID_INPUT: {
         "category": ErrorCategory.VALIDATION,
@@ -331,7 +328,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Fix workflow specification",
     },
-
     # Infrastructure errors
     WorkflowErrorCode.DB_CONNECTION_FAILED: {
         "category": ErrorCategory.INFRASTRUCTURE,
@@ -373,7 +369,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "backoff_base_ms": 500,
         "recovery": "Check golden file storage",
     },
-
     # Planner errors
     WorkflowErrorCode.PLANNER_TIMEOUT: {
         "category": ErrorCategory.PLANNER,
@@ -403,7 +398,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Constrain planner to cheaper operations",
     },
-
     # Skill errors
     WorkflowErrorCode.HTTP_4XX: {
         "category": ErrorCategory.SKILL,
@@ -439,7 +433,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Fix transformation expression",
     },
-
     # Data errors
     WorkflowErrorCode.DATA_NOT_FOUND: {
         "category": ErrorCategory.DATA,
@@ -465,7 +458,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Fix stored data format",
     },
-
     # Security errors
     WorkflowErrorCode.INJECTION_DETECTED: {
         "category": ErrorCategory.SECURITY,
@@ -491,7 +483,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "retryable": False,
         "recovery": "Restore from verified backup",
     },
-
     # Checkpoint errors
     WorkflowErrorCode.CHECKPOINT_VERSION_CONFLICT: {
         "category": ErrorCategory.CHECKPOINT,
@@ -517,7 +508,6 @@ ERROR_METADATA: Dict[WorkflowErrorCode, Dict[str, Any]] = {
         "backoff_base_ms": 1000,
         "recovery": "Check checkpoint integrity",
     },
-
     # Policy errors
     WorkflowErrorCode.POLICY_VIOLATION: {
         "category": ErrorCategory.PERMISSION,
@@ -551,6 +541,7 @@ class WorkflowError:
     - API responses
     - Recovery suggestion display
     """
+
     code: WorkflowErrorCode
     message: str
     details: Optional[Dict[str, Any]] = None
@@ -701,7 +692,8 @@ def classify_exception(exc: Exception, context: Optional[Dict[str, Any]] = None)
     if "status" in message.lower() or exc_type in ("HTTPStatusError", "ClientResponseError"):
         # Try to extract status code
         import re
-        status_match = re.search(r'(\d{3})', message)
+
+        status_match = re.search(r"(\d{3})", message)
         if status_match:
             status = int(status_match.group(1))
             if 400 <= status < 500:
@@ -714,14 +706,18 @@ def classify_exception(exc: Exception, context: Optional[Dict[str, Any]] = None)
                 elif status == 429:
                     return WorkflowError(code=WorkflowErrorCode.RATE_LIMITED, message=message, **context)
                 else:
-                    return WorkflowError(code=WorkflowErrorCode.HTTP_4XX, message=message, details={"status_code": status}, **context)
+                    return WorkflowError(
+                        code=WorkflowErrorCode.HTTP_4XX, message=message, details={"status_code": status}, **context
+                    )
             elif 500 <= status < 600:
                 if status == 502 or status == 503:
                     return WorkflowError(code=WorkflowErrorCode.SERVICE_UNAVAILABLE, message=message, **context)
                 elif status == 504:
                     return WorkflowError(code=WorkflowErrorCode.GATEWAY_TIMEOUT, message=message, **context)
                 else:
-                    return WorkflowError(code=WorkflowErrorCode.HTTP_5XX, message=message, details={"status_code": status}, **context)
+                    return WorkflowError(
+                        code=WorkflowErrorCode.HTTP_5XX, message=message, details={"status_code": status}, **context
+                    )
 
     # Database errors (psycopg2, asyncpg, sqlalchemy)
     db_error_types = ("OperationalError", "InterfaceError", "DatabaseError", "PostgresError", "IntegrityError")
@@ -729,7 +725,12 @@ def classify_exception(exc: Exception, context: Optional[Dict[str, Any]] = None)
         if "constraint" in message.lower() or "unique" in message.lower() or "duplicate" in message.lower():
             return WorkflowError(code=WorkflowErrorCode.CHECKPOINT_VERSION_CONFLICT, message=message, **context)
         if "deadlock" in message.lower():
-            return WorkflowError(code=WorkflowErrorCode.DB_CONNECTION_FAILED, message=message, details={"db_error": "deadlock"}, **context)
+            return WorkflowError(
+                code=WorkflowErrorCode.DB_CONNECTION_FAILED,
+                message=message,
+                details={"db_error": "deadlock"},
+                **context,
+            )
         return WorkflowError(code=WorkflowErrorCode.DB_CONNECTION_FAILED, message=message, **context)
 
     # Redis errors
@@ -765,7 +766,9 @@ def classify_exception(exc: Exception, context: Optional[Dict[str, Any]] = None)
             return WorkflowError(code=WorkflowErrorCode.MISSING_REQUIRED_FIELD, message=message, **context)
         if "schema" in message.lower():
             return WorkflowError(code=WorkflowErrorCode.SCHEMA_VALIDATION_FAILED, message=message, **context)
-        return WorkflowError(code=WorkflowErrorCode.INVALID_INPUT, message=message, details={"exception_type": exc_type}, **context)
+        return WorkflowError(
+            code=WorkflowErrorCode.INVALID_INPUT, message=message, details={"exception_type": exc_type}, **context
+        )
 
     # Default to execution error
     return WorkflowError(
@@ -778,9 +781,12 @@ def classify_exception(exc: Exception, context: Optional[Dict[str, Any]] = None)
 
 def get_error_metadata(code: WorkflowErrorCode) -> Dict[str, Any]:
     """Get full metadata for an error code."""
-    return ERROR_METADATA.get(code, {
-        "category": ErrorCategory.PERMANENT,
-        "http_status": 500,
-        "retryable": False,
-        "recovery": "Investigation required",
-    })
+    return ERROR_METADATA.get(
+        code,
+        {
+            "category": ErrorCategory.PERMANENT,
+            "http_status": 500,
+            "retryable": False,
+            "recovery": "Investigation required",
+        },
+    )

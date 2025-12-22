@@ -16,14 +16,15 @@ Vision Alignment (PIN-005):
 - Zero silent failures
 """
 
-import pytest
-import json
 import hashlib
+import json
 import sys
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import pytest
 
 # Path setup
 _backend_path = str(Path(__file__).parent.parent.parent)
@@ -34,6 +35,7 @@ if _backend_path not in sys.path:
 @dataclass
 class ReplayRecord:
     """Record of a workflow execution for replay testing."""
+
     workflow_id: str
     run_id: str
     steps: List[Dict[str, Any]]
@@ -48,6 +50,7 @@ class ReplayRecord:
 @dataclass
 class StepRecord:
     """Record of a single step execution."""
+
     step_id: str
     skill: str
     params: Dict[str, Any]
@@ -63,11 +66,10 @@ def compute_deterministic_hash(data: Dict[str, Any], exclude_fields: Optional[se
     def filter_dict(d: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(d, dict):
             return d
-        return {k: filter_dict(v) if isinstance(v, dict) else v
-                for k, v in sorted(d.items()) if k not in exclude}
+        return {k: filter_dict(v) if isinstance(v, dict) else v for k, v in sorted(d.items()) if k not in exclude}
 
     filtered = filter_dict(data)
-    canonical = json.dumps(filtered, sort_keys=True, separators=(',', ':'))
+    canonical = json.dumps(filtered, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
@@ -81,12 +83,7 @@ class WorkflowReplayHarness:
     def __init__(self):
         self.recorded_runs: Dict[str, ReplayRecord] = {}
 
-    def record_run(
-        self,
-        workflow_id: str,
-        steps: List[Dict[str, Any]],
-        final_status: str
-    ) -> ReplayRecord:
+    def record_run(self, workflow_id: str, steps: List[Dict[str, Any]], final_status: str) -> ReplayRecord:
         """Record a workflow run for replay testing."""
         import uuid
 
@@ -98,11 +95,11 @@ class WorkflowReplayHarness:
                     "step_id": s["step_id"],
                     "skill": s["skill"],
                     "status": s.get("status", "ok"),
-                    "output_hash": compute_deterministic_hash(s.get("output", {}))
+                    "output_hash": compute_deterministic_hash(s.get("output", {})),
                 }
                 for s in steps
             ],
-            "final_status": final_status
+            "final_status": final_status,
         }
 
         record = ReplayRecord(
@@ -111,17 +108,14 @@ class WorkflowReplayHarness:
             steps=steps,
             final_status=final_status,
             deterministic_hash=compute_deterministic_hash(hash_data),
-            recorded_at=datetime.now(timezone.utc).isoformat()
+            recorded_at=datetime.now(timezone.utc).isoformat(),
         )
 
         self.recorded_runs[record.run_id] = record
         return record
 
     def verify_replay(
-        self,
-        original_record: ReplayRecord,
-        replay_steps: List[Dict[str, Any]],
-        replay_status: str
+        self, original_record: ReplayRecord, replay_steps: List[Dict[str, Any]], replay_status: str
     ) -> tuple[bool, str]:
         """
         Verify replay produces identical deterministic output.
@@ -137,11 +131,11 @@ class WorkflowReplayHarness:
                     "step_id": s["step_id"],
                     "skill": s["skill"],
                     "status": s.get("status", "ok"),
-                    "output_hash": compute_deterministic_hash(s.get("output", {}))
+                    "output_hash": compute_deterministic_hash(s.get("output", {})),
                 }
                 for s in replay_steps
             ],
-            "final_status": replay_status
+            "final_status": replay_status,
         }
         replay_hash = compute_deterministic_hash(replay_hash_data)
 
@@ -198,12 +192,18 @@ class TestReplayCertification:
     def test_timestamp_excluded_from_hash(self, harness):
         """Timestamps should not affect deterministic hash."""
         steps1 = [
-            {"step_id": "s1", "skill": "json_transform",
-             "output": {"result": "hello", "timestamp": "2025-01-01T00:00:00Z"}},
+            {
+                "step_id": "s1",
+                "skill": "json_transform",
+                "output": {"result": "hello", "timestamp": "2025-01-01T00:00:00Z"},
+            },
         ]
         steps2 = [
-            {"step_id": "s1", "skill": "json_transform",
-             "output": {"result": "hello", "timestamp": "2025-12-31T23:59:59Z"}},
+            {
+                "step_id": "s1",
+                "skill": "json_transform",
+                "output": {"result": "hello", "timestamp": "2025-12-31T23:59:59Z"},
+            },
         ]
 
         record1 = harness.record_run("wf-1", steps1, "succeeded")
@@ -282,8 +282,8 @@ class TestWorkflowDeterminism:
 
     def test_json_transform_is_deterministic(self):
         """json_transform skill produces deterministic output."""
-        from app.skills.json_transform import JsonTransformSkill
         from app.skills import load_all_skills
+        from app.skills.json_transform import JsonTransformSkill
 
         load_all_skills()
 
@@ -292,6 +292,7 @@ class TestWorkflowDeterminism:
 
         # Execute twice with fresh event loop
         import asyncio
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:

@@ -11,11 +11,10 @@ Tests for:
 
 import os
 import time
-import pytest
-from datetime import datetime, timezone, timedelta
-from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
 
 import httpx
+import pytest
 from sqlalchemy import text
 
 # Test configuration
@@ -27,6 +26,7 @@ MACHINE_TOKEN = os.getenv("MACHINE_SECRET_TOKEN", "")
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture(scope="module")
 def client():
@@ -72,6 +72,7 @@ def unique_key():
 # Memory Pins CRUD Tests
 # =============================================================================
 
+
 class TestMemoryPinsCRUD:
     """Test memory pins create, read, update, delete."""
 
@@ -82,8 +83,8 @@ class TestMemoryPinsCRUD:
             json={
                 "tenant_id": unique_tenant,
                 "key": unique_key,
-                "value": {"test": True, "created_at": datetime.now(timezone.utc).isoformat()}
-            }
+                "value": {"test": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            },
         )
         assert response.status_code in (200, 201), f"Create failed: {response.text}"
         data = response.json()
@@ -94,10 +95,7 @@ class TestMemoryPinsCRUD:
     def test_get_pin(self, client, unique_tenant, unique_key):
         """Test retrieving a memory pin."""
         # Create first
-        client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"test": 123}}
-        )
+        client.post("/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"test": 123}})
 
         # Get
         response = client.get(f"/api/v1/memory/pins/{unique_key}?tenant_id={unique_tenant}")
@@ -109,14 +107,12 @@ class TestMemoryPinsCRUD:
         """Test updating a pin via upsert."""
         # Create
         client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"version": 1}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"version": 1}}
         )
 
         # Update (upsert)
         response = client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"version": 2}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"version": 2}}
         )
         assert response.status_code in (200, 201)
 
@@ -126,7 +122,7 @@ class TestMemoryPinsCRUD:
 
     @pytest.mark.skipif(
         MACHINE_TOKEN and "machine" not in os.getenv("TEST_RBAC_ROLE", "machine"),
-        reason="Machine role doesn't have delete permission"
+        reason="Machine role doesn't have delete permission",
     )
     def test_delete_pin(self, client, unique_tenant, unique_key):
         """Test deleting a memory pin.
@@ -136,8 +132,7 @@ class TestMemoryPinsCRUD:
         """
         # Create
         client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"to_delete": True}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"to_delete": True}}
         )
 
         # Delete - may fail with 403 if machine role
@@ -160,8 +155,7 @@ class TestMemoryPinsCRUD:
         # Create multiple pins
         for i in range(3):
             client.post(
-                "/api/v1/memory/pins",
-                json={"tenant_id": unique_tenant, "key": f"{prefix}:item:{i}", "value": {"i": i}}
+                "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": f"{prefix}:item:{i}", "value": {"i": i}}
             )
 
         # List with prefix
@@ -177,6 +171,7 @@ class TestMemoryPinsCRUD:
 # Memory Audit Tests
 # =============================================================================
 
+
 class TestMemoryAudit:
     """Test memory audit logging."""
 
@@ -184,21 +179,18 @@ class TestMemoryAudit:
         """Test audit entry created on pin creation."""
         # Get audit count before
         before = db_session.execute(
-            text("SELECT count(*) FROM system.memory_audit WHERE tenant_id = :tenant"),
-            {"tenant": unique_tenant}
+            text("SELECT count(*) FROM system.memory_audit WHERE tenant_id = :tenant"), {"tenant": unique_tenant}
         ).scalar()
 
         # Create pin
         client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"audit_test": True}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"audit_test": True}}
         )
 
         # Check audit count after
         db_session.commit()  # Refresh
         after = db_session.execute(
-            text("SELECT count(*) FROM system.memory_audit WHERE tenant_id = :tenant"),
-            {"tenant": unique_tenant}
+            text("SELECT count(*) FROM system.memory_audit WHERE tenant_id = :tenant"), {"tenant": unique_tenant}
         ).scalar()
 
         assert after > before, "No audit entry created for upsert"
@@ -207,20 +199,21 @@ class TestMemoryAudit:
         """Test audit entries contain value hash, not full value."""
         # Create pin
         client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"secret": "data"}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"secret": "data"}}
         )
 
         db_session.commit()
 
         # Check audit entry
         result = db_session.execute(
-            text("""
+            text(
+                """
                 SELECT new_value_hash FROM system.memory_audit
                 WHERE tenant_id = :tenant AND key = :key
                 ORDER BY ts DESC LIMIT 1
-            """),
-            {"tenant": unique_tenant, "key": unique_key}
+            """
+            ),
+            {"tenant": unique_tenant, "key": unique_key},
         ).fetchone()
 
         assert result is not None, "No audit entry found"
@@ -234,8 +227,7 @@ class TestMemoryAudit:
         """
         # Create first
         client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"to_delete": True}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"to_delete": True}}
         )
 
         # Delete - may fail with 403 if machine role
@@ -247,11 +239,13 @@ class TestMemoryAudit:
 
         # Check delete audit entry
         result = db_session.execute(
-            text("""
+            text(
+                """
                 SELECT operation FROM system.memory_audit
                 WHERE tenant_id = :tenant AND key = :key AND operation = 'delete'
-            """),
-            {"tenant": unique_tenant, "key": unique_key}
+            """
+            ),
+            {"tenant": unique_tenant, "key": unique_key},
         ).fetchone()
 
         assert result is not None, "No delete audit entry found"
@@ -260,6 +254,7 @@ class TestMemoryAudit:
 # =============================================================================
 # TTL Expiration Tests
 # =============================================================================
+
 
 class TestTTLExpiration:
     """Test TTL-based pin expiration."""
@@ -272,8 +267,8 @@ class TestTTLExpiration:
                 "tenant_id": unique_tenant,
                 "key": unique_key,
                 "value": {"expires": True},
-                "ttl_seconds": 3600  # 1 hour
-            }
+                "ttl_seconds": 3600,  # 1 hour
+            },
         )
         assert response.status_code in (200, 201)
         data = response.json()
@@ -289,13 +284,15 @@ class TestTTLExpiration:
         """
         # Create pin with past expiration directly in DB
         db_session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO system.memory_pins (tenant_id, key, value, ttl_seconds, expires_at, source)
                 VALUES (:tenant, :key, CAST(:value AS jsonb), 1, now() - interval '1 hour', 'test')
                 ON CONFLICT (tenant_id, key) DO UPDATE SET
                     expires_at = now() - interval '1 hour'
-            """),
-            {"tenant": unique_tenant, "key": unique_key, "value": '{"expired": true}'}
+            """
+            ),
+            {"tenant": unique_tenant, "key": unique_key, "value": '{"expired": true}'},
         )
         db_session.commit()
 
@@ -319,6 +316,7 @@ class TestTTLExpiration:
 # RBAC Tests (when enforced)
 # =============================================================================
 
+
 class TestRBACEnforcement:
     """Test RBAC enforcement behavior."""
 
@@ -336,7 +334,7 @@ class TestRBACEnforcement:
         response = client.post(
             "/api/v1/memory/pins",
             headers={"X-Machine-Token": MACHINE_TOKEN},
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"machine": True}}
+            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"machine": True}},
         )
         assert response.status_code in (200, 201), f"Machine token write failed: {response.text}"
 
@@ -350,8 +348,7 @@ class TestRBACEnforcement:
 
         # Try without any auth - should get 403
         response = unauthenticated_client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"unauth": True}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"unauth": True}}
         )
         assert response.status_code == 403, "Should be blocked when RBAC enforced"
 
@@ -359,6 +356,7 @@ class TestRBACEnforcement:
 # =============================================================================
 # RBAC Audit Tests
 # =============================================================================
+
 
 class TestRBACAudit:
     """Test RBAC audit logging."""
@@ -376,18 +374,20 @@ class TestRBACAudit:
         client.post(
             "/api/v1/memory/pins",
             headers={"X-Machine-Token": MACHINE_TOKEN},
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"audit": True}}
+            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"audit": True}},
         )
 
         db_session.commit()
 
         # Check audit
         result = db_session.execute(
-            text("""
+            text(
+                """
                 SELECT subject, allowed, resource, action FROM system.rbac_audit
                 WHERE allowed = true
                 ORDER BY ts DESC LIMIT 1
-            """)
+            """
+            )
         ).fetchone()
 
         assert result is not None, "No allowed RBAC audit entry found"
@@ -402,19 +402,20 @@ class TestRBACAudit:
 
         # Make unauthenticated request - should be denied
         unauthenticated_client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": unique_tenant, "key": unique_key, "value": {"denied": True}}
+            "/api/v1/memory/pins", json={"tenant_id": unique_tenant, "key": unique_key, "value": {"denied": True}}
         )
 
         db_session.commit()
 
         # Check audit
         result = db_session.execute(
-            text("""
+            text(
+                """
                 SELECT subject, allowed, reason FROM system.rbac_audit
                 WHERE allowed = false
                 ORDER BY ts DESC LIMIT 1
-            """)
+            """
+            )
         ).fetchone()
 
         assert result is not None, "No denied RBAC audit entry found"
@@ -424,6 +425,7 @@ class TestRBACAudit:
 # =============================================================================
 # CostSim Memory Integration Tests
 # =============================================================================
+
 
 class TestCostSimMemory:
     """Test CostSim memory integration."""
@@ -445,8 +447,8 @@ class TestCostSimMemory:
                 "budget_cents": 1000,
                 "tenant_id": unique_tenant,
                 "workflow_id": "test-workflow",
-                "inject_memory": True
-            }
+                "inject_memory": True,
+            },
         )
         # May fail if noop skill not registered, but should not error on memory path
         assert response.status_code in (200, 400, 422), f"Unexpected error: {response.text}"
@@ -455,6 +457,7 @@ class TestCostSimMemory:
 # =============================================================================
 # Metrics Tests
 # =============================================================================
+
 
 class TestMetrics:
     """Test Prometheus metrics are emitted."""
@@ -484,9 +487,11 @@ class TestMetrics:
         metrics = response.text
 
         # These may not have data yet, but declarations should exist
-        assert "memory_context_injection_failures_total" in metrics or \
-               "drift_detected_total" in metrics or \
-               "drift_score_current" in metrics, "Drift metrics not found"
+        assert (
+            "memory_context_injection_failures_total" in metrics
+            or "drift_detected_total" in metrics
+            or "drift_score_current" in metrics
+        ), "Drift metrics not found"
 
 
 # =============================================================================

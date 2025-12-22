@@ -10,13 +10,12 @@ P0 hardening migration:
 - Adds missing indexes for performance
 - Fully idempotent - safe to run multiple times
 """
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers
-revision = '015b_harden_failure_matches'
-down_revision = '015_failure_matches'
+revision = "015b_harden_failure_matches"
+down_revision = "015_failure_matches"
 branch_labels = None
 depends_on = None
 
@@ -25,7 +24,8 @@ def upgrade() -> None:
     # === IDEMPOTENT COLUMN FIXES ===
 
     # Fix context vs context_json drift - handle both scenarios
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             -- If 'context' exists but 'context_json' doesn't, rename it
@@ -52,45 +52,55 @@ def upgrade() -> None:
                 RAISE NOTICE 'Added context_json column';
             END IF;
         END $$;
-    """)
+    """
+    )
 
     # === TENANT ENFORCEMENT PREPARATION ===
 
     # Add comment indicating tenant_id will become required
-    op.execute("""
+    op.execute(
+        """
         COMMENT ON COLUMN failure_matches.tenant_id IS
             'Tenant identifier - WILL become NOT NULL after backfill (M9.1)';
-    """)
+    """
+    )
 
     # Add index for tenant queries (if not exists)
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_fm_tenant_created
         ON failure_matches(tenant_id, created_at DESC)
         WHERE tenant_id IS NOT NULL;
-    """)
+    """
+    )
 
     # === ADDITIONAL PERFORMANCE INDEXES ===
 
     # Composite index for recovery dashboard queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_fm_recovery_dashboard
         ON failure_matches(recovery_mode, recovery_attempted, recovery_succeeded)
         WHERE recovery_mode IS NOT NULL;
-    """)
+    """
+    )
 
     # Index for high-miss-rate alerts (partial index on unmatched only, no time filter)
     # Note: Can't use now() in index predicate as it's not IMMUTABLE
     # Time filtering is done at query time instead
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_fm_recent_misses
         ON failure_matches(created_at DESC)
         WHERE catalog_entry_id IS NULL;
-    """)
+    """
+    )
 
     # === AUDIT COLUMNS ===
 
     # Add recovered_at timestamp for recovery tracking
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -101,10 +111,12 @@ def upgrade() -> None:
                 RAISE NOTICE 'Added recovered_at column';
             END IF;
         END $$;
-    """)
+    """
+    )
 
     # Add recovered_by for audit trail
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -116,10 +128,12 @@ def upgrade() -> None:
                 RAISE NOTICE 'Added recovered_by column';
             END IF;
         END $$;
-    """)
+    """
+    )
 
     # Add recovery_notes for operator context
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -130,10 +144,12 @@ def upgrade() -> None:
                 RAISE NOTICE 'Added recovery_notes column';
             END IF;
         END $$;
-    """)
+    """
+    )
 
     # === UPDATE TRIGGER FOR updated_at ===
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION update_failure_matches_updated_at()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -147,10 +163,12 @@ def upgrade() -> None:
             BEFORE UPDATE ON failure_matches
             FOR EACH ROW
             EXECUTE FUNCTION update_failure_matches_updated_at();
-    """)
+    """
+    )
 
     # === VALIDATION CHECK ===
-    op.execute("""
+    op.execute(
+        """
         DO $$
         DECLARE
             col_count INTEGER;
@@ -165,26 +183,33 @@ def upgrade() -> None:
                 RAISE NOTICE 'failure_matches validation passed: % columns', col_count;
             END IF;
         END $$;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
     # Remove new columns (safe - they're optional)
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE failure_matches DROP COLUMN IF EXISTS recovered_at;
         ALTER TABLE failure_matches DROP COLUMN IF EXISTS recovered_by;
         ALTER TABLE failure_matches DROP COLUMN IF EXISTS recovery_notes;
-    """)
+    """
+    )
 
     # Remove new indexes
-    op.execute("""
+    op.execute(
+        """
         DROP INDEX IF EXISTS idx_fm_tenant_created;
         DROP INDEX IF EXISTS idx_fm_recovery_dashboard;
         DROP INDEX IF EXISTS idx_fm_recent_misses;
-    """)
+    """
+    )
 
     # Remove trigger
-    op.execute("""
+    op.execute(
+        """
         DROP TRIGGER IF EXISTS trg_failure_matches_updated_at ON failure_matches;
         DROP FUNCTION IF EXISTS update_failure_matches_updated_at();
-    """)
+    """
+    )

@@ -27,13 +27,13 @@ log_alert() {
     local level="$1"
     local message="$2"
     local timestamp=$(date -Iseconds)
-    
+
     # Log to file
     echo "[$timestamp] ALERT[$level]: $message" | tee -a "$MONITOR_LOG"
-    
+
     # Append to alerts JSON
     echo "{\"timestamp\": \"$timestamp\", \"level\": \"$level\", \"message\": \"$message\"}" >> "$ALERT_FILE"
-    
+
     # Send to webhook if configured
     if [ -n "${SHADOW_HOOK:-}" ]; then
         curl -sS -X POST -H "Content-Type: application/json" \
@@ -45,20 +45,20 @@ log_alert() {
 check_shadow_health() {
     local LOGFILE=$(ls -t /var/lib/aos/shadow_24h_*.log 2>/dev/null | head -1)
     local issues=0
-    
+
     # 1. Check if shadow process is running
     local PID=$(pgrep -f "run_shadow_simulation.sh.*--hours 24" | head -1)
     if [ -z "$PID" ]; then
         log_alert "CRITICAL" "Shadow process NOT RUNNING"
         return 1
     fi
-    
+
     # 2. Check for recent log activity (last 10 minutes)
     if [ -n "$LOGFILE" ]; then
         local last_mod=$(stat -c %Y "$LOGFILE" 2>/dev/null || echo 0)
         local now=$(date +%s)
         local age=$((now - last_mod))
-        
+
         if [ "$age" -gt 600 ]; then
             log_alert "WARNING" "Log file stale - no updates in ${age}s"
             ((issues++))
@@ -67,7 +67,7 @@ check_shadow_health() {
         log_alert "WARNING" "No shadow log file found"
         ((issues++))
     fi
-    
+
     # 3. Check for mismatches
     if [ -n "$LOGFILE" ]; then
         local mismatch_errors=$(grep -E "[1-9][0-9]* mismatches|mismatches detected" "$LOGFILE" 2>/dev/null | grep -v ", 0 mismatches" | wc -l)
@@ -76,14 +76,14 @@ check_shadow_health() {
             return 1
         fi
     fi
-    
+
     # 4. Check disk space
     local disk_pct=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
     if [ "$disk_pct" -gt 90 ]; then
         log_alert "WARNING" "Disk usage high: ${disk_pct}%"
         ((issues++))
     fi
-    
+
     # 5. Check golden directory size
     local GOLDEN_DIR="${GOLDEN_DIR:-/var/lib/aos/golden}"
     if [ -d "$GOLDEN_DIR" ]; then
@@ -93,23 +93,23 @@ check_shadow_health() {
             ((issues++))
         fi
     fi
-    
+
     # 6. Get current stats
     local cycles=$(grep -c "Running cycle" "$LOGFILE" 2>/dev/null || echo 0)
     local success=$(grep -c ", 0 mismatches" "$LOGFILE" 2>/dev/null || echo 0)
-    
+
     if [ "$issues" -eq 0 ]; then
         log "HEALTHY: PID=$PID, Cycles=$cycles, Success=$success, Disk=${disk_pct}%"
     else
         log "DEGRADED: PID=$PID, Cycles=$cycles, Issues=$issues"
     fi
-    
+
     return $issues
 }
 
 run_daemon() {
     log "Starting shadow monitor daemon (interval: ${CHECK_INTERVAL}s)"
-    
+
     while true; do
         check_shadow_health
         sleep "$CHECK_INTERVAL"
@@ -124,7 +124,7 @@ start_daemon() {
             return 1
         fi
     fi
-    
+
     mkdir -p /var/lib/aos
     nohup "$0" daemon >> "$MONITOR_LOG" 2>&1 &
     local new_pid=$!
@@ -154,7 +154,7 @@ show_status() {
     echo "═══════════════════════════════════════════════════════════════"
     echo "           SHADOW MONITOR STATUS"
     echo "═══════════════════════════════════════════════════════════════"
-    
+
     if [ -f "$MONITOR_PID_FILE" ]; then
         local pid=$(cat "$MONITOR_PID_FILE")
         if kill -0 "$pid" 2>/dev/null; then
@@ -165,7 +165,7 @@ show_status() {
     else
         echo -e "Monitor: ${YELLOW}NOT RUNNING${NC}"
     fi
-    
+
     echo ""
     echo "Log file: $MONITOR_LOG"
     if [ -f "$MONITOR_LOG" ]; then
@@ -174,7 +174,7 @@ show_status() {
         echo "Last 10 log entries:"
         tail -10 "$MONITOR_LOG" | sed 's/^/  /'
     fi
-    
+
     echo ""
     if [ -f "$ALERT_FILE" ]; then
         local alert_count=$(wc -l < "$ALERT_FILE")
@@ -184,7 +184,7 @@ show_status() {
     else
         echo "Alerts: None"
     fi
-    
+
     echo "═══════════════════════════════════════════════════════════════"
 }
 

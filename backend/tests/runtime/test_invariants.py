@@ -16,12 +16,11 @@ Invariants tested:
 """
 
 import asyncio
-import pytest
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
-from dataclasses import dataclass
-import json
+from typing import Any, Dict
+
+import pytest
 
 # Add backend to path for imports
 _backend_path = str(Path(__file__).parent.parent.parent)
@@ -33,11 +32,11 @@ for p in [_backend_path, _app_path, _runtime_path]:
         sys.path.insert(0, p)
 
 from app.worker.runtime.core import (
-    Runtime,
-    StructuredOutcome,
-    SkillDescriptor,
-    ResourceContract,
     ErrorCategory,
+    ResourceContract,
+    Runtime,
+    SkillDescriptor,
+    StructuredOutcome,
 )
 
 
@@ -47,39 +46,25 @@ class TestStructuredOutcomeInvariants:
     def test_outcome_always_has_ok_field(self):
         """StructuredOutcome must always have 'ok' field."""
         # Success case
-        success = StructuredOutcome(
-            id="test-1",
-            ok=True,
-            result={"data": "value"}
-        )
-        assert hasattr(success, 'ok')
+        success = StructuredOutcome(id="test-1", ok=True, result={"data": "value"})
+        assert hasattr(success, "ok")
         assert success.ok is True
 
         # Error case
-        error = StructuredOutcome(
-            id="test-2",
-            ok=False,
-            error={"code": "TEST_ERROR", "message": "test"}
-        )
-        assert hasattr(error, 'ok')
+        error = StructuredOutcome(id="test-2", ok=False, error={"code": "TEST_ERROR", "message": "test"})
+        assert hasattr(error, "ok")
         assert error.ok is False
 
     def test_outcome_success_has_result(self):
         """Successful outcome must have result field."""
-        outcome = StructuredOutcome(
-            id="test-1",
-            ok=True,
-            result={"data": "value"}
-        )
+        outcome = StructuredOutcome(id="test-1", ok=True, result={"data": "value"})
         assert outcome.ok is True
         assert outcome.result is not None
 
     def test_outcome_error_has_error_details(self):
         """Error outcome must have error field with required keys."""
         outcome = StructuredOutcome(
-            id="test-1",
-            ok=False,
-            error={"code": "TEST_ERROR", "message": "Something went wrong"}
+            id="test-1", ok=False, error={"code": "TEST_ERROR", "message": "Something went wrong"}
         )
         assert outcome.ok is False
         assert outcome.error is not None
@@ -88,11 +73,7 @@ class TestStructuredOutcomeInvariants:
 
     def test_outcome_id_always_present(self):
         """Every outcome must have an ID."""
-        outcome = StructuredOutcome(
-            id="test-123",
-            ok=True,
-            result={}
-        )
+        outcome = StructuredOutcome(id="test-123", ok=True, result={})
         assert outcome.id is not None
         assert len(outcome.id) > 0
 
@@ -144,9 +125,9 @@ class TestRuntimeExecuteInvariants:
                 stable_fields={},
                 cost_model={},
                 failure_modes=[],
-                constraints={}
+                constraints={},
             ),
-            success_handler
+            success_handler,
         )
 
         rt.register_skill(
@@ -158,12 +139,10 @@ class TestRuntimeExecuteInvariants:
                 outputs_schema_version="1.0",
                 stable_fields={},
                 cost_model={},
-                failure_modes=[
-                    {"code": "ERR_INTENTIONAL", "category": "PERMANENT"}
-                ],
-                constraints={}
+                failure_modes=[{"code": "ERR_INTENTIONAL", "category": "PERMANENT"}],
+                constraints={},
             ),
-            failing_handler
+            failing_handler,
         )
 
         rt.register_skill(
@@ -175,12 +154,10 @@ class TestRuntimeExecuteInvariants:
                 outputs_schema_version="1.0",
                 stable_fields={},
                 cost_model={},
-                failure_modes=[
-                    {"code": "ERR_TIMEOUT", "category": "TRANSIENT"}
-                ],
-                constraints={}
+                failure_modes=[{"code": "ERR_TIMEOUT", "category": "TRANSIENT"}],
+                constraints={},
             ),
-            timeout_handler
+            timeout_handler,
         )
 
         return rt
@@ -239,7 +216,7 @@ class TestSkillDescriptorInvariants:
             stable_fields={"output": "DETERMINISTIC"},
             cost_model={"base_cents": 1},
             failure_modes=[{"code": "ERR_TEST", "category": "PERMANENT"}],
-            constraints={"max_size": 1000}
+            constraints={"max_size": 1000},
         )
 
         # These assertions verify the structure exists
@@ -263,7 +240,7 @@ class TestSkillDescriptorInvariants:
                 stable_fields={},
                 cost_model={},
                 failure_modes=[],
-                constraints={}
+                constraints={},
             )
             assert descriptor.version == version
 
@@ -355,7 +332,7 @@ class TestSideEffectOrderingInvariants:
                     {"type": "write", "target": "file2"},
                     {"type": "delete", "target": "file3"},
                 ]
-            }
+            },
         )
 
         side_effects = outcome.meta.get("side_effects", [])
@@ -375,7 +352,7 @@ class TestSideEffectOrderingInvariants:
                     {"seq": 2, "action": "update"},
                     {"seq": 3, "action": "delete"},
                 ]
-            }
+            },
         )
 
         serialized = outcome.to_dict()
@@ -391,10 +368,7 @@ class TestResourceContractInvariants:
     def test_budget_is_non_negative(self):
         """Budget values must be non-negative."""
         contract = ResourceContract(
-            resource_id="test-resource",
-            budget_cents=100,
-            rate_limit_per_min=60,
-            max_concurrent=5
+            resource_id="test-resource", budget_cents=100, rate_limit_per_min=60, max_concurrent=5
         )
 
         assert contract.budget_cents >= 0
@@ -404,16 +378,13 @@ class TestResourceContractInvariants:
     def test_contract_declares_limits(self):
         """Contract must declare all limit types."""
         contract = ResourceContract(
-            resource_id="test-resource",
-            budget_cents=100,
-            rate_limit_per_min=60,
-            max_concurrent=5
+            resource_id="test-resource", budget_cents=100, rate_limit_per_min=60, max_concurrent=5
         )
 
         # All limits must be explicitly declared
-        assert hasattr(contract, 'budget_cents')
-        assert hasattr(contract, 'rate_limit_per_min')
-        assert hasattr(contract, 'max_concurrent')
+        assert hasattr(contract, "budget_cents")
+        assert hasattr(contract, "rate_limit_per_min")
+        assert hasattr(contract, "max_concurrent")
 
 
 class TestQueryInvariants:

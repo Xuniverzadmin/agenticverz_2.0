@@ -15,38 +15,36 @@ Integration points:
 - M4: Execution plan generation
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
-from datetime import datetime, timezone
 import hashlib
+from dataclasses import dataclass, field
 from enum import Enum, auto
+from typing import Any, Dict, List, Optional
 
+from app.policy.compiler.grammar import ActionType, PolicyCategory
 from app.policy.ir.ir_nodes import (
-    IRModule,
-    IRFunction,
-    IRBlock,
-    IRInstruction,
-    IRLoadConst,
-    IRLoadVar,
-    IRStoreVar,
+    IRAction,
     IRBinaryOp,
-    IRUnaryOp,
+    IRCall,
+    IRCheckPolicy,
     IRCompare,
+    IREmitIntent,
+    IRFunction,
+    IRInstruction,
     IRJump,
     IRJumpIf,
-    IRCall,
+    IRLoadConst,
+    IRLoadVar,
+    IRModule,
     IRReturn,
-    IRAction,
-    IRCheckPolicy,
-    IREmitIntent,
-    IRGovernance,
+    IRStoreVar,
+    IRUnaryOp,
 )
-from app.policy.compiler.grammar import ActionType, PolicyCategory
-from app.policy.runtime.intent import Intent, IntentType, IntentPayload, IntentEmitter
+from app.policy.runtime.intent import Intent, IntentEmitter, IntentPayload, IntentType
 
 
 class ExecutionStatus(Enum):
     """Status of policy execution."""
+
     PENDING = auto()
     RUNNING = auto()
     COMPLETED = auto()
@@ -61,6 +59,7 @@ class ExecutionContext:
 
     Contains all runtime state needed for deterministic execution.
     """
+
     # Unique execution ID (deterministic from inputs)
     execution_id: str = ""
 
@@ -127,11 +126,13 @@ class ExecutionContext:
 
     def add_trace(self, event: str, data: Dict[str, Any]) -> None:
         """Add event to execution trace."""
-        self.trace.append({
-            "step": self.step_count,
-            "event": event,
-            "data": data,
-        })
+        self.trace.append(
+            {
+                "step": self.step_count,
+                "event": event,
+                "data": data,
+            }
+        )
 
 
 @dataclass
@@ -141,6 +142,7 @@ class ExecutionResult:
 
     Contains final decision, intents, and audit trail.
     """
+
     success: bool
     action: Optional[ActionType] = None
     intents: List[Intent] = field(default_factory=list)
@@ -298,9 +300,7 @@ class DeterministicEngine:
                     raise RuntimeError(f"Execution exceeded max steps ({context.max_steps})")
 
                 # Execute instruction
-                result = await self._execute_instruction(
-                    instr, registers, context, module
-                )
+                result = await self._execute_instruction(instr, registers, context, module)
 
                 # Handle control flow
                 if isinstance(result, str):
@@ -317,7 +317,9 @@ class DeterministicEngine:
                 current_block = None
 
         context.pop_call()
-        context.add_trace("function_exit", {"name": func.name, "action": result_action.value if result_action else None})
+        context.add_trace(
+            "function_exit", {"name": func.name, "action": result_action.value if result_action else None}
+        )
 
         return result_action
 
@@ -385,10 +387,13 @@ class DeterministicEngine:
             return None
 
         elif isinstance(instr, IRAction):
-            context.add_trace("action", {
-                "action": instr.action.value,
-                "target": instr.target,
-            })
+            context.add_trace(
+                "action",
+                {
+                    "action": instr.action.value,
+                    "target": instr.target,
+                },
+            )
 
             # Create intent for the action
             intent_type = self._action_to_intent_type(instr.action)
@@ -416,9 +421,7 @@ class DeterministicEngine:
             return None
 
         elif isinstance(instr, IREmitIntent):
-            payload_data = {
-                "data": [registers.get(p) for p in instr.payload_ids]
-            }
+            payload_data = {"data": [registers.get(p) for p in instr.payload_ids]}
             self.intent_emitter.create_intent(
                 intent_type=IntentType[instr.intent_type.upper()] if instr.intent_type else IntentType.EXECUTE,
                 payload=IntentPayload(context=payload_data),

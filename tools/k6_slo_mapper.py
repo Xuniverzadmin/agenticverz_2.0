@@ -16,13 +16,10 @@ SLOs (M8):
 - Availability > 99.5%
 - Replay parity failures < 0.1%
 """
-import os
 import sys
 import json
 import argparse
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
 
 
 # SLO Definitions
@@ -83,7 +80,7 @@ def parse_k6_json(filepath: str) -> dict:
     }
 
     try:
-        with open(filepath, 'r') as f:
+        with open(filepath, "r") as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -120,7 +117,9 @@ def parse_k6_json(filepath: str) -> dict:
                     if metric_name == "iterations":
                         contains = data.get("data", {}).get("contains")
                         if contains == "default":
-                            metrics["iterations"] = data.get("data", {}).get("value", metrics["iterations"])
+                            metrics["iterations"] = data.get("data", {}).get(
+                                "value", metrics["iterations"]
+                            )
 
     except FileNotFoundError:
         raise FileNotFoundError(f"k6 results file not found: {filepath}")
@@ -160,7 +159,9 @@ def extract_slo_metrics(raw_metrics: dict) -> dict:
     # Check parity (from custom checks if available)
     total_checks = len(checks)
     passed_checks = sum(1 for c in checks if c > 0)
-    parity_failure = ((total_checks - passed_checks) / total_checks * 100) if total_checks > 0 else 0
+    parity_failure = (
+        ((total_checks - passed_checks) / total_checks * 100) if total_checks > 0 else 0
+    )
 
     return {
         "simulate_p50_latency_ms": p50,
@@ -277,12 +278,16 @@ def print_report(report: dict, verbose: bool = False) -> None:
         severity_tag = f"[{result['severity'].upper()}]" if not result["passed"] else ""
 
         print(f"  {status_icon} {status} {severity_tag} {result['description']}")
-        print(f"       Value: {result['value']:.2f}{result['unit']} "
-              f"(threshold: {result['operator']} {result['threshold']}{result['unit']})")
+        print(
+            f"       Value: {result['value']:.2f}{result['unit']} "
+            f"(threshold: {result['operator']} {result['threshold']}{result['unit']})"
+        )
 
         if verbose and not result["passed"]:
-            print(f"       Margin: {result['margin']:.2f}{result['unit']} "
-                  f"({result['margin_percent']:.1f}% beyond threshold)")
+            print(
+                f"       Margin: {result['margin']:.2f}{result['unit']} "
+                f"({result['margin_percent']:.1f}% beyond threshold)"
+            )
         print()
 
     print("-" * 60)
@@ -301,33 +306,24 @@ def main():
     parser = argparse.ArgumentParser(
         description="Map k6 load test results to SLO compliance"
     )
+    parser.add_argument("results_file", help="Path to k6 JSON results file")
+    parser.add_argument("--output", "-o", help="Output file for JSON report")
     parser.add_argument(
-        "results_file",
-        help="Path to k6 JSON results file"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        help="Output file for JSON report"
-    )
-    parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Exit with code 1 if any SLO is breached"
+        "--strict", action="store_true", help="Exit with code 1 if any SLO is breached"
     )
     parser.add_argument(
         "--critical-only",
         action="store_true",
-        help="Only fail on critical SLO breaches (with --strict)"
+        help="Only fail on critical SLO breaches (with --strict)",
     )
     parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
-        help="Show detailed output including margins"
+        help="Show detailed output including margins",
     )
     parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output only JSON (no human-readable)"
+        "--json", action="store_true", help="Output only JSON (no human-readable)"
     )
 
     args = parser.parse_args()
@@ -353,7 +349,7 @@ def main():
 
     # Write output file
     if args.output:
-        with open(args.output, 'w') as f:
+        with open(args.output, "w") as f:
             json.dump(report, f, indent=2)
         if not args.json:
             print(f"\nReport saved to: {args.output}")

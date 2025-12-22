@@ -9,20 +9,20 @@ Tracks all failure pattern exports to R2 storage:
 - Local fallback files (pending retry)
 - Retry history
 """
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers
-revision = '016_failure_pattern_exports'
-down_revision = '015b_harden_failure_matches'
+revision = "016_failure_pattern_exports"
+down_revision = "015b_harden_failure_matches"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     # Create the failure_pattern_exports table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS failure_pattern_exports (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             s3_key TEXT NOT NULL,
@@ -60,13 +60,16 @@ def upgrade() -> None:
             'uploaded | fallback_local | retrying | failed';
         COMMENT ON COLUMN failure_pattern_exports.retry_count IS
             'Number of retry attempts for fallback files';
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
-    op.execute("""
+    op.execute(
+        """
         DROP INDEX IF EXISTS idx_fpe_sha256;
         DROP INDEX IF EXISTS idx_fpe_uploaded_at;
         DROP INDEX IF EXISTS idx_fpe_status;
         DROP TABLE IF EXISTS failure_pattern_exports;
-    """)
+    """
+    )

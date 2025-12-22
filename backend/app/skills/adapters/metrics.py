@@ -23,7 +23,7 @@ Usage:
 import functools
 import logging
 import time
-from typing import Any, Callable, Optional, Union, Tuple
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger("nova.adapters.metrics")
 
@@ -32,11 +32,12 @@ def _get_metrics():
     """Lazy import metrics to avoid circular imports."""
     try:
         from app.metrics import (
-            nova_llm_tokens_total,
             nova_llm_cost_cents_total,
             nova_llm_duration_seconds,
             nova_llm_invocations_total,
+            nova_llm_tokens_total,
         )
+
         return {
             "tokens": nova_llm_tokens_total,
             "cost": nova_llm_cost_cents_total,
@@ -52,6 +53,7 @@ def _get_cost_model():
     """Get cost model from llm_invoke_v2."""
     try:
         from app.skills.llm_invoke_v2 import COST_PER_MTOK
+
         return COST_PER_MTOK
     except ImportError:
         # Fallback cost model
@@ -115,12 +117,12 @@ def track_llm_response(
 
     try:
         # Extract token counts
-        if hasattr(response, 'input_tokens'):
+        if hasattr(response, "input_tokens"):
             input_tokens = response.input_tokens
             output_tokens = response.output_tokens
         elif isinstance(response, dict):
-            input_tokens = response.get('input_tokens', 0)
-            output_tokens = response.get('output_tokens', 0)
+            input_tokens = response.get("input_tokens", 0)
+            output_tokens = response.get("output_tokens", 0)
         else:
             # Error tuple or unknown format
             input_tokens = 0
@@ -204,6 +206,7 @@ def track_llm_usage(func: Callable) -> Callable:
             async def invoke(self, prompt, config):
                 ...
     """
+
     @functools.wraps(func)
     async def wrapper(self, prompt, config, *args, **kwargs):
         start_time = time.perf_counter()
@@ -219,7 +222,7 @@ def track_llm_usage(func: Callable) -> Callable:
 
             return response
 
-        except Exception as e:
+        except Exception:
             success = False
             raise
 
@@ -227,12 +230,12 @@ def track_llm_usage(func: Callable) -> Callable:
             duration = time.perf_counter() - start_time
 
             # Get adapter info
-            adapter_id = getattr(self, 'adapter_id', 'unknown')
-            model = getattr(config, 'model', None) or getattr(self, 'default_model', 'unknown')
+            adapter_id = getattr(self, "adapter_id", "unknown")
+            model = getattr(config, "model", None) or getattr(self, "default_model", "unknown")
 
             # Extract tenant/agent from config for billing & throttling
-            tenant_id = getattr(config, 'tenant_id', None)
-            agent_id = getattr(config, 'agent_id', None)
+            tenant_id = getattr(config, "tenant_id", None)
+            agent_id = getattr(config, "agent_id", None)
 
             track_llm_response(
                 response=response,
@@ -253,6 +256,7 @@ def track_llm_usage_sync(func: Callable) -> Callable:
 
     For non-async invoke methods.
     """
+
     @functools.wraps(func)
     def wrapper(self, prompt, config, *args, **kwargs):
         start_time = time.perf_counter()
@@ -268,7 +272,7 @@ def track_llm_usage_sync(func: Callable) -> Callable:
 
             return response
 
-        except Exception as e:
+        except Exception:
             success = False
             raise
 
@@ -276,12 +280,12 @@ def track_llm_usage_sync(func: Callable) -> Callable:
             duration = time.perf_counter() - start_time
 
             # Get adapter info
-            adapter_id = getattr(self, 'adapter_id', 'unknown')
-            model = getattr(config, 'model', None) or getattr(self, 'default_model', 'unknown')
+            adapter_id = getattr(self, "adapter_id", "unknown")
+            model = getattr(config, "model", None) or getattr(self, "default_model", "unknown")
 
             # Extract tenant/agent from config for billing & throttling
-            tenant_id = getattr(config, 'tenant_id', None)
-            agent_id = getattr(config, 'agent_id', None)
+            tenant_id = getattr(config, "tenant_id", None)
+            agent_id = getattr(config, "agent_id", None)
 
             track_llm_response(
                 response=response,
@@ -299,6 +303,7 @@ def track_llm_usage_sync(func: Callable) -> Callable:
 # =============================================================================
 # Monthly Cost Estimator
 # =============================================================================
+
 
 def estimate_monthly_cost(
     calls_per_minute: float,

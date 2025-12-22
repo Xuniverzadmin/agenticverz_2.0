@@ -25,23 +25,24 @@ Usage:
 """
 
 from __future__ import annotations
+
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
-from sqlalchemy import select, update, and_
+from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.costsim.config import get_config
+from app.costsim.leader import (
+    LOCK_ALERT_WORKER,
+    leader_election,
+)
+from app.costsim.metrics import get_metrics
 from app.db_async import AsyncSessionLocal, async_session_context
 from app.models.costsim_cb import CostSimAlertQueueModel, CostSimCBIncidentModel
-from app.costsim.leader import (
-    leader_election,
-    LOCK_ALERT_WORKER,
-)
-from app.costsim.config import get_config
-from app.costsim.metrics import get_metrics
 
 logger = logging.getLogger("nova.costsim.alert_worker")
 
@@ -135,15 +136,11 @@ class AlertWorker:
                 if success:
                     alert.status = "sent"
                     alert.sent_at = datetime.now(timezone.utc)
-                    logger.info(
-                        f"Alert sent: id={alert.id}, type={alert.alert_type}"
-                    )
+                    logger.info(f"Alert sent: id={alert.id}, type={alert.alert_type}")
 
                     # Update incident if linked
                     if alert.incident_id:
-                        await self._mark_incident_alert_sent(
-                            session, alert.incident_id
-                        )
+                        await self._mark_incident_alert_sent(session, alert.incident_id)
                 else:
                     # Increment attempts and calculate next retry
                     alert.attempts += 1
@@ -151,19 +148,13 @@ class AlertWorker:
 
                     if alert.attempts >= alert.max_attempts:
                         alert.status = "failed"
-                        logger.error(
-                            f"Alert failed (max attempts): id={alert.id}, "
-                            f"attempts={alert.attempts}"
-                        )
+                        logger.error(f"Alert failed (max attempts): id={alert.id}, " f"attempts={alert.attempts}")
                     else:
                         # Exponential backoff: 2^attempts seconds, capped
-                        backoff = min(2 ** alert.attempts, self.max_backoff)
-                        alert.next_attempt_at = datetime.now(timezone.utc) + timedelta(
-                            seconds=backoff
-                        )
+                        backoff = min(2**alert.attempts, self.max_backoff)
+                        alert.next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=backoff)
                         logger.warning(
-                            f"Alert retry scheduled: id={alert.id}, "
-                            f"attempt={alert.attempts}, backoff={backoff}s"
+                            f"Alert retry scheduled: id={alert.id}, " f"attempt={alert.attempts}, backoff={backoff}s"
                         )
 
             await session.commit()
@@ -209,10 +200,7 @@ class AlertWorker:
 
         except httpx.HTTPStatusError as e:
             alert.last_error = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
-            logger.warning(
-                f"Alert HTTP error: id={alert.id}, "
-                f"status={e.response.status_code}"
-            )
+            logger.warning(f"Alert HTTP error: id={alert.id}, " f"status={e.response.status_code}")
             get_metrics().record_alert_send_failure(
                 alert_type=alert.alert_type or "unknown",
                 error_type=f"http_{e.response.status_code}",
@@ -292,17 +280,15 @@ class AlertWorker:
             status_counts = {}
             for status in ["pending", "sent", "failed"]:
                 result = await session.execute(
-                    select(func.count()).select_from(CostSimAlertQueueModel).where(
-                        CostSimAlertQueueModel.status == status
-                    )
+                    select(func.count())
+                    .select_from(CostSimAlertQueueModel)
+                    .where(CostSimAlertQueueModel.status == status)
                 )
                 status_counts[status] = result.scalar() or 0
 
             # Get oldest pending
             result = await session.execute(
-                select(func.min(CostSimAlertQueueModel.created_at)).where(
-                    CostSimAlertQueueModel.status == "pending"
-                )
+                select(func.min(CostSimAlertQueueModel.created_at)).where(CostSimAlertQueueModel.status == "pending")
             )
             oldest_pending = result.scalar()
 

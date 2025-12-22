@@ -5,10 +5,11 @@ Test suite for the daily canary runner.
 Tests leader election integration and circuit breaker reporting.
 """
 
-import pytest
 import asyncio
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 
 @pytest.fixture(scope="module")
@@ -81,7 +82,7 @@ class TestCanaryRunnerWithMock:
             mock_cm.__aexit__.return_value = None
             mock_election.return_value = mock_cm
 
-            from app.costsim.canary import CanaryRunner, CanaryRunConfig
+            from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
             config = CanaryRunConfig(require_leader_lock=True)
             runner = CanaryRunner(config)
@@ -95,7 +96,7 @@ class TestCanaryRunnerWithMock:
     @pytest.mark.asyncio
     async def test_run_executes_when_leader(self):
         """Test that canary run executes when we're the leader."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig, CanaryReport
+        from app.costsim.canary import CanaryReport, CanaryRunConfig, CanaryRunner
 
         with patch("app.costsim.canary.leader_election") as mock_election:
             mock_cm = AsyncMock()
@@ -119,9 +120,7 @@ class TestCanaryRunnerWithMock:
                 failure_reasons=[],
             )
 
-            with patch.object(
-                CanaryRunner, "_run_internal", new_callable=AsyncMock
-            ) as mock_internal:
+            with patch.object(CanaryRunner, "_run_internal", new_callable=AsyncMock) as mock_internal:
                 mock_internal.return_value = mock_report
 
                 config = CanaryRunConfig(require_leader_lock=True)
@@ -135,7 +134,7 @@ class TestCanaryRunnerWithMock:
     @pytest.mark.asyncio
     async def test_run_without_leader_election(self):
         """Test canary run without leader election requirement."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig, CanaryReport
+        from app.costsim.canary import CanaryReport, CanaryRunConfig, CanaryRunner
 
         mock_report = CanaryReport(
             run_id="test_run",
@@ -153,9 +152,7 @@ class TestCanaryRunnerWithMock:
             failure_reasons=[],
         )
 
-        with patch.object(
-            CanaryRunner, "_run_internal", new_callable=AsyncMock
-        ) as mock_internal:
+        with patch.object(CanaryRunner, "_run_internal", new_callable=AsyncMock) as mock_internal:
             mock_internal.return_value = mock_report
 
             config = CanaryRunConfig(require_leader_lock=False)
@@ -172,7 +169,7 @@ class TestCanaryMetricsCalculation:
 
     def test_calculate_metrics_empty_comparisons(self):
         """Test metrics calculation with no comparisons."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig()
         runner = CanaryRunner(config)
@@ -185,7 +182,7 @@ class TestCanaryMetricsCalculation:
 
     def test_calculate_metrics_with_comparisons(self):
         """Test metrics calculation with comparisons."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
         from app.costsim.models import ComparisonResult, ComparisonVerdict
 
         config = CanaryRunConfig()
@@ -250,7 +247,7 @@ class TestCanaryEvaluation:
 
     def test_evaluate_results_pass(self):
         """Test evaluation that passes."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig(drift_threshold=0.2, outlier_max_pct=0.05)
         runner = CanaryRunner(config)
@@ -270,7 +267,7 @@ class TestCanaryEvaluation:
 
     def test_evaluate_results_fail_kl_divergence(self):
         """Test evaluation fails on high KL divergence."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig(drift_threshold=0.2)
         runner = CanaryRunner(config)
@@ -290,7 +287,7 @@ class TestCanaryEvaluation:
 
     def test_evaluate_results_fail_outlier_percentage(self):
         """Test evaluation fails on high outlier percentage."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig(outlier_max_pct=0.05)
         runner = CanaryRunner(config)
@@ -314,7 +311,7 @@ class TestKLDivergence:
 
     def test_approximate_kl_divergence_identical(self):
         """Test KL divergence is 0 for identical distributions."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig()
         runner = CanaryRunner(config)
@@ -328,7 +325,7 @@ class TestKLDivergence:
 
     def test_approximate_kl_divergence_different(self):
         """Test KL divergence is positive for different distributions."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig()
         runner = CanaryRunner(config)
@@ -342,7 +339,7 @@ class TestKLDivergence:
 
     def test_approximate_kl_divergence_empty(self):
         """Test KL divergence handles empty lists."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig()
         runner = CanaryRunner(config)
@@ -357,7 +354,7 @@ class TestSyntheticSamples:
 
     def test_generate_synthetic_samples(self):
         """Test synthetic sample generation."""
-        from app.costsim.canary import CanaryRunner, CanaryRunConfig
+        from app.costsim.canary import CanaryRunConfig, CanaryRunner
 
         config = CanaryRunConfig()
         runner = CanaryRunner(config)

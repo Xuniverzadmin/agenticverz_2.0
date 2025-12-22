@@ -10,14 +10,12 @@ Usage:
 """
 
 import os
-import pytest
-import socket
 
+import pytest
 
 # Only run these tests when DISABLE_EXTERNAL_CALLS is set
 pytestmark = pytest.mark.skipif(
-    os.getenv("DISABLE_EXTERNAL_CALLS", "").lower() not in ("1", "true"),
-    reason="DISABLE_EXTERNAL_CALLS not enabled"
+    os.getenv("DISABLE_EXTERNAL_CALLS", "").lower() not in ("1", "true"), reason="DISABLE_EXTERNAL_CALLS not enabled"
 )
 
 
@@ -57,8 +55,8 @@ class TestExternalCallsBlocked:
         from app.workflow.external_guard import (
             ExternalCallBlockedError,
             check_external_call_allowed,
-            get_blocked_calls,
             clear_blocked_calls,
+            get_blocked_calls,
         )
 
         clear_blocked_calls()
@@ -74,7 +72,7 @@ class TestExternalCallsBlocked:
 
     def test_guard_context_manager(self):
         """ExternalCallsGuard context manager should block calls."""
-        from app.workflow.external_guard import ExternalCallsGuard, ExternalCallBlockedError
+        from app.workflow.external_guard import ExternalCallBlockedError, ExternalCallsGuard
 
         with ExternalCallsGuard() as guard:
             # Inside guard, external calls should be blocked
@@ -89,8 +87,8 @@ class TestGoldenTestIsolation:
 
     def test_workflow_replay_no_network(self):
         """Workflow replay should work without any network calls."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
         from app.workflow.golden import InMemoryGoldenRecorder
 
         # Simple deterministic skill registry (no network)
@@ -120,9 +118,8 @@ class TestGoldenTestIsolation:
         )
 
         import asyncio
-        result = asyncio.get_event_loop().run_until_complete(
-            engine.run(spec, run_id="ci-test-run", seed=42)
-        )
+
+        result = asyncio.get_event_loop().run_until_complete(engine.run(spec, run_id="ci-test-run", seed=42))
 
         assert result.status == "completed"
         assert result.step_results[0].output["result"] == 3
@@ -133,7 +130,6 @@ class TestEnvironmentGuard:
 
     def test_disable_external_calls_env_active(self):
         """DISABLE_EXTERNAL_CALLS should be active in CI."""
-        from app.workflow.external_guard import is_external_calls_disabled
 
         # This test only runs when DISABLE_EXTERNAL_CALLS=1
         # So this assertion verifies the guard is properly reading the env

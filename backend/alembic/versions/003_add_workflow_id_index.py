@@ -13,8 +13,6 @@ by workflow type. Common patterns:
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision: str = "003_add_workflow_id_index"
@@ -25,18 +23,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Add index on workflow_id
-    op.create_index(
-        "ix_workflow_checkpoints_workflow_id",
-        "workflow_checkpoints",
-        ["workflow_id"]
-    )
+    op.create_index("ix_workflow_checkpoints_workflow_id", "workflow_checkpoints", ["workflow_id"])
 
     # Add composite index for workflow + status queries
-    op.create_index(
-        "ix_workflow_checkpoints_workflow_status",
-        "workflow_checkpoints",
-        ["workflow_id", "status"]
-    )
+    op.create_index("ix_workflow_checkpoints_workflow_status", "workflow_checkpoints", ["workflow_id", "status"])
 
 
 def downgrade() -> None:

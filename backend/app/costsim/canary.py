@@ -21,35 +21,34 @@ Leader Election:
 """
 
 from __future__ import annotations
-import logging
+
 import asyncio
 import json
+import logging
 import math
 import uuid
-from datetime import datetime, timezone, timedelta
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
 
-from app.costsim.config import get_config, is_v2_sandbox_enabled
-from app.costsim.v2_adapter import CostSimV2Adapter
-from app.costsim.models import (
-    V2SimulationResult,
-    ComparisonResult,
-    ComparisonVerdict,
-    CanaryReport,
-    DiffResult,
-)
 from app.costsim.circuit_breaker import get_circuit_breaker
 from app.costsim.circuit_breaker_async import (
     report_drift as report_drift_async,
-    get_async_circuit_breaker,
 )
+from app.costsim.config import get_config
 from app.costsim.leader import (
-    leader_election,
     LOCK_CANARY_RUNNER,
+    leader_election,
 )
-from app.costsim.provenance import get_provenance_logger, ProvenanceLog
+from app.costsim.models import (
+    CanaryReport,
+    ComparisonResult,
+    ComparisonVerdict,
+    DiffResult,
+)
+from app.costsim.provenance import get_provenance_logger
+from app.costsim.v2_adapter import CostSimV2Adapter
 from app.worker.simulate import CostSimulator
 
 logger = logging.getLogger("nova.costsim.canary")
@@ -77,7 +76,7 @@ class CanaryRunConfig:
     # Thresholds
     drift_threshold: float = 0.2
     outlier_threshold: float = 0.5  # Individual samples
-    outlier_max_pct: float = 0.05   # Max 5% outliers
+    outlier_max_pct: float = 0.05  # Max 5% outliers
 
     # Golden comparison
     golden_dir: Optional[str] = None
@@ -116,14 +115,14 @@ class CanaryRunner:
         self.config = config or CanaryRunConfig()
         costsim_config = get_config()
 
-        self.artifacts_dir = Path(
-            self.config.artifacts_dir or costsim_config.artifacts_dir
-        ) / "canary"
+        self.artifacts_dir = Path(self.config.artifacts_dir or costsim_config.artifacts_dir) / "canary"
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
 
-        self.golden_dir = Path(
-            self.config.golden_dir or costsim_config.artifacts_dir
-        ) / "golden" if self.config.golden_dir or costsim_config.artifacts_dir else None
+        self.golden_dir = (
+            Path(self.config.golden_dir or costsim_config.artifacts_dir) / "golden"
+            if self.config.golden_dir or costsim_config.artifacts_dir
+            else None
+        )
 
         # Simulators
         self._v1_simulator = CostSimulator(budget_cents=1000)
@@ -158,10 +157,7 @@ class CanaryRunner:
                 timeout_seconds=self.config.leader_lock_timeout,
             ) as is_leader:
                 if not is_leader:
-                    logger.info(
-                        f"Skipping canary run: another instance holds leader lock, "
-                        f"run_id={run_id}"
-                    )
+                    logger.info(f"Skipping canary run: another instance holds leader lock, " f"run_id={run_id}")
                     return CanaryReport(
                         run_id=run_id,
                         timestamp=start_time,
@@ -232,7 +228,7 @@ class CanaryRunner:
         # Process in batches for parallelism
         batch_size = self.config.parallel_workers
         for i in range(0, len(samples), batch_size):
-            batch = samples[i:i + batch_size]
+            batch = samples[i : i + batch_size]
             batch_results = await asyncio.gather(
                 *[self._run_single(sample) for sample in batch],
                 return_exceptions=True,
@@ -309,10 +305,7 @@ class CanaryRunner:
             if incident:
                 logger.error(f"Circuit breaker tripped by canary: {incident.id}")
 
-        logger.info(
-            f"Canary run complete: run_id={run_id}, "
-            f"passed={passed}, samples={len(samples)}"
-        )
+        logger.info(f"Canary run complete: run_id={run_id}, " f"passed={passed}, samples={len(samples)}")
 
         return report
 
@@ -339,11 +332,13 @@ class CanaryRunner:
                     budget_cents = input_data.get("budget_cents", 1000)
 
                     if plan:
-                        samples.append(CanarySample(
-                            id=log.id,
-                            plan=plan,
-                            budget_cents=budget_cents,
-                        ))
+                        samples.append(
+                            CanarySample(
+                                id=log.id,
+                                plan=plan,
+                                budget_cents=budget_cents,
+                            )
+                        )
                 except Exception as e:
                     logger.warning(f"Failed to parse provenance log: {e}")
 
@@ -354,52 +349,58 @@ class CanaryRunner:
         if not samples:
             samples = self._generate_synthetic_samples()
 
-        return samples[:self.config.sample_count]
+        return samples[: self.config.sample_count]
 
     def _generate_synthetic_samples(self) -> List[CanarySample]:
         """Generate synthetic test samples."""
         samples = []
 
         # Simple HTTP call
-        samples.append(CanarySample(
-            id="synthetic_1",
-            plan=[{"skill": "http_call", "params": {"url": "https://api.example.com"}}],
-            budget_cents=100,
-        ))
+        samples.append(
+            CanarySample(
+                id="synthetic_1",
+                plan=[{"skill": "http_call", "params": {"url": "https://api.example.com"}}],
+                budget_cents=100,
+            )
+        )
 
         # LLM invoke
-        samples.append(CanarySample(
-            id="synthetic_2",
-            plan=[{"skill": "llm_invoke", "params": {"prompt": "Hello world"}}],
-            budget_cents=100,
-        ))
+        samples.append(
+            CanarySample(
+                id="synthetic_2",
+                plan=[{"skill": "llm_invoke", "params": {"prompt": "Hello world"}}],
+                budget_cents=100,
+            )
+        )
 
         # Multi-step workflow
-        samples.append(CanarySample(
-            id="synthetic_3",
-            plan=[
-                {"skill": "http_call", "params": {"url": "https://api.example.com"}},
-                {"skill": "json_transform", "params": {"expression": "$.data"}},
-                {"skill": "llm_invoke", "params": {"prompt": "Analyze this"}},
-            ],
-            budget_cents=100,
-        ))
+        samples.append(
+            CanarySample(
+                id="synthetic_3",
+                plan=[
+                    {"skill": "http_call", "params": {"url": "https://api.example.com"}},
+                    {"skill": "json_transform", "params": {"expression": "$.data"}},
+                    {"skill": "llm_invoke", "params": {"prompt": "Analyze this"}},
+                ],
+                budget_cents=100,
+            )
+        )
 
         # Budget-constrained
-        samples.append(CanarySample(
-            id="synthetic_4",
-            plan=[
-                {"skill": "llm_invoke", "params": {"prompt": "A" * 5000}},
-                {"skill": "llm_invoke", "params": {"prompt": "B" * 5000}},
-            ],
-            budget_cents=5,  # Should fail budget check
-        ))
+        samples.append(
+            CanarySample(
+                id="synthetic_4",
+                plan=[
+                    {"skill": "llm_invoke", "params": {"prompt": "A" * 5000}},
+                    {"skill": "llm_invoke", "params": {"prompt": "B" * 5000}},
+                ],
+                budget_cents=5,  # Should fail budget check
+            )
+        )
 
         return samples
 
-    async def _run_single(
-        self, sample: CanarySample
-    ) -> Tuple[ComparisonResult, Optional[DiffResult]]:
+    async def _run_single(self, sample: CanarySample) -> Tuple[ComparisonResult, Optional[DiffResult]]:
         """Run comparison for a single sample."""
         # Update budget for this sample
         self._v1_simulator.budget_cents = sample.budget_cents
@@ -427,9 +428,7 @@ class CanaryRunner:
 
         return comparison, diff
 
-    def _calculate_metrics(
-        self, comparisons: List[ComparisonResult]
-    ) -> Dict[str, Any]:
+    def _calculate_metrics(self, comparisons: List[ComparisonResult]) -> Dict[str, Any]:
         """Calculate aggregate metrics from comparisons."""
         if not comparisons:
             return {
@@ -445,9 +444,9 @@ class CanaryRunner:
         # Count by verdict
         matching_count = sum(1 for c in comparisons if c.verdict == ComparisonVerdict.MATCH)
         minor_drift_count = sum(1 for c in comparisons if c.verdict == ComparisonVerdict.MINOR_DRIFT)
-        major_drift_count = sum(1 for c in comparisons if c.verdict in (
-            ComparisonVerdict.MAJOR_DRIFT, ComparisonVerdict.MISMATCH
-        ))
+        major_drift_count = sum(
+            1 for c in comparisons if c.verdict in (ComparisonVerdict.MAJOR_DRIFT, ComparisonVerdict.MISMATCH)
+        )
 
         # Cost differences
         cost_diffs = sorted([abs(c.cost_delta_cents) for c in comparisons])
@@ -464,9 +463,7 @@ class CanaryRunner:
         kl_divergence = self._approximate_kl_divergence(v1_costs, v2_costs)
 
         # Outliers (drift > threshold)
-        outlier_count = sum(
-            1 for c in comparisons if c.drift_score > self.config.outlier_threshold
-        )
+        outlier_count = sum(1 for c in comparisons if c.drift_score > self.config.outlier_threshold)
 
         return {
             "matching_count": matching_count,
@@ -478,9 +475,7 @@ class CanaryRunner:
             "outlier_count": outlier_count,
         }
 
-    def _approximate_kl_divergence(
-        self, p: List[int], q: List[int], bins: int = 10
-    ) -> float:
+    def _approximate_kl_divergence(self, p: List[int], q: List[int], bins: int = 10) -> float:
         """
         Approximate KL divergence between two cost distributions.
 
@@ -558,26 +553,20 @@ class CanaryRunner:
 
         # Check KL divergence
         if metrics["kl_divergence"] > self.config.drift_threshold:
-            failure_reasons.append(
-                f"KL divergence {metrics['kl_divergence']:.4f} > {self.config.drift_threshold}"
-            )
+            failure_reasons.append(f"KL divergence {metrics['kl_divergence']:.4f} > {self.config.drift_threshold}")
 
         # Check outlier percentage
         total = metrics["matching_count"] + metrics["minor_drift_count"] + metrics["major_drift_count"]
         if total > 0:
             outlier_pct = metrics["outlier_count"] / total
             if outlier_pct > self.config.outlier_max_pct:
-                failure_reasons.append(
-                    f"Outlier percentage {outlier_pct:.2%} > {self.config.outlier_max_pct:.2%}"
-                )
+                failure_reasons.append(f"Outlier percentage {outlier_pct:.2%} > {self.config.outlier_max_pct:.2%}")
 
         # Check major drift count
         if metrics["major_drift_count"] > 0 and total > 0:
             major_drift_pct = metrics["major_drift_count"] / total
             if major_drift_pct > 0.1:  # More than 10% major drift
-                failure_reasons.append(
-                    f"Major drift samples {major_drift_pct:.2%} > 10%"
-                )
+                failure_reasons.append(f"Major drift samples {major_drift_pct:.2%} > 10%")
 
         passed = len(failure_reasons) == 0
         return passed, failure_reasons

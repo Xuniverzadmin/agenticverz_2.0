@@ -31,18 +31,17 @@ v3.0 Features (preserved):
 PIN-082 Enhancement: IAEC v3.2 for MN-OS
 """
 
-import os
 import hashlib
-import logging
 import json
-import struct
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Literal, Any, Union
+import logging
+import os
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-from prometheus_client import Counter, Histogram, Gauge
+import numpy as np
+from prometheus_client import Counter, Histogram
 
 logger = logging.getLogger("nova.memory.iaec")
 
@@ -55,7 +54,7 @@ EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
 # v3.0: 4-slot architecture with temporal signature
 # Total = instruction + query + context + temporal + policy
 TEMPORAL_SLOT_SIZE = 32  # Temporal signature dimensions
-POLICY_SLOT_SIZE = 32    # Policy encoding dimensions
+POLICY_SLOT_SIZE = 32  # Policy encoding dimensions
 METADATA_SLOT_SIZE = TEMPORAL_SLOT_SIZE + POLICY_SLOT_SIZE  # 64 dims for metadata
 
 # Main content slots share remaining dimensions
@@ -272,12 +271,14 @@ IAEC_POLICY_SOFTMAX = Counter(
 # Data Structures
 # =============================================================================
 
+
 @dataclass
 class TemporalSignature:
     """
     Temporal signature for drift control (32 dimensions).
     Encodes version information to detect model/weight drift.
     """
+
     epoch_hash: str  # Hash of current epoch/timestamp
     model_family: str  # e.g., "openai", "voyage", "cohere"
     model_version: str  # e.g., "text-embedding-3-small"
@@ -332,9 +333,9 @@ class TemporalSignature:
     def is_compatible(self, other: "TemporalSignature") -> bool:
         """Check if two temporal signatures are compatible (same version)."""
         return (
-            self.model_family == other.model_family and
-            self.model_version == other.model_version and
-            self.slot_structure_version == other.slot_structure_version
+            self.model_family == other.model_family
+            and self.model_version == other.model_version
+            and self.slot_structure_version == other.slot_structure_version
         )
 
     def version_key(self) -> str:
@@ -345,6 +346,7 @@ class TemporalSignature:
 # =============================================================================
 # Temporal Mediator (v3.2) - Transform DAG Manager
 # =============================================================================
+
 
 class TemporalMediator:
     """
@@ -401,6 +403,7 @@ class TemporalMediator:
 
         # Track timestamps for pruning
         import time
+
         self._version_timestamps[from_key] = time.time()
         self._version_timestamps[to_key] = time.time()
 
@@ -426,7 +429,7 @@ class TemporalMediator:
         transform, _, _, _ = np.linalg.lstsq(
             sample_embeddings_old.T @ sample_embeddings_old + np.eye(sample_embeddings_old.shape[1]) * 1e-6,
             sample_embeddings_old.T @ sample_embeddings_new,
-            rcond=None
+            rcond=None,
         )
 
         self.register_transform(from_sig, to_sig, transform)
@@ -507,8 +510,7 @@ class TemporalMediator:
         if path is None:
             IAEC_TEMPORAL_MISMATCHES.inc()
             logger.warning(
-                f"TemporalMediator: No transform path from {from_key} "
-                f"to {to_key} - MIXING MAY BE UNSAFE"
+                f"TemporalMediator: No transform path from {from_key} " f"to {to_key} - MIXING MAY BE UNSAFE"
             )
             return embedding, False
 
@@ -527,10 +529,7 @@ class TemporalMediator:
         if norm > 0:
             transformed = transformed / norm
 
-        IAEC_TEMPORAL_MEDIATIONS.labels(
-            from_version=from_key,
-            to_version=to_key
-        ).inc()
+        IAEC_TEMPORAL_MEDIATIONS.labels(from_version=from_key, to_version=to_key).inc()
 
         return transformed, True
 
@@ -570,11 +569,7 @@ class TemporalMediator:
             return 0
 
         # Sort by timestamp, keep newest + canonical
-        sorted_versions = sorted(
-            self._version_timestamps.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        sorted_versions = sorted(self._version_timestamps.items(), key=lambda x: x[1], reverse=True)
 
         keep_versions = set()
         keep_versions.add(self._canonical_version)
@@ -584,7 +579,7 @@ class TemporalMediator:
         # Remove transforms involving pruned versions
         pruned = 0
         keys_to_remove = []
-        for (from_key, to_key) in self._transform_matrices.keys():
+        for from_key, to_key in self._transform_matrices.keys():
             if from_key not in keep_versions or to_key not in keep_versions:
                 keys_to_remove.append((from_key, to_key))
 
@@ -617,10 +612,7 @@ class TemporalMediator:
     def serialize(self) -> bytes:
         """Serialize all transformation matrices for persistence."""
         data = {
-            "transforms": {
-                f"{k[0]}|{k[1]}": v.tolist()
-                for k, v in self._transform_matrices.items()
-            },
+            "transforms": {f"{k[0]}|{k[1]}": v.tolist() for k, v in self._transform_matrices.items()},
             "current_version": self._current_signature.version_key() if self._current_signature else None,
         }
         return json.dumps(data).encode()
@@ -652,6 +644,7 @@ class PolicyEncoding:
 
     Supports policy stacking and folding for multi-level inheritance.
     """
+
     policy_id: Optional[str] = None
     policy_version: int = 1
     hierarchy_level: int = 0  # 0=global, 1=org, 2=agent-class, 3=agent-instance, 4=task
@@ -847,6 +840,7 @@ class SlotBasis:
     Stores original slot vectors for reversible decomposition.
     Required for weighted mode reconstruction.
     """
+
     instruction_vector: np.ndarray
     query_vector: np.ndarray
     context_vector: np.ndarray
@@ -940,7 +934,7 @@ class CompositeEmbedding:
 
     # v3.2: Whitening versioning for audit replay
     whitening_basis_id: Optional[str] = None  # Unique ID for whitening matrix
-    whitening_version: Optional[str] = None   # Version of whitening matrix used
+    whitening_version: Optional[str] = None  # Version of whitening matrix used
 
     def to_list(self) -> List[float]:
         """Convert to list for JSON serialization."""
@@ -987,6 +981,7 @@ class CompositeEmbedding:
 @dataclass
 class DecomposedEmbedding:
     """Result of IAEC decomposition with all 4 slots."""
+
     instruction_slot: np.ndarray
     query_slot: np.ndarray
     context_slot: np.ndarray
@@ -1023,6 +1018,7 @@ class MismatchWarning:
 
     v3.1: Includes prescriptive corrective_action for M18/M19 governance integration.
     """
+
     instruction: str
     query: str
     score: float
@@ -1045,6 +1041,7 @@ class CorrectiveAction:
 
     v3.2: Includes cooldown tracking to prevent oscillation loops.
     """
+
     # The corrected instruction to use
     suggested_instruction: str
 
@@ -1084,6 +1081,7 @@ class CorrectiveAction:
 # Correction Cooldown (v3.2) - Oscillation Prevention
 # =============================================================================
 
+
 class CorrectionCooldown:
     """
     v3.2: Prevents oscillation loops in corrective actions.
@@ -1117,33 +1115,37 @@ class CorrectionCooldown:
         Returns (allowed, reason) - reason is None if allowed.
         """
         import time
+
         now = time.time()
         cutoff = now - CORRECTION_COOLDOWN_WINDOW_SECONDS
 
         # Clean up old entries
-        self._recent_corrections = [
-            (o, s, t) for o, s, t in self._recent_corrections if t > cutoff
-        ]
-        self._blocked_pairs = {
-            k: v for k, v in self._blocked_pairs.items() if v > cutoff
-        }
+        self._recent_corrections = [(o, s, t) for o, s, t in self._recent_corrections if t > cutoff]
+        self._blocked_pairs = {k: v for k, v in self._blocked_pairs.items() if v > cutoff}
 
         # Check 1: Window limit (max corrections per window)
         if len(self._recent_corrections) >= CORRECTION_MAX_PER_WINDOW:
             IAEC_CORRECTION_COOLDOWNS.labels(reason="window_limit").inc()
-            return False, f"Correction limit ({CORRECTION_MAX_PER_WINDOW}) reached within {CORRECTION_COOLDOWN_WINDOW_SECONDS}s window"
+            return (
+                False,
+                f"Correction limit ({CORRECTION_MAX_PER_WINDOW}) reached within {CORRECTION_COOLDOWN_WINDOW_SECONDS}s window",
+            )
 
         # Check 2: Monotonic correction (prevent reverse oscillation)
         reverse_key = (suggested_instruction, original_instruction)
         if reverse_key in self._blocked_pairs:
             IAEC_CORRECTION_COOLDOWNS.labels(reason="monotonic_block").inc()
-            return False, f"Reverse correction blocked: {suggested_instruction}→{original_instruction} already corrected to opposite within window"
+            return (
+                False,
+                f"Reverse correction blocked: {suggested_instruction}→{original_instruction} already corrected to opposite within window",
+            )
 
         return True, None
 
     def record_correction(self, original_instruction: str, suggested_instruction: str):
         """Record a correction that was applied."""
         import time
+
         now = time.time()
 
         # Record the correction
@@ -1161,17 +1163,18 @@ class CorrectionCooldown:
     def get_cooldown_state(self) -> Dict[str, Any]:
         """Get current cooldown state for debugging."""
         import time
+
         now = time.time()
         cutoff = now - CORRECTION_COOLDOWN_WINDOW_SECONDS
 
         return {
             "recent_corrections": [
-                {"from": o, "to": s, "age_seconds": now - t}
-                for o, s, t in self._recent_corrections if t > cutoff
+                {"from": o, "to": s, "age_seconds": now - t} for o, s, t in self._recent_corrections if t > cutoff
             ],
             "blocked_pairs": [
                 {"pair": f"{k[0]}→{k[1]}", "expires_in": v - cutoff}
-                for k, v in self._blocked_pairs.items() if v > cutoff
+                for k, v in self._blocked_pairs.items()
+                if v > cutoff
             ],
             "window_seconds": CORRECTION_COOLDOWN_WINDOW_SECONDS,
             "max_per_window": CORRECTION_MAX_PER_WINDOW,
@@ -1194,6 +1197,7 @@ def get_correction_cooldown() -> CorrectionCooldown:
 @dataclass
 class IntegrityCheckResult:
     """Result of slot integrity verification."""
+
     passed: bool
     reconstruction_error: float
     temporal_match: bool
@@ -1205,6 +1209,7 @@ class IntegrityCheckResult:
 # =============================================================================
 # Core IAEC Class v3.0
 # =============================================================================
+
 
 class InstructionAwareEmbeddingComposer:
     """
@@ -1260,6 +1265,7 @@ class InstructionAwareEmbeddingComposer:
 
         if self._embedding_fn is None:
             from app.memory.vector_store import get_embedding
+
             self._embedding_fn = get_embedding
 
         logger.info("IAEC v3.0: Pre-computing instruction embeddings...")
@@ -1294,8 +1300,10 @@ class InstructionAwareEmbeddingComposer:
             self._compute_whitening_matrix(np.array(raw_embeddings))
 
         self._initialized = True
-        logger.info(f"IAEC v3.1: Initialized with {len(self._instruction_cache)} instructions, "
-                   f"temporal={self._temporal_signature.iaec_version}")
+        logger.info(
+            f"IAEC v3.1: Initialized with {len(self._instruction_cache)} instructions, "
+            f"temporal={self._temporal_signature.iaec_version}"
+        )
 
     def _get_whitening_path(self) -> str:
         """Get path for whitening matrix storage."""
@@ -1539,11 +1547,7 @@ class InstructionAwareEmbeddingComposer:
             confidence = min(1.0, max(0.0, confidence * 2))  # Scale up for better range
 
             # Build alternatives list (top 3 excluding current)
-            alternatives = [
-                (instr, float(score))
-                for instr, score in all_scores[1:4]
-                if instr != instruction
-            ]
+            alternatives = [(instr, float(score)) for instr, score in all_scores[1:4] if instr != instruction]
 
             should_auto_correct = confidence >= CORRECTIVE_ACTION_CONFIDENCE_THRESHOLD
 
@@ -1569,7 +1573,7 @@ class InstructionAwareEmbeddingComposer:
                 confidence=confidence,
                 should_auto_correct=should_auto_correct,
                 reason=f"Query semantics match '{suggested}' better than '{instruction}' "
-                       f"(similarity: {best_similarity:.3f} vs {similarity:.3f})",
+                f"(similarity: {best_similarity:.3f} vs {similarity:.3f})",
                 alternatives=alternatives,
                 governance_rule="M19/IAEC-SEMANTIC-ALIGNMENT" if should_auto_correct else None,
                 cooldown_blocked=cooldown_blocked,
@@ -1577,10 +1581,7 @@ class InstructionAwareEmbeddingComposer:
             )
 
             if should_auto_correct and not cooldown_blocked:
-                IAEC_CORRECTIVE_ACTIONS.labels(
-                    original_instruction=instruction,
-                    suggested_instruction=suggested
-                ).inc()
+                IAEC_CORRECTIVE_ACTIONS.labels(original_instruction=instruction, suggested_instruction=suggested).inc()
 
         return mismatch_score, suggested, corrective_action
 
@@ -1645,7 +1646,7 @@ class InstructionAwareEmbeddingComposer:
         wq_new = wq + boost
 
         composed = wi_new * instr + wq_new * query + wc_new * ctx
-        logger.debug(f"IAEC: Rebalanced collapsed vector")
+        logger.debug("IAEC: Rebalanced collapsed vector")
         return composed
 
     async def compose(
@@ -1678,6 +1679,7 @@ class InstructionAwareEmbeddingComposer:
             CompositeEmbedding with full provenance and reversibility
         """
         import time
+
         start = time.perf_counter()
 
         if not self._initialized:
@@ -1748,21 +1750,15 @@ class InstructionAwareEmbeddingComposer:
 
         # Compose based on mode
         if mode == "segmented":
-            composed = self._compose_segmented(
-                instr_vec, query_vec, ctx_vec, temporal_vec, policy_vec
-            )
+            composed = self._compose_segmented(instr_vec, query_vec, ctx_vec, temporal_vec, policy_vec)
         else:  # weighted or hybrid
-            composed = self._compose_weighted(
-                instr_vec, query_vec, ctx_vec, temporal_vec, policy_vec, instruction
-            )
+            composed = self._compose_weighted(instr_vec, query_vec, ctx_vec, temporal_vec, policy_vec, instruction)
 
         # Anti-collapse: clamp extreme values
         composed, values_clamped = self._clamp_values(composed)
 
         # Anti-collapse: check context dominance
-        collapse_prevented = self._check_context_dominance(
-            instr_vec, query_vec, ctx_vec, composed
-        )
+        collapse_prevented = self._check_context_dominance(instr_vec, query_vec, ctx_vec, composed)
 
         if collapse_prevented:
             composed = self._rebalance_collapsed(instr_vec, query_vec, ctx_vec, instruction)
@@ -1795,9 +1791,7 @@ class InstructionAwareEmbeddingComposer:
             slot_basis_hash = hashlib.sha256(slot_basis.to_bytes()).hexdigest()[:16]
 
         # Compute provenance hash
-        provenance_hash = self._compute_provenance_hash(
-            instruction, query, context, mode, weights, policy_id
-        )
+        provenance_hash = self._compute_provenance_hash(instruction, query, context, mode, weights, policy_id)
 
         # Verify integrity
         reconstruction_error = 0.0
@@ -1859,13 +1853,15 @@ class InstructionAwareEmbeddingComposer:
 
         Layout: [instruction | query | context | temporal | policy]
         """
-        return np.concatenate([
-            instr[:SEGMENT_SIZE],
-            query[:SEGMENT_SIZE],
-            ctx[:SEGMENT_SIZE],
-            temporal,
-            policy,
-        ])
+        return np.concatenate(
+            [
+                instr[:SEGMENT_SIZE],
+                query[:SEGMENT_SIZE],
+                ctx[:SEGMENT_SIZE],
+                temporal,
+                policy,
+            ]
+        )
 
     def _compose_weighted(
         self,
@@ -1880,9 +1876,7 @@ class InstructionAwareEmbeddingComposer:
         wi, wq, wc = INSTRUCTION_WEIGHTS.get(instruction, (0.33, 0.34, 0.33))
 
         # Weighted blend for content
-        content = wi * instr[:CONTENT_DIMENSIONS] + \
-                  wq * query[:CONTENT_DIMENSIONS] + \
-                  wc * ctx[:CONTENT_DIMENSIONS]
+        content = wi * instr[:CONTENT_DIMENSIONS] + wq * query[:CONTENT_DIMENSIONS] + wc * ctx[:CONTENT_DIMENSIONS]
 
         # Concatenate with metadata slots
         return np.concatenate([content, temporal, policy])
@@ -1894,8 +1888,8 @@ class InstructionAwareEmbeddingComposer:
         policy: np.ndarray,
     ) -> np.ndarray:
         """Add/replace metadata slots to composed vector."""
-        composed[CONTENT_DIMENSIONS:CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE] = temporal
-        composed[CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE:] = policy
+        composed[CONTENT_DIMENSIONS : CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE] = temporal
+        composed[CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE :] = policy
         return composed
 
     def _reconstruct_from_basis(
@@ -1906,9 +1900,11 @@ class InstructionAwareEmbeddingComposer:
         """Reconstruct composed vector from slot basis."""
         wi, wq, wc = basis.weights
 
-        content = wi * basis.instruction_vector[:CONTENT_DIMENSIONS] + \
-                  wq * basis.query_vector[:CONTENT_DIMENSIONS] + \
-                  wc * basis.context_vector[:CONTENT_DIMENSIONS]
+        content = (
+            wi * basis.instruction_vector[:CONTENT_DIMENSIONS]
+            + wq * basis.query_vector[:CONTENT_DIMENSIONS]
+            + wc * basis.context_vector[:CONTENT_DIMENSIONS]
+        )
 
         # Normalize content
         content = content / max(np.linalg.norm(content), 1e-8)
@@ -1952,10 +1948,10 @@ class InstructionAwareEmbeddingComposer:
         # Segmented mode: direct extraction
         if mode == "segmented" or slot_basis is None:
             instr_slot = vec[:SEGMENT_SIZE]
-            query_slot = vec[SEGMENT_SIZE:2*SEGMENT_SIZE]
-            ctx_slot = vec[2*SEGMENT_SIZE:3*SEGMENT_SIZE]
-            temporal_slot = vec[CONTENT_DIMENSIONS:CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE]
-            policy_slot = vec[CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE:]
+            query_slot = vec[SEGMENT_SIZE : 2 * SEGMENT_SIZE]
+            ctx_slot = vec[2 * SEGMENT_SIZE : 3 * SEGMENT_SIZE]
+            temporal_slot = vec[CONTENT_DIMENSIONS : CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE]
+            policy_slot = vec[CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE :]
 
             IAEC_DECOMPOSITIONS.labels(mode="segmented", success="true").inc()
 
@@ -1982,8 +1978,8 @@ class InstructionAwareEmbeddingComposer:
         IAEC_DECOMPOSITIONS.labels(mode="weighted", success="true").inc()
 
         # Extract metadata slots (these are unchanged)
-        temporal_slot = vec[CONTENT_DIMENSIONS:CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE]
-        policy_slot = vec[CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE:]
+        temporal_slot = vec[CONTENT_DIMENSIONS : CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE]
+        policy_slot = vec[CONTENT_DIMENSIONS + TEMPORAL_SLOT_SIZE :]
 
         # Use original slot vectors from basis
         instr_slot = slot_basis.instruction_vector[:SEGMENT_SIZE]
@@ -2035,9 +2031,7 @@ class InstructionAwareEmbeddingComposer:
 
         # Check slot basis
         if embedding.slot_basis is not None:
-            reconstructed = self._reconstruct_from_basis(
-                embedding.slot_basis, embedding.instruction
-            )
+            reconstructed = self._reconstruct_from_basis(embedding.slot_basis, embedding.instruction)
             reconstruction_error = np.linalg.norm(embedding.vector - reconstructed)
             reconstruction_ok = reconstruction_error < 0.05
             details["reconstruction_error"] = float(reconstruction_error)
@@ -2126,9 +2120,7 @@ class InstructionAwareEmbeddingComposer:
         vec_b = b.vector if isinstance(b, CompositeEmbedding) else b
 
         if mode == "cosine":
-            return float(np.dot(vec_a, vec_b) / (
-                np.linalg.norm(vec_a) * np.linalg.norm(vec_b) + 1e-8
-            ))
+            return float(np.dot(vec_a, vec_b) / (np.linalg.norm(vec_a) * np.linalg.norm(vec_b) + 1e-8))
 
         elif mode == "instruction_weighted":
             if instruction is None:
@@ -2139,18 +2131,9 @@ class InstructionAwareEmbeddingComposer:
             a_dec = self.decompose(a, verify=False)
             b_dec = self.decompose(b, verify=False)
 
-            sim_instr = np.dot(
-                self._normalize(a_dec.instruction_slot),
-                self._normalize(b_dec.instruction_slot)
-            )
-            sim_query = np.dot(
-                self._normalize(a_dec.query_slot),
-                self._normalize(b_dec.query_slot)
-            )
-            sim_ctx = np.dot(
-                self._normalize(a_dec.context_slot),
-                self._normalize(b_dec.context_slot)
-            )
+            sim_instr = np.dot(self._normalize(a_dec.instruction_slot), self._normalize(b_dec.instruction_slot))
+            sim_query = np.dot(self._normalize(a_dec.query_slot), self._normalize(b_dec.query_slot))
+            sim_ctx = np.dot(self._normalize(a_dec.context_slot), self._normalize(b_dec.context_slot))
 
             return float(wi * sim_instr + wq * sim_query + wc * sim_ctx)
 
@@ -2221,6 +2204,7 @@ async def get_iaec() -> InstructionAwareEmbeddingComposer:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 async def compose_embedding(
     instruction: str,
@@ -2313,8 +2297,7 @@ async def check_instruction_query_match(
         )
     elif kw_score > MISMATCH_THRESHOLD:
         warning.message = (
-            f"Keyword analysis suggests mismatch. "
-            f"Consider using instruction='{suggested}' for better results."
+            f"Keyword analysis suggests mismatch. " f"Consider using instruction='{suggested}' for better results."
         )
     else:
         warning.message = "Instruction and query appear compatible."

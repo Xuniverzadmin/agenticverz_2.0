@@ -8,16 +8,17 @@ These models define the structure of execution traces used for:
 - Determinism testing
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any
-from enum import Enum
 import hashlib
 import json
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any
 
 
 class TraceStatus(str, Enum):
     """Status of a trace step."""
+
     SUCCESS = "success"
     FAILURE = "failure"
     RETRY = "retry"
@@ -31,6 +32,7 @@ class TraceStep:
 
     Captures everything needed to replay and verify determinism.
     """
+
     step_index: int
     skill_name: str
     params: dict[str, Any]
@@ -44,8 +46,15 @@ class TraceStep:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Determinism fields (excluded from content hash)
-    _determinism_fields = {"step_index", "skill_name", "params", "status",
-                          "outcome_category", "outcome_code", "retry_count"}
+    _determinism_fields = {
+        "step_index",
+        "skill_name",
+        "params",
+        "status",
+        "outcome_category",
+        "outcome_code",
+        "retry_count",
+    }
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage."""
@@ -97,6 +106,7 @@ class TraceStep:
 @dataclass
 class TraceSummary:
     """Summary of a trace for listing purposes."""
+
     run_id: str
     correlation_id: str
     tenant_id: str
@@ -140,6 +150,7 @@ class TraceRecord:
     - frozen_timestamp: Frozen time for deterministic context
     - root_hash: Merkle root of deterministic fields (for replay verification)
     """
+
     run_id: str
     correlation_id: str
     tenant_id: str
@@ -245,6 +256,7 @@ class TraceRecord:
 @dataclass
 class ParityResult:
     """Result of comparing two traces for replay parity."""
+
     is_parity: bool
     original_signature: str
     replay_signature: str

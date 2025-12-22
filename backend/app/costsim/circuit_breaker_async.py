@@ -34,27 +34,25 @@ Usage:
 """
 
 from __future__ import annotations
-import asyncio
+
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
-from pathlib import Path
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-import httpx
-from sqlalchemy import select, update, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db_async import AsyncSessionLocal, async_session_context
-from app.models.costsim_cb import (
-    CostSimCBStateModel,
-    CostSimCBIncidentModel,
-    CostSimAlertQueueModel,
-)
 from app.costsim.config import get_config
 from app.costsim.metrics import get_metrics
+from app.db_async import AsyncSessionLocal, async_session_context
+from app.models.costsim_cb import (
+    CostSimAlertQueueModel,
+    CostSimCBIncidentModel,
+    CostSimCBStateModel,
+)
 
 logger = logging.getLogger("nova.costsim.circuit_breaker_async")
 
@@ -128,6 +126,7 @@ class Incident:
 
 # ========== State Management ==========
 
+
 async def _get_or_create_state(
     session: AsyncSession,
     lock: bool = False,
@@ -142,9 +141,7 @@ async def _get_or_create_state(
     Returns:
         CostSimCBStateModel instance
     """
-    statement = select(CostSimCBStateModel).where(
-        CostSimCBStateModel.name == CB_NAME
-    )
+    statement = select(CostSimCBStateModel).where(CostSimCBStateModel.name == CB_NAME)
 
     if lock:
         statement = statement.with_for_update()
@@ -195,11 +192,7 @@ async def is_v2_disabled(session: Optional[AsyncSession] = None) -> bool:
 
     try:
         # Fast path: read without lock
-        result = await session.execute(
-            select(CostSimCBStateModel).where(
-                CostSimCBStateModel.name == CB_NAME
-            ).limit(1)
-        )
+        result = await session.execute(select(CostSimCBStateModel).where(CostSimCBStateModel.name == CB_NAME).limit(1))
         state = result.scalars().first()
 
         if state is None:
@@ -292,8 +285,7 @@ async def _try_auto_recover(state_id: int) -> bool:
             await session.flush()
 
             logger.info(
-                f"Circuit breaker auto-recovered (locked): name={CB_NAME}, "
-                f"old_incident_id={old_incident_id}"
+                f"Circuit breaker auto-recovered (locked): name={CB_NAME}, " f"old_incident_id={old_incident_id}"
             )
 
             # Record metrics
@@ -372,10 +364,7 @@ async def _auto_recover(
         ),
     )
 
-    logger.info(
-        f"Circuit breaker auto-recovered: name={CB_NAME}, "
-        f"old_incident_id={old_incident_id}"
-    )
+    logger.info(f"Circuit breaker auto-recovered: name={CB_NAME}, " f"old_incident_id={old_incident_id}")
 
 
 async def get_state() -> CircuitBreakerState:
@@ -396,6 +385,7 @@ async def get_state() -> CircuitBreakerState:
 
 
 # ========== Drift Reporting ==========
+
 
 async def report_drift(
     drift_score: float,
@@ -496,6 +486,7 @@ async def report_schema_error(
 
 # ========== Manual Controls ==========
 
+
 async def disable_v2(
     reason: str,
     disabled_by: str,
@@ -519,11 +510,7 @@ async def disable_v2(
             state = await _get_or_create_state(session, lock=True)
 
             # Check if already disabled with same params
-            if (
-                state.disabled
-                and state.disabled_reason == reason
-                and state.disabled_until == disabled_until
-            ):
+            if state.disabled and state.disabled_reason == reason and state.disabled_until == disabled_until:
                 return False, None
 
             incident = await _trip(
@@ -608,6 +595,7 @@ async def enable_v2(
 
 
 # ========== Trip Logic ==========
+
 
 async def _trip(
     session: AsyncSession,
@@ -704,6 +692,7 @@ async def _trip(
 
 # ========== Incident Management ==========
 
+
 async def _resolve_incident(
     session: AsyncSession,
     incident_id: str,
@@ -711,11 +700,7 @@ async def _resolve_incident(
     resolution_notes: str,
 ) -> None:
     """Resolve an incident."""
-    result = await session.execute(
-        select(CostSimCBIncidentModel).where(
-            CostSimCBIncidentModel.id == incident_id
-        )
-    )
+    result = await session.execute(select(CostSimCBIncidentModel).where(CostSimCBIncidentModel.id == incident_id))
     incident = result.scalars().first()
 
     if incident:
@@ -741,41 +726,40 @@ async def get_incidents(
         List of incidents
     """
     async with async_session_context() as session:
-        statement = select(CostSimCBIncidentModel).where(
-            CostSimCBIncidentModel.circuit_breaker_name == CB_NAME
-        )
+        statement = select(CostSimCBIncidentModel).where(CostSimCBIncidentModel.circuit_breaker_name == CB_NAME)
 
         if not include_resolved:
             statement = statement.where(CostSimCBIncidentModel.resolved == False)
 
-        statement = statement.order_by(
-            CostSimCBIncidentModel.timestamp.desc()
-        ).limit(limit)
+        statement = statement.order_by(CostSimCBIncidentModel.timestamp.desc()).limit(limit)
 
         result = await session.execute(statement)
         incidents = []
 
         for db_incident in result.scalars():
-            incidents.append(Incident(
-                id=db_incident.id,
-                timestamp=db_incident.timestamp,
-                reason=db_incident.reason,
-                severity=db_incident.severity,
-                drift_score=db_incident.drift_score or 0.0,
-                sample_count=db_incident.sample_count or 0,
-                details=db_incident.get_details(),
-                resolved=db_incident.resolved,
-                resolved_at=db_incident.resolved_at,
-                resolved_by=db_incident.resolved_by,
-                resolution_notes=db_incident.resolution_notes,
-                alert_sent=db_incident.alert_sent,
-                alert_sent_at=db_incident.alert_sent_at,
-            ))
+            incidents.append(
+                Incident(
+                    id=db_incident.id,
+                    timestamp=db_incident.timestamp,
+                    reason=db_incident.reason,
+                    severity=db_incident.severity,
+                    drift_score=db_incident.drift_score or 0.0,
+                    sample_count=db_incident.sample_count or 0,
+                    details=db_incident.get_details(),
+                    resolved=db_incident.resolved,
+                    resolved_at=db_incident.resolved_at,
+                    resolved_by=db_incident.resolved_by,
+                    resolution_notes=db_incident.resolution_notes,
+                    alert_sent=db_incident.alert_sent,
+                    alert_sent_at=db_incident.alert_sent_at,
+                )
+            )
 
         return incidents
 
 
 # ========== Alert Queue ==========
+
 
 async def _enqueue_alert(
     session: AsyncSession,
@@ -812,27 +796,29 @@ def _build_disable_alert_payload(
     """Build Alertmanager payload for disable alert."""
     config = get_config()
 
-    return [{
-        "labels": {
-            "alertname": "CostSimV2Disabled",
-            "severity": incident.severity.lower(),
-            "component": "costsim",
-            "circuit_breaker": CB_NAME,
-            "instance": config.instance_id,
-            "incident_id": incident.id,
-        },
-        "annotations": {
-            "summary": f"CostSim V2 circuit breaker tripped ({incident.severity})",
-            "description": (
-                f"Reason: {incident.reason}\n"
-                f"Drift score: {incident.drift_score:.4f}\n"
-                f"Sample count: {incident.sample_count}\n"
-                f"Disabled until: {disabled_until.isoformat() if disabled_until else 'manual reset required'}"
-            ),
-            "runbook_url": "https://docs.aos.internal/runbooks/costsim-circuit-breaker",
-        },
-        "startsAt": datetime.now(timezone.utc).isoformat(),
-    }]
+    return [
+        {
+            "labels": {
+                "alertname": "CostSimV2Disabled",
+                "severity": incident.severity.lower(),
+                "component": "costsim",
+                "circuit_breaker": CB_NAME,
+                "instance": config.instance_id,
+                "incident_id": incident.id,
+            },
+            "annotations": {
+                "summary": f"CostSim V2 circuit breaker tripped ({incident.severity})",
+                "description": (
+                    f"Reason: {incident.reason}\n"
+                    f"Drift score: {incident.drift_score:.4f}\n"
+                    f"Sample count: {incident.sample_count}\n"
+                    f"Disabled until: {disabled_until.isoformat() if disabled_until else 'manual reset required'}"
+                ),
+                "runbook_url": "https://docs.aos.internal/runbooks/costsim-circuit-breaker",
+            },
+            "startsAt": datetime.now(timezone.utc).isoformat(),
+        }
+    ]
 
 
 def _build_enable_alert_payload(
@@ -843,27 +829,27 @@ def _build_enable_alert_payload(
     config = get_config()
     now = datetime.now(timezone.utc)
 
-    return [{
-        "labels": {
-            "alertname": "CostSimV2Reenabled",
-            "severity": "info",
-            "component": "costsim",
-            "circuit_breaker": CB_NAME,
-            "instance": config.instance_id,
-        },
-        "annotations": {
-            "summary": "CostSim V2 circuit breaker re-enabled",
-            "description": (
-                f"Re-enabled by: {enabled_by}\n"
-                f"Reason: {reason or 'Not specified'}"
-            ),
-        },
-        "startsAt": now.isoformat(),
-        "endsAt": now.isoformat(),  # Resolved immediately
-    }]
+    return [
+        {
+            "labels": {
+                "alertname": "CostSimV2Reenabled",
+                "severity": "info",
+                "component": "costsim",
+                "circuit_breaker": CB_NAME,
+                "instance": config.instance_id,
+            },
+            "annotations": {
+                "summary": "CostSim V2 circuit breaker re-enabled",
+                "description": (f"Re-enabled by: {enabled_by}\n" f"Reason: {reason or 'Not specified'}"),
+            },
+            "startsAt": now.isoformat(),
+            "endsAt": now.isoformat(),  # Resolved immediately
+        }
+    ]
 
 
 # ========== Sync Compatibility Layer ==========
+
 
 class AsyncCircuitBreaker:
     """
@@ -897,6 +883,7 @@ class AsyncCircuitBreaker:
         Returns False (enabled) on error to avoid false-positive disables.
         """
         from app.costsim.cb_sync_wrapper import is_v2_disabled_sync
+
         return is_v2_disabled_sync()
 
     def is_closed(self) -> bool:
@@ -964,6 +951,7 @@ class AsyncCircuitBreaker:
     ) -> List[Incident]:
         """Get incidents (runs async in sync context)."""
         import asyncio
+
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():

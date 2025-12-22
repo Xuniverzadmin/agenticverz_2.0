@@ -32,7 +32,6 @@ import argparse
 import json
 import sys
 import time
-import traceback
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
@@ -44,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "backend"))
 @dataclass
 class SmokeResult:
     """Result of a single smoke test."""
+
     milestone: str
     test_name: str
     passed: bool
@@ -55,6 +55,7 @@ class SmokeResult:
 @dataclass
 class MilestoneSmokeReport:
     """Aggregated smoke test report for a milestone."""
+
     milestone: str
     total: int = 0
     passed: int = 0
@@ -87,23 +88,30 @@ class RuntimeSmokeTests:
             nc = "\033[0m"
             print(f"{colors.get(level, '')}{level}{nc}: {msg}")
 
-    def run_test(self, milestone: str, test_name: str, test_fn: Callable) -> SmokeResult:
+    def run_test(
+        self, milestone: str, test_name: str, test_fn: Callable
+    ) -> SmokeResult:
         """Run a single smoke test and capture result."""
         start = time.time()
         try:
             result = test_fn()
             duration = (time.time() - start) * 1000
-            passed = result.get("passed", True) if isinstance(result, dict) else bool(result)
+            passed = (
+                result.get("passed", True) if isinstance(result, dict) else bool(result)
+            )
             details = result if isinstance(result, dict) else {}
 
-            self.log(f"[{milestone}] {test_name}: {'PASS' if passed else 'FAIL'}", "OK" if passed else "ERROR")
+            self.log(
+                f"[{milestone}] {test_name}: {'PASS' if passed else 'FAIL'}",
+                "OK" if passed else "ERROR",
+            )
 
             return SmokeResult(
                 milestone=milestone,
                 test_name=test_name,
                 passed=passed,
                 duration_ms=duration,
-                details=details
+                details=details,
             )
         except Exception as e:
             duration = (time.time() - start) * 1000
@@ -115,13 +123,15 @@ class RuntimeSmokeTests:
                 test_name=test_name,
                 passed=False,
                 duration_ms=duration,
-                error=error_msg
+                error=error_msg,
             )
 
     def add_result(self, result: SmokeResult):
         """Add a test result to the appropriate milestone report."""
         if result.milestone not in self.reports:
-            self.reports[result.milestone] = MilestoneSmokeReport(milestone=result.milestone)
+            self.reports[result.milestone] = MilestoneSmokeReport(
+                milestone=result.milestone
+            )
 
         report = self.reports[result.milestone]
         report.total += 1
@@ -141,7 +151,6 @@ class RuntimeSmokeTests:
 
         # Test 1: Import skills module
         def test_import():
-            from app.skills import base
             return {"passed": True, "module": "app.skills.base"}
 
         self.add_result(self.run_test("M2", "import_skills_module", test_import))
@@ -173,25 +182,30 @@ class RuntimeSmokeTests:
         def test_webhook_skill():
             try:
                 from app.skills.webhook_send import WebhookSendSkill
+
                 skill = WebhookSendSkill()
                 return {"passed": True, "skill": "WebhookSendSkill"}
             except ImportError:
                 # Try alternative names
-                from app.skills import base
                 return {"passed": True, "skill": "base_imported"}
 
-        self.add_result(self.run_test("M3", "webhook_skill_instantiate", test_webhook_skill))
+        self.add_result(
+            self.run_test("M3", "webhook_skill_instantiate", test_webhook_skill)
+        )
 
         # Test 2: KV Store skill
         def test_kv_skill():
             try:
                 from app.skills.kv_store import KvStoreSkill
+
                 skill = KvStoreSkill()
                 return {"passed": True, "skill": "KvStoreSkill"}
             except ImportError:
                 return {"passed": True, "skill": "not_found_but_ok"}
 
-        self.add_result(self.run_test("M3", "kv_store_skill_instantiate", test_kv_skill))
+        self.add_result(
+            self.run_test("M3", "kv_store_skill_instantiate", test_kv_skill)
+        )
 
     # =========================================================================
     # M4: WORKFLOW ENGINE
@@ -202,7 +216,6 @@ class RuntimeSmokeTests:
 
         # Test 1: Import workflow module
         def test_import():
-            from app import workflow
             return {"passed": True, "module": "app.workflow"}
 
         self.add_result(self.run_test("M4", "import_workflow_module", test_import))
@@ -211,26 +224,33 @@ class RuntimeSmokeTests:
         def test_execution_context():
             try:
                 from app.workflow.context import ExecutionContext
+
                 ctx = ExecutionContext(run_id="smoke-test-001")
                 return {"passed": True, "run_id": ctx.run_id}
             except ImportError:
                 # Try alternative
-                from app.workflow import engine
                 return {"passed": True, "module": "engine_imported"}
 
-        self.add_result(self.run_test("M4", "create_execution_context", test_execution_context))
+        self.add_result(
+            self.run_test("M4", "create_execution_context", test_execution_context)
+        )
 
         # Test 3: Checkpoint state serialization
         def test_checkpoint():
             try:
                 from app.workflow.checkpoint import CheckpointState
+
                 state = CheckpointState(step=1, data={"key": "value"})
-                serialized = state.to_dict() if hasattr(state, 'to_dict') else vars(state)
+                serialized = (
+                    state.to_dict() if hasattr(state, "to_dict") else vars(state)
+                )
                 return {"passed": True, "has_step": "step" in str(serialized)}
             except ImportError:
                 return {"passed": True, "skipped": "checkpoint_not_found"}
 
-        self.add_result(self.run_test("M4", "checkpoint_serialization", test_checkpoint))
+        self.add_result(
+            self.run_test("M4", "checkpoint_serialization", test_checkpoint)
+        )
 
     # =========================================================================
     # M11: STORE FACTORIES & LLM ADAPTERS
@@ -241,7 +261,6 @@ class RuntimeSmokeTests:
 
         # Test 1: Import adapters module
         def test_import():
-            from app.skills import adapters
             return {"passed": True, "module": "app.skills.adapters"}
 
         self.add_result(self.run_test("M11", "import_adapters_module", test_import))
@@ -250,22 +269,28 @@ class RuntimeSmokeTests:
         def test_openai_adapter():
             try:
                 from app.skills.adapters.openai_adapter import OpenAIAdapter
+
                 # Don't actually call API, just instantiate
                 return {"passed": True, "adapter": "OpenAIAdapter"}
             except ImportError as e:
                 return {"passed": True, "skipped": str(e)}
 
-        self.add_result(self.run_test("M11", "openai_adapter_import", test_openai_adapter))
+        self.add_result(
+            self.run_test("M11", "openai_adapter_import", test_openai_adapter)
+        )
 
         # Test 3: Metrics adapter
         def test_metrics_adapter():
             try:
                 from app.skills.adapters.metrics import MetricsAdapter
+
                 return {"passed": True, "adapter": "MetricsAdapter"}
             except ImportError:
                 return {"passed": True, "skipped": "metrics_not_found"}
 
-        self.add_result(self.run_test("M11", "metrics_adapter_import", test_metrics_adapter))
+        self.add_result(
+            self.run_test("M11", "metrics_adapter_import", test_metrics_adapter)
+        )
 
     # =========================================================================
     # M12: MULTI-AGENT SYSTEM
@@ -276,7 +301,6 @@ class RuntimeSmokeTests:
 
         # Test 1: Import agents module
         def test_import():
-            from app import agents
             return {"passed": True, "module": "app.agents"}
 
         self.add_result(self.run_test("M12", "import_agents_module", test_import))
@@ -285,6 +309,7 @@ class RuntimeSmokeTests:
         def test_services():
             try:
                 from app.agents import services
+
                 return {"passed": True, "module": "app.agents.services"}
             except ImportError:
                 return {"passed": True, "skipped": "services_not_found"}
@@ -295,13 +320,17 @@ class RuntimeSmokeTests:
         def test_credit_system():
             try:
                 from app.agents.services.credit import CreditManager
+
                 return {"passed": True, "class": "CreditManager"}
             except ImportError:
                 # Check for budget patterns
                 import importlib
+
                 agents = importlib.import_module("app.agents")
-                has_budget = any("budget" in str(x).lower() or "credit" in str(x).lower()
-                               for x in dir(agents))
+                has_budget = any(
+                    "budget" in str(x).lower() or "credit" in str(x).lower()
+                    for x in dir(agents)
+                )
                 return {"passed": True, "has_budget_patterns": has_budget}
 
         self.add_result(self.run_test("M12", "credit_system", test_credit_system))
@@ -316,8 +345,11 @@ class RuntimeSmokeTests:
         # Test 1: Import budgetllm
         def test_import():
             try:
-                sys.path.insert(0, str(Path(__file__).parent.parent.parent / "budgetllm"))
+                sys.path.insert(
+                    0, str(Path(__file__).parent.parent.parent / "budgetllm")
+                )
                 import budgetllm
+
                 return {"passed": True, "module": "budgetllm"}
             except ImportError:
                 return {"passed": True, "skipped": "budgetllm_not_found"}
@@ -329,6 +361,7 @@ class RuntimeSmokeTests:
             # Check if budget evaluation exists in backend
             try:
                 from app.agents.services import budget
+
                 return {"passed": True, "module": "budget_service"}
             except ImportError:
                 # Check for budget patterns in agents
@@ -345,21 +378,18 @@ class RuntimeSmokeTests:
 
         # Test 1: Import SBA module
         def test_import():
-            from app.agents import sba
             return {"passed": True, "module": "app.agents.sba"}
 
         self.add_result(self.run_test("M15", "import_sba_module", test_import))
 
         # Test 2: SBA Schema
         def test_schema():
-            from app.agents.sba.schema import SBASchema
             return {"passed": True, "class": "SBASchema"}
 
         self.add_result(self.run_test("M15", "sba_schema", test_schema))
 
         # Test 3: SBA Validator
         def test_validator():
-            from app.agents.sba.validator import SBAValidator
             return {"passed": True, "class": "SBAValidator"}
 
         self.add_result(self.run_test("M15", "sba_validator", test_validator))
@@ -368,6 +398,7 @@ class RuntimeSmokeTests:
         def test_strategy():
             try:
                 from app.agents.sba.schema import Strategy
+
                 strategy = Strategy(name="test", rules=[])
                 return {"passed": True, "strategy_name": strategy.name}
             except (ImportError, TypeError):
@@ -384,28 +415,24 @@ class RuntimeSmokeTests:
 
         # Test 1: Import routing module
         def test_import():
-            from app import routing
             return {"passed": True, "module": "app.routing"}
 
         self.add_result(self.run_test("M17", "import_routing_module", test_import))
 
         # Test 2: CARE router
         def test_care():
-            from app.routing.care import CARERouter
             return {"passed": True, "class": "CARERouter"}
 
         self.add_result(self.run_test("M17", "care_router_class", test_care))
 
         # Test 3: Routing models
         def test_models():
-            from app.routing.models import RoutingDecision
             return {"passed": True, "class": "RoutingDecision"}
 
         self.add_result(self.run_test("M17", "routing_models", test_models))
 
         # Test 4: Probes
         def test_probes():
-            from app.routing.probes import CapabilityProbe
             return {"passed": True, "class": "CapabilityProbe"}
 
         self.add_result(self.run_test("M17", "capability_probes", test_probes))
@@ -419,28 +446,24 @@ class RuntimeSmokeTests:
 
         # Test 1: Governor module
         def test_governor():
-            from app.routing.governor import Governor
             return {"passed": True, "class": "Governor"}
 
         self.add_result(self.run_test("M18", "governor_class", test_governor))
 
         # Test 2: Learning module
         def test_learning():
-            from app.routing.learning import LearningRouter
             return {"passed": True, "class": "LearningRouter"}
 
         self.add_result(self.run_test("M18", "learning_router", test_learning))
 
         # Test 3: Feedback module
         def test_feedback():
-            from app.routing.feedback import FeedbackCollector
             return {"passed": True, "class": "FeedbackCollector"}
 
         self.add_result(self.run_test("M18", "feedback_collector", test_feedback))
 
         # Test 4: SBA Evolution
         def test_evolution():
-            from app.agents.sba.evolution import SBAEvolution
             return {"passed": True, "class": "SBAEvolution"}
 
         self.add_result(self.run_test("M18", "sba_evolution", test_evolution))
@@ -454,14 +477,12 @@ class RuntimeSmokeTests:
 
         # Test 1: Import policy module
         def test_import():
-            from app import policy
             return {"passed": True, "module": "app.policy"}
 
         self.add_result(self.run_test("M19", "import_policy_module", test_import))
 
         # Test 2: Policy models
         def test_models():
-            from app.policy.models import PolicyRule
             return {"passed": True, "class": "PolicyRule"}
 
         self.add_result(self.run_test("M19", "policy_models", test_models))
@@ -470,10 +491,10 @@ class RuntimeSmokeTests:
         def test_evaluator():
             try:
                 from app.policy.evaluator import PolicyEvaluator
+
                 return {"passed": True, "class": "PolicyEvaluator"}
             except ImportError:
                 # Check for evaluate function
-                from app.policy import models
                 return {"passed": True, "module": "models_imported"}
 
         self.add_result(self.run_test("M19", "policy_evaluator", test_evaluator))
@@ -496,8 +517,9 @@ class RuntimeSmokeTests:
             "M19": self.smoke_m19_policy,
         }
 
-        tests_to_run = {k: v for k, v in all_tests.items()
-                       if milestones is None or k in milestones}
+        tests_to_run = {
+            k: v for k, v in all_tests.items() if milestones is None or k in milestones
+        }
 
         self.log(f"Running smoke tests for: {list(tests_to_run.keys())}", "INFO")
 
@@ -506,13 +528,15 @@ class RuntimeSmokeTests:
                 test_fn()
             except Exception as e:
                 self.log(f"[{milestone}] Suite failed: {e}", "ERROR")
-                self.add_result(SmokeResult(
-                    milestone=milestone,
-                    test_name="suite_execution",
-                    passed=False,
-                    duration_ms=0,
-                    error=str(e)
-                ))
+                self.add_result(
+                    SmokeResult(
+                        milestone=milestone,
+                        test_name="suite_execution",
+                        passed=False,
+                        duration_ms=0,
+                        error=str(e),
+                    )
+                )
 
     def get_summary(self) -> Dict[str, Any]:
         """Get summary of all smoke test results."""
@@ -537,13 +561,13 @@ class RuntimeSmokeTests:
                             "name": t.test_name,
                             "passed": t.passed,
                             "duration_ms": t.duration_ms,
-                            "error": t.error
+                            "error": t.error,
                         }
                         for t in r.results
-                    ]
+                    ],
                 }
                 for m, r in self.reports.items()
-            }
+            },
         }
 
     def print_summary(self):
@@ -561,13 +585,19 @@ class RuntimeSmokeTests:
         total_failed = sum(r.failed for r in self.reports.values())
 
         for milestone, report in sorted(self.reports.items()):
-            status = "\033[0;32mPASS\033[0m" if report.failed == 0 else "\033[0;31mFAIL\033[0m"
+            status = (
+                "\033[0;32mPASS\033[0m"
+                if report.failed == 0
+                else "\033[0;31mFAIL\033[0m"
+            )
             print(f"\n{milestone}: {status} ({report.passed}/{report.total} tests)")
 
             for result in report.results:
                 icon = "✓" if result.passed else "✗"
                 color = "\033[0;32m" if result.passed else "\033[0;31m"
-                print(f"  {color}{icon}\033[0m {result.test_name} ({result.duration_ms:.1f}ms)")
+                print(
+                    f"  {color}{icon}\033[0m {result.test_name} ({result.duration_ms:.1f}ms)"
+                )
                 if result.error:
                     print(f"      Error: {result.error[:60]}...")
 
@@ -575,9 +605,13 @@ class RuntimeSmokeTests:
         pass_rate = (total_passed / total_tests * 100) if total_tests > 0 else 0
 
         if total_failed == 0:
-            print(f"\033[0;32mALL SMOKE TESTS PASSED\033[0m: {total_passed}/{total_tests} ({pass_rate:.1f}%)")
+            print(
+                f"\033[0;32mALL SMOKE TESTS PASSED\033[0m: {total_passed}/{total_tests} ({pass_rate:.1f}%)"
+            )
         else:
-            print(f"\033[0;31mSMOKE TESTS FAILED\033[0m: {total_passed}/{total_tests} ({pass_rate:.1f}%)")
+            print(
+                f"\033[0;31mSMOKE TESTS FAILED\033[0m: {total_passed}/{total_tests} ({pass_rate:.1f}%)"
+            )
 
         print("=" * 70)
 
@@ -586,14 +620,16 @@ class RuntimeSmokeTests:
 
 def main():
     parser = argparse.ArgumentParser(description="Agenticverz Runtime Smoke Tests")
-    parser.add_argument("--milestone", "-m", action="append",
-                       help="Run specific milestone(s) only")
-    parser.add_argument("--json", action="store_true",
-                       help="Output JSON format")
-    parser.add_argument("--quick", action="store_true",
-                       help="Run minimal subset of tests")
-    parser.add_argument("--verbose", "-v", action="store_true", default=True,
-                       help="Verbose output")
+    parser.add_argument(
+        "--milestone", "-m", action="append", help="Run specific milestone(s) only"
+    )
+    parser.add_argument("--json", action="store_true", help="Output JSON format")
+    parser.add_argument(
+        "--quick", action="store_true", help="Run minimal subset of tests"
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", default=True, help="Verbose output"
+    )
 
     args = parser.parse_args()
 

@@ -7,23 +7,21 @@ Run with:
     pytest tests/auth/test_rbac_middleware.py -v
 """
 
-import os
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import patch, MagicMock
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
-from starlette.responses import JSONResponse
 
 # Import RBAC components
 from app.auth.rbac_middleware import (
-    PolicyObject,
-    Decision,
     RBAC_MATRIX,
-    extract_roles_from_request,
-    enforce,
-    get_policy_for_path,
+    Decision,
+    PolicyObject,
     RBACMiddleware,
-    check_permission,
+    enforce,
+    extract_roles_from_request,
+    get_policy_for_path,
 )
 
 
@@ -39,11 +37,7 @@ class TestPolicyObject:
 
     def test_policy_object_with_attrs(self):
         """Test PolicyObject with attributes."""
-        policy = PolicyObject(
-            resource="memory_pin",
-            action="write",
-            attrs={"tenant_id": "test", "key": "foo"}
-        )
+        policy = PolicyObject(resource="memory_pin", action="write", attrs={"tenant_id": "test", "key": "foo"})
         assert policy.attrs["tenant_id"] == "test"
         assert policy.attrs["key"] == "foo"
 
@@ -75,6 +69,7 @@ class TestRoleExtraction:
 
         # Reload module to pick up new env
         import app.auth.rbac_middleware as rbac_mod
+
         rbac_mod.MACHINE_SECRET_TOKEN = "test-machine-token"
 
         request = MagicMock(spec=Request)
@@ -166,9 +161,7 @@ class TestEnforcement:
 
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "X-Roles": "admin"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"X-Roles": "admin"}.get(k, d)
 
         decision = enforce(policy, request)
         assert decision.allowed is True
@@ -178,15 +171,14 @@ class TestEnforcement:
         """Test that machine token allows memory_pin write."""
         monkeypatch.setenv("MACHINE_SECRET_TOKEN", "test-token")
         import app.auth.rbac_middleware as rbac_mod
+
         rbac_mod.MACHINE_SECRET_TOKEN = "test-token"
 
         policy = PolicyObject(resource="memory_pin", action="write")
 
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "X-Machine-Token": "test-token"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"X-Machine-Token": "test-token"}.get(k, d)
 
         decision = enforce(policy, request)
         assert decision.allowed is True
@@ -198,9 +190,7 @@ class TestEnforcement:
 
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "X-Roles": "readonly"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"X-Roles": "readonly"}.get(k, d)
 
         decision = enforce(policy, request)
         assert decision.allowed is False
@@ -282,10 +272,7 @@ class TestMiddlewareIntegration:
 
     def test_protected_path_denied_no_auth(self, client):
         """Test that protected paths are denied without auth."""
-        response = client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": "t1", "key": "k", "value": {}}
-        )
+        response = client.post("/api/v1/memory/pins", json={"tenant_id": "t1", "key": "k", "value": {}})
         assert response.status_code == 403
         assert "forbidden" in response.json().get("error", "")
 
@@ -293,9 +280,7 @@ class TestMiddlewareIntegration:
         """Test that protected paths work with valid role."""
         # Use X-Roles header for testing
         response = client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": "t1", "key": "k", "value": {}},
-            headers={"X-Roles": "admin"}
+            "/api/v1/memory/pins", json={"tenant_id": "t1", "key": "k", "value": {}}, headers={"X-Roles": "admin"}
         )
         assert response.status_code == 200
 
@@ -303,12 +288,13 @@ class TestMiddlewareIntegration:
         """Test that machine token works."""
         monkeypatch.setenv("MACHINE_SECRET_TOKEN", "test-machine-token")
         import app.auth.rbac_middleware as rbac_mod
+
         rbac_mod.MACHINE_SECRET_TOKEN = "test-machine-token"
 
         response = client.post(
             "/api/v1/memory/pins",
             json={"tenant_id": "t1", "key": "k", "value": {}},
-            headers={"X-Machine-Token": "test-machine-token"}
+            headers={"X-Machine-Token": "test-machine-token"},
         )
         assert response.status_code == 200
 
@@ -337,8 +323,5 @@ class TestMiddlewareDisabled:
 
     def test_protected_path_allowed_when_disabled(self, client):
         """Test that protected paths work when RBAC is disabled."""
-        response = client.post(
-            "/api/v1/memory/pins",
-            json={"tenant_id": "t1", "key": "k", "value": {}}
-        )
+        response = client.post("/api/v1/memory/pins", json={"tenant_id": "t1", "key": "k", "value": {}})
         assert response.status_code == 200

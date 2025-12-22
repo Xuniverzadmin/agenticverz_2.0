@@ -7,12 +7,13 @@ Provides:
 - Circuit breaker state cleanup
 """
 
-import pytest
+from typing import Any, Generator
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Generator, Any
 
+import pytest
 
 # ========== Alertmanager Mock ==========
+
 
 class AlertmanagerMock:
     """
@@ -70,13 +71,13 @@ class AlertmanagerMock:
     def get_alert_by_name(self, alertname: str) -> dict | None:
         """Get first alert matching the given alertname."""
         for alert in self.alerts:
-            if alert.get('labels', {}).get('alertname') == alertname:
+            if alert.get("labels", {}).get("alertname") == alertname:
                 return alert
         return None
 
     def assert_alert_sent(self, alertname: str, count: int = 1):
         """Assert that an alert with the given name was sent."""
-        matching = [a for a in self.alerts if a.get('labels', {}).get('alertname') == alertname]
+        matching = [a for a in self.alerts if a.get("labels", {}).get("alertname") == alertname]
         assert len(matching) >= count, f"Expected {count} alert(s) with name '{alertname}', found {len(matching)}"
 
 
@@ -118,10 +119,12 @@ def auto_mock_alertmanager():
 
 # ========== Database Fixtures ==========
 
+
 @pytest.fixture
 def db_session():
     """Create a database session for testing."""
     from sqlmodel import Session
+
     from app.db import engine
 
     with Session(engine) as session:
@@ -130,12 +133,14 @@ def db_session():
 
 # ========== Circuit Breaker Fixtures ==========
 
+
 @pytest.fixture
 def clean_circuit_breaker_state(db_session):
     """Reset circuit breaker state before and after each test."""
     from sqlmodel import select
-    from app.db import CostSimCBState, CostSimCBIncident
+
     from app.costsim.circuit_breaker import CB_NAME
+    from app.db import CostSimCBIncident, CostSimCBState
 
     def cleanup():
         # Delete existing state
@@ -147,9 +152,7 @@ def clean_circuit_breaker_state(db_session):
             db_session.commit()
 
         # Delete existing incidents
-        statement = select(CostSimCBIncident).where(
-            CostSimCBIncident.circuit_breaker_name == CB_NAME
-        )
+        statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == CB_NAME)
         for incident in db_session.exec(statement):
             db_session.delete(incident)
         db_session.commit()

@@ -8,7 +8,6 @@
 # - Stop conditions (budget exhausted, max retries, permanent failure)
 
 import logging
-import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
@@ -20,6 +19,7 @@ T = TypeVar("T")
 
 class RetryStopReason(str, Enum):
     """Reasons for stopping retry."""
+
     SUCCESS = "success"
     MAX_RETRIES = "max_retries"
     BUDGET_EXHAUSTED = "budget_exhausted"
@@ -31,6 +31,7 @@ class RetryStopReason(str, Enum):
 @dataclass
 class RetryConfig:
     """Configuration for retry policy."""
+
     # Retry limits
     max_retries: int = 3
 
@@ -51,17 +52,20 @@ class RetryConfig:
     budget_safety_margin_cents: int = 20  # Stop 20 cents before exhaustion
 
     # Permanent failure codes (don't retry)
-    permanent_failures: List[str] = field(default_factory=lambda: [
-        "ERR_LLM_AUTH_FAILED",
-        "ERR_LLM_INVALID_MODEL",
-        "ERR_LLM_CONTENT_BLOCKED",
-        "ERR_LLM_CONTEXT_TOO_LONG",
-    ])
+    permanent_failures: List[str] = field(
+        default_factory=lambda: [
+            "ERR_LLM_AUTH_FAILED",
+            "ERR_LLM_INVALID_MODEL",
+            "ERR_LLM_CONTENT_BLOCKED",
+            "ERR_LLM_CONTEXT_TOO_LONG",
+        ]
+    )
 
 
 @dataclass
 class RetryState:
     """Current state of retry attempts."""
+
     attempt: int = 0
     last_error: Optional[str] = None
     last_error_code: Optional[str] = None
@@ -76,6 +80,7 @@ class RetryState:
 @dataclass
 class RetryResult:
     """Result of retry execution."""
+
     success: bool
     result: Any
     stop_reason: RetryStopReason
@@ -157,17 +162,11 @@ class RetryPolicy:
         """
         # Calculate temperature reduction
         temp_reduction = self.config.temperature_reduction * state.attempt
-        new_temp = max(
-            self.config.min_temperature,
-            original_temperature - temp_reduction
-        )
+        new_temp = max(self.config.min_temperature, original_temperature - temp_reduction)
 
         # Calculate risk threshold increase
         threshold_increase = self.config.risk_threshold_increase * state.attempt
-        new_threshold = min(
-            self.config.max_risk_threshold,
-            original_risk_threshold + threshold_increase
-        )
+        new_threshold = min(self.config.max_risk_threshold, original_risk_threshold + threshold_increase)
 
         return {
             "temperature": new_temp,
@@ -176,14 +175,12 @@ class RetryPolicy:
             "adjustments": {
                 "temperature_reduced_by": temp_reduction,
                 "risk_threshold_increased_by": threshold_increase,
-            }
+            },
         }
 
     def get_backoff_ms(self, attempt: int) -> int:
         """Calculate backoff time for attempt."""
-        backoff = self.config.initial_backoff_ms * (
-            self.config.backoff_multiplier ** attempt
-        )
+        backoff = self.config.initial_backoff_ms * (self.config.backoff_multiplier**attempt)
         return min(int(backoff), self.config.max_backoff_ms)
 
     async def execute_with_retry(
@@ -234,44 +231,48 @@ class RetryPolicy:
                 result = await func(**current_params)
 
                 # Check if result indicates success
-                if hasattr(result, 'success') and result.success:
+                if hasattr(result, "success") and result.success:
                     final_result = result
                     stop_reason = RetryStopReason.SUCCESS
 
                     # Track cost
-                    if hasattr(result, 'cost_cents'):
+                    if hasattr(result, "cost_cents"):
                         state.total_cost_cents += result.cost_cents or 0
 
-                    retry_history.append({
-                        "attempt": state.attempt + 1,
-                        "success": True,
-                        "parameters": current_params,
-                        "cost_cents": getattr(result, 'cost_cents', 0),
-                    })
+                    retry_history.append(
+                        {
+                            "attempt": state.attempt + 1,
+                            "success": True,
+                            "parameters": current_params,
+                            "cost_cents": getattr(result, "cost_cents", 0),
+                        }
+                    )
                     break
 
                 # Result indicates failure (blocked, budget exceeded, etc.)
-                if hasattr(result, 'blocked') and result.blocked:
-                    state.last_error = getattr(result, 'blocked_reason', 'blocked')
-                    state.last_error_code = getattr(result, 'error_code', 'ERR_BLOCKED')
+                if hasattr(result, "blocked") and result.blocked:
+                    state.last_error = getattr(result, "blocked_reason", "blocked")
+                    state.last_error_code = getattr(result, "error_code", "ERR_BLOCKED")
                 else:
-                    state.last_error = getattr(result, 'error', 'unknown')
-                    state.last_error_code = getattr(result, 'error_code', 'ERR_UNKNOWN')
+                    state.last_error = getattr(result, "error", "unknown")
+                    state.last_error_code = getattr(result, "error_code", "ERR_UNKNOWN")
 
                 # Track cost even on failure
-                if hasattr(result, 'cost_cents'):
+                if hasattr(result, "cost_cents"):
                     state.total_cost_cents += result.cost_cents or 0
                     if budget_remaining is not None:
                         budget_remaining -= int(result.cost_cents or 0)
 
-                retry_history.append({
-                    "attempt": state.attempt + 1,
-                    "success": False,
-                    "error": state.last_error,
-                    "error_code": state.last_error_code,
-                    "parameters": current_params,
-                    "cost_cents": getattr(result, 'cost_cents', 0),
-                })
+                retry_history.append(
+                    {
+                        "attempt": state.attempt + 1,
+                        "success": False,
+                        "error": state.last_error,
+                        "error_code": state.last_error_code,
+                        "parameters": current_params,
+                        "cost_cents": getattr(result, "cost_cents", 0),
+                    }
+                )
 
                 final_result = result
 
@@ -279,20 +280,20 @@ class RetryPolicy:
                 state.last_error = str(e)
                 state.last_error_code = "ERR_EXCEPTION"
 
-                retry_history.append({
-                    "attempt": state.attempt + 1,
-                    "success": False,
-                    "error": str(e),
-                    "error_code": "ERR_EXCEPTION",
-                    "parameters": current_params,
-                })
+                retry_history.append(
+                    {
+                        "attempt": state.attempt + 1,
+                        "success": False,
+                        "error": str(e),
+                        "error_code": "ERR_EXCEPTION",
+                        "parameters": current_params,
+                    }
+                )
 
             state.attempt += 1
 
             # Check if we should retry
-            should_continue, reason = self.should_retry(
-                state, state.last_error_code, budget_remaining
-            )
+            should_continue, reason = self.should_retry(state, state.last_error_code, budget_remaining)
 
             if not should_continue:
                 stop_reason = reason
@@ -306,7 +307,7 @@ class RetryPolicy:
                     "attempt": state.attempt,
                     "backoff_ms": backoff_ms,
                     "error": state.last_error,
-                }
+                },
             )
 
             # Callback
@@ -333,12 +334,14 @@ class RetryPolicy:
 async def _async_sleep(seconds: float):
     """Async sleep helper."""
     import asyncio
+
     await asyncio.sleep(seconds)
 
 
 # =============================================================================
 # Convenience functions
 # =============================================================================
+
 
 def get_default_retry_config() -> RetryConfig:
     """Get default retry configuration."""
@@ -351,8 +354,10 @@ def create_retry_policy(
     budget_safety_margin_cents: int = 20,
 ) -> RetryPolicy:
     """Create a retry policy with custom settings."""
-    return RetryPolicy(RetryConfig(
-        max_retries=max_retries,
-        temperature_reduction=temperature_reduction,
-        budget_safety_margin_cents=budget_safety_margin_cents,
-    ))
+    return RetryPolicy(
+        RetryConfig(
+            max_retries=max_retries,
+            temperature_reduction=temperature_reduction,
+            budget_safety_margin_cents=budget_safety_margin_cents,
+        )
+    )

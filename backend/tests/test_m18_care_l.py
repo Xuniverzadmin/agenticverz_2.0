@@ -1,14 +1,14 @@
 # M18 CARE-L + SBA Evolution Tests
 # Tests for Learning Router and Agent Evolution
 
-import pytest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, AsyncMock, patch
 
+import pytest
 
 # =============================================================================
 # Reputation Tests
 # =============================================================================
+
 
 class TestAgentReputation:
     """Test agent reputation calculation."""
@@ -90,6 +90,7 @@ class TestAgentReputation:
 # Quarantine State Machine Tests
 # =============================================================================
 
+
 class TestQuarantineStateMachine:
     """Test quarantine state transitions."""
 
@@ -169,13 +170,14 @@ class TestQuarantineStateMachine:
 # Hysteresis Tests
 # =============================================================================
 
+
 class TestHysteresisStability:
     """Test hysteresis prevents routing oscillation."""
 
     @pytest.mark.asyncio
     async def test_hysteresis_blocks_small_difference(self):
         """Small score differences should not trigger switch."""
-        from app.routing.learning import HysteresisManager, HYSTERESIS_THRESHOLD
+        from app.routing.learning import HysteresisManager
 
         manager = HysteresisManager(redis_url="redis://invalid:9999/0")
 
@@ -192,7 +194,7 @@ class TestHysteresisStability:
     @pytest.mark.asyncio
     async def test_hysteresis_allows_large_difference(self):
         """Large score differences should allow switch."""
-        from app.routing.learning import HysteresisManager, HYSTERESIS_THRESHOLD
+        from app.routing.learning import HysteresisManager
 
         manager = HysteresisManager(redis_url="redis://invalid:9999/0")
 
@@ -230,12 +232,13 @@ class TestHysteresisStability:
 # Drift Detection Tests
 # =============================================================================
 
+
 class TestDriftDetection:
     """Test SBA drift detection."""
 
     def test_behavior_drift_detection(self):
         """Success rate drop should trigger behavior drift."""
-        from app.agents.sba.evolution import SBAEvolutionEngine, DriftType
+        from app.agents.sba.evolution import DriftType, SBAEvolutionEngine
 
         engine = SBAEvolutionEngine()
 
@@ -252,7 +255,7 @@ class TestDriftDetection:
 
     def test_data_drift_detection(self):
         """Latency increase should trigger data drift."""
-        from app.agents.sba.evolution import SBAEvolutionEngine, DriftType
+        from app.agents.sba.evolution import DriftType, SBAEvolutionEngine
 
         engine = SBAEvolutionEngine()
 
@@ -269,7 +272,7 @@ class TestDriftDetection:
 
     def test_boundary_drift_from_violations(self):
         """Violation spike should trigger boundary drift."""
-        from app.agents.sba.evolution import SBAEvolutionEngine, DriftType
+        from app.agents.sba.evolution import DriftType, SBAEvolutionEngine
 
         engine = SBAEvolutionEngine()
 
@@ -333,6 +336,7 @@ class TestDriftDetection:
 # =============================================================================
 # Boundary Violation Tests
 # =============================================================================
+
 
 class TestBoundaryViolations:
     """Test boundary violation tracking."""
@@ -404,7 +408,7 @@ class TestBoundaryViolations:
 
     def test_violation_triggers_drift_check(self):
         """Multiple violations should trigger boundary drift."""
-        from app.agents.sba.evolution import SBAEvolutionEngine, ViolationType, DriftType
+        from app.agents.sba.evolution import DriftType, SBAEvolutionEngine, ViolationType
 
         engine = SBAEvolutionEngine()
 
@@ -424,14 +428,13 @@ class TestBoundaryViolations:
 # Strategy Adjustment Tests
 # =============================================================================
 
+
 class TestStrategyAdjustment:
     """Test strategy adjustment suggestions and application."""
 
     def test_suggest_boundary_expand(self):
         """Should suggest boundary expansion for boundary drift."""
-        from app.agents.sba.evolution import (
-            SBAEvolutionEngine, DriftSignal, DriftType, AdjustmentType
-        )
+        from app.agents.sba.evolution import AdjustmentType, DriftSignal, DriftType, SBAEvolutionEngine
 
         engine = SBAEvolutionEngine()
 
@@ -456,9 +459,7 @@ class TestStrategyAdjustment:
 
     def test_suggest_step_refinement(self):
         """Should suggest step refinement for behavior drift."""
-        from app.agents.sba.evolution import (
-            SBAEvolutionEngine, DriftSignal, DriftType, AdjustmentType
-        )
+        from app.agents.sba.evolution import AdjustmentType, DriftSignal, DriftType, SBAEvolutionEngine
 
         engine = SBAEvolutionEngine()
 
@@ -483,8 +484,9 @@ class TestStrategyAdjustment:
 
     def test_adjustment_cooldown(self):
         """Should respect cooldown between adjustments."""
-        from app.agents.sba.evolution import SBAEvolutionEngine, DriftSignal, DriftType
         from datetime import datetime, timezone
+
+        from app.agents.sba.evolution import DriftSignal, DriftType, SBAEvolutionEngine
 
         engine = SBAEvolutionEngine()
 
@@ -505,7 +507,9 @@ class TestStrategyAdjustment:
     def test_adjustment_history(self):
         """Should track adjustment history."""
         from app.agents.sba.evolution import (
-            SBAEvolutionEngine, DriftSignal, DriftType, StrategyAdjustment, AdjustmentType
+            AdjustmentType,
+            SBAEvolutionEngine,
+            StrategyAdjustment,
         )
 
         engine = SBAEvolutionEngine()
@@ -529,6 +533,7 @@ class TestStrategyAdjustment:
 # Learning Parameters Tests
 # =============================================================================
 
+
 class TestLearningParameters:
     """Test self-tuning parameters."""
 
@@ -549,12 +554,8 @@ class TestLearningParameters:
         params = LearningParameters()
 
         # Simulate high block rate with good success
-        outcomes = [
-            {"success": True, "confidence_blocked": True, "was_fallback": False}
-            for _ in range(30)
-        ] + [
-            {"success": True, "confidence_blocked": False, "was_fallback": False}
-            for _ in range(70)
+        outcomes = [{"success": True, "confidence_blocked": True, "was_fallback": False} for _ in range(30)] + [
+            {"success": True, "confidence_blocked": False, "was_fallback": False} for _ in range(70)
         ]
 
         adjustments = params.tune_from_outcomes(outcomes)
@@ -570,12 +571,8 @@ class TestLearningParameters:
         params = LearningParameters()
 
         # Simulate fallback failures
-        outcomes = [
-            {"success": False, "confidence_blocked": False, "was_fallback": True}
-            for _ in range(20)
-        ] + [
-            {"success": True, "confidence_blocked": False, "was_fallback": False}
-            for _ in range(80)
+        outcomes = [{"success": False, "confidence_blocked": False, "was_fallback": True} for _ in range(20)] + [
+            {"success": True, "confidence_blocked": False, "was_fallback": False} for _ in range(80)
         ]
 
         adjustments = params.tune_from_outcomes(outcomes)
@@ -589,13 +586,14 @@ class TestLearningParameters:
 # Reputation Store Tests
 # =============================================================================
 
+
 class TestReputationStore:
     """Test reputation persistence."""
 
     @pytest.mark.asyncio
     async def test_store_without_redis(self):
         """Should work without Redis (in-memory fallback)."""
-        from app.routing.learning import ReputationStore, AgentReputation
+        from app.routing.learning import ReputationStore
 
         store = ReputationStore(redis_url="redis://invalid:9999/0")
 
@@ -607,7 +605,7 @@ class TestReputationStore:
     @pytest.mark.asyncio
     async def test_store_save_and_get(self):
         """Should save and retrieve reputation."""
-        from app.routing.learning import ReputationStore, AgentReputation
+        from app.routing.learning import AgentReputation, ReputationStore
 
         store = ReputationStore(redis_url="redis://invalid:9999/0")
 
@@ -627,13 +625,14 @@ class TestReputationStore:
 # Integration Tests
 # =============================================================================
 
+
 class TestFeedbackLoopIntegration:
     """Test end-to-end feedback loop."""
 
     @pytest.mark.asyncio
     async def test_outcome_updates_reputation(self):
         """Routing outcomes should update agent reputation."""
-        from app.routing.learning import ReputationStore, AgentReputation
+        from app.routing.learning import ReputationStore
 
         store = ReputationStore(redis_url="redis://invalid:9999/0")
 
@@ -650,12 +649,12 @@ class TestFeedbackLoopIntegration:
         # Verify updates
         updated = await store.get_reputation("integration_agent")
         assert updated.total_routes == 3
-        assert updated.success_rate == 2/3
+        assert updated.success_rate == 2 / 3
 
     def test_violation_affects_reputation_and_drift(self):
         """Violations should affect both reputation and trigger drift."""
-        from app.routing.learning import AgentReputation
         from app.agents.sba.evolution import SBAEvolutionEngine, ViolationType
+        from app.routing.learning import AgentReputation
 
         rep = AgentReputation(agent_id="integration_agent")
         engine = SBAEvolutionEngine()

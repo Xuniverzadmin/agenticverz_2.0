@@ -10,13 +10,14 @@ This middleware:
 """
 
 from __future__ import annotations
-import logging
-from contextvars import ContextVar
-from typing import Any, Dict, Optional
-from dataclasses import dataclass
-import uuid
 
-from fastapi import Request, HTTPException
+import logging
+import uuid
+from contextvars import ContextVar
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("nova.middleware.tenant")
@@ -82,10 +83,7 @@ def require_tenant_context() -> TenantContext:
     """
     context = get_tenant_context()
     if context is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Tenant context required"
-        )
+        raise HTTPException(status_code=401, detail="Tenant context required")
     return context
 
 
@@ -150,10 +148,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             )
             set_tenant_context(context)
 
-            logger.debug(
-                f"Tenant context set: tenant_id={tenant_id}, "
-                f"user_id={user_id}, request_id={request_id}"
-            )
+            logger.debug(f"Tenant context set: tenant_id={tenant_id}, " f"user_id={user_id}, request_id={request_id}")
 
         try:
             # Store request_id in request state for logging
@@ -222,13 +217,9 @@ def ensure_tenant_access(entity_tenant_id: Optional[str], action: str = "access"
     # Check tenant match
     if entity_tenant_id != context.tenant_id:
         logger.warning(
-            f"Tenant access denied: context={context.tenant_id}, "
-            f"entity={entity_tenant_id}, action={action}"
+            f"Tenant access denied: context={context.tenant_id}, " f"entity={entity_tenant_id}, action={action}"
         )
-        raise HTTPException(
-            status_code=403,
-            detail=f"Access denied: cannot {action} resource from another tenant"
-        )
+        raise HTTPException(status_code=403, detail=f"Access denied: cannot {action} resource from another tenant")
 
 
 # Decorator for tenant-required endpoints
@@ -243,7 +234,9 @@ def require_tenant(func):
             context = get_tenant_context()
             ...
     """
+
     async def wrapper(*args, **kwargs):
         require_tenant_context()
         return await func(*args, **kwargs)
+
     return wrapper

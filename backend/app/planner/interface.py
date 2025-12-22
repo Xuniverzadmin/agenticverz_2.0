@@ -10,46 +10,51 @@ See: app/specs/planner_determinism.md for full specification.
 """
 
 from __future__ import annotations
+
+import hashlib
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Protocol, Union
-import json
-import hashlib
+from typing import Any, Dict, List, Optional, Union
 
 
 def _canonical_json(obj: Any) -> str:
     """Canonical JSON serialization for deterministic outputs."""
+
     def _serializer(o: Any) -> Any:
-        if hasattr(o, 'to_dict'):
+        if hasattr(o, "to_dict"):
             return o.to_dict()
-        if hasattr(o, '__dict__'):
+        if hasattr(o, "__dict__"):
             return o.__dict__
         if isinstance(o, Enum):
             return o.value
         if isinstance(o, datetime):
             return o.isoformat()
         raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'), default=_serializer)
+
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=_serializer)
 
 
 def _content_hash(obj: Any, length: int = 16) -> str:
     """Compute deterministic content hash."""
-    canonical = _canonical_json(obj).encode('utf-8')
+    canonical = _canonical_json(obj).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()[:length]
 
 
 class DeterminismMode(str, Enum):
     """Determinism mode for planner outputs."""
-    FULL = "full"           # Same inputs → Identical plan (byte-for-byte)
+
+    FULL = "full"  # Same inputs → Identical plan (byte-for-byte)
     STRUCTURAL = "structural"  # Same inputs → Same plan structure
-    NONE = "none"           # No guarantees
+    NONE = "none"  # No guarantees
 
 
 @dataclass
 class PlanStep:
     """A single step in an execution plan."""
+
     step_id: str
     skill: str
     params: Dict[str, Any]
@@ -69,7 +74,7 @@ class PlanStep:
             "on_error": self.on_error,
             "retry_count": self.retry_count,
             "output_key": self.output_key or self.step_id,
-            "description": self.description
+            "description": self.description,
         }
 
 
@@ -83,6 +88,7 @@ class PlanMetadata:
     - Only deterministic_fields are compared during replay
     - cache_key is computed from deterministic inputs only
     """
+
     planner: str
     planner_version: str
     model: Optional[str] = None
@@ -113,7 +119,7 @@ class PlanMetadata:
             "cost_cents": self.cost_cents,
             "deterministic": self.deterministic,
             "cache_key": self.cache_key,
-            "generated_at": self.generated_at  # Non-deterministic, excluded from hash
+            "generated_at": self.generated_at,  # Non-deterministic, excluded from hash
         }
 
     def to_deterministic_dict(self) -> Dict[str, Any]:
@@ -126,7 +132,7 @@ class PlanMetadata:
             "output_tokens": self.output_tokens,
             "cost_cents": self.cost_cents,
             "deterministic": self.deterministic,
-            "cache_key": self.cache_key
+            "cache_key": self.cache_key,
             # generated_at intentionally excluded
         }
 
@@ -144,6 +150,7 @@ class PlannerOutput:
     - Use to_deterministic_dict() for replay comparison
     - Use to_dict() for full serialization including timestamps
     """
+
     steps: List[PlanStep]
     metadata: PlanMetadata
     warnings: List[str] = field(default_factory=list)
@@ -153,7 +160,7 @@ class PlannerOutput:
         return {
             "steps": [s.to_dict() for s in self.steps],
             "metadata": self.metadata.to_dict(),
-            "warnings": self.warnings
+            "warnings": self.warnings,
         }
 
     def to_deterministic_dict(self) -> Dict[str, Any]:
@@ -161,7 +168,7 @@ class PlannerOutput:
         return {
             "steps": [s.to_dict() for s in self.steps],
             "metadata": self.metadata.to_deterministic_dict(),
-            "warnings": self.warnings
+            "warnings": self.warnings,
         }
 
     def to_canonical_json(self) -> str:
@@ -185,6 +192,7 @@ class PlannerError:
 
     Planners should return this instead of raising exceptions.
     """
+
     code: str
     message: str
     retryable: bool = False
@@ -198,13 +206,14 @@ class PlannerError:
             "message": self.message,
             "retryable": self.retryable,
             "details": self.details,
-            "retry_after_ms": self.retry_after_ms
+            "retry_after_ms": self.retry_after_ms,
         }
 
 
 # Error codes for planners
 class PlannerErrorCode:
     """Standard planner error codes."""
+
     RATE_LIMITED = "PLANNER_RATE_LIMITED"
     CONTEXT_TOO_LONG = "PLANNER_CONTEXT_TOO_LONG"
     INVALID_GOAL = "PLANNER_INVALID_GOAL"
@@ -266,7 +275,7 @@ class PlannerInterface(ABC):
         context_summary: Optional[str] = None,
         memory_snippets: Optional[List[Dict[str, Any]]] = None,
         tool_manifest: Optional[List[Dict[str, Any]]] = None,
-        **kwargs
+        **kwargs,
     ) -> Union[PlannerOutput, PlannerError]:
         """
         Generate an execution plan for the given goal.
@@ -325,10 +334,7 @@ class PlannerInterface(ABC):
         return errors
 
     def estimate_cost(
-        self,
-        goal: str,
-        context_summary: Optional[str] = None,
-        tool_manifest: Optional[List[Dict]] = None
+        self, goal: str, context_summary: Optional[str] = None, tool_manifest: Optional[List[Dict]] = None
     ) -> Dict[str, Any]:
         """
         Estimate the cost of generating a plan.
@@ -352,7 +358,7 @@ class PlannerInterface(ABC):
         return {
             "estimated_input_tokens": estimated_input,
             "estimated_output_tokens": estimated_output,
-            "estimated_cost_cents": max(1, (estimated_input + estimated_output) // 1000)
+            "estimated_cost_cents": max(1, (estimated_input + estimated_output) // 1000),
         }
 
 
@@ -394,6 +400,7 @@ class PlannerRegistry:
 
 # Utility functions
 
+
 def normalize_goal(goal: str) -> str:
     """Normalize goal text for consistent processing."""
     return goal.strip()
@@ -411,7 +418,7 @@ def compute_plan_input_hash(
     goal: str,
     context_summary: Optional[str],
     memory_snippets: Optional[List[Dict]],
-    tool_manifest: Optional[List[Dict]]
+    tool_manifest: Optional[List[Dict]],
 ) -> str:
     """
     Compute deterministic hash of planner inputs.
@@ -426,8 +433,8 @@ def compute_plan_input_hash(
         "goal": normalize_goal(goal),
         "context_summary": normalize_context(context_summary),
         "memory_snippets": memory_snippets or [],
-        "tool_manifest": tool_manifest or []
+        "tool_manifest": tool_manifest or [],
     }
 
-    canonical = json.dumps(normalized, sort_keys=True, separators=(',', ':'))
+    canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]

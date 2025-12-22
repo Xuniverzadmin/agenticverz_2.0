@@ -14,14 +14,11 @@ Usage:
 """
 
 import argparse
-import hashlib
 import json
-import os
 import sys
-from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 # Known volatile fields that should NOT affect determinism
 VOLATILE_FIELDS = {
@@ -139,7 +136,11 @@ def diff_golden_files(golden_a: Dict, golden_b: Dict, verbose: bool = False) -> 
 
             if diff_type == "VOLATILE_LEAK":
                 volatile_leaks.append(key)
-            elif diff_type in ("DETERMINISM_VIOLATION", "SEED_MISMATCH", "HASH_MISMATCH"):
+            elif diff_type in (
+                "DETERMINISM_VIOLATION",
+                "SEED_MISMATCH",
+                "HASH_MISMATCH",
+            ):
                 determinism_violations.append(key)
 
     return {
@@ -149,7 +150,9 @@ def diff_golden_files(golden_a: Dict, golden_b: Dict, verbose: bool = False) -> 
         "determinism_violations": determinism_violations,
         "differences": differences if verbose else differences[:10],
         "is_match": len(differences) == 0,
-        "severity": "CRITICAL" if determinism_violations else ("WARNING" if volatile_leaks else "OK"),
+        "severity": "CRITICAL"
+        if determinism_violations
+        else ("WARNING" if volatile_leaks else "OK"),
     }
 
 
@@ -192,23 +195,33 @@ def analyze_shadow_directory(shadow_dir: str) -> Dict:
                 summary["total_mismatches"] += mismatches
 
                 if mismatches > 0:
-                    summary["mismatch_details"].extend(cycle_data.get("mismatch_details", [])[:5])
+                    summary["mismatch_details"].extend(
+                        cycle_data.get("mismatch_details", [])[:5]
+                    )
 
-                summary["cycle_summaries"].append({
-                    "cycle": cycle_file.stem,
-                    "workflows": workflows,
-                    "replays": replays,
-                    "mismatches": mismatches,
-                    "passed": cycle_data.get("passed", mismatches == 0),
-                })
+                summary["cycle_summaries"].append(
+                    {
+                        "cycle": cycle_file.stem,
+                        "workflows": workflows,
+                        "replays": replays,
+                        "mismatches": mismatches,
+                        "passed": cycle_data.get("passed", mismatches == 0),
+                    }
+                )
             except Exception as e:
-                summary["cycle_summaries"].append({"cycle": cycle_file.stem, "error": str(e)})
+                summary["cycle_summaries"].append(
+                    {"cycle": cycle_file.stem, "error": str(e)}
+                )
 
     if golden_dir.exists():
         summary["golden_file_count"] = len(list(golden_dir.glob("*.json")))
-        summary["golden_dir_size_bytes"] = sum(f.stat().st_size for f in golden_dir.glob("*.json"))
+        summary["golden_dir_size_bytes"] = sum(
+            f.stat().st_size for f in golden_dir.glob("*.json")
+        )
 
-    summary["mismatch_rate"] = summary["total_mismatches"] / max(summary["total_replays"], 1)
+    summary["mismatch_rate"] = summary["total_mismatches"] / max(
+        summary["total_replays"], 1
+    )
     summary["passed"] = summary["total_mismatches"] == 0
     summary["verdict"] = "PASS" if summary["passed"] else "FAIL"
 
@@ -219,7 +232,9 @@ def main():
     parser = argparse.ArgumentParser(description="Golden File Diff Debugger")
     parser.add_argument("--golden-a", help="First golden file path")
     parser.add_argument("--golden-b", help="Second golden file path")
-    parser.add_argument("--summary-dir", help="Shadow simulation directory to summarize")
+    parser.add_argument(
+        "--summary-dir", help="Shadow simulation directory to summarize"
+    )
     parser.add_argument("--output", "-o", help="Output file (default: stdout)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 

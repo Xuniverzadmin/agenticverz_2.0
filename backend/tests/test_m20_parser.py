@@ -9,19 +9,18 @@ Test suite for M20 Policy Compiler:
 """
 
 import pytest
-from app.policy.compiler.tokenizer import Tokenizer, Token, TokenType, TokenizerError
-from app.policy.compiler.parser import Parser, ParseError
-from app.policy.compiler.grammar import PolicyCategory, ActionType
+
 from app.policy.ast.nodes import (
-    ProgramNode,
-    PolicyDeclNode,
-    RuleDeclNode,
-    ConditionBlockNode,
     ActionBlockNode,
     BinaryOpNode,
-    LiteralNode,
-    IdentNode,
+    ConditionBlockNode,
+    PolicyDeclNode,
+    ProgramNode,
+    RuleDeclNode,
 )
+from app.policy.compiler.grammar import ActionType, PolicyCategory
+from app.policy.compiler.parser import ParseError, Parser
+from app.policy.compiler.tokenizer import Tokenizer, TokenizerError, TokenType
 
 
 class TestTokenizer:
@@ -29,7 +28,7 @@ class TestTokenizer:
 
     def test_tokenize_simple_policy(self):
         """Test tokenizing a simple policy declaration."""
-        source = 'policy test_policy: SAFETY { deny }'
+        source = "policy test_policy: SAFETY { deny }"
         tokenizer = Tokenizer(source)
         tokens = tokenizer.tokenize()
 
@@ -260,6 +259,7 @@ class TestParser:
 
         # The condition should be a function call
         from app.policy.ast.nodes import FuncCallNode
+
         assert isinstance(condition_block.condition, FuncCallNode)
 
     def test_parse_all_categories(self):

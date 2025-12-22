@@ -10,20 +10,20 @@ Tracks all failure catalog matches for:
 - Failure analytics dashboards
 - Pattern aggregation for unknown errors
 """
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 # revision identifiers
-revision = '015_failure_matches'
-down_revision = '014_trace_mismatches'
+revision = "015_failure_matches"
+down_revision = "014_trace_mismatches"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     # Create failure_matches table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS failure_matches (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             run_id TEXT NOT NULL,
@@ -61,10 +61,12 @@ def upgrade() -> None:
 
         -- Comment
         COMMENT ON TABLE failure_matches IS 'M9: Persistent storage for failure catalog matches';
-    """)
+    """
+    )
 
     # Create aggregation helper view for candidate pattern detection
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW failure_pattern_candidates AS
         SELECT
             error_code,
@@ -82,10 +84,12 @@ def upgrade() -> None:
         ORDER BY occurrence_count DESC;
 
         COMMENT ON VIEW failure_pattern_candidates IS 'Unmatched failures aggregated for catalog expansion';
-    """)
+    """
+    )
 
     # Create metrics view for Prometheus scraping
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW failure_match_metrics AS
         SELECT
             COALESCE(tenant_id, 'global') AS tenant_id,
@@ -102,7 +106,8 @@ def upgrade() -> None:
         GROUP BY ROLLUP(tenant_id);
 
         COMMENT ON VIEW failure_match_metrics IS 'Aggregated failure metrics for Prometheus';
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

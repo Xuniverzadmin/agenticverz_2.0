@@ -3,7 +3,6 @@
 
 import logging
 import os
-import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urlparse
@@ -44,6 +43,7 @@ ALLOWED_SKILLS: Set[str] = {
 @dataclass
 class PlanValidationError:
     """A single validation error."""
+
     code: str
     message: str
     step_id: Optional[str] = None
@@ -53,6 +53,7 @@ class PlanValidationError:
 @dataclass
 class PlanValidationResult:
     """Result of plan validation."""
+
     valid: bool
     errors: List[PlanValidationError] = field(default_factory=list)
     warnings: List[PlanValidationError] = field(default_factory=list)
@@ -133,11 +134,7 @@ def validate_step(step: Dict[str, Any], result: PlanValidationResult):
 
     # Check skill is allowed
     if skill and skill not in ALLOWED_SKILLS:
-        result.add_error(
-            "UNKNOWN_SKILL",
-            f"Skill '{skill}' is not in the allowed list",
-            step_id
-        )
+        result.add_error("UNKNOWN_SKILL", f"Skill '{skill}' is not in the allowed list", step_id)
 
     # Check for forbidden URLs in http_call
     if skill == "http_call":
@@ -145,11 +142,7 @@ def validate_step(step: Dict[str, Any], result: PlanValidationResult):
         for url in urls:
             is_forbidden, domain = is_domain_forbidden(url)
             if is_forbidden:
-                result.add_error(
-                    "FORBIDDEN_TARGET",
-                    f"URL targets forbidden domain: {domain}",
-                    step_id
-                )
+                result.add_error("FORBIDDEN_TARGET", f"URL targets forbidden domain: {domain}", step_id)
 
     # Check for dangerous LLM prompts
     if skill == "llm_invoke":
@@ -159,11 +152,7 @@ def validate_step(step: Dict[str, Any], result: PlanValidationResult):
             if isinstance(content, str):
                 # Check for prompt injection patterns
                 if "ignore previous instructions" in content.lower():
-                    result.add_warning(
-                        "SUSPICIOUS_PROMPT",
-                        "LLM prompt contains suspicious pattern",
-                        step_id
-                    )
+                    result.add_warning("SUSPICIOUS_PROMPT", "LLM prompt contains suspicious pattern", step_id)
 
     # Check for loop configurations
     loop_config = step.get("loop", {})
@@ -171,9 +160,7 @@ def validate_step(step: Dict[str, Any], result: PlanValidationResult):
         max_iter = loop_config.get("max_iterations", 1)
         if max_iter > MAX_LOOP_ITERATIONS:
             result.add_error(
-                "EXCESSIVE_LOOP",
-                f"Loop max_iterations ({max_iter}) exceeds limit ({MAX_LOOP_ITERATIONS})",
-                step_id
+                "EXCESSIVE_LOOP", f"Loop max_iterations ({max_iter}) exceeds limit ({MAX_LOOP_ITERATIONS})", step_id
             )
 
 
@@ -198,10 +185,7 @@ def validate_plan(plan: Dict[str, Any], agent_budget_cents: int = 0) -> PlanVali
 
     # Check step count
     if len(steps) > MAX_PLAN_STEPS:
-        result.add_error(
-            "TOO_MANY_STEPS",
-            f"Plan has {len(steps)} steps, maximum is {MAX_PLAN_STEPS}"
-        )
+        result.add_error("TOO_MANY_STEPS", f"Plan has {len(steps)} steps, maximum is {MAX_PLAN_STEPS}")
 
     if len(steps) == 0:
         result.add_warning("EMPTY_PLAN", "Plan has no steps")
@@ -222,14 +206,14 @@ def validate_plan(plan: Dict[str, Any], agent_budget_cents: int = 0) -> PlanVali
     if estimated_cost > MAX_ESTIMATED_COST_CENTS:
         result.add_error(
             "COST_EXCEEDS_LIMIT",
-            f"Estimated cost ({estimated_cost} cents) exceeds limit ({MAX_ESTIMATED_COST_CENTS} cents)"
+            f"Estimated cost ({estimated_cost} cents) exceeds limit ({MAX_ESTIMATED_COST_CENTS} cents)",
         )
 
     # Check against agent budget if set
     if agent_budget_cents > 0 and estimated_cost > agent_budget_cents:
         result.add_error(
             "INSUFFICIENT_BUDGET",
-            f"Estimated cost ({estimated_cost} cents) exceeds agent budget ({agent_budget_cents} cents)"
+            f"Estimated cost ({estimated_cost} cents) exceeds agent budget ({agent_budget_cents} cents)",
         )
 
     # Validate each step
@@ -239,11 +223,7 @@ def validate_plan(plan: Dict[str, Any], agent_budget_cents: int = 0) -> PlanVali
 
         # Check for duplicate step IDs
         if step_id and step_id in seen_step_ids:
-            result.add_warning(
-                "DUPLICATE_STEP_ID",
-                f"Duplicate step_id: {step_id}",
-                step_id
-            )
+            result.add_warning("DUPLICATE_STEP_ID", f"Duplicate step_id: {step_id}", step_id)
         seen_step_ids.add(step_id)
 
         validate_step(step, result)
@@ -263,9 +243,7 @@ def validate_plan(plan: Dict[str, Any], agent_budget_cents: int = 0) -> PlanVali
             current = to_visit.pop()
             if current == step_id:
                 result.add_error(
-                    "CIRCULAR_DEPENDENCY",
-                    f"Circular dependency detected involving step {step_id}",
-                    step_id
+                    "CIRCULAR_DEPENDENCY", f"Circular dependency detected involving step {step_id}", step_id
                 )
                 break
             if current not in visited:
@@ -297,7 +275,7 @@ def inspect_plan(plan: Dict[str, Any], agent_budget_cents: int = 0) -> Dict[str,
                 "plan_id": plan.get("plan_id", "unknown"),
                 "error_count": len(result.errors),
                 "errors": [{"code": e.code, "message": e.message} for e in result.errors],
-            }
+            },
         )
     elif result.warnings:
         logger.info(
@@ -305,7 +283,7 @@ def inspect_plan(plan: Dict[str, Any], agent_budget_cents: int = 0) -> Dict[str,
             extra={
                 "plan_id": plan.get("plan_id", "unknown"),
                 "warning_count": len(result.warnings),
-            }
+            },
         )
 
     return {

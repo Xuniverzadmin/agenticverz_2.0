@@ -15,15 +15,11 @@ Run with: pytest tests/chaos/test_resource_stress.py -v --chaos
 import asyncio
 import gc
 import os
-import subprocess
-import sys
 import tempfile
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
-from unittest.mock import patch
 
 import pytest
 
@@ -77,7 +73,7 @@ class MemoryStressor:
         """Allocate memory to create pressure."""
         chunk_size = 1024 * 1024  # 1 MB chunks
         for _ in range(self.target_mb):
-            self._allocations.append(b'\x00' * chunk_size)
+            self._allocations.append(b"\x00" * chunk_size)
 
     def release(self):
         """Release allocated memory."""
@@ -94,10 +90,10 @@ class DiskStressor:
 
     def create_files(self, count: int = 100, size_kb: int = 100):
         """Create temporary files to stress disk I/O."""
-        data = b'\x00' * (size_kb * 1024)
+        data = b"\x00" * (size_kb * 1024)
         for i in range(count):
             path = os.path.join(self.temp_dir, f"chaos_test_{i}.tmp")
-            with open(path, 'wb') as f:
+            with open(path, "wb") as f:
                 f.write(data)
             self._files.append(path)
 
@@ -128,10 +124,9 @@ class TestCPUStressChaos:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                result = loop.run_until_complete(skill.execute({
-                    "payload": {"data": {"value": 42}},
-                    "mapping": {"extracted": "data.value"}
-                }))
+                result = loop.run_until_complete(
+                    skill.execute({"payload": {"data": {"value": 42}}, "mapping": {"extracted": "data.value"}})
+                )
             finally:
                 loop.close()
 
@@ -152,10 +147,7 @@ class TestCPUStressChaos:
         async def run_multiple():
             tasks = []
             for i in range(5):
-                tasks.append(skill.execute({
-                    "payload": {"data": {"value": i}},
-                    "mapping": {"extracted": "data.value"}
-                }))
+                tasks.append(skill.execute({"payload": {"data": {"value": i}}, "mapping": {"extracted": "data.value"}}))
             return await asyncio.gather(*tasks)
 
         try:
@@ -193,10 +185,9 @@ class TestMemoryPressureChaos:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                result = loop.run_until_complete(skill.execute({
-                    "payload": {"items": list(range(100))},
-                    "mapping": {"count": "items"}
-                }))
+                result = loop.run_until_complete(
+                    skill.execute({"payload": {"items": list(range(100))}, "mapping": {"count": "items"}})
+                )
             finally:
                 loop.close()
 
@@ -213,11 +204,7 @@ class TestMemoryPressureChaos:
         skill = JsonTransformSkill()
 
         # Create large payload
-        large_payload = {
-            "data": {
-                "items": [{"id": i, "value": f"item_{i}"} for i in range(1000)]
-            }
-        }
+        large_payload = {"data": {"items": [{"id": i, "value": f"item_{i}"} for i in range(1000)]}}
 
         try:
             stressor.allocate()
@@ -225,10 +212,14 @@ class TestMemoryPressureChaos:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                result = loop.run_until_complete(skill.execute({
-                    "payload": large_payload,
-                    "mapping": {"first": "data.items[0].id", "last": "data.items[-1].id"}
-                }))
+                result = loop.run_until_complete(
+                    skill.execute(
+                        {
+                            "payload": large_payload,
+                            "mapping": {"first": "data.items[0].id", "last": "data.items[-1].id"},
+                        }
+                    )
+                )
             finally:
                 loop.close()
 
@@ -282,8 +273,8 @@ class TestWorkerPoolChaos:
 
     def test_executor_handles_task_failure(self):
         """Executor handles individual task failures gracefully."""
-        from concurrent.futures import ThreadPoolExecutor, as_completed
         import time
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
         def failing_task(n):
             if n == 3:
@@ -353,9 +344,7 @@ class TestGracefulDegradation:
             asyncio.set_event_loop(loop)
             try:
                 # Should complete even under CPU stress
-                result = loop.run_until_complete(
-                    asyncio.wait_for(slow_operation(), timeout=5.0)
-                )
+                result = loop.run_until_complete(asyncio.wait_for(slow_operation(), timeout=5.0))
                 assert result == "done"
             except asyncio.TimeoutError:
                 # Acceptable under extreme stress
@@ -386,10 +375,7 @@ class TestGracefulDegradation:
 
         start = time.time()
         try:
-            result = loop.run_until_complete(skill.execute({
-                "payload": {"value": 123},
-                "mapping": {"out": "value"}
-            }))
+            result = loop.run_until_complete(skill.execute({"payload": {"value": 123}, "mapping": {"out": "value"}}))
         finally:
             loop.close()
 

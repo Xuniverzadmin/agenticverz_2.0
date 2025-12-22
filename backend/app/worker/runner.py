@@ -8,27 +8,25 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from sqlmodel import Session
 
-from ..db import Run, Memory, Provenance, engine
-from ..skills import get_skill, create_skill_instance, get_skill_config
-from ..skills.executor import (
-    SkillExecutor,
-    SkillExecutionError,
-    SkillValidationError,
-    execute_skill,
-)
+from ..db import Memory, Provenance, Run, engine
 from ..events import get_publisher
 from ..metrics import (
-    nova_runs_total,
     nova_runs_failed_total,
+    nova_runs_total,
     nova_skill_attempts_total,
     nova_skill_duration_seconds,
 )
-from ..utils.budget_tracker import record_cost, deduct_budget, get_budget_tracker
-from ..utils.plan_inspector import inspect_plan, validate_plan
+from ..skills import get_skill_config
+from ..skills.executor import (
+    SkillExecutionError,
+    SkillExecutor,
+)
+from ..utils.budget_tracker import deduct_budget, get_budget_tracker, record_cost
+from ..utils.plan_inspector import validate_plan
 
 logger = logging.getLogger("nova.worker.runner")
 
@@ -66,6 +64,7 @@ def calculate_llm_cost_cents(model: str, input_tokens: int, output_tokens: int) 
 
     # Round up to nearest cent (minimum 1 cent if any tokens used)
     import math
+
     return max(1, math.ceil(total_cents)) if (input_tokens + output_tokens) > 0 else 0
 
 
@@ -90,7 +89,7 @@ class RunRunner:
         error_message: Optional[str] = None,
         plan_json: Optional[str] = None,
         tool_calls_json: Optional[str] = None,
-        duration_ms: Optional[float] = None
+        duration_ms: Optional[float] = None,
     ):
         """Update run in database."""
         with Session(engine) as session:
@@ -135,7 +134,7 @@ class RunRunner:
                 # Shutdown async generators
                 loop.run_until_complete(loop.shutdown_asyncgens())
                 # Shutdown default executor (Python 3.9+)
-                if hasattr(loop, 'shutdown_default_executor'):
+                if hasattr(loop, "shutdown_default_executor"):
                     loop.run_until_complete(loop.shutdown_default_executor())
             except Exception:
                 logger.debug("cleanup_exception_during_loop_close", exc_info=True)
@@ -150,19 +149,11 @@ class RunRunner:
             return
 
         start_time = time.time()
-        self.publisher.publish("run.started", {
-            "run_id": self.run_id,
-            "agent_id": run.agent_id,
-            "goal": run.goal
-        })
+        self.publisher.publish("run.started", {"run_id": self.run_id, "agent_id": run.agent_id, "goal": run.goal})
         planner_name = os.getenv("PLANNER_BACKEND", "stub")
         nova_runs_total.labels(status="started", planner=planner_name).inc()
 
-        logger.info("run_execution_start", extra={
-            "run_id": self.run_id,
-            "agent_id": run.agent_id,
-            "goal": run.goal
-        })
+        logger.info("run_execution_start", extra={"run_id": self.run_id, "agent_id": run.agent_id, "goal": run.goal})
 
         try:
             # Parse plan
@@ -171,9 +162,9 @@ class RunRunner:
 
             if not steps:
                 # No plan yet - generate one using planner with memory context
+                from ..memory import get_retriever
                 from ..planners import get_planner
                 from ..skills import get_skill_manifest
-                from ..memory import get_retriever
 
                 # Retrieve memory context for planning
                 retriever = get_retriever()
@@ -189,7 +180,7 @@ class RunRunner:
                         "run_id": self.run_id,
                         "has_summary": context.get("context_summary") is not None,
                         "memory_count": len(context.get("memory_snippets") or []),
-                    }
+                    },
                 )
 
                 # Generate plan
@@ -199,7 +190,7 @@ class RunRunner:
                     goal=run.goal,
                     context_summary=context.get("context_summary"),
                     memory_snippets=context.get("memory_snippets"),
-                    tool_manifest=get_skill_manifest()
+                    tool_manifest=get_skill_manifest(),
                 )
                 steps = plan.get("steps", [])
 
@@ -218,7 +209,7 @@ class RunRunner:
                         extra={
                             "run_id": self.run_id,
                             "warnings": [w.message for w in validation.warnings],
-                        }
+                        },
                     )
 
                 # Track planner LLM costs if available
@@ -252,7 +243,7 @@ class RunRunner:
                                 "run_id": self.run_id,
                                 "agent_id": run.agent_id,
                                 "cost_cents": cost_cents,
-                            }
+                            },
                         )
 
                     logger.info(
@@ -263,7 +254,7 @@ class RunRunner:
                             "input_tokens": input_tokens,
                             "output_tokens": output_tokens,
                             "cost_cents": cost_cents,
-                        }
+                        },
                     )
 
             tool_calls = []
@@ -323,7 +314,7 @@ class RunRunner:
                                 "max_attempts": max_step_retries,
                                 "error": str(e)[:200],
                                 "retryable": e.is_retryable,
-                            }
+                            },
                         )
 
                         # Don't retry if error is not retryable
@@ -348,7 +339,7 @@ class RunRunner:
                                 "step_id": step_id,
                                 "skill": skill_name,
                                 "error": str(step_error)[:200],
-                            }
+                            },
                         )
                         # Create a failure result for tool_calls
                         result = {
@@ -376,28 +367,38 @@ class RunRunner:
                     "side_effects": result.get("side_effects", {}) if result else {},
                     "duration": round(step_duration, 3),
                     "ts": datetime.now(timezone.utc).isoformat(),
-                    "status": step_status.value if hasattr(step_status, 'value') else str(step_status) if step_status else "unknown",
+                    "status": step_status.value
+                    if hasattr(step_status, "value")
+                    else str(step_status)
+                    if step_status
+                    else "unknown",
                     "attempts": step_attempts,
                     "on_error": on_error,
                 }
                 tool_calls.append(tool_call)
 
-                logger.info("run_step_result", extra={
-                    "run_id": self.run_id,
-                    "step_id": step_id,
-                    "skill": skill_name,
-                    "duration": round(step_duration, 3),
-                    "status": tool_call["status"],
-                })
+                logger.info(
+                    "run_step_result",
+                    extra={
+                        "run_id": self.run_id,
+                        "step_id": step_id,
+                        "skill": skill_name,
+                        "duration": round(step_duration, 3),
+                        "status": tool_call["status"],
+                    },
+                )
 
-                self.publisher.publish("run.step.completed", {
-                    "run_id": self.run_id,
-                    "step_id": step_id,
-                    "skill": skill_name,
-                    "duration": round(step_duration, 3),
-                    "result": result.get("result", {}),
-                    "status": tool_call["status"],
-                })
+                self.publisher.publish(
+                    "run.step.completed",
+                    {
+                        "run_id": self.run_id,
+                        "step_id": step_id,
+                        "skill": skill_name,
+                        "duration": round(step_duration, 3),
+                        "result": result.get("result", {}),
+                        "status": tool_call["status"],
+                    },
+                )
 
                 # Store memory
                 with Session(engine) as session:
@@ -405,13 +406,15 @@ class RunRunner:
                         agent_id=run.agent_id,
                         memory_type="skill_result",
                         text=f"Skill result: {json.dumps(result.get('result', {}))}",
-                        meta=json.dumps({
-                            "goal": run.goal,
-                            "skill": skill_name,
-                            "skill_version": result.get("skill_version"),
-                            "run_id": self.run_id,
-                            "step_id": step_id,
-                        })
+                        meta=json.dumps(
+                            {
+                                "goal": run.goal,
+                                "skill": skill_name,
+                                "skill_version": result.get("skill_version"),
+                                "run_id": self.run_id,
+                                "step_id": step_id,
+                            }
+                        ),
                     )
                     session.add(memory)
                     session.commit()
@@ -426,7 +429,7 @@ class RunRunner:
                 completed_at=completed_at,
                 plan_json=json.dumps(plan),
                 tool_calls_json=json.dumps(tool_calls),
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
 
             # Create provenance record
@@ -441,22 +444,18 @@ class RunRunner:
                     attempts=run.attempts,
                     started_at=run.started_at,
                     completed_at=completed_at,
-                    duration_ms=duration_ms
+                    duration_ms=duration_ms,
                 )
                 session.add(provenance)
                 session.commit()
 
-            self.publisher.publish("run.completed", {
-                "run_id": self.run_id,
-                "status": "succeeded",
-                "duration_ms": duration_ms
-            })
+            self.publisher.publish(
+                "run.completed", {"run_id": self.run_id, "status": "succeeded", "duration_ms": duration_ms}
+            )
 
-            logger.info("run_completed", extra={
-                "run_id": self.run_id,
-                "status": "succeeded",
-                "duration_ms": duration_ms
-            })
+            logger.info(
+                "run_completed", extra={"run_id": self.run_id, "status": "succeeded", "duration_ms": duration_ms}
+            )
             planner_name = os.getenv("PLANNER_BACKEND", "stub")
             nova_runs_total.labels(status="succeeded", planner=planner_name).inc()
 
@@ -470,17 +469,12 @@ class RunRunner:
                     status="failed",
                     attempts=attempts,
                     error_message=str(exc)[:500],
-                    completed_at=datetime.now(timezone.utc)
+                    completed_at=datetime.now(timezone.utc),
                 )
-                self.publisher.publish("run.failed", {
-                    "run_id": self.run_id,
-                    "attempts": attempts,
-                    "error": str(exc)[:200]
-                })
-                logger.exception("run_failed_permanent", extra={
-                    "run_id": self.run_id,
-                    "attempts": attempts
-                })
+                self.publisher.publish(
+                    "run.failed", {"run_id": self.run_id, "attempts": attempts, "error": str(exc)[:200]}
+                )
+                logger.exception("run_failed_permanent", extra={"run_id": self.run_id, "attempts": attempts})
                 planner_name = os.getenv("PLANNER_BACKEND", "stub")
                 nova_runs_total.labels(status="failed", planner=planner_name).inc()
                 nova_runs_failed_total.inc()
@@ -490,18 +484,13 @@ class RunRunner:
                 next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=backoff_seconds)
 
                 self._update_run(
-                    status="retry",
-                    attempts=attempts,
-                    next_attempt_at=next_attempt_at,
-                    error_message=str(exc)[:500]
+                    status="retry", attempts=attempts, next_attempt_at=next_attempt_at, error_message=str(exc)[:500]
                 )
-                self.publisher.publish("run.retry_scheduled", {
-                    "run_id": self.run_id,
-                    "attempts": attempts,
-                    "backoff_seconds": backoff_seconds
-                })
-                logger.exception("run_failed_transient", extra={
-                    "run_id": self.run_id,
-                    "attempts": attempts,
-                    "retry_after_seconds": backoff_seconds
-                })
+                self.publisher.publish(
+                    "run.retry_scheduled",
+                    {"run_id": self.run_id, "attempts": attempts, "backoff_seconds": backoff_seconds},
+                )
+                logger.exception(
+                    "run_failed_transient",
+                    extra={"run_id": self.run_id, "attempts": attempts, "retry_after_seconds": backoff_seconds},
+                )

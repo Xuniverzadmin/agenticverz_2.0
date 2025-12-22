@@ -17,28 +17,24 @@ M7 Enhancements:
 """
 
 from __future__ import annotations
+
 import logging
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlmodel import Session
 
-from app.db import get_session
 from app.costsim import (
-    is_v2_sandbox_enabled,
-    is_v2_disabled_by_drift,
-    simulate_with_sandbox,
-    simulate_v2_with_comparison,
     get_circuit_breaker,
+    is_v2_disabled_by_drift,
+    is_v2_sandbox_enabled,
     run_canary,
-    CanaryRunConfig,
+    simulate_with_sandbox,
 )
 from app.costsim.config import get_config
 from app.costsim.divergence import generate_divergence_report
-from app.costsim.models import V2SimulationStatus, ComparisonVerdict
 
 logger = logging.getLogger("nova.api.costsim")
 
@@ -57,10 +53,11 @@ _memory_features_enabled = MEMORY_CONTEXT_INJECTION or MEMORY_POST_UPDATE or DRI
 
 if _memory_features_enabled:
     try:
-        from app.memory.memory_service import get_memory_service, MemoryResult
-        from app.memory.update_rules import get_update_rules_engine
         from app.memory.drift_detector import get_drift_detector
+        from app.memory.memory_service import MemoryResult, get_memory_service
+        from app.memory.update_rules import get_update_rules_engine
         from app.tasks.memory_update import apply_update_rules, apply_update_rules_sync
+
         logger.info("Memory integration modules loaded successfully")
     except ImportError as e:
         if MEMORY_FAIL_OPEN_OVERRIDE:
@@ -69,8 +66,12 @@ if _memory_features_enabled:
             get_memory_service = lambda: None
             get_update_rules_engine = lambda: None
             get_drift_detector = lambda: None
-            async def apply_update_rules(*args, **kwargs): return 0
-            def apply_update_rules_sync(*args, **kwargs): return True
+
+            async def apply_update_rules(*args, **kwargs):
+                return 0
+
+            def apply_update_rules_sync(*args, **kwargs):
+                return True
         else:
             raise RuntimeError(
                 f"Memory integration required (MEMORY_CONTEXT_INJECTION={MEMORY_CONTEXT_INJECTION}, "
@@ -82,14 +83,19 @@ else:
     # Memory features disabled - no imports needed, define stubs
     def get_memory_service():
         return None
+
     def get_update_rules_engine():
         return None
+
     def get_drift_detector():
         return None
+
     async def apply_update_rules(*args, **kwargs):
         return 0
+
     def apply_update_rules_sync(*args, **kwargs):
         return True
+
     logger.debug("Memory features disabled, skipping memory module imports")
 
 router = APIRouter(prefix="/costsim", tags=["costsim"])
@@ -222,10 +228,9 @@ class CanaryRunResponse(BaseModel):
 # M7: Memory Integration Helpers
 # =============================================================================
 
+
 async def get_memory_context(
-    tenant_id: str,
-    workflow_id: Optional[str] = None,
-    agent_id: Optional[str] = None
+    tenant_id: str, workflow_id: Optional[str] = None, agent_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Retrieve memory context for simulation.
@@ -273,6 +278,7 @@ async def get_memory_context(
         # M7: Emit context injection failure metric
         try:
             from app.memory.memory_service import MEMORY_CONTEXT_INJECTION_FAILURES
+
             MEMORY_CONTEXT_INJECTION_FAILURES.labels(tenant_id=tenant_id, reason=type(e).__name__).inc()
         except ImportError:
             pass
@@ -280,10 +286,7 @@ async def get_memory_context(
 
 
 async def apply_post_execution_updates(
-    tenant_id: str,
-    workflow_id: Optional[str],
-    agent_id: Optional[str],
-    simulation_result: Dict[str, Any]
+    tenant_id: str, workflow_id: Optional[str], agent_id: Optional[str], simulation_result: Dict[str, Any]
 ) -> int:
     """
     Apply deterministic post-execution memory updates.
@@ -310,11 +313,7 @@ async def apply_post_execution_updates(
         }
 
         result = await memory_service.set(
-            tenant_id,
-            "costsim:history",
-            history_update,
-            source="costsim_engine",
-            agent_id=agent_id
+            tenant_id, "costsim:history", history_update, source="costsim_engine", agent_id=agent_id
         )
         if result.success:
             updates_applied += 1
@@ -328,11 +327,7 @@ async def apply_post_execution_updates(
             }
 
             result = await memory_service.set(
-                tenant_id,
-                f"workflow:{workflow_id}:state",
-                workflow_update,
-                source="costsim_engine",
-                agent_id=agent_id
+                tenant_id, f"workflow:{workflow_id}:state", workflow_update, source="costsim_engine", agent_id=agent_id
             )
             if result.success:
                 updates_applied += 1
@@ -346,9 +341,7 @@ async def apply_post_execution_updates(
 
 
 async def detect_simulation_drift(
-    baseline_result: Dict[str, Any],
-    memory_result: Dict[str, Any],
-    workflow_id: Optional[str]
+    baseline_result: Dict[str, Any], memory_result: Dict[str, Any], workflow_id: Optional[str]
 ) -> tuple[bool, float]:
     """
     Detect drift between baseline and memory-enabled simulation.
@@ -387,7 +380,10 @@ async def detect_simulation_drift(
         if comparison.drift_detected:
             try:
                 from app.memory.memory_service import MEMORY_DRIFT_DETECTED, MEMORY_DRIFT_SCORE
-                severity = "high" if comparison.drift_score > 0.3 else "medium" if comparison.drift_score > 0.15 else "low"
+
+                severity = (
+                    "high" if comparison.drift_score > 0.3 else "medium" if comparison.drift_score > 0.15 else "low"
+                )
                 MEMORY_DRIFT_DETECTED.labels(tenant_id=workflow_id or "unknown", severity=severity).inc()
                 MEMORY_DRIFT_SCORE.labels(workflow_id=workflow_id or "unknown").set(comparison.drift_score)
             except ImportError:
@@ -446,10 +442,7 @@ async def simulate_v2(request: SimulateRequest):
     - Drift detection between baseline and memory-enabled runs
     """
     # Convert request to plan format (include iterations for cost calculation)
-    plan = [
-        {"skill": step.skill, "params": step.params, "iterations": step.iterations}
-        for step in request.plan
-    ]
+    plan = [{"skill": step.skill, "params": step.params, "iterations": step.iterations} for step in request.plan]
 
     # M7: Determine if memory should be injected
     use_memory = request.inject_memory if request.inject_memory is not None else MEMORY_CONTEXT_INJECTION
@@ -460,9 +453,7 @@ async def simulate_v2(request: SimulateRequest):
     memory_context_keys = []
     if use_memory and _memory_features_enabled:
         memory_context = await get_memory_context(
-            tenant_id=tenant_id,
-            workflow_id=request.workflow_id,
-            agent_id=request.agent_id
+            tenant_id=tenant_id, workflow_id=request.workflow_id, agent_id=request.agent_id
         )
         memory_context_keys = list(memory_context.keys())
         logger.debug(f"Injecting memory context: {memory_context_keys}")
@@ -519,7 +510,9 @@ async def simulate_v2(request: SimulateRequest):
                 "estimated_cost_cents": result.v2_result.estimated_cost_cents,
                 "feasible": result.v2_result.feasible,
                 "step_estimates": result.v2_result.step_estimates,
-                "status": result.v2_result.status.value if hasattr(result.v2_result.status, 'value') else str(result.v2_result.status),
+                "status": result.v2_result.status.value
+                if hasattr(result.v2_result.status, "value")
+                else str(result.v2_result.status),
             }
 
             # Use sync mode for tests - blocks until updates are applied
@@ -530,14 +523,14 @@ async def simulate_v2(request: SimulateRequest):
                     workflow_id=request.workflow_id,
                     request_id=request.run_id,
                     trace_input={"plan": plan, "budget_cents": request.budget_cents},
-                    trace_output=simulation_result
+                    trace_output=simulation_result,
                 )
                 # Also run the existing async update for full coverage
                 updates_applied = await apply_post_execution_updates(
                     tenant_id=tenant_id,
                     workflow_id=request.workflow_id,
                     agent_id=request.agent_id,
-                    simulation_result=simulation_result
+                    simulation_result=simulation_result,
                 )
                 response.memory_updates_applied = updates_applied
             else:
@@ -546,7 +539,7 @@ async def simulate_v2(request: SimulateRequest):
                     tenant_id=tenant_id,
                     workflow_id=request.workflow_id,
                     agent_id=request.agent_id,
-                    simulation_result=simulation_result
+                    simulation_result=simulation_result,
                 )
                 response.memory_updates_applied = updates_applied
 
@@ -564,7 +557,7 @@ async def simulate_v2(request: SimulateRequest):
                     "feasible": result.v2_result.feasible,
                     "step_estimates": result.v2_result.step_estimates,
                 },
-                workflow_id=request.workflow_id
+                workflow_id=request.workflow_id,
             )
             response.drift_detected = drift_detected
             response.drift_score = drift_score
@@ -738,7 +731,8 @@ async def get_canary_reports(
 
 # ============== Dataset Validation Endpoints ==============
 
-from app.costsim.datasets import get_dataset_validator, validate_dataset as validate_ds, validate_all_datasets
+from app.costsim.datasets import get_dataset_validator, validate_all_datasets
+from app.costsim.datasets import validate_dataset as validate_ds
 
 
 class DatasetInfo(BaseModel):

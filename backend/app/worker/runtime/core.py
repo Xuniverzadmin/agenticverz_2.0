@@ -17,19 +17,21 @@ Design principles (from PIN-005):
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Optional, Mapping, Callable, Coroutine, List, Union
-from enum import Enum
+
 import asyncio
-import uuid
-import time
-import json
 import hashlib
+import json
 import logging
+import time
+import uuid
+from dataclasses import asdict, dataclass, field
+from enum import Enum
+from typing import Any, Callable, Coroutine, Dict, List, Mapping, Optional, Union
 
 # M6: Import metrics recording functions
 try:
-    from app.workflow.metrics import record_step_duration, record_cost_simulation_drift
+    from app.workflow.metrics import record_cost_simulation_drift, record_step_duration
+
     METRICS_AVAILABLE = True
 except ImportError:
     METRICS_AVAILABLE = False
@@ -44,31 +46,33 @@ def _canonical_json(obj: Any) -> str:
     Canonical JSON serialization for deterministic outputs.
     Keys sorted, no whitespace, UTF-8.
     """
+
     def _serializer(o: Any) -> Any:
-        if hasattr(o, 'to_dict'):
+        if hasattr(o, "to_dict"):
             return o.to_dict()
-        if hasattr(o, '__dict__'):
+        if hasattr(o, "__dict__"):
             return o.__dict__
         if isinstance(o, Enum):
             return o.value
         raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
 
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'), default=_serializer)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=_serializer)
 
 
 def _content_hash(obj: Any, length: int = 16) -> str:
     """Compute deterministic content hash."""
-    canonical = _canonical_json(obj).encode('utf-8')
+    canonical = _canonical_json(obj).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()[:length]
 
 
 class ErrorCategory(str, Enum):
     """Error categories from M0 error taxonomy."""
-    TRANSIENT = "TRANSIENT"      # Retry might work
-    PERMANENT = "PERMANENT"      # Don't retry
-    RESOURCE = "RESOURCE"        # Budget/rate limit
-    PERMISSION = "PERMISSION"    # Not allowed
-    VALIDATION = "VALIDATION"    # Bad input
+
+    TRANSIENT = "TRANSIENT"  # Retry might work
+    PERMANENT = "PERMANENT"  # Don't retry
+    RESOURCE = "RESOURCE"  # Budget/rate limit
+    PERMISSION = "PERMISSION"  # Not allowed
+    VALIDATION = "VALIDATION"  # Bad input
 
     def is_retryable(self) -> bool:
         """Whether this error category is retryable."""
@@ -97,6 +101,7 @@ class StructuredOutcome:
         - meta.started_at, meta.ended_at, meta.duration_s
         - result (for I/O skills like http_call, llm_invoke)
     """
+
     id: str
     ok: bool
     result: Optional[Any] = None
@@ -129,19 +134,19 @@ class StructuredOutcome:
         return cls(id=call_id, ok=True, result=result, meta=meta or {})
 
     @classmethod
-    def failure(cls, call_id: str, code: str, message: str,
-                category: Union[ErrorCategory, str] = ErrorCategory.PERMANENT,
-                retryable: bool = False,
-                details: Optional[Dict[str, Any]] = None,
-                meta: Optional[Dict[str, Any]] = None) -> "StructuredOutcome":
+    def failure(
+        cls,
+        call_id: str,
+        code: str,
+        message: str,
+        category: Union[ErrorCategory, str] = ErrorCategory.PERMANENT,
+        retryable: bool = False,
+        details: Optional[Dict[str, Any]] = None,
+        meta: Optional[Dict[str, Any]] = None,
+    ) -> "StructuredOutcome":
         """Factory for failed outcome with structured error."""
         cat_value = category.value if isinstance(category, ErrorCategory) else category
-        error = {
-            "code": code,
-            "message": message,
-            "category": cat_value,
-            "retryable": retryable
-        }
+        error = {"code": code, "message": message, "category": cat_value, "retryable": retryable}
         if details:
             error["details"] = details
         return cls(id=call_id, ok=False, error=error, meta=meta or {})
@@ -167,6 +172,7 @@ class SkillDescriptor:
         failure_modes: Known failure mode codes
         constraints: Execution constraints (timeout, limits)
     """
+
     skill_id: str
     name: str
     version: str = "1.0.0"
@@ -199,7 +205,7 @@ class SkillDescriptor:
             "idempotent": self.idempotent,
             "cost_model": self.cost_model,
             "failure_modes": list(self.failure_modes),
-            "constraints": self.constraints
+            "constraints": self.constraints,
         }
 
 
@@ -217,6 +223,7 @@ class ResourceContract:
         max_concurrent: Max concurrent executions
         schema_version: Contract schema version
     """
+
     resource_id: str
     budget_cents: int = 1000
     rate_limit_per_min: int = 60
@@ -230,7 +237,7 @@ class ResourceContract:
             "budget_cents": self.budget_cents,
             "rate_limit_per_min": self.rate_limit_per_min,
             "max_concurrent": self.max_concurrent,
-            "schema_version": self.schema_version
+            "schema_version": self.schema_version,
         }
 
 
@@ -268,11 +275,7 @@ class Runtime:
         self._budget_spent_cents: int = 0
         self._budget_total_cents: int = 1000
 
-    def register_skill(
-        self,
-        descriptor: SkillDescriptor,
-        handler: SkillHandler
-    ) -> None:
+    def register_skill(self, descriptor: SkillDescriptor, handler: SkillHandler) -> None:
         """
         Register a skill with its descriptor and handler.
 
@@ -303,10 +306,7 @@ class Runtime:
         self._resource_contracts[contract.resource_id] = contract
 
     async def execute(
-        self,
-        skill_id: str,
-        inputs: Mapping[str, Any],
-        timeout_s: Optional[float] = None
+        self, skill_id: str, inputs: Mapping[str, Any], timeout_s: Optional[float] = None
     ) -> StructuredOutcome:
         """
         Execute a registered skill under deterministic guards.
@@ -327,7 +327,7 @@ class Runtime:
             "call_id": call_id,
             "skill_id": skill_id,
             "started_at": start_ts,
-            "inputs_hash": hash(frozenset(inputs.items())) if inputs else 0
+            "inputs_hash": hash(frozenset(inputs.items())) if inputs else 0,
         }
 
         # Check if skill exists
@@ -340,7 +340,7 @@ class Runtime:
                 message=f"Skill not found: {skill_id}",
                 category=ErrorCategory.PERMANENT,
                 retryable=False,
-                meta=meta
+                meta=meta,
             )
             self._record_execution(skill_id, inputs, outcome)
             return outcome
@@ -359,7 +359,7 @@ class Runtime:
                 message=f"Budget exceeded: {self._budget_spent_cents}/{self._budget_total_cents} cents",
                 category=ErrorCategory.RESOURCE,
                 retryable=False,
-                meta=meta
+                meta=meta,
             )
             self._record_execution(skill_id, inputs, outcome)
             return outcome
@@ -393,7 +393,7 @@ class Runtime:
                 message=f"Execution timed out after {timeout_s}s",
                 category=ErrorCategory.TRANSIENT,
                 retryable=True,
-                meta=meta
+                meta=meta,
             )
             self._record_execution(skill_id, inputs, outcome)
 
@@ -411,7 +411,7 @@ class Runtime:
                 message=str(exc),
                 category=ErrorCategory.PERMANENT,
                 retryable=False,
-                meta={**meta, "exception_type": type(exc).__name__}
+                meta={**meta, "exception_type": type(exc).__name__},
             )
             self._record_execution(skill_id, inputs, outcome)
 
@@ -434,11 +434,7 @@ class Runtime:
         """
         return self._skill_descriptors.get(skill_id)
 
-    async def query(
-        self,
-        query_type: str,
-        **params: Any
-    ) -> Dict[str, Any]:
+    async def query(self, query_type: str, **params: Any) -> Dict[str, Any]:
         """
         Lightweight query interface for discovery and state.
 
@@ -462,7 +458,7 @@ class Runtime:
             return {
                 "remaining_cents": self._budget_total_cents - self._budget_spent_cents,
                 "spent_cents": self._budget_spent_cents,
-                "total_cents": self._budget_total_cents
+                "total_cents": self._budget_total_cents,
             }
 
         elif query_type == "what_did_i_try_already":
@@ -476,10 +472,7 @@ class Runtime:
             return {"history": history[-10:]}  # Last 10 entries
 
         elif query_type == "allowed_skills":
-            return {
-                "skills": list(self._registry.keys()),
-                "count": len(self._registry)
-            }
+            return {"skills": list(self._registry.keys()), "count": len(self._registry)}
 
         elif query_type == "last_step_outcome":
             if self._execution_history:
@@ -494,11 +487,7 @@ class Runtime:
             all_skills = list(self._skill_descriptors.values())
             # Deterministic shuffle using seed
             matched = sorted(all_skills, key=lambda s: (hash(s.skill_id) + seed) % 1000)
-            return {
-                "goal": goal,
-                "skills": [s.skill_id for s in matched[:5]],
-                "seed": seed
-            }
+            return {"goal": goal, "skills": [s.skill_id for s in matched[:5]], "seed": seed}
 
         else:
             return {
@@ -508,8 +497,8 @@ class Runtime:
                     "what_did_i_try_already",
                     "allowed_skills",
                     "last_step_outcome",
-                    "skills_available_for_goal"
-                ]
+                    "skills_available_for_goal",
+                ],
             }
 
     def get_resource_contract(self, resource_id: str) -> Optional[ResourceContract]:
@@ -526,21 +515,18 @@ class Runtime:
         """
         return self._resource_contracts.get(resource_id)
 
-    def _record_execution(
-        self,
-        skill_id: str,
-        inputs: Mapping[str, Any],
-        outcome: StructuredOutcome
-    ) -> None:
+    def _record_execution(self, skill_id: str, inputs: Mapping[str, Any], outcome: StructuredOutcome) -> None:
         """Record execution for query("what_did_i_try_already")."""
-        self._execution_history.append({
-            "skill_id": skill_id,
-            "inputs_keys": list(inputs.keys()) if inputs else [],
-            "ok": outcome.ok,
-            "error_code": outcome.error.get("code") if outcome.error else None,
-            "call_id": outcome.id,
-            "timestamp": time.time()
-        })
+        self._execution_history.append(
+            {
+                "skill_id": skill_id,
+                "inputs_keys": list(inputs.keys()) if inputs else [],
+                "ok": outcome.ok,
+                "error_code": outcome.error.get("code") if outcome.error else None,
+                "call_id": outcome.id,
+                "timestamp": time.time(),
+            }
+        )
 
     def _record_metrics(
         self,

@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-
 SNAPSHOT_PATH = Path(__file__).parent.parent / "registry_snapshot.json"
 
 
@@ -21,6 +20,7 @@ class TestRegistrySnapshot:
     def load_skills(self):
         """Load all skills before tests."""
         from app.skills import load_all_skills
+
         load_all_skills()
 
     def test_registry_matches_snapshot(self):

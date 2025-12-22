@@ -45,13 +45,13 @@ def add_unsafe_pattern(content: str, pattern: dict) -> str:
     # Find the end of UNSAFE_PATTERNS list
     marker = "]\n\n# Safe patterns"
 
-    new_entry = f'''    # Added: {datetime.now().strftime('%Y-%m-%d')}
+    new_entry = f"""    # Added: {datetime.now().strftime('%Y-%m-%d')}
     {{
         "regex": r"{pattern['regex']}",
         "message": "{pattern['message']}",
         "suggestion": "{pattern['suggestion']}",
     }},
-'''
+"""
 
     return content.replace(marker, new_entry + marker)
 
@@ -80,7 +80,7 @@ def main():
     print("Step 1: Define the UNSAFE pattern to detect")
     print("-" * 40)
     print("Enter the regex pattern that matches the UNSAFE code.")
-    print("Example: r\"session\\.exec\\([^)]+\\)\\.first\\(\\)\\.\\w+\"")
+    print('Example: r"session\\.exec\\([^)]+\\)\\.first\\(\\)\\.\\w+"')
     print()
 
     regex = input("Regex pattern: ").strip()
@@ -89,7 +89,7 @@ def main():
         sys.exit(1)
 
     # Remove r" prefix if user included it
-    regex = regex.strip('r"\'')
+    regex = regex.strip("r\"'")
 
     if not validate_regex(regex):
         sys.exit(1)
@@ -110,7 +110,9 @@ def main():
     print("Step 3: Fix suggestion")
     print("-" * 40)
     print("How should the code be fixed?")
-    print("Example: Extract model first: row = session.exec(stmt).first(); obj = row[0] if row else None")
+    print(
+        "Example: Extract model first: row = session.exec(stmt).first(); obj = row[0] if row else None"
+    )
     print()
 
     suggestion = input("Fix suggestion: ").strip()
@@ -121,7 +123,9 @@ def main():
     print()
     print("Step 4: Safe patterns (optional)")
     print("-" * 40)
-    print("Enter regex patterns that should be WHITELISTED (false positive prevention).")
+    print(
+        "Enter regex patterns that should be WHITELISTED (false positive prevention)."
+    )
     print("Press Enter with empty input when done.")
     print()
 
@@ -130,7 +134,7 @@ def main():
         safe = input("Safe pattern (or Enter to finish): ").strip()
         if not safe:
             break
-        safe = safe.strip('r"\'')
+        safe = safe.strip("r\"'")
         if validate_regex(safe):
             safe_patterns.append(safe)
 
@@ -147,18 +151,21 @@ def main():
     print()
 
     confirm = input("Add this pattern? (y/N): ").strip().lower()
-    if confirm != 'y':
+    if confirm != "y":
         print("Aborted")
         sys.exit(1)
 
     # Update file
     content = read_linter()
 
-    content = add_unsafe_pattern(content, {
-        "regex": regex,
-        "message": message,
-        "suggestion": suggestion,
-    })
+    content = add_unsafe_pattern(
+        content,
+        {
+            "regex": regex,
+            "message": message,
+            "suggestion": suggestion,
+        },
+    )
 
     for safe in safe_patterns:
         content = add_safe_pattern(content, safe)

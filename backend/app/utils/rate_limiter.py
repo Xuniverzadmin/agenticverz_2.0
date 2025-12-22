@@ -61,6 +61,7 @@ class RateLimiter:
         if self._client is None:
             try:
                 import redis
+
                 self._client = redis.from_url(self.redis_url)
                 # Pre-load the Lua script
                 self._script_sha = self._client.script_load(TOKEN_BUCKET_LUA)
@@ -103,10 +104,7 @@ class RateLimiter:
             allowed = bool(result)
 
             if not allowed:
-                logger.warning(
-                    "rate_limited",
-                    extra={"key": key, "rate_per_min": rate_per_min}
-                )
+                logger.warning("rate_limited", extra={"key": key, "rate_per_min": rate_per_min})
 
             return allowed
 

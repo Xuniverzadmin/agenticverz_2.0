@@ -12,15 +12,16 @@ Each stage:
 Stages execute in governance order (SAFETY -> PRIVACY -> OPERATIONAL -> ROUTING -> CUSTOM)
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Callable
-from enum import Enum, auto
-from datetime import datetime, timezone
 import hashlib
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum, auto
+from typing import Any, Dict, List, Optional
 
 
 class StageStatus(Enum):
     """Status of an execution stage."""
+
     PENDING = auto()
     RUNNING = auto()
     COMPLETED = auto()
@@ -35,16 +36,18 @@ class StageCategory(str, Enum):
 
     Execution order: SAFETY -> PRIVACY -> OPERATIONAL -> ROUTING -> CUSTOM
     """
-    SAFETY = "SAFETY"           # Pre-flight checks
-    PRIVACY = "PRIVACY"         # Data handling
-    OPERATIONAL = "OPERATIONAL" # Core business logic
-    ROUTING = "ROUTING"         # Agent selection
-    CUSTOM = "CUSTOM"           # Custom stages
+
+    SAFETY = "SAFETY"  # Pre-flight checks
+    PRIVACY = "PRIVACY"  # Data handling
+    OPERATIONAL = "OPERATIONAL"  # Core business logic
+    ROUTING = "ROUTING"  # Agent selection
+    CUSTOM = "CUSTOM"  # Custom stages
 
 
 @dataclass
 class StageResult:
     """Result of a single stage execution."""
+
     stage_id: str
     status: StageStatus
     outputs: Dict[str, Any] = field(default_factory=dict)
@@ -68,6 +71,7 @@ class ExecutionStage:
     - M17: CARE routing (complexity-based agent selection)
     - M19: Policy governance (pre/post validation)
     """
+
     id: str
     name: str
     category: StageCategory
@@ -110,6 +114,7 @@ class ExecutionPlan:
     - M19: Governance validation
     - M9/M10: Failure patterns & recovery
     """
+
     plan_id: str = ""
     name: str = "Business Builder"
     version: str = "0.2"
@@ -218,18 +223,15 @@ class ExecutionPlan:
             "seed": self.seed,
             "version": self.version,
             "stages": [s.id for s in self.stages],
-            "brand_context_hash": hashlib.sha256(
-                str(self.brand_context).encode()
-            ).hexdigest()[:16],
-            "request_context_hash": hashlib.sha256(
-                str(self.request_context).encode()
-            ).hexdigest()[:16],
+            "brand_context_hash": hashlib.sha256(str(self.brand_context).encode()).hexdigest()[:16],
+            "request_context_hash": hashlib.sha256(str(self.request_context).encode()).hexdigest()[:16],
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
     def to_yaml(self) -> str:
         """Serialize plan to YAML for storage/replay."""
         import yaml
+
         data = {
             "plan_id": self.plan_id,
             "name": self.name,
@@ -259,23 +261,26 @@ class ExecutionPlan:
     def from_yaml(cls, yaml_str: str) -> "ExecutionPlan":
         """Load plan from YAML."""
         import yaml
+
         data = yaml.safe_load(yaml_str)
 
         stages = []
         for s in data.get("stages", []):
-            stages.append(ExecutionStage(
-                id=s["id"],
-                name=s["name"],
-                category=StageCategory(s["category"]),
-                description=s.get("description", ""),
-                primary_agent=s["primary_agent"],
-                fallback_agents=s.get("fallback_agents", []),
-                inputs=s.get("inputs", []),
-                outputs=s.get("outputs", []),
-                difficulty=s.get("difficulty", "medium"),
-                risk_policy=s.get("risk_policy", "balanced"),
-                requires_brand_check=s.get("requires_brand_check", False),
-            ))
+            stages.append(
+                ExecutionStage(
+                    id=s["id"],
+                    name=s["name"],
+                    category=StageCategory(s["category"]),
+                    description=s.get("description", ""),
+                    primary_agent=s["primary_agent"],
+                    fallback_agents=s.get("fallback_agents", []),
+                    inputs=s.get("inputs", []),
+                    outputs=s.get("outputs", []),
+                    difficulty=s.get("difficulty", "medium"),
+                    risk_policy=s.get("risk_policy", "balanced"),
+                    requires_brand_check=s.get("requires_brand_check", False),
+                )
+            )
 
         return cls(
             plan_id=data.get("plan_id", ""),
@@ -311,133 +316,153 @@ def create_business_builder_plan(
     )
 
     # Stage 1: Pre-flight validation (SAFETY)
-    plan.add_stage(ExecutionStage(
-        id="preflight",
-        name="Pre-flight Validation",
-        category=StageCategory.SAFETY,
-        description="Validate inputs and check constraints before execution",
-        primary_agent="validator_agent",
-        outputs=["validation_result", "constraint_flags"],
-        difficulty="low",
-        risk_policy="strict",
-        pre_policies=["budget_check", "forbidden_claims_check"],
-        timeout_seconds=60,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="preflight",
+            name="Pre-flight Validation",
+            category=StageCategory.SAFETY,
+            description="Validate inputs and check constraints before execution",
+            primary_agent="validator_agent",
+            outputs=["validation_result", "constraint_flags"],
+            difficulty="low",
+            risk_policy="strict",
+            pre_policies=["budget_check", "forbidden_claims_check"],
+            timeout_seconds=60,
+        )
+    )
 
     # Stage 2: Market Research (OPERATIONAL)
-    plan.add_stage(ExecutionStage(
-        id="research",
-        name="Market Research",
-        category=StageCategory.OPERATIONAL,
-        description="Gather market intelligence and competitor analysis",
-        primary_agent="researcher_agent",
-        fallback_agents=["basic_researcher_agent"],
-        inputs=["validation_result"],
-        outputs=["market_report", "competitor_matrix", "trend_analysis"],
-        difficulty="high",
-        risk_policy="balanced",
-        requires_brand_check=False,  # Research is objective
-        timeout_seconds=300,
-        budget_tokens=10000,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="research",
+            name="Market Research",
+            category=StageCategory.OPERATIONAL,
+            description="Gather market intelligence and competitor analysis",
+            primary_agent="researcher_agent",
+            fallback_agents=["basic_researcher_agent"],
+            inputs=["validation_result"],
+            outputs=["market_report", "competitor_matrix", "trend_analysis"],
+            difficulty="high",
+            risk_policy="balanced",
+            requires_brand_check=False,  # Research is objective
+            timeout_seconds=300,
+            budget_tokens=10000,
+        )
+    )
 
     # Stage 3: Strategy Development (OPERATIONAL)
-    plan.add_stage(ExecutionStage(
-        id="strategy",
-        name="Strategy Development",
-        category=StageCategory.OPERATIONAL,
-        description="Develop positioning and brand strategy",
-        primary_agent="strategist_agent",
-        inputs=["market_report", "competitor_matrix"],
-        outputs=["positioning", "messaging_framework", "tone_guidelines"],
-        difficulty="high",
-        risk_policy="balanced",
-        requires_brand_check=True,  # Must align with brand
-        post_policies=["brand_alignment_check"],
-        timeout_seconds=300,
-        budget_tokens=8000,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="strategy",
+            name="Strategy Development",
+            category=StageCategory.OPERATIONAL,
+            description="Develop positioning and brand strategy",
+            primary_agent="strategist_agent",
+            inputs=["market_report", "competitor_matrix"],
+            outputs=["positioning", "messaging_framework", "tone_guidelines"],
+            difficulty="high",
+            risk_policy="balanced",
+            requires_brand_check=True,  # Must align with brand
+            post_policies=["brand_alignment_check"],
+            timeout_seconds=300,
+            budget_tokens=8000,
+        )
+    )
 
     # Stage 4: Copy Generation (OPERATIONAL)
-    plan.add_stage(ExecutionStage(
-        id="copy",
-        name="Copy Generation",
-        category=StageCategory.OPERATIONAL,
-        description="Generate landing page copy, blogs, and marketing content",
-        primary_agent="copywriter_agent",
-        fallback_agents=["basic_copywriter_agent"],
-        inputs=["positioning", "messaging_framework", "tone_guidelines"],
-        outputs=["landing_copy", "blog_drafts", "email_sequence", "social_copy"],
-        difficulty="medium",
-        risk_policy="balanced",
-        requires_brand_check=True,
-        pre_policies=["tone_check"],
-        post_policies=["forbidden_claims_check", "brand_drift_check"],
-        timeout_seconds=300,
-        budget_tokens=12000,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="copy",
+            name="Copy Generation",
+            category=StageCategory.OPERATIONAL,
+            description="Generate landing page copy, blogs, and marketing content",
+            primary_agent="copywriter_agent",
+            fallback_agents=["basic_copywriter_agent"],
+            inputs=["positioning", "messaging_framework", "tone_guidelines"],
+            outputs=["landing_copy", "blog_drafts", "email_sequence", "social_copy"],
+            difficulty="medium",
+            risk_policy="balanced",
+            requires_brand_check=True,
+            pre_policies=["tone_check"],
+            post_policies=["forbidden_claims_check", "brand_drift_check"],
+            timeout_seconds=300,
+            budget_tokens=12000,
+        )
+    )
 
     # Stage 5: UX/Layout Generation (OPERATIONAL)
-    plan.add_stage(ExecutionStage(
-        id="ux",
-        name="UX Layout Generation",
-        category=StageCategory.OPERATIONAL,
-        description="Generate HTML/CSS landing page structure",
-        primary_agent="ux_agent",
-        inputs=["landing_copy", "positioning"],
-        outputs=["landing_html", "landing_css", "component_map"],
-        difficulty="medium",
-        risk_policy="balanced",
-        requires_brand_check=True,
-        timeout_seconds=180,
-        budget_tokens=5000,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="ux",
+            name="UX Layout Generation",
+            category=StageCategory.OPERATIONAL,
+            description="Generate HTML/CSS landing page structure",
+            primary_agent="ux_agent",
+            inputs=["landing_copy", "positioning"],
+            outputs=["landing_html", "landing_css", "component_map"],
+            difficulty="medium",
+            risk_policy="balanced",
+            requires_brand_check=True,
+            timeout_seconds=180,
+            budget_tokens=5000,
+        )
+    )
 
     # Stage 6: Consistency Check (ROUTING)
-    plan.add_stage(ExecutionStage(
-        id="consistency",
-        name="Consistency Check",
-        category=StageCategory.ROUTING,
-        description="Validate consistency across all outputs",
-        primary_agent="strategist_agent",
-        inputs=["landing_copy", "landing_html", "blog_drafts", "positioning"],
-        outputs=["consistency_score", "violations", "corrections"],
-        difficulty="medium",
-        risk_policy="strict",
-        requires_brand_check=True,
-        post_policies=["consistency_threshold"],
-        timeout_seconds=120,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="consistency",
+            name="Consistency Check",
+            category=StageCategory.ROUTING,
+            description="Validate consistency across all outputs",
+            primary_agent="strategist_agent",
+            inputs=["landing_copy", "landing_html", "blog_drafts", "positioning"],
+            outputs=["consistency_score", "violations", "corrections"],
+            difficulty="medium",
+            risk_policy="strict",
+            requires_brand_check=True,
+            post_policies=["consistency_threshold"],
+            timeout_seconds=120,
+        )
+    )
 
     # Stage 7: Recovery/Normalization (ROUTING)
-    plan.add_stage(ExecutionStage(
-        id="recovery",
-        name="Recovery & Normalization",
-        category=StageCategory.ROUTING,
-        description="Apply corrections from consistency check",
-        primary_agent="recovery_agent",
-        inputs=["consistency_score", "violations", "corrections"],
-        outputs=["normalized_copy", "normalized_html", "recovery_log"],
-        difficulty="low",
-        risk_policy="strict",
-        timeout_seconds=120,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="recovery",
+            name="Recovery & Normalization",
+            category=StageCategory.ROUTING,
+            description="Apply corrections from consistency check",
+            primary_agent="recovery_agent",
+            inputs=["consistency_score", "violations", "corrections"],
+            outputs=["normalized_copy", "normalized_html", "recovery_log"],
+            difficulty="low",
+            risk_policy="strict",
+            timeout_seconds=120,
+        )
+    )
 
     # Stage 8: Bundle Packaging (CUSTOM)
-    plan.add_stage(ExecutionStage(
-        id="bundle",
-        name="Bundle Packaging",
-        category=StageCategory.CUSTOM,
-        description="Package all artifacts into final bundle",
-        primary_agent="governor_agent",
-        inputs=[
-            "market_report", "positioning", "normalized_copy",
-            "normalized_html", "blog_drafts", "recovery_log"
-        ],
-        outputs=["bundle_zip", "cost_report", "replay_token"],
-        difficulty="low",
-        risk_policy="balanced",
-        timeout_seconds=60,
-    ))
+    plan.add_stage(
+        ExecutionStage(
+            id="bundle",
+            name="Bundle Packaging",
+            category=StageCategory.CUSTOM,
+            description="Package all artifacts into final bundle",
+            primary_agent="governor_agent",
+            inputs=[
+                "market_report",
+                "positioning",
+                "normalized_copy",
+                "normalized_html",
+                "blog_drafts",
+                "recovery_log",
+            ],
+            outputs=["bundle_zip", "cost_report", "replay_token"],
+            difficulty="low",
+            risk_policy="balanced",
+            timeout_seconds=60,
+        )
+    )
 
     return plan

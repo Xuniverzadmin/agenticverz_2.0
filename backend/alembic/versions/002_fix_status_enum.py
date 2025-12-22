@@ -20,8 +20,6 @@ used by the workflow engine:
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision: str = "002_fix_status_enum"
@@ -35,7 +33,8 @@ def upgrade() -> None:
     op.execute("ALTER TABLE workflow_checkpoints DROP CONSTRAINT IF EXISTS ck_valid_status")
 
     # Add new constraint with all valid statuses
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE workflow_checkpoints
         ADD CONSTRAINT ck_valid_status
         CHECK (status IN (
@@ -50,7 +49,8 @@ def upgrade() -> None:
             'policy_violation',
             'sandbox_rejected'
         ))
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
@@ -58,8 +58,10 @@ def downgrade() -> None:
     op.execute("ALTER TABLE workflow_checkpoints DROP CONSTRAINT IF EXISTS ck_valid_status")
 
     # Restore old constraint
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE workflow_checkpoints
         ADD CONSTRAINT ck_valid_status
         CHECK (status IN ('running', 'completed', 'failed', 'aborted', 'paused', 'timeout'))
-    """)
+    """
+    )

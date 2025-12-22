@@ -13,19 +13,19 @@ Features:
 """
 
 from __future__ import annotations
+
 import hashlib
 import json
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
-from pathlib import Path
-
 import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
 _runtime_path = str(Path(__file__).parent.parent.parent / "worker" / "runtime")
 if _runtime_path not in sys.path:
     sys.path.insert(0, _runtime_path)
 
 from core import SkillDescriptor
-
 
 # Descriptor for http_call stub
 HTTP_CALL_STUB_DESCRIPTOR = SkillDescriptor(
@@ -34,33 +34,27 @@ HTTP_CALL_STUB_DESCRIPTOR = SkillDescriptor(
     version="1.0.0-stub",
     inputs_schema_version="1.0",
     outputs_schema_version="1.0",
-    stable_fields={
-        "status": "DETERMINISTIC",
-        "headers": "DETERMINISTIC",
-        "body_hash": "DETERMINISTIC"
-    },
-    cost_model={
-        "base_cents": 0,
-        "per_kb_cents": 0
-    },
+    stable_fields={"status": "DETERMINISTIC", "headers": "DETERMINISTIC", "body_hash": "DETERMINISTIC"},
+    cost_model={"base_cents": 0, "per_kb_cents": 0},
     failure_modes=[
         {"code": "ERR_TIMEOUT", "category": "TRANSIENT", "typical_cause": "slow server"},
         {"code": "ERR_DNS_FAILURE", "category": "TRANSIENT", "typical_cause": "network issue"},
         {"code": "ERR_HTTP_4XX", "category": "PERMANENT", "typical_cause": "bad request"},
         {"code": "ERR_HTTP_5XX", "category": "TRANSIENT", "typical_cause": "server error"},
-        {"code": "ERR_CONNECTION_REFUSED", "category": "TRANSIENT", "typical_cause": "server down"}
+        {"code": "ERR_CONNECTION_REFUSED", "category": "TRANSIENT", "typical_cause": "server down"},
     ],
     constraints={
         "blocked_hosts": ["localhost", "127.0.0.1", "169.254.169.254"],
         "max_response_bytes": 10485760,
-        "timeout_ms": 30000
-    }
+        "timeout_ms": 30000,
+    },
 )
 
 
 @dataclass
 class MockResponse:
     """Configurable mock response for http_call stub."""
+
     status_code: int = 200
     headers: Dict[str, str] = field(default_factory=dict)
     body: Any = None
@@ -81,13 +75,13 @@ class HttpCallStub:
         ))
         result = await stub.execute({"url": "https://api.example.com/data"})
     """
+
     # URL pattern -> response mapping
     responses: Dict[str, MockResponse] = field(default_factory=dict)
     # Default response for unmatched URLs
-    default_response: MockResponse = field(default_factory=lambda: MockResponse(
-        status_code=200,
-        body={"stub": True, "message": "Default stub response"}
-    ))
+    default_response: MockResponse = field(
+        default_factory=lambda: MockResponse(status_code=200, body={"stub": True, "message": "Default stub response"})
+    )
     # Record of calls for verification
     call_history: List[Dict[str, Any]] = field(default_factory=list)
 
@@ -99,7 +93,7 @@ class HttpCallStub:
                 headers=response.get("headers", {}),
                 body=response.get("body"),
                 latency_ms=response.get("latency_ms", 50),
-                error=response.get("error")
+                error=response.get("error"),
             )
         self.responses[url_pattern] = response
 
@@ -139,12 +133,7 @@ class HttpCallStub:
         request_body = inputs.get("body")
 
         # Record call
-        self.call_history.append({
-            "url": url,
-            "method": method,
-            "headers": request_headers,
-            "body": request_body
-        })
+        self.call_history.append({"url": url, "method": method, "headers": request_headers, "body": request_body})
 
         # Find matching response
         response = self._find_response(url)
@@ -157,16 +146,12 @@ class HttpCallStub:
         # Build deterministic response
         result = {
             "status_code": response.status_code,
-            "headers": {
-                "content-type": "application/json",
-                "x-stub": "true",
-                **response.headers
-            },
+            "headers": {"content-type": "application/json", "x-stub": "true", **response.headers},
             "body": response.body,
             "body_hash": self._compute_body_hash(response.body),
             "latency_ms": response.latency_ms,
             "url": url,
-            "method": method
+            "method": method,
         }
 
         return result

@@ -43,6 +43,7 @@ logger = logging.getLogger("nova.jobs.storage")
 # Vault Integration - Load R2 Secrets
 # =============================================================================
 
+
 def _load_r2_secrets_from_vault() -> Dict[str, str]:
     """
     Load R2 credentials from HashiCorp Vault.
@@ -111,40 +112,30 @@ os.makedirs(LOCAL_FALLBACK_DIR, exist_ok=True)
 R2_UPLOAD_ATTEMPTS = Counter(
     "failure_agg_r2_upload_attempt_total",
     "Total R2 upload attempts",
-    ["status"]  # uploaded, fallback_local, error
+    ["status"],  # uploaded, fallback_local, error
 )
 
 R2_UPLOAD_DURATION = Histogram(
     "failure_agg_r2_upload_duration_seconds",
     "R2 upload duration in seconds",
-    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0]
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0],
 )
 
-R2_UPLOAD_FALLBACK = Counter(
-    "failure_agg_r2_upload_fallback_total",
-    "Total uploads that fell back to local storage"
-)
+R2_UPLOAD_FALLBACK = Counter("failure_agg_r2_upload_fallback_total", "Total uploads that fell back to local storage")
 
-R2_RETRY_SUCCESS = Counter(
-    "failure_agg_r2_retry_success_total",
-    "Uploads that succeeded after retry"
-)
+R2_RETRY_SUCCESS = Counter("failure_agg_r2_retry_success_total", "Uploads that succeeded after retry")
 
-R2_UPLOAD_BYTES = Counter(
-    "failure_agg_r2_upload_bytes_total",
-    "Total bytes uploaded to R2"
-)
+R2_UPLOAD_BYTES = Counter("failure_agg_r2_upload_bytes_total", "Total bytes uploaded to R2")
 
 # =============================================================================
 # S3 Client Factory
 # =============================================================================
 
+
 def make_s3_client():
     """Create S3-compatible client for Cloudflare R2."""
     if not all([R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY]):
-        raise ValueError(
-            "R2 configuration incomplete. Required: R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY"
-        )
+        raise ValueError("R2 configuration incomplete. Required: R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY")
 
     return boto3.client(
         "s3",
@@ -154,24 +145,20 @@ def make_s3_client():
         region_name="auto",  # Required for Cloudflare R2
         config=Config(
             signature_version="s3v4",
-            retries={"max_attempts": 0}  # We handle retries ourselves
+            retries={"max_attempts": 0},  # We handle retries ourselves
         ),
     )
 
 
 def is_r2_configured() -> bool:
     """Check if R2 storage is properly configured."""
-    return all([
-        R2_ENDPOINT,
-        R2_ACCESS_KEY_ID,
-        R2_SECRET_ACCESS_KEY,
-        R2_BUCKET
-    ])
+    return all([R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET])
 
 
 # =============================================================================
 # Utility Functions
 # =============================================================================
+
 
 def sha256_bytes(data: bytes) -> str:
     """Compute SHA256 hash of bytes."""
@@ -197,17 +184,14 @@ def generate_object_key(prefix: Optional[str] = None) -> str:
 # Core Upload Functions
 # =============================================================================
 
+
 @retry(
     stop=stop_after_attempt(MAX_RETRIES),
     wait=wait_exponential(multiplier=0.5, min=1, max=10),
     retry=retry_if_exception_type(ClientError),
-    reraise=True
+    reraise=True,
 )
-def upload_to_r2_bytes(
-    key: str,
-    payload_bytes: bytes,
-    content_type: str = "application/json"
-) -> Dict[str, Any]:
+def upload_to_r2_bytes(key: str, payload_bytes: bytes, content_type: str = "application/json") -> Dict[str, Any]:
     """
     Upload bytes to R2 with retry logic.
 
@@ -235,7 +219,7 @@ def upload_to_r2_bytes(
             "sha256": checksum,
             "uploaded_by": "failure_aggregation_job",
             "upload_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }
+        },
     )
 
     # Verify upload with HEAD request
@@ -272,6 +256,7 @@ def write_local_fallback(payload_bytes: bytes, filename: str) -> str:
 # =============================================================================
 # Main Entry Point
 # =============================================================================
+
 
 def write_candidate_json_and_upload(
     payload: Dict[str, Any],
@@ -447,6 +432,7 @@ def retry_local_fallback(file_path: str, prefix: Optional[str] = None) -> Dict[s
 # Database Recording
 # =============================================================================
 
+
 def _record_export_to_db(
     s3_key: str,
     size_bytes: int,
@@ -456,24 +442,30 @@ def _record_export_to_db(
 ) -> None:
     """Record export to failure_pattern_exports table."""
     try:
-        from app.db import engine
         from sqlmodel import Session, text
 
-        query = text("""
+        from app.db import engine
+
+        query = text(
+            """
             INSERT INTO failure_pattern_exports
             (s3_key, size_bytes, sha256, status, uploader, notes)
             VALUES (:s3_key, :size_bytes, :sha256, :status, :uploader, :notes)
-        """)
+        """
+        )
 
         with Session(engine) as session:
-            session.execute(query, {
-                "s3_key": s3_key,
-                "size_bytes": size_bytes,
-                "sha256": sha256,
-                "status": status,
-                "uploader": "failure_aggregation_job",
-                "notes": notes,
-            })
+            session.execute(
+                query,
+                {
+                    "s3_key": s3_key,
+                    "size_bytes": size_bytes,
+                    "sha256": sha256,
+                    "status": status,
+                    "uploader": "failure_aggregation_job",
+                    "notes": notes,
+                },
+            )
             session.commit()
 
     except Exception as e:
@@ -488,22 +480,27 @@ def _update_export_status(
 ) -> None:
     """Update export status after retry."""
     try:
-        from app.db import engine
         from sqlmodel import Session, text
 
+        from app.db import engine
+
         if new_s3_key:
-            query = text("""
+            query = text(
+                """
                 UPDATE failure_pattern_exports
                 SET status = :status, s3_key = :new_key, uploaded_at = now()
                 WHERE s3_key = :original_key
-            """)
+            """
+            )
             params = {"status": new_status, "new_key": new_s3_key, "original_key": original_key}
         else:
-            query = text("""
+            query = text(
+                """
                 UPDATE failure_pattern_exports
                 SET status = :status
                 WHERE s3_key = :original_key
-            """)
+            """
+            )
             params = {"status": new_status, "original_key": original_key}
 
         with Session(engine) as session:
@@ -518,6 +515,7 @@ def _update_export_status(
 # =============================================================================
 # Verification Utilities
 # =============================================================================
+
 
 def verify_r2_object(key: str) -> Dict[str, Any]:
     """
@@ -576,11 +574,13 @@ def list_r2_objects(
 
         objects = []
         for obj in response.get("Contents", []):
-            objects.append({
-                "key": obj["Key"],
-                "size": obj["Size"],
-                "last_modified": obj["LastModified"].isoformat(),
-            })
+            objects.append(
+                {
+                    "key": obj["Key"],
+                    "size": obj["Size"],
+                    "last_modified": obj["LastModified"].isoformat(),
+                }
+            )
 
         return {
             "bucket": R2_BUCKET,

@@ -9,14 +9,13 @@
 
 import logging
 import os
-import json
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
-from uuid import uuid4
 from enum import Enum
+from typing import Dict, List, Optional
+from uuid import uuid4
 
-from pydantic import BaseModel, Field
 import redis.asyncio as redis_async
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger("nova.routing.feedback")
 
@@ -26,27 +25,29 @@ logger = logging.getLogger("nova.routing.feedback")
 # =============================================================================
 
 # SLA settings
-DEFAULT_SLA_TARGET = 0.95           # 95% success rate
-CRITICAL_SLA_WEIGHT = 2.0           # Critical tasks weighted 2x
-HIGH_SLA_WEIGHT = 1.5               # High priority weighted 1.5x
-NORMAL_SLA_WEIGHT = 1.0             # Normal priority
+DEFAULT_SLA_TARGET = 0.95  # 95% success rate
+CRITICAL_SLA_WEIGHT = 2.0  # Critical tasks weighted 2x
+HIGH_SLA_WEIGHT = 1.5  # High priority weighted 1.5x
+NORMAL_SLA_WEIGHT = 1.0  # Normal priority
 
 # Complexity weights
-COMPLEXITY_SIMPLE = 0.8             # Simple tasks easier to satisfy
-COMPLEXITY_MODERATE = 1.0           # Default
-COMPLEXITY_COMPLEX = 1.3            # Complex tasks harder
+COMPLEXITY_SIMPLE = 0.8  # Simple tasks easier to satisfy
+COMPLEXITY_MODERATE = 1.0  # Default
+COMPLEXITY_COMPLEX = 1.3  # Complex tasks harder
 
 # Batch settings
-BATCH_WINDOW = 3600                 # 1 hour window for batch processing
-MIN_SAMPLES_FOR_LEARNING = 10       # Minimum samples for batch learning
+BATCH_WINDOW = 3600  # 1 hour window for batch processing
+MIN_SAMPLES_FOR_LEARNING = 10  # Minimum samples for batch learning
 
 
 # =============================================================================
 # Enums
 # =============================================================================
 
+
 class TaskPriority(str, Enum):
     """Task priority levels for SLA weighting."""
+
     CRITICAL = "critical"
     HIGH = "high"
     NORMAL = "normal"
@@ -55,6 +56,7 @@ class TaskPriority(str, Enum):
 
 class TaskComplexity(str, Enum):
     """Task complexity for scoring adjustment."""
+
     SIMPLE = "simple"
     MODERATE = "moderate"
     COMPLEX = "complex"
@@ -62,16 +64,19 @@ class TaskComplexity(str, Enum):
 
 class FeedbackDirection(str, Enum):
     """Direction of feedback in the loop."""
-    CARE_TO_SBA = "care_to_sba"    # Routing outcome → Evolution
-    SBA_TO_CARE = "sba_to_care"    # Strategy adjustment → Routing
+
+    CARE_TO_SBA = "care_to_sba"  # Routing outcome → Evolution
+    SBA_TO_CARE = "sba_to_care"  # Strategy adjustment → Routing
 
 
 # =============================================================================
 # Models
 # =============================================================================
 
+
 class RoutingOutcomeSignal(BaseModel):
     """Signal from CARE-L to SBA Evolution."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     agent_id: str
     task_id: str
@@ -98,6 +103,7 @@ class RoutingOutcomeSignal(BaseModel):
 
 class StrategyAdjustmentSignal(BaseModel):
     """Signal from SBA Evolution to CARE-L."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     agent_id: str
 
@@ -107,7 +113,7 @@ class StrategyAdjustmentSignal(BaseModel):
     new_fulfillment: float
 
     # Impact on routing
-    reputation_delta: float = 0.0   # How much to adjust reputation
+    reputation_delta: float = 0.0  # How much to adjust reputation
     capability_changes: List[str] = Field(default_factory=list)  # New/removed capabilities
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -115,12 +121,13 @@ class StrategyAdjustmentSignal(BaseModel):
 
 class SLAScore(BaseModel):
     """SLA-aware score for an agent."""
+
     agent_id: str
-    raw_score: float                # Base reputation score
-    sla_adjusted_score: float       # After SLA weighting
-    sla_target: float               # Target SLA
-    current_sla: float              # Current SLA achievement
-    sla_gap: float                  # How far from target
+    raw_score: float  # Base reputation score
+    sla_adjusted_score: float  # After SLA weighting
+    sla_target: float  # Target SLA
+    current_sla: float  # Current SLA achievement
+    sla_gap: float  # How far from target
 
     # Breakdown
     critical_success_rate: float = 1.0
@@ -132,6 +139,7 @@ class SLAScore(BaseModel):
 
 class BatchLearningResult(BaseModel):
     """Result of batch learning process."""
+
     batch_id: str = Field(default_factory=lambda: str(uuid4()))
     window_start: datetime
     window_end: datetime
@@ -154,6 +162,7 @@ class BatchLearningResult(BaseModel):
 # Feedback Loop Engine
 # =============================================================================
 
+
 class FeedbackLoop:
     """
     Bidirectional feedback loop between CARE-L and SBA Evolution.
@@ -171,7 +180,7 @@ class FeedbackLoop:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis_async.Redis] = None
 
         # In-memory buffers
@@ -237,16 +246,19 @@ class FeedbackLoop:
         if r:
             try:
                 key = f"feedback:outcome:{signal.id}"
-                await r.hset(key, mapping={
-                    "agent_id": agent_id,
-                    "task_id": task_id,
-                    "success": str(success),
-                    "latency_ms": str(latency_ms),
-                    "error_type": error_type or "",
-                    "task_priority": task_priority.value,
-                    "task_complexity": task_complexity.value,
-                    "created_at": signal.created_at.isoformat(),
-                })
+                await r.hset(
+                    key,
+                    mapping={
+                        "agent_id": agent_id,
+                        "task_id": task_id,
+                        "success": str(success),
+                        "latency_ms": str(latency_ms),
+                        "error_type": error_type or "",
+                        "task_priority": task_priority.value,
+                        "task_complexity": task_complexity.value,
+                        "created_at": signal.created_at.isoformat(),
+                    },
+                )
                 await r.expire(key, BATCH_WINDOW * 2)
 
                 # Add to batch queue
@@ -266,7 +278,7 @@ class FeedbackLoop:
                 "task_id": task_id,
                 "success": success,
                 "priority": task_priority.value,
-            }
+            },
         )
 
         return signal
@@ -330,14 +342,17 @@ class FeedbackLoop:
         if r:
             try:
                 key = f"feedback:adjustment:{signal.id}"
-                await r.hset(key, mapping={
-                    "agent_id": agent_id,
-                    "adjustment_type": adjustment_type,
-                    "old_fulfillment": str(old_fulfillment),
-                    "new_fulfillment": str(new_fulfillment),
-                    "reputation_delta": str(reputation_delta),
-                    "created_at": signal.created_at.isoformat(),
-                })
+                await r.hset(
+                    key,
+                    mapping={
+                        "agent_id": agent_id,
+                        "adjustment_type": adjustment_type,
+                        "old_fulfillment": str(old_fulfillment),
+                        "new_fulfillment": str(new_fulfillment),
+                        "reputation_delta": str(reputation_delta),
+                        "created_at": signal.created_at.isoformat(),
+                    },
+                )
                 await r.expire(key, BATCH_WINDOW * 2)
             except Exception as e:
                 logger.debug(f"Redis error recording adjustment: {e}")
@@ -348,7 +363,7 @@ class FeedbackLoop:
                 "agent_id": agent_id,
                 "adjustment_type": adjustment_type,
                 "reputation_delta": reputation_delta,
-            }
+            },
         )
 
         return signal
@@ -448,7 +463,7 @@ class FeedbackLoop:
 
         # Penalize for SLA gap
         adjustment = 1.0 - (sla_score.sla_gap * 0.5)  # 50% of gap affects reputation
-        adjustment = max(0.5, min(1.5, adjustment))   # Cap adjustment
+        adjustment = max(0.5, min(1.5, adjustment))  # Cap adjustment
 
         return base_reputation * adjustment
 
@@ -511,8 +526,7 @@ class FeedbackLoop:
 
             # Identify weak domains (< 70% success)
             weak_domains = [
-                d for d, results in domain_success.items()
-                if len(results) >= 3 and sum(results) / len(results) < 0.7
+                d for d, results in domain_success.items() if len(results) >= 3 and sum(results) / len(results) < 0.7
             ]
 
             if weak_domains:
@@ -531,7 +545,7 @@ class FeedbackLoop:
             result.parameter_adjustments["confidence_fallback"] = 0.02  # Increase
         elif overall_success > 0.95:
             # Very high success, can loosen thresholds
-            result.parameter_adjustments["confidence_block"] = -0.02   # Decrease
+            result.parameter_adjustments["confidence_block"] = -0.02  # Decrease
 
         # Check for fallback effectiveness
         fallback_outcomes = [o for o in outcomes if o.was_fallback]
@@ -547,7 +561,7 @@ class FeedbackLoop:
                 "success_rate": overall_success,
                 "adjustments": len(result.parameter_adjustments),
                 "reputation_updates": len(result.reputation_updates),
-            }
+            },
         )
 
         return result
@@ -600,7 +614,7 @@ class FeedbackLoop:
                     "weak_agent": weak_agent_id,
                     "capability": capability,
                     "recommended_agent": best[0],
-                }
+                },
             )
             return best[0]
 

@@ -9,13 +9,10 @@ Provides operational visibility into:
 - Registry state
 """
 
-import hashlib
-import json
-import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
 
 router = APIRouter(tags=["health"])
 
@@ -44,7 +41,7 @@ def report_drift(workflow_name: str, expected: str, actual: str):
         "workflow": workflow_name,
         "expected_hash": expected,
         "actual_hash": actual,
-        "detected_at": datetime.now(timezone.utc).isoformat()
+        "detected_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -61,7 +58,7 @@ async def health_check() -> Dict[str, Any]:
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "service": "aos-backend",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 
@@ -75,15 +72,12 @@ async def readiness_check() -> Dict[str, Any]:
     - Redis connectivity
     - Essential services
     """
-    checks = {
-        "database": "unknown",
-        "redis": "unknown",
-        "skills": "unknown"
-    }
+    checks = {"database": "unknown", "redis": "unknown", "skills": "unknown"}
 
     # Check skills registry
     try:
         from app.skills import list_skills
+
         skills = list_skills()
         checks["skills"] = f"ok ({len(skills)} registered)"
     except Exception as e:
@@ -92,11 +86,7 @@ async def readiness_check() -> Dict[str, Any]:
     # Overall status
     all_ok = all("ok" in str(v) or v == "unknown" for v in checks.values())
 
-    return {
-        "ready": all_ok,
-        "checks": checks,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    return {"ready": all_ok, "checks": checks, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @router.get("/health/determinism")
@@ -117,9 +107,9 @@ async def determinism_status() -> Dict[str, Any]:
             "last_replay_at": _determinism_state["last_replay_at"],
             "replay_count": _determinism_state["replay_count"],
             "drift_detected": _determinism_state["drift_detected"],
-            "drift_details": _determinism_state.get("drift_details")
+            "drift_details": _determinism_state.get("drift_details"),
         },
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -133,7 +123,7 @@ async def adapter_status() -> Dict[str, Any]:
     adapters = {}
 
     try:
-        from app.skills.llm_invoke_v2 import list_adapters, get_adapter
+        from app.skills.llm_invoke_v2 import get_adapter, list_adapters
 
         for adapter_id in list_adapters():
             adapter = get_adapter(adapter_id)
@@ -141,7 +131,7 @@ async def adapter_status() -> Dict[str, Any]:
                 adapters[adapter_id] = {
                     "registered": True,
                     "default_model": adapter.default_model,
-                    "supports_seeding": adapter.supports_seeding()
+                    "supports_seeding": adapter.supports_seeding(),
                 }
             else:
                 adapters[adapter_id] = {"registered": False}
@@ -149,10 +139,7 @@ async def adapter_status() -> Dict[str, Any]:
     except Exception as e:
         adapters["error"] = str(e)
 
-    return {
-        "adapters": adapters,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    return {"adapters": adapters, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @router.get("/health/skills")
@@ -165,15 +152,12 @@ async def skills_status() -> Dict[str, Any]:
     skills = {}
 
     try:
-        from app.skills import list_skills, get_skill
+        from app.skills import get_skill, list_skills
 
         for skill_name in list_skills():
             skill = get_skill(skill_name)
             if skill:
-                skills[skill_name] = {
-                    "version": getattr(skill, "VERSION", "unknown"),
-                    "registered": True
-                }
+                skills[skill_name] = {"version": getattr(skill, "VERSION", "unknown"), "registered": True}
 
     except Exception as e:
         skills["error"] = str(e)
@@ -181,5 +165,5 @@ async def skills_status() -> Dict[str, Any]:
     return {
         "skills": skills,
         "count": len([s for s in skills.values() if isinstance(s, dict) and s.get("registered")]),
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

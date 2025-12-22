@@ -9,12 +9,13 @@ import sys
 import json
 import requests
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, List
 from dataclasses import dataclass
 
 # Configuration
 API_BASE = os.getenv("AOS_API_BASE", "http://localhost:8000")
 API_KEY = os.getenv("AOS_API_KEY", "test")
+
 
 @dataclass
 class TestResult:
@@ -24,21 +25,21 @@ class TestResult:
     message: str
     response_data: Optional[Dict] = None
 
+
 class AOSSmokeTest:
     def __init__(self, base_url: str, api_key: str):
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.results: List[TestResult] = []
 
     def _headers(self) -> Dict[str, str]:
-        return {
-            "X-API-Key": self.api_key,
-            "Content-Type": "application/json"
-        }
+        return {"X-API-Key": self.api_key, "Content-Type": "application/json"}
 
     def _request(self, method: str, path: str, **kwargs) -> requests.Response:
         url = f"{self.base_url}{path}"
-        return requests.request(method, url, headers=self._headers(), timeout=10, **kwargs)
+        return requests.request(
+            method, url, headers=self._headers(), timeout=10, **kwargs
+        )
 
     def _run_test(self, name: str, func) -> TestResult:
         start = datetime.now()
@@ -57,7 +58,9 @@ class AOSSmokeTest:
         resp = self._request("GET", "/health")
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
         data = resp.json()
-        assert data.get("status") == "healthy", f"Expected healthy, got {data.get('status')}"
+        assert (
+            data.get("status") == "healthy"
+        ), f"Expected healthy, got {data.get('status')}"
         assert "timestamp" in data, "Missing timestamp"
         assert "version" in data, "Missing version"
         return data
@@ -85,7 +88,7 @@ class AOSSmokeTest:
         """Test /api/v1/runtime/simulate with single step"""
         payload = {
             "plan": [{"skill": "llm_invoke", "params": {"prompt": "test"}}],
-            "budget_cents": 1000
+            "budget_cents": 1000,
         }
         resp = self._request("POST", "/api/v1/runtime/simulate", json=payload)
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
@@ -101,9 +104,9 @@ class AOSSmokeTest:
             "plan": [
                 {"skill": "http_call", "params": {"url": "https://example.com"}},
                 {"skill": "json_transform", "params": {"data": {}}},
-                {"skill": "llm_invoke", "params": {"prompt": "analyze"}}
+                {"skill": "llm_invoke", "params": {"prompt": "analyze"}},
             ],
-            "budget_cents": 500
+            "budget_cents": 500,
         }
         resp = self._request("POST", "/api/v1/runtime/simulate", json=payload)
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
@@ -115,7 +118,7 @@ class AOSSmokeTest:
         """Test simulation fails when budget insufficient"""
         payload = {
             "plan": [{"skill": "llm_invoke", "params": {}} for _ in range(100)],
-            "budget_cents": 10  # Very low budget
+            "budget_cents": 10,  # Very low budget
         }
         resp = self._request("POST", "/api/v1/runtime/simulate", json=payload)
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
@@ -192,10 +195,13 @@ class AOSSmokeTest:
             "total": len(self.results),
             "passed": passed,
             "failed": failed,
-            "pass_rate": f"{(passed/len(self.results)*100):.1f}%" if self.results else "0%",
+            "pass_rate": f"{(passed/len(self.results)*100):.1f}%"
+            if self.results
+            else "0%",
             "total_time_ms": total_time,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
+
 
 def main():
     print("=" * 60)
@@ -218,6 +224,7 @@ def main():
 
     # Exit with error if any tests failed
     sys.exit(0 if summary["failed"] == 0 else 1)
+
 
 if __name__ == "__main__":
     main()

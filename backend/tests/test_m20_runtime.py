@@ -8,23 +8,23 @@ Test suite for M20 Runtime:
 - Governance validation
 """
 
+
 import pytest
-import asyncio
+
+from app.policy.compiler.grammar import ActionType
 from app.policy.compiler.parser import Parser
-from app.policy.compiler.grammar import PolicyCategory, ActionType
 from app.policy.ir.ir_builder import IRBuilder
+from app.policy.runtime.dag_executor import DAGExecutor
 from app.policy.runtime.deterministic_engine import (
     DeterministicEngine,
     ExecutionContext,
-    ExecutionResult,
     ExecutionStatus,
 )
-from app.policy.runtime.dag_executor import DAGExecutor, ExecutionTrace
 from app.policy.runtime.intent import (
     Intent,
-    IntentType,
-    IntentPayload,
     IntentEmitter,
+    IntentPayload,
+    IntentType,
 )
 
 
@@ -277,7 +277,9 @@ class TestDeterministicEngine:
         assert result.success
         # Route action is emitted but default allow may follow
         # Check trace for route action
-        route_actions = [t for t in result.trace if t.get("event") == "action" and t.get("data", {}).get("action") == "route"]
+        route_actions = [
+            t for t in result.trace if t.get("event") == "action" and t.get("data", {}).get("action") == "route"
+        ]
         assert len(route_actions) >= 1
 
         # Should have route intent

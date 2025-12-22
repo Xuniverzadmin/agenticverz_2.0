@@ -10,8 +10,8 @@ Detailed semantic validation (governance, dependencies, etc.) handled by Python.
 This reduces maintenance burden and prevents SQL/Python logic divergence.
 """
 
-revision = '029_m15_sba_validator'
-down_revision = '028_m15_1_sba_schema'
+revision = "029_m15_sba_validator"
+down_revision = "028_m15_1_sba_schema"
 branch_labels = None
 depends_on = None
 
@@ -21,7 +21,8 @@ from alembic import op
 def upgrade():
     # Simplified validation function - only checks field presence
     # Semantic validation (governance, dependencies) handled by Python
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.validate_agent_sba(
             p_agent_id TEXT
         ) RETURNS TABLE(
@@ -101,12 +102,14 @@ def upgrade():
         COMMENT ON FUNCTION agents.validate_agent_sba(TEXT) IS
             'M15.1.1: Simplified SBA validation - checks field presence only. '
             'Semantic validation (governance, dependencies) handled by Python SBAValidator.';
-    """)
+    """
+    )
 
 
 def downgrade():
     # Restore original complex validation function
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION agents.validate_agent_sba(
             p_agent_id TEXT
         ) RETURNS TABLE(
@@ -209,4 +212,5 @@ def downgrade():
                 NULL::TEXT;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )

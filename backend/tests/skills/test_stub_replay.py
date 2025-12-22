@@ -12,12 +12,12 @@ Key properties tested:
 4. Hashes are stable
 """
 
-import asyncio
-import pytest
 import json
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
+import pytest
 
 # Add paths
 _backend_path = str(Path(__file__).parent.parent.parent)
@@ -30,20 +30,13 @@ for p in [_backend_path, _runtime_path, _skills_path]:
 
 from stubs.http_call_stub import (
     HttpCallStub,
-    http_call_stub_handler,
-    get_http_call_stub,
-)
-from stubs.llm_invoke_stub import (
-    LlmInvokeStub,
-    llm_invoke_stub_handler,
-    get_llm_invoke_stub,
 )
 from stubs.json_transform_stub import (
     JsonTransformStub,
-    json_transform_stub_handler,
-    get_json_transform_stub,
 )
-
+from stubs.llm_invoke_stub import (
+    LlmInvokeStub,
+)
 
 GOLDEN_DIR = Path(__file__).parent.parent / "golden"
 
@@ -64,11 +57,7 @@ class TestHttpCallStubReplay:
         stub = HttpCallStub()
         stub.add_response(
             "api.example.com",
-            {
-                "status_code": 200,
-                "body": '{"result": "ok"}',
-                "headers": {"content-type": "application/json"}
-            }
+            {"status_code": 200, "body": '{"result": "ok"}', "headers": {"content-type": "application/json"}},
         )
         return stub
 
@@ -151,10 +140,7 @@ class TestLlmInvokeStubReplay:
         """Custom responses can be configured."""
         from stubs.llm_invoke_stub import MockLlmResponse
 
-        stub.add_response("analyze", MockLlmResponse(
-            content="Custom analysis result",
-            output_tokens=5
-        ))
+        stub.add_response("analyze", MockLlmResponse(content="Custom analysis result", output_tokens=5))
 
         result = await stub.execute({"prompt": "Please analyze the data"})
 
@@ -185,7 +171,7 @@ class TestJsonTransformStubReplay:
         inputs = {
             "data": {"user": {"name": "Alice", "email": "alice@example.com"}},
             "operation": "extract",
-            "path": "$.user.email"
+            "path": "$.user.email",
         }
 
         result1 = await stub.execute(inputs)
@@ -197,11 +183,7 @@ class TestJsonTransformStubReplay:
     @pytest.mark.asyncio
     async def test_pick_deterministic(self, stub):
         """Pick operation is deterministic."""
-        inputs = {
-            "data": {"a": 1, "b": 2, "c": 3},
-            "operation": "pick",
-            "keys": ["a", "c"]
-        }
+        inputs = {"data": {"a": 1, "b": 2, "c": 3}, "operation": "pick", "keys": ["a", "c"]}
 
         result1 = await stub.execute(inputs)
         result2 = await stub.execute(inputs)
@@ -212,11 +194,7 @@ class TestJsonTransformStubReplay:
     @pytest.mark.asyncio
     async def test_omit_deterministic(self, stub):
         """Omit operation is deterministic."""
-        inputs = {
-            "data": {"a": 1, "b": 2, "c": 3},
-            "operation": "omit",
-            "keys": ["b"]
-        }
+        inputs = {"data": {"a": 1, "b": 2, "c": 3}, "operation": "omit", "keys": ["b"]}
 
         result1 = await stub.execute(inputs)
         result2 = await stub.execute(inputs)
@@ -231,10 +209,10 @@ class TestJsonTransformStubReplay:
             "data": [
                 {"name": "Alice", "active": True},
                 {"name": "Bob", "active": False},
-                {"name": "Charlie", "active": True}
+                {"name": "Charlie", "active": True},
             ],
             "operation": "filter",
-            "condition": {"active": True}
+            "condition": {"active": True},
         }
 
         result1 = await stub.execute(inputs)
@@ -246,11 +224,7 @@ class TestJsonTransformStubReplay:
     @pytest.mark.asyncio
     async def test_merge_deterministic(self, stub):
         """Merge operation is deterministic."""
-        inputs = {
-            "data": {"a": 1, "b": 2},
-            "operation": "merge",
-            "with": {"c": 3, "d": 4}
-        }
+        inputs = {"data": {"a": 1, "b": 2}, "operation": "merge", "with": {"c": 3, "d": 4}}
 
         result1 = await stub.execute(inputs)
         result2 = await stub.execute(inputs)
@@ -268,11 +242,10 @@ class TestStubGoldenFileComparison:
         golden = load_golden("stub_http_call")
 
         stub = HttpCallStub()
-        stub.add_response("api.example.com", {
-            "status_code": 200,
-            "body": "test response",
-            "headers": {"content-type": "application/json"}
-        })
+        stub.add_response(
+            "api.example.com",
+            {"status_code": 200, "body": "test response", "headers": {"content-type": "application/json"}},
+        )
 
         result = await stub.execute(golden["input"])
 

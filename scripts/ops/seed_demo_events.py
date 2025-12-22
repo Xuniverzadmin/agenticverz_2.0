@@ -38,7 +38,7 @@ from psycopg2.extras import execute_values
 # Configuration
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+    "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
 )
 
 # Seed marker (to identify demo data for cleanup)
@@ -63,9 +63,12 @@ EVENT_TYPES = {
     "API_CALL_RECEIVED": {"weight": 100, "has_latency": True},
     "INCIDENT_CREATED": {"weight": 20, "entity_type": "incident"},
     "INCIDENT_VIEWED": {"weight": 15, "entity_type": "incident"},
-
     # Friction events (Phase-2)
-    "INCIDENT_VIEWED_NO_ACTION": {"weight": 5, "entity_type": "incident", "friction": True},
+    "INCIDENT_VIEWED_NO_ACTION": {
+        "weight": 5,
+        "entity_type": "incident",
+        "friction": True,
+    },
     "REPLAY_STARTED": {"weight": 10, "entity_type": "replay"},
     "REPLAY_EXECUTED": {"weight": 8, "entity_type": "replay"},
     "REPLAY_ABORTED": {"weight": 3, "entity_type": "replay", "friction": True},
@@ -74,19 +77,15 @@ EVENT_TYPES = {
     "EXPORT_GENERATED": {"weight": 6, "entity_type": "export"},
     "EXPORT_ABORTED": {"weight": 2, "entity_type": "export", "friction": True},
     "EXPORT_FAILED": {"weight": 1, "entity_type": "export", "friction": True},
-
     # Policy
     "POLICY_EVALUATED": {"weight": 30},
     "POLICY_BLOCKED": {"weight": 5},
     "POLICY_BLOCK_REPEAT": {"weight": 2, "friction": True},
-
     # Certificate
     "CERT_VERIFIED": {"weight": 10, "entity_type": "certificate"},
-
     # LLM
     "LLM_CALL_MADE": {"weight": 40, "has_latency": True, "has_cost": True},
     "LLM_CALL_FAILED": {"weight": 3},
-
     # Session
     "SESSION_STARTED": {"weight": 15},
     "SESSION_ENDED": {"weight": 12},
@@ -97,6 +96,7 @@ EVENT_TYPES = {
 # ----------------------------
 # Customer Archetypes
 # ----------------------------
+
 
 @dataclass
 class CustomerArchetype:
@@ -127,7 +127,6 @@ ARCHETYPES = {
         activity_pattern="steady",
         events_per_day_range=(20, 50),
     ),
-
     "silent_churn": CustomerArchetype(
         name="Silent Churn",
         description="API active but no investigation in 7+ days",
@@ -140,7 +139,6 @@ ARCHETYPES = {
         activity_pattern="steady",
         events_per_day_range=(10, 25),
     ),
-
     "policy_friction": CustomerArchetype(
         name="Policy Friction",
         description="Repeated POLICY_BLOCK_REPEAT events",
@@ -155,7 +153,6 @@ ARCHETYPES = {
         activity_pattern="sporadic",
         events_per_day_range=(15, 35),
     ),
-
     "abandonment": CustomerArchetype(
         name="Abandonment Pattern",
         description="Started but aborted replays/exports",
@@ -175,7 +172,6 @@ ARCHETYPES = {
         activity_pattern="declining",
         events_per_day_range=(10, 30),
     ),
-
     "engagement_decay": CustomerArchetype(
         name="Engagement Decay",
         description="Activity declining week over week",
@@ -190,7 +186,6 @@ ARCHETYPES = {
         activity_pattern="declining",
         events_per_day_range=(5, 20),
     ),
-
     "legal_only": CustomerArchetype(
         name="Legal Only",
         description="Only certs verified, no investigation",
@@ -210,14 +205,41 @@ ARCHETYPES = {
 # ----------------------------
 
 COMPANY_PREFIXES = [
-    "Acme", "Nova", "Quantum", "Stellar", "Apex", "Nexus", "Zenith",
-    "Pulse", "Vertex", "Cipher", "Lunar", "Solar", "Cosmic", "Vortex",
-    "Phoenix", "Atlas", "Titan", "Nebula", "Echo", "Flux"
+    "Acme",
+    "Nova",
+    "Quantum",
+    "Stellar",
+    "Apex",
+    "Nexus",
+    "Zenith",
+    "Pulse",
+    "Vertex",
+    "Cipher",
+    "Lunar",
+    "Solar",
+    "Cosmic",
+    "Vortex",
+    "Phoenix",
+    "Atlas",
+    "Titan",
+    "Nebula",
+    "Echo",
+    "Flux",
 ]
 
 COMPANY_SUFFIXES = [
-    "AI", "Labs", "Tech", "Systems", "Corp", "Inc", "Solutions",
-    "Dynamics", "Robotics", "Intelligence", "Analytics", "Ventures"
+    "AI",
+    "Labs",
+    "Tech",
+    "Systems",
+    "Corp",
+    "Inc",
+    "Solutions",
+    "Dynamics",
+    "Robotics",
+    "Intelligence",
+    "Analytics",
+    "Ventures",
 ]
 
 
@@ -228,6 +250,7 @@ def generate_company_name() -> str:
 # ----------------------------
 # Event Generation
 # ----------------------------
+
 
 def generate_events_for_tenant(
     tenant_id: uuid.UUID,
@@ -284,9 +307,15 @@ def generate_events_for_tenant(
                 "session_id": session_id,
                 "entity_type": event_config.get("entity_type"),
                 "entity_id": uuid.uuid4() if event_config.get("entity_type") else None,
-                "severity": random.randint(1, 3) if event_config.get("friction") else None,
-                "latency_ms": random.randint(50, 2000) if event_config.get("has_latency") else None,
-                "cost_usd": Decimal(str(round(random.uniform(0.001, 0.05), 6))) if event_config.get("has_cost") else None,
+                "severity": random.randint(1, 3)
+                if event_config.get("friction")
+                else None,
+                "latency_ms": random.randint(50, 2000)
+                if event_config.get("has_latency")
+                else None,
+                "cost_usd": Decimal(str(round(random.uniform(0.001, 0.05), 6)))
+                if event_config.get("has_cost")
+                else None,
                 "metadata": {
                     "seed_marker": SEED_MARKER,
                     "tenant_name": tenant_name,
@@ -331,6 +360,7 @@ def pick_event_type(event_mix: Dict[str, float]) -> Optional[str]:
 # Database Operations
 # ----------------------------
 
+
 def get_connection():
     """Get database connection."""
     return psycopg2.connect(DATABASE_URL)
@@ -340,8 +370,7 @@ def clean_seeded_data(conn) -> int:
     """Remove previously seeded demo data."""
     with conn.cursor() as cur:
         cur.execute(
-            "DELETE FROM ops_events WHERE metadata->>'seed_marker' = %s",
-            (SEED_MARKER,)
+            "DELETE FROM ops_events WHERE metadata->>'seed_marker' = %s", (SEED_MARKER,)
         )
         deleted = cur.rowcount
         conn.commit()
@@ -355,27 +384,38 @@ def insert_events(conn, events: List[Dict[str, Any]]) -> int:
 
     # Prepare data for insertion
     columns = [
-        "event_id", "timestamp", "tenant_id", "user_id", "session_id",
-        "event_type", "entity_type", "entity_id", "severity",
-        "latency_ms", "cost_usd", "metadata"
+        "event_id",
+        "timestamp",
+        "tenant_id",
+        "user_id",
+        "session_id",
+        "event_type",
+        "entity_type",
+        "entity_id",
+        "severity",
+        "latency_ms",
+        "cost_usd",
+        "metadata",
     ]
 
     values = []
     for e in events:
-        values.append((
-            str(e["event_id"]),
-            e["timestamp"],
-            str(e["tenant_id"]),
-            None,  # user_id
-            str(e["session_id"]) if e["session_id"] else None,
-            e["event_type"],
-            e["entity_type"],
-            str(e["entity_id"]) if e["entity_id"] else None,
-            e["severity"],
-            e["latency_ms"],
-            float(e["cost_usd"]) if e["cost_usd"] else None,
-            psycopg2.extras.Json(e["metadata"]),
-        ))
+        values.append(
+            (
+                str(e["event_id"]),
+                e["timestamp"],
+                str(e["tenant_id"]),
+                None,  # user_id
+                str(e["session_id"]) if e["session_id"] else None,
+                e["event_type"],
+                e["entity_type"],
+                str(e["entity_id"]) if e["entity_id"] else None,
+                e["severity"],
+                e["latency_ms"],
+                float(e["cost_usd"]) if e["cost_usd"] else None,
+                psycopg2.extras.Json(e["metadata"]),
+            )
+        )
 
     with conn.cursor() as cur:
         execute_values(
@@ -385,7 +425,7 @@ def insert_events(conn, events: List[Dict[str, Any]]) -> int:
             VALUES %s
             """,
             values,
-            template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            template="(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         )
         conn.commit()
 
@@ -396,12 +436,21 @@ def insert_events(conn, events: List[Dict[str, Any]]) -> int:
 # Main
 # ----------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(description="Seed demo events for Ops Console")
-    parser.add_argument("--tenants", type=int, default=12, help="Number of tenants to create")
-    parser.add_argument("--days", type=int, default=14, help="Days of history to generate")
-    parser.add_argument("--clean", action="store_true", help="Remove existing seeded data first")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be created")
+    parser.add_argument(
+        "--tenants", type=int, default=12, help="Number of tenants to create"
+    )
+    parser.add_argument(
+        "--days", type=int, default=14, help="Days of history to generate"
+    )
+    parser.add_argument(
+        "--clean", action="store_true", help="Remove existing seeded data first"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be created"
+    )
     args = parser.parse_args()
 
     print(f"\n{CYAN}{'='*60}{RESET}")
@@ -437,12 +486,14 @@ def main():
                 archetype_key = key
                 break
 
-        tenants.append({
-            "id": tenant_id,
-            "name": tenant_name,
-            "archetype": ARCHETYPES[archetype_key],
-            "archetype_key": archetype_key,
-        })
+        tenants.append(
+            {
+                "id": tenant_id,
+                "name": tenant_name,
+                "archetype": ARCHETYPES[archetype_key],
+                "archetype_key": archetype_key,
+            }
+        )
 
     # Show plan
     print(f"  {BOLD}Configuration:{RESET}")
@@ -459,7 +510,13 @@ def main():
 
     for key, count in sorted(archetype_counts.items()):
         arch = ARCHETYPES[key]
-        color = GREEN if key == "healthy_active" else YELLOW if key in ["silent_churn", "abandonment", "engagement_decay"] else RESET
+        color = (
+            GREEN
+            if key == "healthy_active"
+            else YELLOW
+            if key in ["silent_churn", "abandonment", "engagement_decay"]
+            else RESET
+        )
         print(f"    {color}{arch.name:20s}{RESET} {count:3d} tenants")
     print()
 

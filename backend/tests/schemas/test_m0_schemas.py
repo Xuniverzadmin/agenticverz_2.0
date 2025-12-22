@@ -10,21 +10,22 @@ Tests for the core JSON schemas defined in M0:
 Uses jsonschema for validation to ensure cross-language compatibility.
 """
 
-import pytest
-import jsonschema
 from datetime import datetime, timezone
 
-from app.schemas import (
-    get_structured_outcome_schema,
-    get_skill_metadata_schema,
-    get_resource_contract_schema,
-    get_agent_profile_schema,
-)
+import jsonschema
+import pytest
 
+from app.schemas import (
+    get_agent_profile_schema,
+    get_resource_contract_schema,
+    get_skill_metadata_schema,
+    get_structured_outcome_schema,
+)
 
 # =============================================================================
 # StructuredOutcome Tests
 # =============================================================================
+
 
 class TestStructuredOutcome:
     """Tests for StructuredOutcome schema validation."""
@@ -41,7 +42,7 @@ class TestStructuredOutcome:
             "message": "Operation completed successfully",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": 0,
-            "latency_ms": 5
+            "latency_ms": 5,
         }
         jsonschema.validate(obj, schema)
 
@@ -53,7 +54,7 @@ class TestStructuredOutcome:
             "message": "Request timed out after 5000ms",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": 0,
-            "latency_ms": 5000
+            "latency_ms": 5000,
         }
         jsonschema.validate(obj, schema)
 
@@ -65,26 +66,14 @@ class TestStructuredOutcome:
             "status": "success",
             "code": "OK_HTTP_CALL",
             "message": "HTTP call succeeded",
-            "details": {
-                "response_status": 200,
-                "response_body": {"data": "test"}
-            },
+            "details": {"response_status": 200, "response_body": {"data": "test"}},
             "cost_cents": 5,
             "latency_ms": 150,
             "retryable": False,
-            "side_effects": [
-                {"type": "http_request", "url": "https://api.example.com"}
-            ],
-            "metadata": {
-                "skill_id": "http_call",
-                "skill_version": "1.0.0"
-            },
-            "observability": {
-                "trace_id": "trace_xyz",
-                "span_id": "span_123",
-                "backend_retries": 0
-            },
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "side_effects": [{"type": "http_request", "url": "https://api.example.com"}],
+            "metadata": {"skill_id": "http_call", "skill_version": "1.0.0"},
+            "observability": {"trace_id": "trace_xyz", "span_id": "span_123", "backend_retries": 0},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         jsonschema.validate(obj, schema)
 
@@ -96,7 +85,7 @@ class TestStructuredOutcome:
             "message": "Partial results returned",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": 10,
-            "latency_ms": 200
+            "latency_ms": 200,
         }
         jsonschema.validate(obj, schema)
 
@@ -108,7 +97,7 @@ class TestStructuredOutcome:
             "message": "Step skipped - already executed",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": 0,
-            "latency_ms": 0
+            "latency_ms": 0,
         }
         jsonschema.validate(obj, schema)
 
@@ -120,7 +109,7 @@ class TestStructuredOutcome:
             "message": "test",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": 0,
-            "latency_ms": 0
+            "latency_ms": 0,
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -143,7 +132,7 @@ class TestStructuredOutcome:
             "message": "test",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": 0,
-            "latency_ms": 0
+            "latency_ms": 0,
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -156,7 +145,7 @@ class TestStructuredOutcome:
             "message": "test",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": -1,
-            "latency_ms": 0
+            "latency_ms": 0,
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -170,7 +159,7 @@ class TestStructuredOutcome:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "cost_cents": 0,
             "latency_ms": 0,
-            "unknown_field": "should fail"
+            "unknown_field": "should fail",
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -179,6 +168,7 @@ class TestStructuredOutcome:
 # =============================================================================
 # SkillMetadata Tests
 # =============================================================================
+
 
 class TestSkillMetadata:
     """Tests for SkillMetadata schema validation."""
@@ -193,14 +183,10 @@ class TestSkillMetadata:
             "skill_id": "http_call.v1",
             "name": "HTTP Call",
             "version": "1.0.0",
-            "input_schema": {
-                "type": "object",
-                "properties": {"url": {"type": "string"}},
-                "required": ["url"]
-            },
+            "input_schema": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]},
             "output_schema": {"type": "object"},
             "timeout_ms": 5000,
-            "cost_estimate_cents": 5
+            "cost_estimate_cents": 5,
         }
         jsonschema.validate(obj, schema)
 
@@ -213,31 +199,25 @@ class TestSkillMetadata:
             "description": "Invoke Claude LLM for text generation",
             "input_schema": {
                 "type": "object",
-                "properties": {
-                    "prompt": {"type": "string"},
-                    "max_tokens": {"type": "integer"}
-                },
-                "required": ["prompt"]
+                "properties": {"prompt": {"type": "string"}, "max_tokens": {"type": "integer"}},
+                "required": ["prompt"],
             },
             "output_schema": {
                 "type": "object",
-                "properties": {
-                    "text": {"type": "string"},
-                    "tokens_used": {"type": "integer"}
-                }
+                "properties": {"text": {"type": "string"}, "tokens_used": {"type": "integer"}},
             },
             "timeout_ms": 30000,
             "retry_policy": {
                 "max_attempts": 3,
                 "backoff_ms": 1000,
-                "retry_on": ["ERR_LLM_RATE_LIMIT", "ERR_LLM_API_ERROR"]
+                "retry_on": ["ERR_LLM_RATE_LIMIT", "ERR_LLM_API_ERROR"],
             },
             "permissions": ["llm_invoke", "external_api"],
             "cost_estimate_cents": 50,
             "side_effects": ["llm_call"],
             "tags": ["llm", "claude", "text-generation"],
             "owner": "platform-team",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         jsonschema.validate(obj, schema)
 
@@ -250,7 +230,7 @@ class TestSkillMetadata:
             "input_schema": {},
             "output_schema": {},
             "timeout_ms": 1000,
-            "cost_estimate_cents": 0
+            "cost_estimate_cents": 0,
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -264,7 +244,7 @@ class TestSkillMetadata:
             "input_schema": {},
             "output_schema": {},
             "timeout_ms": 1000,
-            "cost_estimate_cents": 0
+            "cost_estimate_cents": 0,
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -278,7 +258,7 @@ class TestSkillMetadata:
             "input_schema": {},
             "output_schema": {},
             "timeout_ms": 1000,
-            "cost_estimate_cents": 0
+            "cost_estimate_cents": 0,
         }
         jsonschema.validate(obj, schema)
 
@@ -286,6 +266,7 @@ class TestSkillMetadata:
 # =============================================================================
 # ResourceContract Tests
 # =============================================================================
+
 
 class TestResourceContract:
     """Tests for ResourceContract schema validation."""
@@ -301,7 +282,7 @@ class TestResourceContract:
             "principal": "agent_abc",
             "budget_cents": 10000,
             "period": "30d",
-            "allowed_operations": ["http_call", "llm_invoke"]
+            "allowed_operations": ["http_call", "llm_invoke"],
         }
         jsonschema.validate(obj, schema)
 
@@ -313,26 +294,12 @@ class TestResourceContract:
             "currency": "USD",
             "budget_cents": 100000,
             "period": "24h",
-            "quotas": {
-                "llm_invoke": {
-                    "limit": 1000,
-                    "window": "1h",
-                    "per": "agent"
-                },
-                "http_call": {
-                    "limit": 10000
-                }
-            },
+            "quotas": {"llm_invoke": {"limit": 1000, "window": "1h", "per": "agent"}, "http_call": {"limit": 10000}},
             "allowed_operations": ["http_call", "llm_invoke", "json_transform"],
-            "cost_model": {
-                "llm_invoke": {"base_cost_cents": 10, "per_token_cents": 0.001}
-            },
-            "policy": {
-                "max_tokens_per_day": 100000,
-                "disallowed_skills": ["email_send"]
-            },
+            "cost_model": {"llm_invoke": {"base_cost_cents": 10, "per_token_cents": 0.001}},
+            "policy": {"max_tokens_per_day": 100000, "disallowed_skills": ["email_send"]},
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": "2025-12-31T23:59:59Z"
+            "expires_at": "2025-12-31T23:59:59Z",
         }
         jsonschema.validate(obj, schema)
 
@@ -344,7 +311,7 @@ class TestResourceContract:
                 "principal": "agent",
                 "budget_cents": 1000,
                 "period": period,
-                "allowed_operations": ["http_call"]
+                "allowed_operations": ["http_call"],
             }
             jsonschema.validate(obj, schema)
 
@@ -355,7 +322,7 @@ class TestResourceContract:
             "principal": "agent",
             "budget_cents": 1000,
             "period": "1 month",  # invalid format
-            "allowed_operations": ["http_call"]
+            "allowed_operations": ["http_call"],
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -368,7 +335,7 @@ class TestResourceContract:
             "budget_cents": 1000,
             "period": "30d",
             "allowed_operations": ["http_call"],
-            "expires_at": None
+            "expires_at": None,
         }
         jsonschema.validate(obj, schema)
 
@@ -376,6 +343,7 @@ class TestResourceContract:
 # =============================================================================
 # AgentProfile Tests
 # =============================================================================
+
 
 class TestAgentProfile:
     """Tests for AgentProfile schema validation."""
@@ -389,10 +357,8 @@ class TestAgentProfile:
         obj = {
             "agent_id": "agent_001",
             "name": "Test Agent",
-            "planner": {
-                "name": "claude"
-            },
-            "default_resource_contract_id": "contract_001"
+            "planner": {"name": "claude"},
+            "default_resource_contract_id": "contract_001",
         }
         jsonschema.validate(obj, schema)
 
@@ -402,27 +368,13 @@ class TestAgentProfile:
             "agent_id": "agent_001",
             "name": "Production Agent",
             "description": "Agent for handling customer requests",
-            "planner": {
-                "name": "claude",
-                "version": "claude-sonnet-4-20250514"
-            },
+            "planner": {"name": "claude", "version": "claude-sonnet-4-20250514"},
             "default_resource_contract_id": "contract_001",
             "permissions": ["http_call", "llm_invoke", "email_send"],
-            "memory_policy": {
-                "enabled": True,
-                "retriever": "postgres",
-                "max_tokens": 4000,
-                "recency_weight": 0.7
-            },
-            "safety": {
-                "disallowed_side_effects": ["email_send_bulk"],
-                "max_external_calls_per_run": 50
-            },
-            "defaults": {
-                "timeout_ms": 30000,
-                "preferred_model": "claude-sonnet-4-20250514"
-            },
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "memory_policy": {"enabled": True, "retriever": "postgres", "max_tokens": 4000, "recency_weight": 0.7},
+            "safety": {"disallowed_side_effects": ["email_send_bulk"], "max_external_calls_per_run": 50},
+            "defaults": {"timeout_ms": 30000, "preferred_model": "claude-sonnet-4-20250514"},
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         jsonschema.validate(obj, schema)
 
@@ -434,7 +386,7 @@ class TestAgentProfile:
             "planner": {
                 "version": "1.0.0"  # missing name
             },
-            "default_resource_contract_id": "contract_001"
+            "default_resource_contract_id": "contract_001",
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -446,10 +398,7 @@ class TestAgentProfile:
             "name": "Test",
             "planner": {"name": "claude"},
             "default_resource_contract_id": "contract_001",
-            "memory_policy": {
-                "enabled": True,
-                "unknown_field": "should fail"
-            }
+            "memory_policy": {"enabled": True, "unknown_field": "should fail"},
         }
         with pytest.raises(jsonschema.ValidationError):
             jsonschema.validate(obj, schema)
@@ -458,6 +407,7 @@ class TestAgentProfile:
 # =============================================================================
 # Schema Loading Tests
 # =============================================================================
+
 
 class TestSchemaLoading:
     """Tests for schema loading functions."""
@@ -497,5 +447,4 @@ class TestSchemaLoading:
             "AgentProfile": get_agent_profile_schema(),
         }
         for name, schema in schemas.items():
-            assert schema.get("additionalProperties") is False, \
-                f"{name} should disallow additional properties"
+            assert schema.get("additionalProperties") is False, f"{name} should disallow additional properties"

@@ -20,8 +20,8 @@ import logging
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("nova.services.recovery_rule_engine")
 
@@ -32,9 +32,11 @@ DEBUG_MODE = os.getenv("RECOVERY_RULE_DEBUG", "").lower() == "true"
 # Data Classes
 # =============================================================================
 
+
 @dataclass
 class RuleContext:
     """Context provided to rules for evaluation."""
+
     error_code: str
     error_message: str
     skill_id: Optional[str] = None
@@ -61,6 +63,7 @@ class RuleContext:
 @dataclass
 class RuleResult:
     """Result from evaluating a single rule."""
+
     rule_id: str
     rule_name: str
     matched: bool
@@ -86,6 +89,7 @@ class RuleResult:
 @dataclass
 class EvaluationResult:
     """Complete result from rule evaluation."""
+
     rules_evaluated: List[RuleResult]
     recommended_action: Optional[str] = None
     total_score: float = 0.0
@@ -107,6 +111,7 @@ class EvaluationResult:
 # =============================================================================
 # Rule Definitions
 # =============================================================================
+
 
 class Rule:
     """Base class for recovery rules."""
@@ -135,13 +140,7 @@ class ErrorCodeRule(Rule):
     """Match based on error code patterns."""
 
     def __init__(
-        self,
-        rule_id: str,
-        name: str,
-        error_patterns: List[str],
-        action_code: str,
-        score: float = 0.8,
-        **kwargs
+        self, rule_id: str, name: str, error_patterns: List[str], action_code: str, score: float = 0.8, **kwargs
     ):
         super().__init__(rule_id, name, **kwargs)
         self.error_patterns = [p.upper() for p in error_patterns]
@@ -175,14 +174,7 @@ class ErrorCodeRule(Rule):
 class HistoricalPatternRule(Rule):
     """Match based on historical success patterns."""
 
-    def __init__(
-        self,
-        rule_id: str,
-        name: str,
-        min_occurrences: int = 3,
-        min_success_rate: float = 0.7,
-        **kwargs
-    ):
+    def __init__(self, rule_id: str, name: str, min_occurrences: int = 3, min_success_rate: float = 0.7, **kwargs):
         super().__init__(rule_id, name, **kwargs)
         self.min_occurrences = min_occurrences
         self.min_success_rate = min_success_rate
@@ -199,10 +191,7 @@ class HistoricalPatternRule(Rule):
 
         # Count successes
         total = len(context.historical_matches)
-        successes = sum(
-            1 for m in context.historical_matches
-            if m.get("recovery_succeeded")
-        )
+        successes = sum(1 for m in context.historical_matches if m.get("recovery_succeeded"))
 
         if total < self.min_occurrences:
             return RuleResult(
@@ -227,6 +216,7 @@ class HistoricalPatternRule(Rule):
             if successful_recoveries:
                 # Use most common recovery
                 from collections import Counter
+
                 most_common = Counter(successful_recoveries).most_common(1)
                 if most_common:
                     action_code = most_common[0][0]
@@ -258,15 +248,7 @@ class HistoricalPatternRule(Rule):
 class SkillSpecificRule(Rule):
     """Rules specific to certain skills."""
 
-    def __init__(
-        self,
-        rule_id: str,
-        name: str,
-        skill_ids: List[str],
-        action_code: str,
-        score: float = 0.7,
-        **kwargs
-    ):
+    def __init__(self, rule_id: str, name: str, skill_ids: List[str], action_code: str, score: float = 0.7, **kwargs):
         super().__init__(rule_id, name, **kwargs)
         self.skill_ids = skill_ids
         self.action_code = action_code
@@ -296,15 +278,7 @@ class SkillSpecificRule(Rule):
 class OccurrenceThresholdRule(Rule):
     """Escalate based on occurrence count."""
 
-    def __init__(
-        self,
-        rule_id: str,
-        name: str,
-        threshold: int,
-        action_code: str,
-        score: float = 0.9,
-        **kwargs
-    ):
+    def __init__(self, rule_id: str, name: str, threshold: int, action_code: str, score: float = 0.9, **kwargs):
         super().__init__(rule_id, name, **kwargs)
         self.threshold = threshold
         self.action_code = action_code
@@ -344,7 +318,7 @@ class CompositeRule(Rule):
         name: str,
         rules: List[Rule],
         logic: str = "and",  # "and" or "or"
-        **kwargs
+        **kwargs,
     ):
         super().__init__(rule_id, name, **kwargs)
         self.rules = rules
@@ -394,7 +368,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.85,
         priority=90,
     ),
-
     ErrorCodeRule(
         rule_id="rate_limit_backoff",
         name="Backoff on Rate Limit",
@@ -403,7 +376,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.90,
         priority=85,
     ),
-
     ErrorCodeRule(
         rule_id="server_error_fallback",
         name="Fallback on Server Error",
@@ -412,7 +384,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.80,
         priority=80,
     ),
-
     ErrorCodeRule(
         rule_id="budget_fallback",
         name="Fallback on Budget Exceeded",
@@ -421,7 +392,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.85,
         priority=75,
     ),
-
     ErrorCodeRule(
         rule_id="auth_notify",
         name="Notify on Auth Failure",
@@ -430,7 +400,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.75,
         priority=70,
     ),
-
     ErrorCodeRule(
         rule_id="connection_retry",
         name="Retry on Connection Error",
@@ -439,7 +408,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.80,
         priority=65,
     ),
-
     # Medium priority - pattern-based
     HistoricalPatternRule(
         rule_id="historical_success",
@@ -449,7 +417,6 @@ DEFAULT_RULES: List[Rule] = [
         priority=60,
         weight=1.2,  # Boost weight for historical evidence
     ),
-
     # Lower priority - escalation rules
     OccurrenceThresholdRule(
         rule_id="escalate_repeated",
@@ -459,7 +426,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.70,
         priority=40,
     ),
-
     OccurrenceThresholdRule(
         rule_id="manual_review_high",
         name="Manual Review for High Occurrence",
@@ -468,7 +434,6 @@ DEFAULT_RULES: List[Rule] = [
         score=0.85,
         priority=35,
     ),
-
     # Catch-all
     ErrorCodeRule(
         rule_id="unknown_manual",
@@ -484,6 +449,7 @@ DEFAULT_RULES: List[Rule] = [
 # =============================================================================
 # Rule Engine
 # =============================================================================
+
 
 class RecoveryRuleEngine:
     """
@@ -548,13 +514,15 @@ class RecoveryRuleEngine:
 
             except Exception as e:
                 logger.warning(f"Rule {rule.rule_id} evaluation failed: {e}")
-                results.append(RuleResult(
-                    rule_id=rule.rule_id,
-                    rule_name=rule.name,
-                    matched=False,
-                    score=0.0,
-                    explanation=f"Evaluation error: {str(e)}",
-                ))
+                results.append(
+                    RuleResult(
+                        rule_id=rule.rule_id,
+                        rule_name=rule.name,
+                        matched=False,
+                        score=0.0,
+                        explanation=f"Evaluation error: {str(e)}",
+                    )
+                )
 
         # Calculate aggregated score and recommendation
         recommended_action = None
@@ -599,6 +567,7 @@ class RecoveryRuleEngine:
 # =============================================================================
 # Convenience Function
 # =============================================================================
+
 
 def evaluate_rules(
     error_code: str,

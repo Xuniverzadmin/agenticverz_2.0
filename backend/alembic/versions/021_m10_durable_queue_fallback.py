@@ -10,13 +10,13 @@ M10 Durability Enhancements:
 - Adds matview_refresh_log for freshness monitoring
 - Safe, additive migration - does not alter existing constraints
 """
-from alembic import op
-import sqlalchemy as sa
 from sqlalchemy import text
 
+from alembic import op
+
 # revision identifiers
-revision = '021_m10_durable_queue_fallback'
-down_revision = '020_m10_concurrent_indexes'
+revision = "021_m10_durable_queue_fallback"
+down_revision = "020_m10_concurrent_indexes"
 branch_labels = None
 depends_on = None
 
@@ -27,7 +27,9 @@ def upgrade() -> None:
     # ==========================================================================
     # 1. Create m10_recovery.work_queue for Redis fallback
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.work_queue (
             id SERIAL PRIMARY KEY,
             candidate_id INTEGER NOT NULL,
@@ -62,14 +64,18 @@ def upgrade() -> None:
             'Fallback queue when Redis unavailable. Worker polls this if stream is empty.';
         COMMENT ON COLUMN m10_recovery.work_queue.method IS
             'Enqueue method: redis_stream, db_fallback, retry';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 2. Add unique index for upsert on recovery_candidates
     # ==========================================================================
     # Note: failure_match_id is already UNIQUE in 017, but we add error_signature
     # composite for cases where same failure has different signatures
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         -- Unique index for upsert: (failure_match_id, error_signature)
         -- Allows ON CONFLICT to work correctly
         CREATE UNIQUE INDEX IF NOT EXISTS uq_rc_fmid_sig
@@ -78,12 +84,16 @@ def upgrade() -> None:
 
         COMMENT ON INDEX public.uq_rc_fmid_sig IS
             'Unique composite for upsert deduplication by failure + signature';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 3. Create matview_refresh_log for freshness monitoring
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE TABLE IF NOT EXISTS m10_recovery.matview_refresh_log (
             id SERIAL PRIMARY KEY,
             view_name TEXT NOT NULL,
@@ -106,12 +116,16 @@ def upgrade() -> None:
 
         COMMENT ON TABLE m10_recovery.matview_refresh_log IS
             'Tracks materialized view refresh operations for freshness monitoring';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 4. Create function for tracked matview refresh
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.refresh_mv_tracked(
             p_view_name TEXT DEFAULT 'mv_top_pending'
         )
@@ -164,12 +178,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.refresh_mv_tracked IS
             'Refresh matview with logging for freshness monitoring';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 5. Create view for matview freshness status
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE VIEW m10_recovery.matview_freshness AS
         SELECT
             view_name,
@@ -187,12 +205,16 @@ def upgrade() -> None:
 
         COMMENT ON VIEW m10_recovery.matview_freshness IS
             'Current freshness status of tracked materialized views';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 6. Create function for DB queue enqueue (fallback)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.enqueue_work(
             p_candidate_id INTEGER,
             p_idempotency_key UUID DEFAULT NULL,
@@ -220,12 +242,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.enqueue_work IS
             'Enqueue work item with upsert semantics for Redis fallback';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 7. Create function for worker claim (FOR UPDATE SKIP LOCKED)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.claim_work(
             p_worker_id TEXT,
             p_batch_size INTEGER DEFAULT 10
@@ -259,12 +285,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.claim_work IS
             'Claim work items with FOR UPDATE SKIP LOCKED for safe concurrency';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 8. Create function to mark work complete
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.complete_work(
             p_work_id INTEGER,
             p_success BOOLEAN DEFAULT TRUE,
@@ -291,12 +321,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.complete_work IS
             'Mark work item as completed or release for retry';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 9. Create function to release stalled work
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.release_stalled_work(
             p_stalled_seconds INTEGER DEFAULT 300
         )
@@ -322,12 +356,16 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.release_stalled_work IS
             'Release work items claimed by stalled workers';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # 10. Grants (safe - handles missing roles)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nova') THEN
@@ -360,7 +398,9 @@ def upgrade() -> None:
         EXCEPTION WHEN OTHERS THEN
             RAISE NOTICE 'Grant failed (non-fatal): %', SQLERRM;
         END$$;
-    """))
+    """
+        )
+    )
 
 
 def downgrade() -> None:

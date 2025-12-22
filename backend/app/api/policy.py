@@ -22,13 +22,13 @@ import hashlib
 import hmac
 import json
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import httpx
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,10 +44,12 @@ router = APIRouter(prefix="/api/v1/policy", tags=["policy"])
 # Metrics Helper (safe import with fallback)
 # =============================================================================
 
+
 def _record_policy_decision(decision: str, policy_type: str) -> None:
     """Safely record policy decision metric."""
     try:
         from app.workflow.metrics import record_policy_decision
+
         record_policy_decision(decision, policy_type)
     except Exception as e:
         logger.debug(f"Failed to record policy decision metric: {e}")
@@ -57,6 +59,7 @@ def _record_capability_violation(violation_type: str, skill_id: str, tenant_id: 
     """Safely record capability violation metric."""
     try:
         from app.workflow.metrics import record_capability_violation
+
         record_capability_violation(violation_type, skill_id, tenant_id)
     except Exception as e:
         logger.debug(f"Failed to record capability violation metric: {e}")
@@ -66,6 +69,7 @@ def _record_budget_rejection(resource_type: str, skill_id: str) -> None:
     """Safely record budget rejection metric."""
     try:
         from app.workflow.metrics import record_budget_rejection
+
         record_budget_rejection(resource_type, skill_id)
     except Exception as e:
         logger.debug(f"Failed to record budget rejection metric: {e}")
@@ -75,6 +79,7 @@ def _record_approval_request_created(policy_type: str) -> None:
     """Safely record approval request creation metric."""
     try:
         from app.workflow.metrics import record_approval_request_created
+
         record_approval_request_created(policy_type)
     except Exception as e:
         logger.debug(f"Failed to record approval request metric: {e}")
@@ -84,6 +89,7 @@ def _record_approval_action(result: str) -> None:
     """Safely record approval action metric."""
     try:
         from app.workflow.metrics import record_approval_action
+
         record_approval_action(result)
     except Exception as e:
         logger.debug(f"Failed to record approval action metric: {e}")
@@ -93,6 +99,7 @@ def _record_approval_escalation() -> None:
     """Safely record approval escalation metric."""
     try:
         from app.workflow.metrics import record_approval_escalation
+
         record_approval_escalation()
     except Exception as e:
         logger.debug(f"Failed to record approval escalation metric: {e}")
@@ -102,6 +109,7 @@ def _record_webhook_fallback() -> None:
     """Safely record webhook fallback metric."""
     try:
         from app.workflow.metrics import record_webhook_fallback
+
         record_webhook_fallback()
     except Exception as e:
         logger.debug(f"Failed to record webhook fallback metric: {e}")
@@ -111,8 +119,10 @@ def _record_webhook_fallback() -> None:
 # Request/Response Models
 # =============================================================================
 
+
 class PolicyType(str, Enum):
     """Types of policies that can be evaluated."""
+
     COST = "cost"
     CAPABILITY = "capability"
     RESOURCE = "resource"
@@ -121,6 +131,7 @@ class PolicyType(str, Enum):
 
 class ApprovalStatus(str, Enum):
     """Status of an approval request."""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -131,6 +142,7 @@ class ApprovalStatus(str, Enum):
 
 class PolicyEvalRequest(BaseModel):
     """Request for policy sandbox evaluation."""
+
     skill_id: str = Field(..., description="Skill to evaluate")
     tenant_id: str = Field(..., description="Tenant context")
     agent_id: Optional[str] = Field(None, description="Agent context")
@@ -141,6 +153,7 @@ class PolicyEvalRequest(BaseModel):
 
 class PolicyEvalResponse(BaseModel):
     """Response from policy sandbox evaluation."""
+
     decision: str = Field(..., description="allow, deny, or requires_approval")
     reasons: List[str] = Field(default_factory=list, description="Reasons for decision")
     simulated_cost_cents: Optional[int] = Field(None, description="Estimated cost")
@@ -152,6 +165,7 @@ class PolicyEvalResponse(BaseModel):
 
 class ApprovalRequestCreate(BaseModel):
     """Request to create an approval request."""
+
     policy_type: PolicyType = Field(..., description="Type of policy requiring approval")
     skill_id: str = Field(..., description="Skill requiring approval")
     tenant_id: str = Field(..., description="Tenant context")
@@ -166,6 +180,7 @@ class ApprovalRequestCreate(BaseModel):
 
 class ApprovalRequestResponse(BaseModel):
     """Response when creating an approval request."""
+
     request_id: str
     status: ApprovalStatus
     required_level: int
@@ -176,6 +191,7 @@ class ApprovalRequestResponse(BaseModel):
 
 class ApprovalAction(BaseModel):
     """Action to approve or reject a request."""
+
     approver_id: str = Field(..., description="ID of approver")
     level: int = Field(..., ge=1, le=5, description="Approval level (1-5)")
     notes: Optional[str] = Field(None, description="Optional notes")
@@ -183,6 +199,7 @@ class ApprovalAction(BaseModel):
 
 class ApprovalStatusResponse(BaseModel):
     """Full status of an approval request."""
+
     request_id: str
     correlation_id: Optional[str] = Field(None, description="Idempotency key for webhook deduplication")
     status: ApprovalStatus
@@ -219,6 +236,7 @@ WEBHOOK_RETRY_DELAYS = [1, 5, 15]  # seconds
 # 3. Keep old key for grace period (WEBHOOK_KEY_GRACE_VERSIONS)
 # 4. After grace period, remove old key version
 import os
+
 WEBHOOK_CURRENT_KEY_VERSION = os.getenv("WEBHOOK_KEY_VERSION", "v1")
 WEBHOOK_KEY_VERSIONS: Dict[str, str] = {
     # Version -> Secret mapping (loaded from env)
@@ -259,18 +277,15 @@ def _check_rate_limit(tenant_id: str, endpoint: str = "policy") -> None:
         rpm = RATE_LIMIT_DEFAULT_RPM
 
         if not allow_request(key, rpm):
-            logger.warning(
-                "rate_limit_exceeded",
-                extra={"tenant_id": tenant_id, "endpoint": endpoint, "rpm": rpm}
-            )
+            logger.warning("rate_limit_exceeded", extra={"tenant_id": tenant_id, "endpoint": endpoint, "rpm": rpm})
             raise HTTPException(
                 status_code=429,
                 detail={
                     "error": "rate_limit_exceeded",
                     "message": f"Rate limit exceeded: {rpm} requests per minute",
                     "tenant_id": tenant_id,
-                    "retry_after_seconds": 60
-                }
+                    "retry_after_seconds": 60,
+                },
             )
     except ImportError:
         logger.debug("Rate limiter not available - redis package may not be installed")
@@ -284,6 +299,7 @@ def _check_rate_limit(tenant_id: str, endpoint: str = "policy") -> None:
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def _get_policy_version() -> str:
     """Get current policy version."""
@@ -300,7 +316,7 @@ async def _get_approval_level_config(
     policy_type: PolicyType,
     tenant_id: str,
     agent_id: Optional[str] = None,
-    skill_id: Optional[str] = None
+    skill_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Get approval level configuration from PolicyApprovalLevel table.
@@ -308,9 +324,7 @@ async def _get_approval_level_config(
     try:
         from app.db import PolicyApprovalLevel
 
-        stmt = select(PolicyApprovalLevel).where(
-            PolicyApprovalLevel.policy_type == policy_type.value
-        )
+        stmt = select(PolicyApprovalLevel).where(PolicyApprovalLevel.policy_type == policy_type.value)
 
         result = await session.execute(stmt)
         configs = result.scalars().all()
@@ -347,14 +361,11 @@ def _config_to_dict(config) -> Dict[str, Any]:
     }
 
 
-async def _simulate_cost(
-    skill_id: str,
-    tenant_id: str,
-    payload: Dict[str, Any]
-) -> Optional[int]:
+async def _simulate_cost(skill_id: str, tenant_id: str, payload: Dict[str, Any]) -> Optional[int]:
     """Simulate cost for a skill execution."""
     try:
         from app.workflow.cost_sim import CostSimulator
+
         sim = CostSimulator()
         result = await sim.simulate(skill_id=skill_id, tenant_id=tenant_id, payload=payload)
         return result.estimated_cost_cents
@@ -368,18 +379,15 @@ async def _simulate_cost(
 
 
 async def _check_policy_violations(
-    skill_id: str,
-    tenant_id: str,
-    agent_id: Optional[str],
-    payload: Dict[str, Any],
-    simulated_cost: Optional[int]
+    skill_id: str, tenant_id: str, agent_id: Optional[str], payload: Dict[str, Any], simulated_cost: Optional[int]
 ) -> List[Dict[str, Any]]:
     """Check for policy violations."""
     violations = []
 
     try:
-        from app.workflow.policies import PolicyEnforcer, BudgetExceededError, PolicyViolationError
         from dataclasses import dataclass
+
+        from app.workflow.policies import BudgetExceededError, PolicyEnforcer, PolicyViolationError
 
         @dataclass
         class MinimalStep:
@@ -406,28 +414,22 @@ async def _check_policy_violations(
         try:
             await enforcer.check_can_execute(step, ctx, agent_id=agent_id)
         except BudgetExceededError as e:
-            violations.append({
-                "type": "BudgetExceededError",
-                "message": str(e),
-                "policy": "budget",
-                "details": {"breach_type": e.breach_type, "limit_cents": e.limit_cents}
-            })
+            violations.append(
+                {
+                    "type": "BudgetExceededError",
+                    "message": str(e),
+                    "policy": "budget",
+                    "details": {"breach_type": e.breach_type, "limit_cents": e.limit_cents},
+                }
+            )
             _record_budget_rejection("cost", skill_id)
         except PolicyViolationError as e:
-            violations.append({
-                "type": "PolicyViolationError",
-                "message": str(e),
-                "policy": e.policy,
-                "details": e.details
-            })
+            violations.append(
+                {"type": "PolicyViolationError", "message": str(e), "policy": e.policy, "details": e.details}
+            )
             _record_capability_violation(e.policy, skill_id, tenant_id)
         except Exception as e:
-            violations.append({
-                "type": type(e).__name__,
-                "message": str(e),
-                "policy": "unknown",
-                "details": {}
-            })
+            violations.append({"type": type(e).__name__, "message": str(e), "policy": "unknown", "details": {}})
 
     except ImportError:
         logger.debug("PolicyEnforcer not available")
@@ -438,6 +440,7 @@ async def _check_policy_violations(
 def _compute_webhook_signature(payload: str, secret: str) -> str:
     """Compute HMAC-SHA256 signature for webhook."""
     import hmac
+
     return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 
@@ -446,7 +449,7 @@ async def _send_webhook(
     payload: Dict[str, Any],
     secret: Optional[str] = None,
     key_version: Optional[str] = None,
-    retry_count: int = 0
+    retry_count: int = 0,
 ) -> bool:
     """Send webhook callback with retry logic and key versioning.
 
@@ -496,12 +499,7 @@ async def _send_webhook(
     return False
 
 
-def verify_webhook_signature(
-    body: str,
-    signature: str,
-    key_version: str,
-    secrets: Dict[str, str]
-) -> bool:
+def verify_webhook_signature(body: str, signature: str, key_version: str, secrets: Dict[str, str]) -> bool:
     """Verify webhook signature with version support for rotation.
 
     During key rotation, accepts signatures from:
@@ -543,10 +541,10 @@ def verify_webhook_signature(
 # API Endpoints
 # =============================================================================
 
+
 @router.post("/eval", response_model=PolicyEvalResponse)
 async def evaluate_policy(
-    request: PolicyEvalRequest,
-    session: AsyncSession = Depends(get_async_session)
+    request: PolicyEvalRequest, session: AsyncSession = Depends(get_async_session)
 ) -> PolicyEvalResponse:
     """
     Sandbox evaluation of policy for a skill execution.
@@ -561,9 +559,7 @@ async def evaluate_policy(
     simulated_cost = None
     if request.simulate_cost:
         simulated_cost = await _simulate_cost(
-            skill_id=request.skill_id,
-            tenant_id=request.tenant_id,
-            payload=request.payload
+            skill_id=request.skill_id, tenant_id=request.tenant_id, payload=request.payload
         )
 
     # Check for policy violations
@@ -572,7 +568,7 @@ async def evaluate_policy(
         tenant_id=request.tenant_id,
         agent_id=request.agent_id,
         payload=request.payload,
-        simulated_cost=simulated_cost
+        simulated_cost=simulated_cost,
     )
 
     # Get approval level config
@@ -581,7 +577,7 @@ async def evaluate_policy(
         policy_type=PolicyType.COST,
         tenant_id=request.tenant_id,
         agent_id=request.agent_id,
-        skill_id=request.skill_id
+        skill_id=request.skill_id,
     )
 
     # Determine decision
@@ -598,10 +594,7 @@ async def evaluate_policy(
         decision = "deny"
         reasons = [v["message"] for v in violations]
 
-        overridable = all(
-            v.get("type") in ("BudgetExceededError", "PolicyViolationError")
-            for v in violations
-        )
+        overridable = all(v.get("type") in ("BudgetExceededError", "PolicyViolationError") for v in violations)
         if overridable:
             decision = "requires_approval"
             reasons.append(f"Requires level {config['approval_level']} approval")
@@ -615,7 +608,7 @@ async def evaluate_policy(
         policy_version=policy_version,
         approval_level_required=config["approval_level"] if decision == "requires_approval" else None,
         violations=violations,
-        timestamp=timestamp
+        timestamp=timestamp,
     )
 
 
@@ -623,7 +616,7 @@ async def evaluate_policy(
 async def create_approval_request(
     request: ApprovalRequestCreate,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ) -> ApprovalRequestResponse:
     """
     Create a new approval request (persisted to DB).
@@ -642,7 +635,7 @@ async def create_approval_request(
         policy_type=request.policy_type,
         tenant_id=request.tenant_id,
         agent_id=request.agent_id,
-        skill_id=request.skill_id
+        skill_id=request.skill_id,
     )
 
     # Create DB model - PERSIST FIRST before any external calls
@@ -683,7 +676,7 @@ async def create_approval_request(
                 "required_level": config["approval_level"],
                 "expires_at": expires_at.isoformat(),
             },
-            request.webhook_secret
+            request.webhook_secret,
         )
 
     return ApprovalRequestResponse(
@@ -692,14 +685,13 @@ async def create_approval_request(
         required_level=config["approval_level"],
         escalate_to=config.get("escalate_to"),
         expires_at=expires_at.isoformat(),
-        created_at=approval.created_at.isoformat()
+        created_at=approval.created_at.isoformat(),
     )
 
 
 @router.get("/requests/{request_id}", response_model=ApprovalStatusResponse)
 async def get_approval_request(
-    request_id: str,
-    session: AsyncSession = Depends(get_async_session)
+    request_id: str, session: AsyncSession = Depends(get_async_session)
 ) -> ApprovalStatusResponse:
     """Get the current status of an approval request."""
     from app.db import ApprovalRequest as ApprovalRequestModel
@@ -710,7 +702,9 @@ async def get_approval_request(
 
     # Check if expired
     now = datetime.now(timezone.utc)
-    expires_at = approval.expires_at.replace(tzinfo=timezone.utc) if approval.expires_at.tzinfo is None else approval.expires_at
+    expires_at = (
+        approval.expires_at.replace(tzinfo=timezone.utc) if approval.expires_at.tzinfo is None else approval.expires_at
+    )
 
     if now > expires_at and approval.status == "pending":
         approval.status = "expired"
@@ -739,7 +733,7 @@ async def get_approval_request(
         last_webhook_status=data.get("last_webhook_status"),
         expires_at=data["expires_at"],
         created_at=data["created_at"],
-        updated_at=data["updated_at"]
+        updated_at=data["updated_at"],
     )
 
 
@@ -759,7 +753,7 @@ def _check_approver_authorization(approver_id: str, level: int, tenant_id: Optio
         HTTPException: If approver lacks required permissions
     """
     try:
-        from app.auth.rbac import check_approver_permission, RBACError, RBAC_ENABLED
+        from app.auth.rbac import RBAC_ENABLED, RBACError, check_approver_permission
 
         if not RBAC_ENABLED:
             # RBAC disabled - allow all but log level 5
@@ -770,17 +764,13 @@ def _check_approver_authorization(approver_id: str, level: int, tenant_id: Optio
                         "approver_id": approver_id,
                         "level": level,
                         "tenant_id": tenant_id,
-                        "warning": "RBAC disabled - owner override allowed without verification"
-                    }
+                        "warning": "RBAC disabled - owner override allowed without verification",
+                    },
                 )
             return
 
         # RBAC enabled - perform full authorization check
-        result = check_approver_permission(
-            approver_id=approver_id,
-            required_level=level,
-            tenant_id=tenant_id
-        )
+        result = check_approver_permission(approver_id=approver_id, required_level=level, tenant_id=tenant_id)
 
         logger.info(
             "rbac_authorization_success",
@@ -789,8 +779,8 @@ def _check_approver_authorization(approver_id: str, level: int, tenant_id: Optio
                 "required_level": level,
                 "granted_level": result.granted_level,
                 "roles": result.roles,
-                "tenant_id": tenant_id
-            }
+                "tenant_id": tenant_id,
+            },
         )
 
     except ImportError:
@@ -806,8 +796,8 @@ def _check_approver_authorization(approver_id: str, level: int, tenant_id: Optio
                 "approver_id": approver_id,
                 "required_level": e.required_level,
                 "message": e.message,
-                "tenant_id": tenant_id
-            }
+                "tenant_id": tenant_id,
+            },
         )
         raise HTTPException(
             status_code=403,
@@ -815,8 +805,8 @@ def _check_approver_authorization(approver_id: str, level: int, tenant_id: Optio
                 "error": "authorization_denied",
                 "message": e.message,
                 "approver_id": approver_id,
-                "required_level": e.required_level
-            }
+                "required_level": e.required_level,
+            },
         )
 
 
@@ -825,7 +815,7 @@ async def approve_request(
     request_id: str,
     action: ApprovalAction,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ) -> ApprovalStatusResponse:
     """Approve an approval request."""
     from app.db import ApprovalRequest as ApprovalRequestModel
@@ -842,7 +832,9 @@ async def approve_request(
 
     # Check expiration
     now = datetime.now(timezone.utc)
-    expires_at = approval.expires_at.replace(tzinfo=timezone.utc) if approval.expires_at.tzinfo is None else approval.expires_at
+    expires_at = (
+        approval.expires_at.replace(tzinfo=timezone.utc) if approval.expires_at.tzinfo is None else approval.expires_at
+    )
 
     if now > expires_at:
         approval.status = "expired"
@@ -855,11 +847,7 @@ async def approve_request(
 
     # Check if fully approved
     if approval.current_level >= approval.required_level:
-        approval.transition_status(
-            "approved",
-            actor=action.approver_id,
-            reason=f"Approved at level {action.level}"
-        )
+        approval.transition_status("approved", actor=action.approver_id, reason=f"Approved at level {action.level}")
         approval.resolved_at = now
 
     await session.commit()
@@ -883,7 +871,7 @@ async def approve_request(
                 "approver_id": action.approver_id,
                 "level": action.level,
             },
-            None  # Secret not stored in plain text
+            None,  # Secret not stored in plain text
         )
 
     return await get_approval_request(request_id, session)
@@ -894,7 +882,7 @@ async def reject_request(
     request_id: str,
     action: ApprovalAction,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ) -> ApprovalStatusResponse:
     """Reject an approval request."""
     from app.db import ApprovalRequest as ApprovalRequestModel
@@ -911,11 +899,7 @@ async def reject_request(
 
     now = datetime.now(timezone.utc)
     approval.add_approval(action.approver_id, action.level, "reject", action.notes)
-    approval.transition_status(
-        "rejected",
-        actor=action.approver_id,
-        reason=action.notes or "Rejected"
-    )
+    approval.transition_status("rejected", actor=action.approver_id, reason=action.notes or "Rejected")
     approval.resolved_at = now
     await session.commit()
 
@@ -934,7 +918,7 @@ async def reject_request(
                 "status": "rejected",
                 "rejector_id": action.approver_id,
             },
-            None
+            None,
         )
 
     return await get_approval_request(request_id, session)
@@ -946,7 +930,7 @@ async def list_approval_requests(
     tenant_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_async_session)
+    session: AsyncSession = Depends(get_async_session),
 ) -> List[ApprovalStatusResponse]:
     """List approval requests with optional filtering."""
     from app.db import ApprovalRequest as ApprovalRequestModel
@@ -969,34 +953,40 @@ async def list_approval_requests(
 
     for approval in results:
         # Check expiration
-        expires_at = approval.expires_at.replace(tzinfo=timezone.utc) if approval.expires_at.tzinfo is None else approval.expires_at
+        expires_at = (
+            approval.expires_at.replace(tzinfo=timezone.utc)
+            if approval.expires_at.tzinfo is None
+            else approval.expires_at
+        )
         if now > expires_at and approval.status == "pending":
             approval.status = "expired"
             approval.updated_at = now
 
         data = approval.to_dict()
-        responses.append(ApprovalStatusResponse(
-            request_id=data["request_id"],
-            correlation_id=data.get("correlation_id"),
-            status=ApprovalStatus(data["status"]),
-            status_history=data.get("status_history", []),
-            policy_type=PolicyType(data["policy_type"]),
-            skill_id=data["skill_id"],
-            tenant_id=data["tenant_id"],
-            agent_id=data["agent_id"],
-            payload=data["payload"],
-            requested_by=data["requested_by"],
-            justification=data["justification"],
-            required_level=data["required_level"],
-            current_level=data["current_level"],
-            approvers=data["approvers"],
-            escalate_to=data["escalate_to"],
-            webhook_attempts=data.get("webhook_attempts", 0),
-            last_webhook_status=data.get("last_webhook_status"),
-            expires_at=data["expires_at"],
-            created_at=data["created_at"],
-            updated_at=data["updated_at"]
-        ))
+        responses.append(
+            ApprovalStatusResponse(
+                request_id=data["request_id"],
+                correlation_id=data.get("correlation_id"),
+                status=ApprovalStatus(data["status"]),
+                status_history=data.get("status_history", []),
+                policy_type=PolicyType(data["policy_type"]),
+                skill_id=data["skill_id"],
+                tenant_id=data["tenant_id"],
+                agent_id=data["agent_id"],
+                payload=data["payload"],
+                requested_by=data["requested_by"],
+                justification=data["justification"],
+                required_level=data["required_level"],
+                current_level=data["current_level"],
+                approvers=data["approvers"],
+                escalate_to=data["escalate_to"],
+                webhook_attempts=data.get("webhook_attempts", 0),
+                last_webhook_status=data.get("last_webhook_status"),
+                expires_at=data["expires_at"],
+                created_at=data["created_at"],
+                updated_at=data["updated_at"],
+            )
+        )
 
     await session.commit()
     return responses
@@ -1005,6 +995,7 @@ async def list_approval_requests(
 # =============================================================================
 # Escalation Worker (called by scheduler)
 # =============================================================================
+
 
 async def run_escalation_check(session: AsyncSession) -> int:
     """
@@ -1017,22 +1008,22 @@ async def run_escalation_check(session: AsyncSession) -> int:
     escalated_count = 0
 
     # Find pending requests past their escalation timeout
-    stmt = select(ApprovalRequestModel).where(
-        ApprovalRequestModel.status == "pending"
-    )
+    stmt = select(ApprovalRequestModel).where(ApprovalRequestModel.status == "pending")
 
     result = await session.execute(stmt)
     results = result.scalars().all()
 
     for approval in results:
-        created_at = approval.created_at.replace(tzinfo=timezone.utc) if approval.created_at.tzinfo is None else approval.created_at
+        created_at = (
+            approval.created_at.replace(tzinfo=timezone.utc)
+            if approval.created_at.tzinfo is None
+            else approval.created_at
+        )
         timeout = timedelta(seconds=approval.escalation_timeout_seconds)
 
         if now - created_at > timeout:
             approval.transition_status(
-                "escalated",
-                actor="escalation_worker",
-                reason=f"Timeout after {timeout.total_seconds()}s"
+                "escalated", actor="escalation_worker", reason=f"Timeout after {timeout.total_seconds()}s"
             )
             escalated_count += 1
 
@@ -1051,7 +1042,7 @@ async def run_escalation_check(session: AsyncSession) -> int:
                         "status": "escalated",
                         "escalate_to": approval.escalate_to,
                     },
-                    None
+                    None,
                 )
 
     await session.commit()
@@ -1066,12 +1057,14 @@ async def run_escalation_check(session: AsyncSession) -> int:
 # Scheduled Task Entry Point
 # =============================================================================
 
+
 def run_escalation_task():
     """
     Entry point for scheduled escalation check.
     Can be called from cron, celery, or APScheduler.
     """
     import asyncio
+
     from app.db_async import AsyncSessionLocal
 
     async def _run():

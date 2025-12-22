@@ -12,7 +12,7 @@ Note: Engine converts exceptions to StepResult.from_error with failed status.
 """
 
 from __future__ import annotations
-import asyncio
+
 import hashlib
 import os
 from datetime import datetime, timezone
@@ -21,7 +21,6 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
 
 os.environ.setdefault("DISABLE_EXTERNAL_CALLS", "1")
 
@@ -52,6 +51,7 @@ class TestCheckpointStore:
         if existing and expected_version is not None:
             if existing["version"] != expected_version:
                 from app.workflow.checkpoint import CheckpointVersionConflictError
+
                 raise CheckpointVersionConflictError(run_id, expected_version, existing["version"])
 
         version = (existing["version"] + 1) if existing else 1
@@ -135,6 +135,7 @@ class DeterministicSkillRegistry:
 
     def _make_flaky_skill(self):
         """Skill that fails on configured call number."""
+
         async def handler(inputs: Dict, seed: int = 0, meta: Dict = None) -> Dict:
             self._call_count += 1
 
@@ -171,7 +172,7 @@ class TestCheckpointCreation:
     @pytest.mark.asyncio
     async def test_checkpoint_created_after_each_step(self):
         """Verify checkpoint is saved after each successful step."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         store = TestCheckpointStore()
@@ -204,7 +205,7 @@ class TestCheckpointCreation:
     @pytest.mark.asyncio
     async def test_checkpoint_saved_on_failure(self):
         """Verify checkpoint is saved even when step fails."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         store = TestCheckpointStore()
@@ -240,7 +241,7 @@ class TestCheckpointResume:
     @pytest.mark.asyncio
     async def test_resume_from_checkpoint(self):
         """Test that workflow resumes from checkpoint correctly."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         store = TestCheckpointStore()
@@ -276,7 +277,7 @@ class TestCheckpointResume:
     @pytest.mark.asyncio
     async def test_step_outputs_preserved_across_resume(self):
         """Test that step outputs from before checkpoint are available."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         store = TestCheckpointStore()
@@ -318,7 +319,7 @@ class TestVersionConsistency:
     @pytest.mark.asyncio
     async def test_version_increments_on_save(self):
         """Test that checkpoint version increments correctly."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         store = TestCheckpointStore()
@@ -383,7 +384,7 @@ class TestDeterminism:
     @pytest.mark.asyncio
     async def test_same_seed_same_output(self):
         """Test that same seed produces same outputs."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         spec = WorkflowSpec(
@@ -420,7 +421,7 @@ class TestDeterminism:
     @pytest.mark.asyncio
     async def test_different_seed_different_output(self):
         """Test that different seeds produce different outputs."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         spec = WorkflowSpec(
@@ -453,7 +454,7 @@ class TestMultipleResumeCycles:
     @pytest.mark.asyncio
     async def test_multiple_resume_cycles(self):
         """Test workflow can resume multiple times."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
 
         registry = DeterministicSkillRegistry()
         store = TestCheckpointStore()
@@ -461,10 +462,7 @@ class TestMultipleResumeCycles:
         spec = WorkflowSpec(
             id="test-multi-resume",
             name="Multi Resume Test",
-            steps=[
-                StepDescriptor(id=f"step{i}", skill_id="compute", inputs={"i": i})
-                for i in range(5)
-            ],
+            steps=[StepDescriptor(id=f"step{i}", skill_id="compute", inputs={"i": i}) for i in range(5)],
         )
 
         run_id = f"multi-{uuid4().hex[:8]}"

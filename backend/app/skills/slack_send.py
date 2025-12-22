@@ -1,18 +1,17 @@
 # Slack Send Skill (M11)
 # Send messages to Slack via webhook with idempotency support
 
-import json
 import logging
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 import httpx
 from pydantic import BaseModel
 
+from ..schemas.skill import SlackSendInput, SlackSendOutput
 from .registry import skill
-from ..schemas.skill import SlackSendInput, SlackSendOutput, SkillStatus
 
 logger = logging.getLogger("nova.skills.slack_send")
 
@@ -25,6 +24,7 @@ IDEMPOTENCY_TTL = 86400  # 24 hours
 
 class SlackSendConfig(BaseModel):
     """Configuration schema for slack_send skill."""
+
     allow_external: bool = True
     webhook_url: Optional[str] = None
     timeout: float = DEFAULT_TIMEOUT
@@ -106,16 +106,13 @@ class SlackSendSkill:
                 "channel": channel,
                 "has_blocks": blocks is not None,
                 "text_preview": text[:50] if text else "",
-            }
+            },
         )
 
         # Check stub mode
         if not self.allow_external:
             duration = time.time() - start_time
-            logger.info(
-                "slack_send_stubbed",
-                extra={"skill": "slack_send", "reason": "external_calls_disabled"}
-            )
+            logger.info("slack_send_stubbed", extra={"skill": "slack_send", "reason": "external_calls_disabled"})
             return {
                 "skill": "slack_send",
                 "skill_version": self.VERSION,
@@ -134,10 +131,7 @@ class SlackSendSkill:
         # Check webhook URL
         if not webhook_url:
             duration = time.time() - start_time
-            logger.error(
-                "slack_send_failed",
-                extra={"skill": "slack_send", "error": "No webhook URL configured"}
-            )
+            logger.error("slack_send_failed", extra={"skill": "slack_send", "error": "No webhook URL configured"})
             return {
                 "skill": "slack_send",
                 "skill_version": self.VERSION,
@@ -156,10 +150,7 @@ class SlackSendSkill:
 
         # Check idempotency
         if idempotency_key and idempotency_key in self._idempotency_cache:
-            logger.info(
-                "slack_send_idempotency_hit",
-                extra={"idempotency_key": idempotency_key}
-            )
+            logger.info("slack_send_idempotency_hit", extra={"idempotency_key": idempotency_key})
             cached = self._idempotency_cache[idempotency_key]
             return {**cached, "result": {**cached.get("result", {}), "from_cache": True}}
 
@@ -209,7 +200,7 @@ class SlackSendSkill:
                             "status": "ok",
                             "channel": channel,
                             "duration": round(duration, 3),
-                        }
+                        },
                     )
 
                     result = {
@@ -244,7 +235,7 @@ class SlackSendSkill:
                             "skill": "slack_send",
                             "http_status": response.status_code,
                             "error": error_body,
-                        }
+                        },
                     )
 
                     return {
@@ -265,10 +256,7 @@ class SlackSendSkill:
 
         except httpx.TimeoutException:
             duration = time.time() - start_time
-            logger.warning(
-                "slack_send_timeout",
-                extra={"skill": "slack_send", "timeout": self.timeout}
-            )
+            logger.warning("slack_send_timeout", extra={"skill": "slack_send", "timeout": self.timeout})
             return {
                 "skill": "slack_send",
                 "skill_version": self.VERSION,
@@ -287,10 +275,7 @@ class SlackSendSkill:
 
         except httpx.RequestError as e:
             duration = time.time() - start_time
-            logger.error(
-                "slack_send_failed",
-                extra={"skill": "slack_send", "error": str(e)[:200]}
-            )
+            logger.error("slack_send_failed", extra={"skill": "slack_send", "error": str(e)[:200]})
             return {
                 "skill": "slack_send",
                 "skill_version": self.VERSION,

@@ -10,14 +10,23 @@ Tables:
 Uses asyncpg for async database access.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
+
 from sqlalchemy import (
-    Column, Integer, BigInteger, Text, Boolean, Float, TIMESTAMP,
-    ForeignKey, Index, CheckConstraint, UniqueConstraint, ARRAY
+    ARRAY,
+    TIMESTAMP,
+    Boolean,
+    CheckConstraint,
+    Column,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    Text,
+    UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
 Base = declarative_base()
@@ -27,6 +36,7 @@ Base = declarative_base()
 # SuggestionInput Model
 # =============================================================================
 
+
 class SuggestionInput(Base):
     """
     Structured inputs that contributed to a recovery suggestion.
@@ -34,6 +44,7 @@ class SuggestionInput(Base):
     Tracks all inputs (error codes, messages, context) that were used
     in rule evaluation for provenance and debugging.
     """
+
     __tablename__ = "suggestion_input"
     __table_args__ = (
         Index("idx_si_suggestion_id", "suggestion_id"),
@@ -41,11 +52,11 @@ class SuggestionInput(Base):
         CheckConstraint(
             "input_type IN ('error_code', 'error_message', 'stack_trace', "
             "'skill_context', 'tenant_context', 'historical_pattern')",
-            name="ck_si_input_type"
+            name="ck_si_input_type",
         ),
         CheckConstraint("confidence >= 0 AND confidence <= 1", name="ck_si_confidence"),
         CheckConstraint("weight >= 0", name="ck_si_weight"),
-        {"schema": "m10_recovery"}
+        {"schema": "m10_recovery"},
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -65,11 +76,7 @@ class SuggestionInput(Base):
 
     # Metadata
     source = Column(Text, nullable=True)
-    created_at = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=func.now()
-    )
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary."""
@@ -91,6 +98,7 @@ class SuggestionInput(Base):
 # SuggestionAction Model
 # =============================================================================
 
+
 class SuggestionAction(Base):
     """
     Catalog of available recovery actions with templates.
@@ -101,6 +109,7 @@ class SuggestionAction(Base):
     - Which errors/skills it applies to
     - Historical success rate
     """
+
     __tablename__ = "suggestion_action"
     __table_args__ = (
         UniqueConstraint("action_code", name="uq_sa_action_code"),
@@ -110,11 +119,11 @@ class SuggestionAction(Base):
         CheckConstraint(
             "action_type IN ('retry', 'fallback', 'escalate', 'notify', "
             "'reconfigure', 'rollback', 'manual', 'skip')",
-            name="ck_sa_action_type"
+            name="ck_sa_action_type",
         ),
         CheckConstraint("success_rate >= 0 AND success_rate <= 1", name="ck_sa_success_rate"),
         CheckConstraint("priority >= 0 AND priority <= 100", name="ck_sa_priority"),
-        {"schema": "m10_recovery"}
+        {"schema": "m10_recovery"},
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -180,10 +189,7 @@ class SuggestionAction(Base):
         if not self.applies_to_error_codes:
             return True  # No restrictions = applies to all
 
-        return any(
-            error_code.upper().startswith(code.upper())
-            for code in self.applies_to_error_codes
-        )
+        return any(error_code.upper().startswith(code.upper()) for code in self.applies_to_error_codes)
 
     def matches_skill(self, skill_id: str) -> bool:
         """Check if action applies to given skill."""
@@ -197,6 +203,7 @@ class SuggestionAction(Base):
 # SuggestionProvenance Model
 # =============================================================================
 
+
 class SuggestionProvenance(Base):
     """
     Complete lineage of how a recovery suggestion was generated and processed.
@@ -208,6 +215,7 @@ class SuggestionProvenance(Base):
     - Approval workflow
     - Execution results
     """
+
     __tablename__ = "suggestion_provenance"
     __table_args__ = (
         Index("idx_sp_suggestion_id", "suggestion_id"),
@@ -218,13 +226,10 @@ class SuggestionProvenance(Base):
             "event_type IN ('created', 'input_added', 'rule_evaluated', 'action_selected', "
             "'confidence_updated', 'approved', 'rejected', 'executed', "
             "'success', 'failure', 'rolled_back', 'manual_override')",
-            name="ck_sp_event_type"
+            name="ck_sp_event_type",
         ),
-        CheckConstraint(
-            "actor_type IN ('system', 'human', 'agent')",
-            name="ck_sp_actor_type"
-        ),
-        {"schema": "m10_recovery"}
+        CheckConstraint("actor_type IN ('system', 'human', 'agent')", name="ck_sp_actor_type"),
+        {"schema": "m10_recovery"},
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)

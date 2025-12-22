@@ -36,10 +36,9 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Optional
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
 logger = logging.getLogger("m10.dl_inspector")
 
@@ -49,6 +48,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 def get_engine():
     """Get database engine."""
     from sqlmodel import create_engine
+
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL not configured")
     return create_engine(DATABASE_URL, pool_pre_ping=True)
@@ -70,7 +70,9 @@ def cmd_top(limit: int = 10, as_json: bool = False) -> dict:
         engine = get_engine()
         with Session(engine) as session:
             # Get top dead letters
-            rows = session.execute(text("""
+            rows = session.execute(
+                text(
+                    """
                 SELECT
                     id,
                     original_msg_id,
@@ -82,27 +84,36 @@ def cmd_top(limit: int = 10, as_json: bool = False) -> dict:
                 FROM m10_recovery.dead_letter_archive
                 ORDER BY dead_lettered_at DESC
                 LIMIT :limit
-            """), {"limit": limit}).fetchall()
+            """
+                ),
+                {"limit": limit},
+            ).fetchall()
 
             for row in rows:
-                result["dead_letters"].append({
-                    "id": row[0],
-                    "original_msg_id": row[1],
-                    "candidate_id": row[2],
-                    "failure_reason": row[3],
-                    "reclaim_count": row[4],
-                    "failed_at": row[5].isoformat() if row[5] else None,
-                    "hours_ago": round(float(row[6]), 1) if row[6] else 0,
-                })
+                result["dead_letters"].append(
+                    {
+                        "id": row[0],
+                        "original_msg_id": row[1],
+                        "candidate_id": row[2],
+                        "failure_reason": row[3],
+                        "reclaim_count": row[4],
+                        "failed_at": row[5].isoformat() if row[5] else None,
+                        "hours_ago": round(float(row[6]), 1) if row[6] else 0,
+                    }
+                )
 
             # Get summary by failure reason
-            summary_rows = session.execute(text("""
+            summary_rows = session.execute(
+                text(
+                    """
                 SELECT reason, COUNT(*) as count
                 FROM m10_recovery.dead_letter_archive
                 GROUP BY reason
                 ORDER BY count DESC
                 LIMIT 10
-            """)).fetchall()
+            """
+                )
+            ).fetchall()
 
             for row in summary_rows:
                 result["summary"][row[0] or "unknown"] = row[1]
@@ -119,21 +130,25 @@ def cmd_top(limit: int = 10, as_json: bool = False) -> dict:
 
         print("\n=== M10 Dead Letter Inspector ===\n")
         print(f"Top {limit} Dead Letters:\n")
-        print(f"{'ID':<8} {'Candidate':<12} {'Reason':<30} {'Hours Ago':<10} {'Reclaims':<8}")
+        print(
+            f"{'ID':<8} {'Candidate':<12} {'Reason':<30} {'Hours Ago':<10} {'Reclaims':<8}"
+        )
         print("-" * 78)
 
         for dl in result["dead_letters"]:
             reason = (dl["failure_reason"] or "unknown")[:30]
-            print(f"{dl['id']:<8} {dl['candidate_id'] or 'N/A':<12} {reason:<30} {dl['hours_ago']:<10} {dl['reclaim_count']:<8}")
+            print(
+                f"{dl['id']:<8} {dl['candidate_id'] or 'N/A':<12} {reason:<30} {dl['hours_ago']:<10} {dl['reclaim_count']:<8}"
+            )
 
-        print(f"\n\nSummary by Failure Reason:")
+        print("\n\nSummary by Failure Reason:")
         print("-" * 40)
         for reason, count in result["summary"].items():
             print(f"  {reason[:35]:<35} {count:>4}")
 
-        print(f"\n\nSafe Replay Command:")
-        print(f"  aos-dl replay --dry-run   # Preview what will be replayed")
-        print(f"  aos-dl replay --confirm   # Actually replay with idempotency check")
+        print("\n\nSafe Replay Command:")
+        print("  aos-dl replay --dry-run   # Preview what will be replayed")
+        print("  aos-dl replay --confirm   # Actually replay with idempotency check")
 
     return result
 
@@ -154,14 +169,19 @@ def cmd_show(dl_id: int, as_json: bool = False) -> dict:
         engine = get_engine()
         with Session(engine) as session:
             # Get dead letter details
-            row = session.execute(text("""
+            row = session.execute(
+                text(
+                    """
                 SELECT
                     id, dl_msg_id, original_msg_id, candidate_id,
                     failure_match_id, payload, reason,
                     reclaim_count, dead_lettered_at, archived_by
                 FROM m10_recovery.dead_letter_archive
                 WHERE id = :id
-            """), {"id": dl_id}).fetchone()
+            """
+                ),
+                {"id": dl_id},
+            ).fetchone()
 
             if not row:
                 result["error"] = f"Dead letter {dl_id} not found"
@@ -182,16 +202,23 @@ def cmd_show(dl_id: int, as_json: bool = False) -> dict:
 
             # Check if already replayed
             if row[2]:  # original_msg_id
-                replay_check = session.execute(text("""
+                replay_check = session.execute(
+                    text(
+                        """
                     SELECT id, replayed_at FROM m10_recovery.replay_log
                     WHERE original_msg_id = :msg_id
-                """), {"msg_id": row[2]}).fetchone()
+                """
+                    ),
+                    {"msg_id": row[2]},
+                ).fetchone()
 
                 if replay_check:
                     result["already_replayed"] = True
                     result["replay_info"] = {
                         "replay_id": replay_check[0],
-                        "replayed_at": replay_check[1].isoformat() if replay_check[1] else None,
+                        "replayed_at": replay_check[1].isoformat()
+                        if replay_check[1]
+                        else None,
                     }
 
     except Exception as e:
@@ -214,20 +241,22 @@ def cmd_show(dl_id: int, as_json: bool = False) -> dict:
         print(f"Reclaim Count:     {dl['reclaim_count']}")
         print(f"Failed At:         {dl['failed_at']}")
         print(f"Archived By:       {dl['archived_by']}")
-        print(f"\nPayload:")
-        print(json.dumps(dl['payload'], indent=2) if dl['payload'] else "  (empty)")
+        print("\nPayload:")
+        print(json.dumps(dl["payload"], indent=2) if dl["payload"] else "  (empty)")
 
         if result["already_replayed"]:
-            print(f"\n⚠️  ALREADY REPLAYED:")
+            print("\n⚠️  ALREADY REPLAYED:")
             print(f"   Replay ID: {result['replay_info']['replay_id']}")
             print(f"   Replayed At: {result['replay_info']['replayed_at']}")
         else:
-            print(f"\n✓ Not yet replayed - safe to replay")
+            print("\n✓ Not yet replayed - safe to replay")
 
     return result
 
 
-def cmd_replay(dry_run: bool = True, confirm: bool = False, limit: int = 10, as_json: bool = False) -> dict:
+def cmd_replay(
+    dry_run: bool = True, confirm: bool = False, limit: int = 10, as_json: bool = False
+) -> dict:
     """Replay dead letters with idempotency checks."""
     from sqlalchemy import text
     from sqlmodel import Session
@@ -252,7 +281,9 @@ def cmd_replay(dry_run: bool = True, confirm: bool = False, limit: int = 10, as_
         engine = get_engine()
         with Session(engine) as session:
             # Get dead letters that haven't been replayed yet
-            rows = session.execute(text("""
+            rows = session.execute(
+                text(
+                    """
                 SELECT
                     dla.id,
                     dla.original_msg_id,
@@ -265,7 +296,10 @@ def cmd_replay(dry_run: bool = True, confirm: bool = False, limit: int = 10, as_
                     ON dla.original_msg_id = rl.original_msg_id
                 ORDER BY dla.dead_lettered_at DESC
                 LIMIT :limit
-            """), {"limit": limit}).fetchall()
+            """
+                ),
+                {"limit": limit},
+            ).fetchall()
 
             for row in rows:
                 dl_info = {
@@ -283,7 +317,9 @@ def cmd_replay(dry_run: bool = True, confirm: bool = False, limit: int = 10, as_
                     if not dry_run and confirm:
                         # Record replay (idempotent - will fail if already exists)
                         try:
-                            session.execute(text("""
+                            session.execute(
+                                text(
+                                    """
                                 SELECT m10_recovery.record_replay(
                                     :original_msg_id,
                                     :dl_msg_id,
@@ -292,12 +328,15 @@ def cmd_replay(dry_run: bool = True, confirm: bool = False, limit: int = 10, as_
                                     :new_msg_id,
                                     'dl_inspector_cli'
                                 )
-                            """), {
-                                "original_msg_id": row[1],
-                                "dl_msg_id": None,
-                                "candidate_id": row[2],
-                                "new_msg_id": f"replay-{row[0]}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
-                            })
+                            """
+                                ),
+                                {
+                                    "original_msg_id": row[1],
+                                    "dl_msg_id": None,
+                                    "candidate_id": row[2],
+                                    "new_msg_id": f"replay-{row[0]}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
+                                },
+                            )
                             result["replayed"].append(dl_info)
                         except Exception as e:
                             dl_info["replay_error"] = str(e)
@@ -319,17 +358,21 @@ def cmd_replay(dry_run: bool = True, confirm: bool = False, limit: int = 10, as_
 
         print(f"Candidates for replay: {len(result['candidates'])}")
         for dl in result["candidates"][:5]:
-            print(f"  - #{dl['id']}: candidate={dl['candidate_id']}, reason={dl['failure_reason'][:40]}")
+            print(
+                f"  - #{dl['id']}: candidate={dl['candidate_id']}, reason={dl['failure_reason'][:40]}"
+            )
         if len(result["candidates"]) > 5:
             print(f"  ... and {len(result['candidates']) - 5} more")
 
-        print(f"\nSkipped (already replayed): {len(result['skipped_already_replayed'])}")
+        print(
+            f"\nSkipped (already replayed): {len(result['skipped_already_replayed'])}"
+        )
 
         if not dry_run:
             print(f"\nActually replayed: {len(result['replayed'])}")
         else:
-            print(f"\nTo actually replay, run:")
-            print(f"  aos-dl replay --confirm")
+            print("\nTo actually replay, run:")
+            print("  aos-dl replay --confirm")
 
     return result
 
@@ -353,29 +396,41 @@ def cmd_stats(as_json: bool = False) -> dict:
         engine = get_engine()
         with Session(engine) as session:
             # Total counts
-            row = session.execute(text("""
+            row = session.execute(
+                text(
+                    """
                 SELECT
                     (SELECT COUNT(*) FROM m10_recovery.dead_letter_archive) as total_dl,
                     (SELECT COUNT(*) FROM m10_recovery.replay_log) as total_replayed
-            """)).fetchone()
+            """
+                )
+            ).fetchone()
 
             result["total_dead_letters"] = row[0] if row else 0
             result["total_replayed"] = row[1] if row else 0
-            result["pending_replay"] = result["total_dead_letters"] - result["total_replayed"]
+            result["pending_replay"] = (
+                result["total_dead_letters"] - result["total_replayed"]
+            )
 
             # By reason
-            rows = session.execute(text("""
+            rows = session.execute(
+                text(
+                    """
                 SELECT reason, COUNT(*)
                 FROM m10_recovery.dead_letter_archive
                 GROUP BY reason
                 ORDER BY count DESC
-            """)).fetchall()
+            """
+                )
+            ).fetchall()
 
             for row in rows:
                 result["by_reason"][row[0] or "unknown"] = row[1]
 
             # By day (last 7 days)
-            rows = session.execute(text("""
+            rows = session.execute(
+                text(
+                    """
                 SELECT
                     DATE(dead_lettered_at) as day,
                     COUNT(*) as count
@@ -383,13 +438,17 @@ def cmd_stats(as_json: bool = False) -> dict:
                 WHERE dead_lettered_at > NOW() - INTERVAL '7 days'
                 GROUP BY DATE(dead_lettered_at)
                 ORDER BY day DESC
-            """)).fetchall()
+            """
+                )
+            ).fetchall()
 
             for row in rows:
-                result["by_day"].append({
-                    "date": row[0].isoformat() if row[0] else None,
-                    "count": row[1],
-                })
+                result["by_day"].append(
+                    {
+                        "date": row[0].isoformat() if row[0] else None,
+                        "count": row[1],
+                    }
+                )
 
     except Exception as e:
         result["error"] = str(e)
@@ -401,16 +460,16 @@ def cmd_stats(as_json: bool = False) -> dict:
             print(f"ERROR: {result['error']}")
             return result
 
-        print(f"\n=== M10 Dead Letter Statistics ===\n")
+        print("\n=== M10 Dead Letter Statistics ===\n")
         print(f"Total Dead Letters:    {result['total_dead_letters']}")
         print(f"Total Replayed:        {result['total_replayed']}")
         print(f"Pending Replay:        {result['pending_replay']}")
 
-        print(f"\nBy Failure Reason:")
+        print("\nBy Failure Reason:")
         for reason, count in list(result["by_reason"].items())[:10]:
             print(f"  {reason[:40]:<40} {count:>4}")
 
-        print(f"\nLast 7 Days:")
+        print("\nLast 7 Days:")
         for day in result["by_day"]:
             print(f"  {day['date']}: {day['count']} dead letters")
 
@@ -436,7 +495,9 @@ Examples:
 
     # top command
     top_parser = subparsers.add_parser("top", help="Show top dead letters")
-    top_parser.add_argument("--limit", type=int, default=10, help="Number of entries to show")
+    top_parser.add_argument(
+        "--limit", type=int, default=10, help="Number of entries to show"
+    )
     top_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     # show command
@@ -448,7 +509,9 @@ Examples:
     replay_parser = subparsers.add_parser("replay", help="Replay dead letters")
     replay_parser.add_argument("--dry-run", action="store_true", help="Preview only")
     replay_parser.add_argument("--confirm", action="store_true", help="Actually replay")
-    replay_parser.add_argument("--limit", type=int, default=10, help="Max entries to replay")
+    replay_parser.add_argument(
+        "--limit", type=int, default=10, help="Max entries to replay"
+    )
     replay_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     # stats command
@@ -473,7 +536,12 @@ Examples:
         elif args.command == "show":
             cmd_show(dl_id=args.id, as_json=args.json)
         elif args.command == "replay":
-            cmd_replay(dry_run=args.dry_run, confirm=args.confirm, limit=args.limit, as_json=args.json)
+            cmd_replay(
+                dry_run=args.dry_run,
+                confirm=args.confirm,
+                limit=args.limit,
+                as_json=args.json,
+            )
         elif args.command == "stats":
             cmd_stats(as_json=args.json)
     except Exception as e:

@@ -16,6 +16,7 @@ Design Principles:
 """
 
 from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
@@ -26,6 +27,7 @@ logger = logging.getLogger("nova.worker.simulate")
 
 class FeasibilityStatus(str, Enum):
     """Simulation feasibility results."""
+
     FEASIBLE = "feasible"
     BUDGET_INSUFFICIENT = "budget_insufficient"
     PERMISSION_DENIED = "permission_denied"
@@ -37,6 +39,7 @@ class FeasibilityStatus(str, Enum):
 @dataclass
 class StepRisk:
     """Risk assessment for a single step."""
+
     step_index: int
     skill_id: str
     risk_type: str
@@ -48,6 +51,7 @@ class StepRisk:
 @dataclass
 class SimulationResult:
     """Result of plan simulation."""
+
     feasible: bool
     status: FeasibilityStatus
     estimated_cost_cents: int
@@ -206,9 +210,7 @@ class CostSimulator:
         """Get cost estimate for a skill."""
         return self.skill_costs.get(skill_id, DEFAULT_UNKNOWN_SKILL)
 
-    def _estimate_step(
-        self, step_index: int, step: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _estimate_step(self, step_index: int, step: Dict[str, Any]) -> Dict[str, Any]:
         """Estimate cost and risk for a single step."""
         skill_id = step.get("skill", "unknown")
         params = step.get("params", {})
@@ -300,14 +302,16 @@ class CostSimulator:
             if estimate["risk_probability"] > 0.05:
                 # Risk increases with iterations: P(at least one failure) = 1 - (1-p)^n
                 compounded_risk = 1.0 - ((1.0 - estimate["risk_probability"]) ** iterations)
-                risks.append(StepRisk(
-                    step_index=i,
-                    skill_id=skill_id,
-                    risk_type=estimate["risk_type"],
-                    probability=compounded_risk,
-                    description=f"{skill_id} x{iterations} has {compounded_risk*100:.0f}% chance of {estimate['risk_type']}",
-                    mitigation=self._get_mitigation(estimate["risk_type"]),
-                ))
+                risks.append(
+                    StepRisk(
+                        step_index=i,
+                        skill_id=skill_id,
+                        risk_type=estimate["risk_type"],
+                        probability=compounded_risk,
+                        description=f"{skill_id} x{iterations} has {compounded_risk*100:.0f}% chance of {estimate['risk_type']}",
+                        mitigation=self._get_mitigation(estimate["risk_type"]),
+                    )
+                )
 
             # Calculate cumulative risk (simplified: 1 - product of success probabilities)
             # Use compounded risk for the step based on iterations
@@ -328,7 +332,9 @@ class CostSimulator:
         elif not risk_acceptable:
             status = FeasibilityStatus.RISK_TOO_HIGH
             feasible = False
-            warnings.append(f"Cumulative risk {cumulative_risk*100:.0f}% exceeds threshold {self.risk_threshold*100:.0f}%")
+            warnings.append(
+                f"Cumulative risk {cumulative_risk*100:.0f}% exceeds threshold {self.risk_threshold*100:.0f}%"
+            )
         else:
             status = FeasibilityStatus.FEASIBLE
             feasible = True
@@ -336,12 +342,14 @@ class CostSimulator:
         # Generate alternatives if not feasible
         alternatives = []
         if not budget_sufficient:
-            alternatives.append({
-                "suggestion": "Reduce LLM calls",
-                "potential_savings_cents": sum(
-                    e["cost_cents"] for e in step_estimates if e["skill_id"] == "llm_invoke"
-                ),
-            })
+            alternatives.append(
+                {
+                    "suggestion": "Reduce LLM calls",
+                    "potential_savings_cents": sum(
+                        e["cost_cents"] for e in step_estimates if e["skill_id"] == "llm_invoke"
+                    ),
+                }
+            )
 
         return SimulationResult(
             feasible=feasible,
@@ -445,7 +453,9 @@ if __name__ == "__main__":
     print(f"Budget remaining: {result2.budget_remaining_cents} cents")
 
     for step in result2.step_estimates:
-        print(f"  Step {step['step_index']}: {step['skill_id']} x{step.get('iterations', 1)} = {step['cost_cents']} cents")
+        print(
+            f"  Step {step['step_index']}: {step['skill_id']} x{step.get('iterations', 1)} = {step['cost_cents']} cents"
+        )
 
     # Test budget failure with iterations
     print("\n" + "=" * 60)

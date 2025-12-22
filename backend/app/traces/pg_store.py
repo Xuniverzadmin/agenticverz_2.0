@@ -13,9 +13,9 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
-from .models import TraceStep, TraceSummary, TraceRecord, TraceStatus
+from .models import TraceRecord, TraceStatus, TraceStep, TraceSummary
 from .redact import redact_trace_data
 
 
@@ -29,8 +29,7 @@ class PostgresTraceStore:
 
     def __init__(self, database_url: str | None = None):
         self.database_url = database_url or os.getenv(
-            "DATABASE_URL",
-            "postgresql://nova:novapass@localhost:6432/nova_aos"
+            "DATABASE_URL", "postgresql://nova:novapass@localhost:6432/nova_aos"
         )
         self._pool = None
 
@@ -38,6 +37,7 @@ class PostgresTraceStore:
         """Get or create connection pool."""
         if self._pool is None:
             import asyncpg
+
             self._pool = await asyncpg.create_pool(
                 self.database_url,
                 min_size=2,
@@ -69,7 +69,7 @@ class PostgresTraceStore:
         pool = await self._get_pool()
         now = datetime.now(timezone.utc)
         # Use run_id as base for trace_id for easier correlation
-        trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith('run_') else f"trace_{run_id}"
+        trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith("run_") else f"trace_{run_id}"
 
         async with pool.acquire() as conn:
             await conn.execute(
@@ -82,18 +82,18 @@ class PostgresTraceStore:
                     status = 'running',
                     started_at = EXCLUDED.started_at
                 """,
-                trace_id,            # trace_id
-                run_id,              # run_id
-                correlation_id,      # correlation_id
-                tenant_id,           # tenant_id
-                agent_id,            # agent_id
-                "pending",           # root_hash (placeholder, computed later)
-                json.dumps(plan),    # plan
+                trace_id,  # trace_id
+                run_id,  # run_id
+                correlation_id,  # correlation_id
+                tenant_id,  # tenant_id
+                agent_id,  # agent_id
+                "pending",  # root_hash (placeholder, computed later)
+                json.dumps(plan),  # plan
                 json.dumps({"steps": []}),  # trace (empty initially)
-                "1.0",               # schema_version
-                "running",           # status
-                now,                 # started_at
-                now,                 # created_at
+                "1.0",  # schema_version
+                "running",  # status
+                now,  # started_at
+                now,  # created_at
             )
 
     async def record_step(
@@ -115,10 +115,10 @@ class PostgresTraceStore:
         now = datetime.now(timezone.utc)
 
         # Convert status if it's an enum
-        status_val = status.value if hasattr(status, 'value') else status
+        status_val = status.value if hasattr(status, "value") else status
 
         # Derive trace_id from run_id
-        trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith('run_') else f"trace_{run_id}"
+        trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith("run_") else f"trace_{run_id}"
 
         async with pool.acquire() as conn:
             await conn.execute(
@@ -134,20 +134,20 @@ class PostgresTraceStore:
                     cost_cents = EXCLUDED.cost_cents,
                     duration_ms = EXCLUDED.duration_ms
                 """,
-                trace_id,                        # trace_id
-                step_index,                      # step_index
-                skill_name,                      # skill_id (use skill_name as id)
-                skill_name,                      # skill_name
-                json.dumps(params),              # params (jsonb)
-                status_val,                      # status
-                outcome_category,                # outcome_category
-                outcome_code,                    # outcome_code
+                trace_id,  # trace_id
+                step_index,  # step_index
+                skill_name,  # skill_id (use skill_name as id)
+                skill_name,  # skill_name
+                json.dumps(params),  # params (jsonb)
+                status_val,  # status
+                outcome_category,  # outcome_category
+                outcome_code,  # outcome_code
                 json.dumps(outcome_data) if outcome_data else None,  # outcome_data (jsonb)
-                cost_cents,                      # cost_cents
-                duration_ms,                     # duration_ms
-                retry_count,                     # retry_count
-                "execute",                       # replay_behavior (default)
-                now,                             # timestamp
+                cost_cents,  # cost_cents
+                duration_ms,  # duration_ms
+                retry_count,  # retry_count
+                "execute",  # replay_behavior (default)
+                now,  # timestamp
             )
 
     async def complete_trace(
@@ -289,35 +289,26 @@ class PostgresTraceStore:
             # Build query with optional tenant filter
             if tenant_id:
                 row = await conn.fetchrow(
-                    "SELECT * FROM aos_traces WHERE trace_id = $1 AND tenant_id = $2",
-                    trace_id, tenant_id
+                    "SELECT * FROM aos_traces WHERE trace_id = $1 AND tenant_id = $2", trace_id, tenant_id
                 )
             else:
-                row = await conn.fetchrow(
-                    "SELECT * FROM aos_traces WHERE trace_id = $1",
-                    trace_id
-                )
+                row = await conn.fetchrow("SELECT * FROM aos_traces WHERE trace_id = $1", trace_id)
 
             if not row:
                 # Try by run_id
                 if tenant_id:
                     row = await conn.fetchrow(
-                        "SELECT * FROM aos_traces WHERE run_id = $1 AND tenant_id = $2",
-                        trace_id, tenant_id
+                        "SELECT * FROM aos_traces WHERE run_id = $1 AND tenant_id = $2", trace_id, tenant_id
                     )
                 else:
-                    row = await conn.fetchrow(
-                        "SELECT * FROM aos_traces WHERE run_id = $1",
-                        trace_id
-                    )
+                    row = await conn.fetchrow("SELECT * FROM aos_traces WHERE run_id = $1", trace_id)
 
             if not row:
                 return None
 
             # Get steps
             steps_rows = await conn.fetch(
-                "SELECT * FROM aos_trace_steps WHERE trace_id = $1 ORDER BY step_index",
-                row["trace_id"]
+                "SELECT * FROM aos_trace_steps WHERE trace_id = $1 ORDER BY step_index", row["trace_id"]
             )
 
             steps = [
@@ -325,7 +316,9 @@ class PostgresTraceStore:
                     step_index=s["step_index"],
                     skill_name=s["skill_name"],
                     params=json.loads(s["params"]) if s["params"] else {},
-                    status=TraceStatus(s["status"]) if s["status"] in [e.value for e in TraceStatus] else TraceStatus.SUCCESS,
+                    status=TraceStatus(s["status"])
+                    if s["status"] in [e.value for e in TraceStatus]
+                    else TraceStatus.SUCCESS,
                     outcome_category=s["outcome_category"],
                     outcome_code=s["outcome_code"],
                     outcome_data=json.loads(s["outcome_data"]) if s["outcome_data"] else None,
@@ -365,13 +358,11 @@ class PostgresTraceStore:
             if tenant_id:
                 row = await conn.fetchrow(
                     "SELECT trace_id FROM aos_traces WHERE root_hash = $1 AND tenant_id = $2 LIMIT 1",
-                    root_hash, tenant_id
+                    root_hash,
+                    tenant_id,
                 )
             else:
-                row = await conn.fetchrow(
-                    "SELECT trace_id FROM aos_traces WHERE root_hash = $1 LIMIT 1",
-                    root_hash
-                )
+                row = await conn.fetchrow("SELECT trace_id FROM aos_traces WHERE root_hash = $1 LIMIT 1", root_hash)
 
             if row:
                 return await self.get_trace(row["trace_id"], tenant_id)
@@ -455,7 +446,9 @@ class PostgresTraceStore:
                 ORDER BY t.created_at DESC
                 LIMIT ${param_idx} OFFSET ${param_idx + 1}
                 """,
-                *params, limit, offset
+                *params,
+                limit,
+                offset,
             )
 
             return [
@@ -496,14 +489,10 @@ class PostgresTraceStore:
         async with pool.acquire() as conn:
             if tenant_id:
                 result = await conn.execute(
-                    "DELETE FROM aos_traces WHERE trace_id = $1 AND tenant_id = $2",
-                    trace_id, tenant_id
+                    "DELETE FROM aos_traces WHERE trace_id = $1 AND tenant_id = $2", trace_id, tenant_id
                 )
             else:
-                result = await conn.execute(
-                    "DELETE FROM aos_traces WHERE trace_id = $1",
-                    trace_id
-                )
+                result = await conn.execute("DELETE FROM aos_traces WHERE trace_id = $1", trace_id)
 
             return result != "DELETE 0"
 
@@ -513,10 +502,7 @@ class PostgresTraceStore:
 
         async with pool.acquire() as conn:
             if tenant_id:
-                row = await conn.fetchrow(
-                    "SELECT COUNT(*) FROM aos_traces WHERE tenant_id = $1",
-                    tenant_id
-                )
+                row = await conn.fetchrow("SELECT COUNT(*) FROM aos_traces WHERE tenant_id = $1", tenant_id)
             else:
                 row = await conn.fetchrow("SELECT COUNT(*) FROM aos_traces")
             return row[0] if row else 0
@@ -534,7 +520,7 @@ class PostgresTraceStore:
                 WHERE created_at < now() - interval '1 day' * $1
                 ON CONFLICT (trace_id) DO NOTHING
                 """,
-                days
+                days,
             )
 
             # Then delete from main table
@@ -543,7 +529,7 @@ class PostgresTraceStore:
                 DELETE FROM aos_traces
                 WHERE created_at < now() - interval '1 day' * $1
                 """,
-                days
+                days,
             )
 
             # Extract count from result
@@ -575,7 +561,8 @@ class PostgresTraceStore:
                 WHERE s.idempotency_key = $1 AND t.tenant_id = $2
                 LIMIT 1
                 """,
-                idempotency_key, tenant_id
+                idempotency_key,
+                tenant_id,
             )
 
             if row:

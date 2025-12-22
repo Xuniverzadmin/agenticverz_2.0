@@ -15,10 +15,11 @@ Design Principles:
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+
 import logging
 import re
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger("nova.workflow.sandbox")
 
@@ -28,6 +29,7 @@ class SandboxReport:
     """
     Result of sandbox validation.
     """
+
     ok: bool
     reason: str = ""
     violations: List[Dict[str, Any]] = field(default_factory=list)
@@ -168,13 +170,15 @@ class PlannerSandbox:
 
         # 1. Check forbidden skills
         if skill_id.lower() in {s.lower() for s in self.forbidden_skills}:
-            violations.append({
-                "type": "forbidden_skill",
-                "step_id": step_id,
-                "step_index": idx,
-                "skill_id": skill_id,
-                "message": f"Forbidden skill: {skill_id}",
-            })
+            violations.append(
+                {
+                    "type": "forbidden_skill",
+                    "step_id": step_id,
+                    "step_index": idx,
+                    "skill_id": skill_id,
+                    "message": f"Forbidden skill: {skill_id}",
+                }
+            )
 
         # 2. Check idempotency for side-effect methods
         if self.require_idempotency:
@@ -184,13 +188,15 @@ class PlannerSandbox:
             if method in self.SIDE_EFFECT_METHODS:
                 idempotency_key = step.get("idempotency_key") or inputs.get("idempotency_key")
                 if not idempotency_key:
-                    violations.append({
-                        "type": "missing_idempotency",
-                        "step_id": step_id,
-                        "step_index": idx,
-                        "method": method,
-                        "message": f"Step {step_id} uses {method} but has no idempotency_key",
-                    })
+                    violations.append(
+                        {
+                            "type": "missing_idempotency",
+                            "step_id": step_id,
+                            "step_index": idx,
+                            "method": method,
+                            "message": f"Step {step_id} uses {method} but has no idempotency_key",
+                        }
+                    )
 
         # 3. Check inputs for suspicious patterns
         inputs = step.get("inputs", {})
@@ -201,13 +207,15 @@ class PlannerSandbox:
         if "url" in inputs and not self.allow_external_urls:
             url = inputs.get("url", "")
             if not self._is_internal_url(url):
-                violations.append({
-                    "type": "external_url_forbidden",
-                    "step_id": step_id,
-                    "step_index": idx,
-                    "url": url[:100],  # Truncate for safety
-                    "message": f"External URLs not allowed: {url[:50]}...",
-                })
+                violations.append(
+                    {
+                        "type": "external_url_forbidden",
+                        "step_id": step_id,
+                        "step_index": idx,
+                        "url": url[:100],  # Truncate for safety
+                        "message": f"External URLs not allowed: {url[:50]}...",
+                    }
+                )
 
         return violations
 
@@ -229,14 +237,16 @@ class PlannerSandbox:
             if isinstance(value, str):
                 for pattern in self.SUSPICIOUS_PATTERNS:
                     if pattern.search(value):
-                        violations.append({
-                            "type": "suspicious_input",
-                            "step_id": step_id,
-                            "step_index": idx,
-                            "path": path,
-                            "pattern": pattern.pattern,
-                            "message": f"Suspicious pattern detected in {path}",
-                        })
+                        violations.append(
+                            {
+                                "type": "suspicious_input",
+                                "step_id": step_id,
+                                "step_index": idx,
+                                "path": path,
+                                "pattern": pattern.pattern,
+                                "message": f"Suspicious pattern detected in {path}",
+                            }
+                        )
                         break
             elif isinstance(value, dict):
                 for k, v in value.items():
@@ -317,6 +327,7 @@ class PlannerSandbox:
 
 
 # Validation helper functions
+
 
 def validate_step_structure(step: Dict[str, Any]) -> List[str]:
     """

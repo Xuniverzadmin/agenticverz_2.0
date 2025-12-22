@@ -8,10 +8,9 @@ import json
 import logging
 import os
 import select
-import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 import psycopg2
@@ -24,6 +23,7 @@ logger = logging.getLogger("nova.agents.message_service")
 @dataclass
 class Message:
     """Agent message entity."""
+
     id: UUID
     from_instance_id: str
     to_instance_id: str
@@ -40,6 +40,7 @@ class Message:
 @dataclass
 class SendResult:
     """Result of sending a message."""
+
     success: bool
     message_id: Optional[UUID] = None
     error: Optional[str] = None
@@ -57,7 +58,7 @@ class MessageService:
     """
 
     def __init__(self, database_url: Optional[str] = None):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not self.database_url:
             raise RuntimeError("DATABASE_URL required for MessageService")
 
@@ -97,7 +98,8 @@ class MessageService:
         with self.Session() as session:
             try:
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.messages (
                             id, from_instance_id, to_instance_id, job_id,
                             message_type, payload, status, reply_to_id, created_at
@@ -107,7 +109,8 @@ class MessageService:
                             :message_type, CAST(:payload AS JSONB),
                             'pending', CAST(:reply_to_id AS UUID), now()
                         )
-                    """),
+                    """
+                    ),
                     {
                         "id": str(message_id),
                         "from_instance_id": from_instance_id,
@@ -116,7 +119,7 @@ class MessageService:
                         "message_type": message_type,
                         "payload": json.dumps(payload) if not isinstance(payload, str) else payload,
                         "reply_to_id": str(reply_to_id) if reply_to_id else None,
-                    }
+                    },
                 )
 
                 # Notify listeners about new message
@@ -124,12 +127,14 @@ class MessageService:
                     text("SELECT pg_notify(:channel, :payload)"),
                     {
                         "channel": f"msg_{to_instance_id}",
-                        "payload": json.dumps({
-                            "message_id": str(message_id),
-                            "from": from_instance_id,
-                            "type": message_type,
-                        }),
-                    }
+                        "payload": json.dumps(
+                            {
+                                "message_id": str(message_id),
+                                "from": from_instance_id,
+                                "type": message_type,
+                            }
+                        ),
+                    },
                 )
 
                 session.commit()
@@ -141,7 +146,7 @@ class MessageService:
                         "from": from_instance_id,
                         "to": to_instance_id,
                         "type": message_type,
-                    }
+                    },
                 )
 
                 return SendResult(success=True, message_id=message_id)
@@ -204,19 +209,21 @@ class MessageService:
             messages = []
 
             for row in result:
-                messages.append(Message(
-                    id=UUID(str(row[0])),
-                    from_instance_id=row[1],
-                    to_instance_id=row[2],
-                    job_id=UUID(str(row[3])) if row[3] else None,
-                    message_type=row[4],
-                    payload=row[5],
-                    status=row[6],
-                    reply_to_id=UUID(str(row[7])) if row[7] else None,
-                    created_at=row[8],
-                    delivered_at=row[9],
-                    read_at=row[10],
-                ))
+                messages.append(
+                    Message(
+                        id=UUID(str(row[0])),
+                        from_instance_id=row[1],
+                        to_instance_id=row[2],
+                        job_id=UUID(str(row[3])) if row[3] else None,
+                        message_type=row[4],
+                        payload=row[5],
+                        status=row[6],
+                        reply_to_id=UUID(str(row[7])) if row[7] else None,
+                        created_at=row[8],
+                        delivered_at=row[9],
+                        read_at=row[10],
+                    )
+                )
 
             return messages
 
@@ -224,15 +231,17 @@ class MessageService:
         """Get a specific message by ID."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, from_instance_id, to_instance_id, job_id,
                         message_type, payload, status, reply_to_id,
                         created_at, delivered_at, read_at
                     FROM agents.messages
                     WHERE id = :message_id
-                """),
-                {"message_id": str(message_id)}
+                """
+                ),
+                {"message_id": str(message_id)},
             )
             row = result.fetchone()
 
@@ -258,13 +267,15 @@ class MessageService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.messages
                         SET status = 'delivered', delivered_at = now()
                         WHERE id = :message_id AND status = 'pending'
                         RETURNING id
-                    """),
-                    {"message_id": str(message_id)}
+                    """
+                    ),
+                    {"message_id": str(message_id)},
                 )
                 row = result.fetchone()
                 session.commit()
@@ -279,13 +290,15 @@ class MessageService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.messages
                         SET status = 'read', read_at = now()
                         WHERE id = :message_id AND status IN ('pending', 'delivered')
                         RETURNING id
-                    """),
-                    {"message_id": str(message_id)}
+                    """
+                    ),
+                    {"message_id": str(message_id)},
                 )
                 row = result.fetchone()
                 session.commit()
@@ -314,7 +327,8 @@ class MessageService:
         """
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, from_instance_id, to_instance_id, job_id,
                         message_type, payload, status, reply_to_id,
@@ -322,25 +336,28 @@ class MessageService:
                     FROM agents.messages
                     WHERE reply_to_id = :original_message_id
                     ORDER BY created_at
-                """),
-                {"original_message_id": str(original_message_id)}
+                """
+                ),
+                {"original_message_id": str(original_message_id)},
             )
 
             messages = []
             for row in result:
-                messages.append(Message(
-                    id=UUID(str(row[0])),
-                    from_instance_id=row[1],
-                    to_instance_id=row[2],
-                    job_id=UUID(str(row[3])) if row[3] else None,
-                    message_type=row[4],
-                    payload=row[5],
-                    status=row[6],
-                    reply_to_id=UUID(str(row[7])) if row[7] else None,
-                    created_at=row[8],
-                    delivered_at=row[9],
-                    read_at=row[10],
-                ))
+                messages.append(
+                    Message(
+                        id=UUID(str(row[0])),
+                        from_instance_id=row[1],
+                        to_instance_id=row[2],
+                        job_id=UUID(str(row[3])) if row[3] else None,
+                        message_type=row[4],
+                        payload=row[5],
+                        status=row[6],
+                        reply_to_id=UUID(str(row[7])) if row[7] else None,
+                        created_at=row[8],
+                        delivered_at=row[9],
+                        read_at=row[10],
+                    )
+                )
 
             return messages
 
@@ -480,13 +497,15 @@ class MessageService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         DELETE FROM agents.messages
                         WHERE status = 'read'
                           AND created_at < now() - make_interval(hours => :hours)
                         RETURNING id
-                    """),
-                    {"hours": older_than_hours}
+                    """
+                    ),
+                    {"hours": older_than_hours},
                 )
                 deleted = len(result.fetchall())
                 session.commit()

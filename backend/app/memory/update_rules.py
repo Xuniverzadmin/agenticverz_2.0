@@ -15,7 +15,6 @@ Usage:
     transformed = await engine.apply("tenant", "config:rate_limits", data)
 """
 
-import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -30,22 +29,15 @@ logger = logging.getLogger("nova.memory.update_rules")
 # Prometheus Metrics
 # =============================================================================
 
-RULES_APPLIED = Counter(
-    "memory_update_rules_applied_total",
-    "Memory update rules applied",
-    ["rule_name", "status"]
-)
+RULES_APPLIED = Counter("memory_update_rules_applied_total", "Memory update rules applied", ["rule_name", "status"])
 
-RULES_ERRORS = Counter(
-    "memory_update_rules_errors_total",
-    "Memory update rules errors",
-    ["rule_name", "error_type"]
-)
+RULES_ERRORS = Counter("memory_update_rules_errors_total", "Memory update rules errors", ["rule_name", "error_type"])
 
 
 # =============================================================================
 # Data Classes
 # =============================================================================
+
 
 @dataclass
 class UpdateRule:
@@ -61,6 +53,7 @@ class UpdateRule:
         sanitizers: List of sanitization functions
         enabled: Whether rule is active
     """
+
     name: str
     pattern: str
     schema: Optional[Any] = None  # Pydantic model
@@ -84,6 +77,7 @@ class UpdateRule:
 @dataclass
 class RuleResult:
     """Result of rule application."""
+
     rule_name: str
     applied: bool
     value: Dict[str, Any]
@@ -94,6 +88,7 @@ class RuleResult:
 # =============================================================================
 # Built-in Sanitizers
 # =============================================================================
+
 
 def sanitize_strings(value: Any) -> Any:
     """Strip whitespace from string values."""
@@ -144,6 +139,7 @@ def sanitize_timestamps(value: Any) -> Any:
 # =============================================================================
 # Merge Strategies
 # =============================================================================
+
 
 def deep_merge(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -202,6 +198,7 @@ MERGE_STRATEGIES: Dict[str, Callable] = {
 # Update Rules Engine
 # =============================================================================
 
+
 class UpdateRulesEngine:
     """
     Engine for applying update rules to memory values.
@@ -229,7 +226,7 @@ class UpdateRulesEngine:
         schema: Optional[Any] = None,
         transform: Optional[Callable] = None,
         merge_strategy: str = "replace",
-        sanitizers: Optional[List[Callable]] = None
+        sanitizers: Optional[List[Callable]] = None,
     ) -> None:
         """
         Add an update rule.
@@ -248,7 +245,7 @@ class UpdateRulesEngine:
             schema=schema,
             transform=transform,
             merge_strategy=merge_strategy,
-            sanitizers=sanitizers or []
+            sanitizers=sanitizers or [],
         )
         self._rules.append(rule)
         logger.info(f"Added update rule: {name} for pattern {pattern}")
@@ -277,11 +274,7 @@ class UpdateRulesEngine:
         ]
 
     async def apply(
-        self,
-        tenant_id: str,
-        key: str,
-        value: Dict[str, Any],
-        existing: Optional[Dict[str, Any]] = None
+        self, tenant_id: str, key: str, value: Dict[str, Any], existing: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Apply all matching rules to a value.
@@ -323,10 +316,7 @@ class UpdateRulesEngine:
         return result
 
     def _apply_rule(
-        self,
-        rule: UpdateRule,
-        value: Dict[str, Any],
-        existing: Optional[Dict[str, Any]] = None
+        self, rule: UpdateRule, value: Dict[str, Any], existing: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Apply a single rule."""
         result = value
@@ -379,37 +369,22 @@ class UpdateRulesEngine:
 # Pre-configured Rules
 # =============================================================================
 
+
 def create_default_engine() -> UpdateRulesEngine:
     """Create engine with default rules."""
     engine = UpdateRulesEngine()
 
     # Config entries use deep merge
-    engine.add_rule(
-        name="config_merge",
-        pattern="config:*",
-        merge_strategy="deep_merge"
-    )
+    engine.add_rule(name="config_merge", pattern="config:*", merge_strategy="deep_merge")
 
     # Counter entries use increment
-    engine.add_rule(
-        name="counter_increment",
-        pattern="counter:*",
-        merge_strategy="increment"
-    )
+    engine.add_rule(name="counter_increment", pattern="counter:*", merge_strategy="increment")
 
     # Log entries use append
-    engine.add_rule(
-        name="log_append",
-        pattern="log:*",
-        merge_strategy="append"
-    )
+    engine.add_rule(name="log_append", pattern="log:*", merge_strategy="append")
 
     # Agent preferences use deep merge
-    engine.add_rule(
-        name="agent_preferences",
-        pattern="agent:*:preferences",
-        merge_strategy="deep_merge"
-    )
+    engine.add_rule(name="agent_preferences", pattern="agent:*:preferences", merge_strategy="deep_merge")
 
     return engine
 

@@ -1,9 +1,9 @@
 # NOVA Planner Adapters
 # Provides pluggable planner backends (stub, anthropic, openai)
 
-import os
 import logging
-from typing import Protocol, Dict, Any, List, Optional
+import os
+from typing import Any, Dict, List, Optional, Protocol
 
 logger = logging.getLogger("nova.planners")
 
@@ -17,7 +17,7 @@ class PlannerProtocol(Protocol):
         goal: str,
         context_summary: Optional[str] = None,
         memory_snippets: Optional[List[Dict[str, Any]]] = None,
-        tool_manifest: Optional[List[Dict[str, Any]]] = None
+        tool_manifest: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Generate a plan for the given goal."""
         ...
@@ -29,14 +29,17 @@ def get_planner() -> PlannerProtocol:
 
     if backend == "anthropic":
         from .anthropic_adapter import AnthropicPlanner
+
         api_key = os.getenv("ANTHROPIC_API_KEY")
         return AnthropicPlanner(api_key=api_key)
     elif backend == "openai":
         from .openai_adapter import OpenAIPlanner
+
         api_key = os.getenv("OPENAI_API_KEY")
         return OpenAIPlanner(api_key=api_key)
     else:
         from .stub_adapter import StubPlanner
+
         return StubPlanner()
 
 

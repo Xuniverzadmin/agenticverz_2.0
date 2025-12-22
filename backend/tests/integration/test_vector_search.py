@@ -16,11 +16,11 @@ Run individual test classes for more reliable results:
     pytest tests/integration/test_vector_search.py::TestVectorStoreBasics -v
 """
 
-import os
-import pytest
 import uuid
-from unittest.mock import AsyncMock, patch, MagicMock
 from typing import List
+from unittest.mock import patch
+
+import pytest
 
 # Skip module if running in CI without DB
 pytestmark = [
@@ -31,6 +31,7 @@ pytestmark = [
 
 # ========== Fixtures ==========
 
+
 @pytest.fixture
 def mock_embedding_fn():
     """
@@ -38,9 +39,11 @@ def mock_embedding_fn():
 
     Uses a simple hash-based approach for consistent test results.
     """
+
     async def _mock_embedding(text: str) -> List[float]:
         # Generate deterministic embedding based on text hash
         import hashlib
+
         hash_val = int(hashlib.md5(text.encode()).hexdigest(), 16)
 
         # Create 1536-dim vector from hash
@@ -51,7 +54,7 @@ def mock_embedding_fn():
             embedding.append(val)
 
         # Normalize
-        norm = sum(x*x for x in embedding) ** 0.5
+        norm = sum(x * x for x in embedding) ** 0.5
         return [x / norm for x in embedding]
 
     return _mock_embedding
@@ -64,13 +67,13 @@ def mock_similar_embeddings():
     """
     # Base embedding - normalized
     base = [0.1] * 1536
-    norm = sum(x*x for x in base) ** 0.5
+    norm = sum(x * x for x in base) ** 0.5
     base = [x / norm for x in base]
 
     # Slightly modified embedding (high similarity)
     similar = base.copy()
     similar[0] = 0.11
-    norm = sum(x*x for x in similar) ** 0.5
+    norm = sum(x * x for x in similar) ** 0.5
     similar = [x / norm for x in similar]
 
     return base, similar
@@ -84,17 +87,17 @@ def test_agent_id():
 
 # ========== pgvector Availability Check ==========
 
+
 def check_pgvector_available_sync() -> bool:
     """Check if pgvector extension is available in the database (sync)."""
     try:
-        from sqlmodel import Session
         from sqlalchemy import text
+        from sqlmodel import Session
+
         from app.db import engine
 
         with Session(engine) as session:
-            result = session.exec(
-                text("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
-            )
+            result = session.exec(text("SELECT 1 FROM pg_extension WHERE extname = 'vector'"))
             return result.first() is not None
     except Exception as e:
         print(f"pgvector check failed: {e}")
@@ -121,6 +124,7 @@ def pgvector_available():
 
 
 # ========== Tests ==========
+
 
 class TestVectorStoreBasics:
     """Basic CRUD operations for vector store."""
@@ -149,9 +153,7 @@ class TestVectorStoreBasics:
         # Cleanup
         await store.delete(memory_id)
 
-    async def test_store_memory_with_mock_embedding(
-        self, test_agent_id, mock_embedding_fn, pgvector_available
-    ):
+    async def test_store_memory_with_mock_embedding(self, test_agent_id, mock_embedding_fn, pgvector_available):
         """Test storing memory with mock embedding."""
         from app.memory.vector_store import VectorMemoryStore
 
@@ -220,9 +222,7 @@ class TestVectorStoreBasics:
 class TestVectorSimilaritySearch:
     """Tests for semantic similarity search."""
 
-    async def test_similarity_search_with_mock_embeddings(
-        self, test_agent_id, mock_embedding_fn, pgvector_available
-    ):
+    async def test_similarity_search_with_mock_embeddings(self, test_agent_id, mock_embedding_fn, pgvector_available):
         """Test vector similarity search returns ordered by similarity."""
         from app.memory.vector_store import VectorMemoryStore
 
@@ -233,7 +233,7 @@ class TestVectorSimilaritySearch:
         texts = [
             "The quick brown fox jumps over the lazy dog",
             "The quick brown fox runs through the forest",  # Similar to first
-            "Programming in Python is fun and productive",   # Different topic
+            "Programming in Python is fun and productive",  # Different topic
         ]
 
         for text in texts:
@@ -268,15 +268,14 @@ class TestVectorSimilaritySearch:
 class TestKeywordFallback:
     """Tests for keyword search fallback."""
 
-    async def test_keyword_search_when_no_embeddings(
-        self, test_agent_id, pgvector_available
-    ):
+    async def test_keyword_search_when_no_embeddings(self, test_agent_id, pgvector_available):
         """Test fallback to keyword search when embeddings unavailable."""
         from app.memory.vector_store import VectorMemoryStore
 
         # Mock embedding function that fails
         async def failing_embedding(text: str):
             from app.memory.vector_store import EmbeddingError
+
             raise EmbeddingError("API unavailable")
 
         store = VectorMemoryStore(embedding_fn=failing_embedding)
@@ -307,9 +306,7 @@ class TestKeywordFallback:
 class TestFeatureFlags:
     """Tests for feature flag behavior."""
 
-    async def test_vector_search_disabled_flag(
-        self, test_agent_id, mock_embedding_fn, pgvector_available
-    ):
+    async def test_vector_search_disabled_flag(self, test_agent_id, mock_embedding_fn, pgvector_available):
         """Test that VECTOR_SEARCH_ENABLED=false skips vector search."""
         from app.memory.vector_store import VectorMemoryStore
 
@@ -343,12 +340,10 @@ class TestFeatureFlags:
 class TestMetricsRecording:
     """Tests for Prometheus metrics recording."""
 
-    async def test_search_records_latency_metric(
-        self, test_agent_id, mock_embedding_fn, pgvector_available
-    ):
+    async def test_search_records_latency_metric(self, test_agent_id, mock_embedding_fn, pgvector_available):
         """Test that vector search records latency metrics."""
-        from app.memory.vector_store import VectorMemoryStore
         from app.memory.embedding_metrics import VECTOR_QUERY_LATENCY
+        from app.memory.vector_store import VectorMemoryStore
 
         store = VectorMemoryStore(embedding_fn=mock_embedding_fn)
 
@@ -376,16 +371,15 @@ class TestMetricsRecording:
         # Cleanup
         await store.delete(memory_id)
 
-    async def test_fallback_records_counter(
-        self, test_agent_id, pgvector_available
-    ):
+    async def test_fallback_records_counter(self, test_agent_id, pgvector_available):
         """Test that fallback events are counted."""
-        from app.memory.vector_store import VectorMemoryStore
         from app.memory.embedding_metrics import VECTOR_FALLBACK_COUNT
+        from app.memory.vector_store import VectorMemoryStore
 
         # Mock embedding function that fails
         async def failing_embedding(text: str):
             from app.memory.vector_store import EmbeddingError
+
             raise EmbeddingError("Intentional failure")
 
         store = VectorMemoryStore(embedding_fn=failing_embedding)

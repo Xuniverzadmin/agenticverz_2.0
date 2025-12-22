@@ -5,13 +5,11 @@ Test suite for the async DB-backed circuit breaker.
 Requires PostgreSQL with the costsim_cb_state table.
 """
 
-import pytest
 import asyncio
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest_asyncio
-
+import pytest
 
 # Skip if dependencies not available
 pytest.importorskip("asyncpg")
@@ -91,7 +89,9 @@ class TestAsyncCircuitBreakerWithMock:
                 mock_config.return_value.auto_recover_enabled = True
 
                 # Mock _try_auto_recover to avoid full implementation
-                with patch("app.costsim.circuit_breaker_async._try_auto_recover", new_callable=AsyncMock) as mock_recover:
+                with patch(
+                    "app.costsim.circuit_breaker_async._try_auto_recover", new_callable=AsyncMock
+                ) as mock_recover:
                     mock_recover.return_value = True  # Indicates successful recovery
                     from app.costsim.circuit_breaker_async import is_v2_disabled
 

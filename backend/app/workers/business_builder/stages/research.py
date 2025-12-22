@@ -6,13 +6,14 @@ Market research stage that uses:
 - M9: Failure patterns for hallucination detection
 """
 
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
 class ResearchOutput:
     """Structured output from research stage."""
+
     market_report: Dict[str, Any]
     competitor_matrix: List[Dict[str, Any]]
     trend_analysis: List[str]

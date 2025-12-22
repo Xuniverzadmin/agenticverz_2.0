@@ -14,38 +14,33 @@ import hashlib
 import json
 import os
 import tempfile
+
 import pytest
-from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock, AsyncMock
 
 # P0-1: Async checkpoint store tests
 from app.workflow.checkpoint import (
-    InMemoryCheckpointStore,
     CheckpointVersionConflictError,
-    CheckpointData,
+    InMemoryCheckpointStore,
 )
 
 # P0-2: Exponential backoff tests
 from app.workflow.engine import (
-    _deterministic_jitter,
     _compute_backoff_ms,
-    _derive_seed,
+    _deterministic_jitter,
 )
-
-# P0-3: Golden write tests
-from app.workflow.golden import GoldenRecorder, GoldenEvent
 
 # P0-4: External guard tests
 from app.workflow.external_guard import (
     ExternalCallsGuard,
-    ExternalCallBlockedError,
-    check_external_call_allowed,
 )
 
+# P0-3: Golden write tests
+from app.workflow.golden import GoldenRecorder
 
 # ============================================================================
 # P0-1: Async Checkpoint Store Tests
 # ============================================================================
+
 
 class TestAsyncCheckpointStore:
     """Tests for P0-1: Async checkpoint store with proper concurrency."""
@@ -123,6 +118,7 @@ class TestAsyncCheckpointStore:
 # P0-2: Exponential Backoff Tests
 # ============================================================================
 
+
 class TestExponentialBackoff:
     """Tests for P0-2: Exponential backoff with deterministic jitter."""
 
@@ -195,6 +191,7 @@ class TestExponentialBackoff:
 # ============================================================================
 # P0-3: Atomic Golden Write Tests
 # ============================================================================
+
 
 class TestAtomicGoldenWrite:
     """Tests for P0-3: Atomic golden write + sign pattern."""
@@ -283,6 +280,7 @@ class TestAtomicGoldenWrite:
 # P0-3 (continued): Golden hash excludes duration_ms
 # ============================================================================
 
+
 class TestGoldenHashExcludesDuration:
     """Test that duration_ms is excluded from golden output hash."""
 
@@ -308,22 +306,18 @@ class TestGoldenHashExcludesDuration:
         # Canonicalize both
         canonical1 = canonicalize_for_golden(
             output1,
-            ignore_fields={'duration_ms', 'latency_ms'},
+            ignore_fields={"duration_ms", "latency_ms"},
             redact_sensitive=False,
         )
         canonical2 = canonicalize_for_golden(
             output2,
-            ignore_fields={'duration_ms', 'latency_ms'},
+            ignore_fields={"duration_ms", "latency_ms"},
             redact_sensitive=False,
         )
 
         # Compute hashes
-        hash1 = hashlib.sha256(
-            json.dumps(canonical1, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()[:16]
-        hash2 = hashlib.sha256(
-            json.dumps(canonical2, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()[:16]
+        hash1 = hashlib.sha256(json.dumps(canonical1, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
+        hash2 = hashlib.sha256(json.dumps(canonical2, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
 
         # Should be identical
         assert hash1 == hash2
@@ -332,6 +326,7 @@ class TestGoldenHashExcludesDuration:
 # ============================================================================
 # P0-4: External Guard Async HTTP Tests
 # ============================================================================
+
 
 class TestExternalGuardAsyncHTTP:
     """Tests for P0-4: External guard blocks async HTTP clients."""
@@ -349,6 +344,7 @@ class TestExternalGuardAsyncHTTP:
     async def test_check_external_call_allowed_raises_for_external(self):
         """Test that check_external_call_allowed raises for external hosts."""
         import os
+
         original = os.environ.get("DISABLE_EXTERNAL_CALLS")
 
         try:
@@ -356,7 +352,9 @@ class TestExternalGuardAsyncHTTP:
 
             # Re-import to pick up env change
             from importlib import reload
+
             import app.workflow.external_guard as eg
+
             reload(eg)
 
             with pytest.raises(eg.ExternalCallBlockedError):
@@ -381,6 +379,7 @@ class TestExternalGuardAsyncHTTP:
 # P0-1 + P1-5: Health endpoint uses ping()
 # ============================================================================
 
+
 class TestHealthEndpointPing:
     """Test that health endpoint uses ping() for DB check."""
 
@@ -401,13 +400,14 @@ class TestHealthEndpointPing:
         response = await health.readyz()
 
         # Should return 200 (or mock response with 200)
-        if hasattr(response, 'status_code'):
+        if hasattr(response, "status_code"):
             assert response.status_code == 200
 
 
 # ============================================================================
 # Integration: Verify all imports work
 # ============================================================================
+
 
 class TestP0Imports:
     """Verify all P0-related modules import correctly."""
@@ -417,10 +417,8 @@ class TestP0Imports:
         from app.workflow.checkpoint import (
             CheckpointStore,
             InMemoryCheckpointStore,
-            CheckpointVersionConflictError,
-            CheckpointData,
-            _convert_to_async_url,
         )
+
         assert CheckpointStore is not None
         assert InMemoryCheckpointStore is not None
 
@@ -429,9 +427,8 @@ class TestP0Imports:
         from app.workflow.engine import (
             WorkflowEngine,
             _deterministic_jitter,
-            _compute_backoff_ms,
-            _derive_seed,
         )
+
         assert WorkflowEngine is not None
         assert _deterministic_jitter is not None
 
@@ -440,19 +437,18 @@ class TestP0Imports:
         from app.workflow.golden import (
             GoldenRecorder,
             InMemoryGoldenRecorder,
-            GoldenEvent,
         )
+
         assert GoldenRecorder is not None
         assert InMemoryGoldenRecorder is not None
 
     def test_external_guard_imports(self):
         """Test external guard module imports."""
         from app.workflow.external_guard import (
-            ExternalCallsGuard,
             ExternalCallBlockedError,
-            block_external_calls,
-            require_no_external_calls,
+            ExternalCallsGuard,
         )
+
         assert ExternalCallsGuard is not None
         assert ExternalCallBlockedError is not None
 
@@ -461,6 +457,7 @@ class TestP0Imports:
 # P1-1: Engine uses save_with_retry for multi-worker correctness
 # ============================================================================
 
+
 class TestEngineSaveWithRetry:
     """Tests for P1-1: Engine uses save_with_retry."""
 
@@ -468,7 +465,7 @@ class TestEngineSaveWithRetry:
     async def test_inmemory_store_has_save_with_retry(self):
         """Test that InMemoryCheckpointStore has save_with_retry."""
         store = InMemoryCheckpointStore()
-        assert hasattr(store, 'save_with_retry')
+        assert hasattr(store, "save_with_retry")
 
     @pytest.mark.asyncio
     async def test_save_with_retry_works(self):
@@ -500,17 +497,18 @@ class TestEngineSaveWithRetry:
 # P1-2: PolicyEnforcer with shared budget store
 # ============================================================================
 
+
 class TestPolicyEnforcerBudgetStore:
     """Tests for P1-2: PolicyEnforcer with shared budget store."""
 
     def test_policy_enforcer_imports(self):
         """Test policy module imports."""
         from app.workflow.policies import (
-            PolicyEnforcer,
-            BudgetStore,
             InMemoryBudgetStore,
+            PolicyEnforcer,
             RedisBudgetStore,
         )
+
         assert PolicyEnforcer is not None
         assert InMemoryBudgetStore is not None
         assert RedisBudgetStore is not None
@@ -547,8 +545,8 @@ class TestPolicyEnforcerBudgetStore:
     @pytest.mark.asyncio
     async def test_policy_enforcer_uses_budget_store(self):
         """Test PolicyEnforcer uses budget store for cost tracking."""
-        from app.workflow.policies import PolicyEnforcer, InMemoryBudgetStore
-        from app.workflow.engine import StepDescriptor, StepContext
+        from app.workflow.engine import StepContext, StepDescriptor
+        from app.workflow.policies import InMemoryBudgetStore, PolicyEnforcer
 
         store = InMemoryBudgetStore()
         enforcer = PolicyEnforcer(

@@ -12,10 +12,11 @@ Environment Variables:
 """
 
 from __future__ import annotations
-import os
-from dataclasses import dataclass, field
-from typing import Optional
+
 import logging
+import os
+from dataclasses import dataclass
+from typing import Optional
 
 logger = logging.getLogger("nova.costsim.config")
 
@@ -30,18 +31,18 @@ class CostSimConfig:
     canary_enabled: bool = True
 
     # Thresholds
-    drift_threshold: float = 0.2          # P1 alert threshold
+    drift_threshold: float = 0.2  # P1 alert threshold
     drift_warning_threshold: float = 0.15  # P2 warning threshold
-    schema_error_threshold: int = 5        # P3 schema error count
+    schema_error_threshold: int = 5  # P3 schema error count
 
     # Circuit Breaker
-    failure_threshold: int = 3             # Consecutive failures to trip
-    auto_recover_enabled: bool = True      # Auto-recover after TTL expires
-    default_disable_ttl_hours: int = 24    # Default TTL for disables
+    failure_threshold: int = 3  # Consecutive failures to trip
+    auto_recover_enabled: bool = True  # Auto-recover after TTL expires
+    default_disable_ttl_hours: int = 24  # Default TTL for disables
 
     # Provenance
     provenance_enabled: bool = True
-    provenance_compress: bool = True       # Compress JSON payloads
+    provenance_compress: bool = True  # Compress JSON payloads
 
     # Paths (legacy, for backward compatibility)
     disable_file_path: str = "/var/lib/aos/costsim_v2_disabled"
@@ -63,7 +64,7 @@ class CostSimConfig:
 
     # Database
     v2_table_prefix: str = "costsim_v2_"
-    use_db_circuit_breaker: bool = True    # Use DB-backed circuit breaker
+    use_db_circuit_breaker: bool = True  # Use DB-backed circuit breaker
 
     @classmethod
     def from_env(cls) -> "CostSimConfig":
@@ -137,6 +138,7 @@ def get_commit_sha() -> str:
     """Get current git commit SHA."""
     try:
         import subprocess
+
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             capture_output=True,

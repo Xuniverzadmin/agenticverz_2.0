@@ -44,16 +44,18 @@ FAIL_CLOSED_ON_AUTH_ERROR = RBAC_ENFORCE
 
 class ApprovalLevel(IntEnum):
     """Approval levels mapped to organizational roles."""
-    SELF = 1        # Self-approval for low-risk operations
+
+    SELF = 1  # Self-approval for low-risk operations
     TEAM_MEMBER = 2  # Any authenticated team member
-    TEAM_LEAD = 3    # Team lead or senior engineer
-    MANAGER = 4      # Manager or policy admin
-    OWNER = 5        # Owner override (requires audit)
+    TEAM_LEAD = 3  # Team lead or senior engineer
+    MANAGER = 4  # Manager or policy admin
+    OWNER = 5  # Owner override (requires audit)
 
 
 @dataclass
 class RBACResult:
     """Result of RBAC permission check."""
+
     allowed: bool
     approver_id: str
     granted_level: int
@@ -93,7 +95,7 @@ async def _get_user_roles_async(approver_id: str, tenant_id: Optional[str] = Non
     if not RBAC_ENABLED:
         if RBAC_ENFORCE:
             # Fail-closed: RBAC enforcement requires RBAC to be enabled
-            logger.error(f"RBAC_ENFORCE=true but RBAC_ENABLED=false - configuration error")
+            logger.error("RBAC_ENFORCE=true but RBAC_ENABLED=false - configuration error")
             raise RBACError(
                 "RBAC enforcement enabled but RBAC not configured",
                 approver_id,
@@ -112,6 +114,7 @@ async def _get_user_roles_async(approver_id: str, tenant_id: Optional[str] = Non
     if USE_CLERK_AUTH:
         try:
             from app.auth.clerk_provider import get_user_roles_from_clerk
+
             return await get_user_roles_from_clerk(approver_id, tenant_id)
         except Exception as e:
             logger.error(f"Clerk auth error: {e}")
@@ -162,16 +165,12 @@ def _get_user_roles(approver_id: str, tenant_id: Optional[str] = None) -> dict:
         if loop.is_running():
             # If we're already in an async context, create a new task
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    _get_user_roles_async(approver_id, tenant_id)
-                )
+                future = executor.submit(asyncio.run, _get_user_roles_async(approver_id, tenant_id))
                 return future.result(timeout=AUTH_SERVICE_TIMEOUT + 1)
         else:
-            return loop.run_until_complete(
-                _get_user_roles_async(approver_id, tenant_id)
-            )
+            return loop.run_until_complete(_get_user_roles_async(approver_id, tenant_id))
     except RuntimeError:
         # No event loop, create one
         return asyncio.run(_get_user_roles_async(approver_id, tenant_id))
@@ -256,7 +255,7 @@ def check_approver_permission(
                 "granted_level": granted_level,
                 "tenant_id": tenant_id,
                 "roles": roles,
-            }
+            },
         )
 
     # Check permission
@@ -280,7 +279,7 @@ def check_approver_permission(
             "required_level": required_level,
             "granted_level": granted_level,
             "tenant_id": tenant_id,
-        }
+        },
     )
 
     if not allowed:
@@ -302,9 +301,12 @@ def require_approval_level(level: int):
         async def approve_high_risk_request(...):
             ...
     """
+
     def decorator(func):
         async def wrapper(*args, approver_id: str, tenant_id: Optional[str] = None, **kwargs):
             check_approver_permission(approver_id, level, tenant_id)
             return await func(*args, approver_id=approver_id, tenant_id=tenant_id, **kwargs)
+
         return wrapper
+
     return decorator

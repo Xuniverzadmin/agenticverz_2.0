@@ -17,14 +17,13 @@ Design Principles:
 """
 
 from __future__ import annotations
-from datetime import datetime
-from decimal import Decimal
-from typing import Any, Dict, List, Optional, Set, Union
+
 import copy
 import hashlib
 import json
-import re
-
+from datetime import datetime
+from decimal import Decimal
+from typing import Any, Dict, List, Optional, Set
 
 # Default volatile fields to ignore in golden comparisons
 DEFAULT_VOLATILE_FIELDS: Set[str] = {
@@ -97,8 +96,9 @@ def _normalize_key(key: str, mode: str = KEY_NORMALIZE_MODE) -> str:
     elif mode == "snake_case":
         # Convert camelCase/PascalCase to snake_case
         import re
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', key)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", key)
+        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
     else:  # preserve
         return key
 
@@ -398,12 +398,14 @@ def _find_diffs(actual: Any, expected: Any, path: str) -> List[Dict[str, Any]]:
     diffs = []
 
     if type(actual) != type(expected):
-        diffs.append({
-            "path": path or "root",
-            "type": "type_mismatch",
-            "actual_type": type(actual).__name__,
-            "expected_type": type(expected).__name__,
-        })
+        diffs.append(
+            {
+                "path": path or "root",
+                "type": "type_mismatch",
+                "actual_type": type(actual).__name__,
+                "expected_type": type(expected).__name__,
+            }
+        )
         return diffs
 
     if isinstance(actual, dict):
@@ -411,39 +413,47 @@ def _find_diffs(actual: Any, expected: Any, path: str) -> List[Dict[str, Any]]:
         for key in sorted(all_keys):
             key_path = f"{path}.{key}" if path else key
             if key not in actual:
-                diffs.append({
-                    "path": key_path,
-                    "type": "missing_in_actual",
-                    "expected": expected[key],
-                })
+                diffs.append(
+                    {
+                        "path": key_path,
+                        "type": "missing_in_actual",
+                        "expected": expected[key],
+                    }
+                )
             elif key not in expected:
-                diffs.append({
-                    "path": key_path,
-                    "type": "extra_in_actual",
-                    "actual": actual[key],
-                })
+                diffs.append(
+                    {
+                        "path": key_path,
+                        "type": "extra_in_actual",
+                        "actual": actual[key],
+                    }
+                )
             else:
                 diffs.extend(_find_diffs(actual[key], expected[key], key_path))
 
     elif isinstance(actual, list):
         if len(actual) != len(expected):
-            diffs.append({
-                "path": path or "root",
-                "type": "length_mismatch",
-                "actual_length": len(actual),
-                "expected_length": len(expected),
-            })
+            diffs.append(
+                {
+                    "path": path or "root",
+                    "type": "length_mismatch",
+                    "actual_length": len(actual),
+                    "expected_length": len(expected),
+                }
+            )
         for i, (a, e) in enumerate(zip(actual, expected)):
             diffs.extend(_find_diffs(a, e, f"{path}[{i}]"))
 
     else:
         if actual != expected:
-            diffs.append({
-                "path": path or "root",
-                "type": "value_mismatch",
-                "actual": actual,
-                "expected": expected,
-            })
+            diffs.append(
+                {
+                    "path": path or "root",
+                    "type": "value_mismatch",
+                    "actual": actual,
+                    "expected": expected,
+                }
+            )
 
     return diffs
 
@@ -462,7 +472,4 @@ def strip_volatile_from_events(
     Returns:
         List of events with volatile fields removed
     """
-    return [
-        canonicalize_for_golden(event, ignore_fields=ignore_fields, redact_sensitive=False)
-        for event in events
-    ]
+    return [canonicalize_for_golden(event, ignore_fields=ignore_fields, redact_sensitive=False) for event in events]

@@ -11,13 +11,12 @@ Revision ID: 031_m18_care_l_sba_evolution
 Revises: 030_m17_care_routing
 Create Date: 2025-12-14
 """
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers
-revision = '031_m18_care_l_sba_evolution'
-down_revision = '030_m17_care_routing'
+revision = "031_m18_care_l_sba_evolution"
+down_revision = "030_m17_care_routing"
 branch_labels = None
 depends_on = None
 
@@ -27,7 +26,8 @@ def upgrade() -> None:
     # Agent Reputation Table
     # Use DO block to handle concurrent migration execution gracefully
     # =========================================================================
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             CREATE TABLE IF NOT EXISTS routing.agent_reputation (
@@ -52,23 +52,29 @@ def upgrade() -> None:
             -- Table or type already exists (concurrent migration), skip
             NULL;
         END $$
-    """)
+    """
+    )
 
     # Index for reputation queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_reputation_score
         ON routing.agent_reputation (reputation_score DESC)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_reputation_state
         ON routing.agent_reputation (quarantine_state)
-    """)
+    """
+    )
 
     # =========================================================================
     # Boundary Violations Table
     # =========================================================================
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             CREATE TABLE IF NOT EXISTS agents.boundary_violations (
@@ -85,23 +91,29 @@ def upgrade() -> None:
         EXCEPTION WHEN duplicate_object OR unique_violation THEN
             NULL;
         END $$
-    """)
+    """
+    )
 
     # Index for violation queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_violations_agent
         ON agents.boundary_violations (agent_id, detected_at DESC)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_violations_type
         ON agents.boundary_violations (violation_type, detected_at DESC)
-    """)
+    """
+    )
 
     # =========================================================================
     # Drift Signals Table
     # =========================================================================
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             CREATE TABLE IF NOT EXISTS agents.drift_signals (
@@ -118,24 +130,30 @@ def upgrade() -> None:
         EXCEPTION WHEN duplicate_object OR unique_violation THEN
             NULL;
         END $$
-    """)
+    """
+    )
 
     # Index for drift queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_drift_agent
         ON agents.drift_signals (agent_id, detected_at DESC)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_drift_unacknowledged
         ON agents.drift_signals (acknowledged, detected_at DESC)
         WHERE acknowledged = false
-    """)
+    """
+    )
 
     # =========================================================================
     # Strategy Adjustments Table
     # =========================================================================
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             CREATE TABLE IF NOT EXISTS agents.strategy_adjustments (
@@ -152,18 +170,22 @@ def upgrade() -> None:
         EXCEPTION WHEN duplicate_object OR unique_violation THEN
             NULL;
         END $$
-    """)
+    """
+    )
 
     # Index for adjustment queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_adjustments_agent
         ON agents.strategy_adjustments (agent_id, adjusted_at DESC)
-    """)
+    """
+    )
 
     # =========================================================================
     # Learning Parameters Table
     # =========================================================================
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             CREATE TABLE IF NOT EXISTS routing.learning_parameters (
@@ -180,10 +202,12 @@ def upgrade() -> None:
         EXCEPTION WHEN duplicate_object OR unique_violation THEN
             NULL;
         END $$
-    """)
+    """
+    )
 
     # Insert default learning parameters
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO routing.learning_parameters (
             parameter_name, current_value, min_value, max_value, adaptation_rate
         ) VALUES
@@ -196,25 +220,30 @@ def upgrade() -> None:
             ('violation_weight', 0.25, 0.1, 0.4, 0.01),
             ('hysteresis_threshold', 0.15, 0.05, 0.30, 0.01)
         ON CONFLICT (parameter_name) DO NOTHING
-    """)
+    """
+    )
 
     # =========================================================================
     # Add reputation columns to routing_decisions for tracking
     # =========================================================================
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE routing.routing_decisions
         ADD COLUMN IF NOT EXISTS agent_reputation_at_route FLOAT,
         ADD COLUMN IF NOT EXISTS quarantine_state_at_route VARCHAR(20)
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
     # Drop columns from routing_decisions
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE routing.routing_decisions
         DROP COLUMN IF EXISTS agent_reputation_at_route,
         DROP COLUMN IF EXISTS quarantine_state_at_route
-    """)
+    """
+    )
 
     # Drop tables in reverse order
     op.execute("DROP TABLE IF EXISTS routing.learning_parameters")

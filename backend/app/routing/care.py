@@ -16,35 +16,32 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+import redis.asyncio as redis_async
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
-import redis.asyncio as redis_async
-
 from .models import (
-    AgentPerformanceVector,
-    CapabilityCheckResult,
     CONFIDENCE_BLOCK_THRESHOLD,
     CONFIDENCE_FALLBACK_THRESHOLD,
-    DifficultyLevel,
     FAIRNESS_WINDOW,
+    RATE_LIMIT_WINDOW,
+    RATE_LIMITS,
+    STAGE_CONFIDENCE_WEIGHTS,
+    AgentPerformanceVector,
+    CapabilityCheckResult,
     OrchestratorMode,
     RiskPolicy,
     RouteEvaluationResult,
-    RoutingConfig,
     RoutingDecision,
     RoutingOutcome,
     RoutingRequest,
     RoutingStage,
-    STAGE_CONFIDENCE_WEIGHTS,
     StageResult,
     SuccessMetric,
     infer_orchestrator_mode,
     infer_success_metric,
-    RATE_LIMITS,
-    RATE_LIMIT_WINDOW,
 )
-from .probes import CapabilityProber, get_capability_prober
+from .probes import get_capability_prober
 
 
 class RateLimiter:
@@ -55,7 +52,7 @@ class RateLimiter:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis_async.Redis] = None
 
     async def _get_redis(self) -> Optional[redis_async.Redis]:
@@ -145,7 +142,7 @@ class FairnessTracker:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis_async.Redis] = None
 
     async def _get_redis(self) -> Optional[redis_async.Redis]:
@@ -229,7 +226,7 @@ class PerformanceStore:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis_async.Redis] = None
         # In-memory fallback if Redis unavailable
         self._vectors: Dict[str, AgentPerformanceVector] = {}
@@ -305,10 +302,7 @@ class PerformanceStore:
         if outcome.latency_ms > 0:
             vector.latency_samples += 1
             alpha = 0.1  # Smoothing factor
-            vector.avg_latency_ms = (
-                alpha * outcome.latency_ms +
-                (1 - alpha) * vector.avg_latency_ms
-            )
+            vector.avg_latency_ms = alpha * outcome.latency_ms + (1 - alpha) * vector.avg_latency_ms
             # Track p95 approximation (simple max tracking)
             vector.p95_latency_ms = max(vector.p95_latency_ms, outcome.latency_ms)
 
@@ -328,20 +322,23 @@ class PerformanceStore:
         if r:
             try:
                 key = f"care:perf:{agent_id}"
-                await r.hset(key, mapping={
-                    "avg_latency_ms": str(vector.avg_latency_ms),
-                    "p95_latency_ms": str(vector.p95_latency_ms),
-                    "latency_samples": str(vector.latency_samples),
-                    "total_routes": str(vector.total_routes),
-                    "successful_routes": str(vector.successful_routes),
-                    "success_rate": str(vector.success_rate),
-                    "risk_violation_count": str(vector.risk_violation_count),
-                    "risk_violation_rate": str(vector.risk_violation_rate),
-                    "fallback_count": str(vector.fallback_count),
-                    "fallback_rate": str(vector.fallback_rate),
-                    "primary_selection_count": str(vector.primary_selection_count),
-                    "fairness_score": str(vector.fairness_score),
-                })
+                await r.hset(
+                    key,
+                    mapping={
+                        "avg_latency_ms": str(vector.avg_latency_ms),
+                        "p95_latency_ms": str(vector.p95_latency_ms),
+                        "latency_samples": str(vector.latency_samples),
+                        "total_routes": str(vector.total_routes),
+                        "successful_routes": str(vector.successful_routes),
+                        "success_rate": str(vector.success_rate),
+                        "risk_violation_count": str(vector.risk_violation_count),
+                        "risk_violation_rate": str(vector.risk_violation_rate),
+                        "fallback_count": str(vector.fallback_count),
+                        "fallback_rate": str(vector.fallback_rate),
+                        "primary_selection_count": str(vector.primary_selection_count),
+                        "fairness_score": str(vector.fairness_score),
+                    },
+                )
                 # Expire after 24 hours of inactivity
                 await r.expire(key, 86400)
             except Exception as e:
@@ -436,7 +433,8 @@ class CAREEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO routing.routing_decisions (
                             request_id, task_description, task_domain,
                             selected_agent_id, success_metric, orchestrator_mode,
@@ -452,7 +450,8 @@ class CAREEngine:
                             :error, :actionable_fix, :total_latency_ms,
                             :stage_latencies, :decision_details, :tenant_id, :decided_at
                         )
-                    """),
+                    """
+                    ),
                     {
                         "request_id": decision.request_id,
                         "task_description": decision.task_description[:1000],
@@ -471,17 +470,19 @@ class CAREEngine:
                         "actionable_fix": decision.actionable_fix,
                         "total_latency_ms": decision.total_latency_ms,
                         "stage_latencies": json.dumps(decision.stage_latencies),
-                        "decision_details": json.dumps({
-                            "decision_reason": decision.decision_reason,
-                            "difficulty": request.difficulty.value,
-                            "risk_tolerance": request.risk_tolerance.value,
-                            "confidence_score": decision.confidence_score,
-                            "confidence_blocked": decision.confidence_blocked,
-                            "confidence_enforced_fallback": decision.confidence_enforced_fallback,
-                        }),
+                        "decision_details": json.dumps(
+                            {
+                                "decision_reason": decision.decision_reason,
+                                "difficulty": request.difficulty.value,
+                                "risk_tolerance": request.risk_tolerance.value,
+                                "confidence_score": decision.confidence_score,
+                                "confidence_blocked": decision.confidence_blocked,
+                                "confidence_enforced_fallback": decision.confidence_enforced_fallback,
+                            }
+                        ),
                         "tenant_id": request.tenant_id,
                         "decided_at": decision.decided_at,
-                    }
+                    },
                 )
                 conn.commit()
             engine.dispose()
@@ -774,10 +775,7 @@ class CAREEngine:
         if not check_result.passed:
             # HARD dependency failures - block routing
             hard_names = [p.name for p in check_result.hard_failures]
-            fix_instructions = [
-                p.fix_instruction for p in check_result.hard_failures
-                if p.fix_instruction
-            ]
+            fix_instructions = [p.fix_instruction for p in check_result.hard_failures if p.fix_instruction]
 
             return StageResult(
                 stage=RoutingStage.CAPABILITY,
@@ -1074,9 +1072,7 @@ class CAREEngine:
             return eligible
 
         agent_ids = [e.agent_id for e in eligible]
-        fairness_scores = await self._fairness_tracker.get_fairness_scores(
-            agent_ids, tenant_id
-        )
+        fairness_scores = await self._fairness_tracker.get_fairness_scores(agent_ids, tenant_id)
 
         # Apply fairness adjustment (20% weight on fairness)
         fairness_weight = 0.2
@@ -1127,7 +1123,7 @@ class CAREEngine:
                 "request_id": request_id,
                 "task_domain": request.task_domain,
                 "difficulty": request.difficulty.value,
-            }
+            },
         )
 
         # Rate limit check (per tenant and risk policy)
@@ -1148,7 +1144,7 @@ class CAREEngine:
                         "risk_policy": request.risk_tolerance.value,
                         "current": current,
                         "limit": limit,
-                    }
+                    },
                 )
                 return RoutingDecision(
                     request_id=request_id,
@@ -1165,6 +1161,7 @@ class CAREEngine:
         # Get agents from SBA registry
         try:
             from ..agents.sba import get_sba_service
+
             sba_service = get_sba_service()
             agents = sba_service.list_agents(
                 tenant_id=request.tenant_id,
@@ -1203,16 +1200,18 @@ class CAREEngine:
             "orchestrator": 0,
         }
 
-        for agent in agents[:request.max_agents]:
+        for agent in agents[: request.max_agents]:
             if not agent.sba:
                 # Skip agents without SBA
-                evaluated.append(RouteEvaluationResult(
-                    agent_id=agent.agent_id,
-                    agent_name=agent.agent_name,
-                    eligible=False,
-                    rejection_reason="No SBA schema",
-                    rejection_stage=RoutingStage.ASPIRATION,
-                ))
+                evaluated.append(
+                    RouteEvaluationResult(
+                        agent_id=agent.agent_id,
+                        agent_name=agent.agent_name,
+                        eligible=False,
+                        rejection_reason="No SBA schema",
+                        rejection_stage=RoutingStage.ASPIRATION,
+                    )
+                )
                 continue
 
             result = await self.evaluate_agent(
@@ -1255,12 +1254,11 @@ class CAREEngine:
             confidence_score = self._calculate_confidence_score(selected.stage_results)
 
             # Apply confidence thresholds
-            confidence_blocked, confidence_enforced_fallback, fallback_agents = \
-                self._apply_confidence_thresholds(
-                    confidence_score,
-                    eligible,
-                    fallback_agents,
-                )
+            confidence_blocked, confidence_enforced_fallback, fallback_agents = self._apply_confidence_thresholds(
+                confidence_score,
+                eligible,
+                fallback_agents,
+            )
 
             # If confidence blocked, clear the selection
             if confidence_blocked:
@@ -1271,7 +1269,7 @@ class CAREEngine:
                         "confidence": confidence_score,
                         "threshold": CONFIDENCE_BLOCK_THRESHOLD,
                         "selected_agent": selected.agent_id,
-                    }
+                    },
                 )
                 selected = None
 
@@ -1290,14 +1288,12 @@ class CAREEngine:
                         "confidence": confidence_score,
                         "original_agent": original_agent,
                         "fallback_agent": selected.agent_id,
-                    }
+                    },
                 )
 
             # Record assignment for fairness tracking
             if selected and self._fairness_tracker:
-                await self._fairness_tracker.record_assignment(
-                    selected.agent_id, request.tenant_id
-                )
+                await self._fairness_tracker.record_assignment(selected.agent_id, request.tenant_id)
 
         # Check for degraded mode (any soft dependency failures)
         degraded = False
@@ -1354,7 +1350,7 @@ class CAREEngine:
                 "confidence_score": confidence_score,
                 "confidence_blocked": confidence_blocked,
                 "confidence_enforced_fallback": confidence_enforced_fallback,
-            }
+            },
         )
 
         # Persist to audit table (non-blocking)
@@ -1455,6 +1451,7 @@ class CAREEngine:
         Used by POST /routing/cascade-evaluate
         """
         from ..agents.sba import get_sba_service
+
         sba_service = get_sba_service()
 
         results = []
@@ -1474,7 +1471,7 @@ class CAREEngine:
         else:
             # Evaluate all agents
             agents = sba_service.list_agents(tenant_id=request.tenant_id)
-            for agent in agents[:request.max_agents]:
+            for agent in agents[: request.max_agents]:
                 if agent.sba:
                     result = await self.evaluate_agent(
                         agent_id=agent.agent_id,

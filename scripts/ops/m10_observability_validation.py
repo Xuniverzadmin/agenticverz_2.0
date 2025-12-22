@@ -29,51 +29,70 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
-import traceback
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger('m10.observability')
+logger = logging.getLogger("m10.observability")
 
 # ============================================================================
 # Configuration
 # ============================================================================
 
+
 @dataclass
 class Config:
     """Configuration from environment."""
-    database_url: str = field(default_factory=lambda: os.getenv('DATABASE_URL', ''))
-    redis_url: str = field(default_factory=lambda: os.getenv('REDIS_URL', ''))
+
+    database_url: str = field(default_factory=lambda: os.getenv("DATABASE_URL", ""))
+    redis_url: str = field(default_factory=lambda: os.getenv("REDIS_URL", ""))
 
     # Prometheus
-    prometheus_pushgateway: str = field(default_factory=lambda: os.getenv('PROMETHEUS_PUSHGATEWAY', 'http://localhost:9091'))
+    prometheus_pushgateway: str = field(
+        default_factory=lambda: os.getenv(
+            "PROMETHEUS_PUSHGATEWAY", "http://localhost:9091"
+        )
+    )
 
     # Alertmanager
-    alertmanager_url: str = field(default_factory=lambda: os.getenv('ALERTMANAGER_URL', 'http://localhost:9093'))
+    alertmanager_url: str = field(
+        default_factory=lambda: os.getenv("ALERTMANAGER_URL", "http://localhost:9093")
+    )
 
     # PostHog
-    posthog_api_key: str = field(default_factory=lambda: os.getenv('POSTHOG_API_KEY', ''))
-    posthog_host: str = field(default_factory=lambda: os.getenv('POSTHOG_HOST', 'https://us.posthog.com'))
+    posthog_api_key: str = field(
+        default_factory=lambda: os.getenv("POSTHOG_API_KEY", "")
+    )
+    posthog_host: str = field(
+        default_factory=lambda: os.getenv("POSTHOG_HOST", "https://us.posthog.com")
+    )
 
     # Resend
-    resend_api_key: str = field(default_factory=lambda: os.getenv('RESEND_API_KEY', ''))
-    alert_email_to: str = field(default_factory=lambda: os.getenv('ALERT_EMAIL_TO', 'admin1@agenticverz.com'))
-    alert_email_from: str = field(default_factory=lambda: os.getenv('ALERT_EMAIL_FROM', 'alerts@agenticverz.com'))
+    resend_api_key: str = field(default_factory=lambda: os.getenv("RESEND_API_KEY", ""))
+    alert_email_to: str = field(
+        default_factory=lambda: os.getenv("ALERT_EMAIL_TO", "admin1@agenticverz.com")
+    )
+    alert_email_from: str = field(
+        default_factory=lambda: os.getenv("ALERT_EMAIL_FROM", "alerts@agenticverz.com")
+    )
 
     # Trigger.dev
-    trigger_api_key: str = field(default_factory=lambda: os.getenv('TRIGGER_API_KEY', ''))
+    trigger_api_key: str = field(
+        default_factory=lambda: os.getenv("TRIGGER_API_KEY", "")
+    )
 
     # Vault for secrets
-    vault_addr: str = field(default_factory=lambda: os.getenv('VAULT_ADDR', 'http://127.0.0.1:8200'))
-    vault_token: str = field(default_factory=lambda: os.getenv('VAULT_TOKEN', ''))
+    vault_addr: str = field(
+        default_factory=lambda: os.getenv("VAULT_ADDR", "http://127.0.0.1:8200")
+    )
+    vault_token: str = field(default_factory=lambda: os.getenv("VAULT_TOKEN", ""))
 
 
 # ============================================================================
 # Test Scenario Framework
 # ============================================================================
+
 
 class TestResult(Enum):
     PASS = "pass"
@@ -85,6 +104,7 @@ class TestResult(Enum):
 @dataclass
 class ValidationScenario:
     """A test scenario with cause, effect, and expected vs actual."""
+
     name: str
     cause: str  # What action triggers the test
     expected_effect: str  # What should happen
@@ -94,37 +114,45 @@ class ValidationScenario:
     result: TestResult = TestResult.SKIP
     latency_ms: float = 0.0
     error: Optional[str] = None
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
 
 @dataclass
 class ValidationReport:
     """Full validation report."""
+
     run_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
     scenarios: list = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
     overall_result: TestResult = TestResult.SKIP
 
     def to_dict(self) -> dict:
         return {
-            'run_id': self.run_id,
-            'timestamp': self.timestamp,
-            'scenarios': [asdict(s) for s in self.scenarios],
-            'metrics': self.metrics,
-            'overall_result': self.overall_result.value,
-            'summary': {
-                'total': len(self.scenarios),
-                'passed': sum(1 for s in self.scenarios if s.result == TestResult.PASS),
-                'failed': sum(1 for s in self.scenarios if s.result == TestResult.FAIL),
-                'errors': sum(1 for s in self.scenarios if s.result == TestResult.ERROR),
-            }
+            "run_id": self.run_id,
+            "timestamp": self.timestamp,
+            "scenarios": [asdict(s) for s in self.scenarios],
+            "metrics": self.metrics,
+            "overall_result": self.overall_result.value,
+            "summary": {
+                "total": len(self.scenarios),
+                "passed": sum(1 for s in self.scenarios if s.result == TestResult.PASS),
+                "failed": sum(1 for s in self.scenarios if s.result == TestResult.FAIL),
+                "errors": sum(
+                    1 for s in self.scenarios if s.result == TestResult.ERROR
+                ),
+            },
         }
 
 
 # ============================================================================
 # Prometheus Integration
 # ============================================================================
+
 
 class PrometheusMetrics:
     """Push metrics to Prometheus Pushgateway."""
@@ -172,14 +200,21 @@ class PrometheusMetrics:
 # Alertmanager Integration
 # ============================================================================
 
+
 class AlertmanagerClient:
     """Send alerts to Alertmanager."""
 
     def __init__(self, alertmanager_url: str):
         self.alertmanager_url = alertmanager_url
 
-    async def fire_alert(self, alertname: str, severity: str, summary: str,
-                         description: str, labels: dict = None) -> bool:
+    async def fire_alert(
+        self,
+        alertname: str,
+        severity: str,
+        summary: str,
+        description: str,
+        labels: dict = None,
+    ) -> bool:
         """Fire an alert to Alertmanager."""
         try:
             import aiohttp
@@ -189,13 +224,10 @@ class AlertmanagerClient:
                     "alertname": alertname,
                     "severity": severity,
                     "service": "m10_validation",
-                    **(labels or {})
+                    **(labels or {}),
                 },
-                "annotations": {
-                    "summary": summary,
-                    "description": description
-                },
-                "generatorURL": "http://localhost:8000/admin/validation"
+                "annotations": {"summary": summary, "description": description},
+                "generatorURL": "http://localhost:8000/admin/validation",
             }
 
             url = f"{self.alertmanager_url}/api/v2/alerts"
@@ -217,6 +249,7 @@ class AlertmanagerClient:
 # PostHog Integration
 # ============================================================================
 
+
 class PostHogTracker:
     """Track events to PostHog."""
 
@@ -224,8 +257,12 @@ class PostHogTracker:
         self.api_key = api_key
         self.host = host
 
-    async def capture(self, event: str, properties: dict = None,
-                      distinct_id: str = "m10_validation_system") -> bool:
+    async def capture(
+        self,
+        event: str,
+        properties: dict = None,
+        distinct_id: str = "m10_validation_system",
+    ) -> bool:
         """Capture an event."""
         if not self.api_key:
             logger.debug("PostHog API key not configured, skipping")
@@ -240,9 +277,9 @@ class PostHogTracker:
                 "properties": {
                     "$lib": "m10_observability",
                     "timestamp": datetime.now(timezone.utc).isoformat(),
-                    **(properties or {})
+                    **(properties or {}),
                 },
-                "distinct_id": distinct_id
+                "distinct_id": distinct_id,
             }
 
             url = f"{self.host}/capture/"
@@ -263,6 +300,7 @@ class PostHogTracker:
 # ============================================================================
 # Resend Email Integration
 # ============================================================================
+
 
 class ResendEmailer:
     """Send email alerts via Resend."""
@@ -285,13 +323,13 @@ class ResendEmailer:
                 "from": self.from_email,
                 "to": [self.to_email],
                 "subject": subject,
-                "html": html_body
+                "html": html_body,
             }
 
             url = "https://api.resend.com/emails"
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
 
             async with aiohttp.ClientSession() as session:
@@ -312,6 +350,7 @@ class ResendEmailer:
 # Trigger.dev Integration
 # ============================================================================
 
+
 class TriggerDevClient:
     """Interact with Trigger.dev for job scheduling."""
 
@@ -330,11 +369,13 @@ class TriggerDevClient:
             url = f"https://api.trigger.dev/api/v1/jobs/{job_id}/invoke"
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
 
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload or {}, headers=headers) as resp:
+                async with session.post(
+                    url, json=payload or {}, headers=headers
+                ) as resp:
                     if resp.status in (200, 201, 202):
                         logger.info(f"Trigger.dev job invoked: {job_id}")
                         return True
@@ -350,6 +391,7 @@ class TriggerDevClient:
 # Validation Scenarios
 # ============================================================================
 
+
 class ValidationSuite:
     """Run validation scenarios and report results."""
 
@@ -361,7 +403,9 @@ class ValidationSuite:
         self.prometheus = PrometheusMetrics(config.prometheus_pushgateway)
         self.alertmanager = AlertmanagerClient(config.alertmanager_url)
         self.posthog = PostHogTracker(config.posthog_api_key, config.posthog_host)
-        self.resend = ResendEmailer(config.resend_api_key, config.alert_email_from, config.alert_email_to)
+        self.resend = ResendEmailer(
+            config.resend_api_key, config.alert_email_from, config.alert_email_to
+        )
         self.trigger = TriggerDevClient(config.trigger_api_key)
 
     async def scenario_neon_write_read(self) -> ValidationScenario:
@@ -369,40 +413,56 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="neon_write_read",
             cause="Insert a test record into failure_matches table",
-            expected_effect="Record is persisted and can be read back with matching values"
+            expected_effect="Record is persisted and can be read back with matching values",
         )
 
         try:
             import asyncpg
 
             start = time.time()
-            conn = await asyncpg.connect(self.config.database_url, ssl='require')
+            conn = await asyncpg.connect(self.config.database_url, ssl="require")
 
             # Write
             test_id = f"obs_test_{uuid.uuid4().hex[:8]}"
-            row_id = await conn.fetchval("""
+            row_id = await conn.fetchval(
+                """
                 INSERT INTO failure_matches (
                     run_id, error_code, match_type, confidence_score, created_at
                 ) VALUES ($1, 'OBS_TEST', 'observability', 0.99, NOW())
                 RETURNING id
-            """, test_id)
+            """,
+                test_id,
+            )
 
             # Read back
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT run_id, error_code, confidence_score FROM failure_matches WHERE id = $1
-            """, row_id)
+            """,
+                row_id,
+            )
 
             # Cleanup
             await conn.execute("DELETE FROM failure_matches WHERE id = $1", row_id)
             await conn.close()
 
             scenario.latency_ms = (time.time() - start) * 1000
-            scenario.expected_result = {"run_id": test_id, "error_code": "OBS_TEST", "confidence": 0.99}
-            scenario.actual_result = {"run_id": row['run_id'], "error_code": row['error_code'], "confidence": float(row['confidence_score'])}
+            scenario.expected_result = {
+                "run_id": test_id,
+                "error_code": "OBS_TEST",
+                "confidence": 0.99,
+            }
+            scenario.actual_result = {
+                "run_id": row["run_id"],
+                "error_code": row["error_code"],
+                "confidence": float(row["confidence_score"]),
+            }
 
-            if (row['run_id'] == test_id and
-                row['error_code'] == 'OBS_TEST' and
-                abs(row['confidence_score'] - 0.99) < 0.01):
+            if (
+                row["run_id"] == test_id
+                and row["error_code"] == "OBS_TEST"
+                and abs(row["confidence_score"] - 0.99) < 0.01
+            ):
                 scenario.result = TestResult.PASS
                 scenario.actual_effect = f"Record persisted and retrieved successfully in {scenario.latency_ms:.0f}ms"
             else:
@@ -421,38 +481,47 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="neon_referential_integrity",
             cause="Insert failure_match, then recovery_candidate referencing it",
-            expected_effect="Both records created with valid FK relationship"
+            expected_effect="Both records created with valid FK relationship",
         )
 
         try:
             import asyncpg
 
             start = time.time()
-            conn = await asyncpg.connect(self.config.database_url, ssl='require')
+            conn = await asyncpg.connect(self.config.database_url, ssl="require")
 
             # Create parent record
             test_id = f"fk_test_{uuid.uuid4().hex[:8]}"
-            fm_id = await conn.fetchval("""
+            fm_id = await conn.fetchval(
+                """
                 INSERT INTO failure_matches (
                     run_id, error_code, match_type, confidence_score
                 ) VALUES ($1, 'FK_TEST', 'fk_test', 0.5)
                 RETURNING id
-            """, test_id)
+            """,
+                test_id,
+            )
 
             # Create child record with FK
-            rc_id = await conn.fetchval("""
+            rc_id = await conn.fetchval(
+                """
                 INSERT INTO recovery_candidates (
                     failure_match_id, suggestion, confidence, decision, source
                 ) VALUES ($1, 'FK test suggestion', 0.8, 'pending', 'fk_test')
                 RETURNING id
-            """, fm_id)
+            """,
+                fm_id,
+            )
 
             # Verify JOIN works
-            join_result = await conn.fetchval("""
+            join_result = await conn.fetchval(
+                """
                 SELECT COUNT(*) FROM recovery_candidates rc
                 JOIN failure_matches fm ON rc.failure_match_id = fm.id
                 WHERE fm.id = $1
-            """, fm_id)
+            """,
+                fm_id,
+            )
 
             # Cleanup (child first due to FK)
             await conn.execute("DELETE FROM recovery_candidates WHERE id = $1", rc_id)
@@ -482,7 +551,7 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="neon_latency_threshold",
             cause="Measure round-trip write latency to Neon",
-            expected_effect="Latency under 3000ms (serverless acceptable)"
+            expected_effect="Latency under 3000ms (serverless acceptable)",
         )
 
         LATENCY_THRESHOLD_MS = 3000
@@ -490,19 +559,22 @@ class ValidationSuite:
         try:
             import asyncpg
 
-            conn = await asyncpg.connect(self.config.database_url, ssl='require')
+            conn = await asyncpg.connect(self.config.database_url, ssl="require")
 
             # Measure latency over 3 writes
             latencies = []
             for i in range(3):
                 start = time.time()
                 test_id = f"lat_test_{uuid.uuid4().hex[:8]}"
-                row_id = await conn.fetchval("""
+                row_id = await conn.fetchval(
+                    """
                     INSERT INTO failure_matches (
                         run_id, error_code, match_type, confidence_score
                     ) VALUES ($1, 'LATENCY_TEST', 'latency', 0.0)
                     RETURNING id
-                """, test_id)
+                """,
+                    test_id,
+                )
                 await conn.execute("DELETE FROM failure_matches WHERE id = $1", row_id)
                 latencies.append((time.time() - start) * 1000)
 
@@ -510,8 +582,14 @@ class ValidationSuite:
 
             avg_latency = sum(latencies) / len(latencies)
             scenario.latency_ms = avg_latency
-            scenario.expected_result = {"threshold_ms": LATENCY_THRESHOLD_MS, "condition": "under"}
-            scenario.actual_result = {"avg_latency_ms": round(avg_latency, 2), "samples": [round(l, 2) for l in latencies]}
+            scenario.expected_result = {
+                "threshold_ms": LATENCY_THRESHOLD_MS,
+                "condition": "under",
+            }
+            scenario.actual_result = {
+                "avg_latency_ms": round(avg_latency, 2),
+                "samples": [round(l, 2) for l in latencies],
+            }
 
             if avg_latency < LATENCY_THRESHOLD_MS:
                 scenario.result = TestResult.PASS
@@ -532,7 +610,7 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="redis_stream_operations",
             cause="Write message to Redis stream, read it back",
-            expected_effect="Message persisted in stream and retrievable"
+            expected_effect="Message persisted in stream and retrievable",
         )
 
         try:
@@ -542,7 +620,10 @@ class ValidationSuite:
             client = redis.from_url(self.config.redis_url)
 
             stream_key = "obs_test:stream"
-            test_data = {"test_id": uuid.uuid4().hex[:8], "timestamp": datetime.now(timezone.utc).isoformat()}
+            test_data = {
+                "test_id": uuid.uuid4().hex[:8],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
 
             # Write to stream
             msg_id = await client.xadd(stream_key, test_data)
@@ -558,20 +639,31 @@ class ValidationSuite:
             scenario.expected_result = {"message_count": 1, "data_matches": True}
 
             if messages and len(messages) == 1:
-                retrieved_data = {k.decode(): v.decode() for k, v in messages[0][1].items()}
-                data_matches = retrieved_data.get('test_id') == test_data['test_id']
-                scenario.actual_result = {"message_count": 1, "data_matches": data_matches}
+                retrieved_data = {
+                    k.decode(): v.decode() for k, v in messages[0][1].items()
+                }
+                data_matches = retrieved_data.get("test_id") == test_data["test_id"]
+                scenario.actual_result = {
+                    "message_count": 1,
+                    "data_matches": data_matches,
+                }
 
                 if data_matches:
                     scenario.result = TestResult.PASS
-                    scenario.actual_effect = "Stream message written and read back successfully"
+                    scenario.actual_effect = (
+                        "Stream message written and read back successfully"
+                    )
                 else:
                     scenario.result = TestResult.FAIL
                     scenario.actual_effect = "Data mismatch in stream message"
             else:
-                scenario.actual_result = {"message_count": len(messages) if messages else 0}
+                scenario.actual_result = {
+                    "message_count": len(messages) if messages else 0
+                }
                 scenario.result = TestResult.FAIL
-                scenario.actual_effect = f"Expected 1 message, got {len(messages) if messages else 0}"
+                scenario.actual_effect = (
+                    f"Expected 1 message, got {len(messages) if messages else 0}"
+                )
 
         except Exception as e:
             scenario.result = TestResult.ERROR
@@ -585,7 +677,7 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="redis_hash_operations",
             cause="Create, read, update, delete hash fields",
-            expected_effect="All CRUD operations succeed"
+            expected_effect="All CRUD operations succeed",
         )
 
         try:
@@ -621,18 +713,16 @@ class ValidationSuite:
                 "create": "success",
                 "read_field1": "value1",
                 "increment_result": 5,
-                "deleted": True
+                "deleted": True,
             }
             scenario.actual_result = {
                 "read_field1": val1.decode() if val1 else None,
                 "increment_result": new_counter,
                 "field_count": len(all_fields),
-                "deleted": exists == 0
+                "deleted": exists == 0,
             }
 
-            if (val1 and val1.decode() == "value1" and
-                new_counter == 5 and
-                exists == 0):
+            if val1 and val1.decode() == "value1" and new_counter == 5 and exists == 0:
                 scenario.result = TestResult.PASS
                 scenario.actual_effect = "All hash CRUD operations successful"
             else:
@@ -651,7 +741,7 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="redis_latency",
             cause="Measure Redis ping latency",
-            expected_effect="Latency under 500ms"
+            expected_effect="Latency under 500ms",
         )
 
         LATENCY_THRESHOLD_MS = 500
@@ -673,14 +763,19 @@ class ValidationSuite:
             avg_latency = sum(latencies) / len(latencies)
             scenario.latency_ms = avg_latency
             scenario.expected_result = {"threshold_ms": LATENCY_THRESHOLD_MS}
-            scenario.actual_result = {"avg_latency_ms": round(avg_latency, 2), "samples": [round(l, 2) for l in latencies]}
+            scenario.actual_result = {
+                "avg_latency_ms": round(avg_latency, 2),
+                "samples": [round(l, 2) for l in latencies],
+            }
 
             if avg_latency < LATENCY_THRESHOLD_MS:
                 scenario.result = TestResult.PASS
                 scenario.actual_effect = f"Average latency {avg_latency:.0f}ms under {LATENCY_THRESHOLD_MS}ms"
             else:
                 scenario.result = TestResult.FAIL
-                scenario.actual_effect = f"Average latency {avg_latency:.0f}ms exceeds threshold"
+                scenario.actual_effect = (
+                    f"Average latency {avg_latency:.0f}ms exceeds threshold"
+                )
 
         except Exception as e:
             scenario.result = TestResult.ERROR
@@ -694,7 +789,7 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="api_health",
             cause="Call /health endpoint",
-            expected_effect="Returns 200 with status=healthy"
+            expected_effect="Returns 200 with status=healthy",
         )
 
         try:
@@ -708,7 +803,10 @@ class ValidationSuite:
 
             scenario.latency_ms = (time.time() - start) * 1000
             scenario.expected_result = {"status_code": 200, "body_status": "healthy"}
-            scenario.actual_result = {"status_code": status_code, "body_status": body.get("status")}
+            scenario.actual_result = {
+                "status_code": status_code,
+                "body_status": body.get("status"),
+            }
 
             if status_code == 200 and body.get("status") == "healthy":
                 scenario.result = TestResult.PASS
@@ -729,19 +827,19 @@ class ValidationSuite:
         scenario = ValidationScenario(
             name="api_capabilities",
             cause="Call /api/v1/runtime/capabilities",
-            expected_effect="Returns skills list with at least 5 skills"
+            expected_effect="Returns skills list with at least 5 skills",
         )
 
         try:
             import aiohttp
 
             start = time.time()
-            api_key = os.getenv('AOS_API_KEY', '')
+            api_key = os.getenv("AOS_API_KEY", "")
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(
                     "http://localhost:8000/api/v1/runtime/capabilities",
-                    headers={"X-API-Key": api_key}
+                    headers={"X-API-Key": api_key},
                 ) as resp:
                     status_code = resp.status
                     body = await resp.json()
@@ -751,7 +849,10 @@ class ValidationSuite:
             skill_count = len(skills)
 
             scenario.expected_result = {"min_skills": 5}
-            scenario.actual_result = {"skill_count": skill_count, "skills": list(skills.keys())}
+            scenario.actual_result = {
+                "skill_count": skill_count,
+                "skills": list(skills.keys()),
+            }
 
             if status_code == 200 and skill_count >= 5:
                 scenario.result = TestResult.PASS
@@ -787,17 +888,22 @@ class ValidationSuite:
                 logger.info(f"Scenario {result.name}: {result.result.value}")
             except Exception as e:
                 logger.error(f"Scenario {scenario_fn.__name__} crashed: {e}")
-                self.report.scenarios.append(ValidationScenario(
-                    name=scenario_fn.__name__,
-                    cause="Run scenario",
-                    expected_effect="Complete without crash",
-                    actual_effect=f"Crashed: {e}",
-                    result=TestResult.ERROR,
-                    error=str(e)
-                ))
+                self.report.scenarios.append(
+                    ValidationScenario(
+                        name=scenario_fn.__name__,
+                        cause="Run scenario",
+                        expected_effect="Complete without crash",
+                        actual_effect=f"Crashed: {e}",
+                        result=TestResult.ERROR,
+                        error=str(e),
+                    )
+                )
 
         # Determine overall result
-        if any(s.result in (TestResult.FAIL, TestResult.ERROR) for s in self.report.scenarios):
+        if any(
+            s.result in (TestResult.FAIL, TestResult.ERROR)
+            for s in self.report.scenarios
+        ):
             self.report.overall_result = TestResult.FAIL
         elif all(s.result == TestResult.PASS for s in self.report.scenarios):
             self.report.overall_result = TestResult.PASS
@@ -806,40 +912,66 @@ class ValidationSuite:
 
         # Collect metrics
         self.report.metrics = {
-            'neon_write_latency_ms': next((s.latency_ms for s in self.report.scenarios if s.name == 'neon_latency_threshold'), 0),
-            'redis_ping_latency_ms': next((s.latency_ms for s in self.report.scenarios if s.name == 'redis_latency'), 0),
-            'api_health_latency_ms': next((s.latency_ms for s in self.report.scenarios if s.name == 'api_health'), 0),
+            "neon_write_latency_ms": next(
+                (
+                    s.latency_ms
+                    for s in self.report.scenarios
+                    if s.name == "neon_latency_threshold"
+                ),
+                0,
+            ),
+            "redis_ping_latency_ms": next(
+                (
+                    s.latency_ms
+                    for s in self.report.scenarios
+                    if s.name == "redis_latency"
+                ),
+                0,
+            ),
+            "api_health_latency_ms": next(
+                (s.latency_ms for s in self.report.scenarios if s.name == "api_health"),
+                0,
+            ),
         }
 
         return self.report
 
     async def push_metrics(self):
         """Push metrics to Prometheus."""
-        summary = self.report.to_dict()['summary']
+        summary = self.report.to_dict()["summary"]
 
-        self.prometheus.gauge('m10_validation_scenarios_total', summary['total'])
-        self.prometheus.gauge('m10_validation_scenarios_passed', summary['passed'])
-        self.prometheus.gauge('m10_validation_scenarios_failed', summary['failed'])
-        self.prometheus.gauge('m10_validation_scenarios_errors', summary['errors'])
+        self.prometheus.gauge("m10_validation_scenarios_total", summary["total"])
+        self.prometheus.gauge("m10_validation_scenarios_passed", summary["passed"])
+        self.prometheus.gauge("m10_validation_scenarios_failed", summary["failed"])
+        self.prometheus.gauge("m10_validation_scenarios_errors", summary["errors"])
 
-        self.prometheus.gauge('m10_validation_overall_success', 1 if self.report.overall_result == TestResult.PASS else 0)
+        self.prometheus.gauge(
+            "m10_validation_overall_success",
+            1 if self.report.overall_result == TestResult.PASS else 0,
+        )
 
         for name, value in self.report.metrics.items():
-            self.prometheus.gauge(f'm10_{name}', value)
+            self.prometheus.gauge(f"m10_{name}", value)
 
         await self.prometheus.push()
 
     async def fire_alerts_if_needed(self):
         """Fire alerts if validation failed."""
         if self.report.overall_result in (TestResult.FAIL, TestResult.ERROR):
-            failed_scenarios = [s for s in self.report.scenarios if s.result in (TestResult.FAIL, TestResult.ERROR)]
+            failed_scenarios = [
+                s
+                for s in self.report.scenarios
+                if s.result in (TestResult.FAIL, TestResult.ERROR)
+            ]
 
             # Alertmanager
             await self.alertmanager.fire_alert(
                 alertname="M10ValidationFailed",
                 severity="critical",
                 summary=f"M10 validation failed: {len(failed_scenarios)} scenarios failed",
-                description="\n".join(f"- {s.name}: {s.actual_effect}" for s in failed_scenarios)
+                description="\n".join(
+                    f"- {s.name}: {s.actual_effect}" for s in failed_scenarios
+                ),
             )
 
             # Resend email
@@ -857,24 +989,24 @@ class ValidationSuite:
 
             await self.resend.send_alert(
                 subject=f"[CRITICAL] M10 Validation Failed - {len(failed_scenarios)} scenarios",
-                html_body=html_body
+                html_body=html_body,
             )
 
     async def track_analytics(self):
         """Track validation event in PostHog."""
-        summary = self.report.to_dict()['summary']
+        summary = self.report.to_dict()["summary"]
 
         await self.posthog.capture(
             event="m10_validation_completed",
             properties={
                 "run_id": self.report.run_id,
                 "overall_result": self.report.overall_result.value,
-                "scenarios_total": summary['total'],
-                "scenarios_passed": summary['passed'],
-                "scenarios_failed": summary['failed'],
-                "neon_latency_ms": self.report.metrics.get('neon_write_latency_ms', 0),
-                "redis_latency_ms": self.report.metrics.get('redis_ping_latency_ms', 0),
-            }
+                "scenarios_total": summary["total"],
+                "scenarios_passed": summary["passed"],
+                "scenarios_failed": summary["failed"],
+                "neon_latency_ms": self.report.metrics.get("neon_write_latency_ms", 0),
+                "redis_latency_ms": self.report.metrics.get("redis_ping_latency_ms", 0),
+            },
         )
 
 
@@ -882,8 +1014,13 @@ class ValidationSuite:
 # Main
 # ============================================================================
 
-async def run_validation(config: Config, push_metrics: bool = True,
-                         fire_alerts: bool = True, track_analytics: bool = True) -> ValidationReport:
+
+async def run_validation(
+    config: Config,
+    push_metrics: bool = True,
+    fire_alerts: bool = True,
+    track_analytics: bool = True,
+) -> ValidationReport:
     """Run full validation suite with all integrations."""
     suite = ValidationSuite(config)
 
@@ -910,7 +1047,9 @@ async def run_daemon(config: Config, interval: int = 300):
     while True:
         try:
             report = await run_validation(config)
-            logger.info(f"Validation cycle {report.run_id}: {report.overall_result.value}")
+            logger.info(
+                f"Validation cycle {report.run_id}: {report.overall_result.value}"
+            )
         except Exception as e:
             logger.error(f"Daemon cycle error: {e}")
 
@@ -918,12 +1057,18 @@ async def run_daemon(config: Config, interval: int = 300):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='M10 Observability Validation Suite')
-    parser.add_argument('--full', action='store_true', help='Run full validation with all integrations')
-    parser.add_argument('--scenarios', action='store_true', help='Run scenarios only (no integrations)')
-    parser.add_argument('--daemon', action='store_true', help='Run as daemon')
-    parser.add_argument('--interval', type=int, default=300, help='Daemon interval (seconds)')
-    parser.add_argument('--json', action='store_true', help='Output JSON report')
+    parser = argparse.ArgumentParser(description="M10 Observability Validation Suite")
+    parser.add_argument(
+        "--full", action="store_true", help="Run full validation with all integrations"
+    )
+    parser.add_argument(
+        "--scenarios", action="store_true", help="Run scenarios only (no integrations)"
+    )
+    parser.add_argument("--daemon", action="store_true", help="Run as daemon")
+    parser.add_argument(
+        "--interval", type=int, default=300, help="Daemon interval (seconds)"
+    )
+    parser.add_argument("--json", action="store_true", help="Output JSON report")
     args = parser.parse_args()
 
     config = Config()
@@ -937,14 +1082,16 @@ def main():
             await run_daemon(config, args.interval)
         else:
             push = not args.scenarios
-            report = await run_validation(config, push_metrics=push, fire_alerts=push, track_analytics=push)
+            report = await run_validation(
+                config, push_metrics=push, fire_alerts=push, track_analytics=push
+            )
 
             if args.json:
                 print(json.dumps(report.to_dict(), indent=2, default=str))
             else:
-                summary = report.to_dict()['summary']
+                summary = report.to_dict()["summary"]
                 print(f"\n{'='*60}")
-                print(f"M10 Observability Validation Report")
+                print("M10 Observability Validation Report")
                 print(f"{'='*60}")
                 print(f"Run ID: {report.run_id}")
                 print(f"Timestamp: {report.timestamp}")
@@ -954,9 +1101,14 @@ def main():
                 print(f"  - Failed: {summary['failed']}")
                 print(f"  - Errors: {summary['errors']}")
 
-                print(f"\nScenario Details:")
+                print("\nScenario Details:")
                 for s in report.scenarios:
-                    status_icon = {"pass": "[OK]", "fail": "[FAIL]", "error": "[ERR]", "skip": "[SKIP]"}[s.result.value]
+                    status_icon = {
+                        "pass": "[OK]",
+                        "fail": "[FAIL]",
+                        "error": "[ERR]",
+                        "skip": "[SKIP]",
+                    }[s.result.value]
                     print(f"  {status_icon} {s.name}")
                     print(f"       Cause: {s.cause}")
                     print(f"       Expected: {s.expected_effect}")
@@ -964,7 +1116,7 @@ def main():
                     if s.latency_ms > 0:
                         print(f"       Latency: {s.latency_ms:.0f}ms")
 
-                print(f"\nMetrics:")
+                print("\nMetrics:")
                 for name, value in report.metrics.items():
                     print(f"  {name}: {value:.2f}")
 
@@ -973,5 +1125,5 @@ def main():
     asyncio.run(run())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

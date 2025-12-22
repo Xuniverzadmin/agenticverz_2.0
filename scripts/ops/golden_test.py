@@ -53,6 +53,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 @dataclass
 class GoldenTestResult:
     """Result of a golden test comparison."""
+
     milestone: str
     test_name: str
     passed: bool
@@ -66,6 +67,7 @@ class GoldenTestResult:
 @dataclass
 class GoldenTestReport:
     """Aggregated golden test report."""
+
     total: int = 0
     passed: int = 0
     failed: int = 0
@@ -114,9 +116,9 @@ class GoldenTestFramework:
             "metadata": {
                 "created_at": datetime.now().isoformat(),
                 "version": "1.0",
-                "framework": "agenticverz-golden-test"
+                "framework": "agenticverz-golden-test",
             },
-            "data": data
+            "data": data,
         }
         with open(filepath, "w") as f:
             json.dump(snapshot, f, indent=2, sort_keys=True, default=str)
@@ -131,14 +133,21 @@ class GoldenTestFramework:
                 for key in set(a.keys()) | set(g.keys()):
                     new_path = f"{path}.{key}" if path else key
                     if key not in a:
-                        diff[new_path] = {"status": "missing_in_actual", "golden": g[key]}
+                        diff[new_path] = {
+                            "status": "missing_in_actual",
+                            "golden": g[key],
+                        }
                     elif key not in g:
                         diff[new_path] = {"status": "extra_in_actual", "actual": a[key]}
                     else:
                         _compare(a[key], g[key], new_path)
             elif isinstance(a, list) and isinstance(g, list):
                 if len(a) != len(g):
-                    diff[path] = {"status": "length_mismatch", "actual": len(a), "golden": len(g)}
+                    diff[path] = {
+                        "status": "length_mismatch",
+                        "actual": len(a),
+                        "golden": len(g),
+                    }
                 else:
                     for i, (av, gv) in enumerate(zip(a, g)):
                         _compare(av, gv, f"{path}[{i}]")
@@ -148,8 +157,13 @@ class GoldenTestFramework:
         _compare(actual, golden)
         return diff
 
-    def run_test(self, milestone: str, test_name: str, golden_file: str,
-                 generator: Callable[[], Dict[str, Any]]) -> GoldenTestResult:
+    def run_test(
+        self,
+        milestone: str,
+        test_name: str,
+        golden_file: str,
+        generator: Callable[[], Dict[str, Any]],
+    ) -> GoldenTestResult:
         """Run a single golden test."""
         try:
             # Generate actual output
@@ -169,7 +183,7 @@ class GoldenTestFramework:
                         passed=True,
                         golden_file=golden_file,
                         actual_hash=actual_hash,
-                        error="Created new golden snapshot"
+                        error="Created new golden snapshot",
                     )
                 else:
                     return GoldenTestResult(
@@ -177,7 +191,7 @@ class GoldenTestFramework:
                         test_name=test_name,
                         passed=False,
                         golden_file=golden_file,
-                        error=f"Golden snapshot not found: {golden_file}"
+                        error=f"Golden snapshot not found: {golden_file}",
                     )
 
             golden_data = golden_snapshot.get("data", golden_snapshot)
@@ -194,7 +208,7 @@ class GoldenTestFramework:
                     passed=True,
                     golden_file=golden_file,
                     actual_hash=actual_hash,
-                    golden_hash=golden_hash
+                    golden_hash=golden_hash,
                 )
             else:
                 if self.update_mode:
@@ -206,10 +220,13 @@ class GoldenTestFramework:
                         passed=True,
                         golden_file=golden_file,
                         actual_hash=actual_hash,
-                        error="Updated golden snapshot"
+                        error="Updated golden snapshot",
                     )
                 else:
-                    self.log(f"[{milestone}] {test_name}: FAIL (diff: {len(diff)} keys)", "ERROR")
+                    self.log(
+                        f"[{milestone}] {test_name}: FAIL (diff: {len(diff)} keys)",
+                        "ERROR",
+                    )
                     return GoldenTestResult(
                         milestone=milestone,
                         test_name=test_name,
@@ -218,7 +235,7 @@ class GoldenTestFramework:
                         diff=diff,
                         actual_hash=actual_hash,
                         golden_hash=golden_hash,
-                        error=f"Snapshot mismatch: {len(diff)} differences"
+                        error=f"Snapshot mismatch: {len(diff)} differences",
                     )
 
         except Exception as e:
@@ -228,7 +245,7 @@ class GoldenTestFramework:
                 test_name=test_name,
                 passed=False,
                 golden_file=golden_file,
-                error=f"{type(e).__name__}: {str(e)}"
+                error=f"{type(e).__name__}: {str(e)}",
             )
 
     def add_result(self, result: GoldenTestResult):
@@ -259,14 +276,14 @@ class GoldenTestFramework:
                 ],
                 "checkpoint_interval": 1,
                 "deterministic": True,
-                "hash_algorithm": "sha256"
+                "hash_algorithm": "sha256",
             }
 
         result = self.run_test(
             milestone="M4",
             test_name="execution_plan_structure",
             golden_file="m4_execution_plan.json",
-            generator=generate_execution_plan
+            generator=generate_execution_plan,
         )
         self.add_result(result)
 
@@ -284,18 +301,18 @@ class GoldenTestFramework:
                 "skill_costs": {
                     "llm_invoke": {"tokens": 1000, "cost_usd": 0.002},
                     "http_call": {"requests": 5, "cost_usd": 0.0001},
-                    "kv_store": {"operations": 10, "cost_usd": 0.00001}
+                    "kv_store": {"operations": 10, "cost_usd": 0.00001},
                 },
                 "total_cost_usd": 0.00211,
                 "budget_remaining_usd": 0.99789,
-                "deterministic_hash": "a1b2c3d4"
+                "deterministic_hash": "a1b2c3d4",
             }
 
         result = self.run_test(
             milestone="M6",
             test_name="pricing_calculation",
             golden_file="m6_costsim_pricing.json",
-            generator=generate_pricing_decision
+            generator=generate_pricing_decision,
         )
         self.add_result(result)
 
@@ -319,16 +336,16 @@ class GoldenTestFramework:
                 "envelope_status": {
                     "daily_limit_usd": 10.00,
                     "daily_used_usd": 2.50,
-                    "remaining_usd": 7.50
+                    "remaining_usd": 7.50,
                 },
-                "fallback_model": None
+                "fallback_model": None,
             }
 
         result = self.run_test(
             milestone="M14",
             test_name="budget_approval_decision",
             golden_file="m14_budget_decision.json",
-            generator=generate_budget_decision
+            generator=generate_budget_decision,
         )
         self.add_result(result)
 
@@ -349,20 +366,20 @@ class GoldenTestFramework:
                     {"stage": 2, "name": "cost_check", "result": "within_budget"},
                     {"stage": 3, "name": "risk_assessment", "result": "low_risk"},
                     {"stage": 4, "name": "load_balance", "result": "agent_a"},
-                    {"stage": 5, "name": "final_route", "result": "agent_a:model_x"}
+                    {"stage": 5, "name": "final_route", "result": "agent_a:model_x"},
                 ],
                 "selected_agent": "agent_a",
                 "selected_model": "model_x",
                 "confidence": 0.95,
                 "risk_level": "low",
-                "deterministic": True
+                "deterministic": True,
             }
 
         result = self.run_test(
             milestone="M17",
             test_name="5_stage_routing_decision",
             golden_file="m17_routing_decision.json",
-            generator=generate_routing_decision
+            generator=generate_routing_decision,
         )
         self.add_result(result)
 
@@ -380,29 +397,29 @@ class GoldenTestFramework:
                 "previous_state": {
                     "rate_limit": 100,
                     "magnitude_cap": 0.8,
-                    "freeze_threshold": 0.95
+                    "freeze_threshold": 0.95,
                 },
                 "trigger": "oscillation_detected",
                 "oscillation_count": 3,
                 "adjustment": {
                     "action": "dampen",
                     "rate_limit_delta": -10,
-                    "magnitude_cap_delta": -0.1
+                    "magnitude_cap_delta": -0.1,
                 },
                 "new_state": {
                     "rate_limit": 90,
                     "magnitude_cap": 0.7,
-                    "freeze_threshold": 0.95
+                    "freeze_threshold": 0.95,
                 },
                 "rollback_available": True,
-                "metrics_exported": ["governor_adjustment_total", "rate_limit_gauge"]
+                "metrics_exported": ["governor_adjustment_total", "rate_limit_gauge"],
             }
 
         result = self.run_test(
             milestone="M18",
             test_name="oscillation_dampen_adjustment",
             golden_file="m18_governor_adjustment.json",
-            generator=generate_governor_adjustment
+            generator=generate_governor_adjustment,
         )
         self.add_result(result)
 
@@ -420,25 +437,37 @@ class GoldenTestFramework:
                 "request": {
                     "action": "execute_skill",
                     "skill": "http_call",
-                    "target_url": "https://api.example.com"
+                    "target_url": "https://api.example.com",
                 },
                 "rules_evaluated": [
-                    {"category": "SAFETY", "rule": "block_internal_ips", "result": "pass"},
+                    {
+                        "category": "SAFETY",
+                        "rule": "block_internal_ips",
+                        "result": "pass",
+                    },
                     {"category": "PRIVACY", "rule": "no_pii_logging", "result": "pass"},
-                    {"category": "OPERATIONAL", "rule": "rate_limit_check", "result": "pass"},
+                    {
+                        "category": "OPERATIONAL",
+                        "rule": "rate_limit_check",
+                        "result": "pass",
+                    },
                     {"category": "ROUTING", "rule": "prefer_cached", "result": "skip"},
-                    {"category": "CUSTOM_DOMAIN", "rule": "api_allowlist", "result": "pass"}
+                    {
+                        "category": "CUSTOM_DOMAIN",
+                        "rule": "api_allowlist",
+                        "result": "pass",
+                    },
                 ],
                 "final_decision": "ALLOW",
                 "categories_checked": 5,
-                "version": "1.0.0"
+                "version": "1.0.0",
             }
 
         result = self.run_test(
             milestone="M19",
             test_name="5_category_policy_evaluation",
             golden_file="m19_policy_evaluation.json",
-            generator=generate_policy_evaluation
+            generator=generate_policy_evaluation,
         )
         self.add_result(result)
 
@@ -456,8 +485,9 @@ class GoldenTestFramework:
             "M19": self.golden_m19_policy_evaluation,
         }
 
-        tests_to_run = {k: v for k, v in all_tests.items()
-                       if milestones is None or k in milestones}
+        tests_to_run = {
+            k: v for k, v in all_tests.items() if milestones is None or k in milestones
+        }
 
         self.log(f"Running golden tests for: {list(tests_to_run.keys())}", "INFO")
 
@@ -479,7 +509,9 @@ class GoldenTestFramework:
             "passed": self.report.passed,
             "failed": self.report.failed,
             "updated": self.report.updated,
-            "pass_rate": (self.report.passed / self.report.total * 100) if self.report.total > 0 else 0,
+            "pass_rate": (self.report.passed / self.report.total * 100)
+            if self.report.total > 0
+            else 0,
             "results": [
                 {
                     "milestone": r.milestone,
@@ -489,10 +521,10 @@ class GoldenTestFramework:
                     "actual_hash": r.actual_hash,
                     "golden_hash": r.golden_hash,
                     "error": r.error,
-                    "diff_keys": len(r.diff) if r.diff else 0
+                    "diff_keys": len(r.diff) if r.diff else 0,
                 }
                 for r in self.report.results
-            ]
+            ],
         }
 
     def print_summary(self) -> bool:
@@ -506,10 +538,16 @@ class GoldenTestFramework:
         print("=" * 70)
 
         if self.update_mode:
-            print(f"\033[1;33mUPDATE MODE: {self.report.updated} snapshots updated\033[0m")
+            print(
+                f"\033[1;33mUPDATE MODE: {self.report.updated} snapshots updated\033[0m"
+            )
 
         for result in self.report.results:
-            status = "\033[0;32m✓ PASS\033[0m" if result.passed else "\033[0;31m✗ FAIL\033[0m"
+            status = (
+                "\033[0;32m✓ PASS\033[0m"
+                if result.passed
+                else "\033[0;31m✗ FAIL\033[0m"
+            )
             print(f"\n[{result.milestone}] {result.test_name}: {status}")
             print(f"  Golden file: {result.golden_file}")
             if result.actual_hash:
@@ -520,12 +558,20 @@ class GoldenTestFramework:
                 print(f"  Diff keys: {list(result.diff.keys())[:5]}...")
 
         print("\n" + "-" * 70)
-        pass_rate = (self.report.passed / self.report.total * 100) if self.report.total > 0 else 0
+        pass_rate = (
+            (self.report.passed / self.report.total * 100)
+            if self.report.total > 0
+            else 0
+        )
 
         if self.report.failed == 0:
-            print(f"\033[0;32mALL GOLDEN TESTS PASSED\033[0m: {self.report.passed}/{self.report.total} ({pass_rate:.1f}%)")
+            print(
+                f"\033[0;32mALL GOLDEN TESTS PASSED\033[0m: {self.report.passed}/{self.report.total} ({pass_rate:.1f}%)"
+            )
         else:
-            print(f"\033[0;31mGOLDEN TESTS FAILED\033[0m: {self.report.passed}/{self.report.total} ({pass_rate:.1f}%)")
+            print(
+                f"\033[0;31mGOLDEN TESTS FAILED\033[0m: {self.report.passed}/{self.report.total} ({pass_rate:.1f}%)"
+            )
 
         if self.report.updated > 0:
             print(f"\033[1;33mSnapshots updated: {self.report.updated}\033[0m")
@@ -537,14 +583,16 @@ class GoldenTestFramework:
 
 def main():
     parser = argparse.ArgumentParser(description="Agenticverz Golden Tests")
-    parser.add_argument("--update", "-u", action="store_true",
-                       help="Update golden snapshots")
-    parser.add_argument("--milestone", "-m", action="append",
-                       help="Run specific milestone(s) only")
-    parser.add_argument("--json", action="store_true",
-                       help="Output JSON format")
-    parser.add_argument("--list", "-l", action="store_true",
-                       help="List available golden tests")
+    parser.add_argument(
+        "--update", "-u", action="store_true", help="Update golden snapshots"
+    )
+    parser.add_argument(
+        "--milestone", "-m", action="append", help="Run specific milestone(s) only"
+    )
+    parser.add_argument("--json", action="store_true", help="Output JSON format")
+    parser.add_argument(
+        "--list", "-l", action="store_true", help="List available golden tests"
+    )
 
     args = parser.parse_args()
 
@@ -558,10 +606,7 @@ def main():
         print("  M19: Policy evaluation")
         sys.exit(0)
 
-    framework = GoldenTestFramework(
-        update_mode=args.update,
-        json_mode=args.json
-    )
+    framework = GoldenTestFramework(update_mode=args.update, json_mode=args.json)
 
     framework.run_all(args.milestone)
     success = framework.print_summary()

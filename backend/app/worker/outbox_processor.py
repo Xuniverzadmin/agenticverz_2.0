@@ -33,13 +33,11 @@ Environment Variables:
 import argparse
 import asyncio
 import hashlib
-import json
 import logging
 import os
 import signal
 import socket
 import sys
-import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -86,6 +84,7 @@ class OutboxProcessor:
     async def start(self):
         """Initialize resources."""
         from sqlmodel import create_engine
+
         self._engine = create_engine(self.db_url, pool_pre_ping=True)
         # Use connection limits to prevent overwhelming external endpoints
         limits = httpx.Limits(
@@ -114,7 +113,7 @@ class OutboxProcessor:
             with Session(self._engine) as session:
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": LOCK_NAME, "holder_id": WORKER_ID, "ttl": LOCK_TTL}
+                    {"lock_name": LOCK_NAME, "holder_id": WORKER_ID, "ttl": LOCK_TTL},
                 )
                 acquired = result.scalar()
                 session.commit()
@@ -139,7 +138,7 @@ class OutboxProcessor:
             with Session(self._engine) as session:
                 result = session.execute(
                     text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                    {"lock_name": LOCK_NAME, "holder_id": WORKER_ID}
+                    {"lock_name": LOCK_NAME, "holder_id": WORKER_ID},
                 )
                 released = result.scalar()
                 session.commit()
@@ -157,7 +156,7 @@ class OutboxProcessor:
             with Session(self._engine) as session:
                 result = session.execute(
                     text("SELECT m10_recovery.extend_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": LOCK_NAME, "holder_id": WORKER_ID, "ttl": LOCK_TTL}
+                    {"lock_name": LOCK_NAME, "holder_id": WORKER_ID, "ttl": LOCK_TTL},
                 )
                 extended = result.scalar()
                 session.commit()
@@ -179,21 +178,23 @@ class OutboxProcessor:
             with Session(self._engine) as session:
                 result = session.execute(
                     text("SELECT * FROM m10_recovery.claim_outbox_events(:processor_id, :batch_size)"),
-                    {"processor_id": WORKER_ID, "batch_size": batch_size}
+                    {"processor_id": WORKER_ID, "batch_size": batch_size},
                 )
                 rows = result.fetchall()
                 session.commit()
 
                 events = []
                 for row in rows:
-                    events.append({
-                        "id": row[0],
-                        "aggregate_type": row[1],
-                        "aggregate_id": row[2],
-                        "event_type": row[3],
-                        "payload": row[4],
-                        "retry_count": row[5],
-                    })
+                    events.append(
+                        {
+                            "id": row[0],
+                            "aggregate_type": row[1],
+                            "aggregate_id": row[2],
+                            "event_type": row[3],
+                            "payload": row[4],
+                            "retry_count": row[5],
+                        }
+                    )
 
                 if events:
                     logger.info(f"Claimed {len(events)} outbox events")
@@ -326,7 +327,10 @@ class OutboxProcessor:
                     url=webhook_url,
                     json={"text": payload.get("message", "Notification from AOS")},
                 )
-                return response.status_code == 200, None if response.status_code == 200 else f"Slack: {response.status_code}"
+                return (
+                    response.status_code == 200,
+                    None if response.status_code == 200 else f"Slack: {response.status_code}",
+                )
             except Exception as e:
                 return False, f"Slack error: {e}"
 
@@ -348,7 +352,7 @@ class OutboxProcessor:
                         "processor_id": WORKER_ID,
                         "success": success,
                         "error": error,
-                    }
+                    },
                 )
                 session.commit()
 
@@ -375,6 +379,7 @@ class OutboxProcessor:
         """Update Prometheus metric (if available)."""
         try:
             from app.metrics import get_metric
+
             metric = get_metric(name)
             if metric:
                 metric.inc(value)
@@ -452,9 +457,7 @@ class OutboxProcessor:
 
 def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Process outbox events for exactly-once delivery"
-    )
+    parser = argparse.ArgumentParser(description="Process outbox events for exactly-once delivery")
     parser.add_argument(
         "--once",
         action="store_true",

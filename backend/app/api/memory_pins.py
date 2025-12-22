@@ -23,8 +23,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field, field_validator
 from prometheus_client import Counter, Histogram
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
@@ -36,16 +36,12 @@ logger = logging.getLogger("nova.api.memory_pins")
 MEMORY_PINS_ENABLED = os.getenv("MEMORY_PINS_ENABLED", "true").lower() == "true"
 
 # Prometheus metrics
-MEMORY_PINS_OPERATIONS = Counter(
-    "memory_pins_operations_total",
-    "Total memory pin operations",
-    ["operation", "status"]
-)
+MEMORY_PINS_OPERATIONS = Counter("memory_pins_operations_total", "Total memory pin operations", ["operation", "status"])
 MEMORY_PINS_LATENCY = Histogram(
     "memory_pins_latency_seconds",
     "Memory pin operation latency",
     ["operation"],
-    buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0]
+    buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0],
 )
 
 router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
@@ -55,19 +51,21 @@ router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
 # Pydantic Schemas
 # ============================================================================
 
+
 class MemoryPinCreate(BaseModel):
     """Schema for creating/upserting a memory pin."""
+
     tenant_id: str = Field(..., min_length=1, max_length=256, description="Tenant identifier")
     key: str = Field(..., min_length=1, max_length=512, description="Pin key (unique per tenant)")
     value: Dict[str, Any] = Field(..., description="Pin value (JSON object)")
     source: str = Field(default="api", max_length=64, description="Source of the pin (api, seed, import)")
     ttl_seconds: Optional[int] = Field(default=None, ge=0, le=31536000, description="TTL in seconds (max 1 year)")
 
-    @field_validator('key')
+    @field_validator("key")
     @classmethod
     def validate_key(cls, v: str) -> str:
         # Disallow certain characters for safety
-        forbidden = ['..', '/', '\\', '\x00']
+        forbidden = ["..", "/", "\\", "\x00"]
         for f in forbidden:
             if f in v:
                 raise ValueError(f"Key cannot contain '{f}'")
@@ -76,6 +74,7 @@ class MemoryPinCreate(BaseModel):
 
 class MemoryPinResponse(BaseModel):
     """Schema for memory pin response."""
+
     id: int
     tenant_id: str
     key: str
@@ -92,6 +91,7 @@ class MemoryPinResponse(BaseModel):
 
 class MemoryPinListResponse(BaseModel):
     """Schema for listing memory pins."""
+
     pins: List[MemoryPinResponse]
     total: int
     limit: int
@@ -100,6 +100,7 @@ class MemoryPinListResponse(BaseModel):
 
 class MemoryPinDeleteResponse(BaseModel):
     """Schema for delete response."""
+
     deleted: bool
     key: str
     tenant_id: str
@@ -109,13 +110,11 @@ class MemoryPinDeleteResponse(BaseModel):
 # Helper Functions
 # ============================================================================
 
+
 def check_feature_enabled():
     """Check if memory pins feature is enabled."""
     if not MEMORY_PINS_ENABLED:
-        raise HTTPException(
-            status_code=503,
-            detail="Memory pins feature is disabled"
-        )
+        raise HTTPException(status_code=503, detail="Memory pins feature is disabled")
 
 
 def extract_tenant_from_request(request: Request, tenant_id: Optional[str] = None) -> str:
@@ -142,20 +141,23 @@ def write_memory_audit(
     error_message: Optional[str] = None,
     old_value_hash: Optional[str] = None,
     new_value_hash: Optional[str] = None,
-    extra: Optional[Dict[str, Any]] = None
+    extra: Optional[Dict[str, Any]] = None,
 ):
     """Write an audit entry to system.memory_audit."""
     import json
+
     try:
         db.execute(
-            text("""
+            text(
+                """
                 INSERT INTO system.memory_audit
                     (operation, tenant_id, key, agent_id, source, cache_hit,
                      latency_ms, success, error_message, old_value_hash, new_value_hash, extra)
                 VALUES
                     (:operation, :tenant_id, :key, :agent_id, :source, :cache_hit,
                      :latency_ms, :success, :error_message, :old_value_hash, :new_value_hash, :extra)
-            """),
+            """
+            ),
             {
                 "operation": operation,
                 "tenant_id": tenant_id,
@@ -168,8 +170,8 @@ def write_memory_audit(
                 "error_message": error_message,
                 "old_value_hash": old_value_hash,
                 "new_value_hash": new_value_hash,
-                "extra": json.dumps(extra) if extra else "{}"
-            }
+                "extra": json.dumps(extra) if extra else "{}",
+            },
         )
         db.commit()
     except Exception as e:
@@ -181,12 +183,9 @@ def write_memory_audit(
 # API Endpoints
 # ============================================================================
 
+
 @router.post("/pins", response_model=MemoryPinResponse, status_code=201)
-async def create_or_upsert_pin(
-    pin: MemoryPinCreate,
-    request: Request,
-    db=Depends(get_db_session)
-):
+async def create_or_upsert_pin(pin: MemoryPinCreate, request: Request, db=Depends(get_db_session)):
     """
     Create or upsert a memory pin.
 
@@ -195,8 +194,9 @@ async def create_or_upsert_pin(
 
     Requires RBAC permission: memory_pin:write
     """
-    import time
     import json
+    import time
+
     start = time.time()
     check_feature_enabled()
 
@@ -206,7 +206,8 @@ async def create_or_upsert_pin(
 
         # Use upsert (INSERT ... ON CONFLICT UPDATE)
         result = db.execute(
-            text("""
+            text(
+                """
                 INSERT INTO system.memory_pins (tenant_id, key, value, source, ttl_seconds)
                 VALUES (:tenant_id, :key, CAST(:value AS jsonb), :source, :ttl_seconds)
                 ON CONFLICT (tenant_id, key)
@@ -216,14 +217,15 @@ async def create_or_upsert_pin(
                     ttl_seconds = EXCLUDED.ttl_seconds,
                     updated_at = now()
                 RETURNING id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
-            """),
+            """
+            ),
             {
                 "tenant_id": pin.tenant_id,
                 "key": pin.key,
                 "value": value_json,
                 "source": pin.source,
-                "ttl_seconds": pin.ttl_seconds
-            }
+                "ttl_seconds": pin.ttl_seconds,
+            },
         )
         db.commit()
 
@@ -240,7 +242,7 @@ async def create_or_upsert_pin(
             created_at=row.created_at,
             updated_at=row.updated_at,
             ttl_seconds=row.ttl_seconds,
-            expires_at=row.expires_at
+            expires_at=row.expires_at,
         )
 
         latency_ms = (time.time() - start) * 1000
@@ -249,11 +251,17 @@ async def create_or_upsert_pin(
 
         # Write audit log
         import hashlib
+
         value_hash = hashlib.sha256(value_json.encode()).hexdigest()[:16]
         write_memory_audit(
-            db, operation="upsert", tenant_id=pin.tenant_id, key=pin.key,
-            success=True, latency_ms=latency_ms, source=pin.source,
-            new_value_hash=value_hash
+            db,
+            operation="upsert",
+            tenant_id=pin.tenant_id,
+            key=pin.key,
+            success=True,
+            latency_ms=latency_ms,
+            source=pin.source,
+            new_value_hash=value_hash,
         )
 
         logger.info(
@@ -262,8 +270,8 @@ async def create_or_upsert_pin(
                 "tenant_id": pin.tenant_id,
                 "key": pin.key,
                 "source": pin.source,
-                "has_ttl": pin.ttl_seconds is not None
-            }
+                "has_ttl": pin.ttl_seconds is not None,
+            },
         )
 
         return response
@@ -285,7 +293,7 @@ async def get_pin(
     key: str,
     request: Request,
     tenant_id: str = Query(default="global", description="Tenant ID"),
-    db=Depends(get_db_session)
+    db=Depends(get_db_session),
 ):
     """
     Get a memory pin by key.
@@ -295,19 +303,22 @@ async def get_pin(
     Requires RBAC permission: memory_pin:read
     """
     import time
+
     start = time.time()
     check_feature_enabled()
 
     try:
         result = db.execute(
-            text("""
+            text(
+                """
                 SELECT id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
                 FROM system.memory_pins
                 WHERE tenant_id = :tenant_id
                   AND key = :key
                   AND (expires_at IS NULL OR expires_at > now())
-            """),
-            {"tenant_id": tenant_id, "key": key}
+            """
+            ),
+            {"tenant_id": tenant_id, "key": key},
         )
         row = result.fetchone()
 
@@ -316,6 +327,7 @@ async def get_pin(
             raise HTTPException(status_code=404, detail=f"Pin not found: {key}")
 
         import json
+
         response = MemoryPinResponse(
             id=row.id,
             tenant_id=row.tenant_id,
@@ -325,7 +337,7 @@ async def get_pin(
             created_at=row.created_at,
             updated_at=row.updated_at,
             ttl_seconds=row.ttl_seconds,
-            expires_at=row.expires_at
+            expires_at=row.expires_at,
         )
 
         latency_ms = (time.time() - start) * 1000
@@ -333,10 +345,7 @@ async def get_pin(
         MEMORY_PINS_LATENCY.labels(operation="get").observe(latency_ms / 1000)
 
         # Write audit log
-        write_memory_audit(
-            db, operation="get", tenant_id=tenant_id, key=key,
-            success=True, latency_ms=latency_ms
-        )
+        write_memory_audit(db, operation="get", tenant_id=tenant_id, key=key, success=True, latency_ms=latency_ms)
 
         return response
 
@@ -356,7 +365,7 @@ async def list_pins(
     limit: int = Query(default=100, ge=1, le=1000, description="Max results"),
     offset: int = Query(default=0, ge=0, description="Offset for pagination"),
     include_expired: bool = Query(default=False, description="Include expired pins"),
-    db=Depends(get_db_session)
+    db=Depends(get_db_session),
 ):
     """
     List memory pins for a tenant.
@@ -366,6 +375,7 @@ async def list_pins(
     Requires RBAC permission: memory_pin:read
     """
     import time
+
     start = time.time()
     check_feature_enabled()
 
@@ -384,48 +394,45 @@ async def list_pins(
         where_sql = " AND ".join(where_clauses)
 
         # Get total count
-        count_result = db.execute(
-            text(f"SELECT COUNT(*) FROM system.memory_pins WHERE {where_sql}"),
-            params
-        )
+        count_result = db.execute(text(f"SELECT COUNT(*) FROM system.memory_pins WHERE {where_sql}"), params)
         total = count_result.scalar()
 
         # Get pins
         result = db.execute(
-            text(f"""
+            text(
+                f"""
                 SELECT id, tenant_id, key, value, source, created_at, updated_at, ttl_seconds, expires_at
                 FROM system.memory_pins
                 WHERE {where_sql}
                 ORDER BY created_at DESC
                 LIMIT :limit OFFSET :offset
-            """),
-            params
+            """
+            ),
+            params,
         )
 
         import json
+
         pins = []
         for row in result:
-            pins.append(MemoryPinResponse(
-                id=row.id,
-                tenant_id=row.tenant_id,
-                key=row.key,
-                value=row.value if isinstance(row.value, dict) else json.loads(row.value),
-                source=row.source,
-                created_at=row.created_at,
-                updated_at=row.updated_at,
-                ttl_seconds=row.ttl_seconds,
-                expires_at=row.expires_at
-            ))
+            pins.append(
+                MemoryPinResponse(
+                    id=row.id,
+                    tenant_id=row.tenant_id,
+                    key=row.key,
+                    value=row.value if isinstance(row.value, dict) else json.loads(row.value),
+                    source=row.source,
+                    created_at=row.created_at,
+                    updated_at=row.updated_at,
+                    ttl_seconds=row.ttl_seconds,
+                    expires_at=row.expires_at,
+                )
+            )
 
         MEMORY_PINS_OPERATIONS.labels(operation="list", status="success").inc()
         MEMORY_PINS_LATENCY.labels(operation="list").observe(time.time() - start)
 
-        return MemoryPinListResponse(
-            pins=pins,
-            total=total,
-            limit=limit,
-            offset=offset
-        )
+        return MemoryPinListResponse(pins=pins, total=total, limit=limit, offset=offset)
 
     except Exception as e:
         MEMORY_PINS_OPERATIONS.labels(operation="list", status="error").inc()
@@ -438,7 +445,7 @@ async def delete_pin(
     key: str,
     request: Request,
     tenant_id: str = Query(default="global", description="Tenant ID"),
-    db=Depends(get_db_session)
+    db=Depends(get_db_session),
 ):
     """
     Delete a memory pin by key.
@@ -448,17 +455,20 @@ async def delete_pin(
     Requires RBAC permission: memory_pin:delete
     """
     import time
+
     start = time.time()
     check_feature_enabled()
 
     try:
         result = db.execute(
-            text("""
+            text(
+                """
                 DELETE FROM system.memory_pins
                 WHERE tenant_id = :tenant_id AND key = :key
                 RETURNING id
-            """),
-            {"tenant_id": tenant_id, "key": key}
+            """
+            ),
+            {"tenant_id": tenant_id, "key": key},
         )
         db.commit()
 
@@ -472,21 +482,11 @@ async def delete_pin(
         MEMORY_PINS_LATENCY.labels(operation="delete").observe(latency_ms / 1000)
 
         # Write audit log
-        write_memory_audit(
-            db, operation="delete", tenant_id=tenant_id, key=key,
-            success=True, latency_ms=latency_ms
-        )
+        write_memory_audit(db, operation="delete", tenant_id=tenant_id, key=key, success=True, latency_ms=latency_ms)
 
-        logger.info(
-            "memory_pin_deleted",
-            extra={"tenant_id": tenant_id, "key": key}
-        )
+        logger.info("memory_pin_deleted", extra={"tenant_id": tenant_id, "key": key})
 
-        return MemoryPinDeleteResponse(
-            deleted=True,
-            key=key,
-            tenant_id=tenant_id
-        )
+        return MemoryPinDeleteResponse(deleted=True, key=key, tenant_id=tenant_id)
 
     except HTTPException:
         raise
@@ -501,7 +501,7 @@ async def delete_pin(
 async def cleanup_expired_pins(
     request: Request,
     tenant_id: Optional[str] = Query(default=None, description="Limit to specific tenant"),
-    db=Depends(get_db_session)
+    db=Depends(get_db_session),
 ):
     """
     Clean up expired memory pins.
@@ -511,29 +511,34 @@ async def cleanup_expired_pins(
     Requires RBAC permission: memory_pin:admin
     """
     import time
+
     start = time.time()
     check_feature_enabled()
 
     try:
         if tenant_id:
             result = db.execute(
-                text("""
+                text(
+                    """
                     DELETE FROM system.memory_pins
                     WHERE tenant_id = :tenant_id
                       AND expires_at IS NOT NULL
                       AND expires_at < now()
                     RETURNING id
-                """),
-                {"tenant_id": tenant_id}
+                """
+                ),
+                {"tenant_id": tenant_id},
             )
         else:
             result = db.execute(
-                text("""
+                text(
+                    """
                     DELETE FROM system.memory_pins
                     WHERE expires_at IS NOT NULL
                       AND expires_at < now()
                     RETURNING id
-                """)
+                """
+                )
             )
 
         db.commit()
@@ -542,15 +547,12 @@ async def cleanup_expired_pins(
         MEMORY_PINS_OPERATIONS.labels(operation="cleanup", status="success").inc()
         MEMORY_PINS_LATENCY.labels(operation="cleanup").observe(time.time() - start)
 
-        logger.info(
-            "memory_pins_cleanup",
-            extra={"deleted_count": deleted_count, "tenant_id": tenant_id}
-        )
+        logger.info("memory_pins_cleanup", extra={"deleted_count": deleted_count, "tenant_id": tenant_id})
 
         return {
             "deleted_count": deleted_count,
             "tenant_id": tenant_id,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     except Exception as e:

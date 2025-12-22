@@ -6,9 +6,10 @@ These tests cover the synchronous circuit breaker implementation.
 For async tests, see test_circuit_breaker_async.py.
 """
 
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
 
 
 class TestCircuitBreakerState:

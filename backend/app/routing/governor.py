@@ -10,14 +10,13 @@
 
 import logging
 import os
-import time
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
 import redis.asyncio as redis_async
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger("nova.routing.governor")
 
@@ -27,39 +26,42 @@ logger = logging.getLogger("nova.routing.governor")
 # =============================================================================
 
 # Adjustment limits
-MAX_ADJUSTMENTS_PER_HOUR = 5          # Max parameter adjustments per agent per hour
-MAX_ADJUSTMENT_MAGNITUDE = 0.10       # Max 10% change per adjustment
-GLOBAL_FREEZE_THRESHOLD = 10          # System-wide freeze after N adjustments/hour
-FREEZE_DURATION = 900                 # 15 min freeze window
+MAX_ADJUSTMENTS_PER_HOUR = 5  # Max parameter adjustments per agent per hour
+MAX_ADJUSTMENT_MAGNITUDE = 0.10  # Max 10% change per adjustment
+GLOBAL_FREEZE_THRESHOLD = 10  # System-wide freeze after N adjustments/hour
+FREEZE_DURATION = 900  # 15 min freeze window
 
 # Rollback settings
-ROLLBACK_WINDOW = 1800                # 30 min window to evaluate adjustment impact
-MIN_IMPROVEMENT_REQUIRED = 0.05       # 5% improvement required to keep adjustment
-AUTO_ROLLBACK_ENABLED = True          # Enable automatic rollback
+ROLLBACK_WINDOW = 1800  # 30 min window to evaluate adjustment impact
+MIN_IMPROVEMENT_REQUIRED = 0.05  # 5% improvement required to keep adjustment
+AUTO_ROLLBACK_ENABLED = True  # Enable automatic rollback
 
 # Oscillation detection
-OSCILLATION_DETECTION_WINDOW = 3600   # 1 hour
-OSCILLATION_THRESHOLD = 3             # Same param adjusted 3+ times = oscillation
+OSCILLATION_DETECTION_WINDOW = 3600  # 1 hour
+OSCILLATION_THRESHOLD = 3  # Same param adjusted 3+ times = oscillation
 
 # Instability metrics
-STABILITY_WINDOW = 600                # 10 min stability window
-SUCCESS_RATE_VARIANCE_THRESHOLD = 0.1 # High variance = instability
+STABILITY_WINDOW = 600  # 10 min stability window
+SUCCESS_RATE_VARIANCE_THRESHOLD = 0.1  # High variance = instability
 
 
 # =============================================================================
 # Enums
 # =============================================================================
 
+
 class GovernorState(str, Enum):
     """System stability states."""
-    STABLE = "stable"           # Normal operation
-    CAUTIOUS = "cautious"       # Reduced adjustment rate
-    FROZEN = "frozen"           # No adjustments allowed
-    RECOVERY = "recovery"       # Recovering from instability
+
+    STABLE = "stable"  # Normal operation
+    CAUTIOUS = "cautious"  # Reduced adjustment rate
+    FROZEN = "frozen"  # No adjustments allowed
+    RECOVERY = "recovery"  # Recovering from instability
 
 
 class RollbackReason(str, Enum):
     """Reasons for rolling back an adjustment."""
+
     PERFORMANCE_DEGRADED = "performance_degraded"
     OSCILLATION_DETECTED = "oscillation_detected"
     MANUAL_OVERRIDE = "manual_override"
@@ -70,8 +72,10 @@ class RollbackReason(str, Enum):
 # Models
 # =============================================================================
 
+
 class AdjustmentRecord(BaseModel):
     """Record of a parameter adjustment for governor tracking."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     agent_id: Optional[str] = None  # None = system-wide parameter
     parameter_name: str
@@ -99,6 +103,7 @@ class AdjustmentRecord(BaseModel):
 
 class StabilityMetrics(BaseModel):
     """System-wide stability metrics."""
+
     state: GovernorState = GovernorState.STABLE
     freeze_until: Optional[datetime] = None
     freeze_reason: Optional[str] = None
@@ -122,6 +127,7 @@ class StabilityMetrics(BaseModel):
 
 class RollbackResult(BaseModel):
     """Result of a rollback operation."""
+
     success: bool
     adjustment_id: str
     reason: RollbackReason
@@ -132,6 +138,7 @@ class RollbackResult(BaseModel):
 # =============================================================================
 # Governor
 # =============================================================================
+
 
 class Governor:
     """
@@ -146,7 +153,7 @@ class Governor:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis_async.Redis] = None
 
         # In-memory tracking
@@ -260,15 +267,18 @@ class Governor:
         if r:
             try:
                 redis_key = f"governor:adjustment:{record.id}"
-                await r.hset(redis_key, mapping={
-                    "agent_id": agent_id or "system",
-                    "parameter_name": parameter_name,
-                    "old_value": str(old_value),
-                    "new_value": str(new_value),
-                    "magnitude": str(record.magnitude),
-                    "applied_at": record.applied_at.isoformat(),
-                    "success_rate_before": str(success_rate_before) if success_rate_before else "",
-                })
+                await r.hset(
+                    redis_key,
+                    mapping={
+                        "agent_id": agent_id or "system",
+                        "parameter_name": parameter_name,
+                        "old_value": str(old_value),
+                        "new_value": str(new_value),
+                        "magnitude": str(record.magnitude),
+                        "applied_at": record.applied_at.isoformat(),
+                        "success_rate_before": str(success_rate_before) if success_rate_before else "",
+                    },
+                )
                 await r.expire(redis_key, 86400)  # 24 hour expiry
 
                 # Increment hourly counter
@@ -288,7 +298,7 @@ class Governor:
                 "agent_id": agent_id,
                 "parameter": parameter_name,
                 "magnitude": record.magnitude,
-            }
+            },
         )
 
         return record
@@ -400,12 +410,15 @@ class Governor:
         if r:
             try:
                 redis_key = f"governor:rollback:{adjustment_id}"
-                await r.hset(redis_key, mapping={
-                    "adjustment_id": adjustment_id,
-                    "reason": reason.value,
-                    "rolled_back_at": datetime.now(timezone.utc).isoformat(),
-                    "restored_value": str(record.old_value),
-                })
+                await r.hset(
+                    redis_key,
+                    mapping={
+                        "adjustment_id": adjustment_id,
+                        "reason": reason.value,
+                        "rolled_back_at": datetime.now(timezone.utc).isoformat(),
+                        "restored_value": str(record.old_value),
+                    },
+                )
                 await r.expire(redis_key, 86400)
             except Exception:
                 pass
@@ -417,7 +430,7 @@ class Governor:
                 "reason": reason.value,
                 "parameter": record.parameter_name,
                 "restored_value": record.old_value,
-            }
+            },
         )
 
         return RollbackResult(
@@ -453,10 +466,9 @@ class Governor:
 
         # Count adjustments for this agent/system
         count = sum(
-            1 for adj in self._adjustments
-            if adj.applied_at >= hour_ago
-            and adj.agent_id == agent_id
-            and not adj.rolled_back
+            1
+            for adj in self._adjustments
+            if adj.applied_at >= hour_ago and adj.agent_id == agent_id and not adj.rolled_back
         )
 
         if count >= MAX_ADJUSTMENTS_PER_HOUR:
@@ -491,15 +503,15 @@ class Governor:
             # Check if values are alternating (sign of oscillation)
             directions = []
             for i in range(1, len(recent)):
-                if recent[i] > recent[i-1]:
+                if recent[i] > recent[i - 1]:
                     directions.append(1)
-                elif recent[i] < recent[i-1]:
+                elif recent[i] < recent[i - 1]:
                     directions.append(-1)
                 else:
                     directions.append(0)
 
             # Oscillation = direction changes frequently
-            changes = sum(1 for i in range(1, len(directions)) if directions[i] != directions[i-1])
+            changes = sum(1 for i in range(1, len(directions)) if directions[i] != directions[i - 1])
             if changes >= 2:
                 logger.warning(f"Oscillation detected for {parameter_name}")
                 return True
@@ -524,7 +536,7 @@ class Governor:
                 extra={
                     "reason": self._freeze_reason,
                     "freeze_until": self._freeze_until.isoformat(),
-                }
+                },
             )
 
     async def get_stability_metrics(self) -> StabilityMetrics:
@@ -543,9 +555,7 @@ class Governor:
                 oscillations += 1
 
         # Get affected agents
-        affected_agents = list(set(
-            adj.agent_id for adj in recent_adjustments if adj.agent_id
-        ))
+        affected_agents = list(set(adj.agent_id for adj in recent_adjustments if adj.agent_id))
 
         return StabilityMetrics(
             state=self._state,

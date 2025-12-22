@@ -10,53 +10,51 @@ Transforms AST nodes into IR with:
 - Governance metadata attachment
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Optional
+
 from app.policy.ast.nodes import (
-    ASTNode,
-    ProgramNode,
-    PolicyDeclNode,
-    RuleDeclNode,
-    ImportNode,
-    RuleRefNode,
-    PriorityNode,
-    ConditionBlockNode,
     ActionBlockNode,
-    RouteTargetNode,
-    BinaryOpNode,
-    UnaryOpNode,
-    IdentNode,
-    LiteralNode,
-    FuncCallNode,
     AttrAccessNode,
-    GovernanceMetadata,
+    BinaryOpNode,
+    ConditionBlockNode,
+    FuncCallNode,
+    IdentNode,
+    ImportNode,
+    LiteralNode,
+    PolicyDeclNode,
+    PriorityNode,
+    ProgramNode,
+    RouteTargetNode,
+    RuleDeclNode,
+    RuleRefNode,
+    UnaryOpNode,
 )
 from app.policy.ast.visitors import BaseVisitor
+from app.policy.compiler.grammar import ActionType
 from app.policy.ir.ir_nodes import (
-    IRType,
+    IRAction,
+    IRBinaryOp,
+    IRBlock,
+    IRCall,
+    IRCompare,
+    IREmitIntent,
+    IRFunction,
     IRGovernance,
     IRInstruction,
-    IRLoadConst,
-    IRLoadVar,
-    IRBinaryOp,
-    IRUnaryOp,
-    IRCompare,
     IRJump,
     IRJumpIf,
-    IRCall,
-    IRReturn,
-    IRAction,
-    IRCheckPolicy,
-    IREmitIntent,
-    IRBlock,
-    IRFunction,
+    IRLoadConst,
+    IRLoadVar,
     IRModule,
+    IRReturn,
+    IRType,
+    IRUnaryOp,
 )
 from app.policy.ir.symbol_table import (
     Symbol,
-    SymbolType,
     SymbolTable,
+    SymbolType,
 )
-from app.policy.compiler.grammar import PolicyCategory, ActionType
 
 
 class IRBuilder(BaseVisitor):
@@ -136,13 +134,15 @@ class IRBuilder(BaseVisitor):
         governance = IRGovernance.from_ast(node.governance)
 
         # Define policy symbol
-        self.symbol_table.define(Symbol(
-            name=node.name,
-            symbol_type=SymbolType.POLICY,
-            category=node.category,
-            priority=governance.priority,
-            defined_at=node.location,
-        ))
+        self.symbol_table.define(
+            Symbol(
+                name=node.name,
+                symbol_type=SymbolType.POLICY,
+                category=node.category,
+                priority=governance.priority,
+                defined_at=node.location,
+            )
+        )
 
         # Enter policy scope
         self.symbol_table.enter_scope(node.name, node.category)
@@ -182,13 +182,15 @@ class IRBuilder(BaseVisitor):
         governance = IRGovernance.from_ast(node.governance)
 
         # Define rule symbol
-        self.symbol_table.define(Symbol(
-            name=node.name,
-            symbol_type=SymbolType.RULE,
-            category=node.category,
-            priority=governance.priority,
-            defined_at=node.location,
-        ))
+        self.symbol_table.define(
+            Symbol(
+                name=node.name,
+                symbol_type=SymbolType.RULE,
+                category=node.category,
+                priority=governance.priority,
+                defined_at=node.location,
+            )
+        )
 
         # Enter rule scope
         self.symbol_table.enter_scope(node.name, node.category)
@@ -258,11 +260,13 @@ class IRBuilder(BaseVisitor):
         merge_block = self._new_block(self._next_block_name("merge"))
 
         # Emit conditional jump
-        self._emit(IRJumpIf(
-            condition_id=condition_id,
-            true_block=true_block.name,
-            false_block=false_block.name,
-        ))
+        self._emit(
+            IRJumpIf(
+                condition_id=condition_id,
+                true_block=true_block.name,
+                false_block=false_block.name,
+            )
+        )
 
         # True branch: execute action
         self.current_block = true_block
@@ -282,11 +286,13 @@ class IRBuilder(BaseVisitor):
 
         # Emit action instruction
         governance = self.current_function.governance if self.current_function else None
-        self._emit(IRAction(
-            action=node.action,
-            target=target,
-            governance=governance,
-        ))
+        self._emit(
+            IRAction(
+                action=node.action,
+                target=target,
+                governance=governance,
+            )
+        )
 
         # Emit intent for M18 execution
         if node.action in (ActionType.ROUTE, ActionType.ESCALATE):
@@ -295,12 +301,14 @@ class IRBuilder(BaseVisitor):
                 target_id = self._emit(IRLoadConst(value=target))
                 payload.append(target_id)
 
-            self._emit(IREmitIntent(
-                intent_type=node.action.value,
-                payload_ids=payload,
-                priority=governance.priority if governance else 50,
-                requires_confirmation=node.action == ActionType.ESCALATE,
-            ))
+            self._emit(
+                IREmitIntent(
+                    intent_type=node.action.value,
+                    payload_ids=payload,
+                    priority=governance.priority if governance else 50,
+                    requires_confirmation=node.action == ActionType.ESCALATE,
+                )
+            )
 
     def visit_route_target(self, node: RouteTargetNode) -> Any:
         # Handled by action_block
@@ -315,27 +323,33 @@ class IRBuilder(BaseVisitor):
         right_id = node.right.accept(self)
 
         if node.op in ("and", "or"):
-            return self._emit(IRBinaryOp(
-                op=node.op,
-                left_id=left_id,
-                right_id=right_id,
-                result_type=IRType.BOOL,
-            ))
+            return self._emit(
+                IRBinaryOp(
+                    op=node.op,
+                    left_id=left_id,
+                    right_id=right_id,
+                    result_type=IRType.BOOL,
+                )
+            )
         else:
             # Comparison
-            return self._emit(IRCompare(
-                op=node.op,
-                left_id=left_id,
-                right_id=right_id,
-            ))
+            return self._emit(
+                IRCompare(
+                    op=node.op,
+                    left_id=left_id,
+                    right_id=right_id,
+                )
+            )
 
     def visit_unary_op(self, node: UnaryOpNode) -> int:
         operand_id = node.operand.accept(self)
-        return self._emit(IRUnaryOp(
-            op=node.op,
-            operand_id=operand_id,
-            result_type=IRType.BOOL,
-        ))
+        return self._emit(
+            IRUnaryOp(
+                op=node.op,
+                operand_id=operand_id,
+                result_type=IRType.BOOL,
+            )
+        )
 
     def visit_ident(self, node: IdentNode) -> int:
         # Track reference
@@ -366,7 +380,9 @@ class IRBuilder(BaseVisitor):
     def visit_attr_access(self, node: AttrAccessNode) -> int:
         obj_id = node.obj.accept(self)
         # Emit attribute load as method call with object
-        return self._emit(IRCall(
-            callee=f"__getattr__",
-            args=[obj_id, self._emit(IRLoadConst(value=node.attr))],
-        ))
+        return self._emit(
+            IRCall(
+                callee="__getattr__",
+                args=[obj_id, self._emit(IRLoadConst(value=node.attr))],
+            )
+        )

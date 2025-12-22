@@ -25,7 +25,6 @@ Usage:
 """
 
 import argparse
-import asyncio
 import json
 import logging
 import os
@@ -42,8 +41,7 @@ import requests
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger("alert_fuzzer")
 
@@ -68,6 +66,7 @@ NAMESPACES = ["aos-staging", "aos-prod", "default"]
 @dataclass
 class FuzzResult:
     """Result of a single fuzz request."""
+
     success: bool
     status_code: int
     response_time_ms: float
@@ -102,7 +101,11 @@ def generate_alert(
 
     now = datetime.now(timezone.utc)
     starts_at = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    ends_at = (now.replace(minute=now.minute + 5)).strftime("%Y-%m-%dT%H:%M:%SZ") if status == "firing" else starts_at
+    ends_at = (
+        (now.replace(minute=now.minute + 5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if status == "firing"
+        else starts_at
+    )
 
     # Generate unique fingerprint
     fingerprint = uuid.uuid4().hex[:16]
@@ -339,55 +342,40 @@ Examples:
     # Specific alert pattern
     python3 alert_fuzzer.py --url http://localhost:8011/webhook/alertmanager \\
         --alert-name MemoryPinError --severity critical
-        """
+        """,
     )
 
+    parser.add_argument("--url", required=True, help="Webhook receiver URL")
     parser.add_argument(
-        "--url",
-        required=True,
-        help="Webhook receiver URL"
-    )
-    parser.add_argument(
-        "--count",
-        type=int,
-        default=50,
-        help="Number of alerts to send (default: 50)"
+        "--count", type=int, default=50, help="Number of alerts to send (default: 50)"
     )
     parser.add_argument(
         "--concurrency",
         type=int,
         default=1,
-        help="Number of concurrent requests (default: 1 = sequential)"
+        help="Number of concurrent requests (default: 1 = sequential)",
     )
     parser.add_argument(
         "--pause",
         type=float,
         default=0.1,
-        help="Pause between sequential requests in seconds (default: 0.1)"
+        help="Pause between sequential requests in seconds (default: 0.1)",
     )
     parser.add_argument(
         "--token",
         default=os.getenv("WEBHOOK_TOKEN"),
-        help="Authentication token (or set WEBHOOK_TOKEN env)"
+        help="Authentication token (or set WEBHOOK_TOKEN env)",
     )
     parser.add_argument(
-        "--alert-name",
-        help="Use specific alert name (random if not set)"
+        "--alert-name", help="Use specific alert name (random if not set)"
     )
     parser.add_argument(
         "--severity",
         choices=["critical", "warning", "info"],
-        help="Use specific severity (random if not set)"
+        help="Use specific severity (random if not set)",
     )
-    parser.add_argument(
-        "--output",
-        help="Write results to JSON file"
-    )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
-    )
+    parser.add_argument("--output", help="Write results to JSON file")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
 

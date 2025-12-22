@@ -13,12 +13,12 @@ Usage:
     ts = ctx.now  # Frozen timestamp
 """
 
-import random
 import hashlib
 import json
+import random
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass, field, asdict
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -36,6 +36,7 @@ class RuntimeContext:
         env: Recorded environment variables (for audit)
         rng_state: Captured RNG state for replay
     """
+
     seed: int = 42
     now: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     tenant_id: str = "default"
@@ -48,7 +49,7 @@ class RuntimeContext:
         if self.now is None:
             self.now = datetime.now(timezone.utc)
         elif isinstance(self.now, str):
-            self.now = datetime.fromisoformat(self.now.replace('Z', '+00:00'))
+            self.now = datetime.fromisoformat(self.now.replace("Z", "+00:00"))
         self._rng = random.Random(self.seed)
         self.rng_state = self._capture_rng_state()
 
@@ -92,7 +93,7 @@ class RuntimeContext:
             "now": self.now.isoformat(),
             "tenant_id": self.tenant_id,
             "env": self.env,
-            "rng_state": self.rng_state
+            "rng_state": self.rng_state,
         }
 
     @classmethod
@@ -102,13 +103,13 @@ class RuntimeContext:
             seed=data.get("seed", 42),
             now=data.get("now"),
             tenant_id=data.get("tenant_id", "default"),
-            env=data.get("env", {})
+            env=data.get("env", {}),
         )
 
 
 def freeze_time(iso_string: str) -> datetime:
     """Parse ISO8601 string to datetime."""
-    return datetime.fromisoformat(iso_string.replace('Z', '+00:00'))
+    return datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
 
 
 def canonical_json(obj: Any) -> str:
@@ -117,7 +118,7 @@ def canonical_json(obj: Any) -> str:
 
     This ensures identical objects produce identical byte output.
     """
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'), default=str)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str)
 
 
 def hash_trace(trace: Dict[str, Any]) -> str:

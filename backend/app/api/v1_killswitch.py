@@ -16,40 +16,38 @@ Endpoints:
 
 import json
 import uuid
+
 # NOTE: Removed 'import random' - Demo endpoint uses deterministic values
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
-from sqlalchemy import select, and_, desc, func
+from sqlalchemy import and_, desc, select
 from sqlmodel import Session
 
 from app.db import get_session
 from app.models.killswitch import (
-    KillSwitchState,
-    ProxyCall,
-    Incident,
-    IncidentEvent,
     DefaultGuardrail,
-    KillSwitchStatus,
-    KillSwitchAction,
-    IncidentSummary,
-    IncidentDetail,
+    DemoSimulationRequest,
+    DemoSimulationResult,
     GuardrailSummary,
-    ProxyCallSummary,
+    Incident,
+    IncidentDetail,
+    IncidentEvent,
+    IncidentSeverity,
+    IncidentStatus,
+    IncidentSummary,
+    KillSwitchAction,
+    KillSwitchState,
+    KillSwitchStatus,
+    ProxyCall,
     ProxyCallDetail,
     ReplayRequest,
     ReplayResult,
-    DemoSimulationRequest,
-    DemoSimulationResult,
     TriggerType,
-    IncidentSeverity,
-    IncidentStatus,
 )
-from app.models.tenant import Tenant, APIKey
-
+from app.models.tenant import APIKey, Tenant
 
 # =============================================================================
 # Router
@@ -61,6 +59,7 @@ router = APIRouter(prefix="/v1", tags=["KillSwitch"])
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -100,6 +99,7 @@ def get_or_create_killswitch_state(
 # =============================================================================
 # Kill Switch Endpoints
 # =============================================================================
+
 
 @router.post("/killswitch/tenant", response_model=KillSwitchStatus)
 async def freeze_tenant(
@@ -334,6 +334,7 @@ async def unfreeze_key(
 # Guardrails Endpoint
 # =============================================================================
 
+
 @router.get("/policies/active", response_model=List[GuardrailSummary])
 async def get_active_policies(
     session: Session = Depends(get_session),
@@ -344,9 +345,7 @@ async def get_active_policies(
     Returns the Default Guardrail Pack v1 (read-only).
     No editing in MVP - this is intentional for trust.
     """
-    stmt = select(DefaultGuardrail).where(
-        DefaultGuardrail.is_enabled == True
-    ).order_by(DefaultGuardrail.priority)
+    stmt = select(DefaultGuardrail).where(DefaultGuardrail.is_enabled == True).order_by(DefaultGuardrail.priority)
     rows = session.exec(stmt).all()
 
     # Extract model instances from Row tuples
@@ -367,6 +366,7 @@ async def get_active_policies(
 # =============================================================================
 # Incidents Endpoints
 # =============================================================================
+
 
 @router.get("/incidents", response_model=List[IncidentSummary])
 async def list_incidents(
@@ -424,9 +424,7 @@ async def get_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # Get timeline events
-    stmt = select(IncidentEvent).where(
-        IncidentEvent.incident_id == incident_id
-    ).order_by(IncidentEvent.created_at)
+    stmt = select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
     event_rows = session.exec(stmt).all()
     events = [r[0] for r in event_rows]
 
@@ -462,6 +460,7 @@ async def get_incident(
 # Replay Endpoints
 # =============================================================================
 
+
 @router.post("/replay/{call_id}", response_model=ReplayResult)
 async def replay_call(
     call_id: str,
@@ -495,8 +494,7 @@ async def replay_call(
 
     if not original.replay_eligible:
         raise HTTPException(
-            status_code=400,
-            detail=f"Call is not replay eligible: {original.block_reason or 'unknown'}"
+            status_code=400, detail=f"Call is not replay eligible: {original.block_reason or 'unknown'}"
         )
 
     # Parse original request
@@ -582,6 +580,7 @@ async def get_call(
 DEMO_TENANT_PREFIX = "demo-"
 DEMO_CALLS_AFFECTED = 25  # Deterministic, not random
 
+
 @router.post("/demo/simulate-incident", response_model=DemoSimulationResult)
 async def simulate_incident(
     request: DemoSimulationRequest = None,
@@ -611,8 +610,8 @@ async def simulate_incident(
             detail={
                 "error": "Demo safety violation",
                 "message": f"Tenant ID must start with '{DEMO_TENANT_PREFIX}' for demo simulations",
-                "hint": f"Try tenant_id='{DEMO_TENANT_PREFIX}your-company'"
-            }
+                "hint": f"Try tenant_id='{DEMO_TENANT_PREFIX}your-company'",
+            },
         )
 
     if request is None:
@@ -676,8 +675,7 @@ async def simulate_incident(
 
     else:
         raise HTTPException(
-            status_code=400,
-            detail=f"Unknown scenario: {scenario}. Use: budget_breach, failure_spike, rate_limit"
+            status_code=400, detail=f"Unknown scenario: {scenario}. Use: budget_breach, failure_spike, rate_limit"
         )
 
     # === Create DEMO incident in DB (clearly marked) ===

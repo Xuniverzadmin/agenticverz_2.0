@@ -6,35 +6,34 @@ import os
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type
 
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from ..traces.idempotency import (
-    get_idempotency_store,
-    IdempotencyResult,
-    hash_request,
-)
-from ..utils.deterministic import deterministic_backoff_ms, generate_idempotency_key
 from ..metrics import (
-    m11_skill_executions_total,
-    m11_skill_execution_seconds,
-    m11_skill_idempotency_hits_total,
-    m11_skill_idempotency_conflicts_total,
-    m11_circuit_breaker_state,
-    m11_circuit_breaker_failures_total,
-    m11_circuit_breaker_successes_total,
-    m11_circuit_breaker_opens_total,
     m11_circuit_breaker_closes_total,
+    m11_circuit_breaker_failures_total,
+    m11_circuit_breaker_opens_total,
     m11_circuit_breaker_rejected_total,
+    m11_circuit_breaker_state,
+    m11_circuit_breaker_successes_total,
+    m11_skill_execution_seconds,
+    m11_skill_executions_total,
+    m11_skill_idempotency_conflicts_total,
+    m11_skill_idempotency_hits_total,
+)
+from ..traces.idempotency import (
+    IdempotencyResult,
+    get_idempotency_store,
 )
 
 logger = logging.getLogger("nova.skills.base")
 
 
 # ============ Circuit Breaker for External Skills ============
+
 
 class SkillCircuitBreaker:
     """
@@ -92,12 +91,14 @@ class SkillCircuitBreaker:
         try:
             with self.Session() as session:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT state, failure_count, last_failure_at, opened_at, cooldown_until
                         FROM m11_audit.circuit_breaker_state
                         WHERE target = :target
-                    """),
-                    {"target": self.target}
+                    """
+                    ),
+                    {"target": self.target},
                 )
                 row = result.fetchone()
 
@@ -130,7 +131,8 @@ class SkillCircuitBreaker:
         try:
             with self.Session() as session:
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO m11_audit.circuit_breaker_state
                         (target, state, failure_count, last_failure_at, opened_at, cooldown_until, updated_at)
                         VALUES (:target, :state, :failure_count, :last_failure_at, :opened_at, :cooldown_until, now())
@@ -141,7 +143,8 @@ class SkillCircuitBreaker:
                             opened_at = COALESCE(:opened_at, m11_audit.circuit_breaker_state.opened_at),
                             cooldown_until = :cooldown_until,
                             updated_at = now()
-                    """),
+                    """
+                    ),
                     {
                         "target": self.target,
                         "state": state,
@@ -149,7 +152,7 @@ class SkillCircuitBreaker:
                         "last_failure_at": last_failure_at,
                         "opened_at": opened_at,
                         "cooldown_until": cooldown_until,
-                    }
+                    },
                 )
                 session.commit()
         except Exception as e:
@@ -341,8 +344,9 @@ class IdempotentSkill(ABC):
         name = self.__class__.__name__
         # Convert CamelCase to snake_case
         import re
-        name = re.sub(r'Skill$', '', name)
-        name = re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
+
+        name = re.sub(r"Skill$", "", name)
+        name = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
         return name
 
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -367,10 +371,7 @@ class IdempotentSkill(ABC):
             try:
                 store = await self._get_idempotency_store()
                 check_result = await store.check(
-                    idempotency_key=idempotency_key,
-                    request_data=params,
-                    tenant_id=tenant_id,
-                    trace_id=workflow_run_id
+                    idempotency_key=idempotency_key, request_data=params, tenant_id=tenant_id, trace_id=workflow_run_id
                 )
 
                 if check_result.result == IdempotencyResult.DUPLICATE:
@@ -381,15 +382,11 @@ class IdempotentSkill(ABC):
                         extra={
                             "skill": self.skill_name,
                             "idempotency_key": idempotency_key,
-                        }
+                        },
                     )
                     duration = time.time() - start_time
                     m11_skill_execution_seconds.labels(skill=self.skill_name).observe(duration)
-                    m11_skill_executions_total.labels(
-                        skill=self.skill_name,
-                        status="ok",
-                        tenant_id=tenant_id
-                    ).inc()
+                    m11_skill_executions_total.labels(skill=self.skill_name, status="ok", tenant_id=tenant_id).inc()
                     return {
                         "skill": self.skill_name,
                         "skill_version": self.VERSION,
@@ -412,15 +409,11 @@ class IdempotentSkill(ABC):
                         extra={
                             "skill": self.skill_name,
                             "idempotency_key": idempotency_key,
-                        }
+                        },
                     )
                     duration = time.time() - start_time
                     m11_skill_execution_seconds.labels(skill=self.skill_name).observe(duration)
-                    m11_skill_executions_total.labels(
-                        skill=self.skill_name,
-                        status="error",
-                        tenant_id=tenant_id
-                    ).inc()
+                    m11_skill_executions_total.labels(skill=self.skill_name, status="error", tenant_id=tenant_id).inc()
                     return {
                         "skill": self.skill_name,
                         "skill_version": self.VERSION,
@@ -446,11 +439,7 @@ class IdempotentSkill(ABC):
             m11_skill_execution_seconds.labels(skill=self.skill_name).observe(duration)
             result_status = result.get("result", {}).get("status", "unknown")
             metric_status = "ok" if result_status in ("ok", "completed", "stubbed") else "error"
-            m11_skill_executions_total.labels(
-                skill=self.skill_name,
-                status=metric_status,
-                tenant_id=tenant_id
-            ).inc()
+            m11_skill_executions_total.labels(skill=self.skill_name, status=metric_status, tenant_id=tenant_id).inc()
 
             # Mark idempotency key as completed
             if idempotency_key:
@@ -460,7 +449,7 @@ class IdempotentSkill(ABC):
                         idempotency_key=idempotency_key,
                         trace_id=workflow_run_id,
                         tenant_id=tenant_id,
-                        response_data=result
+                        response_data=result,
                     )
                 except Exception as e:
                     logger.warning(f"Failed to mark idempotency completed: {e}")
@@ -472,11 +461,7 @@ class IdempotentSkill(ABC):
             if idempotency_key:
                 try:
                     store = await self._get_idempotency_store()
-                    await store.mark_failed(
-                        idempotency_key=idempotency_key,
-                        tenant_id=tenant_id,
-                        error=str(e)
-                    )
+                    await store.mark_failed(idempotency_key=idempotency_key, tenant_id=tenant_id, error=str(e))
                 except Exception as mark_e:
                     logger.warning(f"Failed to mark idempotency failed: {mark_e}")
 
@@ -484,16 +469,9 @@ class IdempotentSkill(ABC):
 
             # Record error metrics
             m11_skill_execution_seconds.labels(skill=self.skill_name).observe(duration)
-            m11_skill_executions_total.labels(
-                skill=self.skill_name,
-                status="error",
-                tenant_id=tenant_id
-            ).inc()
+            m11_skill_executions_total.labels(skill=self.skill_name, status="error", tenant_id=tenant_id).inc()
 
-            logger.error(
-                "skill_execution_failed",
-                extra={"skill": self.skill_name, "error": str(e)[:200]}
-            )
+            logger.error("skill_execution_failed", extra={"skill": self.skill_name, "error": str(e)[:200]})
             return {
                 "skill": self.skill_name,
                 "skill_version": self.VERSION,
@@ -581,7 +559,7 @@ class ExternalSkill(IdempotentSkill):
                 extra={
                     "skill": self.skill_name,
                     "reason": "external_calls_disabled",
-                }
+                },
             )
             return {
                 "skill": self.skill_name,
@@ -605,11 +583,7 @@ class ExternalSkill(IdempotentSkill):
             # Record rejection metric
             m11_circuit_breaker_rejected_total.labels(target=breaker.target).inc()
             tenant_id = params.get("tenant_id", "default")
-            m11_skill_executions_total.labels(
-                skill=self.skill_name,
-                status="circuit_open",
-                tenant_id=tenant_id
-            ).inc()
+            m11_skill_executions_total.labels(skill=self.skill_name, status="circuit_open", tenant_id=tenant_id).inc()
 
             logger.warning(
                 "skill_circuit_open",
@@ -617,7 +591,7 @@ class ExternalSkill(IdempotentSkill):
                     "skill": self.skill_name,
                     "target": breaker.target,
                     "cooldown_remaining": cooldown,
-                }
+                },
             )
             return {
                 "skill": self.skill_name,
@@ -651,7 +625,7 @@ class ExternalSkill(IdempotentSkill):
 
             return result
 
-        except Exception as e:
+        except Exception:
             if breaker:
                 await breaker.record_failure()
             raise

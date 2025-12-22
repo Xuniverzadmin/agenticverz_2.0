@@ -15,14 +15,14 @@ Run with:
 import hashlib
 import json
 import os
-import pytest
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Check if requests is available for live tests
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -36,8 +36,7 @@ MACHINE_JWT = os.getenv("MACHINE_JWT", "")
 def requires_live():
     """Marker for tests that require live API."""
     return pytest.mark.skipif(
-        not os.getenv("RUN_LIVE_TESTS", "").lower() == "true",
-        reason="Live tests disabled (set RUN_LIVE_TESTS=true)"
+        not os.getenv("RUN_LIVE_TESTS", "").lower() == "true", reason="Live tests disabled (set RUN_LIVE_TESTS=true)"
     )
 
 
@@ -56,16 +55,8 @@ class TestReplayParity:
 
     def test_hash_excludes_timestamps(self):
         """Test that timestamps don't affect hash."""
-        data1 = {
-            "result": "success",
-            "timestamp": "2025-01-01T00:00:00Z",
-            "data": {"value": 42}
-        }
-        data2 = {
-            "result": "success",
-            "timestamp": "2025-01-02T00:00:00Z",
-            "data": {"value": 42}
-        }
+        data1 = {"result": "success", "timestamp": "2025-01-01T00:00:00Z", "data": {"value": 42}}
+        data2 = {"result": "success", "timestamp": "2025-01-02T00:00:00Z", "data": {"value": 42}}
 
         hash1 = self._canonical_hash(data1, exclude_keys=["timestamp"])
         hash2 = self._canonical_hash(data2, exclude_keys=["timestamp"])
@@ -80,7 +71,7 @@ class TestReplayParity:
             "steps": [
                 {"skill": "http_call", "params": {"url": "https://api.example.com/data"}},
                 {"skill": "json_transform", "params": {"jq": ".items"}},
-            ]
+            ],
         }
 
         # Mock execution results
@@ -98,7 +89,7 @@ class TestReplayParity:
             "agent_id": "agent-123",
             "steps": [
                 {"skill": "llm_invoke", "params": {"prompt": "Hello"}},
-            ]
+            ],
         }
 
         baseline_result = self._mock_execute_trace(trace, enable_memory=False)
@@ -109,12 +100,10 @@ class TestReplayParity:
 
         # But final output should match (modulo memory-specific metadata)
         baseline_hash = self._canonical_hash(
-            baseline_result,
-            exclude_keys=["context_injected", "memory_context", "execution_time"]
+            baseline_result, exclude_keys=["context_injected", "memory_context", "execution_time"]
         )
         memory_hash = self._canonical_hash(
-            memory_result,
-            exclude_keys=["context_injected", "memory_context", "execution_time"]
+            memory_result, exclude_keys=["context_injected", "memory_context", "execution_time"]
         )
 
         assert baseline_hash == memory_hash
@@ -128,24 +117,17 @@ class TestReplayParity:
         if not MACHINE_JWT:
             pytest.skip("MACHINE_JWT not configured")
 
-        trace = {
-            "user": "test-user",
-            "ops": [
-                {"op": "price", "args": {"v": "TEST"}}
-            ]
-        }
+        trace = {"user": "test-user", "ops": [{"op": "price", "args": {"v": "TEST"}}]}
 
         baseline = self._run_live_trace(trace, enable_memory=False)
         with_memory = self._run_live_trace(trace, enable_memory=True)
 
-        assert baseline["final_state"] == with_memory["final_state"], \
-            "Determinism drift detected between baseline and memory-enabled traces"
+        assert (
+            baseline["final_state"] == with_memory["final_state"]
+        ), "Determinism drift detected between baseline and memory-enabled traces"
 
     @staticmethod
-    def _canonical_hash(
-        data: Dict[str, Any],
-        exclude_keys: Optional[List[str]] = None
-    ) -> str:
+    def _canonical_hash(data: Dict[str, Any], exclude_keys: Optional[List[str]] = None) -> str:
         """
         Compute a canonical hash of a dictionary.
 
@@ -155,11 +137,7 @@ class TestReplayParity:
 
         def filter_and_sort(obj):
             if isinstance(obj, dict):
-                return {
-                    k: filter_and_sort(v)
-                    for k, v in sorted(obj.items())
-                    if k not in exclude_keys
-                }
+                return {k: filter_and_sort(v) for k, v in sorted(obj.items()) if k not in exclude_keys}
             elif isinstance(obj, list):
                 return [filter_and_sort(item) for item in obj]
             else:
@@ -170,10 +148,7 @@ class TestReplayParity:
         return hashlib.sha256(canonical.encode()).hexdigest()
 
     @staticmethod
-    def _mock_execute_trace(
-        trace: Dict[str, Any],
-        enable_memory: bool = False
-    ) -> Dict[str, Any]:
+    def _mock_execute_trace(trace: Dict[str, Any], enable_memory: bool = False) -> Dict[str, Any]:
         """
         Mock trace execution for testing.
 
@@ -184,11 +159,7 @@ class TestReplayParity:
         result = {
             "workflow_id": trace.get("workflow_id"),
             "step_count": step_count,
-            "final_state": {
-                "status": "completed",
-                "steps_executed": step_count,
-                "output": {"data": "mock_result"}
-            },
+            "final_state": {"status": "completed", "steps_executed": step_count, "output": {"data": "mock_result"}},
             "execution_time": 0.123,  # Non-deterministic
         }
 
@@ -201,11 +172,7 @@ class TestReplayParity:
 
         return result
 
-    def _run_live_trace(
-        self,
-        trace: Dict[str, Any],
-        enable_memory: bool = False
-    ) -> Dict[str, Any]:
+    def _run_live_trace(self, trace: Dict[str, Any], enable_memory: bool = False) -> Dict[str, Any]:
         """Run a trace against the live API."""
         url = f"{STAGING_BASE}/api/v1/costsim/run"
         headers = {
@@ -232,11 +199,7 @@ class TestMemoryIntegrationParity:
         # Mock memory store
         store = MagicMock()
         store.store.return_value = "mem-123"
-        store.get.return_value = {
-            "id": "mem-123",
-            "text": "test memory",
-            "created_at": "2025-01-01T00:00:00Z"
-        }
+        store.get.return_value = {"id": "mem-123", "text": "test memory", "created_at": "2025-01-01T00:00:00Z"}
 
         # Store same content twice
         id1 = store.store(agent_id="a1", text="test memory", memory_type="general")
@@ -321,7 +284,7 @@ class TestMemoryPinsParity:
 
     def test_expired_pins_excluded(self):
         """Test that expired pins are not returned."""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         past = now - timedelta(hours=1)
@@ -334,10 +297,7 @@ class TestMemoryPinsParity:
         ]
 
         def filter_active(pins_list, current_time):
-            return [
-                p for p in pins_list
-                if p["expires_at"] is None or p["expires_at"] > current_time
-            ]
+            return [p for p in pins_list if p["expires_at"] is None or p["expires_at"] > current_time]
 
         active = filter_active(pins, now)
         assert len(active) == 2

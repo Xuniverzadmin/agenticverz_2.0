@@ -15,8 +15,6 @@ Run with:
 import asyncio
 import logging
 import os
-import re
-import time
 from io import StringIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -40,14 +38,14 @@ def fastapi_available():
     try:
         import fastapi
         from fastapi.testclient import TestClient
+
         return True
     except ImportError:
         return False
 
 
 requires_fastapi = pytest.mark.skipif(
-    not fastapi_available(),
-    reason="FastAPI not available"
+    not fastapi_available(), reason="FastAPI not available"
 )
 
 
@@ -59,6 +57,7 @@ def redis_available():
     """Check if Redis is available for testing."""
     try:
         import redis
+
         client = redis.from_url(REDIS_TEST_URL, socket_connect_timeout=1)
         client.ping()
         client.close()
@@ -68,8 +67,7 @@ def redis_available():
 
 
 requires_redis = pytest.mark.skipif(
-    not redis_available(),
-    reason="Redis not available at REDIS_TEST_URL"
+    not redis_available(), reason="Redis not available at REDIS_TEST_URL"
 )
 
 
@@ -88,7 +86,7 @@ class LogCapture:
         self.stream = StringIO()
         self.handler = logging.StreamHandler(self.stream)
         self.handler.setLevel(self.level)
-        formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
         self.handler.setFormatter(formatter)
 
         logger = logging.getLogger(self.logger_name)
@@ -116,7 +114,11 @@ class LogCapture:
 
     def get_log_lines(self) -> list:
         """Get captured log output as list of lines."""
-        return self.stream.getvalue().strip().split('\n') if self.stream.getvalue().strip() else []
+        return (
+            self.stream.getvalue().strip().split("\n")
+            if self.stream.getvalue().strip()
+            else []
+        )
 
 
 class TestRateLimitLogCorrelation:
@@ -143,7 +145,7 @@ class TestRateLimitLogCorrelation:
                 limiter.allow_request(
                     tenant_id="test-tenant-123",
                     ip="192.168.1.100",
-                    request_id="req-abc123"
+                    request_id="req-abc123",
                 )
             )
 
@@ -151,8 +153,9 @@ class TestRateLimitLogCorrelation:
 
             logs = log_capture.get_logs()
             # Verify tenant_id is in logs
-            assert "tenant_id=test-tenant-123" in logs, \
-                f"Logs should contain tenant_id=test-tenant-123. Got: {logs}"
+            assert (
+                "tenant_id=test-tenant-123" in logs
+            ), f"Logs should contain tenant_id=test-tenant-123. Got: {logs}"
 
     def test_rate_limit_log_contains_ip(self):
         """Rate-limit exceeded logs should contain IP address."""
@@ -172,16 +175,15 @@ class TestRateLimitLogCorrelation:
         with LogCapture("webhook.rate_limiter", logging.INFO) as log_capture:
             result = run_async(
                 limiter.allow_request(
-                    tenant_id="test-tenant",
-                    ip="10.20.30.40",
-                    request_id="req-xyz789"
+                    tenant_id="test-tenant", ip="10.20.30.40", request_id="req-xyz789"
                 )
             )
 
             logs = log_capture.get_logs()
             # Verify IP is in logs
-            assert "ip=10.20.30.40" in logs, \
-                f"Logs should contain ip=10.20.30.40. Got: {logs}"
+            assert (
+                "ip=10.20.30.40" in logs
+            ), f"Logs should contain ip=10.20.30.40. Got: {logs}"
 
     def test_rate_limit_log_contains_request_id(self):
         """Rate-limit exceeded logs should contain request_id."""
@@ -203,14 +205,15 @@ class TestRateLimitLogCorrelation:
                 limiter.allow_request(
                     tenant_id="test-tenant",
                     ip="10.20.30.40",
-                    request_id="req-correlation-test"
+                    request_id="req-correlation-test",
                 )
             )
 
             logs = log_capture.get_logs()
             # Verify request_id is in logs
-            assert "request_id=req-correlation-test" in logs, \
-                f"Logs should contain request_id=req-correlation-test. Got: {logs}"
+            assert (
+                "request_id=req-correlation-test" in logs
+            ), f"Logs should contain request_id=req-correlation-test. Got: {logs}"
 
     def test_rate_limit_log_contains_redis_latency(self):
         """Rate-limit exceeded logs should contain redis_latency_ms."""
@@ -232,21 +235,21 @@ class TestRateLimitLogCorrelation:
                 limiter.allow_request(
                     tenant_id="test-tenant",
                     ip="10.20.30.40",
-                    request_id="req-latency-test"
+                    request_id="req-latency-test",
                 )
             )
 
             logs = log_capture.get_logs()
             # Verify redis_latency_ms is in logs
-            assert "redis_latency_ms=" in logs, \
-                f"Logs should contain redis_latency_ms. Got: {logs}"
+            assert (
+                "redis_latency_ms=" in logs
+            ), f"Logs should contain redis_latency_ms. Got: {logs}"
 
     @pytest.mark.skipif(not fastapi_available(), reason="FastAPI not available")
     def test_webhook_rate_limit_log_contains_both_tenant_and_ip(self):
         """Webhook rate-limit log should contain both tenant and IP."""
-        from app.main import app, logger as main_logger
+        from app.main import app
         from fastapi.testclient import TestClient
-        from unittest.mock import patch
         import app.main as main_module
 
         # Create rate limiter that will trigger limit
@@ -275,7 +278,7 @@ class TestRateLimitLogCorrelation:
                         "Content-Type": "application/json",
                         "X-Tenant-ID": "ops-tenant-456",
                         "X-Forwarded-For": "203.0.113.50",
-                    }
+                    },
                 )
 
                 # Should get 429 rate limited
@@ -285,11 +288,14 @@ class TestRateLimitLogCorrelation:
                     has_tenant = "ops-tenant-456" in logs or "tenant" in logs.lower()
                     has_ip = "203.0.113.50" in logs or "ip" in logs.lower()
 
-                    assert has_tenant or has_ip, \
-                        f"Rate limit log should contain tenant/IP info. Got: {logs}"
+                    assert (
+                        has_tenant or has_ip
+                    ), f"Rate limit log should contain tenant/IP info. Got: {logs}"
                 else:
                     # If not rate limited (e.g. 500 from DB issues), skip assertion
-                    pytest.skip(f"Got {response.status_code} instead of 429, skipping log check")
+                    pytest.skip(
+                        f"Got {response.status_code} instead of 429, skipping log check"
+                    )
 
         finally:
             main_module.redis_rate_limiter = original
@@ -315,11 +321,7 @@ class TestLogFieldFormat:
 
         with LogCapture("webhook.rate_limiter", logging.INFO) as log_capture:
             run_async(
-                limiter.allow_request(
-                    tenant_id="format-test",
-                    ip="172.16.0.1",
-                    rpm=5
-                )
+                limiter.allow_request(tenant_id="format-test", ip="172.16.0.1", rpm=5)
             )
 
             logs = log_capture.get_logs()
@@ -327,7 +329,9 @@ class TestLogFieldFormat:
             # Check for structured rate limit info
             # Expected format: "Rate limit exceeded for IP 172.16.0.1: 10/5"
             assert "172.16.0.1" in logs, f"Should contain IP. Got: {logs}"
-            assert "10" in logs or "count" in logs.lower(), f"Should contain count. Got: {logs}"
+            assert (
+                "10" in logs or "count" in logs.lower()
+            ), f"Should contain count. Got: {logs}"
 
     def test_tenant_rate_limit_log_format(self):
         """Tenant rate limit log should have structured format."""
@@ -357,17 +361,16 @@ class TestLogFieldFormat:
         with LogCapture("webhook.rate_limiter", logging.INFO) as log_capture:
             run_async(
                 limiter.allow_request(
-                    tenant_id="tenant-rate-test",
-                    ip="172.16.0.2",
-                    rpm=5
+                    tenant_id="tenant-rate-test", ip="172.16.0.2", rpm=5
                 )
             )
 
             logs = log_capture.get_logs()
 
             # Check for tenant info in log
-            assert "tenant-rate-test" in logs or "tenant" in logs.lower(), \
-                f"Should contain tenant info. Got: {logs}"
+            assert (
+                "tenant-rate-test" in logs or "tenant" in logs.lower()
+            ), f"Should contain tenant info. Got: {logs}"
 
 
 class TestRedisLatencyLogging:
@@ -385,16 +388,15 @@ class TestRedisLatencyLogging:
         mock_pipe = MagicMock()
         mock_pipe.incr = MagicMock()
         mock_pipe.expire = MagicMock()
-        mock_pipe.execute = AsyncMock(side_effect=TimeoutError("Redis timeout after 5000ms"))
+        mock_pipe.execute = AsyncMock(
+            side_effect=TimeoutError("Redis timeout after 5000ms")
+        )
         mock_client.pipeline = MagicMock(return_value=mock_pipe)
         limiter._client = mock_client
 
         with LogCapture("webhook.rate_limiter", logging.WARNING) as log_capture:
             result = run_async(
-                limiter.allow_request(
-                    tenant_id="timeout-test",
-                    ip="10.0.0.1"
-                )
+                limiter.allow_request(tenant_id="timeout-test", ip="10.0.0.1")
             )
 
             # Should fail-open
@@ -402,8 +404,9 @@ class TestRedisLatencyLogging:
 
             logs = log_capture.get_logs()
             # Should log the timeout error which contains timing info
-            assert "timeout" in logs.lower() or "error" in logs.lower(), \
-                f"Should log timeout/error info. Got: {logs}"
+            assert (
+                "timeout" in logs.lower() or "error" in logs.lower()
+            ), f"Should log timeout/error info. Got: {logs}"
 
 
 class TestLogCorrelationWithRequestContext:
@@ -429,8 +432,7 @@ class TestLogCorrelationWithRequestContext:
             for tenant in ["tenant-alpha", "tenant-beta", "tenant-gamma"]:
                 run_async(
                     limiter.allow_request(
-                        tenant_id=tenant,
-                        ip=f"10.0.0.{hash(tenant) % 256}"
+                        tenant_id=tenant, ip=f"10.0.0.{hash(tenant) % 256}"
                     )
                 )
 
@@ -443,8 +445,9 @@ class TestLogCorrelationWithRequestContext:
                 if tenant in logs:
                     found_tenants.append(tenant)
 
-            assert len(found_tenants) >= 1, \
-                f"Should log at least one tenant identifier. Got: {logs}"
+            assert (
+                len(found_tenants) >= 1
+            ), f"Should log at least one tenant identifier. Got: {logs}"
 
     def test_multiple_ips_distinguishable_in_logs(self):
         """Rate limits for different IPs should be distinguishable in logs."""
@@ -465,19 +468,15 @@ class TestLogCorrelationWithRequestContext:
 
         with LogCapture("webhook.rate_limiter", logging.INFO) as log_capture:
             for ip in test_ips:
-                run_async(
-                    limiter.allow_request(
-                        tenant_id="shared-tenant",
-                        ip=ip
-                    )
-                )
+                run_async(limiter.allow_request(tenant_id="shared-tenant", ip=ip))
 
             logs = log_capture.get_logs()
 
             # Each IP should appear in logs
             found_ips = [ip for ip in test_ips if ip in logs]
-            assert len(found_ips) >= 1, \
-                f"Should log at least one IP address. Got: {logs}"
+            assert (
+                len(found_ips) >= 1
+            ), f"Should log at least one IP address. Got: {logs}"
 
 
 class TestEnhancedLogging:
@@ -492,22 +491,22 @@ class TestEnhancedLogging:
         limiter._client = None
 
         with LogCapture("webhook.rate_limiter", logging.DEBUG) as log_capture:
-            with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+            with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
                 mock_init.return_value = False
 
                 result = run_async(
-                    limiter.allow_request(
-                        tenant_id="failopen-test",
-                        ip="10.0.0.1"
-                    )
+                    limiter.allow_request(tenant_id="failopen-test", ip="10.0.0.1")
                 )
 
                 assert result is True, "Should fail-open"
 
                 logs = log_capture.get_logs()
                 # Should log something about Redis being unavailable
-                assert "unavailable" in logs.lower() or "fail" in logs.lower() or len(logs) == 0, \
-                    f"Should log Redis unavailable or be silent. Got: {logs}"
+                assert (
+                    "unavailable" in logs.lower()
+                    or "fail" in logs.lower()
+                    or len(logs) == 0
+                ), f"Should log Redis unavailable or be silent. Got: {logs}"
 
     def test_reconnection_attempt_logged(self):
         """Reconnection attempts should be logged."""
@@ -518,7 +517,7 @@ class TestEnhancedLogging:
         limiter._client = None
 
         with LogCapture("webhook.rate_limiter", logging.INFO) as log_capture:
-            with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+            with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
                 mock_init.return_value = True  # Successful reconnection
 
                 # Set up working mock client after "reconnection"
@@ -536,10 +535,7 @@ class TestEnhancedLogging:
                 mock_init.side_effect = setup_client
 
                 result = run_async(
-                    limiter.allow_request(
-                        tenant_id="reconnect-test",
-                        ip="10.0.0.1"
-                    )
+                    limiter.allow_request(tenant_id="reconnect-test", ip="10.0.0.1")
                 )
 
                 # init should have been called for reconnection
@@ -556,9 +552,7 @@ class TestLogCorrelationIntegration:
         from app.rate_limiter import RedisRateLimiter
 
         limiter = RedisRateLimiter(
-            redis_url=REDIS_TEST_URL,
-            default_rpm=5,
-            window_seconds=5
+            redis_url=REDIS_TEST_URL, default_rpm=5, window_seconds=5
         )
 
         await limiter.init()
@@ -566,16 +560,14 @@ class TestLogCorrelationIntegration:
         try:
             # Clear counters
             await limiter.reset_limits(
-                tenant_id="integration-log-test",
-                ip="10.99.99.99"
+                tenant_id="integration-log-test", ip="10.99.99.99"
             )
 
             with LogCapture("webhook.rate_limiter", logging.INFO) as log_capture:
                 # Make requests until rate limited
                 for i in range(10):
                     result = await limiter.allow_request(
-                        tenant_id="integration-log-test",
-                        ip="10.99.99.99"
+                        tenant_id="integration-log-test", ip="10.99.99.99"
                     )
                     if not result:
                         break
@@ -587,8 +579,9 @@ class TestLogCorrelationIntegration:
                     has_tenant = "integration-log-test" in logs
                     has_ip = "10.99.99.99" in logs
 
-                    assert has_tenant or has_ip, \
-                        f"Logs should contain tenant/IP. Got: {logs}"
+                    assert (
+                        has_tenant or has_ip
+                    ), f"Logs should contain tenant/IP. Got: {logs}"
 
         finally:
             await limiter.close()

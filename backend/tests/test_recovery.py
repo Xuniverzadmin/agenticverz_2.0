@@ -10,29 +10,24 @@ Tests for:
 Run with: pytest tests/test_recovery.py -v
 """
 
-import json
-import math
-import pytest
-from datetime import datetime, timezone, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from datetime import datetime, timedelta, timezone
+from unittest.mock import Mock, patch
 from uuid import uuid4
+
+import pytest
 
 # Test imports
 from app.services.recovery_matcher import (
-    RecoveryMatcher,
-    MatchResult,
-    HALF_LIFE_DAYS,
-    LAMBDA,
-    ALPHA,
-    MIN_CONFIDENCE_THRESHOLD,
-    NO_HISTORY_CONFIDENCE,
     EXACT_MATCH_CONFIDENCE,
+    HALF_LIFE_DAYS,
+    NO_HISTORY_CONFIDENCE,
+    RecoveryMatcher,
 )
-
 
 # =============================================================================
 # Unit Tests - Matcher Service
 # =============================================================================
+
 
 class TestConfidenceScoring:
     """Test confidence scoring algorithm."""
@@ -54,11 +49,7 @@ class TestConfidenceScoring:
         """Test confidence when no historical data exists."""
         matcher = RecoveryMatcher()
 
-        confidence, explain = matcher._compute_confidence(
-            matches=[],
-            occurrences=0,
-            has_exact_match=False
-        )
+        confidence, explain = matcher._compute_confidence(matches=[], occurrences=0, has_exact_match=False)
 
         assert confidence == NO_HISTORY_CONFIDENCE
         assert explain["method"] == "no_history"
@@ -68,9 +59,7 @@ class TestConfidenceScoring:
         matcher = RecoveryMatcher()
 
         confidence, explain = matcher._compute_confidence(
-            matches=[{"created_at": datetime.now(timezone.utc)}],
-            occurrences=10,
-            has_exact_match=True
+            matches=[{"created_at": datetime.now(timezone.utc)}], occurrences=10, has_exact_match=True
         )
 
         assert confidence == EXACT_MATCH_CONFIDENCE
@@ -83,14 +72,10 @@ class TestConfidenceScoring:
         now = datetime.now(timezone.utc)
 
         # Recent match (today)
-        recent_matches = [
-            {"created_at": now}
-        ]
+        recent_matches = [{"created_at": now}]
 
         # Old match (60 days ago)
-        old_matches = [
-            {"created_at": now - timedelta(days=60)}
-        ]
+        old_matches = [{"created_at": now - timedelta(days=60)}]
 
         conf_recent, _ = matcher._compute_confidence(recent_matches, 5, False)
         conf_old, _ = matcher._compute_confidence(old_matches, 5, False)
@@ -118,10 +103,9 @@ class TestErrorNormalization:
         """Test basic error normalization."""
         matcher = RecoveryMatcher()
 
-        error_code, signature = matcher._normalize_error({
-            "error_type": "TIMEOUT",
-            "raw": "Connection timed out after 30s"
-        })
+        error_code, signature = matcher._normalize_error(
+            {"error_type": "TIMEOUT", "raw": "Connection timed out after 30s"}
+        )
 
         assert error_code == "TIMEOUT"
         assert len(signature) == 16  # SHA256 truncated to 16 chars
@@ -130,9 +114,7 @@ class TestErrorNormalization:
         """Test normalization with missing fields."""
         matcher = RecoveryMatcher()
 
-        error_code, signature = matcher._normalize_error({
-            "error_code": "HTTP_500"
-        })
+        error_code, signature = matcher._normalize_error({"error_code": "HTTP_500"})
 
         assert error_code == "HTTP_500"
         assert len(signature) == 16
@@ -143,10 +125,7 @@ class TestErrorNormalization:
 
         long_message = "x" * 1000
 
-        error_code, signature = matcher._normalize_error({
-            "error_type": "ERROR",
-            "raw": long_message
-        })
+        error_code, signature = matcher._normalize_error({"error_type": "ERROR", "raw": long_message})
 
         # Signature should still be 16 chars
         assert len(signature) == 16
@@ -160,9 +139,7 @@ class TestSuggestionGeneration:
         matcher = RecoveryMatcher()
 
         suggestion = matcher._generate_suggestion(
-            error_code="TIMEOUT",
-            error_message="Connection timed out",
-            similar_recoveries=[]
+            error_code="TIMEOUT", error_message="Connection timed out", similar_recoveries=[]
         )
 
         assert "timeout" in suggestion.lower() or "retry" in suggestion.lower()
@@ -173,11 +150,7 @@ class TestSuggestionGeneration:
 
         historical = ["Use exponential backoff with max 5 retries"]
 
-        suggestion = matcher._generate_suggestion(
-            error_code="TIMEOUT",
-            error_message="",
-            similar_recoveries=historical
-        )
+        suggestion = matcher._generate_suggestion(error_code="TIMEOUT", error_message="", similar_recoveries=historical)
 
         assert suggestion == historical[0]
 
@@ -186,11 +159,14 @@ class TestSuggestionGeneration:
 # Integration Tests - API Endpoints
 # =============================================================================
 
+
 @pytest.fixture
 def test_client():
     """Create test client for API tests."""
     from fastapi.testclient import TestClient
+
     from app.main import app
+
     return TestClient(app)
 
 
@@ -206,12 +182,9 @@ class TestRecoveryAPI:
             "/api/v1/recovery/suggest",
             json={
                 "failure_match_id": failure_match_id,
-                "failure_payload": {
-                    "error_type": "TIMEOUT",
-                    "raw": "Connection timed out after 30s"
-                },
-                "source": "test"
-            }
+                "failure_payload": {"error_type": "TIMEOUT", "raw": "Connection timed out after 30s"},
+                "source": "test",
+            },
         )
 
         # May fail if DB not connected - skip gracefully
@@ -226,10 +199,7 @@ class TestRecoveryAPI:
 
     def test_candidates_endpoint(self, test_client):
         """Test GET /api/v1/recovery/candidates returns list."""
-        response = test_client.get(
-            "/api/v1/recovery/candidates",
-            params={"status": "all", "limit": 10}
-        )
+        response = test_client.get("/api/v1/recovery/candidates", params={"status": "all", "limit": 10})
 
         if response.status_code == 500:
             pytest.skip("Database not available")
@@ -255,6 +225,7 @@ class TestRecoveryAPI:
 # Acceptance Tests
 # =============================================================================
 
+
 class TestAcceptanceCriteria:
     """
     Verify M10 acceptance criteria:
@@ -270,43 +241,34 @@ class TestAcceptanceCriteria:
         return [
             {
                 "failure_match_id": str(uuid4()),
-                "failure_payload": {
-                    "error_type": "TIMEOUT",
-                    "raw": "Connection timed out after 30s"
-                },
-                "source": "test"
+                "failure_payload": {"error_type": "TIMEOUT", "raw": "Connection timed out after 30s"},
+                "source": "test",
             },
             {
                 "failure_match_id": str(uuid4()),
-                "failure_payload": {
-                    "error_type": "HTTP_5XX",
-                    "raw": "Server returned 503 Service Unavailable"
-                },
-                "source": "test"
+                "failure_payload": {"error_type": "HTTP_5XX", "raw": "Server returned 503 Service Unavailable"},
+                "source": "test",
             },
             {
                 "failure_match_id": str(uuid4()),
-                "failure_payload": {
-                    "error_type": "RATE_LIMITED",
-                    "raw": "Rate limit exceeded, retry after 60s"
-                },
-                "source": "test"
+                "failure_payload": {"error_type": "RATE_LIMITED", "raw": "Rate limit exceeded, retry after 60s"},
+                "source": "test",
             },
             {
                 "failure_match_id": str(uuid4()),
                 "failure_payload": {
                     "error_type": "PARSE_ERROR",
-                    "raw": "Failed to parse JSON response: unexpected token"
+                    "raw": "Failed to parse JSON response: unexpected token",
                 },
-                "source": "test"
+                "source": "test",
             },
             {
                 "failure_match_id": str(uuid4()),
                 "failure_payload": {
                     "error_type": "PERMISSION_DENIED",
-                    "raw": "Access denied: insufficient permissions"
+                    "raw": "Access denied: insufficient permissions",
                 },
-                "source": "test"
+                "source": "test",
             },
         ]
 
@@ -315,10 +277,7 @@ class TestAcceptanceCriteria:
         successful_suggestions = 0
 
         for failure in sample_failures:
-            response = test_client.post(
-                "/api/v1/recovery/suggest",
-                json=failure
-            )
+            response = test_client.post("/api/v1/recovery/suggest", json=failure)
 
             if response.status_code == 500:
                 pytest.skip("Database not available")
@@ -328,9 +287,7 @@ class TestAcceptanceCriteria:
                 if data.get("suggested_recovery"):
                     successful_suggestions += 1
 
-        assert successful_suggestions >= 5, (
-            f"Expected at least 5 suggestions, got {successful_suggestions}"
-        )
+        assert successful_suggestions >= 5, f"Expected at least 5 suggestions, got {successful_suggestions}"
 
     def test_ac4_confidence_scores_vary(self, sample_failures):
         """AC4: Confidence scores vary across different error types."""
@@ -342,30 +299,25 @@ class TestAcceptanceCriteria:
             error_code, _ = matcher._normalize_error(failure["failure_payload"])
 
             # Compute confidence with varying history
-            matches = [{"created_at": datetime.now(timezone.utc)}] * (
-                len(confidences) + 1
-            )
-            conf, _ = matcher._compute_confidence(
-                matches,
-                occurrences=10,
-                has_exact_match=False
-            )
+            matches = [{"created_at": datetime.now(timezone.utc)}] * (len(confidences) + 1)
+            conf, _ = matcher._compute_confidence(matches, occurrences=10, has_exact_match=False)
             confidences.append(conf)
 
         # Verify variance exists
-        assert len(set([round(c, 2) for c in confidences])) > 1, (
-            f"Expected varying confidence scores, got: {confidences}"
-        )
+        assert (
+            len(set([round(c, 2) for c in confidences])) > 1
+        ), f"Expected varying confidence scores, got: {confidences}"
 
 
 # =============================================================================
 # CLI Tests (Mock-based)
 # =============================================================================
 
+
 class TestCLI:
     """Test CLI commands via mocking."""
 
-    @patch('cli.aos.api_request')
+    @patch("cli.aos.api_request")
     def test_cli_recovery_candidates(self, mock_api):
         """Test recovery candidates CLI command."""
         mock_api.return_value = {
@@ -375,10 +327,10 @@ class TestCLI:
                     "confidence": 0.85,
                     "decision": "pending",
                     "error_code": "TIMEOUT",
-                    "suggestion": "Implement retry logic"
+                    "suggestion": "Implement retry logic",
                 }
             ],
-            "total": 1
+            "total": 1,
         }
 
         # Import after patch
@@ -396,14 +348,14 @@ class TestCLI:
 
         mock_api.assert_called_once()
 
-    @patch('cli.aos.api_request')
+    @patch("cli.aos.api_request")
     def test_cli_recovery_approve(self, mock_api):
         """Test recovery approve CLI command."""
         mock_api.return_value = {
             "id": 1,
             "decision": "approved",
             "approved_by_human": "test_user",
-            "approved_at": "2025-12-08T12:00:00Z"
+            "approved_at": "2025-12-08T12:00:00Z",
         }
 
         from cli.aos import cmd_recovery_approve

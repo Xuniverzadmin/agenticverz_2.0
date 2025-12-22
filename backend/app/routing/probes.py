@@ -13,11 +13,11 @@ from typing import Any, Dict, List, Optional
 import redis.asyncio as redis
 
 from .models import (
+    PROBE_HARDNESS,
     CapabilityCheckResult,
     CapabilityHardness,
     CapabilityProbeResult,
     ProbeType,
-    PROBE_HARDNESS,
 )
 
 logger = logging.getLogger("nova.routing.probes")
@@ -44,7 +44,7 @@ class CapabilityProber:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis.Redis] = None
 
     async def _get_redis(self) -> redis.Redis:
@@ -86,11 +86,7 @@ class CapabilityProber:
         try:
             r = await self._get_redis()
             if r:
-                await r.setex(
-                    cache_key,
-                    PROBE_CACHE_TTL,
-                    json.dumps(result.to_dict())
-                )
+                await r.setex(cache_key, PROBE_CACHE_TTL, json.dumps(result.to_dict()))
         except Exception as e:
             logger.debug(f"Cache set failed: {e}")
 
@@ -226,11 +222,9 @@ class CapabilityProber:
         start = time.time()
         try:
             import aiohttp
+
             async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=timeout_ms / 1000)
-                ) as response:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=timeout_ms / 1000)) as response:
                     latency = (time.time() - start) * 1000
                     available = 200 <= response.status < 500
                     result = CapabilityProbeResult(
@@ -295,7 +289,7 @@ class CapabilityProber:
 
     async def probe_database(self, url: Optional[str] = None) -> CapabilityProbeResult:
         """Probe database connectivity."""
-        url = url or os.environ.get("DATABASE_URL")
+        url = url if url is not None else os.environ.get("DATABASE_URL")
         if not url:
             return CapabilityProbeResult(
                 probe_type=ProbeType.DATABASE,
@@ -316,6 +310,7 @@ class CapabilityProber:
         start = time.time()
         try:
             from sqlalchemy import create_engine, text
+
             engine = create_engine(url, pool_pre_ping=True)
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
@@ -353,6 +348,7 @@ class CapabilityProber:
         start = time.time()
         try:
             from ..agents.sba import get_sba_service
+
             sba_service = get_sba_service()
             agent = sba_service.get_agent(agent_id)
             latency = (time.time() - start) * 1000
@@ -464,10 +460,7 @@ class CapabilityProber:
 
         # Execute all probes concurrently
         if tasks:
-            results = await asyncio.gather(
-                *[t[1] for t in tasks],
-                return_exceptions=True
-            )
+            results = await asyncio.gather(*[t[1] for t in tasks], return_exceptions=True)
 
             for i, result in enumerate(results):
                 if isinstance(result, Exception):

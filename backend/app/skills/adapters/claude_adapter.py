@@ -26,12 +26,13 @@ logger = logging.getLogger("nova.adapters.claude")
 # Note: This is a lazy import to avoid circular dependencies
 def _get_base_types():
     from app.skills.llm_invoke_v2 import (
+        LLM_ERROR_MAP,
         LLMAdapter,
         LLMConfig,
         LLMResponse,
         Message,
-        LLM_ERROR_MAP,
     )
+
     return LLMAdapter, LLMConfig, LLMResponse, Message, LLM_ERROR_MAP
 
 
@@ -54,6 +55,7 @@ DEFAULT_MODEL = "claude-sonnet-4-20250514"
 # Claude Adapter
 # =============================================================================
 
+
 class ClaudeAdapter:
     """
     Anthropic Claude adapter implementing LLMAdapter interface.
@@ -72,7 +74,7 @@ class ClaudeAdapter:
         Args:
             api_key: Anthropic API key. If not provided, uses ANTHROPIC_API_KEY env var.
         """
-        self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        self._api_key = api_key if api_key is not None else os.environ.get("ANTHROPIC_API_KEY")
         self._client = None
 
     @property
@@ -98,12 +100,10 @@ class ClaudeAdapter:
         if self._client is None:
             try:
                 import anthropic
+
                 self._client = anthropic.Anthropic(api_key=self._api_key)
             except ImportError:
-                raise ImportError(
-                    "anthropic package not installed. "
-                    "Install with: pip install anthropic"
-                )
+                raise ImportError("anthropic package not installed. " "Install with: pip install anthropic")
         return self._client
 
     def _map_api_error(self, error: Exception) -> Tuple[str, str, bool]:
@@ -151,11 +151,7 @@ class ClaudeAdapter:
         # Claude uses roughly 3.5 chars per token
         return len(text) // 3
 
-    async def invoke(
-        self,
-        prompt: Union[str, List],
-        config
-    ) -> Union[Any, Tuple[str, str, bool]]:
+    async def invoke(self, prompt: Union[str, List], config) -> Union[Any, Tuple[str, str, bool]]:
         """
         Invoke Claude API.
 
@@ -186,7 +182,7 @@ class ClaudeAdapter:
                 messages.append({"role": "user", "content": prompt})
             else:
                 for m in prompt:
-                    if hasattr(m, 'role'):
+                    if hasattr(m, "role"):
                         role, content = m.role, m.content
                     else:
                         role, content = m.get("role", "user"), m.get("content", "")
@@ -250,7 +246,7 @@ class ClaudeAdapter:
                 model=response.model,
                 finish_reason=finish_reason,
                 latency_ms=latency_ms,
-                seed=config.seed
+                seed=config.seed,
             )
 
         except Exception as e:
@@ -262,9 +258,11 @@ class ClaudeAdapter:
 # Registration
 # =============================================================================
 
+
 def register_claude_adapter():
     """Register Claude adapter with the adapter registry."""
     from app.skills.llm_invoke_v2 import register_adapter
+
     adapter = ClaudeAdapter()
     register_adapter(adapter)
     return adapter
@@ -273,6 +271,7 @@ def register_claude_adapter():
 # =============================================================================
 # Stub for testing without API key
 # =============================================================================
+
 
 class ClaudeAdapterStub(ClaudeAdapter):
     """
@@ -297,11 +296,7 @@ class ClaudeAdapterStub(ClaudeAdapter):
         """Clear all mock responses."""
         self._mock_responses.clear()
 
-    async def invoke(
-        self,
-        prompt: Union[str, List],
-        config
-    ) -> Union[Any, Tuple[str, str, bool]]:
+    async def invoke(self, prompt: Union[str, List], config) -> Union[Any, Tuple[str, str, bool]]:
         """Return mock responses for testing."""
         LLMAdapter, LLMConfig, LLMResponse, Message, LLM_ERROR_MAP = _get_base_types()
 
@@ -313,7 +308,7 @@ class ClaudeAdapterStub(ClaudeAdapter):
         else:
             parts = []
             for m in prompt:
-                if hasattr(m, 'role'):
+                if hasattr(m, "role"):
                     parts.append(f"{m.role}: {m.content}")
                 else:
                     parts.append(f"{m.get('role', 'user')}: {m.get('content', '')}")
@@ -345,5 +340,5 @@ class ClaudeAdapterStub(ClaudeAdapter):
             model=config.model or self.default_model,
             finish_reason="end_turn",
             latency_ms=latency_ms,
-            seed=config.seed
+            seed=config.seed,
         )

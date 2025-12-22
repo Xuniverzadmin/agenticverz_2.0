@@ -3,28 +3,26 @@
 Tests for SkillExecutor with budget enforcement.
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
 if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
-from app.skills.executor import (
-    SkillExecutor,
-    SkillExecutionError,
-    BudgetExceededError,
-    execute_skill,
-)
 from app.observability.cost_tracker import (
-    CostTracker,
-    CostQuota,
     CostEnforcementResult,
+    CostQuota,
     configure_cost_quota,
 )
 from app.skills import load_all_skills
+from app.skills.executor import (
+    BudgetExceededError,
+    SkillExecutor,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -37,13 +35,15 @@ def load_skills():
 def reset_cost_tracker():
     """Reset global cost tracker before each test."""
     # Configure a fresh tracker with test quota
-    configure_cost_quota(CostQuota(
-        daily_limit_cents=10000,
-        hourly_limit_cents=1000,
-        per_request_limit_cents=100,
-        per_workflow_limit_cents=500,
-        enforce_hard_limit=True,
-    ))
+    configure_cost_quota(
+        CostQuota(
+            daily_limit_cents=10000,
+            hourly_limit_cents=1000,
+            per_request_limit_cents=100,
+            per_workflow_limit_cents=500,
+            enforce_hard_limit=True,
+        )
+    )
     yield
 
 
@@ -68,17 +68,20 @@ class TestExecutorBudgetEnforcement:
     async def test_execute_blocked_when_budget_exceeded(self, reset_cost_tracker):
         """Execution blocked when budget would be exceeded."""
         # Configure very low budget
-        configure_cost_quota(CostQuota(
-            daily_limit_cents=1,  # Only 1 cent total
-            hourly_limit_cents=1,
-            per_request_limit_cents=100,
-            enforce_hard_limit=True,
-        ))
+        configure_cost_quota(
+            CostQuota(
+                daily_limit_cents=1,  # Only 1 cent total
+                hourly_limit_cents=1,
+                per_request_limit_cents=100,
+                enforce_hard_limit=True,
+            )
+        )
 
         executor = SkillExecutor(enforce_budget=True)
 
         # Record spend that exceeds budget
         from app.observability.cost_tracker import get_cost_tracker as get_tracker
+
         tracker = get_tracker()
         tracker.record_cost(
             tenant_id="tenant-test",
@@ -106,11 +109,13 @@ class TestExecutorBudgetEnforcement:
     async def test_execute_no_budget_check_without_tenant_id(self, reset_cost_tracker):
         """Budget not checked if tenant_id not provided."""
         # Configure very low budget
-        configure_cost_quota(CostQuota(
-            daily_limit_cents=0,  # Zero budget
-            hourly_limit_cents=0,
-            enforce_hard_limit=True,
-        ))
+        configure_cost_quota(
+            CostQuota(
+                daily_limit_cents=0,  # Zero budget
+                hourly_limit_cents=0,
+                enforce_hard_limit=True,
+            )
+        )
 
         executor = SkillExecutor(enforce_budget=True)
 
@@ -127,11 +132,13 @@ class TestExecutorBudgetEnforcement:
     async def test_execute_no_budget_check_when_disabled(self, reset_cost_tracker):
         """Budget not checked when enforce_budget=False."""
         # Configure very low budget
-        configure_cost_quota(CostQuota(
-            daily_limit_cents=0,  # Zero budget
-            hourly_limit_cents=0,
-            enforce_hard_limit=True,
-        ))
+        configure_cost_quota(
+            CostQuota(
+                daily_limit_cents=0,  # Zero budget
+                hourly_limit_cents=0,
+                enforce_hard_limit=True,
+            )
+        )
 
         executor = SkillExecutor(enforce_budget=False)  # Disabled
 
@@ -147,12 +154,14 @@ class TestExecutorBudgetEnforcement:
     @pytest.mark.asyncio
     async def test_workflow_budget_enforcement(self, reset_cost_tracker):
         """Workflow-level budget is enforced."""
-        configure_cost_quota(CostQuota(
-            daily_limit_cents=10000,
-            hourly_limit_cents=1000,
-            per_workflow_limit_cents=10,  # Very low workflow limit
-            enforce_hard_limit=True,
-        ))
+        configure_cost_quota(
+            CostQuota(
+                daily_limit_cents=10000,
+                hourly_limit_cents=1000,
+                per_workflow_limit_cents=10,  # Very low workflow limit
+                enforce_hard_limit=True,
+            )
+        )
 
         executor = SkillExecutor(enforce_budget=True)
 
@@ -182,11 +191,13 @@ class TestExecutorBudgetEnforcement:
     @pytest.mark.asyncio
     async def test_budget_exceeded_error_attributes(self, reset_cost_tracker):
         """BudgetExceededError has correct attributes."""
-        configure_cost_quota(CostQuota(
-            daily_limit_cents=1,
-            hourly_limit_cents=1,
-            enforce_hard_limit=True,
-        ))
+        configure_cost_quota(
+            CostQuota(
+                daily_limit_cents=1,
+                hourly_limit_cents=1,
+                enforce_hard_limit=True,
+            )
+        )
 
         # Exhaust budget
         tracker = get_cost_tracker()
@@ -235,6 +246,7 @@ class TestExecutorCostEstimates:
 # Import helper for tests
 def get_cost_tracker():
     from app.observability.cost_tracker import get_cost_tracker as _get
+
     return _get()
 
 

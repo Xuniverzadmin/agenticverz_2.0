@@ -2,8 +2,8 @@
 Publisher interface for events. Uses pluggable adapters (nats_adapter).
 If no adapter is configured, falls back to logging publisher.
 """
-import os
 import logging
+import os
 from typing import Any, Dict
 
 logger = logging.getLogger("nova.events.publisher")
@@ -30,6 +30,7 @@ def get_publisher() -> BasePublisher:
     if adapter == "nats":
         try:
             from .nats_adapter import NatsAdapter
+
             return NatsAdapter()
         except Exception:
             logger.exception("nats_adapter_load_failed; falling back to logging")

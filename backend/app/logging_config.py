@@ -62,7 +62,7 @@ def log_request(
     status: str,
     run_id: str = None,
     duration_ms: float = None,
-    extra_data: Dict[str, Any] = None
+    extra_data: Dict[str, Any] = None,
 ):
     """Log a request with structured data."""
     extra = {
@@ -82,21 +82,13 @@ def log_request(
 
 
 def log_provenance(
-    logger: logging.Logger,
-    run_id: str,
-    agent_id: str,
-    goal: str,
-    plan: Dict[str, Any],
-    tool_calls: list
+    logger: logging.Logger, run_id: str, agent_id: str, goal: str, plan: Dict[str, Any], tool_calls: list
 ):
     """Log provenance record."""
     extra = {
         "run_id": run_id,
         "agent_id": agent_id,
         "goal": goal,
-        "extra_data": {
-            "plan": plan,
-            "tool_calls": tool_calls
-        }
+        "extra_data": {"plan": plan, "tool_calls": tool_calls},
     }
     logger.info("provenance_recorded", extra=extra)

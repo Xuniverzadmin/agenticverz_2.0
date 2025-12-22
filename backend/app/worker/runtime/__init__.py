@@ -22,7 +22,7 @@ Note: IntegratedRuntime requires pydantic. Use lazy import to avoid
 breaking tests that only need core Runtime.
 """
 
-from .core import Runtime, StructuredOutcome, SkillDescriptor, ResourceContract, ErrorCategory
+from .core import ErrorCategory, ResourceContract, Runtime, SkillDescriptor, StructuredOutcome
 
 __all__ = [
     "Runtime",
@@ -36,10 +36,12 @@ __all__ = [
 def get_integrated_runtime_class():
     """Lazy import for IntegratedRuntime (requires pydantic)."""
     from .integrated_runtime import IntegratedRuntime
+
     return IntegratedRuntime
 
 
 def create_integrated_runtime(*args, **kwargs):
     """Lazy factory for IntegratedRuntime (requires pydantic)."""
     from .integrated_runtime import create_integrated_runtime as _create
+
     return _create(*args, **kwargs)

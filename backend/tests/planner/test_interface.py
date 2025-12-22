@@ -10,10 +10,10 @@ Tests for:
 5. PlannerRegistry management
 """
 
-import pytest
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
+
+import pytest
 
 # Add paths
 _backend_path = str(Path(__file__).parent.parent.parent)
@@ -24,18 +24,17 @@ for p in [_backend_path, _app_path]:
         sys.path.insert(0, p)
 
 from app.planner.interface import (
-    PlannerInterface,
-    PlannerOutput,
+    DeterminismMode,
+    PlanMetadata,
     PlannerError,
     PlannerErrorCode,
-    PlanStep,
-    PlanMetadata,
+    PlannerOutput,
     PlannerRegistry,
-    DeterminismMode,
-    normalize_goal,
+    PlanStep,
     compute_plan_input_hash,
+    normalize_goal,
 )
-from app.planner.stub_planner import StubPlanner, PlanRule, LegacyStubPlanner
+from app.planner.stub_planner import LegacyStubPlanner, PlanRule, StubPlanner
 
 
 class TestPlanStep:
@@ -43,11 +42,7 @@ class TestPlanStep:
 
     def test_step_creation(self):
         """Can create a plan step with required fields."""
-        step = PlanStep(
-            step_id="s1",
-            skill="skill.http_call",
-            params={"url": "https://example.com"}
-        )
+        step = PlanStep(step_id="s1", skill="skill.http_call", params={"url": "https://example.com"})
 
         assert step.step_id == "s1"
         assert step.skill == "skill.http_call"
@@ -65,11 +60,7 @@ class TestPlanStep:
     def test_step_to_dict(self):
         """Step serializes correctly."""
         step = PlanStep(
-            step_id="s1",
-            skill="skill.http_call",
-            params={"url": "test"},
-            depends_on=["s0"],
-            description="Fetch data"
+            step_id="s1", skill="skill.http_call", params={"url": "test"}, depends_on=["s0"], description="Fetch data"
         )
 
         d = step.to_dict()
@@ -85,10 +76,7 @@ class TestPlanMetadata:
 
     def test_metadata_creation(self):
         """Can create metadata with required fields."""
-        meta = PlanMetadata(
-            planner="stub",
-            planner_version="1.0.0"
-        )
+        meta = PlanMetadata(planner="stub", planner_version="1.0.0")
 
         assert meta.planner == "stub"
         assert meta.planner_version == "1.0.0"
@@ -113,7 +101,7 @@ class TestPlanMetadata:
             input_tokens=100,
             output_tokens=50,
             cost_cents=1,
-            deterministic=True
+            deterministic=True,
         )
 
         d = meta.to_dict()
@@ -129,9 +117,7 @@ class TestPlannerOutput:
 
     def test_output_creation(self):
         """Can create planner output."""
-        steps = [
-            PlanStep(step_id="s1", skill="test", params={})
-        ]
+        steps = [PlanStep(step_id="s1", skill="test", params={})]
         meta = PlanMetadata(planner="stub", planner_version="1.0.0")
 
         output = PlannerOutput(steps=steps, metadata=meta)
@@ -141,9 +127,7 @@ class TestPlannerOutput:
 
     def test_output_plan_property(self):
         """Plan property returns dict with steps and metadata."""
-        steps = [
-            PlanStep(step_id="s1", skill="test", params={"a": 1})
-        ]
+        steps = [PlanStep(step_id="s1", skill="test", params={"a": 1})]
         meta = PlanMetadata(planner="stub", planner_version="1.0.0")
 
         output = PlannerOutput(steps=steps, metadata=meta)
@@ -160,10 +144,7 @@ class TestPlannerError:
 
     def test_error_creation(self):
         """Can create planner error."""
-        error = PlannerError(
-            code=PlannerErrorCode.INVALID_GOAL,
-            message="Goal cannot be empty"
-        )
+        error = PlannerError(code=PlannerErrorCode.INVALID_GOAL, message="Goal cannot be empty")
 
         assert error.code == PlannerErrorCode.INVALID_GOAL
         assert error.message == "Goal cannot be empty"
@@ -176,7 +157,7 @@ class TestPlannerError:
             message="Rate limited",
             retryable=True,
             retry_after_ms=5000,
-            details={"limit": 100}
+            details={"limit": 100},
         )
 
         assert error.retryable is True
@@ -199,7 +180,7 @@ class TestStubPlanner:
             {"skill_id": "skill.http_call", "name": "HTTP Call"},
             {"skill_id": "skill.json_transform", "name": "JSON Transform"},
             {"skill_id": "skill.llm_invoke", "name": "LLM Invoke"},
-            {"skill_id": "skill.echo", "name": "Echo"}
+            {"skill_id": "skill.echo", "name": "Echo"},
         ]
 
     def test_planner_id(self, planner):
@@ -216,11 +197,7 @@ class TestStubPlanner:
 
     def test_plan_echo_goal(self, planner, manifest):
         """Plans echo goal correctly."""
-        result = planner.plan(
-            agent_id="test",
-            goal="echo hello world",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="echo hello world", tool_manifest=manifest)
 
         # Check by class name to avoid import path issues
         assert result.__class__.__name__ == "PlannerOutput"
@@ -229,11 +206,7 @@ class TestStubPlanner:
 
     def test_plan_fetch_goal(self, planner, manifest):
         """Plans fetch goal correctly."""
-        result = planner.plan(
-            agent_id="test",
-            goal="fetch data from api",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="fetch data from api", tool_manifest=manifest)
 
         assert result.__class__.__name__ == "PlannerOutput"
         assert len(result.steps) == 1
@@ -241,11 +214,7 @@ class TestStubPlanner:
 
     def test_plan_analyze_goal(self, planner, manifest):
         """Plans analyze goal with multiple steps."""
-        result = planner.plan(
-            agent_id="test",
-            goal="analyze user data",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="analyze user data", tool_manifest=manifest)
 
         assert result.__class__.__name__ == "PlannerOutput"
         assert len(result.steps) == 3
@@ -255,11 +224,7 @@ class TestStubPlanner:
 
     def test_plan_dependencies(self, planner, manifest):
         """Multi-step plans have correct dependencies."""
-        result = planner.plan(
-            agent_id="test",
-            goal="analyze data",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="analyze data", tool_manifest=manifest)
 
         assert result.__class__.__name__ == "PlannerOutput"
         # s2 depends on s1, s3 depends on s2
@@ -268,22 +233,14 @@ class TestStubPlanner:
 
     def test_plan_empty_goal_returns_error(self, planner):
         """Empty goal returns error."""
-        result = planner.plan(
-            agent_id="test",
-            goal="   ",
-            tool_manifest=[]
-        )
+        result = planner.plan(agent_id="test", goal="   ", tool_manifest=[])
 
         assert result.__class__.__name__ == "PlannerError"
         assert result.code == PlannerErrorCode.INVALID_GOAL
 
     def test_plan_unknown_goal_returns_error(self, planner, manifest):
         """Unknown goal returns error."""
-        result = planner.plan(
-            agent_id="test",
-            goal="do something completely unknown xyz123",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="do something completely unknown xyz123", tool_manifest=manifest)
 
         assert result.__class__.__name__ == "PlannerError"
         assert result.code == PlannerErrorCode.GENERATION_FAILED
@@ -296,7 +253,7 @@ class TestStubPlanner:
         result = planner.plan(
             agent_id="test",
             goal="analyze data",  # Would normally use 3 skills
-            tool_manifest=manifest
+            tool_manifest=manifest,
         )
 
         # Should only include the available skill
@@ -306,11 +263,7 @@ class TestStubPlanner:
 
     def test_plan_deterministic(self, planner, manifest):
         """Same inputs produce identical outputs."""
-        inputs = {
-            "agent_id": "test",
-            "goal": "fetch user data",
-            "tool_manifest": manifest
-        }
+        inputs = {"agent_id": "test", "goal": "fetch user data", "tool_manifest": manifest}
 
         result1 = planner.plan(**inputs)
         result2 = planner.plan(**inputs)
@@ -330,11 +283,7 @@ class TestStubPlanner:
 
     def test_plan_metadata_correct(self, planner, manifest):
         """Plan metadata is correct."""
-        result = planner.plan(
-            agent_id="test",
-            goal="fetch data",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="fetch data", tool_manifest=manifest)
 
         assert result.__class__.__name__ == "PlannerOutput"
         assert result.metadata.planner == "stub"
@@ -372,19 +321,13 @@ class TestStubPlannerCustomRules:
 
         custom_rule = PlanRule(
             keywords=["custom", "special"],
-            steps=[
-                PlanStep(step_id="c1", skill="skill.custom", params={"x": 1})
-            ],
-            priority=100
+            steps=[PlanStep(step_id="c1", skill="skill.custom", params={"x": 1})],
+            priority=100,
         )
         planner.add_rule(custom_rule)
 
         manifest = [{"skill_id": "skill.custom"}]
-        result = planner.plan(
-            agent_id="test",
-            goal="do something custom",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="do something custom", tool_manifest=manifest)
 
         assert result.__class__.__name__ == "PlannerOutput"
         assert result.steps[0].skill == "skill.custom"
@@ -394,11 +337,7 @@ class TestStubPlannerCustomRules:
         planner = StubPlanner()
         planner.clear_rules()
 
-        result = planner.plan(
-            agent_id="test",
-            goal="fetch data",
-            tool_manifest=[]
-        )
+        result = planner.plan(agent_id="test", goal="fetch data", tool_manifest=[])
 
         assert result.__class__.__name__ == "PlannerError"
 
@@ -411,11 +350,7 @@ class TestLegacyStubPlanner:
         planner = LegacyStubPlanner()
 
         manifest = [{"skill_id": "skill.http_call"}]
-        result = planner.plan(
-            agent_id="test",
-            goal="fetch data",
-            tool_manifest=manifest
-        )
+        result = planner.plan(agent_id="test", goal="fetch data", tool_manifest=manifest)
 
         assert isinstance(result, dict)
         assert "steps" in result
@@ -428,7 +363,7 @@ class TestLegacyStubPlanner:
         result = planner.plan(
             agent_id="test",
             goal="   ",  # Empty goal
-            tool_manifest=[]
+            tool_manifest=[],
         )
 
         assert isinstance(result, dict)
@@ -493,7 +428,7 @@ class TestUtilityFunctions:
             goal="fetch data",
             context_summary=None,
             memory_snippets=None,
-            tool_manifest=[{"skill_id": "test"}]
+            tool_manifest=[{"skill_id": "test"}],
         )
 
         hash2 = compute_plan_input_hash(
@@ -501,7 +436,7 @@ class TestUtilityFunctions:
             goal="fetch data",
             context_summary=None,
             memory_snippets=None,
-            tool_manifest=[{"skill_id": "test"}]
+            tool_manifest=[{"skill_id": "test"}],
         )
 
         assert hash1 == hash2
@@ -510,19 +445,11 @@ class TestUtilityFunctions:
     def test_compute_plan_input_hash_different_inputs(self):
         """Different inputs produce different hashes."""
         hash1 = compute_plan_input_hash(
-            agent_id="agent1",
-            goal="fetch",
-            context_summary=None,
-            memory_snippets=None,
-            tool_manifest=None
+            agent_id="agent1", goal="fetch", context_summary=None, memory_snippets=None, tool_manifest=None
         )
 
         hash2 = compute_plan_input_hash(
-            agent_id="agent2",
-            goal="fetch",
-            context_summary=None,
-            memory_snippets=None,
-            tool_manifest=None
+            agent_id="agent2", goal="fetch", context_summary=None, memory_snippets=None, tool_manifest=None
         )
 
         assert hash1 != hash2

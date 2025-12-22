@@ -1,7 +1,6 @@
 # Tests for Worker Pool and Runner
 # Run with: pytest backend/tests/test_worker_pool.py -v
 
-import json
 import pytest
 
 
@@ -11,8 +10,8 @@ class TestRunRunner:
     def test_runner_constructs_without_crashing(self):
         """RunRunner can be constructed with a run_id."""
         # Import here to avoid DB initialization at module load
-        import sys
         import os
+
         # Set DATABASE_URL for import (won't actually connect in this test)
         os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
@@ -30,6 +29,7 @@ class TestWorkerPool:
     def test_pool_constructs_with_default_concurrency(self):
         """WorkerPool constructs with default concurrency."""
         import os
+
         os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
         from app.worker.pool import WorkerPool
@@ -41,6 +41,7 @@ class TestWorkerPool:
     def test_pool_constructs_with_custom_concurrency(self):
         """WorkerPool accepts custom concurrency."""
         import os
+
         os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost/test")
 
         from app.worker.pool import WorkerPool
@@ -63,11 +64,12 @@ class TestEventsPublisher:
     def test_get_publisher_returns_logging_by_default(self):
         """get_publisher returns LoggingPublisher by default."""
         import os
+
         # Ensure NATS is not configured
         os.environ.pop("EVENT_PUBLISHER", None)
         os.environ.pop("NATS_URL", None)
 
-        from app.events.publisher import get_publisher, LoggingPublisher
+        from app.events.publisher import LoggingPublisher, get_publisher
 
         publisher = get_publisher()
         assert isinstance(publisher, LoggingPublisher)

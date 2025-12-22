@@ -14,11 +14,12 @@ Fix: Replace the function to use proper partial unique index conflict syntax.
 
 See also: PIN-120 (RC-11: Migration Index vs Constraint Mismatch)
 """
-from alembic import op
 from sqlalchemy import text
 
-revision = '041_fix_enqueue_work_constraint'
-down_revision = '040_m24_onboarding'
+from alembic import op
+
+revision = "041_fix_enqueue_work_constraint"
+down_revision = "040_m24_onboarding"
 branch_labels = None
 depends_on = None
 
@@ -28,7 +29,9 @@ def upgrade() -> None:
 
     # Drop and recreate the function with correct ON CONFLICT syntax
     # For partial unique indexes, specify the conflict target with WHERE clause
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.enqueue_work(
             p_candidate_id INTEGER,
             p_idempotency_key UUID DEFAULT NULL,
@@ -59,10 +62,14 @@ def upgrade() -> None:
 
         COMMENT ON FUNCTION m10_recovery.enqueue_work IS
             'Enqueue work item with upsert semantics for Redis fallback (fixed for partial unique index)';
-    """))
+    """
+        )
+    )
 
     # Ensure the partial unique index exists (idempotent check)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -76,14 +83,18 @@ def upgrade() -> None:
                     WHERE processed_at IS NULL;
             END IF;
         END $$;
-    """))
+    """
+        )
+    )
 
 
 def downgrade() -> None:
     conn = op.get_bind()
 
     # Restore original function with ON CONFLICT ON CONSTRAINT (will break)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.enqueue_work(
             p_candidate_id INTEGER,
             p_idempotency_key UUID DEFAULT NULL,
@@ -108,4 +119,6 @@ def downgrade() -> None:
             RETURN v_id;
         END;
         $$ LANGUAGE plpgsql;
-    """))
+    """
+        )
+    )

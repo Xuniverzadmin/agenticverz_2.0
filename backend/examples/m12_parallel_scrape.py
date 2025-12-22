@@ -21,15 +21,15 @@ import os
 import sys
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.agents.services.job_service import JobService, JobConfig
-from app.agents.services.worker_service import WorkerService
 from app.agents.services.blackboard_service import BlackboardService
+from app.agents.services.job_service import JobConfig, JobService
 from app.agents.services.registry_service import RegistryService
+from app.agents.services.worker_service import WorkerService
 
 
 def simulate_url_scrape(url: str) -> Dict[str, Any]:
@@ -38,13 +38,7 @@ def simulate_url_scrape(url: str) -> Dict[str, Any]:
     time.sleep(0.1)
 
     # Return mock data based on URL
-    return {
-        "url": url,
-        "title": f"Page {url.split('/')[-1]}",
-        "word_count": len(url) * 10,
-        "links": 5,
-        "status": 200
-    }
+    return {"url": url, "title": f"Page {url.split('/')[-1]}", "word_count": len(url) * 10, "links": 5, "status": 200}
 
 
 def run_parallel_scrape_example():
@@ -72,21 +66,17 @@ def run_parallel_scrape_example():
         items=[{"url": url} for url in urls],
         parallelism=5,
         timeout_per_item=30,
-        max_retries=2
+        max_retries=2,
     )
 
     # Spawn the job
     orchestrator_id = f"orchestrator-{uuid.uuid4().hex[:8]}"
-    job = job_service.create_job(
-        config=config,
-        orchestrator_instance_id=orchestrator_id,
-        tenant_id="demo-tenant"
-    )
+    job = job_service.create_job(config=config, orchestrator_instance_id=orchestrator_id, tenant_id="demo-tenant")
 
     job_id = str(job.id)
     print(f"\nJob created: {job_id}")
     print(f"  Total items: {job.progress.total}")
-    print(f"  Parallelism: 5 workers")
+    print("  Parallelism: 5 workers")
     print(f"  Credits reserved: {job.credits.reserved}")
 
     # Initialize blackboard for aggregation
@@ -106,20 +96,14 @@ def run_parallel_scrape_example():
 
         # Register worker
         registry_service.register(
-            agent_id="scraper_worker",
-            instance_id=worker_id,
-            job_id=job_id,
-            capabilities={"skills": ["http_scrape"]}
+            agent_id="scraper_worker", instance_id=worker_id, job_id=job_id, capabilities={"skills": ["http_scrape"]}
         )
 
         items_processed = 0
 
         while True:
             # Claim next item
-            item = worker_service.claim_item(
-                job_id=job_id,
-                worker_instance_id=worker_id
-            )
+            item = worker_service.claim_item(job_id=job_id, worker_instance_id=worker_id)
 
             if not item:
                 break
@@ -136,10 +120,7 @@ def run_parallel_scrape_example():
             blackboard_service.set(result_key, result)
 
             # Mark item complete
-            worker_service.complete_item(
-                item_id=str(item.id),
-                output=result
-            )
+            worker_service.complete_item(item_id=str(item.id), output=result)
 
             items_processed += 1
 
@@ -209,7 +190,7 @@ def run_parallel_scrape_example():
         "job_id": job_id,
         "completed": final_status.progress.completed,
         "total_words": total_words,
-        "status": "success" if final_status.progress.completed == len(urls) else "partial"
+        "status": "success" if final_status.progress.completed == len(urls) else "partial",
     }
 
 

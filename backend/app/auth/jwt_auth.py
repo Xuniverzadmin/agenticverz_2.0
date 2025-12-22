@@ -11,21 +11,21 @@ Features:
 - Rate limit tier extraction from claims
 """
 
+import logging
 import os
 import time
-import logging
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-import json
+from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, HTTPException, Security, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Request, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 # JWT libraries
 try:
     import jwt
     from jwt import PyJWKClient, PyJWKClientError
+
     HAS_PYJWT = True
 except ImportError:
     HAS_PYJWT = False
@@ -35,6 +35,7 @@ except ImportError:
 
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
@@ -68,12 +69,8 @@ class JWTConfig:
     rate_limit_claim: str = "rate_limit_tier"
 
     # Fallback for development
-    allow_dev_token: bool = field(
-        default_factory=lambda: os.getenv("JWT_ALLOW_DEV_TOKEN", "false").lower() == "true"
-    )
-    dev_token_secret: str = field(
-        default_factory=lambda: os.getenv("JWT_DEV_SECRET", "dev-secret-not-for-production")
-    )
+    allow_dev_token: bool = field(default_factory=lambda: os.getenv("JWT_ALLOW_DEV_TOKEN", "false").lower() == "true")
+    dev_token_secret: str = field(default_factory=lambda: os.getenv("JWT_DEV_SECRET", "dev-secret-not-for-production"))
 
     def __post_init__(self):
         # Auto-discover JWKS URI from issuer if not set
@@ -124,11 +121,7 @@ class JWKSCache:
 
         now = time.time()
         if self._client is None or (now - self._last_refresh) > self.config.jwks_cache_ttl:
-            self._client = PyJWKClient(
-                self.config.jwks_uri,
-                cache_keys=True,
-                lifespan=self.config.jwks_cache_ttl
-            )
+            self._client = PyJWKClient(self.config.jwks_uri, cache_keys=True, lifespan=self.config.jwks_cache_ttl)
             self._last_refresh = now
             logger.info(f"Refreshed JWKS from {self.config.jwks_uri}")
 
@@ -164,7 +157,7 @@ class JWTAuthDependency:
     async def __call__(
         self,
         request: Request,
-        credentials: Optional[HTTPAuthorizationCredentials] = Security(HTTPBearer(auto_error=False))
+        credentials: Optional[HTTPAuthorizationCredentials] = Security(HTTPBearer(auto_error=False)),
     ) -> TokenPayload:
         """Authenticate request and return token payload."""
 
@@ -175,9 +168,7 @@ class JWTAuthDependency:
             if api_key:
                 return self._handle_api_key(api_key)
             raise HTTPException(
-                status_code=401,
-                detail="Missing authentication token",
-                headers={"WWW-Authenticate": "Bearer"}
+                status_code=401, detail="Missing authentication token", headers={"WWW-Authenticate": "Bearer"}
             )
 
         token = credentials.credentials
@@ -195,10 +186,7 @@ class JWTAuthDependency:
         # In production, this should validate against a key store
         expected_key = os.getenv("AOS_API_KEY", "")
         if api_key != expected_key:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid API key"
-            )
+            raise HTTPException(status_code=401, detail="Invalid API key")
 
         # Return a system token payload for API key auth
         now = datetime.utcnow()
@@ -211,22 +199,16 @@ class JWTAuthDependency:
             iat=now,
             iss="aos-api-key",
             aud=self.config.audience,
-            raw_claims={"auth_type": "api_key"}
+            raw_claims={"auth_type": "api_key"},
         )
 
     def _verify_dev_token(self, token: str) -> TokenPayload:
         """Verify development token (HS256 signed)."""
         if not self.config.allow_dev_token:
-            raise HTTPException(
-                status_code=401,
-                detail="Development tokens not allowed"
-            )
+            raise HTTPException(status_code=401, detail="Development tokens not allowed")
 
         if not HAS_PYJWT:
-            raise HTTPException(
-                status_code=500,
-                detail="PyJWT not installed"
-            )
+            raise HTTPException(status_code=500, detail="PyJWT not installed")
 
         # Strip dev: prefix
         actual_token = token[4:]
@@ -236,7 +218,7 @@ class JWTAuthDependency:
                 actual_token,
                 self.config.dev_token_secret,
                 algorithms=["HS256"],
-                options={"verify_exp": self.config.verify_exp}
+                options={"verify_exp": self.config.verify_exp},
             )
             return self._parse_claims(payload)
         except jwt.ExpiredSignatureError:
@@ -247,10 +229,7 @@ class JWTAuthDependency:
     async def _verify_jwt(self, token: str) -> TokenPayload:
         """Verify JWT against JWKS."""
         if not HAS_PYJWT:
-            raise HTTPException(
-                status_code=500,
-                detail="PyJWT not installed"
-            )
+            raise HTTPException(status_code=500, detail="PyJWT not installed")
 
         try:
             # Get signing key from JWKS
@@ -267,7 +246,7 @@ class JWTAuthDependency:
                     "verify_exp": self.config.verify_exp,
                     "verify_aud": self.config.verify_aud,
                     "verify_iss": self.config.verify_iss,
-                }
+                },
             )
 
             return self._parse_claims(payload)
@@ -276,33 +255,26 @@ class JWTAuthDependency:
             raise HTTPException(
                 status_code=401,
                 detail="Token expired",
-                headers={"WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"Token expired\""}
+                headers={"WWW-Authenticate": 'Bearer error="invalid_token", error_description="Token expired"'},
             )
         except jwt.InvalidAudienceError:
             raise HTTPException(
                 status_code=401,
                 detail="Invalid audience",
-                headers={"WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"Invalid audience\""}
+                headers={"WWW-Authenticate": 'Bearer error="invalid_token", error_description="Invalid audience"'},
             )
         except jwt.InvalidIssuerError:
             raise HTTPException(
                 status_code=401,
                 detail="Invalid issuer",
-                headers={"WWW-Authenticate": "Bearer error=\"invalid_token\", error_description=\"Invalid issuer\""}
+                headers={"WWW-Authenticate": 'Bearer error="invalid_token", error_description="Invalid issuer"'},
             )
         except jwt.InvalidTokenError as e:
             logger.warning(f"JWT validation failed: {e}")
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid token",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+            raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
         except Exception as e:
             logger.error(f"JWT verification error: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Authentication service error"
-            )
+            raise HTTPException(status_code=500, detail="Authentication service error")
 
     def _parse_claims(self, payload: Dict[str, Any]) -> TokenPayload:
         """Parse JWT claims into TokenPayload."""
@@ -333,7 +305,7 @@ class JWTAuthDependency:
             iat=datetime.fromtimestamp(iat_ts),
             iss=iss,
             aud=aud,
-            raw_claims=payload
+            raw_claims=payload,
         )
 
 
@@ -355,6 +327,7 @@ async def verify_token(token: str, config: Optional[JWTConfig] = None) -> TokenP
 
     # Create a mock credentials object
     from fastapi.security import HTTPAuthorizationCredentials
+
     credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
     # Create a minimal mock request
@@ -371,7 +344,7 @@ def create_dev_token(
     roles: Optional[List[str]] = None,
     rate_limit_tier: str = "standard",
     expires_in: int = 3600,
-    secret: Optional[str] = None
+    secret: Optional[str] = None,
 ) -> str:
     """Create a development token for testing."""
     if not HAS_PYJWT:
@@ -386,7 +359,7 @@ def create_dev_token(
         "iat": now,
         "exp": now + timedelta(seconds=expires_in),
         "iss": "aos-dev",
-        "aud": "aos-api"
+        "aud": "aos-api",
     }
 
     secret = secret or os.getenv("JWT_DEV_SECRET", "dev-secret-not-for-production")

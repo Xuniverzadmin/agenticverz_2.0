@@ -11,8 +11,8 @@ from typing import Any, Dict, Optional, Type
 import redis.asyncio as redis
 from pydantic import BaseModel
 
+from ..schemas.skill import KVStoreInput, KVStoreOutput
 from .registry import skill
-from ..schemas.skill import KVStoreInput, KVStoreOutput, KVOperation, SkillStatus
 
 logger = logging.getLogger("nova.skills.kv_store")
 
@@ -25,6 +25,7 @@ IDEMPOTENCY_TTL = 86400  # 24 hours
 
 class KVStoreConfig(BaseModel):
     """Configuration schema for kv_store skill."""
+
     allow_external: bool = True
     redis_url: Optional[str] = None
     key_prefix: str = KEY_PREFIX
@@ -84,11 +85,7 @@ class KVStoreSkill:
     async def _get_client(self) -> redis.Redis:
         """Get or create Redis client."""
         if self._client is None:
-            self._client = redis.from_url(
-                self.redis_url,
-                encoding="utf-8",
-                decode_responses=True
-            )
+            self._client = redis.from_url(self.redis_url, encoding="utf-8", decode_responses=True)
         return self._client
 
     def _make_key(self, namespace: str, key: str) -> str:
@@ -119,10 +116,7 @@ class KVStoreSkill:
         start_time = time.time()
         full_key = self._make_key(namespace, key)
 
-        logger.info(
-            "kv_store_execution_start",
-            extra={"skill": "kv_store", "operation": operation, "key": full_key}
-        )
+        logger.info("kv_store_execution_start", extra={"skill": "kv_store", "operation": operation, "key": full_key})
 
         # Check stub mode
         if not self.allow_external:
@@ -138,9 +132,7 @@ class KVStoreSkill:
 
         try:
             client = await self._get_client()
-            result = await self._execute_operation(
-                client, operation, full_key, key, value, ttl_seconds, namespace
-            )
+            result = await self._execute_operation(client, operation, full_key, key, value, ttl_seconds, namespace)
 
             duration = time.time() - start_time
             completed_at = datetime.now(timezone.utc)
@@ -154,7 +146,7 @@ class KVStoreSkill:
                 "completed_at": completed_at.isoformat(),
                 "operation": operation,
                 "key": key,
-                **result
+                **result,
             }
 
             # Store idempotency result for mutating operations
@@ -163,7 +155,7 @@ class KVStoreSkill:
 
             logger.info(
                 "kv_store_execution_end",
-                extra={"skill": "kv_store", "operation": operation, "key": full_key, "duration": duration}
+                extra={"skill": "kv_store", "operation": operation, "key": full_key, "duration": duration},
             )
 
             return response
@@ -191,7 +183,7 @@ class KVStoreSkill:
         key: str,
         value: Any,
         ttl_seconds: Optional[int],
-        namespace: str
+        namespace: str,
     ) -> Dict[str, Any]:
         """Execute the specific KV operation."""
 

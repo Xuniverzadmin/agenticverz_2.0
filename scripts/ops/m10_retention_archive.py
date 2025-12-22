@@ -43,8 +43,7 @@ from sqlalchemy import text
 from sqlmodel import Session, create_engine
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s"
+    level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s"
 )
 logger = logging.getLogger("nova.ops.retention")
 
@@ -93,11 +92,13 @@ class RetentionArchiver:
         session = self._get_session()
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT retention_days FROM m10_recovery.retention_jobs
                     WHERE name = :name
-                """),
-                {"name": job_name}
+                """
+                ),
+                {"name": job_name},
             )
             row = result.fetchone()
             if row:
@@ -120,11 +121,13 @@ class RetentionArchiver:
         try:
             # Count records to archive
             result = session.execute(
-                text(f"""
+                text(
+                    f"""
                     SELECT COUNT(*)
                     FROM m10_recovery.suggestion_provenance
                     WHERE created_at < now() - interval '{retention_days} days'
-                """)
+                """
+                )
             )
             count = result.scalar() or 0
 
@@ -140,7 +143,8 @@ class RetentionArchiver:
 
             # Archive records
             session.execute(
-                text(f"""
+                text(
+                    f"""
                     INSERT INTO m10_recovery.suggestion_provenance_archive
                     (id, suggestion_id, event_type, details, rule_id, action_id,
                      confidence_before, confidence_after, actor, actor_type,
@@ -151,15 +155,18 @@ class RetentionArchiver:
                         created_at, duration_ms, now()
                     FROM m10_recovery.suggestion_provenance
                     WHERE created_at < now() - interval '{retention_days} days'
-                """)
+                """
+                )
             )
 
             # Delete archived records
             result = session.execute(
-                text(f"""
+                text(
+                    f"""
                     DELETE FROM m10_recovery.suggestion_provenance
                     WHERE created_at < now() - interval '{retention_days} days'
-                """)
+                """
+                )
             )
             deleted = result.rowcount
 
@@ -185,11 +192,13 @@ class RetentionArchiver:
         try:
             # Count records to archive
             result = session.execute(
-                text(f"""
+                text(
+                    f"""
                     SELECT COUNT(*)
                     FROM m10_recovery.suggestion_input
                     WHERE created_at < now() - interval '{retention_days} days'
-                """)
+                """
+                )
             )
             count = result.scalar() or 0
 
@@ -205,7 +214,8 @@ class RetentionArchiver:
 
             # Archive records
             session.execute(
-                text(f"""
+                text(
+                    f"""
                     INSERT INTO m10_recovery.suggestion_input_archive
                     (id, suggestion_id, input_type, raw_value, normalized_value,
                      parsed_data, confidence, weight, source, created_at, archived_at)
@@ -214,15 +224,18 @@ class RetentionArchiver:
                         parsed_data, confidence, weight, source, created_at, now()
                     FROM m10_recovery.suggestion_input
                     WHERE created_at < now() - interval '{retention_days} days'
-                """)
+                """
+                )
             )
 
             # Delete archived records
             result = session.execute(
-                text(f"""
+                text(
+                    f"""
                     DELETE FROM m10_recovery.suggestion_input
                     WHERE created_at < now() - interval '{retention_days} days'
-                """)
+                """
+                )
             )
             deleted = result.rowcount
 
@@ -246,12 +259,14 @@ class RetentionArchiver:
         session = self._get_session()
         try:
             result = session.execute(
-                text(f"""
+                text(
+                    f"""
                     SELECT COUNT(*)
                     FROM recovery_candidates
                     WHERE created_at < now() - interval '{retention_days} days'
                       AND decision IN ('approved', 'rejected')
-                """)
+                """
+                )
             )
             return result.scalar() or 0
         finally:
@@ -270,7 +285,8 @@ class RetentionArchiver:
         session = self._get_session()
         try:
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE m10_recovery.retention_jobs
                     SET
                         last_run = now(),
@@ -278,8 +294,9 @@ class RetentionArchiver:
                         rows_deleted = :deleted,
                         updated_at = now()
                     WHERE name = :name
-                """),
-                {"name": job_name, "archived": archived, "deleted": deleted}
+                """
+                ),
+                {"name": job_name, "archived": archived, "deleted": deleted},
             )
             session.commit()
         except Exception as e:
@@ -359,30 +376,26 @@ Examples:
   python m10_retention_archive.py --dry-run
   python m10_retention_archive.py --retention-days 60
   python m10_retention_archive.py --job provenance_archive
-        """
+        """,
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be archived without making changes"
+        help="Show what would be archived without making changes",
     )
     parser.add_argument(
         "--retention-days",
         type=int,
         default=None,
-        help="Override retention period for all jobs"
+        help="Override retention period for all jobs",
     )
     parser.add_argument(
         "--job",
         type=str,
         choices=list(ARCHIVE_JOBS.keys()),
-        help="Run specific job only"
+        help="Run specific job only",
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output results as JSON"
-    )
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
 
     args = parser.parse_args()
 
@@ -396,6 +409,7 @@ Examples:
 
         if args.json:
             import json
+
             print(json.dumps(results, indent=2))
         else:
             print("\n=== Retention Archive Results ===")

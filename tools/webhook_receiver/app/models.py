@@ -5,7 +5,6 @@ Stores received webhooks with metadata for replay, audit, and analysis.
 """
 
 from datetime import datetime, timezone
-from typing import Optional, Any
 from sqlalchemy import (
     Column,
     Integer,
@@ -48,7 +47,7 @@ class Webhook(Base):
 
     # Body
     body_json = Column(JSON, nullable=True)  # Parsed JSON body
-    body_raw = Column(Text, nullable=True)   # Raw body for non-JSON
+    body_raw = Column(Text, nullable=True)  # Raw body for non-JSON
     body_size = Column(Integer, nullable=True)
 
     # Source identification

@@ -18,11 +18,9 @@ Run with: pytest backend/tests/test_integration.py -v
 E2E tests (marked with @pytest.mark.e2e) require a running backend server.
 Skip with: pytest backend/tests/test_integration.py -v -m "not e2e"
 """
-import json
 import os
 import time
 import uuid
-from datetime import datetime
 
 import pytest
 
@@ -37,6 +35,7 @@ def _backend_is_running() -> bool:
     """Check if the backend server is running and accepting our test API key."""
     try:
         import httpx
+
         # Check health endpoint
         response = httpx.get("http://localhost:8000/health", timeout=2.0)
         if response.status_code != 200:
@@ -44,9 +43,7 @@ def _backend_is_running() -> bool:
         # Check if we can authenticate with the test key
         api_key = os.environ.get("AOS_API_KEY", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf")
         auth_response = httpx.get(
-            "http://localhost:8000/agents/test-probe",
-            headers={"X-AOS-Key": api_key},
-            timeout=2.0
+            "http://localhost:8000/agents/test-probe", headers={"X-AOS-Key": api_key}, timeout=2.0
         )
         # 404 = auth passed, agent not found (good)
         # 401 = auth failed (skip tests)
@@ -57,8 +54,7 @@ def _backend_is_running() -> bool:
 
 # Skip E2E tests if backend not running or not accepting our API key
 requires_backend = pytest.mark.skipif(
-    not _backend_is_running(),
-    reason="Backend server not running on localhost:8000 or API key mismatch"
+    not _backend_is_running(), reason="Backend server not running on localhost:8000 or API key mismatch"
 )
 
 
@@ -95,10 +91,7 @@ class TestAuthMiddleware:
         """Request with invalid API key returns 401."""
         import httpx
 
-        response = httpx.get(
-            "http://localhost:8000/agents/test-id",
-            headers={"X-AOS-Key": "wrong-key"}
-        )
+        response = httpx.get("http://localhost:8000/agents/test-id", headers={"X-AOS-Key": "wrong-key"})
         assert response.status_code == 401
 
     def test_valid_api_key_returns_not_401(self):
@@ -107,10 +100,7 @@ class TestAuthMiddleware:
 
         # Use the actual API key from environment
         api_key = os.environ.get("AOS_API_KEY", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf")
-        response = httpx.get(
-            "http://localhost:8000/agents/test-id",
-            headers={"X-AOS-Key": api_key}
-        )
+        response = httpx.get("http://localhost:8000/agents/test-id", headers={"X-AOS-Key": api_key})
         # Should be 404 (not found) not 401 (unauthorized)
         assert response.status_code == 404
 
@@ -129,11 +119,8 @@ class TestAgentCRUD:
 
         response = httpx.post(
             "http://localhost:8000/agents",
-            headers={
-                "X-AOS-Key": api_key,
-                "Content-Type": "application/json"
-            },
-            json={"name": f"test-agent-{uuid.uuid4().hex[:8]}"}
+            headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
+            json={"name": f"test-agent-{uuid.uuid4().hex[:8]}"},
         )
         assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.text}"
         data = response.json()
@@ -147,20 +134,14 @@ class TestAgentCRUD:
         # Create agent first
         create_response = httpx.post(
             "http://localhost:8000/agents",
-            headers={
-                "X-AOS-Key": api_key,
-                "Content-Type": "application/json"
-            },
-            json={"name": f"test-agent-{uuid.uuid4().hex[:8]}"}
+            headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
+            json={"name": f"test-agent-{uuid.uuid4().hex[:8]}"},
         )
         assert create_response.status_code == 201, f"Create failed: {create_response.text}"
         agent_id = create_response.json()["agent_id"]
 
         # Get agent
-        response = httpx.get(
-            f"http://localhost:8000/agents/{agent_id}",
-            headers={"X-AOS-Key": api_key}
-        )
+        response = httpx.get(f"http://localhost:8000/agents/{agent_id}", headers={"X-AOS-Key": api_key})
         assert response.status_code == 200
         data = response.json()
         assert data["agent_id"] == agent_id
@@ -169,10 +150,7 @@ class TestAgentCRUD:
         """Can list skills (replaces list agents test)."""
         import httpx
 
-        response = httpx.get(
-            "http://localhost:8000/skills",
-            headers={"X-AOS-Key": api_key}
-        )
+        response = httpx.get("http://localhost:8000/skills", headers={"X-AOS-Key": api_key})
         assert response.status_code == 200
         data = response.json()
         # Response has both 'skills' and 'manifest' keys
@@ -195,12 +173,9 @@ class TestGoalSubmission:
 
         response = httpx.post(
             "http://localhost:8000/agents",
-            headers={
-                "X-AOS-Key": api_key,
-                "Content-Type": "application/json"
-            },
+            headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
             json={"name": f"integration-test-{uuid.uuid4().hex[:8]}"},
-            timeout=30.0
+            timeout=30.0,
         )
         assert response.status_code == 201, f"Agent creation failed: {response.text}"
         return response.json()["agent_id"]
@@ -213,7 +188,7 @@ class TestGoalSubmission:
             f"http://localhost:8000/agents/{test_agent}/goals",
             headers={"X-AOS-Key": api_key},
             json={"goal": "Test goal for integration testing"},
-            timeout=30.0
+            timeout=30.0,
         )
         assert response.status_code == 202
         data = response.json()
@@ -223,8 +198,8 @@ class TestGoalSubmission:
     @pytest.mark.xfail(
         strict=False,
         reason="Intermittent infrastructure timeout - fixture setup times out under load. "
-               "Test logic is correct, timeout occurs in agent creation fixture. "
-               "TODO: Investigate container networking latency. Ticket: INFRA-001"
+        "Test logic is correct, timeout occurs in agent creation fixture. "
+        "TODO: Investigate container networking latency. Ticket: INFRA-001",
     )
     def test_get_run_status(self, api_key, test_agent):
         """Can get run status after submission."""
@@ -235,15 +210,13 @@ class TestGoalSubmission:
             f"http://localhost:8000/agents/{test_agent}/goals",
             headers={"X-AOS-Key": api_key},
             json={"goal": "Test goal"},
-            timeout=30.0
+            timeout=30.0,
         )
         run_id = submit_response.json()["run_id"]
 
         # Get run status with extended timeout
         response = httpx.get(
-            f"http://localhost:8000/agents/{test_agent}/runs/{run_id}",
-            headers={"X-AOS-Key": api_key},
-            timeout=30.0
+            f"http://localhost:8000/agents/{test_agent}/runs/{run_id}", headers={"X-AOS-Key": api_key}, timeout=30.0
         )
         assert response.status_code == 200
         data = response.json()
@@ -265,12 +238,9 @@ class TestIdempotency:
 
         response = httpx.post(
             "http://localhost:8000/agents",
-            headers={
-                "X-AOS-Key": api_key,
-                "Content-Type": "application/json"
-            },
+            headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
             json={"name": f"idempotency-test-{uuid.uuid4().hex[:8]}"},
-            timeout=30.0
+            timeout=30.0,
         )
         assert response.status_code == 201, f"Agent creation failed: {response.text}"
         return response.json()["agent_id"]
@@ -285,11 +255,8 @@ class TestIdempotency:
         response1 = httpx.post(
             f"http://localhost:8000/agents/{test_agent}/goals",
             headers={"X-AOS-Key": api_key},
-            json={
-                "goal": "Test idempotency",
-                "idempotency_key": idempotency_key
-            },
-            timeout=30.0
+            json={"goal": "Test idempotency", "idempotency_key": idempotency_key},
+            timeout=30.0,
         )
         assert response1.status_code == 202
         run_id_1 = response1.json()["run_id"]
@@ -301,11 +268,8 @@ class TestIdempotency:
         response2 = httpx.post(
             f"http://localhost:8000/agents/{test_agent}/goals",
             headers={"X-AOS-Key": api_key},
-            json={
-                "goal": "Test idempotency",
-                "idempotency_key": idempotency_key
-            },
-            timeout=30.0
+            json={"goal": "Test idempotency", "idempotency_key": idempotency_key},
+            timeout=30.0,
         )
         assert response2.status_code == 202
         run_id_2 = response2.json()["run_id"]
@@ -408,6 +372,7 @@ class TestSkillRegistry:
     def load_skills(self):
         """Load all skills before running registry tests."""
         from app.skills import load_all_skills
+
         load_all_skills()
 
     def test_list_skills_returns_registered_skills(self):

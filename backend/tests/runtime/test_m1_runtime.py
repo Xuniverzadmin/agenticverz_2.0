@@ -6,36 +6,25 @@ Tests for the machine-native runtime interfaces.
 This file avoids importing the full worker module to prevent sqlmodel dependency.
 """
 
-import pytest
 import asyncio
 import json
 import sys
 from pathlib import Path
+
+import pytest
 
 # Direct path to runtime module (avoid triggering pydantic-dependent imports)
 _runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
 if _runtime_path not in sys.path:
     sys.path.insert(0, _runtime_path)
 
-from core import (
-    Runtime,
-    StructuredOutcome,
-    SkillDescriptor,
-    ResourceContract,
-    ErrorCategory
-)
-from contracts import (
-    ContractMetadata,
-    SkillContract,
-    FailureMode,
-    CostModel,
-    BudgetTracker
-)
-
+from contracts import BudgetTracker, ContractMetadata, CostModel
+from core import ErrorCategory, ResourceContract, Runtime, SkillDescriptor, StructuredOutcome
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def runtime():
@@ -53,7 +42,7 @@ def runtime():
         inputs_schema_version="1.0",
         outputs_schema_version="1.0",
         stable_fields={"echo": "DETERMINISTIC"},
-        cost_model={"base_cents": 0}
+        cost_model={"base_cents": 0},
     )
     rt.register_skill(descriptor, echo_handler)
     return rt
@@ -62,15 +51,12 @@ def runtime():
 @pytest.fixture
 def runtime_with_slow_skill(runtime):
     """Runtime with a slow skill for timeout testing."""
+
     async def slow_handler(inputs):
         await asyncio.sleep(0.1)
         return {"slow": True}
 
-    descriptor = SkillDescriptor(
-        skill_id="skill.slow",
-        name="Slow Skill",
-        version="1.0.0"
-    )
+    descriptor = SkillDescriptor(skill_id="skill.slow", name="Slow Skill", version="1.0.0")
     runtime.register_skill(descriptor, slow_handler)
     return runtime
 
@@ -78,14 +64,11 @@ def runtime_with_slow_skill(runtime):
 @pytest.fixture
 def runtime_with_failing_skill(runtime):
     """Runtime with a skill that raises exceptions."""
+
     async def failing_handler(inputs):
         raise ValueError("Intentional test failure")
 
-    descriptor = SkillDescriptor(
-        skill_id="skill.failing",
-        name="Failing Skill",
-        version="1.0.0"
-    )
+    descriptor = SkillDescriptor(skill_id="skill.failing", name="Failing Skill", version="1.0.0")
     runtime.register_skill(descriptor, failing_handler)
     return runtime
 
@@ -93,12 +76,7 @@ def runtime_with_failing_skill(runtime):
 @pytest.fixture
 def runtime_with_contract(runtime):
     """Runtime with a resource contract registered."""
-    contract = ResourceContract(
-        resource_id="test-resource",
-        budget_cents=500,
-        rate_limit_per_min=100,
-        max_concurrent=5
-    )
+    contract = ResourceContract(resource_id="test-resource", budget_cents=500, rate_limit_per_min=100, max_concurrent=5)
     runtime.register_resource_contract(contract)
     return runtime
 
@@ -106,6 +84,7 @@ def runtime_with_contract(runtime):
 # ============================================================================
 # Test: runtime.execute()
 # ============================================================================
+
 
 class TestRuntimeExecute:
     """Tests for runtime.execute() interface."""
@@ -140,7 +119,7 @@ class TestRuntimeExecute:
         outcome = await runtime_with_slow_skill.execute(
             "skill.slow",
             {},
-            timeout_s=0.01  # 10ms timeout, skill takes 100ms
+            timeout_s=0.01,  # 10ms timeout, skill takes 100ms
         )
 
         assert outcome.ok is False
@@ -184,6 +163,7 @@ class TestRuntimeExecute:
 # Test: runtime.describe_skill()
 # ============================================================================
 
+
 class TestDescribeSkill:
     """Tests for runtime.describe_skill() interface."""
 
@@ -214,6 +194,7 @@ class TestDescribeSkill:
 # ============================================================================
 # Test: runtime.query()
 # ============================================================================
+
 
 class TestRuntimeQuery:
     """Tests for runtime.query() interface."""
@@ -287,6 +268,7 @@ class TestRuntimeQuery:
 # Test: runtime.get_resource_contract()
 # ============================================================================
 
+
 class TestGetResourceContract:
     """Tests for runtime.get_resource_contract() interface."""
 
@@ -309,16 +291,13 @@ class TestGetResourceContract:
 # Test: StructuredOutcome
 # ============================================================================
 
+
 class TestStructuredOutcome:
     """Tests for StructuredOutcome dataclass."""
 
     def test_success_factory(self):
         """StructuredOutcome.success() should create successful outcome."""
-        outcome = StructuredOutcome.success(
-            call_id="test-123",
-            result={"data": "value"},
-            meta={"timing": 100}
-        )
+        outcome = StructuredOutcome.success(call_id="test-123", result={"data": "value"}, meta={"timing": 100})
 
         assert outcome.ok is True
         assert outcome.result == {"data": "value"}
@@ -328,11 +307,7 @@ class TestStructuredOutcome:
     def test_failure_factory(self):
         """StructuredOutcome.failure() should create failed outcome."""
         outcome = StructuredOutcome.failure(
-            call_id="test-456",
-            code="ERR_TEST",
-            message="Test error",
-            category=ErrorCategory.TRANSIENT,
-            retryable=True
+            call_id="test-456", code="ERR_TEST", message="Test error", category=ErrorCategory.TRANSIENT, retryable=True
         )
 
         assert outcome.ok is False
@@ -359,6 +334,7 @@ class TestStructuredOutcome:
 # Test: Contract Dataclasses
 # ============================================================================
 
+
 class TestContractDataclasses:
     """Tests for contract helper dataclasses."""
 
@@ -372,12 +348,7 @@ class TestContractDataclasses:
 
     def test_cost_model_estimate(self):
         """CostModel.estimate() should calculate cost correctly."""
-        model = CostModel(
-            base_cents=5,
-            per_kb_cents=0.1,
-            per_token_cents=0.001,
-            max_cents=100
-        )
+        model = CostModel(base_cents=5, per_kb_cents=0.1, per_token_cents=0.001, max_cents=100)
 
         # Base only
         assert model.estimate() == 5
@@ -411,6 +382,7 @@ class TestContractDataclasses:
 # Test: Determinism
 # ============================================================================
 
+
 class TestDeterminism:
     """Tests to verify deterministic behavior for replay."""
 
@@ -439,6 +411,7 @@ class TestDeterminism:
 # Test: Registration
 # ============================================================================
 
+
 class TestRegistration:
     """Tests for skill and contract registration."""
 
@@ -456,6 +429,7 @@ class TestRegistration:
 
     def test_register_duplicate_skill_fails(self, runtime):
         """register_skill should fail for duplicate skill_id."""
+
         async def handler(inputs):
             return inputs
 

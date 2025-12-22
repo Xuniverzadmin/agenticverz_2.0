@@ -1,9 +1,13 @@
 import os
+
 import pytest
+
 from nova_sdk import NovaClient
 
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000")
-API_KEY = os.environ.get("API_KEY", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf")
+API_KEY = os.environ.get(
+    "API_KEY", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf"
+)
 
 
 def get_client():
@@ -24,14 +28,18 @@ def test_create_agent_and_post_goal_smoke():
 
 # =========== Machine-Native API Tests ===========
 
+
 def test_simulate_feasible_plan():
     """Test simulating a feasible plan."""
     c = get_client()
     try:
-        result = c.simulate([
-            {"skill": "http_call", "params": {"url": "https://api.example.com"}},
-            {"skill": "json_transform", "params": {"query": ".data"}}
-        ], budget_cents=100)
+        result = c.simulate(
+            [
+                {"skill": "http_call", "params": {"url": "https://api.example.com"}},
+                {"skill": "json_transform", "params": {"query": ".data"}},
+            ],
+            budget_cents=100,
+        )
     except Exception as e:
         pytest.skip(f"backend not available at {API_URL}: {e}")
 
@@ -45,11 +53,14 @@ def test_simulate_budget_exceeded():
     """Test simulating a plan that exceeds budget."""
     c = get_client()
     try:
-        result = c.simulate([
-            {"skill": "llm_invoke", "params": {"prompt": "test"}},
-            {"skill": "llm_invoke", "params": {"prompt": "test2"}},
-            {"skill": "llm_invoke", "params": {"prompt": "test3"}}
-        ], budget_cents=5)  # LLM costs 5c each, so 15c total > 5c budget
+        result = c.simulate(
+            [
+                {"skill": "llm_invoke", "params": {"prompt": "test"}},
+                {"skill": "llm_invoke", "params": {"prompt": "test2"}},
+                {"skill": "llm_invoke", "params": {"prompt": "test3"}},
+            ],
+            budget_cents=5,
+        )  # LLM costs 5c each, so 15c total > 5c budget
     except Exception as e:
         pytest.skip(f"backend not available at {API_URL}: {e}")
 
@@ -169,9 +180,14 @@ def test_60_second_demo_scenario():
 
     # Step 2: Build and simulate plan
     plan = [
-        {"skill": "http_call", "params": {"url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"}},
+        {
+            "skill": "http_call",
+            "params": {
+                "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+            },
+        },
         {"skill": "json_transform", "params": {"query": ".bitcoin.usd"}},
-        {"skill": "webhook_send", "params": {"url": "https://hooks.slack.com/..."}}
+        {"skill": "webhook_send", "params": {"url": "https://hooks.slack.com/..."}},
     ]
 
     sim_result = c.simulate(plan, budget_cents=100)

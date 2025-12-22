@@ -11,20 +11,21 @@ Each agent definition creates a complete Strategy Cascade:
 These are registered with M12 and routed by M17.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List
+
 from app.agents.sba.schema import (
-    SBASchema,
-    WinningAspiration,
-    WhereToPlay,
-    HowToWin,
     CapabilitiesCapacity,
-    EnablingManagementSystems,
-    GovernanceProvider,
     Dependency,
     DependencyType,
+    EnablingManagementSystems,
     EnvironmentRequirements,
-    create_tool_dependency,
+    GovernanceProvider,
+    HowToWin,
+    SBASchema,
+    WhereToPlay,
+    WinningAspiration,
     create_api_dependency,
+    create_tool_dependency,
 )
 
 
@@ -407,6 +408,7 @@ def register_all_agents(
 
     try:
         from app.agents.sba.service import get_sba_service
+
         sba_service = get_sba_service()
 
         for agent_id, agent_def in WORKER_AGENTS.items():
@@ -422,7 +424,7 @@ def register_all_agents(
                     tenant_id=tenant_id,
                 )
                 registered.append(agent_id)
-            except Exception as e:
+            except Exception:
                 # Agent may already exist
                 pass
 

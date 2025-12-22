@@ -1,43 +1,44 @@
 # AOS Trace Storage Module
 # M6/M8 Deliverable: Run traces with correlation IDs, PostgreSQL storage, replay enforcement
 
-from .models import (
-    TraceStep,
-    TraceSummary,
-    TraceRecord,
-    TraceStatus,
-    ParityResult,
-    compare_traces,
-)
-from .store import TraceStore, SQLiteTraceStore
-from .redact import (
-    redact_trace_data,
-    redact_dict,
-    redact_json_string,
-    is_sensitive_field,
-    add_sensitive_field,
-)
-from .replay import (
-    ReplayBehavior,
-    ReplayEnforcer,
-    ReplayResult,
-    ReplayMismatchError,
-    IdempotencyViolationError,
-    get_replay_enforcer,
-)
 from .idempotency import (
-    IdempotencyResult,
     IdempotencyResponse,
-    RedisIdempotencyStore,
+    IdempotencyResult,
     InMemoryIdempotencyStore,
+    RedisIdempotencyStore,
+    canonical_json,
     get_idempotency_store,
     hash_request,
-    canonical_json,
 )
+from .models import (
+    ParityResult,
+    TraceRecord,
+    TraceStatus,
+    TraceStep,
+    TraceSummary,
+    compare_traces,
+)
+from .redact import (
+    add_sensitive_field,
+    is_sensitive_field,
+    redact_dict,
+    redact_json_string,
+    redact_trace_data,
+)
+from .replay import (
+    IdempotencyViolationError,
+    ReplayBehavior,
+    ReplayEnforcer,
+    ReplayMismatchError,
+    ReplayResult,
+    get_replay_enforcer,
+)
+from .store import SQLiteTraceStore, TraceStore
 
 # Conditionally import PostgreSQL store
 try:
     from .pg_store import PostgresTraceStore, get_postgres_trace_store
+
     HAS_POSTGRES = True
 except ImportError:
     HAS_POSTGRES = False
@@ -46,11 +47,11 @@ except ImportError:
 
 # Traces metrics
 from .traces_metrics import (
+    TRACE_LATENCY_HISTOGRAM,
+    TRACE_REQUESTS_COUNTER,
     TracesMetrics,
     get_traces_metrics,
     instrument_trace_request,
-    TRACE_LATENCY_HISTOGRAM,
-    TRACE_REQUESTS_COUNTER,
 )
 
 __all__ = [

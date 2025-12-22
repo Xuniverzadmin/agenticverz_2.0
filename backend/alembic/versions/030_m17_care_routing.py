@@ -10,12 +10,13 @@ Adds:
 - Index for fast routing decision lookups
 """
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = '030_m17_care_routing'
-down_revision = '029_m15_sba_validator'
+from alembic import op
+
+revision = "030_m17_care_routing"
+down_revision = "029_m15_sba_validator"
 branch_labels = None
 depends_on = None
 
@@ -26,81 +27,63 @@ def upgrade() -> None:
 
     # Routing decisions audit table
     op.create_table(
-        'routing_decisions',
-        sa.Column('id', postgresql.UUID(as_uuid=True), server_default=sa.text('gen_random_uuid()'), primary_key=True),
-        sa.Column('request_id', sa.String(32), nullable=False, index=True),
-        sa.Column('task_description', sa.Text(), nullable=False),
-        sa.Column('task_domain', sa.String(100), nullable=True),
-        sa.Column('selected_agent_id', sa.String(100), nullable=True),
-        sa.Column('success_metric', sa.String(20), nullable=False, server_default='balanced'),
-        sa.Column('orchestrator_mode', sa.String(20), nullable=False, server_default='sequential'),
-        sa.Column('risk_policy', sa.String(20), nullable=False, server_default='balanced'),
-        sa.Column('eligible_agents', postgresql.JSONB(), nullable=False, server_default='[]'),
-        sa.Column('fallback_agents', postgresql.JSONB(), nullable=False, server_default='[]'),
-        sa.Column('degraded', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('degraded_reason', sa.Text(), nullable=True),
-        sa.Column('evaluated_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('routed', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('error', sa.Text(), nullable=True),
-        sa.Column('actionable_fix', sa.Text(), nullable=True),
-        sa.Column('total_latency_ms', sa.Float(), nullable=False, server_default='0'),
-        sa.Column('stage_latencies', postgresql.JSONB(), nullable=False, server_default='{}'),
-        sa.Column('decision_details', postgresql.JSONB(), nullable=False, server_default='{}'),
-        sa.Column('tenant_id', sa.String(100), nullable=False, server_default='default'),
-        sa.Column('decided_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        schema='routing'
+        "routing_decisions",
+        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column("request_id", sa.String(32), nullable=False, index=True),
+        sa.Column("task_description", sa.Text(), nullable=False),
+        sa.Column("task_domain", sa.String(100), nullable=True),
+        sa.Column("selected_agent_id", sa.String(100), nullable=True),
+        sa.Column("success_metric", sa.String(20), nullable=False, server_default="balanced"),
+        sa.Column("orchestrator_mode", sa.String(20), nullable=False, server_default="sequential"),
+        sa.Column("risk_policy", sa.String(20), nullable=False, server_default="balanced"),
+        sa.Column("eligible_agents", postgresql.JSONB(), nullable=False, server_default="[]"),
+        sa.Column("fallback_agents", postgresql.JSONB(), nullable=False, server_default="[]"),
+        sa.Column("degraded", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column("degraded_reason", sa.Text(), nullable=True),
+        sa.Column("evaluated_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("routed", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column("error", sa.Text(), nullable=True),
+        sa.Column("actionable_fix", sa.Text(), nullable=True),
+        sa.Column("total_latency_ms", sa.Float(), nullable=False, server_default="0"),
+        sa.Column("stage_latencies", postgresql.JSONB(), nullable=False, server_default="{}"),
+        sa.Column("decision_details", postgresql.JSONB(), nullable=False, server_default="{}"),
+        sa.Column("tenant_id", sa.String(100), nullable=False, server_default="default"),
+        sa.Column("decided_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        schema="routing",
     )
 
     # Index for time-based queries
-    op.create_index(
-        'ix_routing_decisions_decided_at',
-        'routing_decisions',
-        ['decided_at'],
-        schema='routing'
-    )
+    op.create_index("ix_routing_decisions_decided_at", "routing_decisions", ["decided_at"], schema="routing")
 
     # Index for agent-based queries
-    op.create_index(
-        'ix_routing_decisions_agent',
-        'routing_decisions',
-        ['selected_agent_id'],
-        schema='routing'
-    )
+    op.create_index("ix_routing_decisions_agent", "routing_decisions", ["selected_agent_id"], schema="routing")
 
     # Index for tenant queries
-    op.create_index(
-        'ix_routing_decisions_tenant',
-        'routing_decisions',
-        ['tenant_id', 'decided_at'],
-        schema='routing'
-    )
+    op.create_index("ix_routing_decisions_tenant", "routing_decisions", ["tenant_id", "decided_at"], schema="routing")
 
     # Capability probe cache table (for persistence across restarts)
     op.create_table(
-        'capability_probes',
-        sa.Column('id', postgresql.UUID(as_uuid=True), server_default=sa.text('gen_random_uuid()'), primary_key=True),
-        sa.Column('probe_type', sa.String(20), nullable=False),
-        sa.Column('probe_name', sa.String(200), nullable=False),
-        sa.Column('available', sa.Boolean(), nullable=False),
-        sa.Column('latency_ms', sa.Float(), nullable=False, server_default='0'),
-        sa.Column('error', sa.Text(), nullable=True),
-        sa.Column('fix_instruction', sa.Text(), nullable=True),
-        sa.Column('checked_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
-        schema='routing'
+        "capability_probes",
+        sa.Column("id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column("probe_type", sa.String(20), nullable=False),
+        sa.Column("probe_name", sa.String(200), nullable=False),
+        sa.Column("available", sa.Boolean(), nullable=False),
+        sa.Column("latency_ms", sa.Float(), nullable=False, server_default="0"),
+        sa.Column("error", sa.Text(), nullable=True),
+        sa.Column("fix_instruction", sa.Text(), nullable=True),
+        sa.Column("checked_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        schema="routing",
     )
 
     # Unique index for probe lookup
     op.create_index(
-        'ix_capability_probes_lookup',
-        'capability_probes',
-        ['probe_type', 'probe_name'],
-        unique=True,
-        schema='routing'
+        "ix_capability_probes_lookup", "capability_probes", ["probe_type", "probe_name"], unique=True, schema="routing"
     )
 
     # Agent routing stats view (for quick routing decisions)
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW routing.agent_routing_stats AS
         SELECT
             selected_agent_id as agent_id,
@@ -111,10 +94,12 @@ def upgrade() -> None:
         FROM routing.routing_decisions
         WHERE selected_agent_id IS NOT NULL
         GROUP BY selected_agent_id
-    """)
+    """
+    )
 
     # Add routing_config column to agent_registry (for M17 extensions)
-    op.execute("""
+    op.execute(
+        """
         DO $$
         BEGIN
             IF NOT EXISTS (
@@ -127,7 +112,8 @@ def upgrade() -> None:
                 ADD COLUMN routing_config JSONB DEFAULT '{}'::jsonb;
             END IF;
         END $$;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
@@ -135,14 +121,16 @@ def downgrade() -> None:
     op.execute("DROP VIEW IF EXISTS routing.agent_routing_stats")
 
     # Drop tables
-    op.drop_table('capability_probes', schema='routing')
-    op.drop_table('routing_decisions', schema='routing')
+    op.drop_table("capability_probes", schema="routing")
+    op.drop_table("routing_decisions", schema="routing")
 
     # Drop schema (only if empty)
     op.execute("DROP SCHEMA IF EXISTS routing")
 
     # Remove routing_config column
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE agents.agent_registry
         DROP COLUMN IF EXISTS routing_config
-    """)
+    """
+    )

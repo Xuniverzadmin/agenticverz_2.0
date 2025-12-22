@@ -13,10 +13,10 @@ Features:
 - Provider-aware caching (different models = different keys)
 """
 
-import os
-import json
 import hashlib
+import json
 import logging
+import os
 from typing import List, Optional
 
 from prometheus_client import Counter, Histogram
@@ -97,9 +97,10 @@ class EmbeddingCache:
 
         try:
             import redis.asyncio as aioredis
+
             self._redis = aioredis.from_url(redis_url, decode_responses=True)
             await self._redis.ping()
-            logger.info(f"Embedding cache connected to Redis")
+            logger.info("Embedding cache connected to Redis")
             return self._redis
         except Exception as e:
             logger.warning(f"Redis not available for embedding cache: {e}")
@@ -121,6 +122,7 @@ class EmbeddingCache:
             return None
 
         import time
+
         start = time.perf_counter()
 
         try:

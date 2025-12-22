@@ -8,50 +8,39 @@ Tests for M4 hardening features:
 5. Sensitive field redaction
 """
 
-import pytest
 import asyncio
-import threading
-import time
-from datetime import datetime, timezone
-from typing import Any, Dict
 
+import pytest
+
+from app.workflow.canonicalize import (
+    canonical_hash,
+    canonical_json,
+    canonicalize_for_golden,
+    compare_canonical,
+    redact_sensitive_fields,
+    strip_volatile_from_events,
+)
 from app.workflow.checkpoint import (
-    InMemoryCheckpointStore,
     CheckpointVersionConflictError,
-    CheckpointData,
+    InMemoryCheckpointStore,
 )
 from app.workflow.errors import (
     ErrorCategory,
-    WorkflowErrorCode,
     WorkflowError,
+    WorkflowErrorCode,
     classify_exception,
     get_error_metadata,
-    ERROR_METADATA,
-)
-from app.workflow.canonicalize import (
-    canonicalize_for_golden,
-    canonical_json,
-    canonical_hash,
-    redact_sensitive_fields,
-    compare_canonical,
-    strip_volatile_from_events,
-    DEFAULT_VOLATILE_FIELDS,
-    SENSITIVE_FIELDS,
 )
 from app.workflow.external_guard import (
-    ExternalCallsGuard,
     ExternalCallBlockedError,
-    block_external_calls,
-    require_no_external_calls,
-    is_external_calls_disabled,
     check_external_call_allowed,
-    get_blocked_calls,
     clear_blocked_calls,
+    get_blocked_calls,
 )
 from app.workflow.policies import BudgetExceededError, PolicyViolationError
 
-
 # ============== Checkpoint Concurrency Tests ==============
+
 
 class TestCheckpointConcurrency:
     """Tests for checkpoint version-based optimistic locking."""
@@ -176,6 +165,7 @@ class TestCheckpointConcurrency:
 
 # ============== Error Taxonomy Tests ==============
 
+
 class TestErrorTaxonomy:
     """Tests for error taxonomy and classification."""
 
@@ -268,6 +258,7 @@ class TestErrorTaxonomy:
 
 
 # ============== Canonicalization Tests ==============
+
 
 class TestCanonicalization:
     """Tests for golden file canonicalization."""
@@ -387,7 +378,7 @@ class TestCanonicalization:
                 "deep": {
                     "api_key": "nested-key",
                 }
-            }
+            },
         }
 
         redacted = redact_sensitive_fields(obj)
@@ -399,19 +390,23 @@ class TestCanonicalization:
 
 # ============== External Guard Tests ==============
 
+
 class TestExternalGuard:
     """Tests for external calls guard."""
 
     def test_guard_blocks_check_external_call(self):
         """check_external_call_allowed raises when disabled."""
         import os
+
         original = os.environ.get("DISABLE_EXTERNAL_CALLS")
 
         try:
             os.environ["DISABLE_EXTERNAL_CALLS"] = "1"
             # Reload to pick up env change
-            from app.workflow import external_guard
             import importlib
+
+            from app.workflow import external_guard
+
             importlib.reload(external_guard)
 
             with pytest.raises(external_guard.ExternalCallBlockedError):
@@ -440,12 +435,15 @@ class TestExternalGuard:
     def test_blocked_calls_tracked(self):
         """Blocked calls are tracked."""
         import os
+
         original = os.environ.get("DISABLE_EXTERNAL_CALLS")
 
         try:
             os.environ["DISABLE_EXTERNAL_CALLS"] = "1"
-            from app.workflow import external_guard
             import importlib
+
+            from app.workflow import external_guard
+
             importlib.reload(external_guard)
 
             external_guard.clear_blocked_calls()
@@ -477,6 +475,7 @@ class TestExternalGuard:
 
 
 # ============== Integration Tests ==============
+
 
 class TestHardeningIntegration:
     """Integration tests for hardening features."""
@@ -528,14 +527,15 @@ class TestHardeningIntegration:
 
 # ============== Budget Snapshot Tests ==============
 
+
 class TestBudgetSnapshot:
     """Tests for budget snapshot in golden header."""
 
     @pytest.mark.asyncio
     async def test_golden_header_includes_budget_snapshot(self):
         """Golden header should include budget_snapshot when policy is present."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
         from app.workflow.golden import InMemoryGoldenRecorder
         from app.workflow.policies import PolicyEnforcer
 
@@ -582,8 +582,8 @@ class TestBudgetSnapshot:
     @pytest.mark.asyncio
     async def test_golden_header_no_budget_snapshot_without_policy(self):
         """Golden header should not have budget_snapshot without policy."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
         from app.workflow.golden import InMemoryGoldenRecorder
 
         class SimpleRegistry:
@@ -622,8 +622,8 @@ class TestBudgetSnapshot:
     @pytest.mark.asyncio
     async def test_budget_snapshot_deterministic(self):
         """Budget snapshot should be deterministic across runs."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
         from app.workflow.golden import InMemoryGoldenRecorder
         from app.workflow.policies import PolicyEnforcer
 
@@ -671,6 +671,7 @@ class TestBudgetSnapshot:
 
 # ============== Health Endpoint Tests ==============
 
+
 class TestHealthEndpoint:
     """Tests for workflow health endpoints."""
 
@@ -700,7 +701,7 @@ class TestHealthEndpoint:
     @pytest.mark.asyncio
     async def test_readyz_not_ready_without_checkpoint_store(self):
         """readyz should return not ready without checkpoint store."""
-        from app.workflow.health import readyz, configure_health
+        from app.workflow.health import configure_health, readyz
 
         # Configure with no checkpoint store
         configure_health(
@@ -716,7 +717,7 @@ class TestHealthEndpoint:
     @pytest.mark.asyncio
     async def test_readyz_ready_with_checkpoint_store(self):
         """readyz should return ready with valid checkpoint store."""
-        from app.workflow.health import readyz, configure_health
+        from app.workflow.health import configure_health, readyz
 
         # Configure with checkpoint store
         configure_health(
@@ -729,6 +730,7 @@ class TestHealthEndpoint:
 
 
 # ============== Stress Tests ==============
+
 
 class TestConcurrentCheckpointStress:
     """Stress tests for concurrent checkpoint operations."""
@@ -835,10 +837,7 @@ class TestConcurrentCheckpointStress:
         # Sequential updates per run (to avoid conflicts within same run)
         for update_idx in range(1, updates_per_run):
             # But different runs update concurrently
-            await asyncio.gather(*[
-                update_run(run_idx, update_idx)
-                for run_idx in range(num_runs)
-            ])
+            await asyncio.gather(*[update_run(run_idx, update_idx) for run_idx in range(num_runs)])
 
         # All runs should complete
         for i in range(num_runs):
@@ -856,8 +855,8 @@ class TestGoldenReplayStress:
     @pytest.mark.asyncio
     async def test_golden_replay_100x_determinism(self):
         """Same workflow produces identical golden output 100 times."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor, StepResult
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
         from app.workflow.golden import InMemoryGoldenRecorder
 
         # Simple deterministic skill registry
@@ -927,8 +926,8 @@ class TestGoldenReplayStress:
     @pytest.mark.asyncio
     async def test_golden_with_failures_replay_determinism(self):
         """Workflows with failures also replay deterministically."""
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
         from app.workflow.golden import InMemoryGoldenRecorder
 
         class FailingRegistry:

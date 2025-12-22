@@ -7,7 +7,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
@@ -24,6 +24,7 @@ DEFAULT_STALE_THRESHOLD = 60  # seconds
 @dataclass
 class AgentInstance:
     """Registered agent instance."""
+
     id: UUID
     agent_id: str
     instance_id: str
@@ -39,6 +40,7 @@ class AgentInstance:
 @dataclass
 class RegistrationResult:
     """Result of agent registration."""
+
     success: bool
     instance_id: str
     db_id: Optional[UUID] = None
@@ -62,7 +64,7 @@ class RegistryService:
         heartbeat_interval: int = DEFAULT_HEARTBEAT_INTERVAL,
         stale_threshold: int = DEFAULT_STALE_THRESHOLD,
     ):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not self.database_url:
             raise RuntimeError("DATABASE_URL required for RegistryService")
 
@@ -101,7 +103,8 @@ class RegistryService:
         with self.Session() as session:
             try:
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.instances (
                             id, agent_id, instance_id, job_id,
                             status, capabilities, heartbeat_at, created_at
@@ -114,14 +117,15 @@ class RegistryService:
                             job_id = CAST(:job_id AS UUID),
                             capabilities = CAST(:capabilities AS JSONB),
                             heartbeat_at = now()
-                    """),
+                    """
+                    ),
                     {
                         "id": str(db_id),
                         "agent_id": agent_id,
                         "instance_id": instance_id,
                         "job_id": str(job_id) if job_id else None,
                         "capabilities": json.dumps(capabilities) if capabilities else "{}",
-                    }
+                    },
                 )
 
                 session.commit()
@@ -132,7 +136,7 @@ class RegistryService:
                         "agent_id": agent_id,
                         "instance_id": instance_id,
                         "job_id": str(job_id) if job_id else None,
-                    }
+                    },
                 )
 
                 return RegistrationResult(
@@ -163,7 +167,8 @@ class RegistryService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.instances
                         SET heartbeat_at = now(),
                             status = CASE
@@ -172,8 +177,9 @@ class RegistryService:
                             END
                         WHERE instance_id = :instance_id
                         RETURNING id
-                    """),
-                    {"instance_id": instance_id}
+                    """
+                    ),
+                    {"instance_id": instance_id},
                 )
                 row = result.fetchone()
                 session.commit()
@@ -202,13 +208,15 @@ class RegistryService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.instances
                         SET status = 'stopped', completed_at = now()
                         WHERE instance_id = :instance_id
                         RETURNING id
-                    """),
-                    {"instance_id": instance_id}
+                    """
+                    ),
+                    {"instance_id": instance_id},
                 )
                 row = result.fetchone()
                 session.commit()
@@ -228,15 +236,17 @@ class RegistryService:
         """Get agent instance by instance_id."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, agent_id, instance_id, job_id, status,
                         capabilities, heartbeat_at, created_at, completed_at,
                         EXTRACT(EPOCH FROM (now() - heartbeat_at)) as heartbeat_age
                     FROM agents.instances
                     WHERE instance_id = :instance_id
-                """),
-                {"instance_id": instance_id}
+                """
+                ),
+                {"instance_id": instance_id},
             )
             row = result.fetchone()
 
@@ -306,18 +316,20 @@ class RegistryService:
             instances = []
 
             for row in result:
-                instances.append(AgentInstance(
-                    id=UUID(str(row[0])),
-                    agent_id=row[1],
-                    instance_id=row[2],
-                    job_id=UUID(str(row[3])) if row[3] else None,
-                    status=row[4],
-                    capabilities=row[5],
-                    heartbeat_at=row[6],
-                    created_at=row[7],
-                    completed_at=row[8],
-                    heartbeat_age_seconds=float(row[9]) if row[9] else None,
-                ))
+                instances.append(
+                    AgentInstance(
+                        id=UUID(str(row[0])),
+                        agent_id=row[1],
+                        instance_id=row[2],
+                        job_id=UUID(str(row[3])) if row[3] else None,
+                        status=row[4],
+                        capabilities=row[5],
+                        heartbeat_at=row[6],
+                        created_at=row[7],
+                        completed_at=row[8],
+                        heartbeat_age_seconds=float(row[9]) if row[9] else None,
+                    )
+                )
 
             return instances
 
@@ -336,14 +348,16 @@ class RegistryService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.instances
                         SET status = 'stale'
                         WHERE instance_id = :instance_id
                           AND status = 'running'
                         RETURNING id
-                    """),
-                    {"instance_id": instance_id}
+                    """
+                    ),
+                    {"instance_id": instance_id},
                 )
                 row = result.fetchone()
                 session.commit()
@@ -377,7 +391,7 @@ class RegistryService:
                 try:
                     result = session.execute(
                         text("SELECT agents.mark_stale_instances(make_interval(secs => :threshold))"),
-                        {"threshold": threshold}
+                        {"threshold": threshold},
                     )
                     count = result.fetchone()[0]
                     session.commit()
@@ -387,14 +401,16 @@ class RegistryService:
 
                 # Fallback to raw SQL
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.instances
                         SET status = 'stale'
                         WHERE status = 'running'
                           AND heartbeat_at < now() - make_interval(secs => :threshold)
                         RETURNING id
-                    """),
-                    {"threshold": threshold}
+                    """
+                    ),
+                    {"threshold": threshold},
                 )
                 count = len(result.fetchall())
                 session.commit()
@@ -429,7 +445,8 @@ class RegistryService:
 
                 # Fallback to raw SQL
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.job_items ji
                         SET status = 'pending',
                             worker_instance_id = NULL,
@@ -441,7 +458,8 @@ class RegistryService:
                           AND ji.status IN ('claimed', 'running')
                           AND ji.retry_count < ji.max_retries
                         RETURNING ji.id
-                    """)
+                    """
+                    )
                 )
                 count = len(result.fetchall())
                 session.commit()

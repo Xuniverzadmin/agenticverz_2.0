@@ -5,19 +5,20 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, Type
+from typing import Any, Dict, Type
 
 import httpx
 from pydantic import BaseModel
 
+from ..schemas.skill import HttpCallInput, HttpCallOutput
 from .registry import skill
-from ..schemas.skill import HttpCallInput, HttpCallOutput, SkillStatus
 
 logger = logging.getLogger("nova.skills.http_call")
 
 
 class HttpCallConfig(BaseModel):
     """Configuration schema for http_call skill."""
+
     allow_external: bool = True
     timeout: float = 30.0
     max_retries: int = 3
@@ -49,11 +50,7 @@ class HttpCallSkill:
     BACKOFF_MULTIPLIER = 0.5
 
     def __init__(
-        self,
-        *,
-        allow_external: bool = True,
-        timeout: float = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES
+        self, *, allow_external: bool = True, timeout: float = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES
     ):
         """Initialize HTTP skill.
 
@@ -85,10 +82,7 @@ class HttpCallSkill:
         started_at = datetime.now(timezone.utc)
         start_time = time.time()
 
-        logger.info(
-            "skill_execution_start",
-            extra={"skill": "http_call", "url": url, "method": method}
-        )
+        logger.info("skill_execution_start", extra={"skill": "http_call", "url": url, "method": method})
 
         # Check if external calls are allowed (contract: url_behavior)
         if not self.allow_external:
@@ -99,7 +93,7 @@ class HttpCallSkill:
                 # Local URLs forbidden when in stub mode to ensure determinism
                 logger.info(
                     "skill_execution_forbidden",
-                    extra={"skill": "http_call", "url": url, "reason": "local_url_forbidden_in_stub_mode"}
+                    extra={"skill": "http_call", "url": url, "reason": "local_url_forbidden_in_stub_mode"},
                 )
                 return {
                     "skill": "http_call",
@@ -109,17 +103,17 @@ class HttpCallSkill:
                         "code": 403,
                         "body": {
                             "error": "LOCAL_URL_FORBIDDEN",
-                            "message": "Local URLs are forbidden when external calls disabled"
-                        }
+                            "message": "Local URLs are forbidden when external calls disabled",
+                        },
                     },
                     "duration": duration,
-                    "side_effects": {}
+                    "side_effects": {},
                 }
             else:
                 # Contract: external_urls.when_allow_external_false = STUBBED
                 logger.info(
                     "skill_execution_stubbed",
-                    extra={"skill": "http_call", "url": url, "reason": "external_calls_disabled"}
+                    extra={"skill": "http_call", "url": url, "reason": "external_calls_disabled"},
                 )
                 return {
                     "skill": "http_call",
@@ -127,10 +121,10 @@ class HttpCallSkill:
                     "result": {
                         "status": "stubbed",
                         "code": 501,
-                        "body": {"note": "External calls disabled in skill configuration"}
+                        "body": {"note": "External calls disabled in skill configuration"},
                     },
                     "duration": duration,
-                    "side_effects": {}
+                    "side_effects": {},
                 }
 
         # Execute with retries
@@ -160,7 +154,7 @@ class HttpCallSkill:
                     if response.status_code >= 500:
                         last_error = f"Server error: {response.status_code}"
                         if attempt < max_retries - 1:
-                            backoff = self.BACKOFF_MULTIPLIER * (2 ** attempt)
+                            backoff = self.BACKOFF_MULTIPLIER * (2**attempt)
                             await asyncio.sleep(backoff)
                             continue
 
@@ -175,8 +169,8 @@ class HttpCallSkill:
                             "status": status,
                             "http_status": response.status_code,
                             "duration": round(duration, 3),
-                            "attempts": attempts
-                        }
+                            "attempts": attempts,
+                        },
                     )
 
                     return {
@@ -186,12 +180,12 @@ class HttpCallSkill:
                             "status": status,
                             "code": response.status_code,
                             "body": response.text[:1000],  # Limit size
-                            "attempts": attempts
+                            "attempts": attempts,
                         },
                         "duration": round(duration, 3),
                         "side_effects": {},
                         "started_at": started_at.isoformat(),
-                        "completed_at": completed_at.isoformat()
+                        "completed_at": completed_at.isoformat(),
                     }
 
             except httpx.TimeoutException:
@@ -203,19 +197,14 @@ class HttpCallSkill:
 
             # Exponential backoff before retry
             if attempt < max_retries - 1:
-                backoff = self.BACKOFF_MULTIPLIER * (2 ** attempt)
+                backoff = self.BACKOFF_MULTIPLIER * (2**attempt)
                 await asyncio.sleep(backoff)
 
         # All retries exhausted
         duration = time.time() - start_time
         logger.warning(
             "skill_execution_failed",
-            extra={
-                "skill": "http_call",
-                "url": url,
-                "error": last_error,
-                "attempts": attempts
-            }
+            extra={"skill": "http_call", "url": url, "error": last_error, "attempts": attempts},
         )
 
         return {
@@ -225,10 +214,10 @@ class HttpCallSkill:
                 "status": "error",
                 "error": "max_retries_exceeded",
                 "message": last_error or "Unknown error",
-                "attempts": attempts
+                "attempts": attempts,
             },
             "duration": round(duration, 3),
-            "side_effects": {}
+            "side_effects": {},
         }
 
     def _is_local_url(self, url: str) -> bool:
@@ -239,7 +228,7 @@ class HttpCallSkill:
             "https://127.0.0.1",
             "https://localhost",
             "https://example.local",
-            "http://example.local"
+            "http://example.local",
         ]
         return any(url.startswith(prefix) for prefix in local_prefixes)
 

@@ -31,15 +31,14 @@ Usage:
     assert trace.root_hash == loaded.root_hash
 """
 
-import json
 import hashlib
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List, Literal
+import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional
 
-from .runtime import RuntimeContext, canonical_json, hash_trace
-
+from .runtime import RuntimeContext, canonical_json
 
 # Trace schema version - bumped to 1.1 for deterministic hashing
 TRACE_SCHEMA_VERSION = "1.1.0"
@@ -64,6 +63,7 @@ class TraceStep:
             - "skip": Skip if idempotency_key already executed
             - "check": Verify output matches original, fail if different
     """
+
     # Deterministic fields (included in hash)
     step_index: int
     skill_id: str
@@ -101,14 +101,12 @@ class TraceStep:
             "rng_state_before": self.rng_state_before,
             "outcome": self.outcome,
             "idempotency_key": self.idempotency_key,
-            "replay_behavior": self.replay_behavior
+            "replay_behavior": self.replay_behavior,
         }
 
     def deterministic_hash(self) -> str:
         """Compute hash of deterministic payload only."""
-        return hashlib.sha256(
-            canonical_json(self.deterministic_payload()).encode()
-        ).hexdigest()
+        return hashlib.sha256(canonical_json(self.deterministic_payload()).encode()).hexdigest()
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize step to dict (includes all fields for storage)."""
@@ -126,7 +124,7 @@ class TraceStep:
             # Audit
             "duration_ms": self.duration_ms,
             "error_code": self.error_code,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
     @classmethod
@@ -143,7 +141,7 @@ class TraceStep:
             replay_behavior=data.get("replay_behavior", "execute"),
             duration_ms=data.get("duration_ms", 0),
             error_code=data.get("error_code"),
-            timestamp=data.get("timestamp")
+            timestamp=data.get("timestamp"),
         )
 
 
@@ -174,6 +172,7 @@ class Trace:
         finalized: Whether trace is complete
         metadata: Additional metadata (excluded from hash)
     """
+
     seed: int
     plan: List[Dict[str, Any]]
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -194,7 +193,7 @@ class Trace:
         outcome: Literal["success", "failure", "skipped"],
         error_code: Optional[str] = None,
         idempotency_key: Optional[str] = None,
-        replay_behavior: Literal["execute", "skip", "check"] = "execute"
+        replay_behavior: Literal["execute", "skip", "check"] = "execute",
     ) -> TraceStep:
         """
         Add a step to the trace.
@@ -232,7 +231,7 @@ class Trace:
             idempotency_key=idempotency_key,
             replay_behavior=replay_behavior,
             duration_ms=duration_ms,
-            error_code=error_code
+            error_code=error_code,
         )
         self.steps.append(step)
         return step
@@ -303,7 +302,7 @@ class Trace:
             "steps": [s.to_dict() for s in self.steps],
             "root_hash": self.root_hash,
             "finalized": self.finalized,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     def to_json(self) -> str:
@@ -319,7 +318,7 @@ class Trace:
             timestamp=data.get("timestamp", datetime.now(timezone.utc).isoformat()),
             tenant_id=data.get("tenant_id", "default"),
             version=data.get("version", TRACE_SCHEMA_VERSION),
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
         )
 
         for step_data in data.get("steps", []):
@@ -401,74 +400,60 @@ def diff_traces(trace1: Trace, trace2: Trace) -> Dict[str, Any]:
 
     # Check deterministic metadata
     if trace1.seed != trace2.seed:
-        differences.append({
-            "field": "seed",
-            "trace1": trace1.seed,
-            "trace2": trace2.seed
-        })
+        differences.append({"field": "seed", "trace1": trace1.seed, "trace2": trace2.seed})
 
     if trace1.timestamp != trace2.timestamp:
-        differences.append({
-            "field": "timestamp",
-            "trace1": trace1.timestamp,
-            "trace2": trace2.timestamp
-        })
+        differences.append(
+            {"field": "timestamp", "trace1": trace1.timestamp, "trace2": trace2.timestamp}
+        )
 
     if trace1.tenant_id != trace2.tenant_id:
-        differences.append({
-            "field": "tenant_id",
-            "trace1": trace1.tenant_id,
-            "trace2": trace2.tenant_id
-        })
+        differences.append(
+            {"field": "tenant_id", "trace1": trace1.tenant_id, "trace2": trace2.tenant_id}
+        )
 
     # Check step count
     if len(trace1.steps) != len(trace2.steps):
-        differences.append({
-            "field": "step_count",
-            "trace1": len(trace1.steps),
-            "trace2": len(trace2.steps)
-        })
+        differences.append(
+            {"field": "step_count", "trace1": len(trace1.steps), "trace2": len(trace2.steps)}
+        )
 
     # Check individual steps (deterministic fields only)
     for i, (s1, s2) in enumerate(zip(trace1.steps, trace2.steps)):
         if s1.skill_id != s2.skill_id:
-            differences.append({
-                "field": f"step[{i}].skill_id",
-                "trace1": s1.skill_id,
-                "trace2": s2.skill_id
-            })
+            differences.append(
+                {"field": f"step[{i}].skill_id", "trace1": s1.skill_id, "trace2": s2.skill_id}
+            )
         if s1.input_hash != s2.input_hash:
-            differences.append({
-                "field": f"step[{i}].input_hash",
-                "trace1": s1.input_hash,
-                "trace2": s2.input_hash
-            })
+            differences.append(
+                {"field": f"step[{i}].input_hash", "trace1": s1.input_hash, "trace2": s2.input_hash}
+            )
         if s1.output_hash != s2.output_hash:
-            differences.append({
-                "field": f"step[{i}].output_hash",
-                "trace1": s1.output_hash,
-                "trace2": s2.output_hash
-            })
+            differences.append(
+                {
+                    "field": f"step[{i}].output_hash",
+                    "trace1": s1.output_hash,
+                    "trace2": s2.output_hash,
+                }
+            )
         if s1.rng_state_before != s2.rng_state_before:
-            differences.append({
-                "field": f"step[{i}].rng_state",
-                "trace1": s1.rng_state_before,
-                "trace2": s2.rng_state_before
-            })
+            differences.append(
+                {
+                    "field": f"step[{i}].rng_state",
+                    "trace1": s1.rng_state_before,
+                    "trace2": s2.rng_state_before,
+                }
+            )
         if s1.outcome != s2.outcome:
-            differences.append({
-                "field": f"step[{i}].outcome",
-                "trace1": s1.outcome,
-                "trace2": s2.outcome
-            })
+            differences.append(
+                {"field": f"step[{i}].outcome", "trace1": s1.outcome, "trace2": s2.outcome}
+            )
 
     # Check root hash (should match if all above match)
     if trace1.root_hash != trace2.root_hash:
-        differences.append({
-            "field": "root_hash",
-            "trace1": trace1.root_hash,
-            "trace2": trace2.root_hash
-        })
+        differences.append(
+            {"field": "root_hash", "trace1": trace1.root_hash, "trace2": trace2.root_hash}
+        )
 
     match = len(differences) == 0
 
@@ -479,11 +464,7 @@ def diff_traces(trace1: Trace, trace2: Trace) -> Dict[str, Any]:
         if len(differences) > 3:
             summary += f" and {len(differences) - 3} more"
 
-    return {
-        "match": match,
-        "differences": differences,
-        "summary": summary
-    }
+    return {"match": match, "differences": differences, "summary": summary}
 
 
 def create_trace_from_context(ctx: RuntimeContext, plan: List[Dict[str, Any]]) -> Trace:
@@ -497,12 +478,7 @@ def create_trace_from_context(ctx: RuntimeContext, plan: List[Dict[str, Any]]) -
     Returns:
         New Trace initialized from context
     """
-    return Trace(
-        seed=ctx.seed,
-        timestamp=ctx.timestamp(),
-        tenant_id=ctx.tenant_id,
-        plan=plan
-    )
+    return Trace(seed=ctx.seed, timestamp=ctx.timestamp(), tenant_id=ctx.tenant_id, plan=plan)
 
 
 # Idempotency tracking for replay safety
@@ -528,6 +504,7 @@ def is_idempotency_key_executed(key: str) -> bool:
 @dataclass
 class ReplayResult:
     """Result of replaying a trace step."""
+
     step_index: int
     action: Literal["executed", "skipped", "checked", "failed"]
     reason: Optional[str] = None
@@ -535,9 +512,7 @@ class ReplayResult:
 
 
 def replay_step(
-    step: TraceStep,
-    execute_fn: Optional[callable] = None,
-    idempotency_store: Optional[set] = None
+    step: TraceStep, execute_fn: Optional[callable] = None, idempotency_store: Optional[set] = None
 ) -> ReplayResult:
     """
     Replay a single trace step with idempotency safety.
@@ -563,7 +538,7 @@ def replay_step(
             return ReplayResult(
                 step_index=step.step_index,
                 action="skipped",
-                reason=f"Idempotency key '{step.idempotency_key}' already executed"
+                reason=f"Idempotency key '{step.idempotency_key}' already executed",
             )
 
     # Execute the step
@@ -575,7 +550,7 @@ def replay_step(
             step_index=step.step_index,
             action="executed" if step.replay_behavior != "check" else "checked",
             reason="Dry run - no execution function provided",
-            output_match=True if step.replay_behavior == "check" else None
+            output_match=True if step.replay_behavior == "check" else None,
         )
 
     try:
@@ -592,30 +567,19 @@ def replay_step(
             return ReplayResult(
                 step_index=step.step_index,
                 action="checked" if matches else "failed",
-                reason=None if matches else f"Output hash mismatch: {output_hash} != {step.output_hash}",
-                output_match=matches
+                reason=None
+                if matches
+                else f"Output hash mismatch: {output_hash} != {step.output_hash}",
+                output_match=matches,
             )
 
-        return ReplayResult(
-            step_index=step.step_index,
-            action="executed",
-            reason=None
-        )
+        return ReplayResult(step_index=step.step_index, action="executed", reason=None)
 
     except Exception as e:
-        return ReplayResult(
-            step_index=step.step_index,
-            action="failed",
-            reason=str(e)
-        )
+        return ReplayResult(step_index=step.step_index, action="failed", reason=str(e))
 
 
-def generate_idempotency_key(
-    run_id: str,
-    step_index: int,
-    skill_id: str,
-    input_hash: str
-) -> str:
+def generate_idempotency_key(run_id: str, step_index: int, skill_id: str, input_hash: str) -> str:
     """
     Generate a deterministic idempotency key for a step.
 

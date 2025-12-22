@@ -18,19 +18,18 @@ Design Principles:
 """
 
 from __future__ import annotations
+
 import asyncio
 import json
 import logging
-import os
-import re
+import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from contextlib import contextmanager
 from threading import Lock
-import time
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger("nova.runtime.failure_catalog")
 
@@ -56,10 +55,7 @@ def _get_persist_executor() -> ThreadPoolExecutor:
     if _persist_executor is None:
         with _persist_lock:
             if _persist_executor is None:
-                _persist_executor = ThreadPoolExecutor(
-                    max_workers=4,
-                    thread_name_prefix="failure_persist"
-                )
+                _persist_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="failure_persist")
     return _persist_executor
 
 
@@ -95,9 +91,7 @@ def _record_circuit_failure():
 
         if state["failures"] >= _CIRCUIT_BREAKER_THRESHOLD:
             state["is_open"] = True
-            logger.warning(
-                f"M9: Circuit breaker OPEN after {state['failures']} failures"
-            )
+            logger.warning(f"M9: Circuit breaker OPEN after {state['failures']} failures")
 
 
 def _record_circuit_success():
@@ -130,27 +124,21 @@ def _init_metrics():
         _failure_match_hits = Counter(
             "failure_match_hits_total",
             "Total failure catalog hits (matched entries)",
-            ["error_code", "category", "recovery_mode"]
+            ["error_code", "category", "recovery_mode"],
         )
         _failure_match_misses = Counter(
-            "failure_match_misses_total",
-            "Total failure catalog misses (unmatched errors)",
-            ["error_code"]
+            "failure_match_misses_total", "Total failure catalog misses (unmatched errors)", ["error_code"]
         )
         _recovery_success = Counter(
-            "recovery_success_total",
-            "Total successful recovery attempts",
-            ["recovery_mode", "error_code"]
+            "recovery_success_total", "Total successful recovery attempts", ["recovery_mode", "error_code"]
         )
         _recovery_failure = Counter(
-            "recovery_failure_total",
-            "Total failed recovery attempts",
-            ["recovery_mode", "error_code"]
+            "recovery_failure_total", "Total failed recovery attempts", ["recovery_mode", "error_code"]
         )
         _failure_persist_dropped = Counter(
             "failure_persist_dropped_total",
             "Total failure records dropped due to circuit breaker or timeout",
-            ["reason"]
+            ["reason"],
         )
         _metrics_initialized = True
         logger.info("M9: Failure catalog metrics initialized")
@@ -158,12 +146,14 @@ def _init_metrics():
         logger.warning("prometheus_client not available, metrics disabled")
         _metrics_initialized = True  # Don't retry
 
+
 # Default catalog path relative to this file
 DEFAULT_CATALOG_PATH = Path(__file__).parent.parent / "data" / "failure_catalog.json"
 
 
 class MatchType(str, Enum):
     """Types of matching for error lookup."""
+
     EXACT = "exact"
     PREFIX = "prefix"
     REGEX = "regex"
@@ -172,6 +162,7 @@ class MatchType(str, Enum):
 
 class RecoveryStrategy(str, Enum):
     """Recovery strategies from the catalog."""
+
     RETRY_IMMEDIATE = "RETRY_IMMEDIATE"
     RETRY_EXPONENTIAL = "RETRY_EXPONENTIAL"
     RETRY_WITH_JITTER = "RETRY_WITH_JITTER"
@@ -187,6 +178,7 @@ class RecoveryStrategy(str, Enum):
 @dataclass
 class CatalogEntry:
     """A single entry from the failure catalog."""
+
     code: str
     category: str
     message: str
@@ -225,6 +217,7 @@ class CatalogEntry:
 @dataclass
 class MatchResult:
     """Result of a catalog match operation."""
+
     matched: bool
     entry: Optional[CatalogEntry]
     match_type: MatchType
@@ -580,6 +573,7 @@ def match_failure(code_or_message: str) -> MatchResult:
 
 # ============== M9: Persistence Layer ==============
 
+
 def persist_failure_match(
     run_id: str,
     result: MatchResult,
@@ -612,8 +606,9 @@ def persist_failure_match(
     _init_metrics()
 
     try:
-        from app.db import FailureMatch, engine
         from sqlmodel import Session
+
+        from app.db import FailureMatch, engine
 
         # Build the record
         record = FailureMatch(
@@ -629,9 +624,7 @@ def persist_failure_match(
             is_retryable=result.is_retryable,
             recovery_mode=result.recovery_mode,
             recovery_suggestion=(
-                result.entry.recovery_suggestions[0]
-                if result.entry and result.entry.recovery_suggestions
-                else None
+                result.entry.recovery_suggestions[0] if result.entry and result.entry.recovery_suggestions else None
             ),
             skill_id=skill_id,
             step_index=step_index,
@@ -655,7 +648,7 @@ def persist_failure_match(
                     _failure_match_hits.labels(
                         error_code=result.entry.code,
                         category=result.entry.category,
-                        recovery_mode=result.entry.recovery_mode or "none"
+                        recovery_mode=result.entry.recovery_mode or "none",
                     ).inc()
             else:
                 if _failure_match_misses:
@@ -663,10 +656,7 @@ def persist_failure_match(
                     safe_code = error_code[:50] if error_code else "unknown"
                     _failure_match_misses.labels(error_code=safe_code).inc()
 
-            logger.debug(
-                f"M9: Persisted failure match {record_id} "
-                f"(matched={result.matched}, code={error_code})"
-            )
+            logger.debug(f"M9: Persisted failure match {record_id} " f"(matched={result.matched}, code={error_code})")
 
         return record_id
 
@@ -705,7 +695,7 @@ async def persist_failure_match_async(
             skill_id=skill_id,
             step_index=step_index,
             context=context,
-        )
+        ),
     )
 
 
@@ -788,10 +778,7 @@ def persist_failure_match_nonblocking(
             # Timed out - record but don't block
             if _failure_persist_dropped:
                 _failure_persist_dropped.labels(reason="timeout").inc()
-            logger.warning(
-                f"M9: Persistence timeout for run={run_id} "
-                f"(timeout={_PERSIST_TIMEOUT}s)"
-            )
+            logger.warning(f"M9: Persistence timeout for run={run_id} " f"(timeout={_PERSIST_TIMEOUT}s)")
             _record_circuit_failure()
     except Exception as e:
         # Thread pool submission failed
@@ -818,8 +805,9 @@ def update_recovery_status(
     _init_metrics()
 
     try:
-        from app.db import FailureMatch, engine, utc_now
         from sqlmodel import Session
+
+        from app.db import FailureMatch, engine, utc_now
 
         with Session(engine) as session:
             record = session.get(FailureMatch, failure_match_id)
@@ -837,20 +825,15 @@ def update_recovery_status(
             if succeeded:
                 if _recovery_success:
                     _recovery_success.labels(
-                        recovery_mode=record.recovery_mode or "unknown",
-                        error_code=record.error_code
+                        recovery_mode=record.recovery_mode or "unknown", error_code=record.error_code
                     ).inc()
             else:
                 if _recovery_failure:
                     _recovery_failure.labels(
-                        recovery_mode=record.recovery_mode or "unknown",
-                        error_code=record.error_code
+                        recovery_mode=record.recovery_mode or "unknown", error_code=record.error_code
                     ).inc()
 
-            logger.debug(
-                f"M9: Updated recovery status for {failure_match_id} "
-                f"(succeeded={succeeded})"
-            )
+            logger.debug(f"M9: Updated recovery status for {failure_match_id} " f"(succeeded={succeeded})")
             return True
 
     except Exception as e:

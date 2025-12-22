@@ -9,34 +9,37 @@
 # - Self-Tuning Instability: Auto-tuning doesn't destabilize
 
 import asyncio
-import pytest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.routing.learning import (
-    AgentReputation, QuarantineState, LearningParameters,
-    HysteresisManager, ReputationStore,
-    HYSTERESIS_THRESHOLD, HYSTERESIS_WINDOW,
-)
-from app.routing.governor import (
-    Governor, GovernorState, RollbackReason,
-    MAX_ADJUSTMENTS_PER_HOUR, MAX_ADJUSTMENT_MAGNITUDE,
-    GLOBAL_FREEZE_THRESHOLD, FREEZE_DURATION,
+import pytest
+
+from app.agents.sba.evolution import (
+    VIOLATION_SPIKE_THRESHOLD,
+    DriftType,
+    SBAEvolutionEngine,
+    ViolationType,
 )
 from app.routing.feedback import (
-    FeedbackLoop, TaskPriority, TaskComplexity,
-    RoutingOutcomeSignal, SLAScore, BatchLearningResult,
-    DEFAULT_SLA_TARGET, MIN_SAMPLES_FOR_LEARNING,
+    FeedbackLoop,
+    TaskPriority,
 )
-from app.agents.sba.evolution import (
-    SBAEvolutionEngine, DriftType, ViolationType, AdjustmentType,
-    SUCCESS_RATE_DRIFT_THRESHOLD, VIOLATION_SPIKE_THRESHOLD,
+from app.routing.governor import (
+    GLOBAL_FREEZE_THRESHOLD,
+    MAX_ADJUSTMENT_MAGNITUDE,
+    Governor,
+    GovernorState,
+    RollbackReason,
 )
-
+from app.routing.learning import (
+    HysteresisManager,
+    LearningParameters,
+    QuarantineState,
+    ReputationStore,
+)
 
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def governor():
@@ -71,6 +74,7 @@ def learning_params():
 # =============================================================================
 # 1. System Convergence Tests
 # =============================================================================
+
 
 class TestSystemConvergence:
     """Test that system converges to stable state after perturbations."""
@@ -152,6 +156,7 @@ class TestSystemConvergence:
 # =============================================================================
 # 2. Oscillation Stress Tests
 # =============================================================================
+
 
 class TestOscillationStress:
     """Test that system doesn't enter runaway oscillation loops."""
@@ -240,13 +245,14 @@ class TestOscillationStress:
             transitions.append(rep.quarantine_state)
 
         # Count state changes - shouldn't be too many
-        changes = sum(1 for i in range(1, len(transitions)) if transitions[i] != transitions[i-1])
+        changes = sum(1 for i in range(1, len(transitions)) if transitions[i] != transitions[i - 1])
         assert changes <= 5  # Reasonable number of transitions
 
 
 # =============================================================================
 # 3. Boundary Cascade Tests
 # =============================================================================
+
 
 class TestBoundaryCascade:
     """Test that boundary violations propagate correctly through the system."""
@@ -307,6 +313,7 @@ class TestBoundaryCascade:
 
         # Get adjustment recommendation
         import copy
+
         current_sba = {
             "where_to_play": {"domain": "test", "boundaries": ""},
             "how_to_win": {"tasks": ["task1"]},
@@ -334,6 +341,7 @@ class TestBoundaryCascade:
 # =============================================================================
 # 4. Hysteresis vs Drift Conflict Tests
 # =============================================================================
+
 
 class TestHysteresisVsDrift:
     """Test that hysteresis doesn't block necessary drift-based adjustments."""
@@ -404,9 +412,7 @@ class TestHysteresisVsDrift:
         assert sla_score is not None
 
         # SLA-adjusted reputation should be penalized
-        adjusted = await feedback_loop.compute_sla_adjusted_reputation(
-            agent_id, base_reputation=0.8
-        )
+        adjusted = await feedback_loop.compute_sla_adjusted_reputation(agent_id, base_reputation=0.8)
         # Should be lower than base due to SLA gap
         assert adjusted < 0.8
 
@@ -414,6 +420,7 @@ class TestHysteresisVsDrift:
 # =============================================================================
 # 5. Self-Tuning Instability Tests
 # =============================================================================
+
 
 class TestSelfTuningInstability:
     """Test that auto-tuning parameters don't destabilize the system."""
@@ -423,10 +430,7 @@ class TestSelfTuningInstability:
         params = LearningParameters()
 
         # Try to tune with extreme outcomes
-        extreme_outcomes = [
-            {"success": True, "confidence_blocked": True, "was_fallback": False}
-            for _ in range(100)
-        ]
+        extreme_outcomes = [{"success": True, "confidence_blocked": True, "was_fallback": False} for _ in range(100)]
 
         adjustments = params.tune_from_outcomes(extreme_outcomes)
 
@@ -511,12 +515,14 @@ class TestSelfTuningInstability:
 # 6. Integration Stress Tests
 # =============================================================================
 
+
 class TestIntegrationStress:
     """Test the full integrated system under stress."""
 
     @pytest.mark.asyncio
     async def test_concurrent_adjustments_handled(self, governor):
         """System should handle concurrent adjustment requests."""
+
         async def make_adjustment(i):
             try:
                 await governor.request_adjustment(
@@ -577,6 +583,7 @@ class TestIntegrationStress:
 # =============================================================================
 # 7. Edge Case Tests
 # =============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""

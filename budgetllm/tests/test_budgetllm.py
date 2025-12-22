@@ -12,7 +12,7 @@ import os
 # Add parent to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from budgetllm.core.budget import BudgetTracker, BudgetExceededError, InMemoryStateAdapter
+from budgetllm.core.budget import BudgetTracker, BudgetExceededError
 from budgetllm.core.cache import PromptCache
 from budgetllm.core.backends.memory import MemoryBackend
 
@@ -20,6 +20,7 @@ from budgetllm.core.backends.memory import MemoryBackend
 # =============================================================================
 # BUDGET TRACKER TESTS
 # =============================================================================
+
 
 class TestBudgetTracker:
     """Tests for BudgetTracker class."""
@@ -134,6 +135,7 @@ class TestBudgetTracker:
 # CACHE TESTS
 # =============================================================================
 
+
 class TestPromptCache:
     """Tests for PromptCache class."""
 
@@ -243,6 +245,7 @@ class TestPromptCache:
 # MEMORY BACKEND TESTS
 # =============================================================================
 
+
 class TestMemoryBackend:
     """Tests for MemoryBackend class."""
 
@@ -276,6 +279,7 @@ class TestMemoryBackend:
 
         # Wait for expiration
         import time
+
         time.sleep(1.5)
 
         result = backend.get("key1")
@@ -313,6 +317,7 @@ class TestMemoryBackend:
 # CLIENT TESTS (with mocked OpenAI)
 # =============================================================================
 
+
 class TestClient:
     """Tests for Client class."""
 
@@ -321,6 +326,7 @@ class TestClient:
         """Mock OpenAI client."""
         with patch.dict("sys.modules", {"openai": MagicMock()}):
             import sys
+
             mock_openai_module = sys.modules["openai"]
 
             # Setup mock response matching OpenAI's actual format
@@ -419,6 +425,7 @@ class TestClient:
 # =============================================================================
 # INTEGRATION TESTS
 # =============================================================================
+
 
 class TestIntegration:
     """Integration tests combining budget + cache."""

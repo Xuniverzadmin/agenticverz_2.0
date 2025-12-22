@@ -10,20 +10,20 @@ M10 Recovery Suggestion Engine:
 - Supports occurrence counting for pattern learning
 - Integrates with failure_matches table
 """
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 # revision identifiers
-revision = '017_recovery_candidates'
-down_revision = '016_failure_pattern_exports'
+revision = "017_recovery_candidates"
+down_revision = "016_failure_pattern_exports"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     # Create recovery_candidates table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS recovery_candidates (
             id SERIAL PRIMARY KEY,
 
@@ -77,10 +77,12 @@ def upgrade() -> None:
         COMMENT ON COLUMN recovery_candidates.confidence IS 'Weighted confidence score (0.0-1.0) based on historical matches';
         COMMENT ON COLUMN recovery_candidates.explain IS 'Scoring provenance: method, matches, occurrences, half_life';
         COMMENT ON COLUMN recovery_candidates.occurrence_count IS 'Number of times this failure pattern was seen';
-    """)
+    """
+    )
 
     # Create audit table for approval history
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS recovery_candidates_audit (
             id SERIAL PRIMARY KEY,
             candidate_id INT NOT NULL REFERENCES recovery_candidates(id) ON DELETE CASCADE,
@@ -96,10 +98,12 @@ def upgrade() -> None:
         CREATE INDEX IF NOT EXISTS idx_rca_created_at ON recovery_candidates_audit (created_at DESC);
 
         COMMENT ON TABLE recovery_candidates_audit IS 'M10: Immutable audit trail for recovery approval decisions';
-    """)
+    """
+    )
 
     # Create view for pending candidates with failure context
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW recovery_candidates_with_context AS
         SELECT
             rc.id,
@@ -126,10 +130,12 @@ def upgrade() -> None:
         ORDER BY rc.created_at DESC;
 
         COMMENT ON VIEW recovery_candidates_with_context IS 'Recovery candidates joined with failure context for review';
-    """)
+    """
+    )
 
     # Create function for updating timestamps
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION update_recovery_candidates_updated_at()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -142,7 +148,8 @@ def upgrade() -> None:
         CREATE TRIGGER trg_recovery_candidates_updated_at
             BEFORE UPDATE ON recovery_candidates
             FOR EACH ROW EXECUTE FUNCTION update_recovery_candidates_updated_at();
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

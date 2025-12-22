@@ -25,12 +25,13 @@ Design Principles:
 """
 
 from __future__ import annotations
-from contextlib import contextmanager
-from typing import Any, Callable, List, Optional, Set, Tuple
-from unittest.mock import patch
+
 import logging
 import os
 import socket
+from contextlib import contextmanager
+from typing import Any, Callable, List, Optional, Set, Tuple
+from unittest.mock import patch
 
 logger = logging.getLogger("nova.workflow.external_guard")
 
@@ -45,9 +46,7 @@ class ExternalCallBlockedError(Exception):
 
 
 # Check environment variable
-DISABLE_EXTERNAL_CALLS = os.getenv("DISABLE_EXTERNAL_CALLS", "").lower() in (
-    "1", "true", "yes", "on"
-)
+DISABLE_EXTERNAL_CALLS = os.getenv("DISABLE_EXTERNAL_CALLS", "").lower() in ("1", "true", "yes", "on")
 
 # Allowed hosts for internal services (can be extended)
 DEFAULT_ALLOWED_HOSTS: Set[str] = {
@@ -106,10 +105,7 @@ def check_external_call_allowed(
 
     # Block and record
     _blocked_calls.append((call_type, target))
-    logger.warning(
-        "external_call_blocked",
-        extra={"call_type": call_type, "target": target}
-    )
+    logger.warning("external_call_blocked", extra={"call_type": call_type, "target": target})
     raise ExternalCallBlockedError(
         call_type=call_type,
         target=target,
@@ -142,9 +138,7 @@ class _BlockedSocket:
         return getattr(real_socket, name)
 
 
-def _create_blocking_socket_factory(
-    allowed_hosts: Optional[Set[str]] = None
-) -> Callable:
+def _create_blocking_socket_factory(allowed_hosts: Optional[Set[str]] = None) -> Callable:
     """Create a socket factory that blocks external connections."""
     hosts = allowed_hosts or DEFAULT_ALLOWED_HOSTS
     original_socket = socket.socket
@@ -225,10 +219,7 @@ class ExternalCallsGuard:
         clear_blocked_calls()
 
         # Patch socket.socket
-        socket_patch = patch(
-            "socket.socket",
-            _create_blocking_socket_factory(self.allowed_hosts)
-        )
+        socket_patch = patch("socket.socket", _create_blocking_socket_factory(self.allowed_hosts))
         self._patches.append(socket_patch)
         socket_patch.start()
 
@@ -236,6 +227,7 @@ class ExternalCallsGuard:
         if self.block_requests:
             try:
                 import requests
+
                 requests_patch = patch.object(
                     requests.Session,
                     "request",
@@ -346,7 +338,7 @@ class ExternalCallsGuard:
         """Check if async HTTP send should be blocked (for httpx Request objects)."""
         # For send(), the first arg is often the Request object
         request = args[0] if args else None
-        if request and hasattr(request, 'url'):
+        if request and hasattr(request, "url"):
             url_str = str(request.url)
             host = url_str.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
             if host not in self.allowed_hosts:

@@ -24,8 +24,8 @@ Usage:
     WantedBy=timers.target
 """
 
-import sys
 import os
+import sys
 
 # Add app to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

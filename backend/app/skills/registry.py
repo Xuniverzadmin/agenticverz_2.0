@@ -13,6 +13,7 @@ from typing import (
     TypeVar,
     runtime_checkable,
 )
+
 from pydantic import BaseModel
 
 logger = logging.getLogger("nova.skills.registry")
@@ -22,12 +23,14 @@ logger = logging.getLogger("nova.skills.registry")
 # Skill Protocol
 # ====================
 
+
 @runtime_checkable
 class SkillInterface(Protocol):
     """Protocol defining the skill interface.
 
     All skills must implement this interface.
     """
+
     VERSION: str
     DESCRIPTION: str
 
@@ -56,6 +59,7 @@ class SkillInterface(Protocol):
 # ====================
 # Skill Entry
 # ====================
+
 
 class SkillEntry:
     """Registry entry for a registered skill."""
@@ -99,10 +103,7 @@ class SkillEntry:
                 validated = self.config_schema(**merged_config)
                 merged_config = validated.model_dump()
             except Exception as e:
-                logger.warning(
-                    "skill_config_validation_failed",
-                    extra={"skill": self.name, "error": str(e)}
-                )
+                logger.warning("skill_config_validation_failed", extra={"skill": self.name, "error": str(e)})
                 # Fall through with unvalidated config
 
         try:
@@ -178,6 +179,7 @@ def skill(
     Returns:
         Decorator function
     """
+
     def decorator(cls: Type[T]) -> Type[T]:
         skill_version = version or getattr(cls, "VERSION", "0.0.0")
         skill_description = description or getattr(cls, "DESCRIPTION", f"Skill: {name}")
@@ -211,7 +213,7 @@ def skill(
                 "version": skill_version,
                 "has_input_schema": actual_input is not None,
                 "has_output_schema": actual_output is not None,
-            }
+            },
         )
 
         return cls
@@ -219,12 +221,7 @@ def skill(
     return decorator
 
 
-def register_skill(
-    name: str,
-    cls: Type,
-    version: Optional[str] = None,
-    **kwargs
-):
+def register_skill(name: str, cls: Type, version: Optional[str] = None, **kwargs):
     """Register a skill class in the registry (legacy function).
 
     This is the original registration function, kept for backwards
@@ -244,20 +241,18 @@ def register_skill(
         cls=cls,
         version=skill_version,
         description=skill_description,
-        **{k: v for k, v in kwargs.items() if k not in ("description",)}
+        **{k: v for k, v in kwargs.items() if k not in ("description",)},
     )
 
     _REGISTRY[name] = entry
 
-    logger.info(
-        "skill_registered",
-        extra={"skill": name, "version": skill_version}
-    )
+    logger.info("skill_registered", extra={"skill": name, "version": skill_version})
 
 
 # ====================
 # Registry Access
 # ====================
+
 
 def get_skill(name: str) -> Optional[Dict[str, Any]]:
     """Get a skill entry from the registry (legacy format).
@@ -291,10 +286,7 @@ def get_skill_entry(name: str) -> Optional[SkillEntry]:
     return entry
 
 
-def create_skill_instance(
-    name: str,
-    config: Optional[Dict[str, Any]] = None
-) -> Optional[Any]:
+def create_skill_instance(name: str, config: Optional[Dict[str, Any]] = None) -> Optional[Any]:
     """Create an instance of a skill from the registry.
 
     This is the factory function that replaces hardcoded instantiation.
@@ -318,10 +310,7 @@ def list_skills() -> List[Dict[str, Any]]:
     Returns:
         List of skill metadata dicts
     """
-    return [
-        {"name": name, "version": entry.version}
-        for name, entry in _REGISTRY.items()
-    ]
+    return [{"name": name, "version": entry.version} for name, entry in _REGISTRY.items()]
 
 
 def get_skill_manifest() -> List[Dict[str, Any]]:
@@ -373,10 +362,7 @@ def set_skill_config(name: str, config: Dict[str, Any]):
         config: Configuration dict
     """
     _SKILL_CONFIGS[name] = config
-    logger.info(
-        "skill_config_set",
-        extra={"skill": name, "config_keys": list(config.keys())}
-    )
+    logger.info("skill_config_set", extra={"skill": name, "config_keys": list(config.keys())})
 
 
 def get_skill_config(name: str) -> Dict[str, Any]:

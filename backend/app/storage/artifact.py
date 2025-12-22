@@ -5,21 +5,22 @@ import hashlib
 import json
 import logging
 import os
-import shutil
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, List, Optional, Union
 from urllib.parse import urlparse
 
-from ..schemas.artifact import ArtifactType, StorageBackend
 from pydantic import BaseModel, Field
+
+from ..schemas.artifact import ArtifactType, StorageBackend
 
 logger = logging.getLogger("nova.storage.artifact")
 
 
 class StoredArtifact(BaseModel):
     """Metadata for a stored artifact."""
+
     artifact_id: str = Field(description="Unique artifact identifier")
     run_id: str = Field(description="Run that produced this artifact")
     filename: str = Field(description="Original filename")
@@ -192,7 +193,7 @@ class LocalArtifactStore(ArtifactStore):
                 "filename": filename,
                 "size_bytes": len(content_bytes),
                 "backend": "local",
-            }
+            },
         )
 
         return artifact
@@ -305,7 +306,7 @@ class S3ArtifactStore(ArtifactStore):
                 "bucket": bucket,
                 "endpoint": endpoint_url or "aws",
                 "prefix": prefix,
-            }
+            },
         )
 
     def _get_client(self):
@@ -405,7 +406,7 @@ class S3ArtifactStore(ArtifactStore):
                 "size_bytes": len(content_bytes),
                 "backend": "s3",
                 "bucket": self.bucket,
-            }
+            },
         )
 
         return artifact
@@ -524,8 +525,6 @@ def get_artifact_store() -> ArtifactStore:
                 prefix=os.getenv("ARTIFACT_S3_PREFIX", "artifacts/"),
             )
         else:
-            _store = LocalArtifactStore(
-                base_path=os.getenv("ARTIFACT_LOCAL_PATH", "/tmp/nova_artifacts")
-            )
+            _store = LocalArtifactStore(base_path=os.getenv("ARTIFACT_LOCAL_PATH", "/tmp/nova_artifacts"))
 
     return _store

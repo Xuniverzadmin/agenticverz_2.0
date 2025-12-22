@@ -21,30 +21,36 @@ M3.5 CLI (Machine-Native SDK Demo):
 import argparse
 import asyncio
 import json
-import os
 import sys
 import time
 from datetime import datetime, timezone
 from typing import Optional
 
+
 # Lazy imports for database-dependent modules (avoid requiring DATABASE_URL for demo)
 def _get_db_imports():
     """Lazy import database-dependent modules."""
     from sqlmodel import Session, select
+
     from .db import Agent, Run, engine, init_db
+    from .events import get_publisher
     from .planners import get_planner
     from .worker.runner import RunRunner
-    from .events import get_publisher
+
     return Session, select, Agent, Run, engine, init_db, get_planner, RunRunner, get_publisher
 
+
 # These don't require database
-from .skills import get_skill_manifest, list_skills, load_all_skills
 from .observability.cost_tracker import get_cost_tracker
+from .skills import list_skills, load_all_skills
+
 
 # Setup logging (doesn't need DB)
 def _get_logger():
     from .logging_config import setup_logging
+
     return setup_logging()
+
 
 logger = None  # Lazy init
 
@@ -259,17 +265,10 @@ def run_demo(quick: bool = False) -> None:
     from .skills.json_transform import JsonTransformSkill
 
     skill = JsonTransformSkill()
-    test_data = {
-        "user": "demo_user",
-        "action": "test",
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    test_data = {"user": "demo_user", "action": "test", "timestamp": datetime.now(timezone.utc).isoformat()}
 
     async def run_skill():
-        result = await skill.execute({
-            "data": test_data,
-            "operation": "identity"
-        })
+        result = await skill.execute({"data": test_data, "operation": "identity"})
         return result
 
     loop = asyncio.new_event_loop()
@@ -279,7 +278,7 @@ def run_demo(quick: bool = False) -> None:
 
     print(f"      Input: {json.dumps(test_data)[:50]}...")
     print(f"      Output status: {result.get('status', 'unknown')}")
-    print(f"      Deterministic: Yes (same input -> same output)")
+    print("      Deterministic: Yes (same input -> same output)")
 
     if not quick:
         time.sleep(1)
@@ -293,10 +292,10 @@ def run_demo(quick: bool = False) -> None:
         cost_cents=0.1,
         input_tokens=50,
         output_tokens=50,
-        model="demo"
+        model="demo",
     )
     spend = tracker.get_spend("demo-tenant", "daily")
-    print(f"      Recorded: 0.1c for json_transform")
+    print("      Recorded: 0.1c for json_transform")
     print(f"      Tenant daily spend: {spend:.2f}c")
     print(f"      Alerts triggered: {len(alerts)}")
 
@@ -324,9 +323,7 @@ def run_demo(quick: bool = False) -> None:
 
 def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="AOS CLI - Machine-Native Agent Operating System"
-    )
+    parser = argparse.ArgumentParser(description="AOS CLI - Machine-Native Agent Operating System")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # demo command (M3.5)

@@ -9,19 +9,17 @@ Tests for:
 - Demo simulation
 """
 
-import json
-import pytest
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from fastapi.testclient import TestClient
-
+import pytest
 
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def test_tenant_id():
@@ -43,6 +41,7 @@ def mock_session():
 # =============================================================================
 # Model Tests
 # =============================================================================
+
 
 class TestKillSwitchModels:
     """Test KillSwitch model functionality."""
@@ -331,6 +330,7 @@ class TestSchemas:
 # Cost Calculation Tests
 # =============================================================================
 
+
 class TestCostCalculation:
     """Test cost calculation functions."""
 
@@ -373,6 +373,7 @@ class TestCostCalculation:
 # Integration Tests (with mocked dependencies)
 # =============================================================================
 
+
 class TestKillSwitchIntegration:
     """Integration tests with mocked database."""
 
@@ -391,12 +392,7 @@ class TestKillSwitchIntegration:
         )
 
         # Freeze
-        state.freeze(
-            by="test-admin",
-            reason="Integration test freeze",
-            auto=False,
-            trigger=TriggerType.MANUAL.value
-        )
+        state.freeze(by="test-admin", reason="Integration test freeze", auto=False, trigger=TriggerType.MANUAL.value)
 
         # Verify frozen
         assert state.is_frozen
@@ -414,6 +410,7 @@ class TestKillSwitchIntegration:
 # =============================================================================
 # Endpoint Tests
 # =============================================================================
+
 
 class TestEndpointSchemas:
     """Test that endpoint request/response schemas are correct."""
@@ -434,7 +431,7 @@ class TestEndpointSchemas:
 
     def test_chat_completion_response_schema(self):
         """Test ChatCompletionResponse validation."""
-        from app.api.v1_proxy import ChatCompletionResponse, ChatCompletionChoice, ChatMessage, Usage
+        from app.api.v1_proxy import ChatCompletionChoice, ChatCompletionResponse, ChatMessage, Usage
 
         response = ChatCompletionResponse(
             id="chatcmpl-test123",
@@ -442,12 +439,10 @@ class TestEndpointSchemas:
             model="gpt-4o",
             choices=[
                 ChatCompletionChoice(
-                    index=0,
-                    message=ChatMessage(role="assistant", content="Hello back!"),
-                    finish_reason="stop"
+                    index=0, message=ChatMessage(role="assistant", content="Hello back!"), finish_reason="stop"
                 )
             ],
-            usage=Usage(prompt_tokens=10, completion_tokens=20, total_tokens=30)
+            usage=Usage(prompt_tokens=10, completion_tokens=20, total_tokens=30),
         )
         assert response.object == "chat.completion"
         assert response.choices[0].finish_reason == "stop"
@@ -473,6 +468,7 @@ class TestEndpointSchemas:
 # =============================================================================
 # Error Handling Tests
 # =============================================================================
+
 
 class TestErrorHandling:
     """Test error handling scenarios."""
@@ -517,6 +513,7 @@ class TestErrorHandling:
 # =============================================================================
 # Demo Simulation Tests
 # =============================================================================
+
 
 class TestDemoSimulation:
     """Test demo simulation functionality."""

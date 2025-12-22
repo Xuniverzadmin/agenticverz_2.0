@@ -3,19 +3,15 @@
 Unit tests for failure catalog loading, matching, and recovery suggestions.
 """
 
-import pytest
-from pathlib import Path
-
 # Add backend to path for imports
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.runtime.failure_catalog import (
     FailureCatalog,
-    CatalogEntry,
-    MatchResult,
     MatchType,
-    RecoveryStrategy,
     get_catalog,
     match_failure,
 )
@@ -273,13 +269,13 @@ class TestMetricsLabels:
         catalog = FailureCatalog()
 
         import re
-        label_pattern = re.compile(r'^[a-z][a-z0-9_]*$')
+
+        label_pattern = re.compile(r"^[a-z][a-z0-9_]*$")
 
         for code in catalog.list_codes():
             entry = catalog.get_entry(code)
             for label_key in entry.metrics_labels.keys():
-                assert label_pattern.match(label_key), \
-                    f"Label key '{label_key}' in {code} is not normalized"
+                assert label_pattern.match(label_key), f"Label key '{label_key}' in {code} is not normalized"
 
     def test_all_entries_have_metrics_labels(self):
         """Test all entries have metrics_labels."""

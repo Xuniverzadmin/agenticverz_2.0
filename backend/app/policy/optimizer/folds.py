@@ -9,28 +9,28 @@ Optimizations:
 - Policy simplification: Merge compatible policies
 """
 
-from typing import Dict, List, Optional, Set, Any
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Set
+
 from app.policy.ir.ir_nodes import (
-    IRModule,
-    IRFunction,
-    IRBlock,
-    IRInstruction,
-    IRLoadConst,
+    IRAction,
     IRBinaryOp,
-    IRUnaryOp,
+    IRBlock,
     IRCompare,
+    IRFunction,
+    IRInstruction,
     IRJump,
     IRJumpIf,
-    IRAction,
-    IRGovernance,
+    IRLoadConst,
+    IRModule,
+    IRUnaryOp,
 )
-from app.policy.compiler.grammar import PolicyCategory
 
 
 @dataclass
 class FoldResult:
     """Result of a folding operation."""
+
     folded: bool
     value: Any = None
     instruction: Optional[IRInstruction] = None
@@ -228,8 +228,10 @@ class DeadCodeEliminator:
         # Remove unused instructions (except governance-critical)
         for block in func.blocks.values():
             new_instructions = [
-                instr for instr in block.instructions
-                if instr.id in used or instr.id in self._governance_critical
+                instr
+                for instr in block.instructions
+                if instr.id in used
+                or instr.id in self._governance_critical
                 or isinstance(instr, (IRJump, IRJumpIf, IRAction))
             ]
             eliminated = len(block.instructions) - len(new_instructions)
@@ -373,10 +375,7 @@ class PolicySimplifier:
         if not policies:
             return
 
-        policies.sort(
-            key=lambda p: p[1].governance.priority if p[1].governance else 0,
-            reverse=True
-        )
+        policies.sort(key=lambda p: p[1].governance.priority if p[1].governance else 0, reverse=True)
 
         primary_name, primary = policies[0]
 

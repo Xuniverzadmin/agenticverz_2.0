@@ -27,26 +27,25 @@ Usage:
     )
 """
 
-import os
-import logging
 import hashlib
+import logging
+import os
+from datetime import datetime
 from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
 
 import httpx
 from sqlalchemy import text as sql_text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db_async import AsyncSessionLocal, async_session_context
+from app.db_async import async_session_context
 from app.memory.embedding_metrics import (
-    VECTOR_SEARCH_ENABLED,
-    VECTOR_SEARCH_FALLBACK,
-    VECTOR_QUERY_LATENCY,
-    VECTOR_QUERY_RESULTS,
-    VECTOR_FALLBACK_COUNT,
     EMBEDDING_API_CALLS,
     EMBEDDING_API_LATENCY,
     EMBEDDING_ERRORS,
+    VECTOR_FALLBACK_COUNT,
+    VECTOR_QUERY_LATENCY,
+    VECTOR_QUERY_RESULTS,
+    VECTOR_SEARCH_ENABLED,
+    VECTOR_SEARCH_FALLBACK,
     check_embedding_quota,
     increment_embedding_count,
 )
@@ -66,6 +65,7 @@ EMBEDDING_FALLBACK_ENABLED = os.getenv("EMBEDDING_FALLBACK_ENABLED", "true").low
 
 class EmbeddingError(Exception):
     """Raised when embedding generation fails."""
+
     pass
 
 
@@ -232,9 +232,7 @@ async def get_embedding(text: str, allow_fallback: bool = True, use_cache: bool 
         except EmbeddingError as e:
             last_error = e
             if provider == EMBEDDING_PROVIDER and len(providers) > 1:
-                logger.warning(
-                    f"Primary provider {provider} failed ({e}), trying backup {EMBEDDING_BACKUP_PROVIDER}"
-                )
+                logger.warning(f"Primary provider {provider} failed ({e}), trying backup {EMBEDDING_BACKUP_PROVIDER}")
                 continue
             raise
 
@@ -305,10 +303,12 @@ class VectorMemoryStore:
             if embedding:
                 # Insert with embedding
                 await session.execute(
-                    sql_text("""
+                    sql_text(
+                        """
                         INSERT INTO memories (id, agent_id, memory_type, text, meta, embedding, created_at)
                         VALUES (:id, :agent_id, :memory_type, :text, :meta, CAST(:embedding AS vector), :created_at)
-                    """),
+                    """
+                    ),
                     {
                         "id": memory_id,
                         "agent_id": agent_id,
@@ -317,15 +317,17 @@ class VectorMemoryStore:
                         "meta": meta_json,
                         "embedding": f"[{','.join(str(x) for x in embedding)}]",
                         "created_at": datetime.utcnow(),
-                    }
+                    },
                 )
             else:
                 # Insert without embedding
                 await session.execute(
-                    sql_text("""
+                    sql_text(
+                        """
                         INSERT INTO memories (id, agent_id, memory_type, text, meta, created_at)
                         VALUES (:id, :agent_id, :memory_type, :text, :meta, :created_at)
-                    """),
+                    """
+                    ),
                     {
                         "id": memory_id,
                         "agent_id": agent_id,
@@ -333,7 +335,7 @@ class VectorMemoryStore:
                         "text": text,
                         "meta": meta_json,
                         "created_at": datetime.utcnow(),
-                    }
+                    },
                 )
 
             await session.commit()
@@ -344,7 +346,7 @@ class VectorMemoryStore:
                 "memory_id": memory_id,
                 "agent_id": agent_id,
                 "has_embedding": embedding is not None,
-            }
+            },
         )
 
         return memory_id
@@ -396,7 +398,8 @@ class VectorMemoryStore:
             # Vector similarity search using cosine distance
             # 1 - cosine_distance = cosine_similarity
             result = await session.execute(
-                sql_text("""
+                sql_text(
+                    """
                     SELECT
                         id,
                         agent_id,
@@ -411,13 +414,14 @@ class VectorMemoryStore:
                         AND 1 - (embedding <=> CAST(:query_embedding AS vector)) >= :threshold
                     ORDER BY embedding <=> CAST(:query_embedding AS vector)
                     LIMIT :limit
-                """),
+                """
+                ),
                 {
                     "agent_id": agent_id,
                     "query_embedding": f"[{','.join(str(x) for x in query_embedding)}]",
                     "threshold": similarity_threshold,
                     "limit": limit,
-                }
+                },
             )
 
             rows = result.fetchall()
@@ -461,19 +465,21 @@ class VectorMemoryStore:
 
         async with async_session_context() as session:
             result = await session.execute(
-                sql_text("""
+                sql_text(
+                    """
                     SELECT id, agent_id, memory_type, text, meta, created_at
                     FROM memories
                     WHERE agent_id = :agent_id
                         AND text ILIKE :pattern
                     ORDER BY created_at DESC
                     LIMIT :limit
-                """),
+                """
+                ),
                 {
                     "agent_id": agent_id,
                     "pattern": f"%{query}%",
                     "limit": limit,
-                }
+                },
             )
 
             rows = result.fetchall()
@@ -497,12 +503,14 @@ class VectorMemoryStore:
 
         async with async_session_context() as session:
             result = await session.execute(
-                sql_text("""
+                sql_text(
+                    """
                     SELECT id, agent_id, memory_type, text, meta, created_at
                     FROM memories
                     WHERE id = :id
-                """),
-                {"id": memory_id}
+                """
+                ),
+                {"id": memory_id},
             )
 
             row = result.fetchone()
@@ -531,34 +539,38 @@ class VectorMemoryStore:
         async with async_session_context() as session:
             if memory_type:
                 result = await session.execute(
-                    sql_text("""
+                    sql_text(
+                        """
                         SELECT id, agent_id, memory_type, text, meta, created_at
                         FROM memories
                         WHERE agent_id = :agent_id AND memory_type = :memory_type
                         ORDER BY created_at DESC
                         LIMIT :limit OFFSET :offset
-                    """),
+                    """
+                    ),
                     {
                         "agent_id": agent_id,
                         "memory_type": memory_type,
                         "limit": limit,
                         "offset": offset,
-                    }
+                    },
                 )
             else:
                 result = await session.execute(
-                    sql_text("""
+                    sql_text(
+                        """
                         SELECT id, agent_id, memory_type, text, meta, created_at
                         FROM memories
                         WHERE agent_id = :agent_id
                         ORDER BY created_at DESC
                         LIMIT :limit OFFSET :offset
-                    """),
+                    """
+                    ),
                     {
                         "agent_id": agent_id,
                         "limit": limit,
                         "offset": offset,
-                    }
+                    },
                 )
 
             rows = result.fetchall()
@@ -579,8 +591,7 @@ class VectorMemoryStore:
         """Delete a memory by ID."""
         async with async_session_context() as session:
             result = await session.execute(
-                sql_text("DELETE FROM memories WHERE id = :id RETURNING id"),
-                {"id": memory_id}
+                sql_text("DELETE FROM memories WHERE id = :id RETURNING id"), {"id": memory_id}
             )
             deleted = result.fetchone() is not None
             await session.commit()
@@ -607,21 +618,25 @@ class VectorMemoryStore:
             # Get memories without embeddings
             if agent_id:
                 result = await session.execute(
-                    sql_text("""
+                    sql_text(
+                        """
                         SELECT id, text FROM memories
                         WHERE agent_id = :agent_id AND embedding IS NULL
                         LIMIT :limit
-                    """),
-                    {"agent_id": agent_id, "limit": batch_size}
+                    """
+                    ),
+                    {"agent_id": agent_id, "limit": batch_size},
                 )
             else:
                 result = await session.execute(
-                    sql_text("""
+                    sql_text(
+                        """
                         SELECT id, text FROM memories
                         WHERE embedding IS NULL
                         LIMIT :limit
-                    """),
-                    {"limit": batch_size}
+                    """
+                    ),
+                    {"limit": batch_size},
                 )
 
             rows = result.fetchall()
@@ -632,15 +647,17 @@ class VectorMemoryStore:
                     if row.text and row.text.strip():
                         embedding = await self._embedding_fn(row.text)
                         await session.execute(
-                            sql_text("""
+                            sql_text(
+                                """
                                 UPDATE memories
                                 SET embedding = CAST(:embedding AS vector)
                                 WHERE id = :id
-                            """),
+                            """
+                            ),
                             {
                                 "id": row.id,
                                 "embedding": f"[{','.join(str(x) for x in embedding)}]",
-                            }
+                            },
                         )
                         stats["success"] += 1
                 except Exception as e:

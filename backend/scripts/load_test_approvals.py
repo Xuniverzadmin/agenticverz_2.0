@@ -21,8 +21,6 @@ Requirements:
 
 import argparse
 import asyncio
-import json
-import statistics
 import sys
 import time
 from dataclasses import dataclass
@@ -38,6 +36,7 @@ except ImportError:
 @dataclass
 class RequestResult:
     """Result of a single request."""
+
     success: bool
     latency_ms: float
     status_code: int
@@ -48,6 +47,7 @@ class RequestResult:
 @dataclass
 class LoadTestReport:
     """Summary report of load test."""
+
     total_requests: int
     successful: int
     failed: int
@@ -60,11 +60,7 @@ class LoadTestReport:
     errors: List[str]
 
 
-async def create_approval_request(
-    client: httpx.AsyncClient,
-    base_url: str,
-    request_num: int
-) -> RequestResult:
+async def create_approval_request(client: httpx.AsyncClient, base_url: str, request_num: int) -> RequestResult:
     """Create a single approval request."""
     start = time.perf_counter()
     try:
@@ -78,51 +74,32 @@ async def create_approval_request(
                 "justification": f"Load test request {request_num}",
                 "expires_in_seconds": 3600,
             },
-            timeout=30.0
+            timeout=30.0,
         )
         latency = (time.perf_counter() - start) * 1000
 
         if response.status_code == 200:
             data = response.json()
             return RequestResult(
-                success=True,
-                latency_ms=latency,
-                status_code=response.status_code,
-                request_id=data.get("request_id")
+                success=True, latency_ms=latency, status_code=response.status_code, request_id=data.get("request_id")
             )
         else:
             return RequestResult(
-                success=False,
-                latency_ms=latency,
-                status_code=response.status_code,
-                error=response.text[:200]
+                success=False, latency_ms=latency, status_code=response.status_code, error=response.text[:200]
             )
     except Exception as e:
         latency = (time.perf_counter() - start) * 1000
-        return RequestResult(
-            success=False,
-            latency_ms=latency,
-            status_code=0,
-            error=str(e)[:200]
-        )
+        return RequestResult(success=False, latency_ms=latency, status_code=0, error=str(e)[:200])
 
 
-async def approve_request(
-    client: httpx.AsyncClient,
-    base_url: str,
-    request_id: str
-) -> RequestResult:
+async def approve_request(client: httpx.AsyncClient, base_url: str, request_id: str) -> RequestResult:
     """Approve a single request."""
     start = time.perf_counter()
     try:
         response = await client.post(
             f"{base_url}/api/v1/policy/requests/{request_id}/approve",
-            json={
-                "approver_id": "load_test_approver",
-                "level": 4,
-                "notes": "Load test approval"
-            },
-            timeout=30.0
+            json={"approver_id": "load_test_approver", "level": 4, "notes": "Load test approval"},
+            timeout=30.0,
         )
         latency = (time.perf_counter() - start) * 1000
 
@@ -131,50 +108,30 @@ async def approve_request(
             latency_ms=latency,
             status_code=response.status_code,
             request_id=request_id,
-            error=response.text[:200] if response.status_code != 200 else None
+            error=response.text[:200] if response.status_code != 200 else None,
         )
     except Exception as e:
         latency = (time.perf_counter() - start) * 1000
         return RequestResult(
-            success=False,
-            latency_ms=latency,
-            status_code=0,
-            request_id=request_id,
-            error=str(e)[:200]
+            success=False, latency_ms=latency, status_code=0, request_id=request_id, error=str(e)[:200]
         )
 
 
-async def run_create_batch(
-    base_url: str,
-    batch_size: int,
-    batch_num: int
-) -> List[RequestResult]:
+async def run_create_batch(base_url: str, batch_size: int, batch_num: int) -> List[RequestResult]:
     """Run a batch of create requests concurrently."""
     async with httpx.AsyncClient() as client:
-        tasks = [
-            create_approval_request(client, base_url, batch_num * batch_size + i)
-            for i in range(batch_size)
-        ]
+        tasks = [create_approval_request(client, base_url, batch_num * batch_size + i) for i in range(batch_size)]
         return await asyncio.gather(*tasks)
 
 
-async def run_approve_batch(
-    base_url: str,
-    request_ids: List[str]
-) -> List[RequestResult]:
+async def run_approve_batch(base_url: str, request_ids: List[str]) -> List[RequestResult]:
     """Run a batch of approve requests concurrently."""
     async with httpx.AsyncClient() as client:
-        tasks = [
-            approve_request(client, base_url, request_id)
-            for request_id in request_ids
-        ]
+        tasks = [approve_request(client, base_url, request_id) for request_id in request_ids]
         return await asyncio.gather(*tasks)
 
 
-def compute_report(
-    results: List[RequestResult],
-    duration_seconds: float
-) -> LoadTestReport:
+def compute_report(results: List[RequestResult], duration_seconds: float) -> LoadTestReport:
     """Compute summary statistics from results."""
     successful = [r for r in results if r.success]
     failed = [r for r in results if not r.success]
@@ -198,7 +155,7 @@ def compute_report(
         latency_max_ms=max(latencies) if latencies else 0,
         requests_per_second=len(results) / duration_seconds if duration_seconds > 0 else 0,
         duration_seconds=duration_seconds,
-        errors=list(set(r.error for r in failed if r.error))[:10]
+        errors=list(set(r.error for r in failed if r.error))[:10],
     )
 
 
@@ -212,7 +169,7 @@ def print_report(report: LoadTestReport, phase: str):
     print(f"  Failed:            {report.failed}")
     print(f"  Duration:          {report.duration_seconds:.2f}s")
     print(f"  Throughput:        {report.requests_per_second:.1f} req/s")
-    print(f"\n  Latency:")
+    print("\n  Latency:")
     print(f"    p50:             {report.latency_p50_ms:.1f}ms")
     print(f"    p95:             {report.latency_p95_ms:.1f}ms")
     print(f"    p99:             {report.latency_p99_ms:.1f}ms")
@@ -234,7 +191,7 @@ async def main():
     parser.add_argument("--skip-approve", action="store_true", help="Skip approval phase")
     args = parser.parse_args()
 
-    print(f"\nLoad Test Configuration:")
+    print("\nLoad Test Configuration:")
     print(f"  Base URL:      {args.base_url}")
     print(f"  Concurrent:    {args.concurrent}")
     print(f"  Total:         {args.total}")
@@ -267,12 +224,14 @@ async def main():
 
             # Batch approvals
             for i in range(0, len(created_ids), args.concurrent):
-                batch = created_ids[i:i + args.concurrent]
+                batch = created_ids[i : i + args.concurrent]
                 results = await run_approve_batch(args.base_url, batch)
                 all_approve_results.extend(results)
                 batch_num = i // args.concurrent + 1
                 total_batches = (len(created_ids) + args.concurrent - 1) // args.concurrent
-                print(f"  Batch {batch_num}/{total_batches}: {sum(1 for r in results if r.success)}/{len(batch)} succeeded")
+                print(
+                    f"  Batch {batch_num}/{total_batches}: {sum(1 for r in results if r.success)}/{len(batch)} succeeded"
+                )
 
             approve_duration = time.perf_counter() - start_time
             approve_report = compute_report(all_approve_results, approve_duration)

@@ -6,28 +6,27 @@ Tests the ClaudeAdapterStub for deterministic testing.
 Real API tests require ANTHROPIC_API_KEY.
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
 if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
+from app.skills.adapters.claude_adapter import (
+    CLAUDE_COST_MODEL,
+    DEFAULT_MODEL,
+    ClaudeAdapter,
+    ClaudeAdapterStub,
+)
 from app.skills.llm_invoke_v2 import (
     LLMConfig,
     LLMResponse,
     Message,
-    register_adapter,
     get_adapter,
-    list_adapters,
-)
-from app.skills.adapters.claude_adapter import (
-    ClaudeAdapter,
-    ClaudeAdapterStub,
-    CLAUDE_COST_MODEL,
-    DEFAULT_MODEL,
 )
 
 
@@ -110,6 +109,7 @@ class TestClaudeAdapterStub:
     async def test_mock_error_response(self, setup):
         """Mock error is returned."""
         import hashlib
+
         prompt = "user: Error test"
         prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()[:16]
 
@@ -140,10 +140,7 @@ class TestClaudeAdapterStub:
     async def test_with_system_prompt(self, setup):
         """System prompt is handled."""
         config = LLMConfig(system_prompt="You are a helpful assistant.")
-        messages = [
-            Message(role="system", content="Be concise."),
-            Message(role="user", content="Hi")
-        ]
+        messages = [Message(role="system", content="Be concise."), Message(role="user", content="Hi")]
 
         response = await setup.invoke(messages, config)
 
@@ -160,9 +157,7 @@ class TestClaudeErrorMapping:
         class RateLimitError(Exception):
             pass
 
-        error_type, _, retryable = adapter._map_api_error(
-            RateLimitError("Rate limit exceeded")
-        )
+        error_type, _, retryable = adapter._map_api_error(RateLimitError("Rate limit exceeded"))
         assert error_type == "rate_limited"
         assert retryable is True
 
@@ -173,9 +168,7 @@ class TestClaudeErrorMapping:
         class AuthError(Exception):
             pass
 
-        error_type, _, retryable = adapter._map_api_error(
-            AuthError("Invalid API key")
-        )
+        error_type, _, retryable = adapter._map_api_error(AuthError("Invalid API key"))
         assert error_type == "auth_failed"
         assert retryable is False
 
@@ -186,9 +179,7 @@ class TestClaudeErrorMapping:
         class TimeoutError(Exception):
             pass
 
-        error_type, _, retryable = adapter._map_api_error(
-            TimeoutError("Request timeout")
-        )
+        error_type, _, retryable = adapter._map_api_error(TimeoutError("Request timeout"))
         assert error_type == "timeout"
         assert retryable is True
 
@@ -196,9 +187,7 @@ class TestClaudeErrorMapping:
         """Content blocked is permanent."""
         adapter = ClaudeAdapter()
 
-        error_type, _, retryable = adapter._map_api_error(
-            Exception("Content blocked by policy")
-        )
+        error_type, _, retryable = adapter._map_api_error(Exception("Content blocked by policy"))
         assert error_type == "content_blocked"
         assert retryable is False
 
@@ -206,9 +195,7 @@ class TestClaudeErrorMapping:
         """Unknown errors default to retryable."""
         adapter = ClaudeAdapter()
 
-        error_type, _, retryable = adapter._map_api_error(
-            Exception("Something went wrong")
-        )
+        error_type, _, retryable = adapter._map_api_error(Exception("Something went wrong"))
         assert retryable is True
 
 

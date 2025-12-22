@@ -16,23 +16,24 @@ Intent types:
 - ALLOW: Permit execution
 """
 
-from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
 import hashlib
 import json
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum, auto
+from typing import Any, Dict, List, Optional
 
 
 class IntentType(Enum):
     """Types of intents emitted by policy runtime."""
-    ROUTE = auto()      # Route to agent
-    ESCALATE = auto()   # Escalate for approval
-    EXECUTE = auto()    # Execute action
-    DENY = auto()       # Deny request
-    ALLOW = auto()      # Allow request
-    LOG = auto()        # Audit log only
-    ALERT = auto()      # Alert without blocking
+
+    ROUTE = auto()  # Route to agent
+    ESCALATE = auto()  # Escalate for approval
+    EXECUTE = auto()  # Execute action
+    DENY = auto()  # Deny request
+    ALLOW = auto()  # Allow request
+    LOG = auto()  # Audit log only
+    ALERT = auto()  # Alert without blocking
 
 
 @dataclass
@@ -42,6 +43,7 @@ class IntentPayload:
 
     Contains all data needed for M18 to execute the intent.
     """
+
     # Target information
     target_agent: Optional[str] = None
     target_skill: Optional[str] = None
@@ -101,6 +103,7 @@ class Intent:
 
     Represents a governance-validated action to be executed by M18.
     """
+
     id: str
     intent_type: IntentType
     payload: IntentPayload
@@ -126,12 +129,15 @@ class Intent:
 
     def _generate_id(self) -> str:
         """Generate deterministic intent ID."""
-        content = json.dumps({
-            "type": self.intent_type.name,
-            "payload": self.payload.to_dict(),
-            "policy": self.source_policy,
-            "rule": self.source_rule,
-        }, sort_keys=True)
+        content = json.dumps(
+            {
+                "type": self.intent_type.name,
+                "payload": self.payload.to_dict(),
+                "policy": self.source_policy,
+                "rule": self.source_rule,
+            },
+            sort_keys=True,
+        )
         return f"int_{hashlib.sha256(content.encode()).hexdigest()[:16]}"
 
     def to_dict(self) -> Dict[str, Any]:
@@ -186,9 +192,7 @@ class IntentEmitter:
     def __init__(self):
         self.pending_intents: List[Intent] = []
         self.emitted_intents: List[Intent] = []
-        self._intent_handlers: Dict[IntentType, List[callable]] = {
-            t: [] for t in IntentType
-        }
+        self._intent_handlers: Dict[IntentType, List[callable]] = {t: [] for t in IntentType}
 
     def create_intent(
         self,
@@ -319,11 +323,7 @@ class IntentEmitter:
                 emitted.append(intent)
         return emitted
 
-    def register_handler(
-        self,
-        intent_type: IntentType,
-        handler: callable
-    ) -> None:
+    def register_handler(self, intent_type: IntentType, handler: callable) -> None:
         """
         Register a handler for an intent type.
 

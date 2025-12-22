@@ -28,8 +28,6 @@ import json
 import logging
 import os
 import signal
-import sys
-import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -120,7 +118,8 @@ class RecoveryClaimWorker:
         session = self._get_session()
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     WITH claimed AS (
                         SELECT id
                         FROM recovery_candidates
@@ -147,8 +146,9 @@ class RecoveryClaimWorker:
                         rc.occurrence_count,
                         rc.source,
                         rc.explain
-                """),
-                {"batch_size": self.batch_size}
+                """
+                ),
+                {"batch_size": self.batch_size},
             )
 
             rows = result.fetchall()
@@ -194,8 +194,8 @@ class RecoveryClaimWorker:
             Evaluation result dict
         """
         from app.worker.recovery_evaluator import (
-            RecoveryEvaluator,
             FailureEvent,
+            RecoveryEvaluator,
         )
 
         event = FailureEvent(
@@ -238,19 +238,21 @@ class RecoveryClaimWorker:
             status = "succeeded" if success else "failed"
 
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE recovery_candidates
                     SET
                         confidence = :confidence,
                         execution_status = :status,
                         updated_at = now()
                     WHERE id = :id
-                """),
+                """
+                ),
                 {
                     "id": candidate_id,
                     "confidence": result.get("confidence", 0.2),
                     "status": status,
-                }
+                },
             )
             session.commit()
 
@@ -279,15 +281,17 @@ class RecoveryClaimWorker:
         session = self._get_session()
         try:
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE recovery_candidates
                     SET
                         execution_status = 'pending',
                         updated_at = now()
                     WHERE id = ANY(:ids)
                       AND execution_status = 'executing'
-                """),
-                {"ids": self._pending_ids}
+                """
+                ),
+                {"ids": self._pending_ids},
             )
             session.commit()
             logger.info(f"Released {len(self._pending_ids)} pending candidates")
@@ -331,10 +335,7 @@ class RecoveryClaimWorker:
 
             except Exception as e:
                 logger.error(f"Failed to process candidate {candidate_id}: {e}")
-                self.update_candidate(
-                    candidate_id,
-                    {"error": str(e), "confidence": 0.1}
-                )
+                self.update_candidate(candidate_id, {"error": str(e), "confidence": 0.1})
 
         return processed
 
@@ -346,8 +347,7 @@ class RecoveryClaimWorker:
         Runs until shutdown signal received.
         """
         logger.info(
-            f"Starting recovery claim worker: "
-            f"batch_size={self.batch_size}, poll_interval={self.poll_interval}s"
+            f"Starting recovery claim worker: " f"batch_size={self.batch_size}, poll_interval={self.poll_interval}s"
         )
 
         try:
@@ -367,9 +367,7 @@ class RecoveryClaimWorker:
                         )
                     else:
                         # No work, sleep
-                        logger.debug(
-                            f"No candidates to evaluate, sleeping {self.poll_interval}s"
-                        )
+                        logger.debug(f"No candidates to evaluate, sleeping {self.poll_interval}s")
                         await asyncio.sleep(self.poll_interval)
 
                 except asyncio.CancelledError:
@@ -409,19 +407,15 @@ def main():
         "--batch-size",
         type=int,
         default=DEFAULT_BATCH_SIZE,
-        help=f"Number of candidates to claim per batch (default: {DEFAULT_BATCH_SIZE})"
+        help=f"Number of candidates to claim per batch (default: {DEFAULT_BATCH_SIZE})",
     )
     parser.add_argument(
         "--poll-interval",
         type=int,
         default=DEFAULT_POLL_INTERVAL,
-        help=f"Seconds between polls when no work (default: {DEFAULT_POLL_INTERVAL})"
+        help=f"Seconds between polls when no work (default: {DEFAULT_POLL_INTERVAL})",
     )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging"
-    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
 

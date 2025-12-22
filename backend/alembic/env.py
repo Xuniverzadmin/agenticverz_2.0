@@ -1,18 +1,15 @@
 """Alembic environment configuration for AOS."""
-from logging.config import fileConfig
 import os
+from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Import SQLModel metadata
 from sqlmodel import SQLModel
 
+from alembic import context
+
 # Import all models to ensure they're registered
-from app.workflow.checkpoint import WorkflowCheckpoint
-from app.db import FeatureFlag, PolicyApprovalLevel, ApprovalRequest  # M5 models
 
 # this is the Alembic Config object
 config = context.config

@@ -12,7 +12,6 @@ Run with: pytest tests/test_phase4_e2e.py -v
 For server-based tests (requires docker compose up):
     pytest tests/test_phase4_e2e.py -v -m e2e
 """
-import json
 import os
 import uuid
 
@@ -40,10 +39,10 @@ class TestPlanInspector:
                 {
                     "step_id": "s1",
                     "skill": "http_call",
-                    "params": {"url": "https://api.example.com/data", "method": "GET"}
+                    "params": {"url": "https://api.example.com/data", "method": "GET"},
                 }
             ],
-            "metadata": {}
+            "metadata": {},
         }
         result = validate_plan(plan)
         assert result.valid
@@ -58,9 +57,9 @@ class TestPlanInspector:
                 {
                     "step_id": "s1",
                     "skill": "http_call",
-                    "params": {"url": "http://169.254.169.254/metadata", "method": "GET"}
+                    "params": {"url": "http://169.254.169.254/metadata", "method": "GET"},
                 }
-            ]
+            ],
         }
         result = validate_plan(plan)
         assert not result.valid
@@ -76,9 +75,9 @@ class TestPlanInspector:
                 {
                     "step_id": "s1",
                     "skill": "http_call",
-                    "params": {"url": "http://localhost:8080/admin", "method": "GET"}
+                    "params": {"url": "http://localhost:8080/admin", "method": "GET"},
                 }
-            ]
+            ],
         }
         result = validate_plan(plan)
         assert not result.valid
@@ -89,7 +88,7 @@ class TestPlanInspector:
 
         plan = {
             "plan_id": "test-4",
-            "steps": [{"step_id": f"s{i}", "skill": "http_call", "params": {}} for i in range(30)]
+            "steps": [{"step_id": f"s{i}", "skill": "http_call", "params": {}} for i in range(30)],
         }
         result = validate_plan(plan)
         assert not result.valid
@@ -105,9 +104,9 @@ class TestPlanInspector:
                 {
                     "step_id": "s1",
                     "skill": "exec_shell",  # Not allowed
-                    "params": {"command": "rm -rf /"}
+                    "params": {"command": "rm -rf /"},
                 }
-            ]
+            ],
         }
         result = validate_plan(plan)
         assert not result.valid
@@ -120,7 +119,7 @@ class TestPlanInspector:
         plan = {
             "plan_id": "test-6",
             "steps": [{"step_id": "s1", "skill": "http_call", "params": {}}],
-            "metadata": {"estimated_cost_cents": 500}  # 5 dollars
+            "metadata": {"estimated_cost_cents": 500},  # 5 dollars
         }
         # With a budget of only 100 cents
         result = validate_plan(plan, agent_budget_cents=100)
@@ -148,10 +147,7 @@ class TestJsonTransformSkill:
         from app.skills.json_transform import transform_json
 
         payload = {"items": [{"id": 1}, {"id": 2}, {"id": 3}]}
-        mapping = {
-            "first_id": "items[0].id",
-            "last_id": "items[-1].id"
-        }
+        mapping = {"first_id": "items[0].id", "last_id": "items[-1].id"}
 
         result, errors = transform_json(payload, mapping)
         assert result["first_id"] == 1
@@ -174,15 +170,7 @@ class TestJsonTransformSkill:
         """Can handle deeply nested structures."""
         from app.skills.json_transform import transform_json
 
-        payload = {
-            "response": {
-                "data": {
-                    "results": [
-                        {"meta": {"score": 95}}
-                    ]
-                }
-            }
-        }
+        payload = {"response": {"data": {"results": [{"meta": {"score": 95}}]}}}
         mapping = {"score": "response.data.results[0].meta.score"}
 
         result, errors = transform_json(payload, mapping)
@@ -194,10 +182,9 @@ class TestJsonTransformSkill:
         from app.skills.json_transform import JsonTransformSkill
 
         skill = JsonTransformSkill()
-        result = await skill.execute({
-            "payload": {"data": {"items": [1, 2, 3]}},
-            "mapping": {"items": "data.items", "first": "data.items[0]"}
-        })
+        result = await skill.execute(
+            {"payload": {"data": {"items": [1, 2, 3]}}, "mapping": {"items": "data.items", "first": "data.items[0]"}}
+        )
 
         assert result["result"]["status"] == "ok"
         assert result["result"]["result"]["items"] == [1, 2, 3]
@@ -231,8 +218,9 @@ class TestPostgresQuerySkill:
 
     def test_forbidden_patterns_blocked(self):
         """Forbidden SQL patterns are blocked by validator."""
-        from app.skills.postgres_query import PostgresQueryInput
         from pydantic import ValidationError
+
+        from app.skills.postgres_query import PostgresQueryInput
 
         dangerous_queries = [
             "DROP TABLE users",
@@ -272,9 +260,6 @@ class TestBudgetDeduction:
     def test_budget_deduction_function_exists(self):
         """Budget deduction functions are available."""
         from app.utils.budget_tracker import (
-            deduct_budget,
-            record_cost,
-            check_budget,
             get_budget_tracker,
         )
 
@@ -296,34 +281,29 @@ class TestMultiStepExecution:
 
         response = httpx.post(
             "http://localhost:8000/agents",
-            headers={
-                "X-AOS-Key": api_key,
-                "Content-Type": "application/json"
-            },
+            headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
             json={"name": f"e2e-test-{uuid.uuid4().hex[:8]}"},
-            timeout=30.0
+            timeout=30.0,
         )
         assert response.status_code == 201
         return response.json()["agent_id"]
 
     @pytest.mark.skipif(
         not os.environ.get("RUN_E2E_TESTS"),
-        reason="Requires running server - set RUN_E2E_TESTS=1 with docker compose up"
+        reason="Requires running server - set RUN_E2E_TESTS=1 with docker compose up",
     )
     def test_http_skill_execution(self, api_key, test_agent):
         """HTTP skill executes correctly."""
-        import httpx
         import time
+
+        import httpx
 
         # Submit goal - use httpbin.org which is more reliable than zenquotes
         response = httpx.post(
             f"http://localhost:8000/agents/{test_agent}/goals",
-            headers={
-                "X-AOS-Key": api_key,
-                "Content-Type": "application/json"
-            },
+            headers={"X-AOS-Key": api_key, "Content-Type": "application/json"},
             json={"goal": "Fetch data from https://httpbin.org/json"},
-            timeout=30.0
+            timeout=30.0,
         )
         assert response.status_code == 202
         run_id = response.json()["run_id"]
@@ -340,9 +320,7 @@ class TestMultiStepExecution:
             elapsed += poll_interval
 
             response = httpx.get(
-                f"http://localhost:8000/agents/{test_agent}/runs/{run_id}",
-                headers={"X-AOS-Key": api_key},
-                timeout=30.0
+                f"http://localhost:8000/agents/{test_agent}/runs/{run_id}", headers={"X-AOS-Key": api_key}, timeout=30.0
             )
             assert response.status_code == 200
             data = response.json()
@@ -361,16 +339,14 @@ class TestMultiStepExecution:
 
     @pytest.mark.skipif(
         not os.environ.get("RUN_E2E_TESTS"),
-        reason="Skills require running server - set RUN_E2E_TESTS=1 with docker compose up"
+        reason="Skills require running server - set RUN_E2E_TESTS=1 with docker compose up",
     )
     def test_skills_registered(self, api_key):
         """New skills are registered."""
         import httpx
 
         response = httpx.get(
-            "http://localhost:8000/api/v1/runtime/capabilities",
-            headers={"X-AOS-Key": api_key},
-            timeout=30.0
+            "http://localhost:8000/api/v1/runtime/capabilities", headers={"X-AOS-Key": api_key}, timeout=30.0
         )
         assert response.status_code == 200
         data = response.json()
@@ -388,6 +364,7 @@ class TestSkillRegistry:
     def test_all_skills_registered(self):
         """All expected skills are registered."""
         from app.skills import list_skills, load_all_skills
+
         load_all_skills()
 
         skills = list_skills()

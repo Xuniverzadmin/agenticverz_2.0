@@ -26,6 +26,7 @@ Requirements:
 """
 
 from __future__ import annotations
+
 import argparse
 import asyncio
 import hashlib
@@ -33,18 +34,14 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Add backend to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("backfill_provenance")
 
 
@@ -95,8 +92,9 @@ def transform_provenance_log(record: Dict[str, Any]) -> Dict[str, Any]:
     try:
         output = record.get("output_json", "{}")
         if record.get("compressed", False):
-            import gzip
             import base64
+            import gzip
+
             decoded = base64.b64decode(output)
             output = gzip.decompress(decoded).decode()
 
@@ -110,8 +108,9 @@ def transform_provenance_log(record: Dict[str, Any]) -> Dict[str, Any]:
     try:
         input_json = record.get("input_json", "{}")
         if record.get("compressed", False):
-            import gzip
             import base64
+            import gzip
+
             decoded = base64.b64decode(input_json)
             input_json = gzip.decompress(decoded).decode()
         payload = json.loads(input_json) if isinstance(input_json, str) else input_json
@@ -177,7 +176,7 @@ async def backfill_from_directory(
     Returns:
         Statistics dictionary
     """
-    from app.costsim.provenance_async import write_provenance, check_duplicate
+    from app.costsim.provenance_async import check_duplicate, write_provenance
 
     stats = {"files": 0, "records": 0, "inserted": 0, "skipped": 0, "errors": 0}
 
@@ -234,7 +233,7 @@ async def backfill_from_file(
     Returns:
         Statistics dictionary
     """
-    from app.costsim.provenance_async import write_provenance, check_duplicate
+    from app.costsim.provenance_async import check_duplicate, write_provenance
 
     stats = {"records": 0, "inserted": 0, "skipped": 0, "errors": 0}
 
@@ -316,10 +315,7 @@ async def verify_backfill() -> Dict[str, Any]:
     results["drift_stats"] = await get_drift_stats()
 
     # Verification checks
-    results["verified"] = (
-        results["total_records"] > 0 and
-        results["v1_records"] > 0
-    )
+    results["verified"] = results["total_records"] > 0 and results["v1_records"] > 0
 
     return results
 
@@ -338,12 +334,15 @@ async def run_psql_verification():
         ("Total records", "SELECT count(*) FROM costsim_provenance;"),
         ("V1 records", "SELECT count(*) FROM costsim_provenance WHERE variant_slug = 'v1';"),
         ("Records with v1_cost", "SELECT count(*) FROM costsim_provenance WHERE v1_cost IS NOT NULL;"),
-        ("Sample records", """
+        (
+            "Sample records",
+            """
             SELECT id, run_id, variant_slug, v1_cost, v2_cost, created_at
             FROM costsim_provenance
             ORDER BY created_at DESC
             LIMIT 5;
-        """),
+        """,
+        ),
     ]
 
     for name, query in queries:
@@ -363,9 +362,7 @@ async def run_psql_verification():
 
 
 async def main():
-    parser = argparse.ArgumentParser(
-        description="Backfill V1 baseline provenance records for CostSim V2"
-    )
+    parser = argparse.ArgumentParser(description="Backfill V1 baseline provenance records for CostSim V2")
     parser.add_argument(
         "--dir",
         type=Path,
@@ -398,7 +395,8 @@ async def main():
         help="Records per batch (default: 100)",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Enable verbose logging",
     )
@@ -439,8 +437,10 @@ async def main():
         if results["sample_records"]:
             print("\nSample Records:")
             for record in results["sample_records"][:3]:
-                print(f"  - id={record['id']}, v1_cost={record.get('v1_cost')}, "
-                      f"input_hash={record.get('input_hash', '')[:8]}...")
+                print(
+                    f"  - id={record['id']}, v1_cost={record.get('v1_cost')}, "
+                    f"input_hash={record.get('input_hash', '')[:8]}..."
+                )
 
         print("=" * 60)
 

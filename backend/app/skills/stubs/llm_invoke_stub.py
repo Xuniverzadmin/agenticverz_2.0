@@ -13,19 +13,18 @@ Features:
 """
 
 from __future__ import annotations
-import hashlib
-import re
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-from pathlib import Path
 
+import hashlib
 import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 _runtime_path = str(Path(__file__).parent.parent.parent / "worker" / "runtime")
 if _runtime_path not in sys.path:
     sys.path.insert(0, _runtime_path)
 
 from core import SkillDescriptor
-
 
 # Descriptor for llm_invoke stub
 LLM_INVOKE_STUB_DESCRIPTOR = SkillDescriptor(
@@ -38,29 +37,23 @@ LLM_INVOKE_STUB_DESCRIPTOR = SkillDescriptor(
         "model": "DETERMINISTIC",
         "prompt_hash": "DETERMINISTIC",
         "token_count": "DETERMINISTIC",
-        "response_hash": "DETERMINISTIC"
+        "response_hash": "DETERMINISTIC",
     },
-    cost_model={
-        "base_cents": 1,
-        "per_token_cents": 0.001
-    },
+    cost_model={"base_cents": 1, "per_token_cents": 0.001},
     failure_modes=[
         {"code": "ERR_RATE_LIMITED", "category": "TRANSIENT", "typical_cause": "API rate limit"},
         {"code": "ERR_CONTEXT_LENGTH", "category": "PERMANENT", "typical_cause": "prompt too long"},
         {"code": "ERR_INVALID_MODEL", "category": "PERMANENT", "typical_cause": "model not available"},
-        {"code": "ERR_CONTENT_FILTER", "category": "PERMANENT", "typical_cause": "content blocked"}
+        {"code": "ERR_CONTENT_FILTER", "category": "PERMANENT", "typical_cause": "content blocked"},
     ],
-    constraints={
-        "max_tokens": 4096,
-        "models_allowed": ["stub-model", "claude-sonnet-stub"],
-        "timeout_ms": 60000
-    }
+    constraints={"max_tokens": 4096, "models_allowed": ["stub-model", "claude-sonnet-stub"], "timeout_ms": 60000},
 )
 
 
 @dataclass
 class MockLlmResponse:
     """Configurable mock LLM response."""
+
     content: str
     model: str = "stub-model"
     input_tokens: int = 0
@@ -82,6 +75,7 @@ class LlmInvokeStub:
         ))
         result = await stub.execute({"prompt": "Please analyze this data"})
     """
+
     # Prompt pattern -> response mapping
     responses: Dict[str, MockLlmResponse] = field(default_factory=dict)
     # Default response generator (seeded by prompt hash)
@@ -95,10 +89,7 @@ class LlmInvokeStub:
 
     def add_error(self, prompt_pattern: str, error_code: str, message: str) -> None:
         """Add an error response for a prompt pattern."""
-        self.responses[prompt_pattern.lower()] = MockLlmResponse(
-            content="",
-            error=f"{error_code}:{message}"
-        )
+        self.responses[prompt_pattern.lower()] = MockLlmResponse(content="", error=f"{error_code}:{message}")
 
     def _compute_prompt_hash(self, prompt: str) -> str:
         """Compute deterministic hash of prompt."""
@@ -129,7 +120,7 @@ class LlmInvokeStub:
             "Analyzing the request...",
             "Processing the input...",
             "Generating response...",
-            "Finalizing output..."
+            "Finalizing output...",
         ]
         thought = thoughts[seed % len(thoughts)]
 
@@ -145,7 +136,7 @@ class LlmInvokeStub:
             model=self.default_model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            finish_reason="stop"
+            finish_reason="stop",
         )
 
     async def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
@@ -165,12 +156,14 @@ class LlmInvokeStub:
         prompt_hash = self._compute_prompt_hash(prompt)
 
         # Record call
-        self.call_history.append({
-            "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-            "prompt_hash": prompt_hash,
-            "model": model,
-            "max_tokens": max_tokens
-        })
+        self.call_history.append(
+            {
+                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                "prompt_hash": prompt_hash,
+                "model": model,
+                "max_tokens": max_tokens,
+            }
+        )
 
         # Find matching response or generate deterministic one
         response = self._find_response(prompt)
@@ -190,12 +183,10 @@ class LlmInvokeStub:
             "usage": {
                 "input_tokens": response.input_tokens,
                 "output_tokens": response.output_tokens,
-                "total_tokens": response.input_tokens + response.output_tokens
+                "total_tokens": response.input_tokens + response.output_tokens,
             },
             "finish_reason": response.finish_reason,
-            "cost_cents": max(1, int(
-                (response.input_tokens + response.output_tokens) * 0.001
-            ))
+            "cost_cents": max(1, int((response.input_tokens + response.output_tokens) * 0.001)),
         }
 
         return result

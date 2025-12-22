@@ -14,11 +14,11 @@ import json
 import logging
 import re
 import sys
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
 
 # Path setup for imports
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
 _backend = Path(__file__).parent.parent.parent
 if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
@@ -32,14 +32,15 @@ logger = logging.getLogger("nova.skills.json_transform_v2")
 # Canonical JSON Utilities
 # =============================================================================
 
+
 def _canonical_json(obj: Any) -> str:
     """Produce canonical JSON (sorted keys, no whitespace)."""
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def _content_hash(obj: Any, length: int = 16) -> str:
     """Compute SHA256 hash of canonical JSON representation."""
-    canonical = _canonical_json(obj).encode('utf-8')
+    canonical = _canonical_json(obj).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()[:length]
 
 
@@ -60,6 +61,7 @@ def _measure_depth(obj: Any, current: int = 0) -> int:
 # Path Extraction
 # =============================================================================
 
+
 def _parse_jsonpath(path: str) -> List[Union[str, int]]:
     """
     Parse JSONPath-like expression into segments.
@@ -73,7 +75,7 @@ def _parse_jsonpath(path: str) -> List[Union[str, int]]:
     Returns:
         List of segments (strings for keys, ints for array indices)
     """
-    if not path.startswith('$'):
+    if not path.startswith("$"):
         raise ValueError(f"Path must start with '$': {path}")
 
     # Remove leading $
@@ -82,7 +84,7 @@ def _parse_jsonpath(path: str) -> List[Union[str, int]]:
         return []
 
     # Remove leading dot if present
-    if path.startswith('.'):
+    if path.startswith("."):
         path = path[1:]
 
     if not path:
@@ -92,14 +94,14 @@ def _parse_jsonpath(path: str) -> List[Union[str, int]]:
     i = 0
 
     while i < len(path):
-        if path[i] == '.':
+        if path[i] == ".":
             i += 1
             continue
 
         # Bracket notation: ['key'] or [0]
-        if path[i] == '[':
-            end = path.index(']', i)
-            content = path[i+1:end]
+        if path[i] == "[":
+            end = path.index("]", i)
+            content = path[i + 1 : end]
 
             # String key: ['key'] or ["key"]
             if content.startswith("'") or content.startswith('"'):
@@ -113,14 +115,14 @@ def _parse_jsonpath(path: str) -> List[Union[str, int]]:
             # Dot notation: find next . or [
             end = len(path)
             for j in range(i, len(path)):
-                if path[j] in '.[]':
+                if path[j] in ".[]":
                     end = j
                     break
 
             key = path[i:end]
 
             # Check for array index attached to key: items[0]
-            bracket_match = re.match(r'^([^\[]+)\[(-?\d+)\]$', key)
+            bracket_match = re.match(r"^([^\[]+)\[(-?\d+)\]$", key)
             if bracket_match:
                 key_part, idx = bracket_match.groups()
                 segments.append(key_part)
@@ -168,6 +170,7 @@ def _get_at_path(data: Any, segments: List[Union[str, int]]) -> tuple[Any, bool]
 # =============================================================================
 # Transform Operations
 # =============================================================================
+
 
 def _op_extract(data: Any, params: Dict[str, Any]) -> tuple[Any, Optional[str]]:
     """Extract value at path."""
@@ -363,17 +366,14 @@ JSON_TRANSFORM_DESCRIPTOR = SkillDescriptor(
         "required": ["data", "operation"],
         "properties": {
             "data": {"description": "Input data to transform"},
-            "operation": {
-                "type": "string",
-                "enum": list(OPERATIONS.keys())
-            },
+            "operation": {"type": "string", "enum": list(OPERATIONS.keys())},
             "path": {"type": "string"},
             "keys": {"type": "array", "items": {"type": "string"}},
             "condition": {"type": "object"},
             "merge_with": {"type": "object"},
             "sort_key": {"type": "string"},
-            "sort_order": {"type": "string", "enum": ["asc", "desc"]}
-        }
+            "sort_order": {"type": "string", "enum": ["asc", "desc"]},
+        },
     },
     outputs_schema={
         "type": "object",
@@ -384,8 +384,8 @@ JSON_TRANSFORM_DESCRIPTOR = SkillDescriptor(
             "canonical": {"type": "boolean"},
             "operation": {"type": "string"},
             "input_size": {"type": "integer"},
-            "output_size": {"type": "integer"}
-        }
+            "output_size": {"type": "integer"},
+        },
     },
     stable_fields=["result", "result_hash", "operation", "canonical"],
     idempotent=True,
@@ -397,19 +397,20 @@ JSON_TRANSFORM_DESCRIPTOR = SkillDescriptor(
         "ERR_JSON_TRANSFORM_FAILED",
         "ERR_JSON_DEPTH_EXCEEDED",
         "ERR_JSON_SIZE_EXCEEDED",
-        "ERR_JSON_OPERATION_INVALID"
+        "ERR_JSON_OPERATION_INVALID",
     ],
     constraints={
         "max_input_size_bytes": 10485760,  # 10MB
         "max_depth": 100,
-        "max_array_length": 100000
-    }
+        "max_array_length": 100000,
+    },
 )
 
 
 # =============================================================================
 # Main Execute Function
 # =============================================================================
+
 
 def _generate_call_id(params: Dict[str, Any]) -> str:
     """Generate deterministic call ID from params."""
@@ -444,7 +445,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
                 message=f"Invalid JSON input: {e}",
                 category="VALIDATION",
                 retryable=False,
-                details={"error": str(e), "input_preview": data[:100] if len(data) > 100 else data}
+                details={"error": str(e), "input_preview": data[:100] if len(data) > 100 else data},
             )
 
     # Validate operation
@@ -454,7 +455,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
             code="ERR_JSON_OPERATION_INVALID",
             message="Missing 'operation' parameter",
             category="VALIDATION",
-            retryable=False
+            retryable=False,
         )
 
     if operation in FORBIDDEN_OPERATIONS:
@@ -464,7 +465,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=f"Forbidden operation: {operation}",
             category="VALIDATION",
             retryable=False,
-            details={"operation": operation}
+            details={"operation": operation},
         )
 
     if operation not in OPERATIONS:
@@ -474,7 +475,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=f"Unknown operation: {operation}. Valid: {list(OPERATIONS.keys())}",
             category="VALIDATION",
             retryable=False,
-            details={"operation": operation, "valid_operations": list(OPERATIONS.keys())}
+            details={"operation": operation, "valid_operations": list(OPERATIONS.keys())},
         )
 
     # Validate input size
@@ -487,7 +488,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=f"Input size {input_size} exceeds limit {max_size}",
             category="VALIDATION",
             retryable=False,
-            details={"input_size": input_size, "max_size": max_size}
+            details={"input_size": input_size, "max_size": max_size},
         )
 
     # Validate depth
@@ -500,7 +501,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=f"Input depth {depth} exceeds limit {max_depth}",
             category="VALIDATION",
             retryable=False,
-            details={"depth": depth, "max_depth": max_depth}
+            details={"depth": depth, "max_depth": max_depth},
         )
 
     # Execute operation
@@ -523,7 +524,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
                 message=error,
                 category="VALIDATION" if code != "ERR_JSON_TRANSFORM_FAILED" else "PERMANENT",
                 retryable=False,
-                details={"operation": operation}
+                details={"operation": operation},
             )
 
         # Compute result hash (canonical)
@@ -538,13 +539,13 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
                 "canonical": True,
                 "operation": operation,
                 "input_size": input_size,
-                "output_size": output_size
+                "output_size": output_size,
             },
             meta={
                 "skill_id": JSON_TRANSFORM_DESCRIPTOR.skill_id,
                 "skill_version": JSON_TRANSFORM_DESCRIPTOR.version,
-                "deterministic": True
-            }
+                "deterministic": True,
+            },
         )
 
     except Exception as e:
@@ -555,7 +556,7 @@ async def json_transform_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=f"Transform failed: {e}",
             category="PERMANENT",
             retryable=False,
-            details={"operation": operation, "error_type": type(e).__name__}
+            details={"operation": operation, "error_type": type(e).__name__},
         )
 
 
@@ -569,11 +570,12 @@ async def json_transform_handler(params: Dict[str, Any]) -> StructuredOutcome:
 # Registration Helper
 # =============================================================================
 
+
 def register_json_transform(registry) -> None:
     """Register json_transform skill with registry."""
     registry.register(
         descriptor=JSON_TRANSFORM_DESCRIPTOR,
         handler=json_transform_handler,
         is_stub=False,
-        tags=["transform", "json", "data", "m3"]
+        tags=["transform", "json", "data", "m3"],
     )

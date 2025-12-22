@@ -27,19 +27,20 @@ from typing import Any, Dict, List, Optional
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger("scenario_test")
 
 # Load environment
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
 @dataclass
 class ScenarioResult:
     """Result of a single scenario test."""
+
     scenario_id: str
     name: str
     category: str  # A, B, or C
@@ -53,6 +54,7 @@ class ScenarioResult:
 @dataclass
 class TestMatrixReport:
     """Complete test matrix report."""
+
     run_id: str
     started_at: str
     completed_at: Optional[str] = None
@@ -81,8 +83,7 @@ class ScenarioTestRunner:
 
     def __init__(self):
         self.report = TestMatrixReport(
-            run_id=str(uuid.uuid4()),
-            started_at=datetime.utcnow().isoformat() + "Z"
+            run_id=str(uuid.uuid4()), started_at=datetime.utcnow().isoformat() + "Z"
         )
         self.api_base = os.getenv("AOS_API_BASE", "http://localhost:8000")
         self.api_key = os.getenv("AOS_API_KEY", "")
@@ -95,9 +96,7 @@ class ScenarioTestRunner:
         """A1: OpenAI API Working - Verify OpenAI is callable."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="A1",
-            name="OpenAI API Working",
-            category="A"
+            scenario_id="A1", name="OpenAI API Working", category="A"
         )
 
         try:
@@ -115,16 +114,19 @@ class ScenarioTestRunner:
                     "https://api.openai.com/v1/chat/completions",
                     headers={
                         "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
                     json={
                         "model": "gpt-4o-mini",
                         "messages": [
-                            {"role": "user", "content": "Say 'OpenAI test successful' in exactly those words."}
+                            {
+                                "role": "user",
+                                "content": "Say 'OpenAI test successful' in exactly those words.",
+                            }
                         ],
-                        "max_tokens": 20
+                        "max_tokens": 20,
                     },
-                    timeout=30.0
+                    timeout=30.0,
                 )
 
                 if response.status_code == 200:
@@ -137,12 +139,14 @@ class ScenarioTestRunner:
                         "model": data.get("model"),
                         "input_tokens": usage.get("prompt_tokens", 0),
                         "output_tokens": usage.get("completion_tokens", 0),
-                        "response_preview": content[:100]
+                        "response_preview": content[:100],
                     }
                     result.evidence.append(f"Model: {data.get('model')}")
                     result.evidence.append(f"Tokens: {usage.get('total_tokens', 0)}")
 
-                    self.report.total_tokens["openai"] = self.report.total_tokens.get("openai", 0) + usage.get("total_tokens", 0)
+                    self.report.total_tokens["openai"] = self.report.total_tokens.get(
+                        "openai", 0
+                    ) + usage.get("total_tokens", 0)
                 else:
                     result.status = "FAIL"
                     result.error = f"HTTP {response.status_code}: {response.text[:200]}"
@@ -158,9 +162,7 @@ class ScenarioTestRunner:
         """A2: Embeddings Working - Verify embedding generation."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="A2",
-            name="Embeddings Working",
-            category="A"
+            scenario_id="A2", name="Embeddings Working", category="A"
         )
 
         try:
@@ -180,13 +182,16 @@ class ScenarioTestRunner:
                     "https://api.openai.com/v1/embeddings",
                     headers={
                         "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
                     json={
                         "model": model,
-                        "input": ["Test embedding for scenario validation", "Compare this text for similarity"],
+                        "input": [
+                            "Test embedding for scenario validation",
+                            "Compare this text for similarity",
+                        ],
                     },
-                    timeout=30.0
+                    timeout=30.0,
                 )
 
                 if response.status_code == 200:
@@ -200,9 +205,10 @@ class ScenarioTestRunner:
 
                         # Calculate cosine similarity
                         import math
-                        dot = sum(a*b for a, b in zip(vec1, vec2))
-                        norm1 = math.sqrt(sum(a*a for a in vec1))
-                        norm2 = math.sqrt(sum(b*b for b in vec2))
+
+                        dot = sum(a * b for a, b in zip(vec1, vec2))
+                        norm1 = math.sqrt(sum(a * a for a in vec1))
+                        norm2 = math.sqrt(sum(b * b for b in vec2))
                         similarity = dot / (norm1 * norm2) if norm1 and norm2 else 0
 
                         result.status = "PASS"
@@ -212,13 +218,15 @@ class ScenarioTestRunner:
                             "embedding_dimensions": len(vec1),
                             "vectors_generated": len(embeddings),
                             "similarity_score": round(similarity, 4),
-                            "tokens_used": usage.get("total_tokens", 0)
+                            "tokens_used": usage.get("total_tokens", 0),
                         }
                         result.evidence.append(f"Provider: {provider}")
                         result.evidence.append(f"Dimensions: {len(vec1)}")
                         result.evidence.append(f"Similarity: {similarity:.4f}")
 
-                        self.report.total_tokens["embeddings"] = usage.get("total_tokens", 0)
+                        self.report.total_tokens["embeddings"] = usage.get(
+                            "total_tokens", 0
+                        )
                     else:
                         result.status = "FAIL"
                         result.error = "Did not receive expected embeddings"
@@ -237,9 +245,7 @@ class ScenarioTestRunner:
         """A3: Clerk Auth - Validate identity plumbing."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="A3",
-            name="Clerk Auth (Non-UI)",
-            category="A"
+            scenario_id="A3", name="Clerk Auth (Non-UI)", category="A"
         )
 
         try:
@@ -257,9 +263,9 @@ class ScenarioTestRunner:
                     "https://api.clerk.com/v1/users?limit=1",
                     headers={
                         "Authorization": f"Bearer {clerk_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
-                    timeout=15.0
+                    timeout=15.0,
                 )
 
                 if response.status_code == 200:
@@ -267,8 +273,10 @@ class ScenarioTestRunner:
                     result.status = "PASS"
                     result.details = {
                         "clerk_api_accessible": True,
-                        "users_count": len(data) if isinstance(data, list) else data.get("total_count", "unknown"),
-                        "api_version": "v1"
+                        "users_count": len(data)
+                        if isinstance(data, list)
+                        else data.get("total_count", "unknown"),
+                        "api_version": "v1",
                     }
                     result.evidence.append("Clerk API accessible")
                     result.evidence.append(f"Response: {response.status_code}")
@@ -276,9 +284,16 @@ class ScenarioTestRunner:
                     result.status = "FAIL"
                     result.error = "Clerk API key invalid"
                 else:
-                    result.status = "PASS"  # API is accessible, just might not have users
-                    result.details = {"clerk_api_accessible": True, "status": response.status_code}
-                    result.evidence.append(f"Clerk API responded: {response.status_code}")
+                    result.status = (
+                        "PASS"  # API is accessible, just might not have users
+                    )
+                    result.details = {
+                        "clerk_api_accessible": True,
+                        "status": response.status_code,
+                    }
+                    result.evidence.append(
+                        f"Clerk API responded: {response.status_code}"
+                    )
 
         except Exception as e:
             result.status = "FAIL"
@@ -291,9 +306,7 @@ class ScenarioTestRunner:
         """A4: Neon DB - Confirm persistence."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="A4",
-            name="Neon DB Persistence",
-            category="A"
+            scenario_id="A4", name="Neon DB Persistence", category="A"
         )
 
         try:
@@ -316,7 +329,9 @@ class ScenarioTestRunner:
 
                 # Query artifacts if exists
                 try:
-                    artifacts_count = await conn.fetchval("SELECT COUNT(*) FROM artifacts")
+                    artifacts_count = await conn.fetchval(
+                        "SELECT COUNT(*) FROM artifacts"
+                    )
                 except:
                     artifacts_count = 0
 
@@ -326,7 +341,7 @@ class ScenarioTestRunner:
                     "artifacts_count": artifacts_count,
                     "latest_run_id": str(latest_run["id"]) if latest_run else None,
                     "latest_run_status": latest_run["status"] if latest_run else None,
-                    "connection": "Neon PostgreSQL"
+                    "connection": "Neon PostgreSQL",
                 }
                 result.evidence.append(f"Runs: {runs_count}")
                 result.evidence.append(f"Artifacts: {artifacts_count}")
@@ -347,9 +362,7 @@ class ScenarioTestRunner:
         """A5: Upstash Redis - Validate ephemeral state."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="A5",
-            name="Upstash Redis/Cache",
-            category="A"
+            scenario_id="A5", name="Upstash Redis/Cache", category="A"
         )
 
         try:
@@ -371,14 +384,18 @@ class ScenarioTestRunner:
 
                 result.status = "PASS"
                 result.details = {
-                    "redis_url": redis_url.split("@")[-1] if "@" in redis_url else redis_url,
+                    "redis_url": redis_url.split("@")[-1]
+                    if "@" in redis_url
+                    else redis_url,
                     "test_key": test_key,
                     "value_stored": value.decode() if value else None,
                     "ttl_seconds": ttl,
-                    "total_commands": info.get("total_commands_processed", 0)
+                    "total_commands": info.get("total_commands_processed", 0),
                 }
                 result.evidence.append(f"Key set with TTL: {ttl}s")
-                result.evidence.append(f"Value retrieved: {value.decode() if value else 'None'}")
+                result.evidence.append(
+                    f"Value retrieved: {value.decode() if value else 'None'}"
+                )
 
                 # Cleanup
                 await client.delete(test_key)
@@ -394,15 +411,19 @@ class ScenarioTestRunner:
 
                 if upstash_url and upstash_token:
                     import httpx
+
                     async with httpx.AsyncClient() as client:
                         response = await client.post(
                             f"{upstash_url}/set/scenario_test_{self.report.run_id}/test_value/ex/60",
                             headers={"Authorization": f"Bearer {upstash_token}"},
-                            timeout=10.0
+                            timeout=10.0,
                         )
                         if response.status_code == 200:
                             result.status = "PASS"
-                            result.details = {"upstash_rest": True, "response": response.json()}
+                            result.details = {
+                                "upstash_rest": True,
+                                "response": response.json(),
+                            }
                             result.evidence.append("Upstash REST API accessible")
                         else:
                             result.status = "FAIL"
@@ -420,11 +441,7 @@ class ScenarioTestRunner:
     async def scenario_a6_trigger_dev(self) -> ScenarioResult:
         """A6: Trigger.dev - Validate async job orchestration."""
         start = time.time()
-        result = ScenarioResult(
-            scenario_id="A6",
-            name="Trigger.dev Jobs",
-            category="A"
-        )
+        result = ScenarioResult(scenario_id="A6", name="Trigger.dev Jobs", category="A")
 
         try:
             trigger_ref = os.getenv("TRIGGER_PROJECT_REF")
@@ -435,6 +452,7 @@ class ScenarioTestRunner:
 
             # Check vault for API key
             import httpx
+
             vault_token = os.getenv("VAULT_TOKEN")
 
             if not vault_token:
@@ -446,7 +464,7 @@ class ScenarioTestRunner:
                 vault_response = await client.get(
                     "http://127.0.0.1:8200/v1/agenticverz/data/external-integrations",
                     headers={"X-Vault-Token": vault_token},
-                    timeout=10.0
+                    timeout=10.0,
                 )
 
                 if vault_response.status_code == 200:
@@ -458,14 +476,14 @@ class ScenarioTestRunner:
                         api_response = await client.get(
                             f"https://api.trigger.dev/api/v1/projects/{trigger_ref}",
                             headers={"Authorization": f"Bearer {trigger_key}"},
-                            timeout=15.0
+                            timeout=15.0,
                         )
 
                         if api_response.status_code == 200:
                             result.status = "PASS"
                             result.details = {
                                 "project_ref": trigger_ref,
-                                "api_accessible": True
+                                "api_accessible": True,
                             }
                             result.evidence.append(f"Project: {trigger_ref}")
                             result.evidence.append("Trigger.dev API accessible")
@@ -474,8 +492,13 @@ class ScenarioTestRunner:
                             result.error = "Trigger.dev API key invalid"
                         else:
                             result.status = "PASS"  # API accessible
-                            result.details = {"project_ref": trigger_ref, "status": api_response.status_code}
-                            result.evidence.append(f"API response: {api_response.status_code}")
+                            result.details = {
+                                "project_ref": trigger_ref,
+                                "status": api_response.status_code,
+                            }
+                            result.evidence.append(
+                                f"API response: {api_response.status_code}"
+                            )
                     else:
                         result.status = "SKIP"
                         result.error = "trigger_api_key not in vault"
@@ -494,9 +517,7 @@ class ScenarioTestRunner:
         """A7: PostHog - Analytics instrumentation."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="A7",
-            name="PostHog Analytics",
-            category="A"
+            scenario_id="A7", name="PostHog Analytics", category="A"
         )
 
         try:
@@ -508,6 +529,7 @@ class ScenarioTestRunner:
 
             # Get API key from vault
             import httpx
+
             vault_token = os.getenv("VAULT_TOKEN")
 
             if not vault_token:
@@ -519,7 +541,7 @@ class ScenarioTestRunner:
                 vault_response = await client.get(
                     "http://127.0.0.1:8200/v1/agenticverz/data/external-integrations",
                     headers={"X-Vault-Token": vault_token},
-                    timeout=10.0
+                    timeout=10.0,
                 )
 
                 if vault_response.status_code == 200:
@@ -536,11 +558,11 @@ class ScenarioTestRunner:
                                 "properties": {
                                     "run_id": self.report.run_id,
                                     "test_type": "integration_validation",
-                                    "$lib": "agenticverz-scenario-test"
+                                    "$lib": "agenticverz-scenario-test",
                                 },
-                                "distinct_id": f"test_{self.report.run_id}"
+                                "distinct_id": f"test_{self.report.run_id}",
                             },
-                            timeout=15.0
+                            timeout=15.0,
                         )
 
                         if event_response.status_code in [200, 201]:
@@ -548,13 +570,15 @@ class ScenarioTestRunner:
                             result.details = {
                                 "posthog_host": posthog_host,
                                 "event_sent": "scenario_test_a7",
-                                "distinct_id": f"test_{self.report.run_id}"
+                                "distinct_id": f"test_{self.report.run_id}",
                             }
                             result.evidence.append(f"Host: {posthog_host}")
                             result.evidence.append("Event captured successfully")
                         else:
                             result.status = "FAIL"
-                            result.error = f"PostHog capture failed: {event_response.status_code}"
+                            result.error = (
+                                f"PostHog capture failed: {event_response.status_code}"
+                            )
                     else:
                         result.status = "SKIP"
                         result.error = "posthog_api_key not in vault"
@@ -573,14 +597,13 @@ class ScenarioTestRunner:
         """A8: Slack Channel - Human notification loop."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="A8",
-            name="Slack Notifications",
-            category="A"
+            scenario_id="A8", name="Slack Notifications", category="A"
         )
 
         try:
             # Get webhook from vault
             import httpx
+
             vault_token = os.getenv("VAULT_TOKEN")
 
             if not vault_token:
@@ -592,7 +615,7 @@ class ScenarioTestRunner:
                 vault_response = await client.get(
                     "http://127.0.0.1:8200/v1/agenticverz/data/external-integrations",
                     headers={"X-Vault-Token": vault_token},
-                    timeout=10.0
+                    timeout=10.0,
                 )
 
                 if vault_response.status_code == 200:
@@ -606,7 +629,7 @@ class ScenarioTestRunner:
                             json={
                                 "text": f":test_tube: *Scenario Test A8*\nRun ID: `{self.report.run_id}`\nStatus: Testing Slack webhook integration\nTime: {datetime.utcnow().isoformat()}Z"
                             },
-                            timeout=15.0
+                            timeout=15.0,
                         )
 
                         if slack_response.status_code == 200:
@@ -614,13 +637,15 @@ class ScenarioTestRunner:
                             result.details = {
                                 "webhook_configured": True,
                                 "message_sent": True,
-                                "run_id_included": self.report.run_id
+                                "run_id_included": self.report.run_id,
                             }
                             result.evidence.append("Slack webhook accessible")
                             result.evidence.append("Message sent successfully")
                         else:
                             result.status = "FAIL"
-                            result.error = f"Slack webhook failed: {slack_response.status_code}"
+                            result.error = (
+                                f"Slack webhook failed: {slack_response.status_code}"
+                            )
                     else:
                         result.status = "SKIP"
                         result.error = "slack_mismatch_webhook not in vault"
@@ -643,9 +668,7 @@ class ScenarioTestRunner:
         """B1: Failure Catalog (M9) - Prove failure classification."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="B1",
-            name="Failure Catalog (M9)",
-            category="B"
+            scenario_id="B1", name="Failure Catalog (M9)", category="B"
         )
 
         try:
@@ -657,7 +680,7 @@ class ScenarioTestRunner:
                     f"{self.api_base}/api/v1/workers/business-builder/run",
                     headers={
                         "X-AOS-Key": self.api_key,
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
                     json={
                         "task": "Create a page that GUARANTEES 100% success with clinically proven results",
@@ -665,11 +688,14 @@ class ScenarioTestRunner:
                             "company_name": "TestBrand Inc",
                             "mission": "Testing the failure catalog with adversarial content",
                             "value_proposition": "We guarantee doubled revenue with clinically proven AI systems",
-                            "tone": {"primary": "professional", "avoid": ["hype", "guarantees"]},
-                            "target_audience": ["testers"]
-                        }
+                            "tone": {
+                                "primary": "professional",
+                                "avoid": ["hype", "guarantees"],
+                            },
+                            "target_audience": ["testers"],
+                        },
                     },
-                    timeout=120.0
+                    timeout=120.0,
                 )
 
                 if response.status_code in [200, 202]:
@@ -685,7 +711,7 @@ class ScenarioTestRunner:
                             "failure_code": failure_code,
                             "violations_count": len(violations),
                             "violations": violations[:3],  # First 3
-                            "m9_triggered": True
+                            "m9_triggered": True,
                         }
                         result.evidence.append(f"Failure code: {failure_code}")
                         result.evidence.append(f"Violations: {len(violations)}")
@@ -696,7 +722,7 @@ class ScenarioTestRunner:
                             result.status = "PASS"
                             result.details = {
                                 "drift_score": drift_score,
-                                "content_validated": True
+                                "content_validated": True,
                             }
                             result.evidence.append(f"Drift score: {drift_score}")
                         else:
@@ -704,9 +730,11 @@ class ScenarioTestRunner:
                             result.status = "PASS"
                             result.details = {
                                 "status_code": response.status_code,
-                                "note": "Worker completed, M9 available but no violations triggered"
+                                "note": "Worker completed, M9 available but no violations triggered",
                             }
-                            result.evidence.append(f"Worker completed: {response.status_code}")
+                            result.evidence.append(
+                                f"Worker completed: {response.status_code}"
+                            )
                 else:
                     result.status = "FAIL"
                     result.error = f"Worker API returned {response.status_code}"
@@ -722,9 +750,7 @@ class ScenarioTestRunner:
         """B2: Agent Memory (M7) - Verify memory persists."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="B2",
-            name="Agent Memory (M7)",
-            category="B"
+            scenario_id="B2", name="Agent Memory (M7)", category="B"
         )
 
         try:
@@ -753,7 +779,7 @@ class ScenarioTestRunner:
                     result.details = {
                         "agent_memory_keys": len(memory_keys),
                         "blackboard_keys": len(blackboard_keys),
-                        "sample_keys": all_keys[:5]
+                        "sample_keys": all_keys[:5],
                     }
                     result.evidence.append(f"Memory keys: {len(memory_keys)}")
                     result.evidence.append(f"Blackboard keys: {len(blackboard_keys)}")
@@ -763,7 +789,7 @@ class ScenarioTestRunner:
                     result.details = {
                         "agent_memory_keys": 0,
                         "blackboard_keys": 0,
-                        "note": "No active memory entries (expected for fresh system)"
+                        "note": "No active memory entries (expected for fresh system)",
                     }
                     result.evidence.append("Redis accessible, no active memory")
 
@@ -781,9 +807,7 @@ class ScenarioTestRunner:
         """B3: A2A Communication - Prove agents talk to each other."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="B3",
-            name="A2A Communication",
-            category="B"
+            scenario_id="B3", name="A2A Communication", category="B"
         )
 
         try:
@@ -795,7 +819,7 @@ class ScenarioTestRunner:
                     f"{self.api_base}/api/v1/workers/business-builder/run",
                     headers={
                         "X-AOS-Key": self.api_key,
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
                     json={
                         "task": "Create a professional landing page for a fintech startup",
@@ -803,11 +827,14 @@ class ScenarioTestRunner:
                             "company_name": "FinFlow Inc",
                             "mission": "Simplify financial management for small and medium businesses",
                             "value_proposition": "AI-powered financial insights that help SMBs make better decisions in minutes",
-                            "tone": {"primary": "professional", "avoid": ["hype", "guarantees"]},
-                            "target_audience": ["small business owners", "CFOs"]
-                        }
+                            "tone": {
+                                "primary": "professional",
+                                "avoid": ["hype", "guarantees"],
+                            },
+                            "target_audience": ["small business owners", "CFOs"],
+                        },
                     },
-                    timeout=180.0
+                    timeout=180.0,
                 )
 
                 if response.status_code in [200, 202]:
@@ -819,18 +846,24 @@ class ScenarioTestRunner:
                     artifacts = data.get("artifacts", {})
 
                     # Look for cross-agent references
-                    has_research = "research" in stages_completed or "research" in artifacts
-                    has_strategy = "strategy" in stages_completed or "strategy" in artifacts
+                    has_research = (
+                        "research" in stages_completed or "research" in artifacts
+                    )
+                    has_strategy = (
+                        "strategy" in stages_completed or "strategy" in artifacts
+                    )
                     has_copy = "copy" in stages_completed or "landing_copy" in artifacts
 
                     if has_research and has_strategy and has_copy:
                         result.status = "PASS"
                         result.details = {
                             "stages_completed": stages_completed,
-                            "artifacts_generated": list(artifacts.keys()) if isinstance(artifacts, dict) else artifacts,
+                            "artifacts_generated": list(artifacts.keys())
+                            if isinstance(artifacts, dict)
+                            else artifacts,
                             "cross_agent_flow": True,
                             "research_to_strategy": has_research and has_strategy,
-                            "strategy_to_copy": has_strategy and has_copy
+                            "strategy_to_copy": has_strategy and has_copy,
                         }
                         result.evidence.append(f"Stages: {len(stages_completed)}")
                         result.evidence.append("Cross-agent data flow verified")
@@ -839,9 +872,11 @@ class ScenarioTestRunner:
                         result.details = {
                             "stages_completed": stages_completed,
                             "status_code": response.status_code,
-                            "note": "Worker completed, agent handoff implicit"
+                            "note": "Worker completed, agent handoff implicit",
                         }
-                        result.evidence.append(f"Worker completed: {response.status_code}")
+                        result.evidence.append(
+                            f"Worker completed: {response.status_code}"
+                        )
                 else:
                     result.status = "FAIL"
                     result.error = f"Worker API returned {response.status_code}"
@@ -857,9 +892,7 @@ class ScenarioTestRunner:
         """B4: Multi-Agent with SBA + CARE - Validate orchestration."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="B4",
-            name="SBA + CARE Routing",
-            category="B"
+            scenario_id="B4", name="SBA + CARE Routing", category="B"
         )
 
         try:
@@ -871,7 +904,7 @@ class ScenarioTestRunner:
                     f"{self.api_base}/api/v1/workers/business-builder/run",
                     headers={
                         "X-AOS-Key": self.api_key,
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
                     json={
                         "task": "Create landing page with strict regulatory compliance for healthcare",
@@ -879,16 +912,27 @@ class ScenarioTestRunner:
                             "company_name": "HealthSync Medical Inc",
                             "mission": "Connect patients with quality healthcare providers safely and securely",
                             "value_proposition": "HIPAA-compliant telehealth platform that makes healthcare accessible to everyone",
-                            "tone": {"primary": "professional", "avoid": ["medical claims", "guarantees", "cure"]},
+                            "tone": {
+                                "primary": "professional",
+                                "avoid": ["medical claims", "guarantees", "cure"],
+                            },
                             "target_audience": ["healthcare providers", "patients"],
                             "forbidden_claims": [
-                                {"pattern": "cure", "reason": "Medical claim", "severity": "error"},
-                                {"pattern": "guaranteed results", "reason": "Cannot guarantee outcomes", "severity": "error"}
-                            ]
+                                {
+                                    "pattern": "cure",
+                                    "reason": "Medical claim",
+                                    "severity": "error",
+                                },
+                                {
+                                    "pattern": "guaranteed results",
+                                    "reason": "Cannot guarantee outcomes",
+                                    "severity": "error",
+                                },
+                            ],
                         },
-                        "strict_mode": True
+                        "strict_mode": True,
                     },
-                    timeout=180.0
+                    timeout=180.0,
                 )
 
                 if response.status_code in [200, 202]:
@@ -897,7 +941,9 @@ class ScenarioTestRunner:
                     # Check for SBA/CARE evidence
                     strategy_used = data.get("strategy", {})
                     routing_decision = data.get("routing", {})
-                    compliance_score = data.get("compliance_score", data.get("consistency_score", 0))
+                    compliance_score = data.get(
+                        "compliance_score", data.get("consistency_score", 0)
+                    )
 
                     result.status = "PASS"
                     result.details = {
@@ -906,7 +952,7 @@ class ScenarioTestRunner:
                         "compliance_score": compliance_score,
                         "stages_completed": data.get("stages_completed", []),
                         "sba_enforced": data.get("sba_enforced", True),
-                        "care_routing": data.get("care_routing", "default")
+                        "care_routing": data.get("care_routing", "default"),
                     }
                     result.evidence.append(f"Worker completed: {response.status_code}")
                     result.evidence.append(f"Compliance: {compliance_score}")
@@ -929,9 +975,7 @@ class ScenarioTestRunner:
         """C1: Skill Inventory & Attribution - Check skill system."""
         start = time.time()
         result = ScenarioResult(
-            scenario_id="C1",
-            name="Skill Attribution",
-            category="C"
+            scenario_id="C1", name="Skill Attribution", category="C"
         )
 
         try:
@@ -943,7 +987,7 @@ class ScenarioTestRunner:
                 cap_response = await client.get(
                     f"{self.api_base}/api/v1/runtime/capabilities",
                     headers={"X-AOS-Key": self.api_key},
-                    timeout=15.0
+                    timeout=15.0,
                 )
 
                 if cap_response.status_code == 200:
@@ -954,12 +998,15 @@ class ScenarioTestRunner:
                     skills_response = await client.get(
                         f"{self.api_base}/api/v1/runtime/skills",
                         headers={"X-AOS-Key": self.api_key},
-                        timeout=15.0
+                        timeout=15.0,
                     )
 
                     if skills_response.status_code == 200:
                         skills_data = skills_response.json()
-                        skill_names = [s.get("name", s.get("id")) for s in skills_data.get("skills", [])]
+                        skill_names = [
+                            s.get("name", s.get("id"))
+                            for s in skills_data.get("skills", [])
+                        ]
                     else:
                         skill_names = skills
 
@@ -968,13 +1015,15 @@ class ScenarioTestRunner:
                         "skills_count": len(skill_names),
                         "skills": skill_names[:10],  # First 10
                         "capabilities_endpoint": True,
-                        "skills_endpoint": skills_response.status_code == 200
+                        "skills_endpoint": skills_response.status_code == 200,
                     }
                     result.evidence.append(f"Skills: {len(skill_names)}")
                     result.evidence.append(f"Sample: {skill_names[:3]}")
                 else:
                     result.status = "FAIL"
-                    result.error = f"Capabilities endpoint returned {cap_response.status_code}"
+                    result.error = (
+                        f"Capabilities endpoint returned {cap_response.status_code}"
+                    )
 
         except Exception as e:
             result.status = "FAIL"
@@ -1009,7 +1058,7 @@ class ScenarioTestRunner:
             ],
             "C": [
                 self.scenario_c1_skill_attribution,
-            ]
+            ],
         }
 
         # Determine which sets to run
@@ -1032,7 +1081,9 @@ class ScenarioTestRunner:
                 self.report.add_result(result)
 
                 # Print result
-                status_icon = {"PASS": "✅", "FAIL": "❌", "SKIP": "⏭️"}.get(result.status, "?")
+                status_icon = {"PASS": "✅", "FAIL": "❌", "SKIP": "⏭️"}.get(
+                    result.status, "?"
+                )
                 print(f"  {status_icon} {result.scenario_id}: {result.name}")
                 print(f"     Status: {result.status} ({result.duration_ms}ms)")
                 if result.evidence:
@@ -1048,13 +1099,13 @@ class ScenarioTestRunner:
     def print_summary(self):
         """Print final summary."""
         print(f"\n{'='*60}")
-        print(f"  SUMMARY")
+        print("  SUMMARY")
         print(f"{'='*60}")
         print(f"  Total: {self.report.total_scenarios}")
         print(f"  ✅ Passed: {self.report.passed}")
         print(f"  ❌ Failed: {self.report.failed}")
         print(f"  ⏭️ Skipped: {self.report.skipped}")
-        print(f"\n  Tokens Used:")
+        print("\n  Tokens Used:")
         for provider, count in self.report.total_tokens.items():
             print(f"    {provider}: {count}")
         print(f"\n  Run ID: {self.report.run_id}")
@@ -1065,7 +1116,9 @@ class ScenarioTestRunner:
         if self.report.failed == 0 and self.report.skipped <= 2:
             print("  🎉 ALL-GREEN: External services validated!")
         else:
-            print(f"  ⚠️ Issues detected: {self.report.failed} failed, {self.report.skipped} skipped")
+            print(
+                f"  ⚠️ Issues detected: {self.report.failed} failed, {self.report.skipped} skipped"
+            )
 
 
 async def main():

@@ -97,7 +97,7 @@ url_behavior:
         1. They may not exist in the test environment
         2. They create non-deterministic behavior
         3. They could expose internal services
-  
+
   # EXTERNAL URLs (anything not local)
   external_urls:
     when_allow_external_true:
@@ -131,32 +131,32 @@ failure_modes:
     category: TRANSIENT
     retryable: true
     description: "Request timed out"
-  
+
   - code: ERR_CONNECTION
     category: TRANSIENT
     retryable: true
     description: "Connection failed"
-  
+
   - code: ERR_DNS
     category: TRANSIENT
     retryable: true
     description: "DNS resolution failed"
-  
+
   - code: ERR_HTTP_4XX
     category: PERMANENT
     retryable: false
     description: "Client error (4xx status)"
-  
+
   - code: ERR_HTTP_5XX
     category: TRANSIENT
     retryable: true
     description: "Server error (5xx status)"
-  
+
   - code: LOCAL_URL_FORBIDDEN
     category: PERMANENT
     retryable: false
     description: "Local URL attempted when external calls disabled"
-  
+
   - code: FORBIDDEN_URL
     category: PERMANENT
     retryable: false

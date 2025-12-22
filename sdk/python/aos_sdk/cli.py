@@ -20,21 +20,21 @@ Determinism Flags (for simulate):
 
 import argparse
 import json
-import sys
 import os
+import sys
 import time
 
 from . import __version__
 from .client import AOSClient, AOSError
-from .runtime import RuntimeContext, canonical_json
-from .trace import Trace, TraceStep, diff_traces, hash_data, create_trace_from_context
+from .runtime import RuntimeContext
+from .trace import Trace, create_trace_from_context, diff_traces, hash_data
 
 
 def get_client() -> AOSClient:
     """Create a client from environment variables."""
     return AOSClient(
         api_key=os.getenv("AOS_API_KEY"),
-        base_url=os.getenv("AOS_BASE_URL", "http://127.0.0.1:8000")
+        base_url=os.getenv("AOS_BASE_URL", "http://127.0.0.1:8000"),
     )
 
 
@@ -94,10 +94,7 @@ def cmd_simulate(args):
         plan = json.loads(args.plan_json)
 
         # Create runtime context with seed
-        ctx = RuntimeContext(
-            seed=args.seed,
-            now=args.timestamp if args.timestamp else None
-        )
+        ctx = RuntimeContext(seed=args.seed, now=args.timestamp if args.timestamp else None)
 
         # Create trace if saving
         trace = None
@@ -119,7 +116,7 @@ def cmd_simulate(args):
         result = client.simulate(
             plan=plan,
             budget_cents=args.budget,
-            seed=args.seed  # Pass seed to backend
+            seed=args.seed,  # Pass seed to backend
         )
         duration_ms = int((time.time() - start_time) * 1000)
 
@@ -131,7 +128,7 @@ def cmd_simulate(args):
                 output_data=result,
                 rng_state=ctx.rng_state,
                 duration_ms=duration_ms,
-                outcome="success" if result.get("feasible", False) else "failure"
+                outcome="success" if result.get("feasible", False) else "failure",
             )
             trace.finalize()
 
@@ -150,7 +147,9 @@ def cmd_simulate(args):
             else:
                 print(f"[REPLAY] MISMATCH: {diff_result['summary']}", file=sys.stderr)
                 for diff in diff_result["differences"]:
-                    print(f"  {diff['field']}: {diff['trace1']} != {diff['trace2']}", file=sys.stderr)
+                    print(
+                        f"  {diff['field']}: {diff['trace1']} != {diff['trace2']}", file=sys.stderr
+                    )
                 sys.exit(2)
 
         print(json.dumps(result, indent=2))
@@ -170,7 +169,7 @@ def cmd_replay(args):
         trace = Trace.load(args.trace_file)
 
         if not trace.verify():
-            print(f"[ERROR] Trace integrity check failed", file=sys.stderr)
+            print("[ERROR] Trace integrity check failed", file=sys.stderr)
             sys.exit(1)
 
         print(f"Trace: {args.trace_file}")
@@ -179,7 +178,7 @@ def cmd_replay(args):
         print(f"  Timestamp: {trace.timestamp}")
         print(f"  Steps: {len(trace.steps)}")
         print(f"  Root hash: {trace.root_hash}")
-        print(f"  Integrity: VERIFIED")
+        print("  Integrity: VERIFIED")
 
         if args.verbose:
             print("\nSteps:")
@@ -193,10 +192,7 @@ def cmd_replay(args):
             client = get_client()
 
             # Create new context with same seed/time
-            ctx = RuntimeContext(
-                seed=trace.seed,
-                now=trace.timestamp
-            )
+            ctx = RuntimeContext(seed=trace.seed, now=trace.timestamp)
 
             # Create new trace for comparison
             new_trace = create_trace_from_context(ctx, trace.plan)
@@ -206,7 +202,7 @@ def cmd_replay(args):
             result = client.simulate(
                 plan=trace.plan,
                 budget_cents=1000,  # Use default budget for replay
-                seed=trace.seed
+                seed=trace.seed,
             )
             duration_ms = int((time.time() - start_time) * 1000)
 
@@ -216,7 +212,7 @@ def cmd_replay(args):
                 output_data=result,
                 rng_state=ctx.rng_state,
                 duration_ms=duration_ms,
-                outcome="success" if result.get("feasible", False) else "failure"
+                outcome="success" if result.get("feasible", False) else "failure",
             )
             new_trace.finalize()
 
@@ -244,7 +240,7 @@ def cmd_diff(args):
 
         diff_result = diff_traces(trace1, trace2)
 
-        print(f"Comparing:")
+        print("Comparing:")
         print(f"  Trace 1: {args.trace1} (hash: {trace1.root_hash})")
         print(f"  Trace 2: {args.trace2} (hash: {trace2.root_hash})")
         print()
@@ -272,8 +268,7 @@ def cmd_diff(args):
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        prog="aos",
-        description="AOS SDK Command-Line Interface - Machine-Native Agent Runtime"
+        prog="aos", description="AOS SDK Command-Line Interface - Machine-Native Agent Runtime"
     )
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
@@ -297,55 +292,42 @@ def main():
     sim_parser = subparsers.add_parser("simulate", help="Simulate a plan with determinism support")
     sim_parser.add_argument("plan_json", help="Plan as JSON array")
     sim_parser.add_argument(
-        "--budget",
-        type=int,
-        default=1000,
-        help="Budget in cents (default: 1000)"
+        "--budget", type=int, default=1000, help="Budget in cents (default: 1000)"
     )
     sim_parser.add_argument(
         "--seed",
         type=int,
         default=42,
-        help="Random seed for deterministic simulation (default: 42)"
+        help="Random seed for deterministic simulation (default: 42)",
     )
     sim_parser.add_argument(
         "--timestamp",
         type=str,
         default=None,
-        help="Frozen timestamp (ISO8601) for deterministic time"
+        help="Frozen timestamp (ISO8601) for deterministic time",
     )
     sim_parser.add_argument(
-        "--save-trace",
-        type=str,
-        default=None,
-        metavar="PATH",
-        help="Save execution trace to file"
+        "--save-trace", type=str, default=None, metavar="PATH", help="Save execution trace to file"
     )
     sim_parser.add_argument(
         "--load-trace",
         type=str,
         default=None,
         metavar="PATH",
-        help="Load trace for replay verification"
+        help="Load trace for replay verification",
     )
     sim_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Preview simulation without executing"
+        "--dry-run", action="store_true", help="Preview simulation without executing"
     )
 
     # replay <trace> - replay and verify
     replay_parser = subparsers.add_parser("replay", help="Replay a saved trace")
     replay_parser.add_argument("trace_file", help="Path to trace file (.trace.json)")
     replay_parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="Show detailed step information"
+        "-v", "--verbose", action="store_true", help="Show detailed step information"
     )
     replay_parser.add_argument(
-        "--execute",
-        action="store_true",
-        help="Re-execute and verify against original trace"
+        "--execute", action="store_true", help="Re-execute and verify against original trace"
     )
 
     # diff <trace1> <trace2> - compare traces

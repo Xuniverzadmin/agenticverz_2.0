@@ -2,12 +2,20 @@
 Tests for Trace schema and serialization.
 """
 
-import pytest
 import json
 import tempfile
 from pathlib import Path
 
-from aos_sdk import Trace, TraceStep, diff_traces, hash_data, RuntimeContext, create_trace_from_context
+import pytest
+
+from aos_sdk import (
+    RuntimeContext,
+    Trace,
+    TraceStep,
+    create_trace_from_context,
+    diff_traces,
+    hash_data,
+)
 
 
 class TestTraceStep:
@@ -22,7 +30,7 @@ class TestTraceStep:
             output_hash="def456",
             rng_state_before="aabbcc",
             duration_ms=150,
-            outcome="success"
+            outcome="success",
         )
 
         assert step.step_index == 0
@@ -38,7 +46,7 @@ class TestTraceStep:
             output_hash="y",
             rng_state_before="z",
             duration_ms=100,
-            outcome="success"
+            outcome="success",
         )
 
         assert step.timestamp is not None
@@ -55,7 +63,7 @@ class TestTraceStep:
             duration_ms=50,
             outcome="failure",
             error_code="E001",
-            timestamp="2025-01-01T00:00:00Z"
+            timestamp="2025-01-01T00:00:00Z",
         )
 
         data = step.to_dict()
@@ -76,7 +84,7 @@ class TestTraceStep:
             "duration_ms": 1000,
             "outcome": "success",
             "error_code": None,
-            "timestamp": "2025-06-15T12:00:00Z"
+            "timestamp": "2025-06-15T12:00:00Z",
         }
 
         step = TraceStep.from_dict(data)
@@ -91,10 +99,7 @@ class TestTrace:
 
     def test_create_trace(self):
         """Create a basic trace."""
-        trace = Trace(
-            seed=42,
-            plan=[{"skill": "test"}]
-        )
+        trace = Trace(seed=42, plan=[{"skill": "test"}])
 
         assert trace.seed == 42
         assert trace.plan == [{"skill": "test"}]
@@ -111,7 +116,7 @@ class TestTrace:
             output_data={"y": 2},
             rng_state="abc",
             duration_ms=100,
-            outcome="success"
+            outcome="success",
         )
 
         assert len(trace.steps) == 1
@@ -190,7 +195,7 @@ class TestTrace:
             plan=[{"skill": "x"}],
             timestamp="2025-01-01T00:00:00Z",
             tenant_id="t1",
-            metadata={"key": "value"}
+            metadata={"key": "value"},
         )
         trace.add_step("x", {"a": 1}, {"b": 2}, "rng", 50, "success")
         trace.finalize()
@@ -238,12 +243,12 @@ class TestTrace:
                     "duration_ms": 200,
                     "outcome": "success",
                     "error_code": None,
-                    "timestamp": "2025-06-15T00:00:00Z"
+                    "timestamp": "2025-06-15T00:00:00Z",
                 }
             ],
             "root_hash": "abcd1234",
             "finalized": True,
-            "metadata": {}
+            "metadata": {},
         }
 
         trace = Trace.from_dict(data)
@@ -255,11 +260,7 @@ class TestTrace:
 
     def test_roundtrip_serialization(self):
         """Trace survives dict roundtrip."""
-        original = Trace(
-            seed=42,
-            plan=[{"skill": "roundtrip"}],
-            timestamp="2025-01-01T00:00:00Z"
-        )
+        original = Trace(seed=42, plan=[{"skill": "roundtrip"}], timestamp="2025-01-01T00:00:00Z")
         original.add_step("roundtrip", {"in": 1}, {"out": 2}, "rng", 100, "success")
         original.finalize()
 
@@ -320,6 +321,7 @@ class TestDiffTraces:
 
         # Small delay doesn't matter - audit timestamps excluded from hash
         import time
+
         time.sleep(0.01)
 
         trace2 = Trace(seed=42, plan=[], timestamp="2025-01-01T00:00:00Z")
@@ -441,11 +443,7 @@ class TestCreateTraceFromContext:
 
     def test_create_from_context(self):
         """Create trace from RuntimeContext."""
-        ctx = RuntimeContext(
-            seed=42,
-            now="2025-01-01T00:00:00Z",
-            tenant_id="test-tenant"
-        )
+        ctx = RuntimeContext(seed=42, now="2025-01-01T00:00:00Z", tenant_id="test-tenant")
 
         plan = [{"skill": "x"}, {"skill": "y"}]
         trace = create_trace_from_context(ctx, plan)
@@ -475,7 +473,7 @@ class TestTraceDeterminism:
             output_data={"random": random_val_1},
             rng_state=ctx1.rng_state,
             duration_ms=100,
-            outcome="success"
+            outcome="success",
         )
         trace1.finalize()
 
@@ -490,7 +488,7 @@ class TestTraceDeterminism:
             output_data={"random": random_val_2},
             rng_state=ctx2.rng_state,
             duration_ms=250,  # Different duration - doesn't affect hash
-            outcome="success"
+            outcome="success",
         )
         trace2.finalize()
 
@@ -508,7 +506,9 @@ class TestTraceDeterminism:
         trace1.finalize()
 
         trace2 = Trace(seed=42, plan=[], timestamp="2025-01-01T00:00:00Z")
-        step2 = trace2.add_step("test", {"x": 1}, {"y": 2}, "rng", 999, "success")  # Very different duration
+        step2 = trace2.add_step(
+            "test", {"x": 1}, {"y": 2}, "rng", 999, "success"
+        )  # Very different duration
         trace2.finalize()
 
         # Audit fields are different

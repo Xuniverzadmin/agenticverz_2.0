@@ -24,16 +24,16 @@ Environment Variables:
 - CHECKPOINT_OFFLOAD_MAX_RETRIES: Max retries per checkpoint (default: 3)
 """
 
-import os
-import io
-import gzip
-import json
-import hashlib
-import logging
-import random
 import asyncio
+import gzip
+import hashlib
+import io
+import json
+import logging
+import os
+import random
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger("nova.stores.checkpoint_offload")
 
@@ -50,12 +50,13 @@ MAX_RETRY_DELAY = 30.0  # seconds
 # Retry/Backoff Utilities
 # =============================================================================
 
+
 async def _retry_with_backoff(
     func,
     max_retries: int = MAX_RETRIES,
     base_delay: float = BASE_RETRY_DELAY,
     max_delay: float = MAX_RETRY_DELAY,
-    operation_name: str = "operation"
+    operation_name: str = "operation",
 ) -> Tuple[bool, Any, Optional[str]]:
     """
     Retry an async function with exponential backoff and jitter.
@@ -73,7 +74,7 @@ async def _retry_with_backoff(
             last_error = str(e)
             if attempt < max_retries - 1:
                 # Exponential backoff with jitter
-                delay = min(base_delay * (2 ** attempt), max_delay)
+                delay = min(base_delay * (2**attempt), max_delay)
                 jitter = random.uniform(0, delay * 0.1)
                 wait_time = delay + jitter
                 logger.warning(
@@ -116,8 +117,7 @@ def _verify_upload_integrity(r2_client, bucket: str, key: str, expected_sha256: 
             return True
 
         logger.error(
-            f"Integrity mismatch for {key}: expected {expected_sha256[:16]}..., "
-            f"got {actual_sha256[:16]}..."
+            f"Integrity mismatch for {key}: expected {expected_sha256[:16]}..., " f"got {actual_sha256[:16]}..."
         )
         return False
 
@@ -129,19 +129,19 @@ def _verify_upload_integrity(r2_client, bucket: str, key: str, expected_sha256: 
 def _get_r2_client():
     """Get R2 client from stores factory."""
     from app.stores import get_r2_client
+
     return get_r2_client()
 
 
 def _get_r2_bucket() -> str:
     """Get R2 bucket name."""
     from app.stores import get_r2_bucket
+
     return get_r2_bucket()
 
 
 async def offload_old_checkpoints(
-    older_than_days: Optional[int] = None,
-    batch_size: Optional[int] = None,
-    dry_run: bool = False
+    older_than_days: Optional[int] = None, batch_size: Optional[int] = None, dry_run: bool = False
 ) -> Dict[str, Any]:
     """
     Offload old checkpoints from PostgreSQL to Cloudflare R2.
@@ -211,7 +211,7 @@ async def offload_old_checkpoints(
                 LIMIT $2
                 """,
                 cutoff,
-                batch_size
+                batch_size,
             )
 
             logger.info(f"Found {len(rows)} checkpoints older than {cutoff}")
@@ -254,8 +254,15 @@ async def offload_old_checkpoints(
                     if not dry_run:
                         # STEP 1: Upload to R2 with retry
                         # Use default args to capture values by value, not reference
-                        def make_upload_fn(bucket=r2_bucket, k=key, data=compressed_data,
-                                          rid=run_id, tid=tenant_id, st=row["status"], sha=data_sha256):
+                        def make_upload_fn(
+                            bucket=r2_bucket,
+                            k=key,
+                            data=compressed_data,
+                            rid=run_id,
+                            tid=tenant_id,
+                            st=row["status"],
+                            sha=data_sha256,
+                        ):
                             def upload_fn():
                                 return r2_client.put_object(
                                     Bucket=bucket,
@@ -267,13 +274,13 @@ async def offload_old_checkpoints(
                                         "tenant_id": tid,
                                         "status": st,
                                         "sha256": sha,
-                                    }
+                                    },
                                 )
+
                             return upload_fn
 
                         upload_success, _, upload_error = await _retry_with_backoff(
-                            make_upload_fn(),
-                            operation_name=f"Upload {run_id}"
+                            make_upload_fn(), operation_name=f"Upload {run_id}"
                         )
 
                         if not upload_success:
@@ -287,12 +294,11 @@ async def offload_old_checkpoints(
                         def make_verify_fn(client=r2_client, bucket=r2_bucket, k=key, sha=data_sha256):
                             def verify_fn():
                                 return _verify_upload_integrity(client, bucket, k, sha)
+
                             return verify_fn
 
                         verify_success, verify_result, verify_error = await _retry_with_backoff(
-                            make_verify_fn(),
-                            max_retries=2,
-                            operation_name=f"Verify {run_id}"
+                            make_verify_fn(), max_retries=2, operation_name=f"Verify {run_id}"
                         )
 
                         # verify_result is the boolean from _verify_upload_integrity
@@ -306,17 +312,11 @@ async def offload_old_checkpoints(
 
                         # STEP 3: Delete from DB only after verified upload
                         async def make_delete_fn(connection=conn, rid=run_id):
-                            return await connection.execute(
-                                "DELETE FROM workflow_checkpoints WHERE run_id = $1",
-                                rid
-                            )
+                            return await connection.execute("DELETE FROM workflow_checkpoints WHERE run_id = $1", rid)
 
                         delete_success, _, delete_error = await _retry_with_backoff(
-                            lambda rid=run_id: conn.execute(
-                                "DELETE FROM workflow_checkpoints WHERE run_id = $1",
-                                rid
-                            ),
-                            operation_name=f"Delete {run_id}"
+                            lambda rid=run_id: conn.execute("DELETE FROM workflow_checkpoints WHERE run_id = $1", rid),
+                            operation_name=f"Delete {run_id}",
                         )
 
                         if not delete_success:
@@ -330,7 +330,9 @@ async def offload_old_checkpoints(
                         logger.debug(f"Offloaded checkpoint {run_id} to {key} (sha256: {data_sha256[:16]}...)")
 
                     else:
-                        logger.debug(f"[DRY RUN] Would offload checkpoint {run_id} to {key} (sha256: {data_sha256[:16]}...)")
+                        logger.debug(
+                            f"[DRY RUN] Would offload checkpoint {run_id} to {key} (sha256: {data_sha256[:16]}...)"
+                        )
                         stats["uploaded"] += 1
                         stats["verified"] += 1
                         stats["deleted"] += 1
@@ -356,9 +358,7 @@ async def offload_old_checkpoints(
 
 
 async def restore_checkpoint_from_r2(
-    run_id: str,
-    tenant_id: str = "default",
-    created_date: Optional[datetime] = None
+    run_id: str, tenant_id: str = "default", created_date: Optional[datetime] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Restore a checkpoint from R2 archive.
@@ -434,6 +434,7 @@ async def get_offload_stats() -> Dict[str, Any]:
     if database_url:
         try:
             import asyncpg
+
             conn = await asyncpg.connect(database_url)
             try:
                 row = await conn.fetchrow(
@@ -458,18 +459,16 @@ async def get_offload_stats() -> Dict[str, Any]:
 # =============================================================================
 
 if __name__ == "__main__":
-    import asyncio
     import argparse
+    import asyncio
 
     parser = argparse.ArgumentParser(description="Checkpoint offload to R2")
-    parser.add_argument("--older-than", type=int, default=OFFLOAD_OLDER_THAN_DAYS,
-                        help="Offload checkpoints older than N days")
-    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE,
-                        help="Batch size for processing")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Don't actually delete or upload")
-    parser.add_argument("--stats", action="store_true",
-                        help="Just show storage stats")
+    parser.add_argument(
+        "--older-than", type=int, default=OFFLOAD_OLDER_THAN_DAYS, help="Offload checkpoints older than N days"
+    )
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE, help="Batch size for processing")
+    parser.add_argument("--dry-run", action="store_true", help="Don't actually delete or upload")
+    parser.add_argument("--stats", action="store_true", help="Just show storage stats")
     args = parser.parse_args()
 
     async def main():
@@ -478,9 +477,7 @@ if __name__ == "__main__":
             print(json.dumps(stats, indent=2, default=str))
         else:
             result = await offload_old_checkpoints(
-                older_than_days=args.older_than,
-                batch_size=args.batch_size,
-                dry_run=args.dry_run
+                older_than_days=args.older_than, batch_size=args.batch_size, dry_run=args.dry_run
             )
             print(json.dumps(result, indent=2, default=str))
 

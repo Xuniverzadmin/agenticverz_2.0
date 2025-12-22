@@ -9,19 +9,18 @@ and verify that the runtime behavior is deterministic.
 import asyncio
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any
 
 from app.traces.models import (
-    TraceRecord,
-    TraceStep,
-    TraceStatus,
     ParityResult,
+    TraceRecord,
+    TraceStatus,
+    TraceStep,
     compare_traces,
 )
 from app.traces.store import (
-    TraceStore,
     SQLiteTraceStore,
+    TraceStore,
     generate_correlation_id,
     generate_run_id,
 )
@@ -30,7 +29,7 @@ from app.traces.store import (
 USE_POSTGRES = os.getenv("USE_POSTGRES_TRACES", "false").lower() == "true"
 
 if USE_POSTGRES:
-    from app.traces.pg_store import PostgresTraceStore, get_postgres_trace_store
+    from app.traces.pg_store import get_postgres_trace_store
 
 
 def get_trace_store() -> TraceStore:
@@ -43,6 +42,7 @@ def get_trace_store() -> TraceStore:
 @dataclass
 class ReplayResult:
     """Result of a replay operation."""
+
     success: bool
     run_id: str  # New run ID for this replay
     original_run_id: str
@@ -179,9 +179,7 @@ class ReplayEngine:
                         # Continue execution but note the divergence
 
             # Complete trace
-            final_status = "completed" if all(
-                s.status == TraceStatus.SUCCESS for s in replay_steps
-            ) else "failed"
+            final_status = "completed" if all(s.status == TraceStatus.SUCCESS for s in replay_steps) else "failed"
 
             await self.trace_store.complete_trace(
                 run_id=new_run_id,
@@ -245,6 +243,7 @@ class ReplayEngine:
         the skill executor from the runtime.
         """
         import time
+
         start_time = time.monotonic()
 
         # Placeholder: In real implementation, this would call:

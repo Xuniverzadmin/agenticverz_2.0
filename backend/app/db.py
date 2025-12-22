@@ -3,12 +3,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlmodel import Field, SQLModel, Session, create_engine
+from sqlmodel import Field, Session, SQLModel, create_engine
 
 
 def utc_now() -> datetime:
     """Return timezone-aware UTC datetime. Use instead of utc_now()."""
     return datetime.now(timezone.utc)
+
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -39,14 +40,8 @@ class Agent(SQLModel, table=True):
     status: str = Field(default="active")  # active, paused, disabled, maintenance
 
     # Capabilities and configuration (JSON strings)
-    capabilities_json: Optional[str] = Field(
-        default=None,
-        description="JSON: AgentCapabilities schema"
-    )
-    planner_config_json: Optional[str] = Field(
-        default=None,
-        description="JSON: PlannerConfig schema"
-    )
+    capabilities_json: Optional[str] = Field(default=None, description="JSON: AgentCapabilities schema")
+    planner_config_json: Optional[str] = Field(default=None, description="JSON: PlannerConfig schema")
 
     # Rate limits
     rate_limit_rpm: int = Field(default=60, description="Requests per minute limit")
@@ -120,17 +115,11 @@ class Run(SQLModel, table=True):
 
     # Idempotency support
     idempotency_key: Optional[str] = Field(
-        default=None,
-        index=True,
-        description="Client-provided key for idempotent submissions"
+        default=None, index=True, description="Client-provided key for idempotent submissions"
     )
 
     # Parent run for reruns
-    parent_run_id: Optional[str] = Field(
-        default=None,
-        index=True,
-        description="Original run ID if this is a rerun"
-    )
+    parent_run_id: Optional[str] = Field(default=None, index=True, description="Original run ID if this is a rerun")
 
     # Priority for queue ordering
     priority: int = Field(default=0, description="Higher = more urgent")
@@ -166,6 +155,7 @@ class Provenance(SQLModel, table=True):
 
 # ============== Feature Flags (M5 Prep - DB-backed for multi-node) ==============
 
+
 class FeatureFlag(SQLModel, table=True):
     """
     DB-backed feature flags for multi-node deployments.
@@ -173,6 +163,7 @@ class FeatureFlag(SQLModel, table=True):
     Replaces file-based feature_flags.json for production scale.
     Uses SELECT FOR UPDATE for safe concurrent access.
     """
+
     __tablename__ = "feature_flags"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
@@ -188,8 +179,7 @@ class FeatureFlag(SQLModel, table=True):
     # Rollout configuration
     rollout_percentage: int = Field(default=100, ge=0, le=100, description="Percentage rollout")
     rollout_tenant_ids_json: Optional[str] = Field(
-        default=None,
-        description="JSON array of tenant IDs for targeted rollout"
+        default=None, description="JSON array of tenant IDs for targeted rollout"
     )
 
     # Audit trail
@@ -222,6 +212,7 @@ class FeatureFlag(SQLModel, table=True):
 
 # ============== Policy Approval Hierarchy (M5 Prep) ==============
 
+
 class PolicyApprovalLevel(SQLModel, table=True):
     """
     Defines approval hierarchy for policy decisions.
@@ -233,13 +224,13 @@ class PolicyApprovalLevel(SQLModel, table=True):
     4. manual_approve - Runtime human approval required
     5. owner_override - Owner/admin emergency override
     """
+
     __tablename__ = "policy_approval_levels"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     policy_type: str = Field(index=True, description="budget, rate_limit, capability, permission")
     approval_level: str = Field(
-        default="auto_approve",
-        description="auto_approve, pre_approved, agent_approve, manual_approve, owner_override"
+        default="auto_approve", description="auto_approve, pre_approved, agent_approve, manual_approve, owner_override"
     )
 
     # Scope
@@ -248,24 +239,12 @@ class PolicyApprovalLevel(SQLModel, table=True):
     skill_id: Optional[str] = Field(default=None, description="Skill scope (null=all)")
 
     # Thresholds for auto-approval
-    auto_approve_max_cost_cents: Optional[int] = Field(
-        default=None,
-        description="Max cost for auto-approval (cents)"
-    )
-    auto_approve_max_tokens: Optional[int] = Field(
-        default=None,
-        description="Max tokens for auto-approval"
-    )
+    auto_approve_max_cost_cents: Optional[int] = Field(default=None, description="Max cost for auto-approval (cents)")
+    auto_approve_max_tokens: Optional[int] = Field(default=None, description="Max tokens for auto-approval")
 
     # Escalation config
-    escalate_to: Optional[str] = Field(
-        default=None,
-        description="Next approval level if denied"
-    )
-    escalation_timeout_seconds: int = Field(
-        default=300,
-        description="Timeout before auto-escalating"
-    )
+    escalate_to: Optional[str] = Field(default=None, description="Next approval level if denied")
+    escalation_timeout_seconds: int = Field(default=300, description="Timeout before auto-escalating")
 
     # Audit
     created_by: Optional[str] = Field(default=None)
@@ -287,6 +266,7 @@ class PolicyApprovalLevel(SQLModel, table=True):
 
 # ============== Approval Request (M5) ==============
 
+
 class ApprovalRequest(SQLModel, table=True):
     """
     Persistent storage for policy approval requests.
@@ -297,14 +277,14 @@ class ApprovalRequest(SQLModel, table=True):
     - pending -> escalated (via timeout)
     - pending -> expired (via expiration)
     """
+
     __tablename__ = "approval_requests"
 
     id: str = Field(default_factory=lambda: f"apr_{uuid.uuid4().hex[:16]}", primary_key=True)
 
     # Correlation ID for idempotency
     correlation_id: Optional[str] = Field(
-        default_factory=lambda: uuid.uuid4().hex,
-        description="Unique ID for webhook idempotency"
+        default_factory=lambda: uuid.uuid4().hex, description="Unique ID for webhook idempotency"
     )
 
     # Request metadata
@@ -320,10 +300,7 @@ class ApprovalRequest(SQLModel, table=True):
 
     # Status state machine
     status: str = Field(default="pending", index=True)
-    status_history_json: Optional[str] = Field(
-        default=None,
-        description="JSON array of status transitions for audit"
-    )
+    status_history_json: Optional[str] = Field(default=None, description="JSON array of status transitions for audit")
 
     # Approval tracking
     required_level: int = Field(default=3, description="Minimum approval level needed")
@@ -350,6 +327,7 @@ class ApprovalRequest(SQLModel, table=True):
     def get_payload(self) -> dict:
         """Parse payload JSON."""
         import json
+
         if self.payload_json:
             return json.loads(self.payload_json)
         return {}
@@ -357,11 +335,13 @@ class ApprovalRequest(SQLModel, table=True):
     def set_payload(self, payload: dict) -> None:
         """Set payload as JSON."""
         import json
+
         self.payload_json = json.dumps(payload)
 
     def get_approvals(self) -> list:
         """Parse approvals JSON."""
         import json
+
         if self.approvals_json:
             return json.loads(self.approvals_json)
         return []
@@ -369,14 +349,17 @@ class ApprovalRequest(SQLModel, table=True):
     def add_approval(self, approver_id: str, level: int, action: str, notes: Optional[str] = None) -> None:
         """Add an approval action."""
         import json
+
         approvals = self.get_approvals()
-        approvals.append({
-            "approver_id": approver_id,
-            "level": level,
-            "action": action,
-            "notes": notes,
-            "timestamp": utc_now().isoformat()
-        })
+        approvals.append(
+            {
+                "approver_id": approver_id,
+                "level": level,
+                "action": action,
+                "notes": notes,
+                "timestamp": utc_now().isoformat(),
+            }
+        )
         self.approvals_json = json.dumps(approvals)
         self.current_level = max(a["level"] for a in approvals)
         self.updated_at = utc_now()
@@ -384,6 +367,7 @@ class ApprovalRequest(SQLModel, table=True):
     def get_status_history(self) -> list:
         """Parse status history JSON."""
         import json
+
         if self.status_history_json:
             return json.loads(self.status_history_json)
         return []
@@ -398,15 +382,18 @@ class ApprovalRequest(SQLModel, table=True):
             reason: Why the transition happened
         """
         import json
+
         old_status = self.status
         history = self.get_status_history()
-        history.append({
-            "from_status": old_status,
-            "to_status": new_status,
-            "actor": actor,
-            "reason": reason,
-            "timestamp": utc_now().isoformat()
-        })
+        history.append(
+            {
+                "from_status": old_status,
+                "to_status": new_status,
+                "actor": actor,
+                "reason": reason,
+                "timestamp": utc_now().isoformat(),
+            }
+        )
         self.status_history_json = json.dumps(history)
         self.status = new_status
         self.updated_at = utc_now()
@@ -439,6 +426,7 @@ class ApprovalRequest(SQLModel, table=True):
 
 # ============== CostSim Circuit Breaker State (M6 - DB-backed) ==============
 
+
 class CostSimCBState(SQLModel, table=True):
     """
     DB-backed circuit breaker state for CostSim V2.
@@ -452,50 +440,22 @@ class CostSimCBState(SQLModel, table=True):
     - Audit trail (who/why/when)
     - Alertmanager integration
     """
+
     __tablename__ = "costsim_cb_state"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(
-        unique=True,
-        index=True,
-        description="Circuit breaker identifier (e.g. 'costsim_v2')"
-    )
-    disabled: bool = Field(
-        default=False,
-        description="Whether circuit breaker is open (V2 disabled)"
-    )
-    disabled_by: Optional[str] = Field(
-        default=None,
-        description="Who disabled (user_id, system, circuit_breaker)"
-    )
-    disabled_reason: Optional[str] = Field(
-        default=None,
-        description="Reason for disabling"
-    )
+    name: str = Field(unique=True, index=True, description="Circuit breaker identifier (e.g. 'costsim_v2')")
+    disabled: bool = Field(default=False, description="Whether circuit breaker is open (V2 disabled)")
+    disabled_by: Optional[str] = Field(default=None, description="Who disabled (user_id, system, circuit_breaker)")
+    disabled_reason: Optional[str] = Field(default=None, description="Reason for disabling")
     disabled_until: Optional[datetime] = Field(
-        default=None,
-        description="Auto-recovery time (null = manual reset required)"
+        default=None, description="Auto-recovery time (null = manual reset required)"
     )
-    incident_id: Optional[str] = Field(
-        default=None,
-        description="Associated incident ID"
-    )
-    consecutive_failures: int = Field(
-        default=0,
-        description="Number of consecutive drift threshold violations"
-    )
-    last_failure_at: Optional[datetime] = Field(
-        default=None,
-        description="Timestamp of last failure"
-    )
-    updated_at: datetime = Field(
-        default_factory=utc_now,
-        description="Last state update timestamp"
-    )
-    created_at: datetime = Field(
-        default_factory=utc_now,
-        description="Record creation timestamp"
-    )
+    incident_id: Optional[str] = Field(default=None, description="Associated incident ID")
+    consecutive_failures: int = Field(default=0, description="Number of consecutive drift threshold violations")
+    last_failure_at: Optional[datetime] = Field(default=None, description="Timestamp of last failure")
+    updated_at: datetime = Field(default_factory=utc_now, description="Last state update timestamp")
+    created_at: datetime = Field(default_factory=utc_now, description="Record creation timestamp")
 
     def is_expired(self) -> bool:
         """Check if disabled_until has passed."""
@@ -529,20 +489,12 @@ class CostSimCBIncident(SQLModel, table=True):
     Provides audit trail for all circuit breaker events.
     Stores alert sending status for retry/debugging.
     """
+
     __tablename__ = "costsim_cb_incidents"
 
-    id: str = Field(
-        default_factory=lambda: str(uuid.uuid4())[:12],
-        primary_key=True
-    )
-    circuit_breaker_name: str = Field(
-        index=True,
-        description="Name of circuit breaker"
-    )
-    timestamp: datetime = Field(
-        default_factory=utc_now,
-        index=True
-    )
+    id: str = Field(default_factory=lambda: str(uuid.uuid4())[:12], primary_key=True)
+    circuit_breaker_name: str = Field(index=True, description="Name of circuit breaker")
+    timestamp: datetime = Field(default_factory=utc_now, index=True)
     reason: str = Field(description="Reason for trip")
     severity: str = Field(description="P1, P2, P3")
     drift_score: Optional[float] = Field(default=None)
@@ -563,6 +515,7 @@ class CostSimCBIncident(SQLModel, table=True):
     def get_details(self) -> dict:
         """Parse details JSON."""
         import json
+
         if self.details_json:
             return json.loads(self.details_json)
         return {}
@@ -589,6 +542,7 @@ class CostSimCBIncident(SQLModel, table=True):
 
 # ============== Status History (M6 - Immutable Audit Trail) ==============
 
+
 class StatusHistory(SQLModel, table=True):
     """
     Immutable append-only status history for audit trail.
@@ -602,78 +556,45 @@ class StatusHistory(SQLModel, table=True):
     - Regulatory evidence retention
     - Historical analysis and debugging
     """
+
     __tablename__ = "status_history"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
 
     # Entity reference
-    entity_type: str = Field(
-        index=True,
-        description="Type: run, agent, approval, workflow, costsim"
-    )
-    entity_id: str = Field(
-        index=True,
-        description="ID of the entity (run_id, agent_id, etc.)"
-    )
+    entity_type: str = Field(index=True, description="Type: run, agent, approval, workflow, costsim")
+    entity_id: str = Field(index=True, description="ID of the entity (run_id, agent_id, etc.)")
 
     # Status transition
-    old_status: Optional[str] = Field(
-        default=None,
-        description="Previous status (null for creation)"
-    )
-    new_status: str = Field(
-        description="New status after transition"
-    )
+    old_status: Optional[str] = Field(default=None, description="Previous status (null for creation)")
+    new_status: str = Field(description="New status after transition")
 
     # Actor and reason
-    actor_type: str = Field(
-        default="system",
-        description="Type: system, user, agent, scheduler, circuit_breaker"
-    )
-    actor_id: Optional[str] = Field(
-        default=None,
-        description="ID of actor (user_id, agent_id, etc.)"
-    )
-    reason: Optional[str] = Field(
-        default=None,
-        description="Human-readable reason for transition"
-    )
+    actor_type: str = Field(default="system", description="Type: system, user, agent, scheduler, circuit_breaker")
+    actor_id: Optional[str] = Field(default=None, description="ID of actor (user_id, agent_id, etc.)")
+    reason: Optional[str] = Field(default=None, description="Human-readable reason for transition")
 
     # Context
-    tenant_id: Optional[str] = Field(
-        default=None,
-        index=True,
-        description="Tenant scope for multi-tenancy"
-    )
-    correlation_id: Optional[str] = Field(
-        default=None,
-        index=True,
-        description="Correlation ID for tracing"
-    )
+    tenant_id: Optional[str] = Field(default=None, index=True, description="Tenant scope for multi-tenancy")
+    correlation_id: Optional[str] = Field(default=None, index=True, description="Correlation ID for tracing")
 
     # Metadata (JSON)
-    metadata_json: Optional[str] = Field(
-        default=None,
-        description="Additional context as JSON"
-    )
+    metadata_json: Optional[str] = Field(default=None, description="Additional context as JSON")
 
     # Immutable timestamp (set once, never updated)
     created_at: datetime = Field(
-        default_factory=utc_now,
-        index=True,
-        description="Timestamp of status change (immutable)"
+        default_factory=utc_now, index=True, description="Timestamp of status change (immutable)"
     )
 
     # Sequence number for ordering
     sequence: Optional[int] = Field(
-        default=None,
-        index=True,
-        description="Auto-incrementing sequence for total ordering"
+        default=None, index=True, description="Auto-incrementing sequence for total ordering"
     )
 
     def get_metadata(self) -> dict:
         """Parse metadata JSON."""
         import json
+
         if self.metadata_json:
             return json.loads(self.metadata_json)
         return {}
@@ -736,6 +657,7 @@ class StatusHistory(SQLModel, table=True):
 
 # ============== Failure Match (M9 - Failure Persistence) ==============
 
+
 class FailureMatch(SQLModel, table=True):
     """
     Persistent storage for failure catalog matches.
@@ -748,6 +670,7 @@ class FailureMatch(SQLModel, table=True):
 
     Every time failure_catalog.match() runs, a record is persisted here.
     """
+
     __tablename__ = "failure_matches"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
@@ -760,18 +683,10 @@ class FailureMatch(SQLModel, table=True):
 
     # Catalog match info
     catalog_entry_id: Optional[str] = Field(
-        default=None,
-        index=True,
-        description="Matched catalog entry code (null if miss)"
+        default=None, index=True, description="Matched catalog entry code (null if miss)"
     )
-    match_type: str = Field(
-        default="unknown",
-        description="How match was found: exact, prefix, regex, code, unknown"
-    )
-    confidence_score: float = Field(
-        default=0.0,
-        description="Match confidence (1.0 = exact, 0.7 = prefix, 0 = miss)"
-    )
+    match_type: str = Field(default="unknown", description="How match was found: exact, prefix, regex, code, unknown")
+    confidence_score: float = Field(default=0.0, description="Match confidence (1.0 = exact, 0.7 = prefix, 0 = miss)")
 
     # Catalog entry details (denormalized for analytics)
     category: Optional[str] = Field(default=None, description="TRANSIENT, PERMANENT, RESOURCE, etc.")
@@ -799,6 +714,7 @@ class FailureMatch(SQLModel, table=True):
     def get_context(self) -> dict:
         """Parse context JSON."""
         import json
+
         if self.context_json:
             return json.loads(self.context_json)
         return {}
@@ -806,6 +722,7 @@ class FailureMatch(SQLModel, table=True):
     def set_context(self, context: dict) -> None:
         """Set context as JSON."""
         import json
+
         self.context_json = json.dumps(context)
 
     def mark_recovery_attempted(self) -> None:

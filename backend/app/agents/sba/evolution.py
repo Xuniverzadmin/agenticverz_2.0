@@ -7,12 +7,12 @@
 # - Strategy adjustment
 # - Self-updating capabilities
 
+import json
 import logging
 import os
-import json
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -27,52 +27,58 @@ logger = logging.getLogger("nova.agents.sba.evolution")
 # =============================================================================
 
 # Drift detection thresholds
-SUCCESS_RATE_DRIFT_THRESHOLD = 0.20   # 20% drop triggers drift signal
-LATENCY_DRIFT_THRESHOLD = 0.50        # 50% increase triggers drift signal
-VIOLATION_SPIKE_THRESHOLD = 3         # 3 violations in window triggers drift
-DRIFT_WINDOW = 3600                   # 1 hour window for drift detection
+SUCCESS_RATE_DRIFT_THRESHOLD = 0.20  # 20% drop triggers drift signal
+LATENCY_DRIFT_THRESHOLD = 0.50  # 50% increase triggers drift signal
+VIOLATION_SPIKE_THRESHOLD = 3  # 3 violations in window triggers drift
+DRIFT_WINDOW = 3600  # 1 hour window for drift detection
 
 # Strategy adjustment thresholds
 STRATEGY_ADJUSTMENT_SUCCESS_THRESHOLD = 0.60  # Below this triggers adjustment
-STRATEGY_ADJUSTMENT_COOLDOWN = 1800           # 30 min between adjustments
+STRATEGY_ADJUSTMENT_COOLDOWN = 1800  # 30 min between adjustments
 
 
 # =============================================================================
 # Enums
 # =============================================================================
 
+
 class DriftType(str, Enum):
     """Types of drift that can be detected."""
-    DATA_DRIFT = "data_drift"           # Input distribution changed
-    DOMAIN_DRIFT = "domain_drift"       # Task domain shifted
-    BEHAVIOR_DRIFT = "behavior_drift"   # Agent outputs changed
-    BOUNDARY_DRIFT = "boundary_drift"   # Boundaries too tight/loose
+
+    DATA_DRIFT = "data_drift"  # Input distribution changed
+    DOMAIN_DRIFT = "domain_drift"  # Task domain shifted
+    BEHAVIOR_DRIFT = "behavior_drift"  # Agent outputs changed
+    BOUNDARY_DRIFT = "boundary_drift"  # Boundaries too tight/loose
 
 
 class ViolationType(str, Enum):
     """Types of boundary violations."""
-    DOMAIN = "domain"         # Task outside domain
-    TOOL = "tool"             # Used disallowed tool
-    CONTEXT = "context"       # Wrong execution context
-    RISK = "risk"             # Risk policy violation
-    CAPABILITY = "capability" # Used unavailable capability
+
+    DOMAIN = "domain"  # Task outside domain
+    TOOL = "tool"  # Used disallowed tool
+    CONTEXT = "context"  # Wrong execution context
+    RISK = "risk"  # Risk policy violation
+    CAPABILITY = "capability"  # Used unavailable capability
 
 
 class AdjustmentType(str, Enum):
     """Types of strategy adjustments."""
-    TASK_SPLIT = "task_split"           # Split complex tasks
-    STEP_REFINEMENT = "step_refinement" # Refine execution steps
-    FALLBACK_ADD = "fallback_add"       # Add fallback strategies
-    BOUNDARY_EXPAND = "boundary_expand" # Expand boundaries
-    BOUNDARY_CONTRACT = "boundary_contract" # Tighten boundaries
+
+    TASK_SPLIT = "task_split"  # Split complex tasks
+    STEP_REFINEMENT = "step_refinement"  # Refine execution steps
+    FALLBACK_ADD = "fallback_add"  # Add fallback strategies
+    BOUNDARY_EXPAND = "boundary_expand"  # Expand boundaries
+    BOUNDARY_CONTRACT = "boundary_contract"  # Tighten boundaries
 
 
 # =============================================================================
 # Models
 # =============================================================================
 
+
 class BoundaryViolation(BaseModel):
     """Record of a boundary violation."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     agent_id: str
     violation_type: ViolationType
@@ -99,6 +105,7 @@ class BoundaryViolation(BaseModel):
 
 class DriftSignal(BaseModel):
     """Signal indicating detected drift."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     agent_id: str
     drift_type: DriftType
@@ -125,6 +132,7 @@ class DriftSignal(BaseModel):
 
 class StrategyAdjustment(BaseModel):
     """Record of a strategy adjustment."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     agent_id: str
     trigger: str  # What triggered the adjustment
@@ -153,6 +161,7 @@ class StrategyAdjustment(BaseModel):
 # Evolution Engine
 # =============================================================================
 
+
 class SBAEvolutionEngine:
     """
     SBA Evolution Engine for self-improving agents.
@@ -165,7 +174,7 @@ class SBAEvolutionEngine:
     """
 
     def __init__(self, database_url: Optional[str] = None):
-        self._db_url = database_url or os.environ.get("DATABASE_URL")
+        self._db_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         # In-memory stores (will be persisted to DB when available)
         self._violations: Dict[str, List[BoundaryViolation]] = {}
         self._drift_signals: Dict[str, List[DriftSignal]] = {}
@@ -225,7 +234,7 @@ class SBAEvolutionEngine:
                 "violation_type": violation_type.value,
                 "severity": severity,
                 "auto_reported": auto_reported,
-            }
+            },
         )
 
         # Check if this triggers drift
@@ -259,7 +268,8 @@ class SBAEvolutionEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.boundary_violations (
                             id, agent_id, violation_type, description,
                             task_description, task_domain, severity,
@@ -270,7 +280,8 @@ class SBAEvolutionEngine:
                             :auto_reported, :detected_at
                         )
                         ON CONFLICT (id) DO NOTHING
-                    """),
+                    """
+                    ),
                     {
                         "id": violation.id,
                         "agent_id": violation.agent_id,
@@ -281,7 +292,7 @@ class SBAEvolutionEngine:
                         "severity": violation.severity,
                         "auto_reported": violation.auto_reported,
                         "detected_at": violation.detected_at,
-                    }
+                    },
                 )
                 conn.commit()
             engine.dispose()
@@ -408,7 +419,7 @@ class SBAEvolutionEngine:
                 "agent_id": signal.agent_id,
                 "drift_type": signal.drift_type.value,
                 "severity": signal.severity,
-            }
+            },
         )
 
     def get_drift_signals(
@@ -442,7 +453,8 @@ class SBAEvolutionEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.drift_signals (
                             id, agent_id, drift_type, severity, evidence,
                             recommendation, acknowledged, auto_adjusted, detected_at
@@ -452,7 +464,8 @@ class SBAEvolutionEngine:
                             :acknowledged, :auto_adjusted, :detected_at
                         )
                         ON CONFLICT (id) DO NOTHING
-                    """),
+                    """
+                    ),
                     {
                         "id": signal.id,
                         "agent_id": signal.agent_id,
@@ -463,7 +476,7 @@ class SBAEvolutionEngine:
                         "acknowledged": signal.acknowledged,
                         "auto_adjusted": signal.auto_adjusted,
                         "detected_at": signal.detected_at,
-                    }
+                    },
                 )
                 conn.commit()
             engine.dispose()
@@ -584,16 +597,18 @@ class SBAEvolutionEngine:
                 engine = create_engine(self._db_url)
                 with engine.connect() as conn:
                     conn.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE agents.agent_registry
                             SET sba = CAST(:sba AS JSONB),
                                 updated_at = now()
                             WHERE agent_id = :agent_id
-                        """),
+                        """
+                        ),
                         {
                             "agent_id": adjustment.agent_id,
                             "sba": json.dumps(adjustment.new_strategy),
-                        }
+                        },
                     )
                     conn.commit()
                 engine.dispose()
@@ -603,7 +618,7 @@ class SBAEvolutionEngine:
                     extra={
                         "agent_id": adjustment.agent_id,
                         "adjustment_type": adjustment.adjustment_type.value,
-                    }
+                    },
                 )
                 return True
 
@@ -631,7 +646,8 @@ class SBAEvolutionEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.strategy_adjustments (
                             id, agent_id, trigger, adjustment_type,
                             old_strategy, new_strategy,
@@ -642,7 +658,8 @@ class SBAEvolutionEngine:
                             :success_rate_before, :adjusted_at
                         )
                         ON CONFLICT (id) DO NOTHING
-                    """),
+                    """
+                    ),
                     {
                         "id": adjustment.id,
                         "agent_id": adjustment.agent_id,
@@ -652,7 +669,7 @@ class SBAEvolutionEngine:
                         "new_strategy": json.dumps(adjustment.new_strategy),
                         "success_rate_before": adjustment.success_rate_before,
                         "adjusted_at": adjustment.adjusted_at,
-                    }
+                    },
                 )
                 conn.commit()
             engine.dispose()

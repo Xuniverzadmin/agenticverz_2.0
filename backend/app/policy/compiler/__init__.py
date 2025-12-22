@@ -8,18 +8,18 @@
 # - ROUTING: Agent routing and load balancing
 # - CUSTOM: User-defined policies
 
-from app.policy.compiler.tokenizer import (
-    Token,
-    TokenType,
-    Tokenizer,
-)
-from app.policy.compiler.parser import (
-    Parser,
-    ParseError,
-)
 from app.policy.compiler.grammar import (
     PLANG_GRAMMAR,
     PLangGrammar,
+)
+from app.policy.compiler.parser import (
+    ParseError,
+    Parser,
+)
+from app.policy.compiler.tokenizer import (
+    Token,
+    Tokenizer,
+    TokenType,
 )
 
 __all__ = [

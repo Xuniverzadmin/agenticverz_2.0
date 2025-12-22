@@ -11,13 +11,13 @@ Tests that multi-skill workflows execute correctly with:
 This is the canonical test for verifying the skill orchestration engine.
 """
 
-import asyncio
-import pytest
 import json
 import sys
-from pathlib import Path
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
 
 # Add paths for imports
 _backend_path = str(Path(__file__).parent.parent.parent)
@@ -30,28 +30,22 @@ for p in [_backend_path, _runtime_path, _skills_path]:
 
 
 # Import runtime and stubs
-from core import Runtime, StructuredOutcome, SkillDescriptor
+from core import Runtime, StructuredOutcome
 
 # Import stubs directly
 from stubs.http_call_stub import (
-    HttpCallStub,
     HTTP_CALL_STUB_DESCRIPTOR,
-    http_call_stub_handler,
     get_http_call_stub,
-)
-from stubs.llm_invoke_stub import (
-    LlmInvokeStub,
-    LLM_INVOKE_STUB_DESCRIPTOR,
-    llm_invoke_stub_handler,
-    get_llm_invoke_stub,
+    http_call_stub_handler,
 )
 from stubs.json_transform_stub import (
-    JsonTransformStub,
     JSON_TRANSFORM_STUB_DESCRIPTOR,
     json_transform_stub_handler,
-    get_json_transform_stub,
 )
-
+from stubs.llm_invoke_stub import (
+    LLM_INVOKE_STUB_DESCRIPTOR,
+    llm_invoke_stub_handler,
+)
 
 GOLDEN_FILE = Path(__file__).parent.parent / "golden" / "workflow_multi_skill.json"
 
@@ -59,6 +53,7 @@ GOLDEN_FILE = Path(__file__).parent.parent / "golden" / "workflow_multi_skill.js
 @dataclass
 class WorkflowStep:
     """Represents a step in a workflow."""
+
     step_id: str
     skill: str
     params: Dict[str, Any]
@@ -70,6 +65,7 @@ class WorkflowStep:
 @dataclass
 class WorkflowResult:
     """Result of workflow execution."""
+
     status: str
     steps: List[Dict[str, Any]]
     workflow_hash: str
@@ -123,26 +119,20 @@ class WorkflowExecutor:
                 self.step_outputs[step.step_id] = outcome.result or {}
 
             # Record result
-            results.append({
-                "step_id": step.step_id,
-                "skill": step.skill,
-                "ok": outcome.ok,
-                "output_hash": self._hash_output(outcome),
-            })
+            results.append(
+                {
+                    "step_id": step.step_id,
+                    "skill": step.skill,
+                    "ok": outcome.ok,
+                    "output_hash": self._hash_output(outcome),
+                }
+            )
 
             # Handle errors
             if not outcome.ok and step.on_error == "abort":
-                return WorkflowResult(
-                    status="failed",
-                    steps=results,
-                    workflow_hash=self._hash_workflow(results)
-                )
+                return WorkflowResult(status="failed", steps=results, workflow_hash=self._hash_workflow(results))
 
-        return WorkflowResult(
-            status="ok",
-            steps=results,
-            workflow_hash=self._hash_workflow(results)
-        )
+        return WorkflowResult(status="ok", steps=results, workflow_hash=self._hash_workflow(results))
 
     def _interpolate(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Interpolate {{step_id.field}} references."""
@@ -200,13 +190,9 @@ class TestMultiSkillWorkflow:
             "api.example.com/users",
             {
                 "status_code": 200,
-                "body": json.dumps({
-                    "id": 1,
-                    "name": "Test User",
-                    "email": "test@example.com"
-                }),
-                "headers": {"content-type": "application/json"}
-            }
+                "body": json.dumps({"id": 1, "name": "Test User", "email": "test@example.com"}),
+                "headers": {"content-type": "application/json"},
+            },
         )
 
         # Register stubs (descriptor, handler)
@@ -288,14 +274,9 @@ class TestMultiSkillWorkflow:
                     "step_id": "s1",
                     "skill": "skill.nonexistent",  # Will fail
                     "params": {},
-                    "on_error": "abort"
+                    "on_error": "abort",
                 },
-                {
-                    "step_id": "s2",
-                    "skill": "skill.http_call",
-                    "params": {},
-                    "depends_on": ["s1"]
-                }
+                {"step_id": "s2", "skill": "skill.http_call", "params": {}, "depends_on": ["s1"]},
             ]
         }
 
@@ -343,9 +324,7 @@ class TestWorkflowInterpolation:
     def test_nested_interpolation(self):
         """Nested field interpolation works."""
         executor = WorkflowExecutor(Runtime())
-        executor.step_outputs["s1"] = {
-            "response": {"user": {"email": "test@example.com"}}
-        }
+        executor.step_outputs["s1"] = {"response": {"user": {"email": "test@example.com"}}}
 
         params = {"email": "{{s1.response.user.email}}"}
         result = executor._interpolate(params)

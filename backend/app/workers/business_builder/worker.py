@@ -32,30 +32,31 @@ Usage:
 """
 
 import asyncio
+import json
 import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
-import hashlib
-import json
+from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 
 class EventEmitter(Protocol):
     """Protocol for event emission - allows worker to emit events."""
-    async def emit(self, run_id: str, event_type: str, data: Dict[str, Any]) -> None: ...
 
+    async def emit(self, run_id: str, event_type: str, data: Dict[str, Any]) -> None:
+        ...
+
+
+from .agents import WORKER_AGENTS, register_all_agents
 from .execution_plan import (
     ExecutionPlan,
     ExecutionStage,
     StageResult,
     StageStatus,
-    StageCategory,
     create_business_builder_plan,
 )
+from .llm_service import get_llm_service
 from .schemas.brand import BrandSchema, ToneLevel, create_minimal_brand
-from .agents import WORKER_AGENTS, register_all_agents
-from .llm_service import get_llm_service, WorkerLLMService
 
 logger = logging.getLogger("nova.workers.business_builder")
 
@@ -63,6 +64,7 @@ logger = logging.getLogger("nova.workers.business_builder")
 @dataclass
 class WorkerResult:
     """Complete result from Business Builder Worker."""
+
     success: bool
     bundle_path: Optional[str] = None
     artifacts: Dict[str, Any] = field(default_factory=dict)
@@ -137,14 +139,16 @@ class BusinessBuilderWorker:
         # M17 CARE Routing
         try:
             from app.routing.care import get_care_engine
+
             self._care_engine = get_care_engine()
         except ImportError:
             logger.warning("M17 CARE engine not available")
 
         # M20 Policy Runtime
         try:
-            from app.policy.runtime.deterministic_engine import DeterministicEngine
             from app.policy.runtime.dag_executor import DAGExecutor
+            from app.policy.runtime.deterministic_engine import DeterministicEngine
+
             self._policy_engine = DAGExecutor()
         except ImportError:
             logger.warning("M20 Policy engine not available")
@@ -152,6 +156,7 @@ class BusinessBuilderWorker:
         # M9 Failure Catalog - use RecoveryMatcher for pattern matching
         try:
             from app.services.recovery_matcher import RecoveryMatcher
+
             self._failure_catalog = RecoveryMatcher()
             logger.info("M9 Failure catalog loaded (via RecoveryMatcher)")
         except ImportError as e:
@@ -160,6 +165,7 @@ class BusinessBuilderWorker:
         # M10 Recovery Engine - use RecoveryMatcher for suggestions
         try:
             from app.services.recovery_matcher import RecoveryMatcher
+
             self._recovery_engine = RecoveryMatcher()
             logger.info("M10 Recovery engine loaded (via RecoveryMatcher)")
         except ImportError as e:
@@ -168,6 +174,7 @@ class BusinessBuilderWorker:
         # M18 Drift Detection
         try:
             from app.routing.learning import get_learning_engine
+
             self._drift_detector = get_learning_engine()
         except ImportError:
             logger.warning("M18 Drift detector not available")
@@ -211,7 +218,7 @@ class BusinessBuilderWorker:
                 "has_brand": brand is not None,
                 "budget": budget,
                 "strict_mode": strict_mode,
-            }
+            },
         )
 
         # Create default brand if not provided
@@ -234,12 +241,15 @@ class BusinessBuilderWorker:
         result = WorkerResult(success=False)
 
         # Emit run_started event
-        await self._emit("run_started", {
-            "task": task,
-            "has_brand": brand is not None,
-            "budget": budget,
-            "strict_mode": strict_mode,
-        })
+        await self._emit(
+            "run_started",
+            {
+                "task": task,
+                "has_brand": brand is not None,
+                "budget": budget,
+                "strict_mode": strict_mode,
+            },
+        )
 
         try:
             stages = plan.get_execution_order()
@@ -248,11 +258,14 @@ class BusinessBuilderWorker:
             # Execute stages in governance order
             for stage_index, stage in enumerate(stages):
                 # Emit stage_started
-                await self._emit("stage_started", {
-                    "stage_id": stage.id,
-                    "stage_index": stage_index,
-                    "total_stages": total_stages,
-                })
+                await self._emit(
+                    "stage_started",
+                    {
+                        "stage_id": stage.id,
+                        "stage_index": stage_index,
+                        "total_stages": total_stages,
+                    },
+                )
 
                 stage_result = await self._execute_stage(
                     stage=stage,
@@ -262,38 +275,49 @@ class BusinessBuilderWorker:
                 )
 
                 plan.stage_results.append(stage_result)
-                result.execution_trace.append({
-                    "stage": stage.id,
-                    "status": stage_result.status.name,
-                    "latency_ms": stage_result.latency_ms,
-                    "agent_used": stage_result.agent_used,
-                    "tokens_used": self._stage_tokens.get(stage.id, 0),
-                })
+                result.execution_trace.append(
+                    {
+                        "stage": stage.id,
+                        "status": stage_result.status.name,
+                        "latency_ms": stage_result.latency_ms,
+                        "agent_used": stage_result.agent_used,
+                        "tokens_used": self._stage_tokens.get(stage.id, 0),
+                    }
+                )
 
                 # Check for failure
                 if stage_result.status == StageStatus.FAILED:
                     # Emit stage_failed
-                    await self._emit("stage_failed", {
-                        "stage_id": stage.id,
-                        "error": stage_result.error,
-                    })
+                    await self._emit(
+                        "stage_failed",
+                        {
+                            "stage_id": stage.id,
+                            "error": stage_result.error,
+                        },
+                    )
 
                     if strict_mode:
                         result.error = f"Stage {stage.id} failed: {stage_result.error}"
                         break
 
                     # Emit failure_detected (M9)
-                    await self._emit("failure_detected", {
-                        "stage_id": stage.id,
-                        "error": stage_result.error,
-                        "pattern": "stage_execution_failure",
-                    })
+                    await self._emit(
+                        "failure_detected",
+                        {
+                            "stage_id": stage.id,
+                            "error": stage_result.error,
+                            "pattern": "stage_execution_failure",
+                        },
+                    )
 
                     # Try recovery (M9/M10)
-                    await self._emit("recovery_started", {
-                        "stage_id": stage.id,
-                        "action": "attempting_recovery",
-                    })
+                    await self._emit(
+                        "recovery_started",
+                        {
+                            "stage_id": stage.id,
+                            "action": "attempting_recovery",
+                        },
+                    )
 
                     recovered = await self._attempt_recovery(
                         stage=stage,
@@ -304,42 +328,56 @@ class BusinessBuilderWorker:
 
                     if recovered:
                         stage_result.status = StageStatus.RECOVERED
-                        result.recovery_log.append({
-                            "stage": stage.id,
-                            "recovery": recovered,
-                        })
-                        await self._emit("recovery_completed", {
-                            "stage_id": stage.id,
-                            "action": recovered,
-                            "success": True,
-                        })
+                        result.recovery_log.append(
+                            {
+                                "stage": stage.id,
+                                "recovery": recovered,
+                            }
+                        )
+                        await self._emit(
+                            "recovery_completed",
+                            {
+                                "stage_id": stage.id,
+                                "action": recovered,
+                                "success": True,
+                            },
+                        )
                     else:
                         result.error = f"Stage {stage.id} failed and recovery unsuccessful"
-                        await self._emit("recovery_completed", {
-                            "stage_id": stage.id,
-                            "action": "none",
-                            "success": False,
-                        })
+                        await self._emit(
+                            "recovery_completed",
+                            {
+                                "stage_id": stage.id,
+                                "action": "none",
+                                "success": False,
+                            },
+                        )
                         break
                 else:
                     # Emit stage_completed with real metrics
                     stage_tokens = self._stage_tokens.get(stage.id, 0)
-                    await self._emit("stage_completed", {
-                        "stage_id": stage.id,
-                        "duration_ms": stage_result.latency_ms,
-                        "tokens_used": stage_tokens,
-                    })
+                    await self._emit(
+                        "stage_completed",
+                        {
+                            "stage_id": stage.id,
+                            "duration_ms": stage_result.latency_ms,
+                            "tokens_used": stage_tokens,
+                        },
+                    )
 
                 # Check policy violations
                 if stage_result.policy_violations:
                     result.policy_violations.extend(stage_result.policy_violations)
                     for violation in stage_result.policy_violations:
-                        await self._emit("policy_violation", {
-                            "stage_id": stage.id,
-                            "policy": violation.get("policy", "unknown"),
-                            "reason": violation.get("reason", ""),
-                            "severity": violation.get("severity", "error"),
-                        })
+                        await self._emit(
+                            "policy_violation",
+                            {
+                                "stage_id": stage.id,
+                                "policy": violation.get("policy", "unknown"),
+                                "reason": violation.get("reason", ""),
+                                "severity": violation.get("severity", "error"),
+                            },
+                        )
                     if strict_mode:
                         result.error = f"Policy violation in {stage.id}"
                         break
@@ -347,12 +385,15 @@ class BusinessBuilderWorker:
                 # Track drift (M18) - emit if detected
                 if stage_result.drift_score is not None:
                     result.drift_metrics[stage.id] = stage_result.drift_score
-                    await self._emit("drift_detected", {
-                        "stage_id": stage.id,
-                        "drift_score": stage_result.drift_score,
-                        "threshold": 0.35,
-                        "aligned": stage_result.drift_score < 0.35,
-                    })
+                    await self._emit(
+                        "drift_detected",
+                        {
+                            "stage_id": stage.id,
+                            "drift_score": stage_result.drift_score,
+                            "threshold": 0.35,
+                            "aligned": stage_result.drift_score < 0.35,
+                        },
+                    )
 
                 # Accumulate real tokens
                 result.total_tokens_used = self._total_tokens
@@ -379,16 +420,21 @@ class BusinessBuilderWorker:
                             artifact_type = "md"
 
                         # Get content
-                        content = artifact_data if isinstance(artifact_data, str) else json.dumps(artifact_data, indent=2)
+                        content = (
+                            artifact_data if isinstance(artifact_data, str) else json.dumps(artifact_data, indent=2)
+                        )
 
                         # Emit artifact_created with actual content
                         if content and len(content) > 5:
-                            await self._emit("artifact_created", {
-                                "stage_id": sr.stage_id,
-                                "artifact_name": artifact_name,
-                                "artifact_type": artifact_type,
-                                "content": content,
-                            })
+                            await self._emit(
+                                "artifact_created",
+                                {
+                                    "stage_id": sr.stage_id,
+                                    "artifact_name": artifact_name,
+                                    "artifact_type": artifact_type,
+                                    "content": content,
+                                },
+                            )
 
                 # Generate replay token (M4) with real token counts
                 result.replay_token = plan.to_replay_token()
@@ -406,14 +452,15 @@ class BusinessBuilderWorker:
             logger.exception("business_builder_failed")
             result.error = str(e)
             plan.final_status = StageStatus.FAILED
-            await self._emit("run_failed", {
-                "success": False,
-                "error": str(e),
-            })
+            await self._emit(
+                "run_failed",
+                {
+                    "success": False,
+                    "error": str(e),
+                },
+            )
 
-        result.total_latency_ms = (
-            datetime.now(timezone.utc) - start_time
-        ).total_seconds() * 1000
+        result.total_latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         result.total_tokens_used = self._total_tokens
 
         logger.info(
@@ -426,22 +473,28 @@ class BusinessBuilderWorker:
                 "stages_completed": len(plan.stage_results),
                 "policy_violations": len(result.policy_violations),
                 "recoveries": len(result.recovery_log),
-            }
+            },
         )
 
         # Emit run completion
         if result.success:
-            await self._emit("run_completed", {
-                "success": True,
-                "total_tokens": result.total_tokens_used,
-                "total_latency_ms": result.total_latency_ms,
-                "artifacts_count": len(result.artifacts),
-            })
+            await self._emit(
+                "run_completed",
+                {
+                    "success": True,
+                    "total_tokens": result.total_tokens_used,
+                    "total_latency_ms": result.total_latency_ms,
+                    "artifacts_count": len(result.artifacts),
+                },
+            )
         elif not result.error:  # Only emit if not already emitted in exception handler
-            await self._emit("run_failed", {
-                "success": False,
-                "error": result.error or "Unknown error",
-            })
+            await self._emit(
+                "run_failed",
+                {
+                    "success": False,
+                    "error": result.error or "Unknown error",
+                },
+            )
 
         return result
 
@@ -475,31 +528,40 @@ class BusinessBuilderWorker:
             result.agent_used = agent_id
 
             # Emit routing_decision with REAL data from M17
-            await self._emit("routing_decision", {
-                "stage_id": stage.id,
-                "selected_agent": agent_id,
-                "complexity": routing_info.get("complexity", 0.5),
-                "confidence": routing_info.get("confidence", 0.8),
-                "alternatives": routing_info.get("alternatives", []),
-                "routing_source": routing_info.get("source", "fallback"),
-            })
+            await self._emit(
+                "routing_decision",
+                {
+                    "stage_id": stage.id,
+                    "selected_agent": agent_id,
+                    "complexity": routing_info.get("complexity", 0.5),
+                    "confidence": routing_info.get("confidence", 0.8),
+                    "alternatives": routing_info.get("alternatives", []),
+                    "routing_source": routing_info.get("source", "fallback"),
+                },
+            )
 
             # Emit log for stage start
-            await self._emit("log", {
-                "stage_id": stage.id,
-                "agent": agent_id,
-                "message": f"Starting {stage.name}...",
-                "level": "info",
-            })
+            await self._emit(
+                "log",
+                {
+                    "stage_id": stage.id,
+                    "agent": agent_id,
+                    "message": f"Starting {stage.name}...",
+                    "level": "info",
+                },
+            )
 
             # Validate pre-policies (M19/M20)
             if stage.pre_policies:
                 # Emit policy_check event
-                await self._emit("policy_check", {
-                    "stage_id": stage.id,
-                    "policy": "pre_execution",
-                    "passed": True,  # Will update if violations found
-                })
+                await self._emit(
+                    "policy_check",
+                    {
+                        "stage_id": stage.id,
+                        "policy": "pre_execution",
+                        "passed": True,  # Will update if violations found
+                    },
+                )
 
                 violations = await self._check_policies(
                     stage.pre_policies,
@@ -521,12 +583,15 @@ class BusinessBuilderWorker:
                     inputs[input_id] = value
 
             # Emit log for execution
-            await self._emit("log", {
-                "stage_id": stage.id,
-                "agent": agent_id,
-                "message": f"Processing {stage.id} stage...",
-                "level": "info",
-            })
+            await self._emit(
+                "log",
+                {
+                    "stage_id": stage.id,
+                    "agent": agent_id,
+                    "message": f"Processing {stage.id} stage...",
+                    "level": "info",
+                },
+            )
 
             # Execute stage with real LLM calls
             outputs = await self._run_agent(
@@ -546,11 +611,14 @@ class BusinessBuilderWorker:
 
             # Validate post-policies (M19/M20)
             if stage.post_policies:
-                await self._emit("policy_check", {
-                    "stage_id": stage.id,
-                    "policy": "forbidden_claims",
-                    "passed": True,
-                })
+                await self._emit(
+                    "policy_check",
+                    {
+                        "stage_id": stage.id,
+                        "policy": "forbidden_claims",
+                        "passed": True,
+                    },
+                )
 
                 violations = await self._check_policies(
                     stage.post_policies,
@@ -569,32 +637,39 @@ class BusinessBuilderWorker:
             if "drift_score" in outputs and outputs["drift_score"] > 0:
                 result.drift_score = outputs["drift_score"]
                 if result.drift_score > 0.35:  # Threshold
-                    result.policy_violations.append({
-                        "type": "drift",
-                        "policy": "brand_alignment",
-                        "reason": f"Content policy drift (score: {result.drift_score:.2f})",
-                        "stage": stage.id,
-                    })
+                    result.policy_violations.append(
+                        {
+                            "type": "drift",
+                            "policy": "brand_alignment",
+                            "reason": f"Content policy drift (score: {result.drift_score:.2f})",
+                            "stage": stage.id,
+                        }
+                    )
             elif stage.requires_brand_check:
                 drift_score = await self._check_drift(outputs, brand)
                 result.drift_score = drift_score
                 if drift_score > 0.35:  # Threshold
-                    result.policy_violations.append({
-                        "type": "drift",
-                        "policy": "brand_alignment",
-                        "reason": f"Output drifted from brand (score: {drift_score:.2f})",
-                        "stage": stage.id,
-                    })
+                    result.policy_violations.append(
+                        {
+                            "type": "drift",
+                            "policy": "brand_alignment",
+                            "reason": f"Output drifted from brand (score: {drift_score:.2f})",
+                            "stage": stage.id,
+                        }
+                    )
 
             result.status = StageStatus.COMPLETED
 
             # Emit completion log
-            await self._emit("log", {
-                "stage_id": stage.id,
-                "agent": agent_id,
-                "message": f"Completed {stage.name} ({stage_tokens} tokens)",
-                "level": "info",
-            })
+            await self._emit(
+                "log",
+                {
+                    "stage_id": stage.id,
+                    "agent": agent_id,
+                    "message": f"Completed {stage.name} ({stage_tokens} tokens)",
+                    "level": "info",
+                },
+            )
 
         except asyncio.TimeoutError:
             result.status = StageStatus.FAILED
@@ -604,9 +679,7 @@ class BusinessBuilderWorker:
             result.error = str(e)
             logger.exception(f"Stage {stage.id} failed")
 
-        result.latency_ms = (
-            datetime.now(timezone.utc) - start_time
-        ).total_seconds() * 1000
+        result.latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
         return result
 
@@ -632,18 +705,18 @@ class BusinessBuilderWorker:
         if not self._care_engine:
             # Fallback to primary agent with estimated complexity
             routing_info["source"] = "fallback"
-            routing_info["complexity"] = getattr(stage, 'difficulty', 0.5)
+            routing_info["complexity"] = getattr(stage, "difficulty", 0.5)
             routing_info["alternatives"] = [f"{stage.id}_agent_v2"]
             return stage.primary_agent, routing_info
 
         try:
-            from app.routing.models import RoutingRequest, DifficultyLevel, RiskPolicy
+            from app.routing.models import DifficultyLevel, RiskPolicy, RoutingRequest
 
             request = RoutingRequest(
                 task_description=f"{stage.name}: {task[:200]}",
-                task_domain=stage.category.value.lower() if hasattr(stage, 'category') else "general",
-                difficulty=DifficultyLevel(getattr(stage, 'difficulty', 'medium')),
-                risk_tolerance=RiskPolicy(getattr(stage, 'risk_policy', 'normal')),
+                task_domain=stage.category.value.lower() if hasattr(stage, "category") else "general",
+                difficulty=DifficultyLevel(getattr(stage, "difficulty", "medium")),
+                risk_tolerance=RiskPolicy(getattr(stage, "risk_policy", "normal")),
                 tenant_id=self.tenant_id,
                 prefer_metric=None,
                 required_tools=None,
@@ -655,11 +728,11 @@ class BusinessBuilderWorker:
             if decision.routed and decision.selected_agent_id:
                 # Extract REAL routing data from CARE decision
                 routing_info = {
-                    "complexity": getattr(decision, 'complexity_score', 0.5),
-                    "confidence": getattr(decision, 'confidence', 0.8),
-                    "alternatives": getattr(decision, 'alternative_agents', []),
+                    "complexity": getattr(decision, "complexity_score", 0.5),
+                    "confidence": getattr(decision, "confidence", 0.8),
+                    "alternatives": getattr(decision, "alternative_agents", []),
                     "source": "m17_care",
-                    "routing_reason": getattr(decision, 'routing_reason', ''),
+                    "routing_reason": getattr(decision, "routing_reason", ""),
                 }
                 return decision.selected_agent_id, routing_info
 
@@ -688,12 +761,14 @@ class BusinessBuilderWorker:
             for claim in brand.forbidden_claims:
                 content = json.dumps(context)
                 if claim.pattern.lower() in content.lower():
-                    violations.append({
-                        "policy": "forbidden_claims",
-                        "reason": claim.reason,
-                        "pattern": claim.pattern,
-                        "severity": claim.severity,
-                    })
+                    violations.append(
+                        {
+                            "policy": "forbidden_claims",
+                            "reason": claim.reason,
+                            "pattern": claim.pattern,
+                            "severity": claim.severity,
+                        }
+                    )
 
         # Check budget if specified
         if "budget_check" in policy_names and brand.budget_tokens:
@@ -947,8 +1022,9 @@ class BusinessBuilderWorker:
                 outputs["landing_css"] = self._generate_fallback_css(brand)
 
             outputs["component_map"] = {"hero": True, "features": True, "cta": True}
-            outputs["_tokens_used"] = (result.input_tokens + result.output_tokens +
-                                       css_result.input_tokens + css_result.output_tokens)
+            outputs["_tokens_used"] = (
+                result.input_tokens + result.output_tokens + css_result.input_tokens + css_result.output_tokens
+            )
 
         elif stage.id == "consistency":
             # ====================================================================
@@ -967,9 +1043,7 @@ class BusinessBuilderWorker:
             }
 
             # Run content validation
-            violations, corrections, drift_score = await self._validate_content_policy(
-                content_to_check, brand
-            )
+            violations, corrections, drift_score = await self._validate_content_policy(content_to_check, brand)
 
             # Calculate consistency score (inversely proportional to violations)
             violation_count = len(violations)
@@ -978,31 +1052,40 @@ class BusinessBuilderWorker:
             # Emit policy violations (M19)
             if violations:
                 for violation in violations:
-                    await self._emit("policy_violation", {
-                        "stage_id": stage.id,
-                        "violation_type": violation["type"],
-                        "pattern": violation["pattern"],
-                        "reason": violation["reason"],
-                        "severity": violation["severity"],
-                        "location": violation.get("location", "unknown"),
-                    })
+                    await self._emit(
+                        "policy_violation",
+                        {
+                            "stage_id": stage.id,
+                            "violation_type": violation["type"],
+                            "pattern": violation["pattern"],
+                            "reason": violation["reason"],
+                            "severity": violation["severity"],
+                            "location": violation.get("location", "unknown"),
+                        },
+                    )
 
                 # Classify failure (M9)
                 failure_code = "CONTENT_POLICY_VIOLATION"
-                await self._emit("failure_classified", {
-                    "code": failure_code,
-                    "category": "policy",
-                    "violation_count": violation_count,
-                    "severity": "error" if any(v["severity"] == "error" for v in violations) else "warning",
-                })
+                await self._emit(
+                    "failure_classified",
+                    {
+                        "code": failure_code,
+                        "category": "policy",
+                        "violation_count": violation_count,
+                        "severity": "error" if any(v["severity"] == "error" for v in violations) else "warning",
+                    },
+                )
 
                 # Generate recovery suggestions (M10)
                 recovery_suggestions = self._generate_recovery_suggestions(violations)
-                await self._emit("recovery_suggestion", {
-                    "failure_code": failure_code,
-                    "suggestions": recovery_suggestions,
-                    "auto_apply": False,
-                })
+                await self._emit(
+                    "recovery_suggestion",
+                    {
+                        "failure_code": failure_code,
+                        "suggestions": recovery_suggestions,
+                        "auto_apply": False,
+                    },
+                )
 
             outputs["consistency_score"] = consistency_score
             outputs["violations"] = violations
@@ -1052,10 +1135,18 @@ class BusinessBuilderWorker:
     # Universal forbidden patterns that apply to ALL brands
     UNIVERSAL_FORBIDDEN_PATTERNS = [
         {"pattern": r"\bguarantee[ds]?\b", "reason": "Cannot guarantee outcomes", "severity": "error"},
-        {"pattern": r"\b100\s*%\s*(success|accurate|effective)", "reason": "Unverifiable absolute claim", "severity": "error"},
+        {
+            "pattern": r"\b100\s*%\s*(success|accurate|effective)",
+            "reason": "Unverifiable absolute claim",
+            "severity": "error",
+        },
         {"pattern": r"\bclinically\s+proven\b", "reason": "Requires clinical evidence", "severity": "error"},
         {"pattern": r"\bmedically\s+proven\b", "reason": "Requires medical evidence", "severity": "error"},
-        {"pattern": r"\bdouble\s+(your\s+)?(revenue|income|money)", "reason": "Unrealistic financial promise", "severity": "error"},
+        {
+            "pattern": r"\bdouble\s+(your\s+)?(revenue|income|money)",
+            "reason": "Unrealistic financial promise",
+            "severity": "error",
+        },
         {"pattern": r"\brisk[\s-]*free\b", "reason": "All investments carry risk", "severity": "warning"},
         {"pattern": r"\bworld'?s?\s+best\b", "reason": "Unverifiable superlative", "severity": "warning"},
         {"pattern": r"\b#1\s+(in|for|rated)\b", "reason": "Unverifiable ranking claim", "severity": "warning"},
@@ -1099,19 +1190,23 @@ class BusinessBuilderWorker:
                         location = key
                         break
 
-                violations.append({
-                    "type": "UNIVERSAL_FORBIDDEN",
-                    "pattern": pattern,
-                    "reason": forbidden["reason"],
-                    "severity": forbidden["severity"],
-                    "location": location,
-                })
+                violations.append(
+                    {
+                        "type": "UNIVERSAL_FORBIDDEN",
+                        "pattern": pattern,
+                        "reason": forbidden["reason"],
+                        "severity": forbidden["severity"],
+                        "location": location,
+                    }
+                )
 
-                corrections.append({
-                    "violation_pattern": pattern,
-                    "suggestion": f"Remove or rephrase content matching '{pattern}'",
-                    "reason": forbidden["reason"],
-                })
+                corrections.append(
+                    {
+                        "violation_pattern": pattern,
+                        "suggestion": f"Remove or rephrase content matching '{pattern}'",
+                        "reason": forbidden["reason"],
+                    }
+                )
 
         # 2. Check brand-specific forbidden_claims
         if brand.forbidden_claims:
@@ -1125,19 +1220,23 @@ class BusinessBuilderWorker:
                             location = key
                             break
 
-                    violations.append({
-                        "type": "BRAND_FORBIDDEN_CLAIM",
-                        "pattern": claim.pattern,
-                        "reason": claim.reason,
-                        "severity": claim.severity,
-                        "location": location,
-                    })
+                    violations.append(
+                        {
+                            "type": "BRAND_FORBIDDEN_CLAIM",
+                            "pattern": claim.pattern,
+                            "reason": claim.reason,
+                            "severity": claim.severity,
+                            "location": location,
+                        }
+                    )
 
-                    corrections.append({
-                        "violation_pattern": claim.pattern,
-                        "suggestion": f"Remove '{claim.pattern}' - {claim.reason}",
-                        "reason": claim.reason,
-                    })
+                    corrections.append(
+                        {
+                            "violation_pattern": claim.pattern,
+                            "suggestion": f"Remove '{claim.pattern}' - {claim.reason}",
+                            "reason": claim.reason,
+                        }
+                    )
 
         # 3. Check tone.avoid violations
         if brand.tone and brand.tone.avoid:
@@ -1150,7 +1249,7 @@ class BusinessBuilderWorker:
             }
 
             for avoid_tone in brand.tone.avoid:
-                tone_str = avoid_tone.value if hasattr(avoid_tone, 'value') else str(avoid_tone)
+                tone_str = avoid_tone.value if hasattr(avoid_tone, "value") else str(avoid_tone)
                 patterns = tone_violation_patterns.get(tone_str.lower(), [])
 
                 for pattern in patterns:
@@ -1161,13 +1260,15 @@ class BusinessBuilderWorker:
                                 location = key
                                 break
 
-                        violations.append({
-                            "type": "TONE_VIOLATION",
-                            "pattern": pattern,
-                            "reason": f"Tone '{tone_str}' is in avoid list",
-                            "severity": "warning",
-                            "location": location,
-                        })
+                        violations.append(
+                            {
+                                "type": "TONE_VIOLATION",
+                                "pattern": pattern,
+                                "reason": f"Tone '{tone_str}' is in avoid list",
+                                "severity": "warning",
+                                "location": location,
+                            }
+                        )
 
         # 4. Calculate drift score based on violations
         # More violations = higher drift from brand intent
@@ -1177,10 +1278,7 @@ class BusinessBuilderWorker:
         # Drift formula: errors have more weight than warnings
         drift_score = min(1.0, (error_count * 0.2) + (warning_count * 0.1))
 
-        logger.info(
-            f"Content policy validation: {len(violations)} violations, "
-            f"drift_score={drift_score:.2f}"
-        )
+        logger.info(f"Content policy validation: {len(violations)} violations, " f"drift_score={drift_score:.2f}")
 
         return violations, corrections, drift_score
 
@@ -1221,19 +1319,22 @@ class BusinessBuilderWorker:
                 suggestion["replacement_hint"] = f"This violates brand policy: {v['reason']}"
 
             elif v["type"] == "TONE_VIOLATION":
-                suggestion["replacement_hint"] = f"Adjust tone to match brand guidelines"
+                suggestion["replacement_hint"] = "Adjust tone to match brand guidelines"
                 suggestion["priority"] = "MEDIUM"
 
             suggestions.append(suggestion)
 
         # Add summary suggestion if multiple violations
         if len(violations) > 3:
-            suggestions.insert(0, {
-                "violation_type": "SUMMARY",
-                "action": "COMPREHENSIVE_REVIEW",
-                "priority": "HIGH",
-                "replacement_hint": f"Content has {len(violations)} policy violations. Consider regenerating with stricter constraints.",
-            })
+            suggestions.insert(
+                0,
+                {
+                    "violation_type": "SUMMARY",
+                    "action": "COMPREHENSIVE_REVIEW",
+                    "priority": "HIGH",
+                    "replacement_hint": f"Content has {len(violations)} policy violations. Consider regenerating with stricter constraints.",
+                },
+            )
 
         return suggestions
 
@@ -1278,10 +1379,7 @@ button {{
         return {
             "total_tokens": result.total_tokens_used,
             "budget": plan.total_budget_tokens,
-            "under_budget": (
-                plan.total_budget_tokens is None or
-                result.total_tokens_used <= plan.total_budget_tokens
-            ),
+            "under_budget": (plan.total_budget_tokens is None or result.total_tokens_used <= plan.total_budget_tokens),
             "stages": stage_costs,
             "policy_violations": len(result.policy_violations),
             "recoveries": len(result.recovery_log),

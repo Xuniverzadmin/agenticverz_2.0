@@ -3,9 +3,9 @@ Rate Limit Integration Tests
 M8 Deliverable: Verify rate limiting works correctly with Redis
 """
 import os
+from unittest.mock import AsyncMock, patch
+
 import pytest
-import asyncio
-from unittest.mock import patch, AsyncMock
 
 # Set test environment
 os.environ.setdefault("RATE_LIMIT_ENABLED", "true")
@@ -142,8 +142,11 @@ class TestRateLimitMetrics:
     def test_metrics_registered(self):
         """Verify Prometheus metrics are registered."""
         from app.middleware.rate_limit import (
-            rl_allowed, rl_blocked, rl_limit_gauge,
-            rl_redis_connected, rl_redis_errors
+            rl_allowed,
+            rl_blocked,
+            rl_limit_gauge,
+            rl_redis_connected,
+            rl_redis_errors,
         )
 
         # Metrics should exist
@@ -155,7 +158,7 @@ class TestRateLimitMetrics:
 
     def test_tier_limits_in_gauge(self):
         """Verify tier limits are set in Prometheus gauge."""
-        from app.middleware.rate_limit import rl_limit_gauge, RATE_LIMIT_TIERS
+        from app.middleware.rate_limit import RATE_LIMIT_TIERS
 
         # Each tier should have a gauge value set
         for tier, (limit, _) in RATE_LIMIT_TIERS.items():
@@ -164,18 +167,16 @@ class TestRateLimitMetrics:
             pass  # Gauge is set at import time
 
 
-@pytest.mark.skipif(
-    not os.environ.get("REDIS_URL"),
-    reason="REDIS_URL not set - skipping live Redis tests"
-)
+@pytest.mark.skipif(not os.environ.get("REDIS_URL"), reason="REDIS_URL not set - skipping live Redis tests")
 class TestRateLimitLiveRedis:
     """Live Redis integration tests (require REDIS_URL)."""
 
     @pytest.mark.asyncio
     async def test_live_redis_rate_limit(self):
         """Test rate limiting against live Redis."""
-        from app.middleware.rate_limit import check_rate_limit
         import time
+
+        from app.middleware.rate_limit import check_rate_limit
 
         # Use unique tenant to avoid conflicts
         tenant_id = f"test_tenant_{int(time.time())}"

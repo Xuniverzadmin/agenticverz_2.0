@@ -28,9 +28,9 @@ Environment Variables:
 - R2_SECRET_ACCESS_KEY: R2 secret key
 """
 
-import os
 import logging
-from typing import Optional, Union, Protocol, Any
+import os
+from typing import Any, Optional, Protocol
 
 logger = logging.getLogger("nova.stores")
 
@@ -39,8 +39,10 @@ logger = logging.getLogger("nova.stores")
 # Configuration Error for Strict Mode
 # =============================================================================
 
+
 class StoreConfigurationError(Exception):
     """Raised when store configuration is invalid in strict mode (ENV=prod)."""
+
     pass
 
 
@@ -61,20 +63,37 @@ def _strict_fail(message: str) -> None:
 # Protocols for type hints
 # =============================================================================
 
+
 class BudgetStoreProtocol(Protocol):
     """Protocol for budget storage backends."""
-    async def get_workflow_cost(self, run_id: str) -> int: ...
-    async def add_workflow_cost(self, run_id: str, cost_cents: int) -> int: ...
-    async def reset_workflow_cost(self, run_id: str) -> None: ...
+
+    async def get_workflow_cost(self, run_id: str) -> int:
+        ...
+
+    async def add_workflow_cost(self, run_id: str, cost_cents: int) -> int:
+        ...
+
+    async def reset_workflow_cost(self, run_id: str) -> None:
+        ...
 
 
 class CheckpointStoreProtocol(Protocol):
     """Protocol for checkpoint storage backends."""
-    def init_tables(self) -> None: ...
-    async def ping(self) -> bool: ...
-    async def save(self, run_id: str, next_step_index: int, **kwargs) -> str: ...
-    async def load(self, run_id: str) -> Optional[Any]: ...
-    async def delete(self, run_id: str) -> bool: ...
+
+    def init_tables(self) -> None:
+        ...
+
+    async def ping(self) -> bool:
+        ...
+
+    async def save(self, run_id: str, next_step_index: int, **kwargs) -> str:
+        ...
+
+    async def load(self, run_id: str) -> Optional[Any]:
+        ...
+
+    async def delete(self, run_id: str) -> bool:
+        ...
 
 
 # =============================================================================
@@ -114,6 +133,7 @@ def get_budget_store(force_new: bool = False) -> BudgetStoreProtocol:
         else:
             try:
                 from app.workflow.policies import RedisBudgetStore
+
                 _budget_store_instance = RedisBudgetStore(redis_url=redis_url)
                 logger.info(f"Using RedisBudgetStore (Upstash): {redis_url[:30]}...")
                 return _budget_store_instance
@@ -129,6 +149,7 @@ def get_budget_store(force_new: bool = False) -> BudgetStoreProtocol:
         )
 
     from app.workflow.policies import InMemoryBudgetStore
+
     _budget_store_instance = InMemoryBudgetStore()
     logger.info("Using InMemoryBudgetStore (single-worker mode)")
     return _budget_store_instance
@@ -176,8 +197,9 @@ def get_checkpoint_store(force_new: bool = False) -> CheckpointStoreProtocol:
         else:
             try:
                 from app.workflow.checkpoint import CheckpointStore
+
                 _checkpoint_store_instance = CheckpointStore(engine_url=database_url)
-                logger.info(f"Using PostgresCheckpointStore (Neon)")
+                logger.info("Using PostgresCheckpointStore (Neon)")
                 return _checkpoint_store_instance
             except Exception as e:
                 _strict_fail(f"Failed to init CheckpointStore: {e}, cannot use PostgresCheckpointStore")
@@ -191,6 +213,7 @@ def get_checkpoint_store(force_new: bool = False) -> CheckpointStoreProtocol:
         )
 
     from app.workflow.checkpoint import InMemoryCheckpointStore
+
     _checkpoint_store_instance = InMemoryCheckpointStore()
     logger.info("Using InMemoryCheckpointStore (testing mode)")
     return _checkpoint_store_instance
@@ -205,6 +228,7 @@ async def get_checkpoint_store_async(force_new: bool = False) -> CheckpointStore
 # Idempotency Store Factory (re-export from traces)
 # =============================================================================
 
+
 async def get_idempotency_store():
     """
     Get or create idempotency store based on environment configuration.
@@ -216,6 +240,7 @@ async def get_idempotency_store():
         REDIS_URL: Redis connection string (auto-detects to Redis if set)
     """
     from app.traces.idempotency import get_idempotency_store as _get_idempotency_store
+
     return await _get_idempotency_store()
 
 
@@ -254,6 +279,7 @@ def get_r2_client():
 
     try:
         import boto3
+
         _r2_client_instance = boto3.client(
             "s3",
             endpoint_url=r2_endpoint,
@@ -278,6 +304,7 @@ def get_r2_bucket() -> Optional[str]:
 # =============================================================================
 # Store Reset (for testing)
 # =============================================================================
+
 
 def reset_all_stores():
     """Reset all cached store instances. For testing only."""

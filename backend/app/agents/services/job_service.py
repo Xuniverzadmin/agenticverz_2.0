@@ -20,7 +20,7 @@ from uuid import UUID
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from .credit_service import CreditService, get_credit_service, CREDIT_COSTS
+from .credit_service import CreditService, get_credit_service
 
 logger = logging.getLogger("nova.agents.job_service")
 
@@ -28,6 +28,7 @@ logger = logging.getLogger("nova.agents.job_service")
 @dataclass
 class JobConfig:
     """Configuration for a parallel job."""
+
     orchestrator_agent: str
     worker_agent: str
     task: str
@@ -48,6 +49,7 @@ class JobConfig:
 @dataclass
 class JobProgress:
     """Job progress status."""
+
     total: int
     completed: int
     failed: int
@@ -58,6 +60,7 @@ class JobProgress:
 @dataclass
 class JobCredits:
     """Job credit tracking."""
+
     reserved: Decimal
     spent: Decimal
     refunded: Decimal
@@ -66,6 +69,7 @@ class JobCredits:
 @dataclass
 class Job:
     """Job entity."""
+
     id: UUID
     orchestrator_instance_id: str
     task: str
@@ -82,6 +86,7 @@ class Job:
 @dataclass
 class JobItem:
     """Individual work item in a job."""
+
     id: UUID
     job_id: UUID
     item_index: int
@@ -106,7 +111,7 @@ class JobService:
         database_url: Optional[str] = None,
         credit_service: Optional[CreditService] = None,
     ):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not self.database_url:
             raise RuntimeError("DATABASE_URL required for JobService")
 
@@ -181,7 +186,8 @@ class JobService:
 
                 # Step 2: Create job FIRST (so credit_ledger FK is valid)
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.jobs (
                             id, orchestrator_instance_id, task, config,
                             status, total_items, tenant_id,
@@ -194,7 +200,8 @@ class JobService:
                             :credits_reserved, now(), now(),
                             :llm_budget_cents, CAST(:llm_config AS JSONB)
                         )
-                    """),
+                    """
+                    ),
                     {
                         "id": str(job_id),
                         "orchestrator_instance_id": orchestrator_instance_id,
@@ -205,28 +212,32 @@ class JobService:
                         "credits_reserved": float(credit_amount),
                         "llm_budget_cents": config.llm_budget_cents,
                         "llm_config": json.dumps(llm_governance_config),
-                    }
+                    },
                 )
 
                 # Create job items
                 for idx, item_input in enumerate(config.items):
                     item_id = uuid.uuid4()
                     session.execute(
-                        text("""
+                        text(
+                            """
                             INSERT INTO agents.job_items (
                                 id, job_id, item_index, input, status, max_retries
                             ) VALUES (
                                 :id, :job_id, :item_index,
                                 CAST(:input AS JSONB), 'pending', :max_retries
                             )
-                        """),
+                        """
+                        ),
                         {
                             "id": str(item_id),
                             "job_id": str(job_id),
                             "item_index": idx,
-                            "input": json.dumps(item_input) if not isinstance(item_input, str) else json.dumps({"value": item_input}),
+                            "input": json.dumps(item_input)
+                            if not isinstance(item_input, str)
+                            else json.dumps({"value": item_input}),
                             "max_retries": config.max_retries,
-                        }
+                        },
                     )
 
                 session.commit()
@@ -247,7 +258,7 @@ class JobService:
                         "parallelism": config.parallelism,
                         "tenant_id": tenant_id,
                         "credits_reserved": float(credit_amount),
-                    }
+                    },
                 )
 
                 return Job(
@@ -283,7 +294,8 @@ class JobService:
         """Get job by ID with current progress."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, orchestrator_instance_id, task, config, status,
                         total_items, completed_items, failed_items,
@@ -291,8 +303,9 @@ class JobService:
                         tenant_id, created_at, started_at, completed_at
                     FROM agents.jobs
                     WHERE id = :job_id
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
             row = result.fetchone()
 
@@ -362,29 +375,31 @@ class JobService:
                 failed = row[7] or 0
                 pending = total - completed - failed
 
-                jobs.append(Job(
-                    id=UUID(str(row[0])),
-                    orchestrator_instance_id=row[1],
-                    task=row[2],
-                    config=row[3] if isinstance(row[3], dict) else json.loads(row[3]) if row[3] else {},
-                    status=row[4],
-                    progress=JobProgress(
-                        total=total,
-                        completed=completed,
-                        failed=failed,
-                        pending=pending,
-                        progress_pct=round((completed / total) * 100, 2) if total > 0 else 0.0,
-                    ),
-                    credits=JobCredits(
-                        reserved=Decimal(str(row[8] or 0)),
-                        spent=Decimal(str(row[9] or 0)),
-                        refunded=Decimal(str(row[10] or 0)),
-                    ),
-                    tenant_id=row[11],
-                    created_at=row[12],
-                    started_at=row[13],
-                    completed_at=row[14],
-                ))
+                jobs.append(
+                    Job(
+                        id=UUID(str(row[0])),
+                        orchestrator_instance_id=row[1],
+                        task=row[2],
+                        config=row[3] if isinstance(row[3], dict) else json.loads(row[3]) if row[3] else {},
+                        status=row[4],
+                        progress=JobProgress(
+                            total=total,
+                            completed=completed,
+                            failed=failed,
+                            pending=pending,
+                            progress_pct=round((completed / total) * 100, 2) if total > 0 else 0.0,
+                        ),
+                        credits=JobCredits(
+                            reserved=Decimal(str(row[8] or 0)),
+                            spent=Decimal(str(row[9] or 0)),
+                            refunded=Decimal(str(row[10] or 0)),
+                        ),
+                        tenant_id=row[11],
+                        created_at=row[12],
+                        started_at=row[13],
+                        completed_at=row[14],
+                    )
+                )
 
             return jobs
 
@@ -397,7 +412,8 @@ class JobService:
         with self.Session() as session:
             # Check if all items are done
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         total_items,
                         completed_items,
@@ -405,8 +421,9 @@ class JobService:
                         status
                     FROM agents.jobs
                     WHERE id = :job_id
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
             row = result.fetchone()
 
@@ -423,12 +440,14 @@ class JobService:
                 new_status = "completed" if failed == 0 else "failed"
 
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.jobs
                         SET status = :status, completed_at = now()
                         WHERE id = :job_id
-                    """),
-                    {"job_id": str(job_id), "status": new_status}
+                    """
+                    ),
+                    {"job_id": str(job_id), "status": new_status},
                 )
                 session.commit()
 
@@ -439,7 +458,7 @@ class JobService:
                         "status": new_status,
                         "completed": completed,
                         "failed": failed,
-                    }
+                    },
                 )
 
                 return True
@@ -467,15 +486,17 @@ class JobService:
             try:
                 # Get job state
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT
                             id, status, total_items, completed_items, failed_items,
                             credits_reserved, credits_spent, tenant_id
                         FROM agents.jobs
                         WHERE id = :job_id
                         FOR UPDATE
-                    """),
-                    {"job_id": str(job_id)}
+                    """
+                    ),
+                    {"job_id": str(job_id)},
                 )
                 row = result.fetchone()
 
@@ -494,36 +515,42 @@ class JobService:
                 # Refund = reserved credits for uncompleted items
                 # Each item costs CREDIT_COSTS["job_item"] = 2
                 from .credit_service import CREDIT_COSTS
+
                 credits_to_refund = Decimal(str(items_cancelled)) * CREDIT_COSTS["job_item"]
 
                 # Update job status
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.jobs
                         SET status = 'cancelled',
                             completed_at = now(),
                             credits_refunded = credits_refunded + :refund
                         WHERE id = :job_id
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "refund": float(credits_to_refund),
-                    }
+                    },
                 )
 
                 # Mark unclaimed items as cancelled
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.job_items
                         SET status = 'cancelled'
                         WHERE job_id = :job_id AND status = 'pending'
-                    """),
-                    {"job_id": str(job_id)}
+                    """
+                    ),
+                    {"job_id": str(job_id)},
                 )
 
                 # Record cancellation
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.job_cancellations (
                             job_id, cancelled_by, reason,
                             items_completed, items_cancelled, credits_refunded
@@ -531,7 +558,8 @@ class JobService:
                             CAST(:job_id AS UUID), :cancelled_by, :reason,
                             :completed, :cancelled, :refunded
                         )
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "cancelled_by": cancelled_by,
@@ -539,23 +567,25 @@ class JobService:
                         "completed": completed,
                         "cancelled": items_cancelled,
                         "refunded": float(credits_to_refund),
-                    }
+                    },
                 )
 
                 # Log refund to credit ledger
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.credit_ledger (
                             job_id, tenant_id, operation, skill, amount
                         ) VALUES (
                             CAST(:job_id AS UUID), :tenant_id, 'refund', 'job_cancel', :amount
                         )
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "tenant_id": tenant_id,
                         "amount": float(credits_to_refund),
-                    }
+                    },
                 )
 
                 session.commit()
@@ -570,10 +600,7 @@ class JobService:
                     "reason": reason,
                 }
 
-                logger.info(
-                    "job_cancelled_with_refund",
-                    extra=result_data
-                )
+                logger.info("job_cancelled_with_refund", extra=result_data)
 
                 return result_data
 
@@ -609,18 +636,20 @@ class JobService:
             items = []
 
             for row in result:
-                items.append(JobItem(
-                    id=UUID(str(row[0])),
-                    job_id=UUID(str(row[1])),
-                    item_index=row[2],
-                    input=row[3],
-                    output=row[4],
-                    worker_instance_id=row[5],
-                    status=row[6],
-                    claimed_at=row[7],
-                    completed_at=row[8],
-                    error_message=row[9],
-                ))
+                items.append(
+                    JobItem(
+                        id=UUID(str(row[0])),
+                        job_id=UUID(str(row[1])),
+                        item_index=row[2],
+                        input=row[3],
+                        output=row[4],
+                        worker_instance_id=row[5],
+                        status=row[6],
+                        claimed_at=row[7],
+                        completed_at=row[8],
+                        error_message=row[9],
+                    )
+                )
 
             return items
 

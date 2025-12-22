@@ -346,4 +346,3 @@ export DEFAULT_DISABLE_TTL_HOURS=24
 
 All 8 mandatory deliverables implemented and verified.
 Critical fixes applied for production readiness (PIN-027).
-

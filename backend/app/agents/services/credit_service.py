@@ -13,9 +13,8 @@
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from sqlalchemy import create_engine, text
@@ -38,6 +37,7 @@ CREDIT_COSTS = {
 @dataclass
 class CreditBalance:
     """Current credit balance for a tenant."""
+
     tenant_id: str
     total_credits: Decimal
     reserved_credits: Decimal
@@ -48,6 +48,7 @@ class CreditBalance:
 @dataclass
 class CreditOperation:
     """Result of a credit operation."""
+
     success: bool
     operation: str  # reserve, spend, refund
     amount: Decimal
@@ -68,7 +69,7 @@ class CreditService:
     """
 
     def __init__(self, database_url: Optional[str] = None):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not self.database_url:
             raise RuntimeError("DATABASE_URL required for CreditService")
 
@@ -115,12 +116,14 @@ class CreditService:
             try:
                 # Check if credit_balances table exists
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT total_credits, reserved_credits, spent_credits
                         FROM agents.credit_balances
                         WHERE tenant_id = :tenant_id
-                    """),
-                    {"tenant_id": tenant_id}
+                    """
+                    ),
+                    {"tenant_id": tenant_id},
                 )
                 row = result.fetchone()
 
@@ -204,18 +207,20 @@ class CreditService:
             try:
                 # Log the reservation to credit_ledger
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.credit_ledger (
                             job_id, tenant_id, operation, skill, amount, created_at
                         ) VALUES (
                             CAST(:job_id AS UUID), :tenant_id, 'reserve', 'agent_spawn', :amount, now()
                         )
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "tenant_id": tenant_id,
                         "amount": float(amount),
-                    }
+                    },
                 )
 
                 session.commit()
@@ -226,7 +231,7 @@ class CreditService:
                         "job_id": str(job_id),
                         "tenant_id": tenant_id,
                         "amount": float(amount),
-                    }
+                    },
                 )
 
                 return CreditOperation(
@@ -285,15 +290,17 @@ class CreditService:
             try:
                 # Update job credits_spent
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.jobs
                         SET credits_spent = credits_spent + :amount
                         WHERE id = :job_id
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "amount": float(amount),
-                    }
+                    },
                 )
 
                 session.commit()
@@ -331,15 +338,17 @@ class CreditService:
             try:
                 # Update job credits_refunded
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.jobs
                         SET credits_refunded = credits_refunded + :amount
                         WHERE id = :job_id
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "amount": float(amount),
-                    }
+                    },
                 )
 
                 session.commit()
@@ -350,7 +359,7 @@ class CreditService:
                         "job_id": str(job_id),
                         "item_id": str(item_id),
                         "amount": float(amount),
-                    }
+                    },
                 )
 
                 return CreditOperation(
@@ -404,21 +413,23 @@ class CreditService:
             try:
                 # Log to ledger
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO agents.credit_ledger (
                             job_id, tenant_id, operation, skill, amount, context, created_at
                         ) VALUES (
                             CAST(:job_id AS UUID), :tenant_id, 'charge', :skill, :amount,
                             CAST(:context AS JSONB), now()
                         )
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id) if job_id else None,
                         "tenant_id": tenant_id,
                         "skill": skill,
                         "amount": float(amount),
                         "context": "{}" if not context else str(context),
-                    }
+                    },
                 )
 
                 session.commit()

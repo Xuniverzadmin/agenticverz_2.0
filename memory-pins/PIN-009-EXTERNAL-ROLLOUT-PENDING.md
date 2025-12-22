@@ -699,4 +699,3 @@ aos simulate --plan '[{"skill": "http_call", "params": {"url": "https://api.coin
 | 2025-12-04 | Fixed PgBouncer health check (nc -z probe) |
 | 2025-12-04 | Enabled Prometheus lifecycle API |
 | 2025-12-04 | Added strategic context and machine-native GA checklist (PIN-023) |
-

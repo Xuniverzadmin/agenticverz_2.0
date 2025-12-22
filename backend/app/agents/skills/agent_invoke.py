@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import time
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
@@ -16,16 +15,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from ..services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
+from ..services.invoke_audit_service import InvokeAuditService, get_invoke_audit_service
 from ..services.message_service import MessageService, get_message_service
 from ..services.registry_service import RegistryService, get_registry_service
-from ..services.credit_service import CreditService, get_credit_service, CREDIT_COSTS
-from ..services.invoke_audit_service import InvokeAuditService, get_invoke_audit_service
 
 logger = logging.getLogger("nova.agents.skills.agent_invoke")
 
 
 class AgentInvokeInput(BaseModel):
     """Input schema for agent_invoke skill."""
+
     caller_instance_id: str = Field(..., description="Caller agent instance ID")
     target_instance_id: str = Field(..., description="Target agent instance ID")
     request_payload: Dict[str, Any] = Field(..., description="Request data to send")
@@ -35,6 +35,7 @@ class AgentInvokeInput(BaseModel):
 
 class AgentInvokeOutput(BaseModel):
     """Output schema for agent_invoke skill."""
+
     success: bool
     invoke_id: Optional[str] = None
     response_payload: Optional[Dict[str, Any]] = None
@@ -65,7 +66,7 @@ class AgentInvokeSkill:
         credit_service: Optional[CreditService] = None,
         invoke_audit_service: Optional[InvokeAuditService] = None,
     ):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         self.message_service = message_service or get_message_service()
         self.registry_service = registry_service or get_registry_service()
         self.credit_service = credit_service or get_credit_service()
@@ -204,7 +205,7 @@ class AgentInvokeSkill:
                     "invoke_id": invoke_id,
                     "target": input_data.target_instance_id,
                     "latency_ms": latency_ms,
-                }
+                },
             )
 
             return AgentInvokeOutput(
@@ -239,7 +240,8 @@ class AgentInvokeSkill:
 
         with self.Session() as session:
             session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO agents.invocations (
                         invoke_id, caller_instance_id, target_instance_id,
                         job_id, request_payload, status, timeout_at, created_at
@@ -248,7 +250,8 @@ class AgentInvokeSkill:
                         CAST(:job_id AS UUID), CAST(:request_payload AS JSONB),
                         'pending', :timeout_at, now()
                     )
-                """),
+                """
+                ),
                 {
                     "invoke_id": invoke_id,
                     "caller_instance_id": caller_instance_id,
@@ -256,7 +259,7 @@ class AgentInvokeSkill:
                     "job_id": str(job_id) if job_id else None,
                     "request_payload": json.dumps(request_payload),
                     "timeout_at": timeout_at,
-                }
+                },
             )
             session.commit()
 
@@ -279,8 +282,9 @@ class AgentInvokeSkill:
         channel = f"invoke_{invoke_id}"
 
         try:
-            import psycopg2
             import select
+
+            import psycopg2
 
             # Use raw psycopg2 for LISTEN
             conn = psycopg2.connect(self.database_url)
@@ -305,12 +309,14 @@ class AgentInvokeSkill:
                 # Check DB for response
                 with self.Session() as session:
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                             SELECT response_payload, status
                             FROM agents.invocations
                             WHERE invoke_id = :invoke_id
-                        """),
-                        {"invoke_id": invoke_id}
+                        """
+                        ),
+                        {"invoke_id": invoke_id},
                     )
                     row = result.fetchone()
 
@@ -349,12 +355,14 @@ class AgentInvokeSkill:
         while time.time() < deadline:
             with self.Session() as session:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT response_payload, status
                         FROM agents.invocations
                         WHERE invoke_id = :invoke_id
-                    """),
-                    {"invoke_id": invoke_id}
+                    """
+                    ),
+                    {"invoke_id": invoke_id},
                 )
                 row = result.fetchone()
 
@@ -376,12 +384,14 @@ class AgentInvokeSkill:
 
         with self.Session() as session:
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE agents.invocations
                     SET status = 'failed', error_message = :error, completed_at = now()
                     WHERE invoke_id = :invoke_id
-                """),
-                {"invoke_id": invoke_id, "error": error[:500]}
+                """
+                ),
+                {"invoke_id": invoke_id, "error": error[:500]},
             )
             session.commit()
 
@@ -392,12 +402,14 @@ class AgentInvokeSkill:
 
         with self.Session() as session:
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE agents.invocations
                     SET status = 'timeout', completed_at = now()
                     WHERE invoke_id = :invoke_id
-                """),
-                {"invoke_id": invoke_id}
+                """
+                ),
+                {"invoke_id": invoke_id},
             )
             session.commit()
 
@@ -417,7 +429,7 @@ class AgentInvokeSkill:
         Returns:
             True if response recorded
         """
-        db_url = database_url or os.environ.get("DATABASE_URL")
+        db_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not db_url:
             logger.error("No DATABASE_URL for respond_to_invoke")
             return False
@@ -428,18 +440,20 @@ class AgentInvokeSkill:
         with Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.invocations
                         SET status = 'completed',
                             response_payload = CAST(:response AS JSONB),
                             completed_at = now()
                         WHERE invoke_id = :invoke_id AND status = 'pending'
                         RETURNING invoke_id
-                    """),
+                    """
+                    ),
                     {
                         "invoke_id": invoke_id,
                         "response": json.dumps(response_payload),
-                    }
+                    },
                 )
                 row = result.fetchone()
 
@@ -450,7 +464,7 @@ class AgentInvokeSkill:
                         {
                             "channel": f"invoke_{invoke_id}",
                             "payload": json.dumps({"status": "completed"}),
-                        }
+                        },
                     )
 
                 session.commit()

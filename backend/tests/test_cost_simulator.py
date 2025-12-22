@@ -3,18 +3,16 @@
 Unit tests for pre-execution cost simulation.
 """
 
-import pytest
-from pathlib import Path
-
 # Add backend to path for imports
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.worker.simulate import (
     CostSimulator,
-    SimulationResult,
     FeasibilityStatus,
-    StepRisk,
+    SimulationResult,
     simulate_plan,
 )
 

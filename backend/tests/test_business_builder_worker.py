@@ -10,39 +10,35 @@ Test suite verifying:
 7. Golden replay (M4)
 """
 
+
 import pytest
-import asyncio
-from typing import Any, Dict
 
 from app.workers.business_builder import (
+    BrandSchema,
     BusinessBuilderWorker,
     ExecutionPlan,
-    ExecutionStage,
-    BrandSchema,
-)
-from app.workers.business_builder.execution_plan import (
-    StageCategory,
-    StageStatus,
-    create_business_builder_plan,
-)
-from app.workers.business_builder.schemas.brand import (
-    ToneLevel,
-    ToneRule,
-    ForbiddenClaim,
-    create_minimal_brand,
-    DEFAULT_FORBIDDEN_CLAIMS,
 )
 from app.workers.business_builder.agents.definitions import (
     WORKER_AGENTS,
+    create_copywriter_agent,
     create_researcher_agent,
     create_strategist_agent,
-    create_copywriter_agent,
 )
-
+from app.workers.business_builder.execution_plan import (
+    StageCategory,
+    create_business_builder_plan,
+)
+from app.workers.business_builder.schemas.brand import (
+    ForbiddenClaim,
+    ToneLevel,
+    ToneRule,
+    create_minimal_brand,
+)
 
 # =============================================================================
 # Brand Schema Tests
 # =============================================================================
+
 
 class TestBrandSchema:
     """Tests for BrandSchema validation."""
@@ -144,6 +140,7 @@ class TestBrandSchema:
 # Agent Definition Tests (M15 SBA)
 # =============================================================================
 
+
 class TestAgentDefinitions:
     """Tests for SBA agent definitions."""
 
@@ -205,6 +202,7 @@ class TestAgentDefinitions:
 # =============================================================================
 # Execution Plan Tests
 # =============================================================================
+
 
 class TestExecutionPlan:
     """Tests for execution plan."""
@@ -290,6 +288,7 @@ class TestExecutionPlan:
 # =============================================================================
 # Worker Execution Tests
 # =============================================================================
+
 
 class TestWorkerExecution:
     """Tests for worker execution."""
@@ -399,6 +398,7 @@ class TestWorkerExecution:
 # Policy Validation Tests (M19/M20)
 # =============================================================================
 
+
 class TestPolicyValidation:
     """Tests for policy validation integration."""
 
@@ -456,6 +456,7 @@ class TestPolicyValidation:
 # =============================================================================
 # Stage Implementation Tests
 # =============================================================================
+
 
 class TestStageImplementations:
     """Tests for individual stage implementations."""
@@ -527,6 +528,7 @@ class TestStageImplementations:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestIntegration:
     """Integration tests for full workflow."""

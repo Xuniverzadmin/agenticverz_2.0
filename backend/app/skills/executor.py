@@ -8,21 +8,12 @@ from typing import Any, Dict, Optional, Tuple
 
 from pydantic import ValidationError
 
-from .registry import get_skill_entry, create_skill_instance, SkillEntry
-from ..schemas.skill import SkillStatus, SkillOutputBase
-from ..schemas.plan import PlanStep, StepStatus, OnErrorPolicy
-from ..schemas.retry import RetryPolicy
 from ..observability.cost_tracker import (
-    get_cost_tracker,
     CostEnforcementResult,
+    get_cost_tracker,
 )
-from ..workflow.metrics import (
-    record_capability_violation,
-    record_policy_decision,
-    record_budget_rejection,
-    record_step_duration,
-    record_cost_simulation_drift,
-)
+from ..schemas.plan import PlanStep, StepStatus
+from .registry import get_skill_entry
 
 logger = logging.getLogger("nova.skills.executor")
 
@@ -107,8 +98,8 @@ class SkillExecutor:
     # Estimated cost per skill type (in cents)
     # Used for pre-execution budget checks
     SKILL_COST_ESTIMATES = {
-        "llm_invoke": 5.0,      # ~5c per LLM call (varies by model)
-        "http_call": 0.0,       # No cost
+        "llm_invoke": 5.0,  # ~5c per LLM call (varies by model)
+        "http_call": 0.0,  # No cost
         "json_transform": 0.0,  # No cost
         "postgres_query": 0.0,  # No cost
         "calendar_write": 0.0,  # No cost
@@ -197,9 +188,7 @@ class SkillExecutor:
         started_at = datetime.now(timezone.utc)
 
         # Estimate cost for this skill
-        estimated_cost = self.SKILL_COST_ESTIMATES.get(
-            skill_name, self.DEFAULT_COST_ESTIMATE
-        )
+        estimated_cost = self.SKILL_COST_ESTIMATES.get(skill_name, self.DEFAULT_COST_ESTIMATE)
 
         # HARD COST ENFORCEMENT - Check budget BEFORE execution
         if self.enforce_budget and tenant_id:
@@ -219,7 +208,7 @@ class SkillExecutor:
                         "workflow_id": workflow_id,
                         "estimated_cost_cents": estimated_cost,
                         "reason": reason,
-                    }
+                    },
                 )
                 raise BudgetExceededError(
                     message=f"Budget exceeded: {reason}",
@@ -239,7 +228,7 @@ class SkillExecutor:
                         "tenant_id": tenant_id,
                         "estimated_cost_cents": estimated_cost,
                         "reason": reason,
-                    }
+                    },
                 )
                 raise BudgetExceededError(
                     message=f"Request too expensive: {reason}",
@@ -258,7 +247,7 @@ class SkillExecutor:
                         "step_id": step_id,
                         "tenant_id": tenant_id,
                         "reason": reason,
-                    }
+                    },
                 )
 
         logger.info(
@@ -267,7 +256,7 @@ class SkillExecutor:
                 "skill": skill_name,
                 "step_id": step_id,
                 "params_keys": list(params.keys()),
-            }
+            },
         )
 
         # Get skill entry from registry
@@ -283,9 +272,7 @@ class SkillExecutor:
         # Validate input
         validated_params = params
         if self.validate_input and entry.input_schema:
-            validated_params = self._validate_input(
-                skill_name, params, entry.input_schema
-            )
+            validated_params = self._validate_input(skill_name, params, entry.input_schema)
 
         # Create skill instance
         try:
@@ -311,7 +298,7 @@ class SkillExecutor:
                     "step_id": step_id,
                     "duration": round(duration, 3),
                     "error": str(e)[:200],
-                }
+                },
             )
             raise SkillExecutionError(
                 message=f"Skill execution failed: {e}",
@@ -338,7 +325,7 @@ class SkillExecutor:
                 "step_id": step_id,
                 "status": status.value,
                 "duration": round(duration, 3),
-            }
+            },
         )
 
         # Add execution metadata to result
@@ -376,9 +363,7 @@ class SkillExecutor:
             return validated.model_dump()
         except ValidationError as e:
             errors = e.errors()
-            error_summary = "; ".join(
-                f"{err['loc']}: {err['msg']}" for err in errors[:3]
-            )
+            error_summary = "; ".join(f"{err['loc']}: {err['msg']}" for err in errors[:3])
 
             if self.strict_mode:
                 raise SkillValidationError(
@@ -394,7 +379,7 @@ class SkillExecutor:
                     "skill": skill_name,
                     "errors": error_summary,
                     "error_count": len(errors),
-                }
+                },
             )
             # Return original params if not strict
             return params
@@ -424,9 +409,7 @@ class SkillExecutor:
             return validated.model_dump()
         except ValidationError as e:
             errors = e.errors()
-            error_summary = "; ".join(
-                f"{err['loc']}: {err['msg']}" for err in errors[:3]
-            )
+            error_summary = "; ".join(f"{err['loc']}: {err['msg']}" for err in errors[:3])
 
             if self.strict_mode:
                 raise SkillValidationError(
@@ -442,7 +425,7 @@ class SkillExecutor:
                     "skill": skill_name,
                     "errors": error_summary,
                     "error_count": len(errors),
-                }
+                },
             )
             # Return original result if not strict
             return result
@@ -562,7 +545,7 @@ default_executor = SkillExecutor(
     validate_input=True,
     validate_output=False,  # Output validation optional for now
     strict_mode=False,
-    enforce_budget=True,   # Cost enforcement enabled by default
+    enforce_budget=True,  # Cost enforcement enabled by default
 )
 
 

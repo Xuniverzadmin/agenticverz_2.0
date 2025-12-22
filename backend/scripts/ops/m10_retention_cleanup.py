@@ -77,7 +77,7 @@ def acquire_lock(db_url: Optional[str] = None) -> bool:
         with Session(engine) as session:
             result = session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID, "ttl": LOCK_TTL}
+                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID, "ttl": LOCK_TTL},
             )
             acquired = result.scalar()
             session.commit()
@@ -107,7 +107,7 @@ def release_lock(db_url: Optional[str] = None) -> bool:
         with Session(engine) as session:
             result = session.execute(
                 text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID}
+                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID},
             )
             released = result.scalar()
             session.commit()
@@ -140,16 +140,20 @@ def cleanup_dead_letter_archive(
         with Session(engine) as session:
             # Count rows to delete
             count_result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) FROM m10_recovery.dead_letter_archive
                     WHERE archived_at < now() - make_interval(days => :days)
-                """),
-                {"days": retention_days}
+                """
+                ),
+                {"days": retention_days},
             )
             results["count"] = count_result.scalar() or 0
 
             if dry_run:
-                logger.info(f"[DRY RUN] Would delete {results['count']} dead_letter_archive rows older than {retention_days} days")
+                logger.info(
+                    f"[DRY RUN] Would delete {results['count']} dead_letter_archive rows older than {retention_days} days"
+                )
                 return results
 
             if results["count"] > 0:
@@ -159,15 +163,17 @@ def cleanup_dead_letter_archive(
 
                 while True:
                     delete_result = session.execute(
-                        text("""
+                        text(
+                            """
                             DELETE FROM m10_recovery.dead_letter_archive
                             WHERE id IN (
                                 SELECT id FROM m10_recovery.dead_letter_archive
                                 WHERE archived_at < now() - make_interval(days => :days)
                                 LIMIT :batch_size
                             )
-                        """),
-                        {"days": retention_days, "batch_size": batch_size}
+                        """
+                        ),
+                        {"days": retention_days, "batch_size": batch_size},
                     )
                     deleted = delete_result.rowcount
                     total_deleted += deleted
@@ -209,16 +215,20 @@ def cleanup_replay_log(
         with Session(engine) as session:
             # Count rows to delete
             count_result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) FROM m10_recovery.replay_log
                     WHERE replayed_at < now() - make_interval(days => :days)
-                """),
-                {"days": retention_days}
+                """
+                ),
+                {"days": retention_days},
             )
             results["count"] = count_result.scalar() or 0
 
             if dry_run:
-                logger.info(f"[DRY RUN] Would delete {results['count']} replay_log rows older than {retention_days} days")
+                logger.info(
+                    f"[DRY RUN] Would delete {results['count']} replay_log rows older than {retention_days} days"
+                )
                 return results
 
             if results["count"] > 0:
@@ -227,15 +237,17 @@ def cleanup_replay_log(
 
                 while True:
                     delete_result = session.execute(
-                        text("""
+                        text(
+                            """
                             DELETE FROM m10_recovery.replay_log
                             WHERE id IN (
                                 SELECT id FROM m10_recovery.replay_log
                                 WHERE replayed_at < now() - make_interval(days => :days)
                                 LIMIT :batch_size
                             )
-                        """),
-                        {"days": retention_days, "batch_size": batch_size}
+                        """
+                        ),
+                        {"days": retention_days, "batch_size": batch_size},
                     )
                     deleted = delete_result.rowcount
                     total_deleted += deleted
@@ -279,17 +291,21 @@ def cleanup_outbox(
         with Session(engine) as session:
             # Count rows to delete (only processed events)
             count_result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) FROM m10_recovery.outbox
                     WHERE processed_at IS NOT NULL
                       AND processed_at < now() - make_interval(days => :days)
-                """),
-                {"days": retention_days}
+                """
+                ),
+                {"days": retention_days},
             )
             results["count"] = count_result.scalar() or 0
 
             if dry_run:
-                logger.info(f"[DRY RUN] Would delete {results['count']} processed outbox rows older than {retention_days} days")
+                logger.info(
+                    f"[DRY RUN] Would delete {results['count']} processed outbox rows older than {retention_days} days"
+                )
                 return results
 
             if results["count"] > 0:
@@ -298,7 +314,8 @@ def cleanup_outbox(
 
                 while True:
                     delete_result = session.execute(
-                        text("""
+                        text(
+                            """
                             DELETE FROM m10_recovery.outbox
                             WHERE id IN (
                                 SELECT id FROM m10_recovery.outbox
@@ -306,8 +323,9 @@ def cleanup_outbox(
                                   AND processed_at < now() - make_interval(days => :days)
                                 LIMIT :batch_size
                             )
-                        """),
-                        {"days": retention_days, "batch_size": batch_size}
+                        """
+                        ),
+                        {"days": retention_days, "batch_size": batch_size},
                     )
                     deleted = delete_result.rowcount
                     total_deleted += deleted
@@ -425,9 +443,7 @@ def run_all_cleanup(
 
 def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="M10 Recovery retention cleanup"
-    )
+    parser = argparse.ArgumentParser(description="M10 Recovery retention cleanup")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -488,18 +504,18 @@ def main():
     if args.json:
         print(json.dumps(results, indent=2, default=str))
     else:
-        print(f"\n=== M10 Retention Cleanup ===")
+        print("\n=== M10 Retention Cleanup ===")
         print(f"Timestamp: {results['timestamp']}")
         print(f"Holder ID: {results['holder_id']}")
         print(f"Dry Run: {results['dry_run']}")
         print(f"Status: {results['status']}")
 
-        if results['status'] == 'skipped':
+        if results["status"] == "skipped":
             print(f"Reason: {results.get('reason', 'unknown')}")
         else:
-            print(f"\nResults by table:")
-            for table in results.get('tables', []):
-                status = "DELETED" if not results['dry_run'] else "WOULD DELETE"
+            print("\nResults by table:")
+            for table in results.get("tables", []):
+                status = "DELETED" if not results["dry_run"] else "WOULD DELETE"
                 print(f"  {table['table']}: {table.get('deleted', table.get('count', 0))} rows {status}")
 
             print(f"\nTotal: {results.get('total_deleted', results.get('total_count', 0))} rows")

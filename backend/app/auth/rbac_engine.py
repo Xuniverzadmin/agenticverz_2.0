@@ -43,10 +43,7 @@ JWT_SECRET = os.getenv("JWT_SECRET", "")
 JWT_VERIFY_SIGNATURE = os.getenv("JWT_VERIFY_SIGNATURE", "false").lower() == "true"
 
 # Policy file path (can be reloaded at runtime)
-POLICY_FILE = os.getenv(
-    "RBAC_POLICY_FILE",
-    str(Path(__file__).parent.parent / "config" / "rbac_policies.json")
-)
+POLICY_FILE = os.getenv("RBAC_POLICY_FILE", str(Path(__file__).parent.parent / "config" / "rbac_policies.json"))
 
 
 # =============================================================================
@@ -54,38 +51,26 @@ POLICY_FILE = os.getenv(
 # =============================================================================
 
 RBAC_ENGINE_DECISIONS = Counter(
-    "rbac_engine_decisions_total",
-    "RBAC engine authorization decisions",
-    ["resource", "action", "decision", "reason"]
+    "rbac_engine_decisions_total", "RBAC engine authorization decisions", ["resource", "action", "decision", "reason"]
 )
 
 RBAC_ENGINE_LATENCY = Histogram(
     "rbac_engine_latency_seconds",
     "RBAC engine decision latency",
-    buckets=[0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1]
+    buckets=[0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1],
 )
 
-RBAC_POLICY_LOADS = Counter(
-    "rbac_policy_loads_total",
-    "Policy file reload attempts",
-    ["status"]
-)
+RBAC_POLICY_LOADS = Counter("rbac_policy_loads_total", "Policy file reload attempts", ["status"])
 
-RBAC_POLICY_VERSION = Gauge(
-    "rbac_policy_version_info",
-    "Current policy version (hash as integer)"
-)
+RBAC_POLICY_VERSION = Gauge("rbac_policy_version_info", "Current policy version (hash as integer)")
 
-RBAC_AUDIT_WRITES = Counter(
-    "rbac_audit_writes_total",
-    "Audit log writes",
-    ["status"]
-)
+RBAC_AUDIT_WRITES = Counter("rbac_audit_writes_total", "Audit log writes", ["status"])
 
 
 # =============================================================================
 # Data Classes
 # =============================================================================
+
 
 @dataclass
 class PolicyObject:
@@ -97,6 +82,7 @@ class PolicyObject:
         action: Action type (e.g., "read", "write", "delete", "admin")
         attrs: Optional additional attributes for context-aware decisions
     """
+
     resource: str
     action: str
     attrs: Dict[str, Any] = field(default_factory=dict)
@@ -117,6 +103,7 @@ class Decision:
         policy: The policy that was evaluated
         latency_ms: Decision latency in milliseconds
     """
+
     allowed: bool
     reason: Optional[str] = None
     roles: List[str] = field(default_factory=list)
@@ -127,6 +114,7 @@ class Decision:
 @dataclass
 class PolicyConfig:
     """Loaded policy configuration."""
+
     version: str
     matrix: Dict[str, Dict[str, List[str]]]
     path_mappings: List[Dict[str, Any]]
@@ -137,6 +125,7 @@ class PolicyConfig:
 # =============================================================================
 # RBAC Engine
 # =============================================================================
+
 
 class RBACEngine:
     """
@@ -160,11 +149,7 @@ class RBACEngine:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(
-        self,
-        db_session_factory: Optional[Callable] = None,
-        policy_file: Optional[str] = None
-    ):
+    def __init__(self, db_session_factory: Optional[Callable] = None, policy_file: Optional[str] = None):
         # Only initialize once
         if hasattr(self, "_initialized") and self._initialized:
             return
@@ -233,10 +218,7 @@ class RBACEngine:
                 RBAC_POLICY_LOADS.labels(status="default").inc()
                 with self._policy_lock:
                     self._policy = PolicyConfig(
-                        version="default",
-                        matrix=self._default_matrix,
-                        path_mappings=[],
-                        hash="default"
+                        version="default", matrix=self._default_matrix, path_mappings=[], hash="default"
                     )
                 return True, "Using default policies"
 
@@ -244,16 +226,14 @@ class RBACEngine:
                 data = json.load(f)
 
             # Compute hash for versioning
-            policy_hash = hashlib.sha256(
-                json.dumps(data, sort_keys=True).encode()
-            ).hexdigest()[:16]
+            policy_hash = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:16]
 
             with self._policy_lock:
                 self._policy = PolicyConfig(
                     version=data.get("version", "unknown"),
                     matrix=data.get("matrix", self._default_matrix),
                     path_mappings=data.get("path_mappings", []),
-                    hash=policy_hash
+                    hash=policy_hash,
                 )
                 RBAC_POLICY_VERSION.set(int(policy_hash[:8], 16))
 
@@ -279,19 +259,11 @@ class RBACEngine:
                     "hash": self._policy.hash,
                     "loaded_at": self._policy.loaded_at.isoformat(),
                     "roles": list(self._policy.matrix.keys()),
-                    "resources": list(set(
-                        r for perms in self._policy.matrix.values()
-                        for r in perms.keys()
-                    ))
+                    "resources": list(set(r for perms in self._policy.matrix.values() for r in perms.keys())),
                 }
             return {"version": "none", "hash": "none"}
 
-    def check(
-        self,
-        policy: PolicyObject,
-        request: Request,
-        tenant_id: Optional[str] = None
-    ) -> Decision:
+    def check(self, policy: PolicyObject, request: Request, tenant_id: Optional[str] = None) -> Decision:
         """
         Check authorization for a policy.
 
@@ -311,12 +283,7 @@ class RBACEngine:
 
             # If RBAC not enforced, allow with reason
             if not RBAC_ENFORCE:
-                decision = Decision(
-                    allowed=True,
-                    reason="rbac-disabled",
-                    roles=roles,
-                    policy=policy
-                )
+                decision = Decision(allowed=True, reason="rbac-disabled", roles=roles, policy=policy)
                 self._record_metrics(policy, decision, start_time)
                 return decision
 
@@ -326,7 +293,7 @@ class RBACEngine:
                     allowed=RBAC_FAIL_OPEN,
                     reason="no-credentials" if not RBAC_FAIL_OPEN else "fail-open-no-credentials",
                     roles=[],
-                    policy=policy
+                    policy=policy,
                 )
                 self._record_metrics(policy, decision, start_time)
                 self._audit(decision, request, tenant_id)
@@ -341,12 +308,7 @@ class RBACEngine:
                 allowed_actions = role_perms.get(policy.resource, [])
 
                 if policy.action in allowed_actions:
-                    decision = Decision(
-                        allowed=True,
-                        reason=f"role:{role}",
-                        roles=roles,
-                        policy=policy
-                    )
+                    decision = Decision(allowed=True, reason=f"role:{role}", roles=roles, policy=policy)
                     self._record_metrics(policy, decision, start_time)
                     self._audit(decision, request, tenant_id)
                     return decision
@@ -356,7 +318,7 @@ class RBACEngine:
                 allowed=RBAC_FAIL_OPEN,
                 reason="insufficient-permissions" if not RBAC_FAIL_OPEN else "fail-open-insufficient",
                 roles=roles,
-                policy=policy
+                policy=policy,
             )
             self._record_metrics(policy, decision, start_time)
             self._audit(decision, request, tenant_id)
@@ -365,10 +327,7 @@ class RBACEngine:
         except Exception as e:
             logger.error(f"RBAC check error: {e}")
             decision = Decision(
-                allowed=RBAC_FAIL_OPEN,
-                reason=f"error:{e}" if RBAC_FAIL_OPEN else "error",
-                roles=[],
-                policy=policy
+                allowed=RBAC_FAIL_OPEN, reason=f"error:{e}" if RBAC_FAIL_OPEN else "error", roles=[], policy=policy
             )
             self._record_metrics(policy, decision, start_time)
             return decision
@@ -376,10 +335,7 @@ class RBACEngine:
     def _extract_roles(self, request: Request) -> List[str]:
         """Extract roles from request headers."""
         # Check machine token
-        machine_token = (
-            request.headers.get("X-Machine-Token") or
-            request.headers.get("Authorization-Machine")
-        )
+        machine_token = request.headers.get("X-Machine-Token") or request.headers.get("Authorization-Machine")
         if machine_token and MACHINE_SECRET_TOKEN and machine_token == MACHINE_SECRET_TOKEN:
             return ["machine"]
 
@@ -412,12 +368,7 @@ class RBACEngine:
 
         return []
 
-    def _record_metrics(
-        self,
-        policy: PolicyObject,
-        decision: Decision,
-        start_time: float
-    ) -> None:
+    def _record_metrics(self, policy: PolicyObject, decision: Decision, start_time: float) -> None:
         """Record Prometheus metrics."""
         latency = time.time() - start_time
         decision.latency_ms = latency * 1000
@@ -426,16 +377,11 @@ class RBACEngine:
             resource=policy.resource,
             action=policy.action,
             decision="allowed" if decision.allowed else "denied",
-            reason=decision.reason or "unknown"
+            reason=decision.reason or "unknown",
         ).inc()
         RBAC_ENGINE_LATENCY.observe(latency)
 
-    def _audit(
-        self,
-        decision: Decision,
-        request: Request,
-        tenant_id: Optional[str] = None
-    ) -> None:
+    def _audit(self, decision: Decision, request: Request, tenant_id: Optional[str] = None) -> None:
         """Write audit log to database (async-safe)."""
         if not RBAC_AUDIT_ENABLED or not self._db_session_factory:
             return
@@ -454,7 +400,7 @@ class RBACEngine:
             # Insert audit record (fire and forget for performance)
             # Handle both generator-based and regular session factories
             session_gen = self._db_session_factory()
-            if hasattr(session_gen, '__next__'):
+            if hasattr(session_gen, "__next__"):
                 # Generator-based factory (e.g., FastAPI dependency)
                 session = next(session_gen)
             else:
@@ -463,12 +409,15 @@ class RBACEngine:
 
             try:
                 from sqlalchemy import text
+
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO system.rbac_audit
                         (subject, resource, action, allowed, reason, roles, path, method, tenant_id, request_id, latency_ms)
                         VALUES (:subject, :resource, :action, :allowed, :reason, :roles, :path, :method, :tenant_id, :request_id, :latency_ms)
-                    """),
+                    """
+                    ),
                     {
                         "subject": subject,
                         "resource": decision.policy.resource if decision.policy else "unknown",
@@ -480,15 +429,15 @@ class RBACEngine:
                         "method": request.method,
                         "tenant_id": tenant_id,
                         "request_id": request_id,
-                        "latency_ms": decision.latency_ms
-                    }
+                        "latency_ms": decision.latency_ms,
+                    },
                 )
                 session.commit()
                 RBAC_AUDIT_WRITES.labels(status="success").inc()
             finally:
                 session.close()
                 # Clean up generator if applicable
-                if hasattr(session_gen, '__next__'):
+                if hasattr(session_gen, "__next__"):
                     try:
                         next(session_gen)
                     except StopIteration:
@@ -502,6 +451,7 @@ class RBACEngine:
 # =============================================================================
 # Path to Policy Mapping
 # =============================================================================
+
 
 def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
     """
@@ -579,12 +529,8 @@ def init_rbac_engine(db_session_factory: Callable) -> RBACEngine:
 # Convenience Functions
 # =============================================================================
 
-def check_permission(
-    resource: str,
-    action: str,
-    request: Request,
-    attrs: Optional[Dict[str, Any]] = None
-) -> Decision:
+
+def check_permission(resource: str, action: str, request: Request, attrs: Optional[Dict[str, Any]] = None) -> Decision:
     """
     Programmatic permission check.
 
@@ -613,10 +559,9 @@ def require_permission(resource: str, action: str):
         async def wrapper(request: Request, *args, **kwargs):
             decision = check_permission(resource, action, request)
             if not decision.allowed:
-                return JSONResponse(
-                    status_code=403,
-                    content={"error": "forbidden", "reason": decision.reason}
-                )
+                return JSONResponse(status_code=403, content={"error": "forbidden", "reason": decision.reason})
             return await func(request, *args, **kwargs)
+
         return wrapper
+
     return decorator

@@ -8,43 +8,30 @@ Tests for deterministic stub implementations:
 - json_transform_stub
 """
 
-import pytest
-import asyncio
+import sys
 from pathlib import Path
 
-import sys
+import pytest
+
 # Direct path to stubs to avoid pydantic-dependent imports through skills/__init__.py
 _stubs_path = str(Path(__file__).parent.parent.parent / "app" / "skills" / "stubs")
 if _stubs_path not in sys.path:
     sys.path.insert(0, _stubs_path)
 
 from http_call_stub import (
+    HTTP_CALL_STUB_DESCRIPTOR,
     HttpCallStub,
     MockResponse,
+    configure_http_call_stub,
     http_call_stub_handler,
-    HTTP_CALL_STUB_DESCRIPTOR,
-    get_http_call_stub,
-    configure_http_call_stub
 )
-from llm_invoke_stub import (
-    LlmInvokeStub,
-    MockLlmResponse,
-    llm_invoke_stub_handler,
-    LLM_INVOKE_STUB_DESCRIPTOR,
-    get_llm_invoke_stub,
-    configure_llm_invoke_stub
-)
-from json_transform_stub import (
-    JsonTransformStub,
-    json_transform_stub_handler,
-    JSON_TRANSFORM_STUB_DESCRIPTOR,
-    get_json_transform_stub
-)
-
+from json_transform_stub import JSON_TRANSFORM_STUB_DESCRIPTOR, JsonTransformStub, json_transform_stub_handler
+from llm_invoke_stub import LLM_INVOKE_STUB_DESCRIPTOR, LlmInvokeStub, MockLlmResponse, llm_invoke_stub_handler
 
 # ============================================================================
 # Test: HTTP Call Stub
 # ============================================================================
+
 
 class TestHttpCallStub:
     """Tests for http_call stub."""
@@ -66,11 +53,9 @@ class TestHttpCallStub:
     @pytest.mark.asyncio
     async def test_custom_response(self, stub):
         """Custom response is returned for configured URL."""
-        stub.add_response("https://api.example.com/data", MockResponse(
-            status_code=200,
-            body={"key": "value"},
-            latency_ms=100
-        ))
+        stub.add_response(
+            "https://api.example.com/data", MockResponse(status_code=200, body={"key": "value"}, latency_ms=100)
+        )
 
         result = await stub.execute({"url": "https://api.example.com/data"})
 
@@ -81,10 +66,7 @@ class TestHttpCallStub:
     @pytest.mark.asyncio
     async def test_prefix_matching(self, stub):
         """URL prefix matching works."""
-        stub.add_response("https://api.example.com", MockResponse(
-            status_code=201,
-            body={"matched": "prefix"}
-        ))
+        stub.add_response("https://api.example.com", MockResponse(status_code=201, body={"matched": "prefix"}))
 
         result = await stub.execute({"url": "https://api.example.com/any/path"})
 
@@ -94,9 +76,7 @@ class TestHttpCallStub:
     @pytest.mark.asyncio
     async def test_deterministic_body_hash(self, stub):
         """Body hash is deterministic."""
-        stub.add_response("https://test.com", MockResponse(
-            body={"data": [1, 2, 3]}
-        ))
+        stub.add_response("https://test.com", MockResponse(body={"data": [1, 2, 3]}))
 
         r1 = await stub.execute({"url": "https://test.com"})
         r2 = await stub.execute({"url": "https://test.com"})
@@ -124,6 +104,7 @@ class TestHttpCallStub:
 # ============================================================================
 # Test: LLM Invoke Stub
 # ============================================================================
+
 
 class TestLlmInvokeStub:
     """Tests for llm_invoke stub."""
@@ -154,10 +135,7 @@ class TestLlmInvokeStub:
     @pytest.mark.asyncio
     async def test_custom_response(self, stub):
         """Custom response for prompt pattern."""
-        stub.add_response("analyze", MockLlmResponse(
-            content="Analysis: Everything looks good.",
-            output_tokens=6
-        ))
+        stub.add_response("analyze", MockLlmResponse(content="Analysis: Everything looks good.", output_tokens=6))
 
         result = await stub.execute({"prompt": "Please analyze this data"})
 
@@ -190,6 +168,7 @@ class TestLlmInvokeStub:
 # Test: JSON Transform Stub
 # ============================================================================
 
+
 class TestJsonTransformStub:
     """Tests for json_transform stub."""
 
@@ -201,70 +180,54 @@ class TestJsonTransformStub:
     @pytest.mark.asyncio
     async def test_extract_simple(self, stub):
         """Extract simple value."""
-        result = await stub.execute({
-            "data": {"name": "Alice", "age": 30},
-            "operation": "extract",
-            "path": "$.name"
-        })
+        result = await stub.execute({"data": {"name": "Alice", "age": 30}, "operation": "extract", "path": "$.name"})
 
         assert result["output"] == "Alice"
 
     @pytest.mark.asyncio
     async def test_extract_nested(self, stub):
         """Extract nested value."""
-        result = await stub.execute({
-            "data": {"user": {"profile": {"email": "test@example.com"}}},
-            "operation": "extract",
-            "path": "$.user.profile.email"
-        })
+        result = await stub.execute(
+            {
+                "data": {"user": {"profile": {"email": "test@example.com"}}},
+                "operation": "extract",
+                "path": "$.user.profile.email",
+            }
+        )
 
         assert result["output"] == "test@example.com"
 
     @pytest.mark.asyncio
     async def test_extract_array_index(self, stub):
         """Extract array item by index."""
-        result = await stub.execute({
-            "data": {"items": ["a", "b", "c"]},
-            "operation": "extract",
-            "path": "$.items[1]"
-        })
+        result = await stub.execute({"data": {"items": ["a", "b", "c"]}, "operation": "extract", "path": "$.items[1]"})
 
         assert result["output"] == "b"
 
     @pytest.mark.asyncio
     async def test_pick_keys(self, stub):
         """Pick specific keys from object."""
-        result = await stub.execute({
-            "data": {"a": 1, "b": 2, "c": 3},
-            "operation": "pick",
-            "keys": ["a", "c"]
-        })
+        result = await stub.execute({"data": {"a": 1, "b": 2, "c": 3}, "operation": "pick", "keys": ["a", "c"]})
 
         assert result["output"] == {"a": 1, "c": 3}
 
     @pytest.mark.asyncio
     async def test_omit_keys(self, stub):
         """Omit specific keys from object."""
-        result = await stub.execute({
-            "data": {"a": 1, "b": 2, "c": 3},
-            "operation": "omit",
-            "keys": ["b"]
-        })
+        result = await stub.execute({"data": {"a": 1, "b": 2, "c": 3}, "operation": "omit", "keys": ["b"]})
 
         assert result["output"] == {"a": 1, "c": 3}
 
     @pytest.mark.asyncio
     async def test_filter_array(self, stub):
         """Filter array items."""
-        result = await stub.execute({
-            "data": [
-                {"type": "A", "value": 1},
-                {"type": "B", "value": 2},
-                {"type": "A", "value": 3}
-            ],
-            "operation": "filter",
-            "condition": {"type": "A"}
-        })
+        result = await stub.execute(
+            {
+                "data": [{"type": "A", "value": 1}, {"type": "B", "value": 2}, {"type": "A", "value": 3}],
+                "operation": "filter",
+                "condition": {"type": "A"},
+            }
+        )
 
         assert len(result["output"]) == 2
         assert all(item["type"] == "A" for item in result["output"])
@@ -272,27 +235,15 @@ class TestJsonTransformStub:
     @pytest.mark.asyncio
     async def test_merge_objects(self, stub):
         """Merge two objects."""
-        result = await stub.execute({
-            "data": {"a": 1, "b": 2},
-            "operation": "merge",
-            "with": {"c": 3, "d": 4}
-        })
+        result = await stub.execute({"data": {"a": 1, "b": 2}, "operation": "merge", "with": {"c": 3, "d": 4}})
 
         assert result["output"] == {"a": 1, "b": 2, "c": 3, "d": 4}
 
     @pytest.mark.asyncio
     async def test_deterministic_hash(self, stub):
         """Output hash is deterministic."""
-        r1 = await stub.execute({
-            "data": {"key": "value"},
-            "operation": "extract",
-            "path": "$"
-        })
-        r2 = await stub.execute({
-            "data": {"key": "value"},
-            "operation": "extract",
-            "path": "$"
-        })
+        r1 = await stub.execute({"data": {"key": "value"}, "operation": "extract", "path": "$"})
+        r2 = await stub.execute({"data": {"key": "value"}, "operation": "extract", "path": "$"})
 
         assert r1["output_hash"] == r2["output_hash"]
 
@@ -306,6 +257,7 @@ class TestJsonTransformStub:
 # Test: Global Stubs
 # ============================================================================
 
+
 class TestGlobalStubs:
     """Tests for global stub instances."""
 
@@ -314,10 +266,7 @@ class TestGlobalStubs:
         """Global http_call handler works."""
         # Configure global stub
         stub = HttpCallStub()
-        stub.add_response("https://global.test", MockResponse(
-            status_code=202,
-            body={"global": True}
-        ))
+        stub.add_response("https://global.test", MockResponse(status_code=202, body={"global": True}))
         configure_http_call_stub(stub)
 
         result = await http_call_stub_handler({"url": "https://global.test"})
@@ -333,9 +282,5 @@ class TestGlobalStubs:
     @pytest.mark.asyncio
     async def test_json_transform_stub_handler(self):
         """Global json_transform handler works."""
-        result = await json_transform_stub_handler({
-            "data": {"x": 1},
-            "operation": "extract",
-            "path": "$.x"
-        })
+        result = await json_transform_stub_handler({"data": {"x": 1}, "operation": "extract", "path": "$.x"})
         assert result["output"] == 1

@@ -6,13 +6,14 @@ Copywriting stage that uses:
 - M19: Forbidden claims policy enforcement
 """
 
-from typing import Any, Dict, List
 from dataclasses import dataclass
+from typing import Any, Dict, List
 
 
 @dataclass
 class CopyOutput:
     """Structured output from copy stage."""
+
     landing_copy: Dict[str, Any]
     blog_drafts: List[Dict[str, Any]]
     email_sequence: List[Dict[str, Any]]

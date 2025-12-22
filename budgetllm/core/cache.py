@@ -6,7 +6,7 @@ Caches responses based on (model, messages, temperature, system_prompt).
 
 import hashlib
 import json
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Dict, List, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable

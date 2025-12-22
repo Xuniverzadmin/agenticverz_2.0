@@ -27,7 +27,14 @@ import os
 import sys
 import time as time_module
 
-from aos_sdk import AOSClient, AOSError, RuntimeContext, Trace, hash_data, generate_idempotency_key
+from aos_sdk import (
+    AOSClient,
+    AOSError,
+    RuntimeContext,
+    Trace,
+    hash_data,
+    generate_idempotency_key,
+)
 
 # Flaky endpoint (httpbin returns different status codes)
 # First URL fails, fallback URL succeeds
@@ -51,29 +58,22 @@ def create_retry_plan() -> list:
                 "method": "GET",
                 "url": PRIMARY_URL,
                 "timeout_seconds": 5,
-                "retry": {
-                    "max_attempts": 2,
-                    "backoff_seconds": 1
-                }
+                "retry": {"max_attempts": 2, "backoff_seconds": 1},
             },
             "fallback": {
                 "skill": "http_call",
-                "params": {
-                    "method": "GET",
-                    "url": FALLBACK_URL,
-                    "timeout_seconds": 5
-                }
+                "params": {"method": "GET", "url": FALLBACK_URL, "timeout_seconds": 5},
             },
-            "description": "Try primary URL, fall back on failure"
+            "description": "Try primary URL, fall back on failure",
         },
         {
             "skill": "json_transform",
             "params": {
                 "input_path": "$.steps[0].result",
-                "query": "{status: .status_code, source: .url}"
+                "query": "{status: .status_code, source: .url}",
             },
-            "description": "Extract status and source URL"
-        }
+            "description": "Extract status and source URL",
+        },
     ]
 
 
@@ -87,9 +87,9 @@ def create_simple_flaky_plan() -> list:
             "params": {
                 "method": "GET",
                 "url": "https://httpbin.org/delay/2",  # 2 second delay
-                "timeout_seconds": 10
+                "timeout_seconds": 10,
             },
-            "description": "Call endpoint with potential timeout"
+            "description": "Call endpoint with potential timeout",
         }
     ]
 
@@ -109,7 +109,7 @@ def simulate_with_risks(client: AOSClient, plan: list) -> dict:
         print(f"Estimated Cost: {result.get('estimated_cost_cents', 0)} cents")
 
         # Show risks identified
-        risks = result.get('risks', [])
+        risks = result.get("risks", [])
         if risks:
             print(f"\nIdentified Risks ({len(risks)}):")
             for i, risk in enumerate(risks):
@@ -118,18 +118,18 @@ def simulate_with_risks(client: AOSClient, plan: list) -> dict:
             print("\nNo significant risks identified.")
 
         # Show step simulations
-        if result.get('step_simulations'):
-            print(f"\nStep Analysis:")
-            for i, step in enumerate(result['step_simulations']):
-                skill = plan[i].get('skill', 'unknown')
-                desc = plan[i].get('description', '')
-                feasible = step.get('feasible', 'unknown')
-                failure_modes = step.get('failure_modes', [])
+        if result.get("step_simulations"):
+            print("\nStep Analysis:")
+            for i, step in enumerate(result["step_simulations"]):
+                skill = plan[i].get("skill", "unknown")
+                desc = plan[i].get("description", "")
+                feasible = step.get("feasible", "unknown")
+                failure_modes = step.get("failure_modes", [])
 
                 print(f"\n  Step {i+1}: [{skill}] {desc}")
                 print(f"    Feasible: {feasible}")
                 if failure_modes:
-                    print(f"    Potential Failures:")
+                    print("    Potential Failures:")
                     for mode in failure_modes[:3]:  # Show top 3
                         print(f"      - {mode}")
 
@@ -150,10 +150,10 @@ def execute_with_retry(client: AOSClient, plan: list) -> dict:
         run = client.create_run(
             agent_id="http-retry-demo",
             goal="Fetch data with retry and fallback",
-            plan=plan
+            plan=plan,
         )
 
-        run_id = run.get('run_id') or run.get('id')
+        run_id = run.get("run_id") or run.get("id")
         print(f"Run created: {run_id}")
 
         # Poll with progress indication
@@ -161,9 +161,9 @@ def execute_with_retry(client: AOSClient, plan: list) -> dict:
         max_polls = 30
         for i in range(max_polls):
             result = client.get_run(run_id)
-            status = result.get('status', 'pending')
+            status = result.get("status", "pending")
 
-            if status in ('succeeded', 'failed'):
+            if status in ("succeeded", "failed"):
                 print(" done!")
                 break
 
@@ -175,27 +175,27 @@ def execute_with_retry(client: AOSClient, plan: list) -> dict:
         # Show outcome
         print(f"\nFinal Status: {status}")
 
-        outcome = result.get('outcome', {})
+        outcome = result.get("outcome", {})
         if outcome:
-            print(f"\nStructured Outcome:")
+            print("\nStructured Outcome:")
             print(f"  Success: {outcome.get('success', False)}")
 
-            if outcome.get('error'):
-                error = outcome['error']
-                print(f"\n  Error Details:")
+            if outcome.get("error"):
+                error = outcome["error"]
+                print("\n  Error Details:")
                 print(f"    Code: {error.get('code', 'unknown')}")
                 print(f"    Message: {error.get('message', 'unknown')}")
-                if error.get('catalog_match'):
+                if error.get("catalog_match"):
                     print(f"    Catalog Match: {error['catalog_match']}")
-                if error.get('recovery_suggestion'):
+                if error.get("recovery_suggestion"):
                     print(f"    Suggested Recovery: {error['recovery_suggestion']}")
 
-            if outcome.get('result'):
+            if outcome.get("result"):
                 print(f"\n  Result: {json.dumps(outcome['result'], indent=4)}")
 
-            if outcome.get('retries'):
+            if outcome.get("retries"):
                 print(f"\n  Retry History ({len(outcome['retries'])} attempts):")
-                for i, retry in enumerate(outcome['retries']):
+                for i, retry in enumerate(outcome["retries"]):
                     print(f"    Attempt {i+1}: {retry.get('status', 'unknown')}")
 
         return result
@@ -219,33 +219,31 @@ def demonstrate_failure_catalog(client: AOSClient):
             "params": {
                 "method": "GET",
                 "url": "https://httpbin.org/status/500",
-                "timeout_seconds": 5
+                "timeout_seconds": 5,
             },
-            "description": "Trigger 500 error"
+            "description": "Trigger 500 error",
         }
     ]
 
     try:
         run = client.create_run(
-            agent_id="failure-demo",
-            goal="Demonstrate failure catalog",
-            plan=fail_plan
+            agent_id="failure-demo", goal="Demonstrate failure catalog", plan=fail_plan
         )
 
-        run_id = run.get('run_id') or run.get('id')
+        run_id = run.get("run_id") or run.get("id")
         time_module.sleep(2)  # Wait for execution
         result = client.get_run(run_id)
 
-        outcome = result.get('outcome', {})
-        if outcome.get('error'):
-            error = outcome['error']
-            print(f"\nCaptured Failure:")
+        outcome = result.get("outcome", {})
+        if outcome.get("error"):
+            error = outcome["error"]
+            print("\nCaptured Failure:")
             print(f"  Error Code: {error.get('code', 'unknown')}")
             print(f"  Category: {error.get('category', 'unknown')}")
 
-            if error.get('catalog_entry'):
-                entry = error['catalog_entry']
-                print(f"\n  Catalog Match:")
+            if error.get("catalog_entry"):
+                entry = error["catalog_entry"]
+                print("\n  Catalog Match:")
                 print(f"    Entry ID: {entry.get('id', 'unknown')}")
                 print(f"    Pattern: {entry.get('pattern', 'unknown')}")
                 print(f"    Suggested Recovery: {entry.get('recovery', 'unknown')}")
@@ -262,10 +260,14 @@ def main():
     """Main demo flow: Simulate -> Execute -> Report with deterministic tracing."""
     # Parse arguments
     parser = argparse.ArgumentParser(description="AOS HTTP Retry Demo")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Random seed (default: 42)"
+    )
     parser.add_argument("--save-trace", type=str, help="Save trace to file")
     parser.add_argument("--timestamp", type=str, help="Frozen timestamp (ISO8601)")
-    parser.add_argument("--catalog", action="store_true", help="Show failure catalog demo")
+    parser.add_argument(
+        "--catalog", action="store_true", help="Show failure catalog demo"
+    )
     args = parser.parse_args()
 
     print("=" * 60)
@@ -273,12 +275,9 @@ def main():
     print("=" * 60)
 
     # Create deterministic context
-    ctx = RuntimeContext(
-        seed=args.seed,
-        now=args.timestamp if args.timestamp else None
-    )
+    ctx = RuntimeContext(seed=args.seed, now=args.timestamp if args.timestamp else None)
 
-    print(f"\nDeterminism Context:")
+    print("\nDeterminism Context:")
     print(f"  Seed: {ctx.seed}")
     print(f"  Timestamp: {ctx.timestamp()}")
     print(f"  RNG State: {ctx.rng_state}")
@@ -290,7 +289,7 @@ def main():
     if not api_key:
         print("\nWarning: AOS_API_KEY not set. Using demo mode.")
 
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  API URL: {base_url}")
     print(f"  Primary URL: {PRIMARY_URL}")
     print(f"  Fallback URL: {FALLBACK_URL}")
@@ -303,7 +302,7 @@ def main():
     print(f"\nPlan has {len(plan)} steps with retry/fallback:")
     for i, step in enumerate(plan):
         print(f"  {i+1}. {step.get('description', step['skill'])}")
-        if step.get('fallback'):
+        if step.get("fallback"):
             print(f"      Fallback: {step['fallback'].get('skill', 'unknown')}")
     print(f"  Plan hash: {hash_data(plan)}")
 
@@ -312,7 +311,7 @@ def main():
         seed=ctx.seed,
         timestamp=ctx.timestamp(),
         plan=plan,
-        metadata={"demo": "http_retry"}
+        metadata={"demo": "http_retry"},
     )
 
     # Phase 1: Simulate with risk analysis
@@ -328,10 +327,10 @@ def main():
             output_data=sim_result,
             rng_state=ctx.rng_state,
             duration_ms=duration,
-            outcome="success" if sim_result.get('feasible', False) else "failure"
+            outcome="success" if sim_result.get("feasible", False) else "failure",
         )
 
-        if not sim_result.get('feasible', False):
+        if not sim_result.get("feasible", False):
             print("\n[WARNING] Plan has feasibility risks, proceeding anyway...")
 
     except AOSError as e:
@@ -342,7 +341,7 @@ def main():
             output_data={"error": str(e)},
             rng_state=ctx.rng_state,
             duration_ms=0,
-            outcome="failure"
+            outcome="failure",
         )
 
     # Phase 2: Execute with retry observation
@@ -352,10 +351,12 @@ def main():
         exec_result = execute_with_retry(client, plan)
         duration = int((time_module.time() - start) * 1000)
 
-        status = exec_result.get('status', 'unknown')
+        status = exec_result.get("status", "unknown")
         # Generate idempotency key for HTTP call execution
-        run_id = exec_result.get('run_id') or exec_result.get('id', 'unknown')
-        idem_key = generate_idempotency_key(run_id, 1, "execute", hash_data({"plan": plan}))
+        run_id = exec_result.get("run_id") or exec_result.get("id", "unknown")
+        idem_key = generate_idempotency_key(
+            run_id, 1, "execute", hash_data({"plan": plan})
+        )
 
         trace.add_step(
             skill_id="execute",
@@ -363,12 +364,12 @@ def main():
             output_data=exec_result,
             rng_state=ctx._capture_rng_state(),
             duration_ms=duration,
-            outcome="success" if status == 'succeeded' else "failure",
+            outcome="success" if status == "succeeded" else "failure",
             idempotency_key=idem_key,
-            replay_behavior="check"  # Verify output matches on replay
+            replay_behavior="check",  # Verify output matches on replay
         )
 
-        if status == 'succeeded':
+        if status == "succeeded":
             print("\n[SUCCESS] Request completed (with retry/fallback)")
         else:
             print(f"\n[RESULT] Final status: {status}")
@@ -381,7 +382,7 @@ def main():
             output_data={"error": str(e)},
             rng_state=ctx._capture_rng_state(),
             duration_ms=0,
-            outcome="failure"
+            outcome="failure",
         )
 
     # Optional: Failure catalog demo
@@ -403,8 +404,8 @@ def main():
     print("=" * 60)
 
     # Exit with appropriate code
-    final_status = exec_result.get('status', 'unknown') if exec_result else 'failed'
-    sys.exit(0 if final_status == 'succeeded' else 1)
+    final_status = exec_result.get("status", "unknown") if exec_result else "failed"
+    sys.exit(0 if final_status == "succeeded" else 1)
 
 
 if __name__ == "__main__":

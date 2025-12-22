@@ -45,7 +45,7 @@ from prometheus_client import (
 )
 
 from .models import Webhook, get_engine, get_session_factory, init_db
-from .rate_limiter import RedisRateLimiter, get_rate_limiter, init_rate_limiter
+from .rate_limiter import RedisRateLimiter
 
 # Configuration
 DATABASE_URL = os.environ.get(
@@ -56,7 +56,9 @@ WEBHOOK_TOKEN = os.environ.get("WEBHOOK_TOKEN", "")  # Empty = no auth
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")  # For HMAC validation
 RETENTION_DAYS = int(os.environ.get("RETENTION_DAYS", "30"))
 MAX_BODY_SIZE = int(os.environ.get("MAX_BODY_SIZE", "1048576"))  # 1MB
-RATE_LIMIT_RPM = int(os.environ.get("RATE_LIMIT_RPM", "100"))  # Requests per minute per IP/tenant
+RATE_LIMIT_RPM = int(
+    os.environ.get("RATE_LIMIT_RPM", "100")
+)  # Requests per minute per IP/tenant
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -64,26 +66,19 @@ logger = logging.getLogger("webhook_receiver")
 
 # Prometheus metrics (using prometheus_client)
 WEBHOOKS_RECEIVED = Counter(
-    "webhooks_received_total",
-    "Total webhooks received",
-    ["path", "status"]
+    "webhooks_received_total", "Total webhooks received", ["path", "status"]
 )
 WEBHOOK_AUTH_FAILURES = Counter(
-    "webhook_auth_failures_total",
-    "Authentication failures"
+    "webhook_auth_failures_total", "Authentication failures"
 )
 WEBHOOK_SIGNATURE_FAILURES = Counter(
-    "webhook_signature_failures_total",
-    "Signature validation failures"
+    "webhook_signature_failures_total", "Signature validation failures"
 )
 WEBHOOKS_BY_ALERTNAME = Counter(
-    "webhooks_by_alertname_total",
-    "Webhooks received by alertname",
-    ["alertname"]
+    "webhooks_by_alertname_total", "Webhooks received by alertname", ["alertname"]
 )
 WEBHOOK_PROCESSING_TIME = Gauge(
-    "webhook_processing_time_seconds",
-    "Time to process webhook"
+    "webhook_processing_time_seconds", "Time to process webhook"
 )
 
 # Redis-backed rate limiter (distributed)
@@ -106,8 +101,7 @@ async def lifespan(app: FastAPI):
     # Initialize Redis rate limiter
     logger.info(f"Initializing Redis rate limiter at {REDIS_URL}...")
     redis_rate_limiter = RedisRateLimiter(
-        redis_url=REDIS_URL,
-        default_rpm=RATE_LIMIT_RPM
+        redis_url=REDIS_URL, default_rpm=RATE_LIMIT_RPM
     )
     connected = await redis_rate_limiter.init()
     if connected:
@@ -155,6 +149,7 @@ def get_request_id(request: Request) -> str:
     if not request_id:
         # Generate one based on timestamp for correlation
         import uuid
+
         request_id = str(uuid.uuid4())[:8]
     return request_id
 
@@ -169,10 +164,7 @@ async def check_rate_limit(request: Request) -> bool:
     request_id = get_request_id(request)
 
     allowed = await redis_rate_limiter.allow_request(
-        tenant_id=tenant_id,
-        ip=ip,
-        rpm=RATE_LIMIT_RPM,
-        request_id=request_id
+        tenant_id=tenant_id, ip=ip, rpm=RATE_LIMIT_RPM, request_id=request_id
     )
 
     if not allowed:
@@ -488,7 +480,11 @@ async def replay_webhook(
 
     background_tasks.add_task(do_replay)
 
-    return {"status": "replay_queued", "webhook_id": webhook_id, "target_url": target_url}
+    return {
+        "status": "replay_queued",
+        "webhook_id": webhook_id,
+        "target_url": target_url,
+    }
 
 
 # ========== Export Endpoints ==========
@@ -537,7 +533,9 @@ async def get_stats(db=Depends(get_db)):
     from sqlalchemy import func
 
     total = db.query(func.count(Webhook.id)).scalar()
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     today_count = (
         db.query(func.count(Webhook.id)).filter(Webhook.received_at >= today).scalar()
     )
@@ -649,10 +647,7 @@ async def prometheus_metrics():
     - webhook_rate_limit_redis_errors_total (from rate_limiter)
     - webhook_rate_limit_redis_connected (from rate_limiter)
     """
-    return Response(
-        content=generate_latest(REGISTRY),
-        media_type=CONTENT_TYPE_LATEST
-    )
+    return Response(content=generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
 
 # ========== Cleanup Endpoint ==========

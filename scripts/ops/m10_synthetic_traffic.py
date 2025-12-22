@@ -45,7 +45,7 @@ import uuid
 from datetime import datetime, timezone
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
 logger = logging.getLogger("m10.synthetic_traffic")
 
@@ -90,33 +90,39 @@ def generate_synthetic_events(count: int, dry_run: bool = False) -> dict:
                 }
 
                 if dry_run:
-                    result["events"].append({
-                        "aggregate_id": aggregate_id,
-                        "event_type": "http:synthetic_test",
-                        "payload_preview": str(payload)[:100],
-                    })
+                    result["events"].append(
+                        {
+                            "aggregate_id": aggregate_id,
+                            "event_type": "http:synthetic_test",
+                            "payload_preview": str(payload)[:100],
+                        }
+                    )
                 else:
                     # Insert into outbox using publish_outbox function
                     session.execute(
-                        text("""
+                        text(
+                            """
                             SELECT m10_recovery.publish_outbox(
                                 :aggregate_type,
                                 :aggregate_id,
                                 :event_type,
                                 :payload::jsonb
                             )
-                        """),
+                        """
+                        ),
                         {
                             "aggregate_type": "synthetic_test",
                             "aggregate_id": aggregate_id,
                             "event_type": "http:synthetic_test",
                             "payload": json.dumps(payload),
+                        },
+                    )
+                    result["events"].append(
+                        {
+                            "aggregate_id": aggregate_id,
+                            "event_type": "http:synthetic_test",
                         }
                     )
-                    result["events"].append({
-                        "aggregate_id": aggregate_id,
-                        "event_type": "http:synthetic_test",
-                    })
 
                 result["count_created"] += 1
 

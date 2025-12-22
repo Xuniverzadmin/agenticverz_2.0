@@ -8,10 +8,11 @@ Tests for:
 - Aggregation job
 """
 
-import pytest
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
+
+import pytest
+
 
 # Test fixtures
 @pytest.fixture
@@ -190,10 +191,7 @@ class TestFailurePersistence:
 
     def test_persist_failure_match_hit(self, sample_run_id):
         """Test persisting a catalog hit."""
-        from app.runtime.failure_catalog import (
-            MatchResult, MatchType, CatalogEntry, persist_failure_match
-        )
-        from app.db import FailureMatch
+        from app.runtime.failure_catalog import CatalogEntry, MatchResult, MatchType, persist_failure_match
 
         entry = CatalogEntry(
             code="TIMEOUT",
@@ -229,9 +227,7 @@ class TestFailurePersistence:
 
     def test_persist_failure_match_miss(self, sample_run_id):
         """Test persisting a catalog miss."""
-        from app.runtime.failure_catalog import (
-            MatchResult, MatchType, persist_failure_match
-        )
+        from app.runtime.failure_catalog import MatchResult, MatchType, persist_failure_match
 
         result = MatchResult(
             matched=False,
@@ -254,7 +250,7 @@ class TestFailurePersistence:
         """Test match_and_persist convenience function."""
         from app.runtime.failure_catalog import match_and_persist
 
-        with patch('app.runtime.failure_catalog.persist_failure_match') as mock_persist:
+        with patch("app.runtime.failure_catalog.persist_failure_match") as mock_persist:
             result = match_and_persist(
                 code_or_message="TIMEOUT",
                 run_id=sample_run_id,
@@ -277,19 +273,13 @@ class TestMetricsInstrumentation:
 
     def test_hit_metrics_increment(self):
         """Test that hit metrics are incremented."""
-        from app.runtime.failure_catalog import (
-            _init_metrics, _failure_match_hits
-        )
+        from app.runtime.failure_catalog import _failure_match_hits, _init_metrics
 
         _init_metrics()
 
         if _failure_match_hits:
             # Should not raise
-            _failure_match_hits.labels(
-                error_code="TEST",
-                category="TEST",
-                recovery_mode="TEST"
-            ).inc()
+            _failure_match_hits.labels(error_code="TEST", category="TEST", recovery_mode="TEST").inc()
 
 
 class TestAggregationJob:
@@ -401,9 +391,7 @@ class TestIntegrationScenarios:
     @pytest.mark.integration
     def test_full_failure_flow(self, sample_run_id, sample_tenant_id):
         """Test complete failure detection → match → persist flow."""
-        from app.runtime.failure_catalog import (
-            FailureCatalog, persist_failure_match
-        )
+        from app.runtime.failure_catalog import FailureCatalog
 
         catalog = FailureCatalog()
 
@@ -466,6 +454,4 @@ class TestIntegrationScenarios:
 
 # Pytest markers
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test"
-    )
+    config.addinivalue_line("markers", "integration: mark test as integration test")

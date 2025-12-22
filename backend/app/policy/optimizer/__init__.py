@@ -8,20 +8,20 @@
 # - DAG-based execution ordering
 # - Category priority propagation
 
+from app.policy.optimizer.conflict_resolver import (
+    ConflictResolver,
+    ConflictType,
+    PolicyConflict,
+)
+from app.policy.optimizer.dag_sorter import (
+    DAGSorter,
+    ExecutionDAG,
+    ExecutionNode,
+)
 from app.policy.optimizer.folds import (
     ConstantFolder,
     DeadCodeEliminator,
     PolicySimplifier,
-)
-from app.policy.optimizer.conflict_resolver import (
-    ConflictType,
-    PolicyConflict,
-    ConflictResolver,
-)
-from app.policy.optimizer.dag_sorter import (
-    ExecutionNode,
-    ExecutionDAG,
-    DAGSorter,
 )
 
 __all__ = [

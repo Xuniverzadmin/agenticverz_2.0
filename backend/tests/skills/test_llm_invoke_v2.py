@@ -6,9 +6,10 @@ Tests adapter pattern, deterministic seeding, error handling,
 and cost tracking.
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -16,24 +17,20 @@ if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
 from app.skills.llm_invoke_v2 import (
-    llm_invoke_execute,
-    llm_invoke_handler,
-    LLM_INVOKE_DESCRIPTOR,
     LLM_ERROR_MAP,
+    LLM_INVOKE_DESCRIPTOR,
     ErrorCategory,
-    ErrorMapping,
-    Message,
     LLMConfig,
     LLMResponse,
-    LLMAdapter,
+    Message,
     StubAdapter,
-    register_adapter,
-    get_adapter,
-    list_adapters,
-    estimate_cost,
     _canonical_json,
     _content_hash,
     _generate_call_id,
+    estimate_cost,
+    get_adapter,
+    list_adapters,
+    llm_invoke_execute,
 )
 
 
@@ -231,10 +228,7 @@ class TestLLMInvokeExecute:
     @pytest.mark.asyncio
     async def test_simple_prompt(self):
         """Simple string prompt succeeds."""
-        result = await llm_invoke_execute({
-            "prompt": "Hello, world!",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Hello, world!", "adapter": "stub"})
 
         assert result.ok is True
         assert "content" in result.result
@@ -246,25 +240,19 @@ class TestLLMInvokeExecute:
     @pytest.mark.asyncio
     async def test_messages_format(self):
         """Messages array format works."""
-        result = await llm_invoke_execute({
-            "prompt": [
-                {"role": "system", "content": "You are helpful."},
-                {"role": "user", "content": "Hi"}
-            ],
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute(
+            {
+                "prompt": [{"role": "system", "content": "You are helpful."}, {"role": "user", "content": "Hi"}],
+                "adapter": "stub",
+            }
+        )
 
         assert result.ok is True
 
     @pytest.mark.asyncio
     async def test_with_seed(self):
         """Seed is passed through and response is deterministic."""
-        params = {
-            "prompt": "What is the meaning of life?",
-            "adapter": "stub",
-            "seed": 42,
-            "temperature": 0.0
-        }
+        params = {"prompt": "What is the meaning of life?", "adapter": "stub", "seed": 42, "temperature": 0.0}
 
         result1 = await llm_invoke_execute(params)
         result2 = await llm_invoke_execute(params)
@@ -278,9 +266,7 @@ class TestLLMInvokeExecute:
     @pytest.mark.asyncio
     async def test_missing_prompt(self):
         """Missing prompt returns error."""
-        result = await llm_invoke_execute({
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_INVALID_PROMPT"
@@ -290,10 +276,7 @@ class TestLLMInvokeExecute:
     @pytest.mark.asyncio
     async def test_unknown_adapter(self):
         """Unknown adapter returns error."""
-        result = await llm_invoke_execute({
-            "prompt": "Hello",
-            "adapter": "nonexistent"
-        })
+        result = await llm_invoke_execute({"prompt": "Hello", "adapter": "nonexistent"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_ADAPTER_NOT_FOUND"
@@ -306,10 +289,7 @@ class TestLLMInvokeExecute:
         prompt_hash = _content_hash("user: Rate limit test")
         StubAdapter.set_error(prompt_hash, "rate_limited", "Too many requests")
 
-        result = await llm_invoke_execute({
-            "prompt": "Rate limit test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Rate limit test", "adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_RATE_LIMITED"
@@ -323,10 +303,7 @@ class TestLLMInvokeExecute:
         prompt_hash = _content_hash("user: Blocked content")
         StubAdapter.set_error(prompt_hash, "content_blocked", "Content policy violation")
 
-        result = await llm_invoke_execute({
-            "prompt": "Blocked content",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Blocked content", "adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_CONTENT_BLOCKED"
@@ -336,10 +313,7 @@ class TestLLMInvokeExecute:
     @pytest.mark.asyncio
     async def test_cost_tracking(self):
         """Cost is tracked in result."""
-        result = await llm_invoke_execute({
-            "prompt": "Hello",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Hello", "adapter": "stub"})
 
         assert result.ok is True
         assert "cost_cents" in result.result
@@ -348,11 +322,7 @@ class TestLLMInvokeExecute:
     @pytest.mark.asyncio
     async def test_deterministic_metadata(self):
         """Meta includes deterministic flag when seeded."""
-        result = await llm_invoke_execute({
-            "prompt": "Test",
-            "adapter": "stub",
-            "seed": 123
-        })
+        result = await llm_invoke_execute({"prompt": "Test", "adapter": "stub", "seed": 123})
 
         assert result.ok is True
         assert result.meta.get("deterministic") is True
@@ -360,10 +330,7 @@ class TestLLMInvokeExecute:
     @pytest.mark.asyncio
     async def test_non_deterministic_metadata(self):
         """Meta shows non-deterministic when not seeded."""
-        result = await llm_invoke_execute({
-            "prompt": "Test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Test", "adapter": "stub"})
 
         assert result.ok is True
         assert result.meta.get("deterministic") is False
@@ -429,17 +396,9 @@ class TestDeterminism:
     @pytest.mark.asyncio
     async def test_different_prompts_different_hashes(self):
         """Different prompts produce different content hashes."""
-        result1 = await llm_invoke_execute({
-            "prompt": "First prompt",
-            "adapter": "stub",
-            "seed": 42
-        })
+        result1 = await llm_invoke_execute({"prompt": "First prompt", "adapter": "stub", "seed": 42})
 
-        result2 = await llm_invoke_execute({
-            "prompt": "Second prompt",
-            "adapter": "stub",
-            "seed": 42
-        })
+        result2 = await llm_invoke_execute({"prompt": "Second prompt", "adapter": "stub", "seed": 42})
 
         assert result1.result["content_hash"] != result2.result["content_hash"]
 

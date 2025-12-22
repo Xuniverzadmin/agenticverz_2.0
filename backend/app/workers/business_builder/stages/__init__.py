@@ -8,9 +8,9 @@ Stages provide:
 4. Custom failure patterns
 """
 
+from .copy import CopyStage
 from .research import ResearchStage
 from .strategy import StrategyStage
-from .copy import CopyStage
 from .ux import UXStage
 
 __all__ = [

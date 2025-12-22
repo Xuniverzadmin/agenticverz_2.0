@@ -55,7 +55,9 @@ def wait_for_api(base_url: str, timeout: int = 30, interval: int = 2) -> bool:
     return False
 
 
-def upsert_pin(base_url: str, pin: dict, token: Optional[str], dry_run: bool) -> tuple[bool, str]:
+def upsert_pin(
+    base_url: str, pin: dict, token: Optional[str], dry_run: bool
+) -> tuple[bool, str]:
     """Upsert a single memory pin."""
     url = urljoin(base_url, "/api/v1/memory/pins")
     headers = {"Content-Type": "application/json"}
@@ -71,9 +73,15 @@ def upsert_pin(base_url: str, pin: dict, token: Optional[str], dry_run: bool) ->
 
         if resp.status_code in (200, 201):
             data = resp.json()
-            return True, f"✓ Upserted: {pin['tenant_id']}:{pin['key']} (id={data.get('id')})"
+            return (
+                True,
+                f"✓ Upserted: {pin['tenant_id']}:{pin['key']} (id={data.get('id')})",
+            )
         else:
-            return False, f"✗ Failed: {pin['tenant_id']}:{pin['key']} - {resp.status_code}: {resp.text[:200]}"
+            return (
+                False,
+                f"✗ Failed: {pin['tenant_id']}:{pin['key']} - {resp.status_code}: {resp.text[:200]}",
+            )
 
     except requests.RequestException as e:
         return False, f"✗ Error: {pin['tenant_id']}:{pin['key']} - {e}"
@@ -122,12 +130,14 @@ def verify_sql(database_url: str, pins: list[dict]) -> tuple[int, int]:
         for pin in pins:
             cur.execute(
                 "SELECT id, key FROM system.memory_pins WHERE tenant_id = %s AND key = %s",
-                (pin["tenant_id"], pin["key"])
+                (pin["tenant_id"], pin["key"]),
             )
             row = cur.fetchone()
 
             if row:
-                print(f"  ✓ SQL verified: {pin['tenant_id']}:{pin['key']} (id={row[0]})")
+                print(
+                    f"  ✓ SQL verified: {pin['tenant_id']}:{pin['key']} (id={row[0]})"
+                )
                 success += 1
             else:
                 print(f"  ✗ SQL missing: {pin['tenant_id']}:{pin['key']}")
@@ -145,14 +155,34 @@ def verify_sql(database_url: str, pins: list[dict]) -> tuple[int, int]:
 
 def main():
     parser = argparse.ArgumentParser(description="Seed memory pins for AOS")
-    parser.add_argument("--file", "-f", required=True, help="JSON file with pins to seed")
+    parser.add_argument(
+        "--file", "-f", required=True, help="JSON file with pins to seed"
+    )
     parser.add_argument("--base", "-b", required=True, help="Base URL of AOS API")
-    parser.add_argument("--verify", "-v", action="store_true", help="Verify pins after seeding")
-    parser.add_argument("--sql-verify", action="store_true", help="Verify pins in database via SQL")
-    parser.add_argument("--wait", "-w", action="store_true", help="Wait for API to be healthy")
-    parser.add_argument("--wait-timeout", type=int, default=30, help="Timeout for waiting (default: 30s)")
-    parser.add_argument("--dry-run", "-n", action="store_true", help="Don't make changes, just show what would happen")
-    parser.add_argument("--token", "-t", help="Machine token (or use MACHINE_SECRET_TOKEN env)")
+    parser.add_argument(
+        "--verify", "-v", action="store_true", help="Verify pins after seeding"
+    )
+    parser.add_argument(
+        "--sql-verify", action="store_true", help="Verify pins in database via SQL"
+    )
+    parser.add_argument(
+        "--wait", "-w", action="store_true", help="Wait for API to be healthy"
+    )
+    parser.add_argument(
+        "--wait-timeout",
+        type=int,
+        default=30,
+        help="Timeout for waiting (default: 30s)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        help="Don't make changes, just show what would happen",
+    )
+    parser.add_argument(
+        "--token", "-t", help="Machine token (or use MACHINE_SECRET_TOKEN env)"
+    )
     args = parser.parse_args()
 
     # Load seed file

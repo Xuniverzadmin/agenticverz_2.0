@@ -38,13 +38,13 @@ OUTPUT_WEIGHTS = {
 
 # Prompt type risk multipliers
 PROMPT_TYPE_WEIGHTS = {
-    "factual": 1.2,      # Highest sensitivity (facts need accuracy)
+    "factual": 1.2,  # Highest sensitivity (facts need accuracy)
     "analytical": 1.0,
     "coding": 1.1,
     "instruction": 0.9,
     "general": 0.85,
     "opinion": 0.7,
-    "creative": 0.3,     # Lowest sensitivity (creativity allows looseness)
+    "creative": 0.3,  # Lowest sensitivity (creativity allows looseness)
 }
 
 # Model quality penalties (lower = better quality)
@@ -111,7 +111,9 @@ def calculate_risk_score(
         "output_breakdown": output_breakdown,
         "determinism_score": round(determinism, 3),
         "model": model,
-        "model_penalty": MODEL_QUALITY_PENALTY.get(model, MODEL_QUALITY_PENALTY["default"]),
+        "model_penalty": MODEL_QUALITY_PENALTY.get(
+            model, MODEL_QUALITY_PENALTY["default"]
+        ),
     }
 
     return round(final_score, 3), risk_factors
@@ -145,10 +147,10 @@ def _calculate_input_risk(
 
     # Weighted sum
     input_risk = (
-        INPUT_WEIGHTS["temperature"] * temp_risk +
-        INPUT_WEIGHTS["top_p"] * top_p_risk +
-        INPUT_WEIGHTS["max_tokens"] * tokens_risk +
-        INPUT_WEIGHTS["model_quality"] * model_risk
+        INPUT_WEIGHTS["temperature"] * temp_risk
+        + INPUT_WEIGHTS["top_p"] * top_p_risk
+        + INPUT_WEIGHTS["max_tokens"] * tokens_risk
+        + INPUT_WEIGHTS["model_quality"] * model_risk
     )
 
     breakdown = {
@@ -174,17 +176,23 @@ def _calculate_output_risk(
 
     # Weighted sum
     output_risk = (
-        OUTPUT_WEIGHTS["unsupported_claims"] * unsupported +
-        OUTPUT_WEIGHTS["hedging"] * hedging +
-        OUTPUT_WEIGHTS["self_contradiction"] * contradiction +
-        OUTPUT_WEIGHTS["numeric_inconsistency"] * numeric
+        OUTPUT_WEIGHTS["unsupported_claims"] * unsupported
+        + OUTPUT_WEIGHTS["hedging"] * hedging
+        + OUTPUT_WEIGHTS["self_contradiction"] * contradiction
+        + OUTPUT_WEIGHTS["numeric_inconsistency"] * numeric
     )
 
     breakdown = {
-        "unsupported_claims": round(unsupported * OUTPUT_WEIGHTS["unsupported_claims"], 3),
+        "unsupported_claims": round(
+            unsupported * OUTPUT_WEIGHTS["unsupported_claims"], 3
+        ),
         "hedging": round(hedging * OUTPUT_WEIGHTS["hedging"], 3),
-        "self_contradiction": round(contradiction * OUTPUT_WEIGHTS["self_contradiction"], 3),
-        "numeric_inconsistency": round(numeric * OUTPUT_WEIGHTS["numeric_inconsistency"], 3),
+        "self_contradiction": round(
+            contradiction * OUTPUT_WEIGHTS["self_contradiction"], 3
+        ),
+        "numeric_inconsistency": round(
+            numeric * OUTPUT_WEIGHTS["numeric_inconsistency"], 3
+        ),
     }
 
     return output_risk, breakdown

@@ -11,19 +11,21 @@ Features:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Set, Optional, Tuple, Any
 from enum import Enum, auto
-from app.policy.ir.ir_nodes import IRModule, IRFunction, IRGovernance
-from app.policy.compiler.grammar import PolicyCategory, PLANG_GRAMMAR
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+from app.policy.compiler.grammar import PolicyCategory
+from app.policy.ir.ir_nodes import IRFunction, IRGovernance, IRModule
 
 
 class ExecutionPhase(Enum):
     """Execution phases in deterministic order."""
-    SAFETY_CHECK = auto()      # SAFETY policies first
-    PRIVACY_CHECK = auto()     # Then PRIVACY
-    OPERATIONAL = auto()       # Business rules
-    ROUTING = auto()           # Routing decisions
-    CUSTOM = auto()            # Custom policies last
+
+    SAFETY_CHECK = auto()  # SAFETY policies first
+    PRIVACY_CHECK = auto()  # Then PRIVACY
+    OPERATIONAL = auto()  # Business rules
+    ROUTING = auto()  # Routing decisions
+    CUSTOM = auto()  # Custom policies last
 
 
 @dataclass
@@ -34,6 +36,7 @@ class ExecutionNode:
     Represents a policy/rule to execute with its dependencies
     and governance metadata.
     """
+
     name: str
     phase: ExecutionPhase
     priority: int
@@ -57,6 +60,7 @@ class ExecutionDAG:
 
     Provides deterministic ordering for policy evaluation.
     """
+
     nodes: Dict[str, ExecutionNode] = field(default_factory=dict)
     edges: List[Tuple[str, str]] = field(default_factory=list)
 
@@ -89,6 +93,7 @@ class ExecutionPlan:
     Contains ordered list of policies to execute with
     parallel execution opportunities.
     """
+
     stages: List[List[str]] = field(default_factory=list)
     total_policies: int = 0
     parallel_stages: int = 0
@@ -166,9 +171,7 @@ class DAGSorter:
     def _add_category_dependencies(self) -> None:
         """Add dependencies based on category precedence."""
         # Group nodes by phase
-        by_phase: Dict[ExecutionPhase, List[str]] = {
-            phase: [] for phase in ExecutionPhase
-        }
+        by_phase: Dict[ExecutionPhase, List[str]] = {phase: [] for phase in ExecutionPhase}
 
         for name, node in self.dag.nodes.items():
             by_phase[node.phase].append(name)
@@ -186,8 +189,8 @@ class DAGSorter:
 
     def _add_routing_dependencies(self, module: IRModule) -> None:
         """Add dependencies from routing targets."""
-        from app.policy.ir.ir_nodes import IRAction
         from app.policy.compiler.grammar import ActionType
+        from app.policy.ir.ir_nodes import IRAction
 
         for name, func in module.functions.items():
             for block in func.blocks.values():
@@ -209,10 +212,7 @@ class DAGSorter:
 
         plan = ExecutionPlan()
         visited: Set[str] = set()
-        in_degree: Dict[str, int] = {
-            name: len(node.dependencies)
-            for name, node in self.dag.nodes.items()
-        }
+        in_degree: Dict[str, int] = {name: len(node.dependencies) for name, node in self.dag.nodes.items()}
 
         # Process in stages (allows parallel execution within stage)
         while len(visited) < len(self.dag.nodes):
@@ -279,9 +279,7 @@ class DAGSorter:
         lines = ["Execution DAG:", ""]
 
         # Group by phase
-        by_phase: Dict[ExecutionPhase, List[ExecutionNode]] = {
-            phase: [] for phase in ExecutionPhase
-        }
+        by_phase: Dict[ExecutionPhase, List[ExecutionNode]] = {phase: [] for phase in ExecutionPhase}
 
         for node in self.dag.nodes.values():
             by_phase[node.phase].append(node)

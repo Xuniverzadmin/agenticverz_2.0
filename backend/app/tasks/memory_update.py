@@ -20,7 +20,6 @@ Usage:
 
 import asyncio
 import logging
-import os
 import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -33,22 +32,17 @@ logger = logging.getLogger("nova.tasks.memory_update")
 # Prometheus Metrics
 # =============================================================================
 
-MEMORY_UPDATES_TOTAL = Counter(
-    "memory_updates_total",
-    "Total memory update operations",
-    ["tenant_id", "status"]
-)
+MEMORY_UPDATES_TOTAL = Counter("memory_updates_total", "Total memory update operations", ["tenant_id", "status"])
 
 MEMORY_UPDATE_LATENCY = Histogram(
-    "memory_update_latency_seconds",
-    "Memory update latency",
-    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+    "memory_update_latency_seconds", "Memory update latency", buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
 )
 
 
 # =============================================================================
 # Update Rules Configuration
 # =============================================================================
+
 
 def _load_rules() -> List[Dict[str, Any]]:
     """
@@ -125,11 +119,7 @@ def _extract_value(trace_output: Dict[str, Any], path: str) -> Any:
 
 
 async def _write_memory_audit(
-    tenant_id: str,
-    workflow_id: Optional[str],
-    request_id: Optional[str],
-    operation: str,
-    details: Dict[str, Any]
+    tenant_id: str, workflow_id: Optional[str], request_id: Optional[str], operation: str, details: Dict[str, Any]
 ) -> None:
     """Write audit record for memory update operation."""
     try:
@@ -151,22 +141,14 @@ async def _write_memory_audit(
 
         # Append to audit log (using append merge strategy)
         await memory_service.set(
-            tenant_id=tenant_id,
-            key=audit_key,
-            value=audit_entry,
-            source="memory_update_task",
-            agent_id=None
+            tenant_id=tenant_id, key=audit_key, value=audit_entry, source="memory_update_task", agent_id=None
         )
     except Exception as e:
         logger.warning(f"Failed to write memory audit: {e}")
 
 
 async def upsert_memory_pin(
-    tenant_id: str,
-    key: str,
-    value: Any,
-    source: str = "update_rule",
-    ttl_seconds: Optional[int] = None
+    tenant_id: str, key: str, value: Any, source: str = "update_rule", ttl_seconds: Optional[int] = None
 ) -> bool:
     """
     Upsert a memory pin via the memory service.
@@ -182,12 +164,7 @@ async def upsert_memory_pin(
             return False
 
         result = await memory_service.set(
-            tenant_id=tenant_id,
-            key=key,
-            value=value,
-            source=source,
-            agent_id=None,
-            ttl_seconds=ttl_seconds
+            tenant_id=tenant_id, key=key, value=value, source=source, agent_id=None, ttl_seconds=ttl_seconds
         )
 
         return result.success
@@ -202,7 +179,7 @@ async def apply_update_rules(
     workflow_id: Optional[str],
     request_id: Optional[str],
     trace_input: Dict[str, Any],
-    trace_output: Dict[str, Any]
+    trace_output: Dict[str, Any],
 ) -> int:
     """
     Evaluate deterministic rules and apply memory writes.
@@ -220,6 +197,7 @@ async def apply_update_rules(
         Number of successful updates applied
     """
     import time
+
     start_time = time.time()
 
     rules = _load_rules()
@@ -262,11 +240,7 @@ async def apply_update_rules(
             # Apply the update
             ttl = rule.get("ttl_seconds")
             success = await upsert_memory_pin(
-                tenant_id=tenant_id,
-                key=target_key,
-                value=new_value,
-                source=f"rule:{rule_id}",
-                ttl_seconds=ttl
+                tenant_id=tenant_id, key=target_key, value=new_value, source=f"rule:{rule_id}", ttl_seconds=ttl
             )
 
             if success:
@@ -279,11 +253,7 @@ async def apply_update_rules(
                     workflow_id=workflow_id,
                     request_id=request_id,
                     operation="update_rule_apply",
-                    details={
-                        "rule": rule_id,
-                        "key": target_key,
-                        "value": new_value
-                    }
+                    details={"rule": rule_id, "key": target_key, "value": new_value},
                 )
 
                 logger.debug(f"Applied rule {rule_id} to {target_key}")
@@ -303,8 +273,8 @@ async def apply_update_rules(
             "tenant_id": tenant_id,
             "workflow_id": workflow_id,
             "updates_applied": updates_applied,
-            "duration_ms": duration * 1000
-        }
+            "duration_ms": duration * 1000,
+        },
     )
 
     return updates_applied
@@ -316,7 +286,7 @@ def apply_update_rules_sync(
     request_id: Optional[str],
     trace_input: Dict[str, Any],
     trace_output: Dict[str, Any],
-    timeout: int = 10
+    timeout: int = 10,
 ) -> bool:
     """
     Synchronous wrapper to apply update rules and wait for completion.

@@ -207,11 +207,11 @@ find /var/lib/aos/golden -name "*.json" -mtime +7 -delete
    ```bash
    INCIDENT_DIR="/tmp/incident_$(date +%s)"
    mkdir -p "$INCIDENT_DIR"
-   
+
    # Copy shadow artifacts
    cp -r /tmp/shadow_simulation_* "$INCIDENT_DIR/" 2>/dev/null || true
    cp /var/lib/aos/shadow_24h_*.log "$INCIDENT_DIR/" 2>/dev/null || true
-   
+
    # Create tarball
    tar -czf "$INCIDENT_DIR.tgz" "$INCIDENT_DIR"
    echo "Artifacts: $INCIDENT_DIR.tgz"
@@ -237,13 +237,13 @@ find /var/lib/aos/golden -name "*.json" -mtime +7 -delete
    python3 -c "
    import asyncio
    from backend.app.workflow.engine import WorkflowEngine
-   
+
    async def test():
        engine = WorkflowEngine()
        for i in range(10):
            result = await engine.run(workflow_type='<failing_type>', seed=12345+i)
            print(f'Iteration {i}: {result.workflow_hash}')
-   
+
    asyncio.run(test())
    "
    ```

@@ -11,12 +11,13 @@ See: app/specs/canonical_json.md for full specification.
 """
 
 from __future__ import annotations
-import json
+
 import hashlib
-from datetime import datetime, date
-from typing import Any, Dict, List, Optional, Set, Union
-from uuid import UUID
+import json
+from datetime import date, datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set
+from uuid import UUID
 
 
 def canonical_json(obj: Any, exclude_fields: Optional[Set[str]] = None) -> str:
@@ -39,13 +40,7 @@ def canonical_json(obj: Any, exclude_fields: Optional[Set[str]] = None) -> str:
     if exclude_fields:
         obj = _filter_fields(obj, exclude_fields)
 
-    return json.dumps(
-        obj,
-        sort_keys=True,
-        ensure_ascii=False,
-        separators=(',', ':'),
-        default=_json_serializer
-    )
+    return json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=_json_serializer)
 
 
 def canonical_json_bytes(obj: Any, exclude_fields: Optional[Set[str]] = None) -> bytes:
@@ -59,7 +54,7 @@ def canonical_json_bytes(obj: Any, exclude_fields: Optional[Set[str]] = None) ->
     Returns:
         UTF-8 encoded canonical JSON bytes
     """
-    return canonical_json(obj, exclude_fields).encode('utf-8')
+    return canonical_json(obj, exclude_fields).encode("utf-8")
 
 
 def content_hash(obj: Any, exclude_fields: Optional[Set[str]] = None, length: int = 16) -> str:
@@ -95,20 +90,22 @@ def content_hash_full(obj: Any, exclude_fields: Optional[Set[str]] = None) -> st
 
 
 # Default fields to exclude from deterministic comparisons
-ALLOWED_VARIANCE_FIELDS = frozenset({
-    'id',
-    'created_at',
-    'started_at',
-    'completed_at',
-    'updated_at',
-    'duration_ms',
-    'duration',
-    'trace_id',
-    'span_id',
-    'request_id',
-    'timestamp',
-    'ts',
-})
+ALLOWED_VARIANCE_FIELDS = frozenset(
+    {
+        "id",
+        "created_at",
+        "started_at",
+        "completed_at",
+        "updated_at",
+        "duration_ms",
+        "duration",
+        "trace_id",
+        "span_id",
+        "request_id",
+        "timestamp",
+        "ts",
+    }
+)
 
 
 def deterministic_hash(obj: Any, length: int = 16) -> str:
@@ -147,12 +144,13 @@ def _json_serializer(obj: Any) -> Any:
         return obj.value
     if isinstance(obj, bytes):
         import base64
-        return base64.b64encode(obj).decode('ascii')
-    if hasattr(obj, 'to_dict'):
+
+        return base64.b64encode(obj).decode("ascii")
+    if hasattr(obj, "to_dict"):
         return obj.to_dict()
-    if hasattr(obj, 'model_dump'):
+    if hasattr(obj, "model_dump"):
         return obj.model_dump()
-    if hasattr(obj, '__dict__'):
+    if hasattr(obj, "__dict__"):
         return obj.__dict__
 
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
@@ -170,11 +168,7 @@ def _filter_fields(obj: Any, exclude: Set[str]) -> Any:
         Filtered object
     """
     if isinstance(obj, dict):
-        return {
-            k: _filter_fields(v, exclude)
-            for k, v in obj.items()
-            if k not in exclude
-        }
+        return {k: _filter_fields(v, exclude) for k, v in obj.items() if k not in exclude}
     if isinstance(obj, list):
         return [_filter_fields(item, exclude) for item in obj]
     return obj
@@ -208,12 +202,12 @@ def canonicalize_file(filepath: str) -> None:
     Raises:
         ValueError: If file is not valid JSON
     """
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     canonical = canonical_json(data)
 
-    with open(filepath, 'w', encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write(canonical)
 
 
@@ -227,7 +221,7 @@ def assert_canonical(filepath: str) -> None:
     Raises:
         AssertionError: If file is not canonical
     """
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
 
     if not is_canonical(content):
@@ -236,10 +230,9 @@ def assert_canonical(filepath: str) -> None:
 
 # Comparison helpers for replay tests
 
+
 def compare_deterministic(
-    actual: Dict[str, Any],
-    expected: Dict[str, Any],
-    deterministic_fields: Optional[List[str]] = None
+    actual: Dict[str, Any], expected: Dict[str, Any], deterministic_fields: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Compare two outputs, checking only deterministic fields.
@@ -259,31 +252,20 @@ def compare_deterministic(
             actual_val = _get_nested(actual, field)
             expected_val = _get_nested(expected, field)
             if actual_val != expected_val:
-                differences.append({
-                    'field': field,
-                    'expected': expected_val,
-                    'actual': actual_val
-                })
+                differences.append({"field": field, "expected": expected_val, "actual": actual_val})
     else:
         # Compare full content hash excluding variance fields
         actual_hash = deterministic_hash(actual)
         expected_hash = deterministic_hash(expected)
         if actual_hash != expected_hash:
-            differences.append({
-                'field': '_content_hash',
-                'expected': expected_hash,
-                'actual': actual_hash
-            })
+            differences.append({"field": "_content_hash", "expected": expected_hash, "actual": actual_hash})
 
-    return {
-        'match': len(differences) == 0,
-        'differences': differences
-    }
+    return {"match": len(differences) == 0, "differences": differences}
 
 
 def _get_nested(obj: Dict[str, Any], path: str) -> Any:
     """Get nested value using dot notation."""
-    parts = path.split('.')
+    parts = path.split(".")
     current = obj
     for part in parts:
         if isinstance(current, dict) and part in current:

@@ -7,10 +7,11 @@ Usage:
     run_id = client.post_goal(agent_id, "ping")
     status = client.poll_run(agent_id, run_id, timeout=10)
 """
-from typing import Optional, Dict, Any
-import requests
 import time
 import uuid
+from typing import Any, Dict, Optional
+
+import requests
 
 
 class NovaClient:
@@ -40,16 +41,26 @@ class NovaClient:
         r.raise_for_status()
         data = r.json()
         # try to extract run id from response provenance/plan if present
-        run_id = data.get("run_id") or data.get("run", {}).get("id") or data.get("plan", {}).get("plan_id")
+        run_id = (
+            data.get("run_id")
+            or data.get("run", {}).get("id")
+            or data.get("plan", {}).get("plan_id")
+        )
         return run_id
 
-    def poll_run(self, agent_id: str, run_id: str, timeout: int = 30, interval: float = 0.5) -> Dict[str, Any]:
+    def poll_run(
+        self, agent_id: str, run_id: str, timeout: int = 30, interval: float = 0.5
+    ) -> Dict[str, Any]:
         end = time.time() + timeout
         while time.time() < end:
             r = self.session.get(self._url(f"/agents/{agent_id}/runs/{run_id}"))
             if r.status_code == 200:
                 data = r.json()
-                status = data.get("status") or data.get("run", {}).get("status") or data.get("plan", {}).get("status")
+                status = (
+                    data.get("status")
+                    or data.get("run", {}).get("status")
+                    or data.get("plan", {}).get("status")
+                )
                 if status and status in ("succeeded", "failed"):
                     return data
             time.sleep(interval)
@@ -68,7 +79,7 @@ class NovaClient:
         plan: list,
         budget_cents: int = 1000,
         agent_id: Optional[str] = None,
-        tenant_id: Optional[str] = None
+        tenant_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Simulate a plan before execution.
@@ -108,7 +119,7 @@ class NovaClient:
         query_type: str,
         params: Optional[Dict[str, Any]] = None,
         agent_id: Optional[str] = None,
-        run_id: Optional[str] = None
+        run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Query runtime state.
@@ -168,9 +179,7 @@ class NovaClient:
         return r.json()
 
     def get_capabilities(
-        self,
-        agent_id: Optional[str] = None,
-        tenant_id: Optional[str] = None
+        self, agent_id: Optional[str] = None, tenant_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Get available capabilities for an agent/tenant.

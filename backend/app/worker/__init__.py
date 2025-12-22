@@ -23,6 +23,7 @@ def get_worker_pool():
     global _worker_pool_class
     if _worker_pool_class is None:
         from .pool import WorkerPool
+
         _worker_pool_class = WorkerPool
     return _worker_pool_class
 
@@ -32,6 +33,7 @@ def get_run_runner():
     global _run_runner_class
     if _run_runner_class is None:
         from .runner import RunRunner
+
         _run_runner_class = RunRunner
     return _run_runner_class
 

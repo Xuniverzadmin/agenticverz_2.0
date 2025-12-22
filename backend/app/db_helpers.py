@@ -16,10 +16,11 @@ Usage:
     count = query_scalar(session, count_query)
 """
 
-from typing import TypeVar, Optional, List, Any
-from sqlmodel import Session, select
+from typing import Any, List, Optional, TypeVar
 
-T = TypeVar('T')
+from sqlmodel import Session
+
+T = TypeVar("T")
 
 
 def query_one(session: Session, stmt) -> Optional[Any]:

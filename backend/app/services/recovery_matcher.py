@@ -15,13 +15,13 @@ References:
 - M10 Blueprint: Recovery Suggestion Engine
 """
 
+import hashlib
 import logging
 import math
-import hashlib
 import os
-from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("nova.services.recovery_matcher")
 
@@ -37,6 +37,7 @@ EXACT_MATCH_CONFIDENCE = 0.95  # Confidence for exact catalog matches
 @dataclass
 class MatchResult:
     """Result from matching a failure to a recovery suggestion."""
+
     matched_entry: Optional[Dict[str, Any]]
     suggested_recovery: Optional[str]
     confidence: float
@@ -67,6 +68,7 @@ class RecoveryMatcher:
             raise RuntimeError("DATABASE_URL environment variable is required")
 
         from sqlmodel import Session, create_engine
+
         engine = create_engine(self._db_url)
         return Session(engine)
 
@@ -94,10 +96,7 @@ class RecoveryMatcher:
         return math.exp(-LAMBDA * age_days)
 
     def _compute_confidence(
-        self,
-        matches: List[Dict[str, Any]],
-        occurrences: int,
-        has_exact_match: bool = False
+        self, matches: List[Dict[str, Any]], occurrences: int, has_exact_match: bool = False
     ) -> Tuple[float, Dict[str, Any]]:
         """
         Compute confidence score using weighted time-decay algorithm.
@@ -167,12 +166,7 @@ class RecoveryMatcher:
 
         return confidence, explain
 
-    def _generate_suggestion(
-        self,
-        error_code: str,
-        error_message: str,
-        similar_recoveries: List[str]
-    ) -> str:
+    def _generate_suggestion(self, error_code: str, error_message: str, similar_recoveries: List[str]) -> str:
         """Generate recovery suggestion text."""
         if similar_recoveries:
             # Use most common recovery from history
@@ -195,20 +189,17 @@ class RecoveryMatcher:
 
         return f"Review error '{error_code}' and implement appropriate error handling"
 
-    def _find_similar_failures(
-        self,
-        error_code: str,
-        error_signature: str,
-        limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    def _find_similar_failures(self, error_code: str, error_signature: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Find similar failures from history."""
         try:
             from sqlalchemy import text
+
             session = self._get_session()
 
             # Query for similar failures by error_code
             result = session.execute(
-                text("""
+                text(
+                    """
                 SELECT
                     id,
                     error_code,
@@ -222,8 +213,9 @@ class RecoveryMatcher:
                   AND recovery_suggestion IS NOT NULL
                 ORDER BY created_at DESC
                 LIMIT :limit
-                """),
-                {"error_code": error_code, "limit": limit}
+                """
+                ),
+                {"error_code": error_code, "limit": limit},
             )
 
             rows = result.fetchall()
@@ -247,16 +239,19 @@ class RecoveryMatcher:
         """Count occurrences of error code in recent history."""
         try:
             from sqlalchemy import text
+
             session = self._get_session()
 
             result = session.execute(
-                text(f"""
+                text(
+                    f"""
                 SELECT COUNT(*)
                 FROM failure_matches
                 WHERE error_code = :error_code
                   AND created_at > now() - interval '{days} days'
-                """),
-                {"error_code": error_code}
+                """
+                ),
+                {"error_code": error_code},
             )
 
             return result.scalar() or 0
@@ -273,7 +268,7 @@ class RecoveryMatcher:
         error_code: str,
         error_signature: str,
         matched_entry: Optional[Dict[str, Any]] = None,
-        source: str = "matcher"
+        source: str = "matcher",
     ) -> int:
         """
         Upsert recovery candidate with occurrence counting.
@@ -282,16 +277,20 @@ class RecoveryMatcher:
             candidate_id
         """
         import json
+
         from sqlalchemy import text
+
         session = self._get_session()
 
         # Check if candidate exists
         result = session.execute(
-            text("""
+            text(
+                """
             SELECT id, occurrence_count FROM recovery_candidates
             WHERE failure_match_id = CAST(:failure_match_id AS uuid)
-            """),
-            {"failure_match_id": failure_match_id}
+            """
+            ),
+            {"failure_match_id": failure_match_id},
         )
         existing = result.fetchone()
 
@@ -299,7 +298,8 @@ class RecoveryMatcher:
             # Update existing candidate
             candidate_id = existing[0]
             session.execute(
-                text("""
+                text(
+                    """
                 UPDATE recovery_candidates
                 SET
                     suggestion = :suggestion,
@@ -309,19 +309,21 @@ class RecoveryMatcher:
                     last_occurrence_at = now(),
                     matched_catalog_entry = CAST(:matched_entry AS jsonb)
                 WHERE id = :id
-                """),
+                """
+                ),
                 {
                     "id": candidate_id,
                     "suggestion": suggestion,
                     "confidence": confidence,
                     "explain": json.dumps(explain),
                     "matched_entry": json.dumps(matched_entry) if matched_entry else None,
-                }
+                },
             )
         else:
             # Insert new candidate
             result = session.execute(
-                text("""
+                text(
+                    """
                 INSERT INTO recovery_candidates (
                     failure_match_id, suggestion, confidence, explain,
                     matched_catalog_entry, error_code, error_signature,
@@ -332,7 +334,8 @@ class RecoveryMatcher:
                     :source, :created_by
                 )
                 RETURNING id
-                """),
+                """
+                ),
                 {
                     "failure_match_id": failure_match_id,
                     "suggestion": suggestion,
@@ -343,7 +346,7 @@ class RecoveryMatcher:
                     "error_signature": error_signature,
                     "source": source,
                     "created_by": "recovery_matcher",
-                }
+                },
             )
             candidate_id = result.scalar()
 
@@ -373,8 +376,7 @@ class RecoveryMatcher:
         error_message = payload.get("raw", payload.get("error_message", ""))
 
         logger.info(
-            f"Processing recovery suggestion for failure_match_id={failure_match_id}, "
-            f"error_code={error_code}"
+            f"Processing recovery suggestion for failure_match_id={failure_match_id}, " f"error_code={error_code}"
         )
 
         # Find similar failures
@@ -383,9 +385,7 @@ class RecoveryMatcher:
 
         # Extract successful recovery suggestions
         successful_recoveries = [
-            f["recovery_suggestion"]
-            for f in similar
-            if f.get("recovery_succeeded") and f.get("recovery_suggestion")
+            f["recovery_suggestion"] for f in similar if f.get("recovery_succeeded") and f.get("recovery_suggestion")
         ]
 
         # Check for exact catalog match
@@ -403,14 +403,10 @@ class RecoveryMatcher:
                     break
 
         # Compute confidence
-        confidence, explain = self._compute_confidence(
-            similar, occurrences, has_exact_match
-        )
+        confidence, explain = self._compute_confidence(similar, occurrences, has_exact_match)
 
         # Generate suggestion
-        suggestion = self._generate_suggestion(
-            error_code, error_message, successful_recoveries
-        )
+        suggestion = self._generate_suggestion(error_code, error_message, successful_recoveries)
 
         # Upsert candidate if confidence meets threshold
         candidate_id = None
@@ -440,19 +436,11 @@ class RecoveryMatcher:
             error_signature=error_signature,
         )
 
-        logger.info(
-            f"Generated suggestion: confidence={confidence:.2f}, "
-            f"candidate_id={candidate_id}"
-        )
+        logger.info(f"Generated suggestion: confidence={confidence:.2f}, " f"candidate_id={candidate_id}")
 
         return result
 
-    def get_candidates(
-        self,
-        status: str = "pending",
-        limit: int = 50,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+    def get_candidates(self, status: str = "pending", limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
         """
         List recovery candidates by status.
 
@@ -464,8 +452,10 @@ class RecoveryMatcher:
         Returns:
             List of candidate dicts
         """
-        from sqlalchemy import text
         import json
+
+        from sqlalchemy import text
+
         session = self._get_session()
 
         query = """
@@ -510,11 +500,7 @@ class RecoveryMatcher:
         ]
 
     def approve_candidate(
-        self,
-        candidate_id: int,
-        approved_by: str,
-        decision: str = "approved",
-        note: str = ""
+        self, candidate_id: int, approved_by: str, decision: str = "approved", note: str = ""
     ) -> Dict[str, Any]:
         """
         Approve or reject a recovery candidate.
@@ -536,10 +522,7 @@ class RecoveryMatcher:
         session = self._get_session()
 
         # Get current state for audit
-        result = session.execute(
-            text("SELECT decision FROM recovery_candidates WHERE id = :id"),
-            {"id": candidate_id}
-        )
+        result = session.execute(text("SELECT decision FROM recovery_candidates WHERE id = :id"), {"id": candidate_id})
         row = result.fetchone()
         if not row:
             raise ValueError(f"Candidate {candidate_id} not found")
@@ -548,7 +531,8 @@ class RecoveryMatcher:
 
         # Update candidate
         session.execute(
-            text("""
+            text(
+                """
             UPDATE recovery_candidates
             SET
                 decision = :decision,
@@ -556,24 +540,27 @@ class RecoveryMatcher:
                 approved_at = now(),
                 review_note = :note
             WHERE id = :id
-            """),
+            """
+            ),
             {
                 "id": candidate_id,
                 "decision": decision,
                 "approved_by": approved_by,
                 "note": note,
-            }
+            },
         )
 
         # Create audit record
         session.execute(
-            text("""
+            text(
+                """
             INSERT INTO recovery_candidates_audit (
                 candidate_id, action, actor, old_decision, new_decision, note
             ) VALUES (
                 :candidate_id, :action, :actor, :old_decision, :new_decision, :note
             )
-            """),
+            """
+            ),
             {
                 "candidate_id": candidate_id,
                 "action": decision,
@@ -581,14 +568,15 @@ class RecoveryMatcher:
                 "old_decision": old_decision,
                 "new_decision": decision,
                 "note": note,
-            }
+            },
         )
 
         session.commit()
 
         # Return updated candidate by querying directly
         result = session.execute(
-            text("""
+            text(
+                """
             SELECT
                 id, failure_match_id, suggestion, confidence,
                 explain, decision, occurrence_count, last_occurrence_at,
@@ -596,12 +584,14 @@ class RecoveryMatcher:
                 error_code, source
             FROM recovery_candidates
             WHERE id = :id
-            """),
-            {"id": candidate_id}
+            """
+            ),
+            {"id": candidate_id},
         )
         row = result.fetchone()
 
         import json
+
         if row:
             return {
                 "id": row[0],

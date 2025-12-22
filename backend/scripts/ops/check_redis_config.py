@@ -39,7 +39,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -72,6 +72,7 @@ async def get_redis():
     """Get async Redis client."""
     try:
         import redis.asyncio as aioredis
+
         return aioredis.from_url(
             REDIS_URL,
             encoding="utf-8",
@@ -79,6 +80,7 @@ async def get_redis():
         )
     except ImportError:
         import aioredis
+
         return await aioredis.from_url(
             REDIS_URL,
             encoding="utf-8",
@@ -109,9 +111,7 @@ async def check_redis_config() -> Tuple[Dict[str, any], List[str], List[str]]:
             config[key] = actual
 
             if actual != expected:
-                errors.append(
-                    f"REQUIRED: {key} = '{actual}' (expected '{expected}')"
-                )
+                errors.append(f"REQUIRED: {key} = '{actual}' (expected '{expected}')")
 
         # Check recommended settings
         for key, expected_options in RECOMMENDED_CONFIG.items():
@@ -121,14 +121,9 @@ async def check_redis_config() -> Tuple[Dict[str, any], List[str], List[str]]:
 
             if isinstance(expected_options, list):
                 if actual not in expected_options:
-                    warnings.append(
-                        f"RECOMMENDED: {key} = '{actual}' "
-                        f"(recommended: {expected_options})"
-                    )
+                    warnings.append(f"RECOMMENDED: {key} = '{actual}' " f"(recommended: {expected_options})")
             elif actual != expected_options:
-                warnings.append(
-                    f"RECOMMENDED: {key} = '{actual}' (recommended '{expected_options}')"
-                )
+                warnings.append(f"RECOMMENDED: {key} = '{actual}' (recommended '{expected_options}')")
 
         # Check should-be-set settings
         for key, description in SHOULD_BE_SET.items():
@@ -137,9 +132,7 @@ async def check_redis_config() -> Tuple[Dict[str, any], List[str], List[str]]:
             config[key] = actual
 
             if actual in ("0", "", "NOT_SET"):
-                warnings.append(
-                    f"SHOULD_SET: {key} = '{actual}' ({description})"
-                )
+                warnings.append(f"SHOULD_SET: {key} = '{actual}' ({description})")
 
         # Additional helpful info
         info = await redis.info("persistence")
@@ -162,9 +155,7 @@ async def check_redis_config() -> Tuple[Dict[str, any], List[str], List[str]]:
 
 def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Check Redis configuration for M10 Recovery durability"
-    )
+    parser = argparse.ArgumentParser(description="Check Redis configuration for M10 Recovery durability")
     parser.add_argument(
         "--strict",
         action="store_true",
@@ -214,12 +205,12 @@ def main():
     if args.json:
         print(json.dumps(result, indent=2))
     else:
-        print(f"\n=== Redis Configuration Check ===")
+        print("\n=== Redis Configuration Check ===")
         print(f"Timestamp: {result['timestamp']}")
         print(f"Redis URL: {result['redis_url']}")
         print(f"Status: {result['status']}")
 
-        print(f"\nConfiguration:")
+        print("\nConfiguration:")
         for key, value in config.items():
             print(f"  {key}: {value}")
 
@@ -234,10 +225,10 @@ def main():
                 print(f"  ⚠️  {warn}")
 
         if not errors and not warnings:
-            print(f"\n✅ All checks passed!")
+            print("\n✅ All checks passed!")
         elif errors:
-            print(f"\n❌ Configuration issues found - streams may lose data!")
-            print(f"   See: deployment/redis/redis-m10-durable.conf")
+            print("\n❌ Configuration issues found - streams may lose data!")
+            print("   See: deployment/redis/redis-m10-durable.conf")
 
     sys.exit(exit_code)
 

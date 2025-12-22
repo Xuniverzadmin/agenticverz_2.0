@@ -27,12 +27,12 @@ class TestM10MetricsRegistered:
     def test_m10_metrics_defined(self):
         """Assert M10 metrics are defined in app.metrics module."""
         from app.metrics import (
-            M10_QUEUE_DEPTH,
+            M10_CONSUMER_COUNT,
             M10_DEAD_LETTER_COUNT,
+            M10_MATVIEW_AGE,
             M10_OUTBOX_PENDING,
             M10_OUTBOX_PROCESSED,
-            M10_MATVIEW_AGE,
-            M10_CONSUMER_COUNT,
+            M10_QUEUE_DEPTH,
             M10_RECLAIM_COUNT,
         )
 
@@ -68,12 +68,12 @@ class TestM10MetricsRegistered:
     def test_m10_metrics_can_be_set(self):
         """Assert M10 metrics can be updated without error."""
         from app.metrics import (
-            M10_QUEUE_DEPTH,
+            M10_CONSUMER_COUNT,
             M10_DEAD_LETTER_COUNT,
+            M10_MATVIEW_AGE,
             M10_OUTBOX_PENDING,
             M10_OUTBOX_PROCESSED,
-            M10_MATVIEW_AGE,
-            M10_CONSUMER_COUNT,
+            M10_QUEUE_DEPTH,
             M10_RECLAIM_COUNT,
         )
 
@@ -113,8 +113,7 @@ class TestM10AlertMetrics:
 
         for metric_name in self.ALERT_METRIC_THRESHOLDS.keys():
             assert metric_name in registered_names, (
-                f"Alert metric '{metric_name}' not found. "
-                f"Alert rules in m10_recovery_alerts.yml will fail."
+                f"Alert metric '{metric_name}' not found. " f"Alert rules in m10_recovery_alerts.yml will fail."
             )
 
 
@@ -125,6 +124,7 @@ class TestM10MetricsEndpoint:
     def client(self):
         """Create test client."""
         from fastapi.testclient import TestClient
+
         from app.main import app
 
         return TestClient(app)
@@ -137,13 +137,10 @@ class TestM10MetricsEndpoint:
         content = response.text
 
         # Check for at least one M10 metric in output
-        m10_metrics_found = [
-            line for line in content.split("\n") if line.startswith("m10_")
-        ]
+        m10_metrics_found = [line for line in content.split("\n") if line.startswith("m10_")]
 
         assert len(m10_metrics_found) > 0, (
-            "No M10 metrics found in /metrics output. "
-            "Ensure M10 metrics are registered before app startup."
+            "No M10 metrics found in /metrics output. " "Ensure M10 metrics are registered before app startup."
         )
 
 
@@ -158,8 +155,8 @@ class TestM10MetricsCollector:
 
     def test_collector_updates_gauges(self):
         """Assert collector function updates gauge values."""
-        from app.tasks.m10_metrics_collector import collect_m10_metrics
         from app.metrics import M10_QUEUE_DEPTH
+        from app.tasks.m10_metrics_collector import collect_m10_metrics
 
         # Get initial value
         initial = M10_QUEUE_DEPTH._value.get()

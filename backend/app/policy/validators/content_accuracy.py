@@ -11,20 +11,21 @@
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 
 class AssertionType(str, Enum):
     """Types of assertions detected in output."""
-    DEFINITIVE = "definitive"      # "Your contract IS auto-renewed"
-    CONDITIONAL = "conditional"    # "IF auto-renew is enabled, THEN..."
-    UNCERTAIN = "uncertain"        # "I'm not sure if..." or "I don't have that info"
-    HEDGED = "hedged"             # "Based on available data..." or "It appears..."
+
+    DEFINITIVE = "definitive"  # "Your contract IS auto-renewed"
+    CONDITIONAL = "conditional"  # "IF auto-renew is enabled, THEN..."
+    UNCERTAIN = "uncertain"  # "I'm not sure if..." or "I don't have that info"
+    HEDGED = "hedged"  # "Based on available data..." or "It appears..."
 
 
 class ValidationResult(str, Enum):
     """Result of content accuracy validation."""
+
     PASS = "PASS"
     FAIL = "FAIL"
     WARN = "WARN"
@@ -33,18 +34,20 @@ class ValidationResult(str, Enum):
 @dataclass
 class AssertionCheck:
     """A single assertion check result."""
-    field_name: str              # Field being asserted about
+
+    field_name: str  # Field being asserted about
     assertion_type: AssertionType
-    field_value: Any             # Actual value from context (None if missing)
-    field_present: bool          # Whether field exists in context
-    output_claim: str            # What the output claimed
-    is_violation: bool           # True if assertion violates policy
+    field_value: Any  # Actual value from context (None if missing)
+    field_present: bool  # Whether field exists in context
+    output_claim: str  # What the output claimed
+    is_violation: bool  # True if assertion violates policy
     reason: Optional[str] = None
 
 
 @dataclass
 class ContentAccuracyResult:
     """Complete result of content accuracy validation."""
+
     result: ValidationResult
     checks: List[AssertionCheck] = field(default_factory=list)
     violations: List[AssertionCheck] = field(default_factory=list)
@@ -80,17 +83,17 @@ class ContentAccuracyResult:
 
 # Patterns that indicate definitive assertions
 DEFINITIVE_PATTERNS = [
-    r"\bis\b",           # "is set to", "is enabled"
-    r"\bwill\b",         # "will auto-renew"
-    r"\bhas been\b",     # "has been configured"
-    r"\byes\b",          # "Yes, your contract..."
-    r"\bconfirm\b",      # "I can confirm that..."
+    r"\bis\b",  # "is set to", "is enabled"
+    r"\bwill\b",  # "will auto-renew"
+    r"\bhas been\b",  # "has been configured"
+    r"\byes\b",  # "Yes, your contract..."
+    r"\bconfirm\b",  # "I can confirm that..."
     r"\bdefinitely\b",
     r"\bcertainly\b",
     r"\babsolutely\b",
     r"\bguaranteed\b",
-    r"\bscheduled\b",    # "scheduled for"
-    r"\bset to\b",       # "set to auto-renew"
+    r"\bscheduled\b",  # "scheduled for"
+    r"\bset to\b",  # "set to auto-renew"
 ]
 
 # Patterns that indicate appropriate uncertainty
@@ -184,10 +187,7 @@ class ContentAccuracyValidator:
         # Check each domain term
         for field_name, terms in self.domain_terms.items():
             # Check if output mentions this field
-            field_mentioned = any(
-                re.search(rf"\b{re.escape(term)}\b", output, re.IGNORECASE)
-                for term in terms
-            )
+            field_mentioned = any(re.search(rf"\b{re.escape(term)}\b", output, re.IGNORECASE) for term in terms)
 
             if not field_mentioned:
                 continue
@@ -229,8 +229,9 @@ class ContentAccuracyValidator:
         # Determine overall result
         if violations:
             result = ValidationResult.FAIL
-            overall_reason = f"Found {len(violations)} content accuracy violation(s): " + \
-                "; ".join(v.reason for v in violations if v.reason)
+            overall_reason = f"Found {len(violations)} content accuracy violation(s): " + "; ".join(
+                v.reason for v in violations if v.reason
+            )
             expected = "Express uncertainty when data is missing (e.g., 'I don't have information about...')"
             actual = f"Made definitive assertion: '{violations[0].output_claim[:50]}...'"
         elif assertion_type == AssertionType.DEFINITIVE and self.strict_mode:
@@ -293,7 +294,7 @@ class ContentAccuracyValidator:
 
     def _extract_claim(self, text: str, terms: List[str]) -> str:
         """Extract the sentence containing the claim about these terms."""
-        sentences = re.split(r'[.!?]', text)
+        sentences = re.split(r"[.!?]", text)
 
         for sentence in sentences:
             for term in terms:
@@ -355,7 +356,7 @@ if __name__ == "__main__":
             "auto_renew": None,  # NULL - data is missing!
             "contract_status": "active",
         },
-        user_query="Is my contract auto-renewed?"
+        user_query="Is my contract auto-renewed?",
     )
 
     print(f"Result: {result.result.value}")

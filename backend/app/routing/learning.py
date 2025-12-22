@@ -15,8 +15,8 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, Field
 import redis.asyncio as redis_async
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger("nova.routing.learning")
 
@@ -32,14 +32,14 @@ REPUTATION_VIOLATION_WEIGHT = 0.25
 REPUTATION_CONSISTENCY_WEIGHT = 0.15
 
 # Quarantine thresholds
-PROBATION_FAILURE_COUNT = 3    # Failures in window to enter probation
-QUARANTINE_FAILURE_COUNT = 5   # Failures to enter quarantine
-PROBATION_WINDOW = 300         # 5 minutes
-QUARANTINE_COOLOFF = 1800      # 30 minutes
+PROBATION_FAILURE_COUNT = 3  # Failures in window to enter probation
+QUARANTINE_FAILURE_COUNT = 5  # Failures to enter quarantine
+PROBATION_WINDOW = 300  # 5 minutes
+QUARANTINE_COOLOFF = 1800  # 30 minutes
 
 # Hysteresis settings
-HYSTERESIS_THRESHOLD = 0.15    # 15% score difference required to switch
-HYSTERESIS_WINDOW = 300        # 5 minute stability window
+HYSTERESIS_THRESHOLD = 0.15  # 15% score difference required to switch
+HYSTERESIS_WINDOW = 300  # 5 minute stability window
 
 # Learning rate
 DEFAULT_ADAPTATION_RATE = 0.01
@@ -49,16 +49,19 @@ DEFAULT_ADAPTATION_RATE = 0.01
 # Quarantine States
 # =============================================================================
 
+
 class QuarantineState(str, Enum):
     """Agent quarantine states."""
-    ACTIVE = "active"           # Normal operation
-    PROBATION = "probation"     # Warning state, monitored closely
-    QUARANTINED = "quarantined" # Blocked from routing
+
+    ACTIVE = "active"  # Normal operation
+    PROBATION = "probation"  # Warning state, monitored closely
+    QUARANTINED = "quarantined"  # Blocked from routing
 
 
 # =============================================================================
 # Agent Reputation
 # =============================================================================
+
 
 class AgentReputation(BaseModel):
     """
@@ -70,6 +73,7 @@ class AgentReputation(BaseModel):
     - violation_count: Boundary/risk violations
     - quarantine_count: Times quarantined
     """
+
     agent_id: str
     reputation_score: float = Field(default=1.0, ge=0.0, le=1.0)
     success_rate: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -119,9 +123,9 @@ class AgentReputation(BaseModel):
         consistency_bonus = min(1.0, self.consecutive_successes / 10)
         consistency_component = consistency_bonus * REPUTATION_CONSISTENCY_WEIGHT
 
-        self.reputation_score = min(1.0, max(0.0,
-            success_component + latency_component + violation_component + consistency_component
-        ))
+        self.reputation_score = min(
+            1.0, max(0.0, success_component + latency_component + violation_component + consistency_component)
+        )
 
         return self.reputation_score
 
@@ -226,12 +230,14 @@ class AgentReputation(BaseModel):
 # Learning Parameters
 # =============================================================================
 
+
 class LearningParameters(BaseModel):
     """
     Self-tuning routing parameters.
 
     These parameters adjust automatically based on routing outcomes.
     """
+
     # Confidence thresholds (auto-adjusted)
     confidence_block: float = Field(default=0.35, ge=0.0, le=1.0)
     confidence_fallback: float = Field(default=0.55, ge=0.0, le=1.0)
@@ -306,6 +312,7 @@ class LearningParameters(BaseModel):
 # Hysteresis Manager
 # =============================================================================
 
+
 class HysteresisManager:
     """
     Prevents oscillation between agents during performance swings.
@@ -316,7 +323,7 @@ class HysteresisManager:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis_async.Redis] = None
 
     async def _get_redis(self) -> Optional[redis_async.Redis]:
@@ -392,6 +399,7 @@ class HysteresisManager:
 # Reputation Store
 # =============================================================================
 
+
 class ReputationStore:
     """
     Store for agent reputations.
@@ -400,7 +408,7 @@ class ReputationStore:
     """
 
     def __init__(self, redis_url: Optional[str] = None):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self._redis: Optional[redis_async.Redis] = None
         self._reputations: Dict[str, AgentReputation] = {}
 
@@ -458,18 +466,21 @@ class ReputationStore:
         if r:
             try:
                 key = f"care:reputation:{reputation.agent_id}"
-                await r.hset(key, mapping={
-                    "reputation_score": str(reputation.reputation_score),
-                    "success_rate": str(reputation.success_rate),
-                    "latency_percentile": str(reputation.latency_percentile),
-                    "violation_count": str(reputation.violation_count),
-                    "quarantine_count": str(reputation.quarantine_count),
-                    "quarantine_state": reputation.quarantine_state.value,
-                    "total_routes": str(reputation.total_routes),
-                    "successful_routes": str(reputation.successful_routes),
-                    "recent_failures": str(reputation.recent_failures),
-                    "consecutive_successes": str(reputation.consecutive_successes),
-                })
+                await r.hset(
+                    key,
+                    mapping={
+                        "reputation_score": str(reputation.reputation_score),
+                        "success_rate": str(reputation.success_rate),
+                        "latency_percentile": str(reputation.latency_percentile),
+                        "violation_count": str(reputation.violation_count),
+                        "quarantine_count": str(reputation.quarantine_count),
+                        "quarantine_state": reputation.quarantine_state.value,
+                        "total_routes": str(reputation.total_routes),
+                        "successful_routes": str(reputation.successful_routes),
+                        "recent_failures": str(reputation.recent_failures),
+                        "consecutive_successes": str(reputation.consecutive_successes),
+                    },
+                )
                 await r.expire(key, 86400)  # 24 hour expiry
             except Exception as e:
                 logger.warning(f"Failed to save reputation to Redis: {e}")

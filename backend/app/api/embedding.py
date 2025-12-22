@@ -6,17 +6,17 @@ PIN-082: IAEC v3.0 - Instruction-Aware Embedding Composer
 """
 
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from ..auth import verify_api_key
 from ..memory.embedding_metrics import (
     EMBEDDING_DAILY_QUOTA,
-    get_embedding_quota_status,
     VECTOR_SEARCH_ENABLED,
     VECTOR_SEARCH_FALLBACK,
+    get_embedding_quota_status,
 )
 
 router = APIRouter(prefix="/embedding", tags=["embedding"])
@@ -24,6 +24,7 @@ router = APIRouter(prefix="/embedding", tags=["embedding"])
 
 class EmbeddingQuotaResponse(BaseModel):
     """Response schema for embedding quota status."""
+
     daily_quota: int
     current_count: int
     remaining: int
@@ -35,6 +36,7 @@ class EmbeddingQuotaResponse(BaseModel):
 
 class EmbeddingConfigResponse(BaseModel):
     """Response schema for embedding configuration."""
+
     provider: str
     model: str
     backup_provider: Optional[str]
@@ -69,6 +71,7 @@ async def get_embedding_quota(
     tomorrow = now.replace(hour=0, minute=0, second=0, microsecond=0)
     if now.hour >= 0:
         from datetime import timedelta
+
         tomorrow = tomorrow + timedelta(days=1)
 
     return EmbeddingQuotaResponse(
@@ -166,8 +169,10 @@ async def clear_embedding_cache(
 # IAEC v3.0 - Instruction-Aware Embedding Composer
 # =============================================================================
 
+
 class IAECComposeRequest(BaseModel):
     """Request schema for IAEC composition (v3.0)."""
+
     instruction: str = "default"
     query: str
     context: Optional[str] = None
@@ -180,6 +185,7 @@ class IAECComposeRequest(BaseModel):
 
 class TemporalSignatureResponse(BaseModel):
     """Temporal signature for drift control."""
+
     epoch_hash: str
     model_family: str
     model_version: str
@@ -189,6 +195,7 @@ class TemporalSignatureResponse(BaseModel):
 
 class PolicyEncodingResponse(BaseModel):
     """Policy slot encoding."""
+
     policy_id: Optional[str]
     policy_version: int
     hierarchy_level: int
@@ -196,6 +203,7 @@ class PolicyEncodingResponse(BaseModel):
 
 class IAECComposeResponse(BaseModel):
     """Response schema for IAEC composition (v3.2)."""
+
     vector: list
     mode: str
     instruction: str
@@ -231,12 +239,14 @@ class IAECComposeResponse(BaseModel):
 
 class IAECDecomposeRequest(BaseModel):
     """Request schema for IAEC decomposition."""
+
     vector: List[float]
     verify: bool = True
 
 
 class IAECDecomposeResponse(BaseModel):
     """Response schema for IAEC decomposition (v3.0)."""
+
     instruction_slot: List[float]
     query_slot: List[float]
     context_slot: List[float]
@@ -250,6 +260,7 @@ class IAECDecomposeResponse(BaseModel):
 
 class IAECVerifyRequest(BaseModel):
     """Request for integrity verification."""
+
     vector: List[float]
     instruction: str
     query: str
@@ -260,6 +271,7 @@ class IAECVerifyRequest(BaseModel):
 
 class IAECVerifyResponse(BaseModel):
     """Response for integrity verification."""
+
     passed: bool
     reconstruction_error: float
     temporal_match: bool
@@ -386,6 +398,7 @@ async def decompose_embedding(
     - policy_slot: Governance encoding (32 dims)
     """
     import numpy as np
+
     from ..memory.iaec import get_iaec
 
     iaec = await get_iaec()
@@ -412,7 +425,7 @@ async def get_iaec_instructions(
     """
     Get available IAEC instruction types and their weights.
     """
-    from ..memory.iaec import INSTRUCTION_WEIGHTS, INSTRUCTION_PROMPTS
+    from ..memory.iaec import INSTRUCTION_PROMPTS, INSTRUCTION_WEIGHTS
 
     return {
         "instructions": [
@@ -423,7 +436,7 @@ async def get_iaec_instructions(
                     "instruction": w[0],
                     "query": w[1],
                     "context": w[2],
-                }
+                },
             }
             for instr, w in INSTRUCTION_WEIGHTS.items()
         ]

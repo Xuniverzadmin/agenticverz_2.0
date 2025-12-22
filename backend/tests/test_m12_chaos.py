@@ -1,12 +1,13 @@
 # M12 Multi-Agent System Chaos Tests
 # Tests for edge cases: worker death, stale recovery, lock contention
 import os
-import pytest
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Set
+
+import pytest
 
 # Test configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -14,10 +15,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 
 # Skip if DB not available
-pytestmark = pytest.mark.skipif(
-    not DATABASE_URL,
-    reason="DATABASE_URL not set"
-)
+pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="DATABASE_URL not set")
 
 
 class TestWorkerDeathRecovery:
@@ -25,10 +23,11 @@ class TestWorkerDeathRecovery:
 
     def test_stale_worker_items_reclaimed(self):
         """Test that items from stale workers are reclaimed."""
-        from app.agents.services.job_service import JobService, JobConfig
-        from app.agents.services.worker_service import WorkerService
-        from app.agents.services.registry_service import RegistryService
         from sqlalchemy import create_engine, text
+
+        from app.agents.services.job_service import JobConfig, JobService
+        from app.agents.services.registry_service import RegistryService
+        from app.agents.services.worker_service import WorkerService
 
         job_service = JobService()
         worker_service = WorkerService()
@@ -40,33 +39,23 @@ class TestWorkerDeathRecovery:
             worker_agent="test_worker",
             task="stale_reclaim_test",
             items=[{"id": i} for i in range(10)],
-            parallelism=5
+            parallelism=5,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-stale-001",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-stale-001", tenant_id="test-tenant"
         )
 
         job_id = str(job.id)
 
         # Register a worker
         dead_worker_id = f"dead-worker-{uuid.uuid4().hex[:8]}"
-        registry_service.register(
-            agent_id="test_worker",
-            instance_id=dead_worker_id,
-            job_id=job_id,
-            capabilities={}
-        )
+        registry_service.register(agent_id="test_worker", instance_id=dead_worker_id, job_id=job_id, capabilities={})
 
         # Worker claims 3 items
         claimed_item_ids = []
         for _ in range(3):
-            item = worker_service.claim_item(
-                job_id=job_id,
-                worker_instance_id=dead_worker_id
-            )
+            item = worker_service.claim_item(job_id=job_id, worker_instance_id=dead_worker_id)
             if item:
                 claimed_item_ids.append(str(item.id))
 
@@ -75,11 +64,16 @@ class TestWorkerDeathRecovery:
         # Simulate worker death - mark as stale directly in DB
         engine = create_engine(DATABASE_URL)
         with engine.connect() as conn:
-            conn.execute(text("""
+            conn.execute(
+                text(
+                    """
                 UPDATE agents.instances
                 SET status = 'stale', heartbeat_at = now() - INTERVAL '2 hours'
                 WHERE instance_id = :instance_id
-            """), {"instance_id": dead_worker_id})
+            """
+                ),
+                {"instance_id": dead_worker_id},
+            )
             conn.commit()
 
         # Run reclamation
@@ -90,20 +84,12 @@ class TestWorkerDeathRecovery:
 
         # New worker should be able to claim those items
         new_worker_id = f"new-worker-{uuid.uuid4().hex[:8]}"
-        registry_service.register(
-            agent_id="test_worker",
-            instance_id=new_worker_id,
-            job_id=job_id,
-            capabilities={}
-        )
+        registry_service.register(agent_id="test_worker", instance_id=new_worker_id, job_id=job_id, capabilities={})
 
         # Should be able to claim 10 items now (3 reclaimed + 7 remaining)
         new_claims = []
         for _ in range(12):
-            item = worker_service.claim_item(
-                job_id=job_id,
-                worker_instance_id=new_worker_id
-            )
+            item = worker_service.claim_item(job_id=job_id, worker_instance_id=new_worker_id)
             if item:
                 new_claims.append(str(item.id))
 
@@ -118,11 +104,7 @@ class TestWorkerDeathRecovery:
         worker_id = f"heartbeat-worker-{uuid.uuid4().hex[:8]}"
 
         # Register worker
-        registry_service.register(
-            agent_id="test_worker",
-            instance_id=worker_id,
-            capabilities={}
-        )
+        registry_service.register(agent_id="test_worker", instance_id=worker_id, capabilities={})
 
         # Get initial status
         instance = registry_service.get_instance(worker_id)
@@ -222,7 +204,7 @@ class TestConcurrentJobOperations:
 
     def test_concurrent_job_updates(self):
         """Test that concurrent item completions don't corrupt counters."""
-        from app.agents.services.job_service import JobService, JobConfig
+        from app.agents.services.job_service import JobConfig, JobService
         from app.agents.services.worker_service import WorkerService
 
         job_service = JobService()
@@ -233,13 +215,11 @@ class TestConcurrentJobOperations:
             worker_agent="test_worker",
             task="concurrent_update_test",
             items=[{"id": i} for i in range(50)],
-            parallelism=20
+            parallelism=20,
         )
 
         job = job_service.create_job(
-            config=config,
-            orchestrator_instance_id="test-orchestrator-concurrent-001",
-            tenant_id="test-tenant"
+            config=config, orchestrator_instance_id="test-orchestrator-concurrent-001", tenant_id="test-tenant"
         )
 
         job_id = str(job.id)
@@ -254,27 +234,17 @@ class TestConcurrentJobOperations:
             svc = WorkerService()
             while True:
                 try:
-                    item = svc.claim_item(
-                        job_id=job_id,
-                        worker_instance_id=f"worker-{worker_id}"
-                    )
+                    item = svc.claim_item(job_id=job_id, worker_instance_id=f"worker-{worker_id}")
                     if not item:
                         break
 
                     # 90% success rate
                     if worker_id % 10 == 0:
-                        svc.fail_item(
-                            item_id=str(item.id),
-                            error_message="Simulated failure",
-                            retry=False
-                        )
+                        svc.fail_item(item_id=str(item.id), error_message="Simulated failure", retry=False)
                         with lock:
                             failed.add(str(item.id))
                     else:
-                        svc.complete_item(
-                            item_id=str(item.id),
-                            output={"done": True}
-                        )
+                        svc.complete_item(item_id=str(item.id), output={"done": True})
                         with lock:
                             completed.add(str(item.id))
                 except Exception as e:
@@ -318,15 +288,11 @@ class TestMessageOrderingUnderLoad:
                 from_instance_id=sender_id,
                 to_instance_id=receiver_id,
                 message_type="sequential_test",
-                payload={"sequence": i}
+                payload={"sequence": i},
             )
 
         # Read inbox
-        inbox = message_service.get_inbox(
-            instance_id=receiver_id,
-            message_type="sequential_test",
-            limit=30
-        )
+        inbox = message_service.get_inbox(instance_id=receiver_id, message_type="sequential_test", limit=30)
 
         # Should have all 20 messages
         assert len(inbox) == 20

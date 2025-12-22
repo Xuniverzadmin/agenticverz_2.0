@@ -9,13 +9,13 @@ Tests for:
 - Integration with runtime interfaces
 """
 
-import pytest
-import asyncio
-import tempfile
 import os
+import sys
+import tempfile
 from pathlib import Path
 
-import sys
+import pytest
+
 # Direct paths to avoid pydantic-dependent imports through __init__.py
 _runtime_path = str(Path(__file__).parent.parent.parent / "app" / "worker" / "runtime")
 _skills_path = str(Path(__file__).parent.parent.parent / "app" / "skills")
@@ -24,22 +24,20 @@ if _runtime_path not in sys.path:
 if _skills_path not in sys.path:
     sys.path.insert(0, _skills_path)
 
-from core import SkillDescriptor, Runtime
+from core import SkillDescriptor
 from registry_v2 import (
     SkillRegistry,
-    SkillRegistration,
     SkillVersion,
     get_global_registry,
-    set_global_registry,
-    register_skill,
     get_skill_handler,
-    get_skill_descriptor
+    register_skill,
+    set_global_registry,
 )
-
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def registry():
@@ -68,21 +66,24 @@ def sample_descriptor():
         version="1.0.0",
         inputs_schema_version="1.0",
         outputs_schema_version="1.0",
-        cost_model={"base_cents": 5}
+        cost_model={"base_cents": 5},
     )
 
 
 @pytest.fixture
 def sample_handler():
     """Create a sample async handler."""
+
     async def handler(inputs):
         return {"processed": inputs}
+
     return handler
 
 
 # ============================================================================
 # Test: SkillVersion
 # ============================================================================
+
 
 class TestSkillVersion:
     """Tests for SkillVersion parsing and comparison."""
@@ -122,6 +123,7 @@ class TestSkillVersion:
 # ============================================================================
 # Test: Registration
 # ============================================================================
+
 
 class TestRegistration:
     """Tests for skill registration."""
@@ -176,11 +178,7 @@ class TestRegistration:
 
     def test_register_with_tags(self, registry, sample_descriptor, sample_handler):
         """Register skill with tags."""
-        reg = registry.register(
-            sample_descriptor,
-            sample_handler,
-            tags=["core", "io"]
-        )
+        reg = registry.register(sample_descriptor, sample_handler, tags=["core", "io"])
 
         assert "core" in reg.tags
         assert "io" in reg.tags
@@ -201,6 +199,7 @@ class TestRegistration:
 # ============================================================================
 # Test: Deregistration
 # ============================================================================
+
 
 class TestDeregistration:
     """Tests for skill deregistration."""
@@ -242,6 +241,7 @@ class TestDeregistration:
 # Test: Handler Access
 # ============================================================================
 
+
 class TestHandlerAccess:
     """Tests for handler retrieval."""
 
@@ -272,6 +272,7 @@ class TestHandlerAccess:
 # Test: Persistence
 # ============================================================================
 
+
 class TestPersistence:
     """Tests for sqlite persistence layer."""
 
@@ -281,8 +282,7 @@ class TestPersistence:
 
         # Check sqlite directly
         cursor = persistent_registry._db.execute(
-            "SELECT skill_id, version FROM skills WHERE skill_id = ?",
-            ("skill.test",)
+            "SELECT skill_id, version FROM skills WHERE skill_id = ?", ("skill.test",)
         )
         row = cursor.fetchone()
 
@@ -295,10 +295,7 @@ class TestPersistence:
         persistent_registry.register(sample_descriptor, sample_handler)
         persistent_registry.deregister("skill.test")
 
-        cursor = persistent_registry._db.execute(
-            "SELECT * FROM skills WHERE skill_id = ?",
-            ("skill.test",)
-        )
+        cursor = persistent_registry._db.execute("SELECT * FROM skills WHERE skill_id = ?", ("skill.test",))
         row = cursor.fetchone()
 
         assert row is None
@@ -308,17 +305,13 @@ class TestPersistence:
 # Test: Manifest
 # ============================================================================
 
+
 class TestManifest:
     """Tests for skill manifest generation."""
 
     def test_get_manifest(self, registry, sample_handler):
         """Get manifest for planner."""
-        desc = SkillDescriptor(
-            skill_id="skill.test",
-            name="Test",
-            version="1.0.0",
-            cost_model={"base_cents": 5}
-        )
+        desc = SkillDescriptor(skill_id="skill.test", name="Test", version="1.0.0", cost_model={"base_cents": 5})
         registry.register(desc, sample_handler, tags=["core"])
 
         manifest = registry.get_manifest()
@@ -332,6 +325,7 @@ class TestManifest:
 # ============================================================================
 # Test: Global Registry
 # ============================================================================
+
 
 class TestGlobalRegistry:
     """Tests for global registry functions."""
@@ -370,6 +364,7 @@ class TestGlobalRegistry:
 # ============================================================================
 # Test: Listing
 # ============================================================================
+
 
 class TestListing:
     """Tests for skill listing."""

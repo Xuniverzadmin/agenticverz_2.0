@@ -2,10 +2,11 @@
 Tests for RuntimeContext determinism.
 """
 
-import pytest
 from datetime import datetime, timezone
 
-from aos_sdk import RuntimeContext, canonical_json, hash_trace, freeze_time
+import pytest
+
+from aos_sdk import RuntimeContext, canonical_json, freeze_time, hash_trace
 
 
 class TestRuntimeContext:
@@ -123,10 +124,7 @@ class TestRuntimeContext:
     def test_to_dict_serialization(self):
         """Context serializes to dict correctly."""
         ctx = RuntimeContext(
-            seed=42,
-            now="2025-01-01T00:00:00Z",
-            tenant_id="test",
-            env={"FOO": "bar"}
+            seed=42, now="2025-01-01T00:00:00Z", tenant_id="test", env={"FOO": "bar"}
         )
 
         data = ctx.to_dict()
@@ -143,7 +141,7 @@ class TestRuntimeContext:
             "seed": 99,
             "now": "2025-06-15T10:00:00Z",
             "tenant_id": "restored",
-            "env": {"KEY": "value"}
+            "env": {"KEY": "value"},
         }
 
         ctx = RuntimeContext.from_dict(data)

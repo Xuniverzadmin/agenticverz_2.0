@@ -29,7 +29,6 @@ Environment Variables:
 """
 
 import argparse
-import asyncio
 import json
 import logging
 import os
@@ -57,6 +56,7 @@ def _update_lock_metric(lock_name: str, acquired: bool):
     """Update Prometheus metrics for lock operations."""
     try:
         from app.metrics import m10_lock_acquired_total, m10_lock_failed_total
+
         if acquired:
             m10_lock_acquired_total.labels(lock_name=lock_name).inc()
         else:
@@ -91,7 +91,7 @@ def acquire_view_lock(view_name: str, db_url: Optional[str] = None) -> bool:
         with Session(engine) as session:
             result = session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": lock_name, "holder_id": HOLDER_ID, "ttl": LOCK_TTL}
+                {"lock_name": lock_name, "holder_id": HOLDER_ID, "ttl": LOCK_TTL},
             )
             acquired = result.scalar()
             session.commit()
@@ -131,7 +131,7 @@ def release_view_lock(view_name: str, db_url: Optional[str] = None) -> bool:
         with Session(engine) as session:
             result = session.execute(
                 text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                {"lock_name": lock_name, "holder_id": HOLDER_ID}
+                {"lock_name": lock_name, "holder_id": HOLDER_ID},
             )
             released = result.scalar()
             session.commit()
@@ -176,8 +176,7 @@ def refresh_matview_tracked(
 
         with Session(engine) as session:
             result = session.execute(
-                text("SELECT * FROM m10_recovery.refresh_mv_tracked(:view_name)"),
-                {"view_name": view_name}
+                text("SELECT * FROM m10_recovery.refresh_mv_tracked(:view_name)"), {"view_name": view_name}
             )
             row = result.fetchone()
             session.commit()
@@ -226,10 +225,14 @@ def get_matview_freshness(db_url: Optional[str] = None) -> Dict[str, Dict]:
         engine = create_engine(db_url, pool_pre_ping=True)
 
         with Session(engine) as session:
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 SELECT view_name, last_refresh, age_seconds, last_success, last_duration_ms
                 FROM m10_recovery.matview_freshness
-            """))
+            """
+                )
+            )
 
             freshness = {}
             for row in result:
@@ -258,12 +261,11 @@ def update_prometheus_metrics(freshness: Dict[str, Dict]) -> None:
 
         for view_name, info in freshness.items():
             if info.get("age_seconds") is not None:
-                recovery_matview_age_seconds.labels(view_name=view_name).set(
-                    info["age_seconds"]
-                )
+                recovery_matview_age_seconds.labels(view_name=view_name).set(info["age_seconds"])
 
             if info.get("last_refresh"):
                 from datetime import datetime
+
                 try:
                     ts = datetime.fromisoformat(info["last_refresh"]).timestamp()
                     recovery_matview_last_refresh_timestamp.labels(view_name=view_name).set(ts)
@@ -278,9 +280,7 @@ def update_prometheus_metrics(freshness: Dict[str, Dict]) -> None:
 
 def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Refresh M10 Recovery materialized views"
-    )
+    parser = argparse.ArgumentParser(description="Refresh M10 Recovery materialized views")
     parser.add_argument(
         "--view",
         type=str,
@@ -369,13 +369,9 @@ def main():
             results[view_name] = result
 
             if result.get("success"):
-                logger.info(
-                    f"Refreshed {view_name} in {result.get('duration_ms', 0)}ms"
-                )
+                logger.info(f"Refreshed {view_name} in {result.get('duration_ms', 0)}ms")
             else:
-                logger.error(
-                    f"Failed to refresh {view_name}: {result.get('error')}"
-                )
+                logger.error(f"Failed to refresh {view_name}: {result.get('error')}")
                 all_success = False
 
         # Update metrics
@@ -394,7 +390,7 @@ def main():
         if args.json:
             print(json.dumps(output, indent=2, default=str))
         else:
-            print(f"\n=== Matview Refresh Complete ===")
+            print("\n=== Matview Refresh Complete ===")
             print(f"Timestamp: {output['timestamp']}")
             print(f"Holder ID: {HOLDER_ID}")
             print(f"All success: {all_success}")
@@ -415,10 +411,7 @@ def main():
                 release_view_lock(view_name)
 
     # Exit with error code if any non-skipped view failed
-    actual_failures = [
-        r for r in results.values()
-        if not r.get("success") and not r.get("skipped")
-    ]
+    actual_failures = [r for r in results.values() if not r.get("success") and not r.get("skipped")]
     sys.exit(0 if not actual_failures else 1)
 
 

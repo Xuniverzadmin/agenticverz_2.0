@@ -13,16 +13,15 @@ import hashlib
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Awaitable, Optional
-
-from .models import TraceStep, TraceStatus
+from typing import Any, Awaitable, Callable, Optional
 
 
 class ReplayBehavior(str, Enum):
     """Replay behavior options."""
+
     EXECUTE = "execute"  # Always execute (default)
-    SKIP = "skip"        # Skip if already executed
-    CHECK = "check"      # Verify output matches
+    SKIP = "skip"  # Skip if already executed
+    CHECK = "check"  # Verify output matches
 
 
 class ReplayMismatchError(Exception):
@@ -56,6 +55,7 @@ class IdempotencyViolationError(Exception):
 @dataclass
 class ReplayResult:
     """Result of a replay operation."""
+
     executed: bool
     skipped: bool
     checked: bool
@@ -197,6 +197,7 @@ class ReplayEnforcer:
         steps = trace.get("steps", [])
 
         for step in steps:
+
             async def execute():
                 return await step_executor(step)
 
@@ -258,6 +259,7 @@ class RedisIdempotencyStore(IdempotencyStore):
 
     def __init__(self, redis_url: str | None = None, ttl_seconds: int = 86400):
         import os
+
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.ttl_seconds = ttl_seconds
         self._client = None
@@ -265,6 +267,7 @@ class RedisIdempotencyStore(IdempotencyStore):
     async def _get_client(self):
         if self._client is None:
             import redis.asyncio as redis
+
             self._client = redis.from_url(self.redis_url)
         return self._client
 

@@ -11,7 +11,6 @@ Or run without Redis (tests fail-open behavior):
 
 import asyncio
 import os
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -38,6 +37,7 @@ def redis_available():
     """Check if Redis is available for testing."""
     try:
         import redis
+
         client = redis.from_url(REDIS_TEST_URL, socket_connect_timeout=1)
         client.ping()
         client.close()
@@ -47,8 +47,7 @@ def redis_available():
 
 
 requires_redis = pytest.mark.skipif(
-    not redis_available(),
-    reason="Redis not available at REDIS_TEST_URL"
+    not redis_available(), reason="Redis not available at REDIS_TEST_URL"
 )
 
 
@@ -66,9 +65,7 @@ class TestRedisRateLimiterUnit:
     def test_init_custom_values(self):
         """Test initialization with custom values."""
         limiter = RedisRateLimiter(
-            redis_url="redis://custom:6379/5",
-            default_rpm=50,
-            window_seconds=30
+            redis_url="redis://custom:6379/5", default_rpm=50, window_seconds=30
         )
         assert limiter.redis_url == "redis://custom:6379/5"
         assert limiter.default_rpm == 50
@@ -82,12 +79,10 @@ class TestRedisRateLimiterUnit:
         limiter._client = None
 
         # Should return True (allow) even though Redis is not connected
-        with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+        with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
             mock_init.return_value = False  # Simulate failed reconnection
             result = await limiter.allow_request(
-                tenant_id="test-tenant",
-                ip="1.2.3.4",
-                rpm=100
+                tenant_id="test-tenant", ip="1.2.3.4", rpm=100
             )
             assert result is True
 
@@ -107,10 +102,7 @@ class TestRedisRateLimiterUnit:
         limiter._client = mock_client
 
         # Should return True (allow) despite Redis error
-        result = await limiter.allow_request(
-            tenant_id="test-tenant",
-            ip="1.2.3.4"
-        )
+        result = await limiter.allow_request(tenant_id="test-tenant", ip="1.2.3.4")
         assert result is True
 
     @pytest.mark.asyncio
@@ -152,6 +144,7 @@ class TestSingletonPattern:
         """Test that get_rate_limiter returns the same instance."""
         # Reset singleton for test
         import app.rate_limiter as rl_module
+
         rl_module._rate_limiter = None
 
         limiter1 = get_rate_limiter()
@@ -163,9 +156,12 @@ class TestSingletonPattern:
     async def test_init_rate_limiter(self):
         """Test init_rate_limiter function."""
         import app.rate_limiter as rl_module
+
         rl_module._rate_limiter = None
 
-        with patch.object(RedisRateLimiter, 'init', new_callable=AsyncMock) as mock_init:
+        with patch.object(
+            RedisRateLimiter, "init", new_callable=AsyncMock
+        ) as mock_init:
             mock_init.return_value = True
             limiter = await init_rate_limiter()
             assert limiter is not None
@@ -182,7 +178,7 @@ class TestRedisRateLimiterIntegration:
         limiter = RedisRateLimiter(
             redis_url=REDIS_TEST_URL,
             default_rpm=10,  # Low limit for testing
-            window_seconds=5  # Short window for testing
+            window_seconds=5,  # Short window for testing
         )
         await limiter.init()
 
@@ -204,10 +200,7 @@ class TestRedisRateLimiterIntegration:
     async def test_allow_request_increments_counter(self, limiter):
         """Test that allow_request increments counters."""
         # First request should be allowed
-        result = await limiter.allow_request(
-            tenant_id="test-tenant",
-            ip="10.0.0.1"
-        )
+        result = await limiter.allow_request(tenant_id="test-tenant", ip="10.0.0.1")
         assert result is True
 
         # Check counts
@@ -271,19 +264,11 @@ class TestRedisRateLimiterIntegration:
 
         # With custom limit of 5
         for i in range(5):
-            result = await limiter.allow_request(
-                tenant_id=tenant_id,
-                ip=ip,
-                rpm=5
-            )
+            result = await limiter.allow_request(tenant_id=tenant_id, ip=ip, rpm=5)
             assert result is True
 
         # 6th request should be rate limited
-        result = await limiter.allow_request(
-            tenant_id=tenant_id,
-            ip=ip,
-            rpm=5
-        )
+        result = await limiter.allow_request(tenant_id=tenant_id, ip=ip, rpm=5)
         assert result is False
 
     @pytest.mark.asyncio
@@ -382,11 +367,7 @@ class TestPrometheusMetrics:
         limiter._client = mock_client
 
         # This should trigger rate limit exceeded
-        result = await limiter.allow_request(
-            tenant_id="test",
-            ip="1.2.3.4",
-            rpm=10
-        )
+        result = await limiter.allow_request(tenant_id="test", ip="1.2.3.4", rpm=10)
 
         assert result is False
 

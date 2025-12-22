@@ -10,18 +10,18 @@ Run with:
 import json
 import os
 import tempfile
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 from fastapi import Request
 
 # Import RBAC engine components
 from app.auth.rbac_engine import (
-    PolicyObject,
     Decision,
-    PolicyConfig,
+    PolicyObject,
     RBACEngine,
-    get_policy_for_path,
     check_permission,
+    get_policy_for_path,
     get_rbac_engine,
     init_rbac_engine,
 )
@@ -39,11 +39,7 @@ class TestPolicyObject:
 
     def test_policy_object_with_attrs(self):
         """Test PolicyObject with attributes."""
-        policy = PolicyObject(
-            resource="memory_pin",
-            action="write",
-            attrs={"tenant_id": "test", "key": "foo"}
-        )
+        policy = PolicyObject(resource="memory_pin", action="write", attrs={"tenant_id": "test", "key": "foo"})
         assert policy.attrs["tenant_id"] == "test"
         assert policy.attrs["key"] == "foo"
 
@@ -135,11 +131,10 @@ class TestRBACEngineBasics:
         """Test admin role is allowed for all actions."""
         # Import and patch RBAC_ENFORCE
         import app.auth.rbac_engine as rbac_mod
+
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
 
-        mock_request.headers.get = lambda k, d=None: {
-            "X-Roles": "admin"
-        }.get(k, d)
+        mock_request.headers.get = lambda k, d=None: {"X-Roles": "admin"}.get(k, d)
 
         policy = PolicyObject(resource="memory_pin", action="admin")
         decision = engine_without_policy_file.check(policy, mock_request)
@@ -150,12 +145,11 @@ class TestRBACEngineBasics:
     def test_check_denied_readonly(self, engine_without_policy_file, mock_request, monkeypatch):
         """Test readonly role is denied for write actions."""
         import app.auth.rbac_engine as rbac_mod
+
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
         monkeypatch.setattr(rbac_mod, "RBAC_FAIL_OPEN", False)
 
-        mock_request.headers.get = lambda k, d=None: {
-            "X-Roles": "readonly"
-        }.get(k, d)
+        mock_request.headers.get = lambda k, d=None: {"X-Roles": "readonly"}.get(k, d)
 
         policy = PolicyObject(resource="memory_pin", action="write")
         decision = engine_without_policy_file.check(policy, mock_request)
@@ -169,6 +163,7 @@ class TestRBACEngineBasics:
         RBACEngine._instance = None
 
         import app.auth.rbac_engine as rbac_mod
+
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", False)
 
         engine = RBACEngine(policy_file="/tmp/nonexistent.json")
@@ -192,15 +187,11 @@ class TestPolicyHotReload:
         """Create a temporary policy file."""
         policy_data = {
             "version": "1.0.0",
-            "matrix": {
-                "test_role": {
-                    "test_resource": ["read", "write"]
-                }
-            },
-            "path_mappings": []
+            "matrix": {"test_role": {"test_resource": ["read", "write"]}},
+            "path_mappings": [],
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(policy_data, f)
             f.flush()
             yield f.name
@@ -226,17 +217,9 @@ class TestPolicyHotReload:
     def test_reload_policy_success(self, engine_with_policy, temp_policy_file):
         """Test successful policy reload."""
         # Update policy file
-        new_policy = {
-            "version": "2.0.0",
-            "matrix": {
-                "new_role": {
-                    "new_resource": ["admin"]
-                }
-            },
-            "path_mappings": []
-        }
+        new_policy = {"version": "2.0.0", "matrix": {"new_role": {"new_resource": ["admin"]}}, "path_mappings": []}
 
-        with open(temp_policy_file, 'w') as f:
+        with open(temp_policy_file, "w") as f:
             json.dump(new_policy, f)
 
         # Reload
@@ -250,7 +233,7 @@ class TestPolicyHotReload:
     def test_reload_policy_invalid_json(self, engine_with_policy, temp_policy_file):
         """Test reload with invalid JSON."""
         # Write invalid JSON
-        with open(temp_policy_file, 'w') as f:
+        with open(temp_policy_file, "w") as f:
             f.write("{ invalid json }")
 
         success, message = engine_with_policy.reload_policy()
@@ -264,13 +247,9 @@ class TestPolicyHotReload:
         old_hash = old_info["hash"]
 
         # Update policy
-        new_policy = {
-            "version": "3.0.0",
-            "matrix": {"changed": {}},
-            "path_mappings": []
-        }
+        new_policy = {"version": "3.0.0", "matrix": {"changed": {}}, "path_mappings": []}
 
-        with open(temp_policy_file, 'w') as f:
+        with open(temp_policy_file, "w") as f:
             json.dump(new_policy, f)
 
         engine_with_policy.reload_policy()
@@ -291,6 +270,7 @@ class TestMachineTokenAuth:
         monkeypatch.setenv("RBAC_AUDIT_ENABLED", "false")
 
         import app.auth.rbac_engine as rbac_mod
+
         monkeypatch.setattr(rbac_mod, "MACHINE_SECRET_TOKEN", "test-machine-secret")
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
 
@@ -302,9 +282,7 @@ class TestMachineTokenAuth:
         """Test valid machine token grants machine role."""
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "X-Machine-Token": "test-machine-secret"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"X-Machine-Token": "test-machine-secret"}.get(k, d)
         request.url = MagicMock()
         request.url.path = "/test"
         request.method = "POST"
@@ -319,9 +297,7 @@ class TestMachineTokenAuth:
         """Test invalid machine token is rejected."""
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "X-Machine-Token": "wrong-token"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"X-Machine-Token": "wrong-token"}.get(k, d)
         request.url = MagicMock()
         request.url.path = "/test"
         request.method = "POST"
@@ -346,6 +322,7 @@ class TestJWTAuth:
         monkeypatch.setenv("JWT_VERIFY_SIGNATURE", "false")
 
         import app.auth.rbac_engine as rbac_mod
+
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
         monkeypatch.setattr(rbac_mod, "JWT_VERIFY_SIGNATURE", False)
 
@@ -357,17 +334,11 @@ class TestJWTAuth:
         """Test roles are extracted from JWT token."""
         import jwt as pyjwt
 
-        token = pyjwt.encode(
-            {"roles": ["admin", "dev"]},
-            "secret",
-            algorithm="HS256"
-        )
+        token = pyjwt.encode({"roles": ["admin", "dev"]}, "secret", algorithm="HS256")
 
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "Authorization": f"Bearer {token}"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"Authorization": f"Bearer {token}"}.get(k, d)
         request.url = MagicMock()
         request.url.path = "/test"
         request.method = "GET"
@@ -385,14 +356,12 @@ class TestJWTAuth:
         token = pyjwt.encode(
             {"roles": "infra"},  # Single string instead of list
             "secret",
-            algorithm="HS256"
+            algorithm="HS256",
         )
 
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "Authorization": f"Bearer {token}"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"Authorization": f"Bearer {token}"}.get(k, d)
         request.url = MagicMock()
         request.url.path = "/test"
         request.method = "GET"
@@ -482,6 +451,7 @@ class TestConvenienceFunctions:
         monkeypatch.setenv("RBAC_AUDIT_ENABLED", "false")
 
         import app.auth.rbac_engine as rbac_mod
+
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", False)
         rbac_mod._engine = None
 
@@ -529,6 +499,7 @@ class TestFailOpenMode:
         monkeypatch.setenv("RBAC_AUDIT_ENABLED", "false")
 
         import app.auth.rbac_engine as rbac_mod
+
         monkeypatch.setattr(rbac_mod, "RBAC_ENFORCE", True)
         monkeypatch.setattr(rbac_mod, "RBAC_FAIL_OPEN", True)
 
@@ -555,9 +526,7 @@ class TestFailOpenMode:
         """Test insufficient permissions allowed in fail-open mode."""
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
-        request.headers.get = lambda k, d=None: {
-            "X-Roles": "readonly"
-        }.get(k, d)
+        request.headers.get = lambda k, d=None: {"X-Roles": "readonly"}.get(k, d)
         request.url = MagicMock()
         request.url.path = "/test"
         request.method = "GET"

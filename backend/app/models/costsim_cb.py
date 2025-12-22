@@ -7,20 +7,18 @@ They mirror the SQLModel definitions in db.py but are designed for
 async use with SQLAlchemy 2.0+.
 """
 
-from datetime import datetime
-from typing import Optional, Dict, Any
 import json
+from typing import Any, Dict
 
 from sqlalchemy import (
-    Column,
+    TIMESTAMP,
     BigInteger,
+    Boolean,
+    Column,
+    Float,
+    Index,
     Integer,
     Text,
-    Boolean,
-    Float,
-    TIMESTAMP,
-    Index,
-    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -36,6 +34,7 @@ class CostSimCBStateModel(Base):
     Single row per circuit breaker (name is unique key).
     Uses SELECT FOR UPDATE for atomic state transitions.
     """
+
     __tablename__ = "costsim_cb_state"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -81,6 +80,7 @@ class CostSimCBIncidentModel(Base):
 
     Provides audit trail for all circuit breaker events.
     """
+
     __tablename__ = "costsim_cb_incidents"
 
     id = Column(Text, primary_key=True)
@@ -140,6 +140,7 @@ class CostSimProvenanceModel(Base):
 
     Stores V1 and V2 costs for divergence analysis.
     """
+
     __tablename__ = "costsim_provenance"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -207,6 +208,7 @@ class CostSimCanaryReportModel(Base):
 
     Stores results from daily canary runs for audit and trend analysis.
     """
+
     __tablename__ = "costsim_canary_reports"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -291,6 +293,7 @@ class CostSimAlertQueueModel(Base):
 
     Failed alerts are retried with exponential backoff.
     """
+
     __tablename__ = "costsim_alert_queue"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)

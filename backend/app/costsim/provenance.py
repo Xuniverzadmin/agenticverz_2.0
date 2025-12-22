@@ -16,19 +16,20 @@ Logs:
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+
+import asyncio
+import base64
+import gzip
 import hashlib
 import json
-import gzip
-import base64
-import uuid
 import logging
-import asyncio
+import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from app.costsim.config import get_config, get_commit_sha
+from app.costsim.config import get_commit_sha, get_config
 
 logger = logging.getLogger("nova.costsim.provenance")
 

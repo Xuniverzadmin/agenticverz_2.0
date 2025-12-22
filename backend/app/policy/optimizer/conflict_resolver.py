@@ -14,25 +14,26 @@ Resolution strategies:
 - Action precedence: deny > escalate > route > allow
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
-from typing import List, Optional, Dict, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
+
+from app.policy.compiler.grammar import PLANG_GRAMMAR, ActionType, PolicyCategory
 from app.policy.ir.ir_nodes import (
-    IRModule,
-    IRFunction,
-    IRBlock,
     IRAction,
-    IRGovernance,
+    IRBlock,
+    IRFunction,
+    IRModule,
 )
-from app.policy.compiler.grammar import PolicyCategory, ActionType, PLANG_GRAMMAR
 
 
 class ConflictType(Enum):
     """Types of policy conflicts."""
-    ACTION = auto()      # Different actions for same condition
-    PRIORITY = auto()    # Same priority for different policies
-    CATEGORY = auto()    # Cross-category interactions
-    CIRCULAR = auto()    # Circular dependencies
+
+    ACTION = auto()  # Different actions for same condition
+    PRIORITY = auto()  # Same priority for different policies
+    CATEGORY = auto()  # Cross-category interactions
+    CIRCULAR = auto()  # Circular dependencies
 
 
 @dataclass
@@ -42,6 +43,7 @@ class PolicyConflict:
 
     Includes conflict type, involved policies, and resolution.
     """
+
     conflict_type: ConflictType
     policies: List[str]
     description: str
@@ -125,12 +127,14 @@ class ConflictResolver:
             # If multiple different actions, that's a conflict
             if len(actions) > 1:
                 all_policies = list(set(p for ps in actions.values() for p in ps))
-                self.conflicts.append(PolicyConflict(
-                    conflict_type=ConflictType.ACTION,
-                    policies=all_policies,
-                    description=f"Conflicting actions {list(actions.keys())} for condition '{sig}'",
-                    severity=70,
-                ))
+                self.conflicts.append(
+                    PolicyConflict(
+                        conflict_type=ConflictType.ACTION,
+                        policies=all_policies,
+                        description=f"Conflicting actions {list(actions.keys())} for condition '{sig}'",
+                        severity=70,
+                    )
+                )
 
     def _detect_priority_conflicts(self, module: IRModule) -> None:
         """Detect policies with same priority in same category."""
@@ -147,12 +151,14 @@ class ConflictResolver:
 
         for key, policies in priority_groups.items():
             if len(policies) > 1:
-                self.conflicts.append(PolicyConflict(
-                    conflict_type=ConflictType.PRIORITY,
-                    policies=policies,
-                    description=f"Same priority {key[1]} in category {key[0].value}",
-                    severity=30,
-                ))
+                self.conflicts.append(
+                    PolicyConflict(
+                        conflict_type=ConflictType.PRIORITY,
+                        policies=policies,
+                        description=f"Same priority {key[1]} in category {key[0].value}",
+                        severity=30,
+                    )
+                )
 
     def _detect_category_conflicts(self, module: IRModule) -> None:
         """Detect cross-category interactions that may conflict."""
@@ -173,18 +179,22 @@ class ConflictResolver:
         custom_policies = by_category.get(PolicyCategory.CUSTOM, [])
 
         # Look for potential overrides
-        for lower_cat, lower_policies in [(PolicyCategory.ROUTING, routing_policies),
-                                           (PolicyCategory.CUSTOM, custom_policies)]:
+        for lower_cat, lower_policies in [
+            (PolicyCategory.ROUTING, routing_policies),
+            (PolicyCategory.CUSTOM, custom_policies),
+        ]:
             for lower_name, lower_func in lower_policies:
                 for safety_name, safety_func in safety_policies:
                     # Check if lower policy might override safety
                     if self._might_override(lower_func, safety_func):
-                        self.conflicts.append(PolicyConflict(
-                            conflict_type=ConflictType.CATEGORY,
-                            policies=[lower_name, safety_name],
-                            description=f"{lower_cat.value} policy '{lower_name}' might override SAFETY policy '{safety_name}'",
-                            severity=90,
-                        ))
+                        self.conflicts.append(
+                            PolicyConflict(
+                                conflict_type=ConflictType.CATEGORY,
+                                policies=[lower_name, safety_name],
+                                description=f"{lower_cat.value} policy '{lower_name}' might override SAFETY policy '{safety_name}'",
+                                severity=90,
+                            )
+                        )
 
     def _detect_circular_dependencies(self, module: IRModule) -> None:
         """Detect circular route dependencies."""
@@ -224,12 +234,14 @@ class ConflictResolver:
         for node in route_graph:
             cycle = has_cycle(node)
             if cycle:
-                self.conflicts.append(PolicyConflict(
-                    conflict_type=ConflictType.CIRCULAR,
-                    policies=cycle,
-                    description=f"Circular routing: {' -> '.join(cycle)}",
-                    severity=100,
-                ))
+                self.conflicts.append(
+                    PolicyConflict(
+                        conflict_type=ConflictType.CIRCULAR,
+                        policies=cycle,
+                        description=f"Circular routing: {' -> '.join(cycle)}",
+                        severity=100,
+                    )
+                )
                 break  # One cycle is enough to report
 
     def _get_condition_signature(self, block: IRBlock) -> str:
@@ -340,7 +352,7 @@ class ConflictResolver:
             return
 
         lowest_policy = None
-        lowest_priority = float('inf')
+        lowest_priority = float("inf")
 
         for policy_name in conflict.policies:
             func = module.functions.get(policy_name)

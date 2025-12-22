@@ -2,10 +2,10 @@
 # Mock calendar skill for creating calendar events
 
 import logging
-import uuid
 import time
+import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from .registry import register_skill
 
@@ -29,10 +29,7 @@ class CalendarWriteSkill:
             provider: Calendar provider (mock, google, outlook)
         """
         self.provider = provider
-        logger.info(
-            "calendar_skill_initialized",
-            extra={"provider": provider}
-        )
+        logger.info("calendar_skill_initialized", extra={"provider": provider})
 
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Create a calendar event.
@@ -59,12 +56,7 @@ class CalendarWriteSkill:
 
         logger.info(
             "skill_execution_start",
-            extra={
-                "skill": "calendar_write",
-                "provider": self.provider,
-                "title": title[:50],
-                "start": start
-            }
+            extra={"skill": "calendar_write", "provider": self.provider, "title": title[:50], "start": start},
         )
 
         # Mock provider - simulate event creation
@@ -77,14 +69,11 @@ class CalendarWriteSkill:
                 end=end,
                 attendees=attendees,
                 location=location,
-                created_at=created_at
+                created_at=created_at,
             )
         else:
             # Future: Real provider implementations
-            result = {
-                "status": "error",
-                "error": f"Provider '{self.provider}' not implemented"
-            }
+            result = {"status": "error", "error": f"Provider '{self.provider}' not implemented"}
 
         duration = time.time() - start_time
 
@@ -94,7 +83,7 @@ class CalendarWriteSkill:
             side_effects = {
                 "written_to_memory": True,
                 "memory_key": f"calendar_event:{event_id}",
-                "provider": self.provider
+                "provider": self.provider,
             }
 
         logger.info(
@@ -103,8 +92,8 @@ class CalendarWriteSkill:
                 "skill": "calendar_write",
                 "event_id": event_id,
                 "status": result.get("status"),
-                "duration": round(duration, 3)
-            }
+                "duration": round(duration, 3),
+            },
         )
 
         return {
@@ -112,7 +101,7 @@ class CalendarWriteSkill:
             "skill_version": self.VERSION,
             "result": result,
             "duration": round(duration, 3),
-            "side_effects": side_effects
+            "side_effects": side_effects,
         }
 
     async def _mock_create_event(
@@ -124,7 +113,7 @@ class CalendarWriteSkill:
         end: Optional[str],
         attendees: list,
         location: Optional[str],
-        created_at: str
+        created_at: str,
     ) -> Dict[str, Any]:
         """Mock event creation for testing.
 
@@ -144,12 +133,13 @@ class CalendarWriteSkill:
             "attendees": attendees,
             "location": location,
             "provider": self.provider,
-            "link": f"https://calendar.example.local/event/{event_id}"
+            "link": f"https://calendar.example.local/event/{event_id}",
         }
 
     async def _simulate_api_delay(self):
         """Simulate realistic API response time."""
         import asyncio
+
         await asyncio.sleep(0.01)  # 10ms simulated delay
 
 

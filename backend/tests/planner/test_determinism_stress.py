@@ -13,11 +13,12 @@ These tests are critical - planner drift causes runtime instability.
 """
 
 import asyncio
-import pytest
-import sys
 import random
+import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict
+
+import pytest
 
 # Add paths
 _backend_path = str(Path(__file__).parent.parent.parent)
@@ -28,12 +29,11 @@ for p in [_backend_path, _app_path]:
         sys.path.insert(0, p)
 
 from app.planner.interface import (
-    PlannerInterface,
+    DeterminismMode,
     PlannerOutput,
     PlannerRegistry,
-    DeterminismMode,
 )
-from app.planner.stub_planner import StubPlanner, PlanRule, PlanStep
+from app.planner.stub_planner import StubPlanner
 
 
 class TestRepeatedIdenticalCalls:
@@ -60,11 +60,7 @@ class TestRepeatedIdenticalCalls:
 
     def test_100_identical_calls_same_output(self, planner, manifest):
         """100 identical calls must produce identical output (excluding timestamps)."""
-        inputs = {
-            "agent_id": "stress-test-agent",
-            "goal": "fetch user data from API",
-            "tool_manifest": manifest
-        }
+        inputs = {"agent_id": "stress-test-agent", "goal": "fetch user data from API", "tool_manifest": manifest}
 
         results = []
         for _ in range(100):
@@ -79,11 +75,7 @@ class TestRepeatedIdenticalCalls:
 
     def test_1000_calls_same_cache_key(self, planner, manifest):
         """1000 calls must produce identical cache keys."""
-        inputs = {
-            "agent_id": "cache-key-test",
-            "goal": "analyze data",
-            "tool_manifest": manifest
-        }
+        inputs = {"agent_id": "cache-key-test", "goal": "analyze data", "tool_manifest": manifest}
 
         cache_keys = set()
         for _ in range(1000):
@@ -96,11 +88,7 @@ class TestRepeatedIdenticalCalls:
 
     def test_100_calls_same_cache_key_only(self, planner, manifest):
         """100 calls must produce identical cache keys (cache_key is timestamp-free)."""
-        inputs = {
-            "agent_id": "hash-test",
-            "goal": "echo hello",
-            "tool_manifest": [{"skill_id": "skill.echo"}]
-        }
+        inputs = {"agent_id": "hash-test", "goal": "echo hello", "tool_manifest": [{"skill_id": "skill.echo"}]}
 
         cache_keys = set()
         for _ in range(100):
@@ -135,17 +123,12 @@ class TestLargeNestedInputs:
         # Create deep nested context
         deep_context = self._generate_deep_nested(50)
 
-        inputs = {
-            "agent_id": "deep-test",
-            "goal": "fetch data",
-            "tool_manifest": manifest,
-            "context": deep_context
-        }
+        inputs = {"agent_id": "deep-test", "goal": "fetch data", "tool_manifest": manifest, "context": deep_context}
 
         results = [planner.plan(**inputs) for _ in range(10)]
 
         # All results must have same cache key
-        cache_keys = {r.metadata.cache_key for r in results if hasattr(r, 'metadata')}
+        cache_keys = {r.metadata.cache_key for r in results if hasattr(r, "metadata")}
         assert len(cache_keys) == 1
 
     def test_wide_manifest_deterministic(self, planner):
@@ -154,14 +137,10 @@ class TestLargeNestedInputs:
         manifest = [{"skill_id": "skill.http_call", "name": "HTTP Call"}]
         manifest.extend([{"skill_id": f"skill.skill_{i}", "name": f"Skill {i}"} for i in range(99)])
 
-        inputs = {
-            "agent_id": "wide-test",
-            "goal": "fetch data",
-            "tool_manifest": manifest
-        }
+        inputs = {"agent_id": "wide-test", "goal": "fetch data", "tool_manifest": manifest}
 
         results = [planner.plan(**inputs) for _ in range(10)]
-        cache_keys = {r.metadata.cache_key for r in results if hasattr(r, 'metadata')}
+        cache_keys = {r.metadata.cache_key for r in results if hasattr(r, "metadata")}
         assert len(cache_keys) == 1
 
 
@@ -193,7 +172,7 @@ class TestKeyOrderInvariance:
 
         # Structure should match even if manifest key order differs
         assert r1.__class__.__name__ == r2.__class__.__name__
-        if hasattr(r1, 'steps'):
+        if hasattr(r1, "steps"):
             assert len(r1.steps) == len(r2.steps)
             for s1, s2 in zip(r1.steps, r2.steps):
                 assert s1.skill == s2.skill
@@ -204,7 +183,7 @@ class TestKeyOrderInvariance:
             "agent_id": "random-order-test",
             "goal": "analyze data",
             "context_summary": "Test context",
-            "tool_manifest": manifest
+            "tool_manifest": manifest,
         }
 
         results = []
@@ -215,7 +194,7 @@ class TestKeyOrderInvariance:
             shuffled = {k: base_inputs[k] for k in keys}
 
             result = planner.plan(**shuffled)
-            if hasattr(result, 'steps'):
+            if hasattr(result, "steps"):
                 results.append(len(result.steps))
 
         # All should have same step count
@@ -292,19 +271,14 @@ class TestConcurrentPlanning:
     @pytest.mark.asyncio
     async def test_concurrent_calls_same_result(self, planner, manifest):
         """Concurrent planning calls produce same cache keys."""
-        inputs = {
-            "agent_id": "concurrent-test",
-            "goal": "fetch data",
-            "tool_manifest": manifest
-        }
+        inputs = {"agent_id": "concurrent-test", "goal": "fetch data", "tool_manifest": manifest}
 
         # Run 50 concurrent plans
-        tasks = [asyncio.create_task(asyncio.to_thread(planner.plan, **inputs))
-                 for _ in range(50)]
+        tasks = [asyncio.create_task(asyncio.to_thread(planner.plan, **inputs)) for _ in range(50)]
         results = await asyncio.gather(*tasks)
 
         # All results should have identical cache keys
-        cache_keys = {r.metadata.cache_key for r in results if hasattr(r, 'metadata')}
+        cache_keys = {r.metadata.cache_key for r in results if hasattr(r, "metadata")}
         assert len(cache_keys) == 1, f"Got {len(cache_keys)} unique cache keys from 50 concurrent calls"
 
 
@@ -331,11 +305,7 @@ class TestDeterminismModeContract:
         assert planner.get_determinism_mode() == DeterminismMode.FULL
 
         manifest = [{"skill_id": "skill.echo"}]
-        inputs = {
-            "agent_id": "test",
-            "goal": "echo hello",
-            "tool_manifest": manifest
-        }
+        inputs = {"agent_id": "test", "goal": "echo hello", "tool_manifest": manifest}
 
         r1 = planner.plan(**inputs)
         r2 = planner.plan(**inputs)
@@ -357,11 +327,7 @@ class TestEdgeCases:
         """Empty manifest produces deterministic result (error or filtered plan)."""
         results = []
         for _ in range(10):
-            result = planner.plan(
-                agent_id="test",
-                goal="fetch data",
-                tool_manifest=[]
-            )
+            result = planner.plan(agent_id="test", goal="fetch data", tool_manifest=[])
             results.append(result.__class__.__name__)
 
         # All results should be consistent (either all errors or all plans)
@@ -373,12 +339,8 @@ class TestEdgeCases:
 
         cache_keys = set()
         for _ in range(10):
-            result = planner.plan(
-                agent_id="test",
-                goal="echo こんにちは 🌍 مرحبا",
-                tool_manifest=manifest
-            )
-            if hasattr(result, 'metadata'):
+            result = planner.plan(agent_id="test", goal="echo こんにちは 🌍 مرحبا", tool_manifest=manifest)
+            if hasattr(result, "metadata"):
                 cache_keys.add(result.metadata.cache_key)
 
         if cache_keys:
@@ -391,12 +353,8 @@ class TestEdgeCases:
 
         results = []
         for _ in range(10):
-            result = planner.plan(
-                agent_id="test",
-                goal=long_goal,
-                tool_manifest=manifest
-            )
-            if hasattr(result, 'metadata'):
+            result = planner.plan(agent_id="test", goal=long_goal, tool_manifest=manifest)
+            if hasattr(result, "metadata"):
                 results.append(result.metadata.cache_key)
 
         if results:

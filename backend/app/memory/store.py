@@ -2,11 +2,9 @@
 # Provides storage interface for agent memories
 
 import logging
-from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Protocol
 
-from sqlmodel import Session, select, desc
+from sqlmodel import Session, desc, select
 
 from ..db import Memory, engine
 
@@ -91,7 +89,7 @@ class PostgresMemoryStore:
                     "agent_id": agent_id,
                     "memory_type": memory_type,
                     "text_len": len(text),
-                }
+                },
             )
 
             return memory.id
@@ -179,7 +177,7 @@ class PostgresMemoryStore:
                     "agent_id": agent_id,
                     "query": query[:50],
                     "results": len(memories),
-                }
+                },
             )
 
             return [
@@ -255,13 +253,15 @@ class PostgresMemoryStore:
                 if total_chars + text_len > max_chars:
                     break
 
-                result.append({
-                    "id": m.id,
-                    "text": m.text,
-                    "memory_type": m.memory_type,
-                    "meta": json.loads(m.meta) if m.meta else None,
-                    "created_at": m.created_at.isoformat(),
-                })
+                result.append(
+                    {
+                        "id": m.id,
+                        "text": m.text,
+                        "memory_type": m.memory_type,
+                        "meta": json.loads(m.meta) if m.meta else None,
+                        "created_at": m.created_at.isoformat(),
+                    }
+                )
                 total_chars += text_len
 
                 if len(result) >= limit:

@@ -16,14 +16,14 @@ These agents are:
 """
 
 from .definitions import (
+    WORKER_AGENTS,
+    create_copywriter_agent,
+    create_governor_agent,
+    create_recovery_agent,
     create_researcher_agent,
     create_strategist_agent,
-    create_copywriter_agent,
     create_ux_agent,
-    create_recovery_agent,
-    create_governor_agent,
     create_validator_agent,
-    WORKER_AGENTS,
     register_all_agents,
 )
 

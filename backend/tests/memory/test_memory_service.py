@@ -7,15 +7,17 @@ Run with:
     pytest tests/memory/test_memory_service.py -v
 """
 
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, AsyncMock, patch
 import json
+from datetime import datetime, timezone
+from unittest.mock import MagicMock
+
+import pytest
 
 # Clear Prometheus registry before importing modules that register metrics
 from prometheus_client import REGISTRY
+
 for name, collector in list(REGISTRY._names_to_collectors.items()):
-    if not name.startswith(('python_', 'process_', 'gc_')):
+    if not name.startswith(("python_", "process_", "gc_")):
         try:
             REGISTRY.unregister(collector)
         except Exception:
@@ -23,13 +25,11 @@ for name, collector in list(REGISTRY._names_to_collectors.items()):
 
 # Import memory service components
 from app.memory.memory_service import (
-    MemoryService,
     MemoryEntry,
     MemoryResult,
+    MemoryService,
     get_memory_service,
     init_memory_service,
-    MEMORY_CACHE_TTL,
-    MEMORY_MAX_SIZE_BYTES,
 )
 
 
@@ -84,12 +84,7 @@ class TestMemoryResult:
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
-        result = MemoryResult(
-            success=True,
-            entry=entry,
-            cache_hit=True,
-            latency_ms=5.2
-        )
+        result = MemoryResult(success=True, entry=entry, cache_hit=True, latency_ms=5.2)
         assert result.success is True
         assert result.entry is not None
         assert result.cache_hit is True
@@ -97,12 +92,7 @@ class TestMemoryResult:
 
     def test_failed_result(self):
         """Test failed MemoryResult."""
-        result = MemoryResult(
-            success=False,
-            entry=None,
-            error="Database connection failed",
-            latency_ms=100.0
-        )
+        result = MemoryResult(success=False, entry=None, error="Database connection failed", latency_ms=100.0)
         assert result.success is False
         assert result.entry is None
         assert result.error == "Database connection failed"
@@ -265,10 +255,7 @@ class TestMemoryServiceSet:
     @pytest.mark.asyncio
     async def test_set_rejects_oversized_value(self, service, monkeypatch):
         """Test that oversized values are rejected."""
-        monkeypatch.setattr(
-            "app.memory.memory_service.MEMORY_MAX_SIZE_BYTES",
-            100
-        )
+        monkeypatch.setattr("app.memory.memory_service.MEMORY_MAX_SIZE_BYTES", 100)
 
         # Create large value
         large_value = {"data": "x" * 200}
@@ -397,6 +384,7 @@ class TestMemoryServiceFailOpen:
         monkeypatch.setenv("MEMORY_AUDIT_ENABLED", "false")
 
         import app.memory.memory_service as mem_mod
+
         monkeypatch.setattr(mem_mod, "MEMORY_FAIL_OPEN", True)
 
         return MemoryService(db_session_factory=failing_db_factory)
@@ -408,6 +396,7 @@ class TestMemoryServiceFailOpen:
         monkeypatch.setenv("MEMORY_AUDIT_ENABLED", "false")
 
         import app.memory.memory_service as mem_mod
+
         monkeypatch.setattr(mem_mod, "MEMORY_FAIL_OPEN", False)
 
         return MemoryService(db_session_factory=failing_db_factory)
@@ -496,6 +485,7 @@ class TestGlobalInstance:
     def test_get_memory_service_returns_none_initially(self, monkeypatch):
         """Test get_memory_service returns None before init."""
         import app.memory.memory_service as mem_mod
+
         mem_mod._service = None
 
         result = get_memory_service()
@@ -504,6 +494,7 @@ class TestGlobalInstance:
     def test_init_memory_service(self, monkeypatch):
         """Test init_memory_service creates instance."""
         import app.memory.memory_service as mem_mod
+
         mem_mod._service = None
         monkeypatch.setenv("MEMORY_AUDIT_ENABLED", "false")
 

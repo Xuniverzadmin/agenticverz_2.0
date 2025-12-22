@@ -15,11 +15,12 @@ Workflow 3: Multi-Step Data Processing
   json_transform (merge) → json_transform (sort) → json_transform (map)
 """
 
-import pytest
-import json
 import hashlib
+import json
 import sys
 from pathlib import Path
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -27,21 +28,21 @@ if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
 from app.skills.http_call_v2 import (
-    http_call_execute,
     MockResponse,
-    set_mock_response,
     clear_mock_responses,
+    http_call_execute,
+    set_mock_response,
 )
 from app.skills.json_transform_v2 import json_transform_execute
 from app.skills.llm_invoke_v2 import (
-    llm_invoke_execute,
     StubAdapter,
+    llm_invoke_execute,
 )
 
 
 def canonical_json(obj) -> str:
     """Canonical JSON serialization."""
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'))
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"))
 
 
 def content_hash(obj, length: int = 16) -> str:
@@ -64,19 +65,22 @@ class TestWorkflow1DataExtraction:
         StubAdapter.clear_responses()
 
         # Mock API response
-        set_mock_response("https://api.example.com/users", MockResponse(
-            status_code=200,
-            headers={"Content-Type": "application/json"},
-            body={
-                "data": {
-                    "users": [
-                        {"id": 1, "name": "Alice", "status": "active", "score": 95},
-                        {"id": 2, "name": "Bob", "status": "inactive", "score": 78},
-                        {"id": 3, "name": "Charlie", "status": "active", "score": 88},
-                    ]
-                }
-            }
-        ))
+        set_mock_response(
+            "https://api.example.com/users",
+            MockResponse(
+                status_code=200,
+                headers={"Content-Type": "application/json"},
+                body={
+                    "data": {
+                        "users": [
+                            {"id": 1, "name": "Alice", "status": "active", "score": 95},
+                            {"id": 2, "name": "Bob", "status": "inactive", "score": 78},
+                            {"id": 3, "name": "Charlie", "status": "active", "score": 88},
+                        ]
+                    }
+                },
+            ),
+        )
 
         yield
         clear_mock_responses()
@@ -86,26 +90,23 @@ class TestWorkflow1DataExtraction:
     async def test_workflow_executes(self):
         """Workflow executes successfully."""
         # Step 1: Fetch data
-        http_result = await http_call_execute({
-            "url": "https://api.example.com/users",
-            "method": "GET"
-        })
+        http_result = await http_call_execute({"url": "https://api.example.com/users", "method": "GET"})
         assert http_result.ok is True
 
         # Step 2: Extract users array
-        extract_result = await json_transform_execute({
-            "data": http_result.result["body"],
-            "operation": "extract",
-            "path": "$.data.users"
-        })
+        extract_result = await json_transform_execute(
+            {"data": http_result.result["body"], "operation": "extract", "path": "$.data.users"}
+        )
         assert extract_result.ok is True
 
         # Step 3: Filter active users
-        filter_result = await json_transform_execute({
-            "data": extract_result.result["result"],
-            "operation": "filter",
-            "condition": {"field": "status", "operator": "eq", "value": "active"}
-        })
+        filter_result = await json_transform_execute(
+            {
+                "data": extract_result.result["result"],
+                "operation": "filter",
+                "condition": {"field": "status", "operator": "eq", "value": "active"},
+            }
+        )
         assert filter_result.ok is True
 
         # Verify final result
@@ -115,22 +116,21 @@ class TestWorkflow1DataExtraction:
     @pytest.mark.asyncio
     async def test_workflow_deterministic(self):
         """Workflow produces deterministic output."""
+
         async def run_workflow():
-            http_result = await http_call_execute({
-                "url": "https://api.example.com/users"
-            })
+            http_result = await http_call_execute({"url": "https://api.example.com/users"})
 
-            extract_result = await json_transform_execute({
-                "data": http_result.result["body"],
-                "operation": "extract",
-                "path": "$.data.users"
-            })
+            extract_result = await json_transform_execute(
+                {"data": http_result.result["body"], "operation": "extract", "path": "$.data.users"}
+            )
 
-            filter_result = await json_transform_execute({
-                "data": extract_result.result["result"],
-                "operation": "filter",
-                "condition": {"field": "status", "operator": "eq", "value": "active"}
-            })
+            filter_result = await json_transform_execute(
+                {
+                    "data": extract_result.result["result"],
+                    "operation": "filter",
+                    "condition": {"field": "status", "operator": "eq", "value": "active"},
+                }
+            )
 
             return filter_result.result["result_hash"]
 
@@ -144,21 +144,19 @@ class TestWorkflow1DataExtraction:
     async def test_workflow_matches_golden(self):
         """Workflow output matches expected golden structure."""
         # Execute workflow
-        http_result = await http_call_execute({
-            "url": "https://api.example.com/users"
-        })
+        http_result = await http_call_execute({"url": "https://api.example.com/users"})
 
-        extract_result = await json_transform_execute({
-            "data": http_result.result["body"],
-            "operation": "extract",
-            "path": "$.data.users"
-        })
+        extract_result = await json_transform_execute(
+            {"data": http_result.result["body"], "operation": "extract", "path": "$.data.users"}
+        )
 
-        filter_result = await json_transform_execute({
-            "data": extract_result.result["result"],
-            "operation": "filter",
-            "condition": {"field": "status", "operator": "eq", "value": "active"}
-        })
+        filter_result = await json_transform_execute(
+            {
+                "data": extract_result.result["result"],
+                "operation": "filter",
+                "condition": {"field": "status", "operator": "eq", "value": "active"},
+            }
+        )
 
         # Golden structure
         expected = [
@@ -188,50 +186,47 @@ class TestWorkflow2LLMAnalysis:
     async def test_workflow_executes(self):
         """Workflow executes successfully."""
         # Step 1: Analyze data with LLM
-        analysis = await llm_invoke_execute({
-            "prompt": "Analyze this data: users with scores 95, 78, 88",
-            "adapter": "stub",
-            "seed": 42
-        })
+        analysis = await llm_invoke_execute(
+            {"prompt": "Analyze this data: users with scores 95, 78, 88", "adapter": "stub", "seed": 42}
+        )
         assert analysis.ok is True
 
         # Step 2: Create structured output
-        structured = await json_transform_execute({
-            "data": {"analysis": analysis.result["content"], "scores": [95, 78, 88]},
-            "operation": "pick",
-            "keys": ["scores"]
-        })
+        structured = await json_transform_execute(
+            {
+                "data": {"analysis": analysis.result["content"], "scores": [95, 78, 88]},
+                "operation": "pick",
+                "keys": ["scores"],
+            }
+        )
         assert structured.ok is True
 
         # Step 3: Summarize with LLM
-        summary = await llm_invoke_execute({
-            "prompt": f"Summarize: {structured.result['result']}",
-            "adapter": "stub",
-            "seed": 42
-        })
+        summary = await llm_invoke_execute(
+            {"prompt": f"Summarize: {structured.result['result']}", "adapter": "stub", "seed": 42}
+        )
         assert summary.ok is True
 
     @pytest.mark.asyncio
     async def test_workflow_deterministic_with_seeds(self):
         """Workflow is deterministic when LLM calls are seeded."""
+
         async def run_workflow():
-            analysis = await llm_invoke_execute({
-                "prompt": "Analyze scores: 95, 78, 88",
-                "adapter": "stub",
-                "seed": 100
-            })
+            analysis = await llm_invoke_execute(
+                {"prompt": "Analyze scores: 95, 78, 88", "adapter": "stub", "seed": 100}
+            )
 
-            structured = await json_transform_execute({
-                "data": {"analysis": analysis.result["content"]},
-                "operation": "merge",
-                "merge_with": {"version": "1.0"}
-            })
+            structured = await json_transform_execute(
+                {
+                    "data": {"analysis": analysis.result["content"]},
+                    "operation": "merge",
+                    "merge_with": {"version": "1.0"},
+                }
+            )
 
-            summary = await llm_invoke_execute({
-                "prompt": f"Summary: {structured.result['result']}",
-                "adapter": "stub",
-                "seed": 200
-            })
+            summary = await llm_invoke_execute(
+                {"prompt": f"Summary: {structured.result['result']}", "adapter": "stub", "seed": 200}
+            )
 
             return summary.result["content_hash"]
 
@@ -254,37 +249,28 @@ class TestWorkflow3DataProcessing:
         data2 = {"name": "Bob", "score": 78}
 
         # Step 1: Merge datasets
-        merge_result = await json_transform_execute({
-            "data": [data1],
-            "operation": "merge",
-            "merge_with": {"items": [data2]}
-        })
+        merge_result = await json_transform_execute(
+            {"data": [data1], "operation": "merge", "merge_with": {"items": [data2]}}
+        )
 
         # Note: merge with array doesn't work as expected - use different approach
         # Step 1 revised: Create combined structure
-        combined = await json_transform_execute({
-            "data": {"users": [data1, data2]},
-            "operation": "extract",
-            "path": "$.users"
-        })
+        combined = await json_transform_execute(
+            {"data": {"users": [data1, data2]}, "operation": "extract", "path": "$.users"}
+        )
         assert combined.ok is True
 
         # Step 2: Sort by score
-        sort_result = await json_transform_execute({
-            "data": combined.result["result"],
-            "operation": "sort",
-            "sort_key": "score",
-            "sort_order": "desc"
-        })
+        sort_result = await json_transform_execute(
+            {"data": combined.result["result"], "operation": "sort", "sort_key": "score", "sort_order": "desc"}
+        )
         assert sort_result.ok is True
         assert sort_result.result["result"][0]["score"] == 95
 
         # Step 3: Map to names only
-        map_result = await json_transform_execute({
-            "data": sort_result.result["result"],
-            "operation": "map",
-            "path": "$.name"
-        })
+        map_result = await json_transform_execute(
+            {"data": sort_result.result["result"], "operation": "map", "path": "$.name"}
+        )
         assert map_result.ok is True
         assert map_result.result["result"] == ["Alice", "Bob"]
 
@@ -294,11 +280,13 @@ class TestWorkflow3DataProcessing:
         # Object with fields in non-alphabetical order
         user = {"z_field": 1, "a_field": 2, "name": "Test"}
 
-        result = await json_transform_execute({
-            "data": user,
-            "operation": "pick",
-            "keys": ["a_field", "z_field"]  # Pick in specific order
-        })
+        result = await json_transform_execute(
+            {
+                "data": user,
+                "operation": "pick",
+                "keys": ["a_field", "z_field"],  # Pick in specific order
+            }
+        )
 
         assert result.ok is True
         # Result should be in canonical form
@@ -314,10 +302,7 @@ class TestCrossSkillDeterminism:
         clear_mock_responses()
         StubAdapter.clear_responses()
 
-        set_mock_response("https://api.test.com/data", MockResponse(
-            status_code=200,
-            body={"items": [1, 2, 3]}
-        ))
+        set_mock_response("https://api.test.com/data", MockResponse(status_code=200, body={"items": [1, 2, 3]}))
 
         yield
         clear_mock_responses()
@@ -326,50 +311,37 @@ class TestCrossSkillDeterminism:
     @pytest.mark.asyncio
     async def test_all_skills_produce_hashes(self):
         """All M3 skills produce content hashes."""
-        http_result = await http_call_execute({
-            "url": "https://api.test.com/data"
-        })
+        http_result = await http_call_execute({"url": "https://api.test.com/data"})
         assert "body_hash" in http_result.result
 
-        json_result = await json_transform_execute({
-            "data": {"key": "value"},
-            "operation": "extract",
-            "path": "$.key"
-        })
+        json_result = await json_transform_execute({"data": {"key": "value"}, "operation": "extract", "path": "$.key"})
         assert "result_hash" in json_result.result
 
-        llm_result = await llm_invoke_execute({
-            "prompt": "Hello",
-            "adapter": "stub"
-        })
+        llm_result = await llm_invoke_execute({"prompt": "Hello", "adapter": "stub"})
         assert "content_hash" in llm_result.result
 
     @pytest.mark.asyncio
     async def test_error_codes_consistent(self):
         """Error codes follow the contract across skills."""
         # HTTP blocked host
-        http_err = await http_call_execute({
-            "url": "http://localhost/test"
-        })
+        http_err = await http_call_execute({"url": "http://localhost/test"})
         assert http_err.ok is False
         assert http_err.error["code"].startswith("ERR_")
         assert "category" in http_err.error
         assert "retryable" in http_err.error
 
         # JSON invalid path
-        json_err = await json_transform_execute({
-            "data": {"a": 1},
-            "operation": "extract",
-            "path": "$.nonexistent"
-        })
+        json_err = await json_transform_execute({"data": {"a": 1}, "operation": "extract", "path": "$.nonexistent"})
         assert json_err.ok is False
         assert json_err.error["code"].startswith("ERR_")
 
         # LLM invalid prompt
-        llm_err = await llm_invoke_execute({
-            "adapter": "stub"
-            # Missing prompt
-        })
+        llm_err = await llm_invoke_execute(
+            {
+                "adapter": "stub"
+                # Missing prompt
+            }
+        )
         assert llm_err.ok is False
         assert llm_err.error["code"].startswith("ERR_")
 
@@ -381,10 +353,7 @@ class TestGoldenFileStructure:
     async def test_http_call_output_structure(self):
         """HTTP call output has expected golden structure."""
         clear_mock_responses()
-        set_mock_response("https://test.com/api", MockResponse(
-            status_code=200,
-            body={"result": "ok"}
-        ))
+        set_mock_response("https://test.com/api", MockResponse(status_code=200, body={"result": "ok"}))
 
         result = await http_call_execute({"url": "https://test.com/api"})
 
@@ -400,11 +369,7 @@ class TestGoldenFileStructure:
     @pytest.mark.asyncio
     async def test_json_transform_output_structure(self):
         """JSON transform output has expected golden structure."""
-        result = await json_transform_execute({
-            "data": {"key": "value"},
-            "operation": "extract",
-            "path": "$.key"
-        })
+        result = await json_transform_execute({"data": {"key": "value"}, "operation": "extract", "path": "$.key"})
 
         # Required fields
         assert "result" in result.result
@@ -417,10 +382,7 @@ class TestGoldenFileStructure:
         """LLM invoke output has expected golden structure."""
         StubAdapter.clear_responses()
 
-        result = await llm_invoke_execute({
-            "prompt": "Test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Test", "adapter": "stub"})
 
         # Required fields
         assert "content" in result.result

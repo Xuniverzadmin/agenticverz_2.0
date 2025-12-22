@@ -12,10 +12,11 @@ Tests retry behavior under various failure conditions:
 These tests validate error_contract.md compliance.
 """
 
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import patch
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -23,15 +24,15 @@ if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
 from app.skills.http_call_v2 import (
-    http_call_execute,
-    compute_retry_delay,
-    RetryConfig,
     HTTP_ERROR_MAP,
     NETWORK_ERROR_MAP,
     ErrorCategory,
     MockResponse,
-    set_mock_response,
+    RetryConfig,
     clear_mock_responses,
+    compute_retry_delay,
+    http_call_execute,
+    set_mock_response,
 )
 
 
@@ -57,11 +58,10 @@ class TestTransientFailureRetry:
                 return (503, {}, {"error": "Service Unavailable"}, 100)
             return (200, {}, {"success": True}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is True
         assert result.result["retries"] == 1
@@ -79,11 +79,10 @@ class TestTransientFailureRetry:
                 return (502, {}, {"error": "Bad Gateway"}, 100)
             return (200, {}, {"success": True}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is True
         assert result.result["retries"] == 2
@@ -91,14 +90,14 @@ class TestTransientFailureRetry:
     @pytest.mark.asyncio
     async def test_exhausted_retries_returns_error(self):
         """After exhausting retries, return structured error."""
+
         async def always_fail(*args, **kwargs):
             return (503, {}, {"error": "Always fail"}, 100)
 
-        with patch('app.skills.http_call_v2._make_request', always_fail):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 2, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", always_fail):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 2, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is False
         assert result.error["code"] == "ERR_HTTP_503_UNAVAILABLE"
@@ -123,11 +122,10 @@ class TestRateLimitHandling:
                 return (429, {"Retry-After": "1"}, {"error": "Rate limited"}, 50)
             return (200, {}, {"success": True}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is True
         assert result.result["retries"] == 1
@@ -135,15 +133,16 @@ class TestRateLimitHandling:
     @pytest.mark.asyncio
     async def test_429_error_category_is_rate_limit(self):
         """429 error should have RATE_LIMIT category."""
-        set_mock_response("https://api.example.com/limited", MockResponse(
-            status_code=429,
-            body={"error": "Rate limited"}
-        ))
+        set_mock_response(
+            "https://api.example.com/limited", MockResponse(status_code=429, body={"error": "Rate limited"})
+        )
 
-        result = await http_call_execute({
-            "url": "https://api.example.com/limited",
-            "retry_config": {"max_retries": 0}  # No retries
-        })
+        result = await http_call_execute(
+            {
+                "url": "https://api.example.com/limited",
+                "retry_config": {"max_retries": 0},  # No retries
+            }
+        )
 
         assert result.ok is False
         assert result.error["category"] == "RATE_LIMIT"
@@ -164,11 +163,10 @@ class TestTimeoutHandling:
                 raise TimeoutError("Request timed out")
             return (200, {}, {"success": True}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is True
         assert result.result["retries"] == 1
@@ -176,14 +174,14 @@ class TestTimeoutHandling:
     @pytest.mark.asyncio
     async def test_timeout_error_category(self):
         """Timeout should have TIMEOUT category."""
+
         async def always_timeout(*args, **kwargs):
             raise TimeoutError("Request timed out")
 
-        with patch('app.skills.http_call_v2._make_request', always_timeout):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 0, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", always_timeout):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 0, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is False
         assert result.error["code"] == "ERR_TIMEOUT"
@@ -205,11 +203,10 @@ class TestConnectionErrors:
                 raise ConnectionError("Connection refused")
             return (200, {}, {"success": True}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is True
 
@@ -225,25 +222,24 @@ class TestConnectionErrors:
                 raise Exception("getaddrinfo failed")
             return (200, {}, {"success": True}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is True
 
     @pytest.mark.asyncio
     async def test_ssl_error_not_retryable(self):
         """SSL error should NOT be retryable."""
+
         async def ssl_error(*args, **kwargs):
             raise Exception("SSL certificate verify failed")
 
-        with patch('app.skills.http_call_v2._make_request', ssl_error):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3, "initial_delay_ms": 1}
-            })
+        with patch("app.skills.http_call_v2._make_request", ssl_error):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3, "initial_delay_ms": 1}}
+            )
 
         assert result.ok is False
         assert result.error["code"] == "ERR_SSL_ERROR"
@@ -255,12 +251,7 @@ class TestDeterministicRetryBackoff:
 
     def test_seeded_delays_are_deterministic(self):
         """Same seed produces same delay sequence."""
-        config = RetryConfig(
-            initial_delay_ms=100,
-            max_delay_ms=5000,
-            backoff_multiplier=2.0,
-            retry_seed=12345
-        )
+        config = RetryConfig(initial_delay_ms=100, max_delay_ms=5000, backoff_multiplier=2.0, retry_seed=12345)
 
         # Generate delays twice
         delays1 = [compute_retry_delay(i, config) for i in range(5)]
@@ -283,7 +274,7 @@ class TestDeterministicRetryBackoff:
         config = RetryConfig(
             initial_delay_ms=100,
             backoff_multiplier=2.0,
-            retry_seed=None  # No jitter
+            retry_seed=None,  # No jitter
         )
 
         delay0 = compute_retry_delay(0, config)
@@ -296,12 +287,7 @@ class TestDeterministicRetryBackoff:
 
     def test_max_delay_cap(self):
         """Delays are capped at max_delay_ms."""
-        config = RetryConfig(
-            initial_delay_ms=1000,
-            max_delay_ms=2000,
-            backoff_multiplier=2.0,
-            retry_seed=None
-        )
+        config = RetryConfig(initial_delay_ms=1000, max_delay_ms=2000, backoff_multiplier=2.0, retry_seed=None)
 
         # After many retries, should still be capped
         delay = compute_retry_delay(10, config)
@@ -327,11 +313,10 @@ class TestNonRetryableErrors:
             call_count += 1
             return (400, {}, {"error": "Bad Request"}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3}}
+            )
 
         assert result.ok is False
         assert call_count == 1  # Only one call, no retries
@@ -347,11 +332,10 @@ class TestNonRetryableErrors:
             call_count += 1
             return (401, {}, {"error": "Unauthorized"}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3}}
+            )
 
         assert result.ok is False
         assert call_count == 1
@@ -367,11 +351,10 @@ class TestNonRetryableErrors:
             call_count += 1
             return (404, {}, {"error": "Not Found"}, 50)
 
-        with patch('app.skills.http_call_v2._make_request', mock_request):
-            result = await http_call_execute({
-                "url": "https://api.example.com/data",
-                "retry_config": {"max_retries": 3}
-            })
+        with patch("app.skills.http_call_v2._make_request", mock_request):
+            result = await http_call_execute(
+                {"url": "https://api.example.com/data", "retry_config": {"max_retries": 3}}
+            )
 
         assert result.ok is False
         assert call_count == 1

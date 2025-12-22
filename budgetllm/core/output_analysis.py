@@ -11,7 +11,7 @@ These are HEURISTICS, not ground truth. Use for guidance, not absolute decisions
 """
 
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 # Hedging/uncertainty phrases

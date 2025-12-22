@@ -15,17 +15,17 @@
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from pydantic import ValidationError
 
 from .schema import (
-    SBASchema, SBA_VERSION, GovernanceProvider,
-    SUPPORTED_SBA_VERSIONS, DEPRECATED_VERSIONS,
-    DependencyType, Dependency,
-    check_version_supported, check_version_deprecated,
+    SUPPORTED_SBA_VERSIONS,
+    DependencyType,
+    GovernanceProvider,
+    SBASchema,
+    check_version_deprecated,
 )
 
 logger = logging.getLogger("nova.agents.sba.validator")
@@ -33,6 +33,7 @@ logger = logging.getLogger("nova.agents.sba.validator")
 
 class SBAValidationErrorCode(str, Enum):
     """Error codes for SBA validation failures."""
+
     MISSING_FIELD = "MISSING_FIELD"
     INVALID_FORMAT = "INVALID_FORMAT"
     EMPTY_TASKS = "EMPTY_TASKS"
@@ -57,6 +58,7 @@ VALID_CONTEXTS: Set[str] = {"job", "p2p", "blackboard", "standalone"}
 @dataclass
 class SBAValidationError:
     """A single validation error."""
+
     code: SBAValidationErrorCode
     field: str
     message: str
@@ -66,6 +68,7 @@ class SBAValidationError:
 @dataclass
 class SBAValidationResult:
     """Result of SBA validation."""
+
     valid: bool
     errors: List[SBAValidationError] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
@@ -179,42 +182,50 @@ class SBAValidator:
             # Convert Pydantic errors to our format
             for error in e.errors():
                 field_path = ".".join(str(loc) for loc in error["loc"])
-                errors.append(SBAValidationError(
-                    code=SBAValidationErrorCode.INVALID_FORMAT,
-                    field=field_path,
-                    message=error["msg"],
-                    details={"type": error["type"]},
-                ))
+                errors.append(
+                    SBAValidationError(
+                        code=SBAValidationErrorCode.INVALID_FORMAT,
+                        field=field_path,
+                        message=error["msg"],
+                        details={"type": error["type"]},
+                    )
+                )
             return SBAValidationResult(valid=False, errors=errors)
 
         # 2. Check version compatibility
         if sba.sba_version not in self.allowed_versions:
-            errors.append(SBAValidationError(
-                code=SBAValidationErrorCode.VERSION_MISMATCH,
-                field="sba_version",
-                message=f"Version {sba.sba_version} not supported. Allowed: {self.allowed_versions}",
-                details={"provided": sba.sba_version, "allowed": self.allowed_versions},
-            ))
+            errors.append(
+                SBAValidationError(
+                    code=SBAValidationErrorCode.VERSION_MISMATCH,
+                    field="sba_version",
+                    message=f"Version {sba.sba_version} not supported. Allowed: {self.allowed_versions}",
+                    details={"provided": sba.sba_version, "allowed": self.allowed_versions},
+                )
+            )
 
         # 3. Validate governance requirement
         if self.enforce_governance:
             if sba.enabling_management_systems.governance != GovernanceProvider.BUDGETLLM:
-                errors.append(SBAValidationError(
-                    code=SBAValidationErrorCode.GOVERNANCE_REQUIRED,
-                    field="enabling_management_systems.governance",
-                    message="BudgetLLM governance is required for production agents",
-                    details={"provided": sba.enabling_management_systems.governance.value},
-                ))
+                errors.append(
+                    SBAValidationError(
+                        code=SBAValidationErrorCode.GOVERNANCE_REQUIRED,
+                        field="enabling_management_systems.governance",
+                        message="BudgetLLM governance is required for production agents",
+                        details={"provided": sba.enabling_management_systems.governance.value},
+                    )
+                )
 
         # 4. Validate dependencies against known registries
         unknown_deps = self._validate_dependencies(sba)
         for dep in unknown_deps:
-            errors.append(SBAValidationError(
-                code=SBAValidationErrorCode.UNKNOWN_DEPENDENCY,
-                field="capabilities_capacity.dependencies",
-                message=f"Unknown dependency: {dep}",
-                details={"dependency": dep},
-            ))
+            errors.append(
+                SBAValidationError(
+                    code=SBAValidationErrorCode.UNKNOWN_DEPENDENCY,
+                    field="capabilities_capacity.dependencies",
+                    message=f"Unknown dependency: {dep}",
+                    details={"dependency": dep},
+                )
+            )
 
         # 5. Validate orchestrator exists
         if self.known_agents and sba.enabling_management_systems.orchestrator not in self.known_agents:
@@ -228,8 +239,7 @@ class SBAValidator:
         # 6. Check for empty tests (warning, not error for retrofitted agents)
         if not sba.how_to_win.tests:
             warnings.append(
-                "No tests defined in how_to_win.tests. "
-                "Recommended to add validation tests for production agents."
+                "No tests defined in how_to_win.tests. " "Recommended to add validation tests for production agents."
             )
 
         # 7. Check allowed_tools against registry
@@ -246,10 +256,7 @@ class SBAValidator:
 
         # 9. Version deprecation warning
         if check_version_deprecated(sba.sba_version):
-            warnings.append(
-                f"SBA version '{sba.sba_version}' is deprecated. "
-                "Consider upgrading to a newer version."
-            )
+            warnings.append(f"SBA version '{sba.sba_version}' is deprecated. " "Consider upgrading to a newer version.")
 
         return SBAValidationResult(
             valid=len(errors) == 0,
@@ -308,9 +315,7 @@ class SBAValidator:
 
         return unknown
 
-    def _validate_semantic(
-        self, sba: SBASchema
-    ) -> tuple[List[SBAValidationError], List[str]]:
+    def _validate_semantic(self, sba: SBASchema) -> tuple[List[SBAValidationError], List[str]]:
         """
         M15.1.1: Semantic validation.
 
@@ -325,12 +330,14 @@ class SBAValidator:
         # 1. Validate contexts
         for ctx in sba.where_to_play.allowed_contexts:
             if ctx not in self.allowed_contexts:
-                errors.append(SBAValidationError(
-                    code=SBAValidationErrorCode.CONTEXT_NOT_ALLOWED,
-                    field="where_to_play.allowed_contexts",
-                    message=f"Context '{ctx}' is not allowed. Valid: {self.allowed_contexts}",
-                    details={"context": ctx, "allowed": list(self.allowed_contexts)},
-                ))
+                errors.append(
+                    SBAValidationError(
+                        code=SBAValidationErrorCode.CONTEXT_NOT_ALLOWED,
+                        field="where_to_play.allowed_contexts",
+                        message=f"Context '{ctx}' is not allowed. Valid: {self.allowed_contexts}",
+                        details={"context": ctx, "allowed": list(self.allowed_contexts)},
+                    )
+                )
 
         # 2. Validate tool permissions if permission map exists
         orchestrator = sba.enabling_management_systems.orchestrator
@@ -338,44 +345,49 @@ class SBAValidator:
             allowed_by_orch = self.tool_permission_map[orchestrator]
             for tool in sba.where_to_play.allowed_tools:
                 if tool not in allowed_by_orch:
-                    errors.append(SBAValidationError(
-                        code=SBAValidationErrorCode.TOOL_NOT_FOUND,
-                        field="where_to_play.allowed_tools",
-                        message=f"Tool '{tool}' not permitted by orchestrator '{orchestrator}'",
-                        details={
-                            "tool": tool,
-                            "orchestrator": orchestrator,
-                            "permitted": list(allowed_by_orch),
-                        },
-                    ))
+                    errors.append(
+                        SBAValidationError(
+                            code=SBAValidationErrorCode.TOOL_NOT_FOUND,
+                            field="where_to_play.allowed_tools",
+                            message=f"Tool '{tool}' not permitted by orchestrator '{orchestrator}'",
+                            details={
+                                "tool": tool,
+                                "orchestrator": orchestrator,
+                                "permitted": list(allowed_by_orch),
+                            },
+                        )
+                    )
 
         # 3. Validate agent dependencies exist
         if self.agent_lookup_fn:
             for dep in sba.capabilities_capacity.get_agent_dependencies():
                 if dep.required and not self.agent_lookup_fn(dep.name):
-                    errors.append(SBAValidationError(
-                        code=SBAValidationErrorCode.AGENT_NOT_FOUND,
-                        field="capabilities_capacity.dependencies",
-                        message=f"Required agent dependency '{dep.name}' not found",
-                        details={"agent": dep.name, "required": True},
-                    ))
+                    errors.append(
+                        SBAValidationError(
+                            code=SBAValidationErrorCode.AGENT_NOT_FOUND,
+                            field="capabilities_capacity.dependencies",
+                            message=f"Required agent dependency '{dep.name}' not found",
+                            details={"agent": dep.name, "required": True},
+                        )
+                    )
 
         # 4. Validate tool dependencies exist
         if self.tool_lookup_fn:
             for dep in sba.capabilities_capacity.get_tool_dependencies():
                 if dep.required and not self.tool_lookup_fn(dep.name):
-                    errors.append(SBAValidationError(
-                        code=SBAValidationErrorCode.TOOL_NOT_FOUND,
-                        field="capabilities_capacity.dependencies",
-                        message=f"Required tool dependency '{dep.name}' not found",
-                        details={"tool": dep.name, "required": True},
-                    ))
+                    errors.append(
+                        SBAValidationError(
+                            code=SBAValidationErrorCode.TOOL_NOT_FOUND,
+                            field="capabilities_capacity.dependencies",
+                            message=f"Required tool dependency '{dep.name}' not found",
+                            details={"tool": dep.name, "required": True},
+                        )
+                    )
 
         # 5. Warn if boundaries not defined
         if not sba.where_to_play.boundaries:
             warnings.append(
-                "No boundaries defined in where_to_play.boundaries. "
-                "Consider defining what the agent should NOT do."
+                "No boundaries defined in where_to_play.boundaries. " "Consider defining what the agent should NOT do."
             )
 
         return errors, warnings
@@ -384,6 +396,7 @@ class SBAValidator:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 def validate_sba(
     sba_data: Dict[str, Any],
@@ -434,12 +447,14 @@ def validate_at_spawn(
     if sba_data is None:
         return SBAValidationResult(
             valid=False,
-            errors=[SBAValidationError(
-                code=SBAValidationErrorCode.MISSING_FIELD,
-                field="sba",
-                message=f"Agent '{agent_id}' has no SBA schema defined. "
-                        "All agents must have a valid Strategy Cascade.",
-            )],
+            errors=[
+                SBAValidationError(
+                    code=SBAValidationErrorCode.MISSING_FIELD,
+                    field="sba",
+                    message=f"Agent '{agent_id}' has no SBA schema defined. "
+                    "All agents must have a valid Strategy Cascade.",
+                )
+            ],
         )
 
     # Get known agents/tools from registry if available
@@ -474,7 +489,7 @@ def validate_at_spawn(
             extra={
                 "agent_id": agent_id,
                 "warnings": len(result.warnings),
-            }
+            },
         )
     else:
         logger.warning(
@@ -483,7 +498,7 @@ def validate_at_spawn(
                 "agent_id": agent_id,
                 "error_count": len(result.errors),
                 "errors": [e.code.value for e in result.errors],
-            }
+            },
         )
 
     return result

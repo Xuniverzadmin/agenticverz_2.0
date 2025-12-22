@@ -22,37 +22,31 @@ from typing import List, Tuple
 # Required metrics for M10-M19+
 REQUIRED_METRICS = [
     # Core runtime metrics
-    ('nova_runs_total', 'counter', 'Total runs created'),
-    ('nova_run_duration_seconds', 'histogram', 'Run execution duration'),
-    ('nova_skills_executed_total', 'counter', 'Total skill executions'),
-
+    ("nova_runs_total", "counter", "Total runs created"),
+    ("nova_run_duration_seconds", "histogram", "Run execution duration"),
+    ("nova_skills_executed_total", "counter", "Total skill executions"),
     # Worker metrics
-    ('nova_worker_pool_size', 'gauge', 'Worker pool size'),
-    ('nova_worker_active_runs', 'gauge', 'Active runs in worker'),
-
+    ("nova_worker_pool_size", "gauge", "Worker pool size"),
+    ("nova_worker_active_runs", "gauge", "Active runs in worker"),
     # M10 Recovery metrics
-    ('nova_recovery_candidates_total', 'counter', 'Recovery candidates created'),
-    ('nova_distributed_locks_held', 'gauge', 'Distributed locks held'),
-
+    ("nova_recovery_candidates_total", "counter", "Recovery candidates created"),
+    ("nova_distributed_locks_held", "gauge", "Distributed locks held"),
     # Budget/Cost metrics
-    ('nova_budget_consumed_total', 'counter', 'Budget consumed'),
-    ('nova_cost_simulation_total', 'counter', 'Cost simulations run'),
-
+    ("nova_budget_consumed_total", "counter", "Budget consumed"),
+    ("nova_cost_simulation_total", "counter", "Cost simulations run"),
     # M17 CARE Routing metrics (if available)
-    ('nova_routing_decisions_total', 'counter', 'Routing decisions made'),
-
+    ("nova_routing_decisions_total", "counter", "Routing decisions made"),
     # M18 Governor metrics (if available)
-    ('nova_governor_adjustments_total', 'counter', 'Governor adjustments'),
-
+    ("nova_governor_adjustments_total", "counter", "Governor adjustments"),
     # M19 Policy metrics (if available)
-    ('nova_policy_evaluations_total', 'counter', 'Policy evaluations'),
+    ("nova_policy_evaluations_total", "counter", "Policy evaluations"),
 ]
 
 # Metrics that should exist but are optional (won't fail CI)
 OPTIONAL_METRICS = [
-    ('nova_agent_reputation_score', 'gauge', 'Agent reputation scores'),
-    ('nova_sba_validations_total', 'counter', 'SBA validations'),
-    ('nova_drift_signals_total', 'counter', 'Drift signals detected'),
+    ("nova_agent_reputation_score", "gauge", "Agent reputation scores"),
+    ("nova_sba_validations_total", "counter", "SBA validations"),
+    ("nova_drift_signals_total", "counter", "Drift signals detected"),
 ]
 
 
@@ -72,13 +66,13 @@ def fetch_metrics(url: str) -> str:
 def parse_metric_names(metrics_text: str) -> set:
     """Extract metric names from Prometheus format."""
     names = set()
-    for line in metrics_text.split('\n'):
+    for line in metrics_text.split("\n"):
         line = line.strip()
-        if not line or line.startswith('#'):
+        if not line or line.startswith("#"):
             continue
         # Metric line format: metric_name{labels} value
         # or: metric_name value
-        name = line.split('{')[0].split(' ')[0]
+        name = line.split("{")[0].split(" ")[0]
         if name:
             names.add(name)
     return names
@@ -93,14 +87,14 @@ def check_required_metrics(metrics_text: str) -> Tuple[List[str], List[str]]:
     for metric_name, metric_type, description in REQUIRED_METRICS:
         # Check base name and common suffixes
         found = False
-        suffixes = ['', '_total', '_count', '_sum', '_bucket', '_created']
+        suffixes = ["", "_total", "_count", "_sum", "_bucket", "_created"]
 
         for suffix in suffixes:
             if f"{metric_name}{suffix}" in existing:
                 found = True
                 break
             # Also check without _total if it's a counter
-            if metric_type == 'counter' and metric_name.endswith('_total'):
+            if metric_type == "counter" and metric_name.endswith("_total"):
                 base = metric_name[:-6]  # Remove _total
                 if f"{base}{suffix}" in existing:
                     found = True
@@ -122,9 +116,9 @@ def check_metric_types(metrics_text: str) -> List[str]:
     errors = []
     type_map = {}
 
-    for line in metrics_text.split('\n'):
-        if line.startswith('# TYPE '):
-            parts = line[7:].split(' ')
+    for line in metrics_text.split("\n"):
+        if line.startswith("# TYPE "):
+            parts = line[7:].split(" ")
             if len(parts) >= 2:
                 type_map[parts[0]] = parts[1]
 
@@ -143,41 +137,43 @@ def check_metric_types(metrics_text: str) -> List[str]:
 def run_validation(url: str) -> dict:
     """Run full metrics validation."""
     results = {
-        'url': url,
-        'reachable': False,
-        'errors': [],
-        'warnings': [],
-        'metrics_count': 0,
-        'passed': False,
+        "url": url,
+        "reachable": False,
+        "errors": [],
+        "warnings": [],
+        "metrics_count": 0,
+        "passed": False,
     }
 
     # Fetch metrics
     metrics_text = fetch_metrics(url)
 
     if metrics_text is None:
-        results['errors'].append(f"Cannot reach metrics endpoint at {url}/metrics")
+        results["errors"].append(f"Cannot reach metrics endpoint at {url}/metrics")
         return results
 
-    results['reachable'] = True
-    results['metrics_count'] = len(parse_metric_names(metrics_text))
+    results["reachable"] = True
+    results["metrics_count"] = len(parse_metric_names(metrics_text))
 
     # Check required metrics
     errors, warnings = check_required_metrics(metrics_text)
-    results['errors'].extend(errors)
-    results['warnings'].extend(warnings)
+    results["errors"].extend(errors)
+    results["warnings"].extend(warnings)
 
     # Check metric types
     type_errors = check_metric_types(metrics_text)
-    results['errors'].extend(type_errors)
+    results["errors"].extend(type_errors)
 
-    results['passed'] = len(results['errors']) == 0
+    results["passed"] = len(results["errors"]) == 0
     return results
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Validate Prometheus metrics endpoint')
-    parser.add_argument('--url', default='http://localhost:8000', help='Base URL of the service')
-    parser.add_argument('--strict', action='store_true', help='Fail on warnings too')
+    parser = argparse.ArgumentParser(description="Validate Prometheus metrics endpoint")
+    parser.add_argument(
+        "--url", default="http://localhost:8000", help="Base URL of the service"
+    )
+    parser.add_argument("--strict", action="store_true", help="Fail on warnings too")
     args = parser.parse_args()
 
     print("=" * 60)
@@ -189,31 +185,31 @@ def main():
     results = run_validation(args.url)
 
     # Print results
-    if results['reachable']:
-        print(f"[PASS] Metrics endpoint reachable")
+    if results["reachable"]:
+        print("[PASS] Metrics endpoint reachable")
         print(f"       Found {results['metrics_count']} metrics")
     else:
-        print(f"[FAIL] Metrics endpoint not reachable")
+        print("[FAIL] Metrics endpoint not reachable")
 
     print()
 
-    if results['errors']:
+    if results["errors"]:
         print("Errors:")
-        for error in results['errors']:
+        for error in results["errors"]:
             print(f"  [FAIL] {error}")
     else:
         print("[PASS] All required metrics present")
 
-    if results['warnings']:
+    if results["warnings"]:
         print()
         print("Warnings (optional metrics):")
-        for warning in results['warnings']:
+        for warning in results["warnings"]:
             print(f"  [WARN] {warning}")
 
     print()
     print("=" * 60)
 
-    if results['passed']:
+    if results["passed"]:
         print("Metrics Validation: PASSED")
         return 0
     else:
@@ -221,5 +217,5 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

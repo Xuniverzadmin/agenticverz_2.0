@@ -11,7 +11,6 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -28,6 +27,7 @@ RESULT_PREFIX = "agents:job:"
 @dataclass
 class BlackboardEntry:
     """Entry in the blackboard."""
+
     key: str
     value: Any
     ttl: Optional[int] = None
@@ -36,6 +36,7 @@ class BlackboardEntry:
 @dataclass
 class LockResult:
     """Result of a lock operation."""
+
     acquired: bool
     lock_key: str
     ttl: Optional[int] = None
@@ -58,7 +59,7 @@ class BlackboardService:
         redis_url: Optional[str] = None,
         key_prefix: str = KEY_PREFIX,
     ):
-        self.redis_url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        self.redis_url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self.key_prefix = key_prefix
         self.lock_prefix = LOCK_PREFIX
         self.result_prefix = RESULT_PREFIX
@@ -219,7 +220,7 @@ class BlackboardService:
                     ttl = self.redis.ttl(key)
 
                     # Strip prefix from key
-                    short_key = key[len(self.key_prefix):] if key.startswith(self.key_prefix) else key
+                    short_key = key[len(self.key_prefix) :] if key.startswith(self.key_prefix) else key
 
                     # Try to parse JSON
                     try:
@@ -227,11 +228,13 @@ class BlackboardService:
                     except (json.JSONDecodeError, TypeError):
                         parsed = value
 
-                    entries.append(BlackboardEntry(
-                        key=short_key,
-                        value=parsed,
-                        ttl=ttl if ttl > 0 else None,
-                    ))
+                    entries.append(
+                        BlackboardEntry(
+                            key=short_key,
+                            value=parsed,
+                            ttl=ttl if ttl > 0 else None,
+                        )
+                    )
 
                 if cursor == 0:
                     break

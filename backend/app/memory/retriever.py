@@ -4,7 +4,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from .store import get_memory_store, PostgresMemoryStore
+from .store import PostgresMemoryStore, get_memory_store
 
 logger = logging.getLogger("nova.memory.retriever")
 
@@ -49,10 +49,7 @@ class MemoryRetriever:
         Returns:
             Dict with 'context_summary' and 'memory_snippets'
         """
-        logger.debug(
-            "retrieving_context",
-            extra={"agent_id": agent_id, "goal": goal[:50]}
-        )
+        logger.debug("retrieving_context", extra={"agent_id": agent_id, "goal": goal[:50]})
 
         # Get recent memories
         recent = self.store.get_recent_for_context(
@@ -87,7 +84,7 @@ class MemoryRetriever:
         all_memories.sort(key=lambda x: x["created_at"], reverse=True)
 
         # Limit to max
-        all_memories = all_memories[:self.max_memories]
+        all_memories = all_memories[: self.max_memories]
 
         # Build context summary
         context_summary = self._build_summary(all_memories, goal)
@@ -108,7 +105,7 @@ class MemoryRetriever:
                 "agent_id": agent_id,
                 "memory_count": len(memory_snippets),
                 "summary_len": len(context_summary),
-            }
+            },
         )
 
         return {
@@ -123,23 +120,128 @@ class MemoryRetriever:
         """
         # Remove common words and short words
         stop_words = {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been",
-            "being", "have", "has", "had", "do", "does", "did", "will",
-            "would", "could", "should", "may", "might", "must", "shall",
-            "can", "need", "dare", "ought", "used", "to", "of", "in",
-            "for", "on", "with", "at", "by", "from", "as", "into",
-            "through", "during", "before", "after", "above", "below",
-            "between", "under", "again", "further", "then", "once",
-            "and", "but", "or", "nor", "so", "yet", "both", "either",
-            "neither", "not", "only", "own", "same", "than", "too",
-            "very", "just", "also", "now", "here", "there", "when",
-            "where", "why", "how", "all", "each", "every", "both",
-            "few", "more", "most", "other", "some", "such", "no",
-            "any", "if", "this", "that", "these", "those", "i", "me",
-            "my", "myself", "we", "our", "ours", "ourselves", "you",
-            "your", "yours", "yourself", "yourselves", "he", "him",
-            "his", "himself", "she", "her", "hers", "herself", "it",
-            "its", "itself", "they", "them", "their", "theirs",
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "must",
+            "shall",
+            "can",
+            "need",
+            "dare",
+            "ought",
+            "used",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+            "as",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "above",
+            "below",
+            "between",
+            "under",
+            "again",
+            "further",
+            "then",
+            "once",
+            "and",
+            "but",
+            "or",
+            "nor",
+            "so",
+            "yet",
+            "both",
+            "either",
+            "neither",
+            "not",
+            "only",
+            "own",
+            "same",
+            "than",
+            "too",
+            "very",
+            "just",
+            "also",
+            "now",
+            "here",
+            "there",
+            "when",
+            "where",
+            "why",
+            "how",
+            "all",
+            "each",
+            "every",
+            "both",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "any",
+            "if",
+            "this",
+            "that",
+            "these",
+            "those",
+            "i",
+            "me",
+            "my",
+            "myself",
+            "we",
+            "our",
+            "ours",
+            "ourselves",
+            "you",
+            "your",
+            "yours",
+            "yourself",
+            "yourselves",
+            "he",
+            "him",
+            "his",
+            "himself",
+            "she",
+            "her",
+            "hers",
+            "herself",
+            "it",
+            "its",
+            "itself",
+            "they",
+            "them",
+            "their",
+            "theirs",
         }
 
         words = text.lower().split()

@@ -18,7 +18,6 @@ import json
 import os
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 from flask import Flask, request, jsonify, render_template_string
 
 # Configuration
@@ -35,7 +34,8 @@ app = Flask(__name__)
 def init_db():
     """Initialize SQLite database."""
     con = sqlite3.connect(DB_PATH)
-    con.execute("""
+    con.execute(
+        """
         CREATE TABLE IF NOT EXISTS webhooks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             received_at TEXT NOT NULL,
@@ -50,8 +50,11 @@ def init_db():
             severity TEXT,
             status TEXT
         )
-    """)
-    con.execute("CREATE INDEX IF NOT EXISTS idx_received_at ON webhooks(received_at DESC)")
+    """
+    )
+    con.execute(
+        "CREATE INDEX IF NOT EXISTS idx_received_at ON webhooks(received_at DESC)"
+    )
     con.execute("CREATE INDEX IF NOT EXISTS idx_alertname ON webhooks(alertname)")
     con.commit()
     con.close()
@@ -60,24 +63,27 @@ def init_db():
 def save_webhook(data: dict) -> int:
     """Save webhook to database, return ID."""
     con = sqlite3.connect(DB_PATH)
-    cur = con.execute("""
+    cur = con.execute(
+        """
         INSERT INTO webhooks (
             received_at, method, path, content_type, headers,
             body, body_size, source_ip, alertname, severity, status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        data["received_at"],
-        data["method"],
-        data["path"],
-        data.get("content_type"),
-        json.dumps(data.get("headers", {})),
-        json.dumps(data.get("body")) if data.get("body") else None,
-        data.get("body_size"),
-        data.get("source_ip"),
-        data.get("alertname"),
-        data.get("severity"),
-        data.get("status"),
-    ))
+    """,
+        (
+            data["received_at"],
+            data["method"],
+            data["path"],
+            data.get("content_type"),
+            json.dumps(data.get("headers", {})),
+            json.dumps(data.get("body")) if data.get("body") else None,
+            data.get("body_size"),
+            data.get("source_ip"),
+            data.get("alertname"),
+            data.get("severity"),
+            data.get("status"),
+        ),
+    )
     webhook_id = cur.lastrowid
     con.commit()
     con.close()
@@ -186,7 +192,11 @@ def receive_webhook(subpath: str = ""):
     if alertname:
         print(f"  Alert: {alertname} ({severity or 'unknown'})")
     if body:
-        body_preview = json.dumps(body)[:200] if isinstance(body, (dict, list)) else str(body)[:200]
+        body_preview = (
+            json.dumps(body)[:200]
+            if isinstance(body, (dict, list))
+            else str(body)[:200]
+        )
         print(f"  Body: {body_preview}...")
     print()
 
@@ -340,11 +350,11 @@ def health():
 
 
 if __name__ == "__main__":
-    print(f"\033[96m")
+    print("\033[96m")
     print("=" * 60)
     print(" 🎣 AOS Webhook Receiver (Dev Mode)")
     print("=" * 60)
-    print(f"\033[0m")
+    print("\033[0m")
     print(f"  Database: {DB_PATH}")
     print(f"  Endpoint: http://{HOST}:{PORT}/webhook")
     print(f"  Web UI:   http://{HOST}:{PORT}/")

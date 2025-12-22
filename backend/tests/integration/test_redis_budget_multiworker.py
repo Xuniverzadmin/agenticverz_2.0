@@ -16,10 +16,10 @@ Tests:
 
 import asyncio
 import os
+from typing import List
+
 import pytest
 import pytest_asyncio
-from typing import List
-from unittest.mock import patch
 
 # Skip if Redis not available
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -27,6 +27,7 @@ REDIS_AVAILABLE = False
 
 try:
     import redis.asyncio as aioredis
+
     # Quick connectivity check
     async def _check_redis():
         try:
@@ -41,10 +42,7 @@ try:
 except ImportError:
     pass
 
-pytestmark = pytest.mark.skipif(
-    not REDIS_AVAILABLE,
-    reason="Redis not available at REDIS_URL"
-)
+pytestmark = pytest.mark.skipif(not REDIS_AVAILABLE, reason="Redis not available at REDIS_URL")
 
 
 @pytest_asyncio.fixture
@@ -176,8 +174,8 @@ class TestRedisBudgetStoreMultiWorker:
         - Each step costs 100 cents
         - Only 5 steps should succeed
         """
-        from app.workflow.policies import PolicyEnforcer, BudgetExceededError
-        from app.workflow.engine import StepDescriptor, StepContext
+        from app.workflow.engine import StepContext, StepDescriptor
+        from app.workflow.policies import BudgetExceededError, PolicyEnforcer
 
         run_id = "test-budget-race"
         budget_ceiling = 500
@@ -246,8 +244,9 @@ class TestRedisBudgetStoreTTL:
     @pytest.mark.asyncio
     async def test_key_has_ttl(self, cleanup_redis):
         """Test that keys are set with TTL."""
-        from app.workflow.policies import RedisBudgetStore
         import redis.asyncio as aioredis
+
+        from app.workflow.policies import RedisBudgetStore
 
         ttl_seconds = 10
         store = RedisBudgetStore(redis_url=REDIS_URL, ttl_seconds=ttl_seconds)
@@ -295,8 +294,8 @@ class TestPolicyEnforcerWithRedis:
     @pytest.mark.asyncio
     async def test_enforcer_tracks_across_steps(self, redis_store, cleanup_redis):
         """Test PolicyEnforcer tracks budget across multiple steps."""
+        from app.workflow.engine import StepContext, StepDescriptor
         from app.workflow.policies import PolicyEnforcer
-        from app.workflow.engine import StepDescriptor, StepContext
 
         enforcer = PolicyEnforcer(
             workflow_ceiling_cents=300,

@@ -1,16 +1,14 @@
 # M11 Replay End-to-End Tests
 # Verify deterministic replay of workflows
 
-import pytest
-import asyncio
-import json
 import os
 from datetime import datetime
 
+import pytest
+
 # Skip all tests if DATABASE_URL not set
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("DATABASE_URL"),
-    reason="DATABASE_URL not set - requires database for replay tests"
+    not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set - requires database for replay tests"
 )
 
 # Test fixtures
@@ -19,38 +17,19 @@ SAMPLE_WORKFLOW = {
         {
             "id": "s1",
             "skill": "kv_store",
-            "params": {
-                "operation": "set",
-                "namespace": "test_replay",
-                "key": "status",
-                "value": {"state": "started"}
-            }
+            "params": {"operation": "set", "namespace": "test_replay", "key": "status", "value": {"state": "started"}},
         },
         {
             "id": "s2",
             "skill": "voyage_embed",
-            "params": {
-                "input": "Test embedding for replay",
-                "model": "voyage-3-lite"
-            }
+            "params": {"input": "Test embedding for replay", "model": "voyage-3-lite"},
         },
         {
             "id": "s3",
             "skill": "slack_send",
-            "params": {
-                "text": "Workflow replay test",
-                "idempotency_key": "replay_test_s3"
-            }
+            "params": {"text": "Workflow replay test", "idempotency_key": "replay_test_s3"},
         },
-        {
-            "id": "s4",
-            "skill": "kv_store",
-            "params": {
-                "operation": "get",
-                "namespace": "test_replay",
-                "key": "status"
-            }
-        },
+        {"id": "s4", "skill": "kv_store", "params": {"operation": "get", "namespace": "test_replay", "key": "status"}},
         {
             "id": "s5",
             "skill": "email_send",
@@ -58,9 +37,9 @@ SAMPLE_WORKFLOW = {
                 "to": "test@example.com",
                 "subject": "Replay Test Complete",
                 "body": "Done",
-                "idempotency_key": "replay_test_s5"
-            }
-        }
+                "idempotency_key": "replay_test_s5",
+            },
+        },
     ]
 }
 
@@ -176,8 +155,8 @@ class TestReplayEndToEnd:
     @pytest.mark.asyncio
     async def test_audit_ops_recorded(self, workflow_run_id):
         """Test that ops are properly recorded in audit log."""
-        from tools.replay.runner import WorkflowRunner
         from tools.replay.audit import AuditStore
+        from tools.replay.runner import WorkflowRunner
 
         skill_config = {
             "kv_store": {"allow_external": False},
@@ -226,19 +205,15 @@ class TestReplayEndToEnd:
                 {
                     "id": "s1",
                     "skill": "kv_store",
-                    "params": {"operation": "set", "namespace": "test", "key": "k1", "value": "v1"}
+                    "params": {"operation": "set", "namespace": "test", "key": "k1", "value": "v1"},
                 },
                 {
                     "id": "s2_transient",
                     "skill": "kv_store",
                     "transient": True,  # This op should be skipped in replay
-                    "params": {"operation": "set", "namespace": "test", "key": "temp", "value": "temp"}
+                    "params": {"operation": "set", "namespace": "test", "key": "temp", "value": "temp"},
                 },
-                {
-                    "id": "s3",
-                    "skill": "kv_store",
-                    "params": {"operation": "get", "namespace": "test", "key": "k1"}
-                }
+                {"id": "s3", "skill": "kv_store", "params": {"operation": "get", "namespace": "test", "key": "k1"}},
             ]
         }
 
@@ -273,8 +248,8 @@ class TestVerifier:
 
     def test_compare_matching_ops(self):
         """Test verifier identifies matching operations."""
-        from tools.replay.verifier import ReplayVerifier
         from tools.replay.audit import OpRecord
+        from tools.replay.verifier import ReplayVerifier
 
         verifier = ReplayVerifier()
 
@@ -295,8 +270,8 @@ class TestVerifier:
 
     def test_compare_status_mismatch(self):
         """Test verifier detects status mismatch."""
-        from tools.replay.verifier import ReplayVerifier
         from tools.replay.audit import OpRecord
+        from tools.replay.verifier import ReplayVerifier
 
         verifier = ReplayVerifier()
 
@@ -318,7 +293,7 @@ class TestVerifier:
 
     def test_generate_diff_report(self):
         """Test diff report generation."""
-        from tools.replay.verifier import ReplayVerifier, VerificationResult, DiffEntry
+        from tools.replay.verifier import DiffEntry, ReplayVerifier, VerificationResult
 
         verifier = ReplayVerifier()
 

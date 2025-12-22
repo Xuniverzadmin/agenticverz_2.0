@@ -19,8 +19,8 @@ import sys
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -36,8 +36,10 @@ logger = logging.getLogger("nova.skills.http_call_v2")
 # Error Category Enum (from error_contract.md)
 # =============================================================================
 
+
 class ErrorCategory(str, Enum):
     """Error categories from error_contract.md"""
+
     TRANSIENT = "TRANSIENT"
     RATE_LIMIT = "RATE_LIMIT"
     CLIENT_ERROR = "CLIENT_ERROR"
@@ -53,9 +55,11 @@ class ErrorCategory(str, Enum):
 # Error Mappings (Programmatic - from contract)
 # =============================================================================
 
+
 @dataclass(frozen=True)
 class ErrorMapping:
     """Mapping from HTTP status to error info."""
+
     code: str
     category: ErrorCategory
     retryable: bool
@@ -72,7 +76,6 @@ HTTP_ERROR_MAP: Dict[int, ErrorMapping] = {
     409: ErrorMapping("ERR_HTTP_409_CONFLICT", ErrorCategory.CLIENT_ERROR, False),
     422: ErrorMapping("ERR_HTTP_422_UNPROCESSABLE", ErrorCategory.VALIDATION, False),
     429: ErrorMapping("ERR_HTTP_429_RATE_LIMITED", ErrorCategory.RATE_LIMIT, True),
-
     # Server Errors (5xx)
     500: ErrorMapping("ERR_HTTP_500_SERVER_ERROR", ErrorCategory.SERVER_ERROR, True),
     502: ErrorMapping("ERR_HTTP_502_BAD_GATEWAY", ErrorCategory.SERVER_ERROR, True),
@@ -97,9 +100,11 @@ SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 # Retry Logic (Deterministic)
 # =============================================================================
 
+
 @dataclass
 class RetryConfig:
     """Retry configuration."""
+
     max_retries: int = 3
     initial_delay_ms: int = 100
     max_delay_ms: int = 5000
@@ -118,16 +123,13 @@ def compute_retry_delay(attempt: int, config: RetryConfig) -> int:
     Returns:
         Delay in milliseconds
     """
-    base_delay = min(
-        config.initial_delay_ms * (config.backoff_multiplier ** attempt),
-        config.max_delay_ms
-    )
+    base_delay = min(config.initial_delay_ms * (config.backoff_multiplier**attempt), config.max_delay_ms)
 
     # Deterministic jitter using seed
     if config.retry_seed is not None:
         jitter_input = f"{config.retry_seed}:{attempt}".encode()
         jitter_hash = hashlib.sha256(jitter_input).digest()
-        jitter_value = int.from_bytes(jitter_hash[:4], 'big') / (2**32)
+        jitter_value = int.from_bytes(jitter_hash[:4], "big") / (2**32)
         jitter_range = base_delay * 0.1  # ±10%
         base_delay += jitter_range * (2 * jitter_value - 1)
 
@@ -138,9 +140,10 @@ def compute_retry_delay(attempt: int, config: RetryConfig) -> int:
 # Canonical JSON Utilities
 # =============================================================================
 
+
 def _canonical_json(obj: Any) -> str:
     """Produce canonical JSON (sorted keys, no whitespace)."""
-    return json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def _content_hash(data: Any, length: int = 16) -> str:
@@ -148,9 +151,9 @@ def _content_hash(data: Any, length: int = 16) -> str:
     if isinstance(data, bytes):
         content = data
     elif isinstance(data, str):
-        content = data.encode('utf-8')
+        content = data.encode("utf-8")
     else:
-        content = _canonical_json(data).encode('utf-8')
+        content = _canonical_json(data).encode("utf-8")
     return hashlib.sha256(content).hexdigest()[:length]
 
 
@@ -179,8 +182,8 @@ HTTP_CALL_DESCRIPTOR = SkillDescriptor(
             "params": {"type": "object"},
             "timeout_ms": {"type": "integer", "default": 30000},
             "idempotency_key": {"type": "string"},
-            "retry_config": {"type": "object"}
-        }
+            "retry_config": {"type": "object"},
+        },
     },
     outputs_schema={
         "type": "object",
@@ -192,8 +195,8 @@ HTTP_CALL_DESCRIPTOR = SkillDescriptor(
             "body": {},
             "body_hash": {"type": "string"},
             "latency_ms": {"type": "integer"},
-            "retries": {"type": "integer"}
-        }
+            "retries": {"type": "integer"},
+        },
     },
     stable_fields=["status_code", "headers_hash", "body_hash", "retries"],
     idempotent=False,  # Depends on method
@@ -210,19 +213,20 @@ HTTP_CALL_DESCRIPTOR = SkillDescriptor(
         "ERR_CONNECTION_REFUSED",
         "ERR_DNS_FAILURE",
         "ERR_MISSING_IDEMPOTENCY_KEY",
-        "ERR_BLOCKED_HOST"
+        "ERR_BLOCKED_HOST",
     ],
     constraints={
         "max_response_bytes": 10485760,
         "blocked_hosts": ["localhost", "127.0.0.1"],
-        "allowed_schemes": ["https", "http"]
-    }
+        "allowed_schemes": ["https", "http"],
+    },
 )
 
 
 # =============================================================================
 # Validation Functions
 # =============================================================================
+
 
 def validate_idempotency(method: str, idempotency_key: Optional[str]) -> Optional[str]:
     """
@@ -243,6 +247,7 @@ def validate_url(url: str) -> Optional[str]:
     Returns error message if validation fails, None if ok.
     """
     from urllib.parse import urlparse
+
     parsed = urlparse(url)
 
     # Check scheme
@@ -310,8 +315,10 @@ def map_network_error(exception: Exception) -> Tuple[str, ErrorCategory, bool, D
 # Mock HTTP Client (for testing without httpx dependency)
 # =============================================================================
 
+
 class MockResponse:
     """Mock HTTP response for testing."""
+
     def __init__(self, status_code: int = 200, headers: Dict = None, body: Any = None):
         self.status_code = status_code
         self.headers = headers or {}
@@ -336,18 +343,13 @@ def clear_mock_responses():
 
 
 async def _make_request(
-    url: str,
-    method: str = "GET",
-    headers: Dict = None,
-    body: Any = None,
-    timeout_ms: int = 30000
+    url: str, method: str = "GET", headers: Dict = None, body: Any = None, timeout_ms: int = 30000
 ) -> Tuple[int, Dict, Any, int]:
     """
     Make HTTP request (mock implementation for M3).
 
     Returns: (status_code, headers, body, latency_ms)
     """
-    import asyncio
 
     start = time.perf_counter()
 
@@ -371,7 +373,7 @@ async def _make_request(
                 url=url,
                 headers=headers,
                 json=body if isinstance(body, dict) else None,
-                content=body if isinstance(body, str) else None
+                content=body if isinstance(body, str) else None,
             )
 
             latency = int((time.perf_counter() - start) * 1000)
@@ -392,6 +394,7 @@ async def _make_request(
 # =============================================================================
 # Main Execute Function
 # =============================================================================
+
 
 async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
     """
@@ -421,7 +424,7 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
             code="ERR_VALIDATION_FAILED",
             message="Missing required parameter: url",
             category="VALIDATION",
-            retryable=False
+            retryable=False,
         )
 
     url_error = validate_url(url)
@@ -432,7 +435,7 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=url_error,
             category="VALIDATION",
             retryable=False,
-            details={"url": url}
+            details={"url": url},
         )
 
     # Validate idempotency
@@ -444,7 +447,7 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
             message=idem_error,
             category="VALIDATION",
             retryable=False,
-            details={"method": method, "url": url}
+            details={"method": method, "url": url},
         )
 
     # Build retry config
@@ -453,7 +456,7 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
         initial_delay_ms=retry_config_dict.get("initial_delay_ms", 100),
         max_delay_ms=retry_config_dict.get("max_delay_ms", 5000),
         backoff_multiplier=retry_config_dict.get("backoff_multiplier", 2.0),
-        retry_seed=retry_config_dict.get("retry_seed")
+        retry_seed=retry_config_dict.get("retry_seed"),
     )
 
     # Execute with retry
@@ -463,11 +466,7 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
     for attempt in range(retry_config.max_retries + 1):
         try:
             status_code, resp_headers, resp_body, latency_ms = await _make_request(
-                url=url,
-                method=method,
-                headers=headers,
-                body=body,
-                timeout_ms=timeout_ms
+                url=url, method=method, headers=headers, body=body, timeout_ms=timeout_ms
             )
 
             # Check for HTTP error status
@@ -477,10 +476,12 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
                 if retryable and attempt < retry_config.max_retries:
                     # Retry
                     delay = compute_retry_delay(attempt, retry_config)
-                    logger.info(f"Retrying after {delay}ms (attempt {attempt + 1})", extra={
-                        "url": url, "status_code": status_code, "delay_ms": delay
-                    })
+                    logger.info(
+                        f"Retrying after {delay}ms (attempt {attempt + 1})",
+                        extra={"url": url, "status_code": status_code, "delay_ms": delay},
+                    )
                     import asyncio
+
                     await asyncio.sleep(delay / 1000)
                     retries += 1
                     continue
@@ -498,8 +499,8 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
                     meta={
                         "skill_id": HTTP_CALL_DESCRIPTOR.skill_id,
                         "skill_version": HTTP_CALL_DESCRIPTOR.version,
-                        "latency_ms": latency_ms
-                    }
+                        "latency_ms": latency_ms,
+                    },
                 )
 
             # Success
@@ -516,13 +517,13 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
                     "body_hash": body_hash,
                     "latency_ms": latency_ms,
                     "retries": retries,
-                    "idempotency_key": idempotency_key
+                    "idempotency_key": idempotency_key,
                 },
                 meta={
                     "skill_id": HTTP_CALL_DESCRIPTOR.skill_id,
                     "skill_version": HTTP_CALL_DESCRIPTOR.version,
-                    "deterministic": False  # Network calls are non-deterministic
-                }
+                    "deterministic": False,  # Network calls are non-deterministic
+                },
             )
 
         except Exception as e:
@@ -531,10 +532,11 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
 
             if retryable and attempt < retry_config.max_retries:
                 delay = compute_retry_delay(attempt, retry_config)
-                logger.info(f"Retrying after network error: {e}", extra={
-                    "url": url, "attempt": attempt + 1, "delay_ms": delay
-                })
+                logger.info(
+                    f"Retrying after network error: {e}", extra={"url": url, "attempt": attempt + 1, "delay_ms": delay}
+                )
                 import asyncio
+
                 await asyncio.sleep(delay / 1000)
                 retries += 1
                 continue
@@ -554,19 +556,12 @@ async def http_call_execute(params: Dict[str, Any]) -> StructuredOutcome:
             category=category.value,
             retryable=False,  # Exhausted retries
             details=details,
-            meta={
-                "skill_id": HTTP_CALL_DESCRIPTOR.skill_id,
-                "skill_version": HTTP_CALL_DESCRIPTOR.version
-            }
+            meta={"skill_id": HTTP_CALL_DESCRIPTOR.skill_id, "skill_version": HTTP_CALL_DESCRIPTOR.version},
         )
 
     # Should not reach here
     return StructuredOutcome.failure(
-        call_id=call_id,
-        code="ERR_UNKNOWN",
-        message="Unknown error",
-        category="PERMANENT",
-        retryable=False
+        call_id=call_id, code="ERR_UNKNOWN", message="Unknown error", category="PERMANENT", retryable=False
     )
 
 
@@ -580,11 +575,9 @@ async def http_call_handler(params: Dict[str, Any]) -> StructuredOutcome:
 # Registration Helper
 # =============================================================================
 
+
 def register_http_call(registry) -> None:
     """Register http_call skill with registry."""
     registry.register(
-        descriptor=HTTP_CALL_DESCRIPTOR,
-        handler=http_call_handler,
-        is_stub=False,
-        tags=["http", "network", "api", "m3"]
+        descriptor=HTTP_CALL_DESCRIPTOR, handler=http_call_handler, is_stub=False, tags=["http", "network", "api", "m3"]
     )

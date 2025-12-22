@@ -27,19 +27,16 @@ import os
 import sys
 import time
 
-from aos_sdk import AOSClient, AOSError, RuntimeContext, Trace, hash_data, generate_idempotency_key
+from aos_sdk import AOSClient, AOSError, RuntimeContext, Trace, hash_data
 
 # Sample input data (deterministic)
 SAMPLE_DATA = {
     "users": [
         {"id": 1, "name": "Alice", "email": "alice@example.com", "active": True},
         {"id": 2, "name": "Bob", "email": "bob@example.com", "active": False},
-        {"id": 3, "name": "Charlie", "email": "charlie@example.com", "active": True}
+        {"id": 3, "name": "Charlie", "email": "charlie@example.com", "active": True},
     ],
-    "metadata": {
-        "total": 3,
-        "generated_at": "2025-01-01T00:00:00Z"
-    }
+    "metadata": {"total": 3, "generated_at": "2025-01-01T00:00:00Z"},
 }
 
 
@@ -50,18 +47,18 @@ def create_transform_plan(data: dict) -> list:
             "skill": "json_transform",
             "params": {
                 "input": data,
-                "query": ".users[] | select(.active == true) | {name, email}"
+                "query": ".users[] | select(.active == true) | {name, email}",
             },
-            "description": "Filter active users and extract name/email"
+            "description": "Filter active users and extract name/email",
         },
         {
             "skill": "json_transform",
             "params": {
                 "input_path": "$.steps[0].result",
-                "query": "[.[] | {contact: .email, label: .name}]"
+                "query": "[.[] | {contact: .email, label: .name}]",
             },
-            "description": "Reshape into contact list format"
-        }
+            "description": "Reshape into contact list format",
+        },
     ]
 
 
@@ -77,16 +74,16 @@ def simulate_transform(client: AOSClient, plan: list) -> dict:
     try:
         result = client.simulate(plan, budget_cents=50)
 
-        print(f"\nSimulation Result:")
+        print("\nSimulation Result:")
         print(f"  Feasible: {result.get('feasible', 'unknown')}")
         print(f"  Estimated Cost: {result.get('estimated_cost_cents', 0)} cents")
-        print(f"  Deterministic: Yes (json_transform is pure)")
+        print("  Deterministic: Yes (json_transform is pure)")
 
-        if result.get('step_simulations'):
-            print(f"\nStep Details:")
-            for i, step in enumerate(result['step_simulations']):
-                skill = plan[i].get('skill', 'unknown')
-                desc = plan[i].get('description', '')
+        if result.get("step_simulations"):
+            print("\nStep Details:")
+            for i, step in enumerate(result["step_simulations"]):
+                skill = plan[i].get("skill", "unknown")
+                desc = plan[i].get("description", "")
                 print(f"  {i+1}. [{skill}] {desc}")
                 print(f"      Feasible: {step.get('feasible', 'unknown')}")
 
@@ -110,21 +107,21 @@ def execute_transform(client: AOSClient, plan: list) -> dict:
         run = client.create_run(
             agent_id="json-transformer",
             goal="Transform user data to contact list",
-            plan=plan
+            plan=plan,
         )
 
-        run_id = run.get('run_id') or run.get('id')
+        run_id = run.get("run_id") or run.get("id")
         print(f"Run created: {run_id}")
 
         # Get result
         result = client.get_run(run_id)
 
-        status = result.get('status', 'unknown')
+        status = result.get("status", "unknown")
         print(f"\nExecution Status: {status}")
 
-        if result.get('outcome', {}).get('result'):
-            print(f"\nTransformed Output:")
-            output = result['outcome']['result']
+        if result.get("outcome", {}).get("result"):
+            print("\nTransformed Output:")
+            output = result["outcome"]["result"]
             print(json.dumps(output, indent=2))
 
         return result
@@ -146,23 +143,19 @@ def demonstrate_determinism(client: AOSClient, plan: list):
     try:
         # First run
         run1 = client.create_run(
-            agent_id="json-transformer",
-            goal="Transform user data (run 1)",
-            plan=plan
+            agent_id="json-transformer", goal="Transform user data (run 1)", plan=plan
         )
-        result1 = client.get_run(run1.get('run_id') or run1.get('id'))
+        result1 = client.get_run(run1.get("run_id") or run1.get("id"))
 
         # Second run
         run2 = client.create_run(
-            agent_id="json-transformer",
-            goal="Transform user data (run 2)",
-            plan=plan
+            agent_id="json-transformer", goal="Transform user data (run 2)", plan=plan
         )
-        result2 = client.get_run(run2.get('run_id') or run2.get('id'))
+        result2 = client.get_run(run2.get("run_id") or run2.get("id"))
 
         # Compare
-        output1 = result1.get('outcome', {}).get('result')
-        output2 = result2.get('outcome', {}).get('result')
+        output1 = result1.get("outcome", {}).get("result")
+        output2 = result2.get("outcome", {}).get("result")
 
         if json.dumps(output1, sort_keys=True) == json.dumps(output2, sort_keys=True):
             print("\n[PASS] Outputs are identical - transform is deterministic!")
@@ -182,9 +175,13 @@ def main():
     """Main demo flow with determinism support."""
     # Parse arguments
     parser = argparse.ArgumentParser(description="AOS JSON Transform Demo")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Random seed (default: 42)"
+    )
     parser.add_argument("--save-trace", type=str, help="Save trace to file")
-    parser.add_argument("--check-determinism", action="store_true", help="Verify determinism")
+    parser.add_argument(
+        "--check-determinism", action="store_true", help="Verify determinism"
+    )
     parser.add_argument("--timestamp", type=str, help="Frozen timestamp (ISO8601)")
     args = parser.parse_args()
 
@@ -193,12 +190,9 @@ def main():
     print("=" * 60)
 
     # Create runtime context with deterministic seed
-    ctx = RuntimeContext(
-        seed=args.seed,
-        now=args.timestamp if args.timestamp else None
-    )
+    ctx = RuntimeContext(seed=args.seed, now=args.timestamp if args.timestamp else None)
 
-    print(f"\nDeterminism Context:")
+    print("\nDeterminism Context:")
     print(f"  Seed: {ctx.seed}")
     print(f"  Timestamp: {ctx.timestamp()}")
     print(f"  RNG State: {ctx.rng_state}")
@@ -210,11 +204,11 @@ def main():
     if not api_key:
         print("\nWarning: AOS_API_KEY not set. Using demo mode.")
 
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  API URL: {base_url}")
 
     # Show input data
-    print(f"\nInput Data:")
+    print("\nInput Data:")
     print(json.dumps(SAMPLE_DATA, indent=2))
     print(f"  Input hash: {hash_data(SAMPLE_DATA)}")
 
@@ -222,7 +216,7 @@ def main():
     client = AOSClient(api_key=api_key, base_url=base_url)
     plan = create_transform_plan(SAMPLE_DATA)
 
-    print(f"\nTransform Plan:")
+    print("\nTransform Plan:")
     for i, step in enumerate(plan):
         print(f"  {i+1}. {step.get('description', step['skill'])}")
     print(f"  Plan hash: {hash_data(plan)}")
@@ -232,7 +226,7 @@ def main():
         seed=ctx.seed,
         timestamp=ctx.timestamp(),
         plan=plan,
-        metadata={"demo": "json_transform", "input_hash": hash_data(SAMPLE_DATA)}
+        metadata={"demo": "json_transform", "input_hash": hash_data(SAMPLE_DATA)},
     )
 
     # Simulate
@@ -247,10 +241,10 @@ def main():
             output_data=sim_result,
             rng_state=ctx.rng_state,
             duration_ms=duration,
-            outcome="success" if sim_result.get('feasible', False) else "failure"
+            outcome="success" if sim_result.get("feasible", False) else "failure",
         )
 
-        if not sim_result.get('feasible', False):
+        if not sim_result.get("feasible", False):
             print("\n[ABORT] Transform not feasible.")
             trace.finalize()
             if args.save_trace:
@@ -276,11 +270,13 @@ def main():
             output_data=exec_result,
             rng_state=ctx._capture_rng_state(),
             duration_ms=duration,
-            outcome="success" if exec_result.get('status') == 'succeeded' else "failure",
-            replay_behavior="execute"  # Pure transform - safe to re-execute
+            outcome="success"
+            if exec_result.get("status") == "succeeded"
+            else "failure",
+            replay_behavior="execute",  # Pure transform - safe to re-execute
         )
 
-        if exec_result.get('status') != 'succeeded':
+        if exec_result.get("status") != "succeeded":
             print("\n[FAILURE] Transform did not succeed.")
             trace.finalize()
             if args.save_trace:

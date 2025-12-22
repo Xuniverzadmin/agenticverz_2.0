@@ -11,8 +11,9 @@ Each node includes:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Optional, Any, Dict
-from app.policy.compiler.grammar import PolicyCategory, ActionType
+from typing import Any, List, Optional
+
+from app.policy.compiler.grammar import ActionType, PolicyCategory
 
 
 @dataclass
@@ -23,6 +24,7 @@ class GovernanceMetadata:
     This metadata is carried through compilation to runtime
     for governance-aware execution.
     """
+
     category: PolicyCategory
     priority: int = 50  # Default medium priority
     source_policy: Optional[str] = None
@@ -48,6 +50,7 @@ class GovernanceMetadata:
 @dataclass
 class ASTNode(ABC):
     """Base class for all AST nodes."""
+
     line: int = 0
     column: int = 0
     governance: Optional[GovernanceMetadata] = None
@@ -66,6 +69,7 @@ class ASTNode(ABC):
 @dataclass
 class ExprNode(ASTNode):
     """Base class for expression nodes."""
+
     pass
 
 
@@ -73,9 +77,11 @@ class ExprNode(ASTNode):
 # Program Structure
 # ============================================================================
 
+
 @dataclass
 class ProgramNode(ASTNode):
     """Root node representing a complete PLang program."""
+
     statements: List[ASTNode] = field(default_factory=list)
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -85,6 +91,7 @@ class ProgramNode(ASTNode):
 @dataclass
 class PolicyDeclNode(ASTNode):
     """Policy declaration node."""
+
     name: str = ""
     category: PolicyCategory = PolicyCategory.CUSTOM
     body: List[ASTNode] = field(default_factory=list)
@@ -92,6 +99,7 @@ class PolicyDeclNode(ASTNode):
     def __post_init__(self):
         # Create governance metadata from category
         from app.policy.compiler.grammar import PLANG_GRAMMAR
+
         self.governance = GovernanceMetadata(
             category=self.category,
             priority=PLANG_GRAMMAR.get_category_priority(self.category.value),
@@ -105,12 +113,14 @@ class PolicyDeclNode(ASTNode):
 @dataclass
 class RuleDeclNode(ASTNode):
     """Rule declaration node."""
+
     name: str = ""
     category: PolicyCategory = PolicyCategory.CUSTOM
     body: List[ASTNode] = field(default_factory=list)
 
     def __post_init__(self):
         from app.policy.compiler.grammar import PLANG_GRAMMAR
+
         self.governance = GovernanceMetadata(
             category=self.category,
             priority=PLANG_GRAMMAR.get_category_priority(self.category.value),
@@ -124,6 +134,7 @@ class RuleDeclNode(ASTNode):
 @dataclass
 class ImportNode(ASTNode):
     """Import statement node."""
+
     path: str = ""
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -133,6 +144,7 @@ class ImportNode(ASTNode):
 @dataclass
 class RuleRefNode(ASTNode):
     """Reference to a named rule."""
+
     name: str = ""
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -142,6 +154,7 @@ class RuleRefNode(ASTNode):
 @dataclass
 class PriorityNode(ASTNode):
     """Priority declaration node."""
+
     value: int = 50
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -152,9 +165,11 @@ class PriorityNode(ASTNode):
 # Condition and Action Blocks
 # ============================================================================
 
+
 @dataclass
 class ConditionBlockNode(ASTNode):
     """When/then condition block."""
+
     condition: ExprNode = None
     action: "ActionBlockNode" = None
 
@@ -165,6 +180,7 @@ class ConditionBlockNode(ASTNode):
 @dataclass
 class ActionBlockNode(ASTNode):
     """Action block (deny, allow, escalate, route)."""
+
     action: ActionType = ActionType.DENY
     target: Optional["RouteTargetNode"] = None
 
@@ -175,6 +191,7 @@ class ActionBlockNode(ASTNode):
 @dataclass
 class RouteTargetNode(ASTNode):
     """Route target specification."""
+
     target: str = ""
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -185,9 +202,11 @@ class RouteTargetNode(ASTNode):
 # Expressions
 # ============================================================================
 
+
 @dataclass
 class BinaryOpNode(ExprNode):
     """Binary operation (and, or, ==, !=, etc.)."""
+
     op: str = ""
     left: ExprNode = None
     right: ExprNode = None
@@ -199,6 +218,7 @@ class BinaryOpNode(ExprNode):
 @dataclass
 class UnaryOpNode(ExprNode):
     """Unary operation (not)."""
+
     op: str = ""
     operand: ExprNode = None
 
@@ -209,12 +229,14 @@ class UnaryOpNode(ExprNode):
 @dataclass
 class ValueNode(ExprNode):
     """Base class for value nodes."""
+
     pass
 
 
 @dataclass
 class IdentNode(ValueNode):
     """Identifier node."""
+
     name: str = ""
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -224,6 +246,7 @@ class IdentNode(ValueNode):
 @dataclass
 class LiteralNode(ValueNode):
     """Literal value node (number, string, boolean)."""
+
     value: Any = None
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -233,6 +256,7 @@ class LiteralNode(ValueNode):
 @dataclass
 class FuncCallNode(ExprNode):
     """Function call node."""
+
     callee: ExprNode = None
     args: List[ExprNode] = field(default_factory=list)
 
@@ -243,6 +267,7 @@ class FuncCallNode(ExprNode):
 @dataclass
 class AttrAccessNode(ExprNode):
     """Attribute access node (obj.attr)."""
+
     obj: ExprNode = None
     attr: str = ""
 
@@ -253,4 +278,5 @@ class AttrAccessNode(ExprNode):
 # Type alias for visitor (forward reference resolved in visitors.py)
 class ASTVisitor:
     """Forward reference for AST visitor."""
+
     pass

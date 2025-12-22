@@ -38,37 +38,34 @@ INJECTION_PATTERNS = [
     (r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|rules?)", "instruction_override"),
     (r"disregard\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?)", "instruction_override"),
     (r"forget\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?)", "instruction_override"),
-
     # System prompt manipulation
     (r"you\s+are\s+now\s+(a|an)\s+", "role_hijack"),
     (r"pretend\s+(you\s+are|to\s+be)\s+", "role_hijack"),
     (r"act\s+as\s+(if\s+)?(you\s+are|a|an)\s+", "role_hijack"),
     (r"your\s+new\s+(role|persona|identity)\s+is", "role_hijack"),
-
     # Dangerous skill invocation
     (r"(call|execute|run|invoke)\s+(postgres_query|sql|database).*(drop|truncate|delete|alter)", "dangerous_sql"),
     (r"drop\s+table", "dangerous_sql"),
     (r"truncate\s+table", "dangerous_sql"),
     (r"delete\s+from\s+\w+\s+where\s+1\s*=\s*1", "dangerous_sql"),
-
     # Bypass attempts
     (r"bypass\s+(validation|security|safety|checks?)", "bypass_attempt"),
     (r"skip\s+(validation|security|safety|checks?)", "bypass_attempt"),
     (r"disable\s+(validation|security|safety|checks?)", "bypass_attempt"),
-
     # Recursive/loop attacks
     (r"create\s+(a\s+)?plan\s+that\s+(creates?|generates?)\s+(more\s+)?plans?", "recursive_plan"),
     (r"loop\s+(forever|infinitely|until)", "infinite_loop"),
     (r"repeat\s+this\s+(task|action)\s+\d{3,}\s+times", "excessive_repeat"),
-
     # Code execution attempts
     (r"exec\s*\(", "code_execution"),
     (r"eval\s*\(", "code_execution"),
     (r"import\s+os\s*;?\s*os\.(system|popen)", "code_execution"),
     (r"subprocess\.(call|run|Popen)", "code_execution"),
-
     # Credential extraction
-    (r"(show|print|display|output|return)\s+(me\s+)?(the\s+)?(api[_\s]?key|password|secret|credential|token)", "credential_leak"),
+    (
+        r"(show|print|display|output|return)\s+(me\s+)?(the\s+)?(api[_\s]?key|password|secret|credential|token)",
+        "credential_leak",
+    ),
     (r"what\s+(is|are)\s+(your|the)\s+(api[_\s]?key|password|secret|credential)", "credential_leak"),
 ]
 
@@ -79,6 +76,7 @@ _compiled_patterns = [(re.compile(pattern, re.IGNORECASE), name) for pattern, na
 @dataclass
 class SanitizationResult:
     """Result of input sanitization."""
+
     sanitized: str
     is_safe: bool
     warnings: List[str]
@@ -188,7 +186,7 @@ def sanitize_goal(goal: str) -> SanitizationResult:
                         "pattern": name,
                         "matched": matched[:100],
                         "goal_preview": sanitized[:200],
-                    }
+                    },
                 )
 
             # Block on severe patterns
@@ -223,10 +221,7 @@ def sanitize_goal(goal: str) -> SanitizationResult:
                 sanitized = sanitized.replace(url, "[BLOCKED_URL]")
                 warnings.append(f"Blocked URL: {reason}")
 
-                logger.warning(
-                    "unsafe_url_blocked",
-                    extra={"url": url, "reason": reason}
-                )
+                logger.warning("unsafe_url_blocked", extra={"url": url, "reason": reason})
 
     return SanitizationResult(
         sanitized=sanitized,

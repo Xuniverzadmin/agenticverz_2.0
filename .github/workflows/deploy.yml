@@ -21,13 +21,13 @@ jobs:
     environment: ${{ github.event.inputs.environment }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to ${{ github.event.inputs.environment }}
         run: |
           echo "Deploying to ${{ github.event.inputs.environment }}..."
           # Add actual deployment commands here
           # e.g., kubectl apply, docker push, etc.
-          
+
       - name: Wait for deployment
         run: |
           echo "Waiting for deployment to stabilize..."
@@ -40,30 +40,30 @@ jobs:
     environment: ${{ github.event.inputs.environment }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          
+
       - name: Install dependencies
         run: |
           cd backend
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
-          
+
       - name: Run smoke tests
         env:
           API_BASE: ${{ vars.API_BASE }}
         run: |
           chmod +x scripts/smoke_release.sh
           ./scripts/smoke_release.sh
-          
+
       - name: Verify replay certification
         run: |
           cd backend
           PYTHONPATH=. pytest tests/workflow/test_replay_certification.py -q --tb=short
-          
+
       - name: Verify registry snapshot
         run: |
           cd backend

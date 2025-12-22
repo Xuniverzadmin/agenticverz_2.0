@@ -11,19 +11,17 @@ secret rotation and archive/restore operations.
 """
 
 from __future__ import annotations
-import asyncio
+
 import hashlib
-import hmac
 import json
 import os
 import shutil
 import tempfile
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
-from dataclasses import dataclass, field
 
 import pytest
 import pytest_asyncio
@@ -35,6 +33,7 @@ os.environ.setdefault("DISABLE_EXTERNAL_CALLS", "1")
 @dataclass
 class MockWorkflowSpec:
     """Mock workflow spec for testing that properly serializes."""
+
     id: str = "test-wf"
     name: str = "Test Workflow"
     version: str = "1.0"
@@ -63,9 +62,7 @@ class GoldenLifecycleTestRegistry:
 
     def _make_skill(self, name: str):
         async def handler(inputs: Dict, seed: int = 0, meta: Dict = None) -> Dict:
-            input_hash = hashlib.sha256(
-                json.dumps(inputs, sort_keys=True).encode()
-            ).hexdigest()[:8]
+            input_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()[:8]
             return {
                 "ok": True,
                 "skill": name,
@@ -111,9 +108,9 @@ class TestGoldenFileCreation:
     @pytest.mark.asyncio
     async def test_golden_file_created_with_signature(self, registry, temp_golden_dir):
         """Test that golden file and signature are created during execution."""
-        from app.workflow.golden import GoldenRecorder
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
+        from app.workflow.golden import GoldenRecorder
 
         secret = "test-secret-key-12345"
         recorder = GoldenRecorder(dirpath=temp_golden_dir, secret=secret)
@@ -148,9 +145,9 @@ class TestGoldenFileCreation:
     @pytest.mark.asyncio
     async def test_golden_file_contains_all_events(self, registry, temp_golden_dir):
         """Test that golden file contains run_start, step events, and run_end."""
-        from app.workflow.golden import GoldenRecorder
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
+        from app.workflow.golden import GoldenRecorder
 
         recorder = GoldenRecorder(dirpath=temp_golden_dir, secret="test-secret")
         store = InMemoryCheckpointStore()
@@ -262,8 +259,9 @@ class TestGoldenFileArchival:
         # Verify signatures still valid after archive
         archive_recorder = GoldenRecorder(dirpath=archive_dir, secret=secret)
         for archived_file in archived_files:
-            assert archive_recorder.verify_golden(str(archived_file)), \
-                f"Signature invalid for archived file: {archived_file.name}"
+            assert archive_recorder.verify_golden(
+                str(archived_file)
+            ), f"Signature invalid for archived file: {archived_file.name}"
 
 
 class TestGoldenFileResign:
@@ -366,9 +364,9 @@ class TestGoldenReplay:
     @pytest.mark.asyncio
     async def test_replay_matches_original(self, registry, temp_golden_dir):
         """Test that replay produces identical golden file as original."""
-        from app.workflow.golden import GoldenRecorder
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
+        from app.workflow.golden import GoldenRecorder
 
         secret = "replay-test-secret"
         spec = WorkflowSpec(
@@ -411,8 +409,9 @@ class TestGoldenReplay:
         replay_events = replay_recorder.load_golden(replay_path)
 
         # Compare event counts
-        assert len(original_events) == len(replay_events), \
-            f"Event count mismatch: {len(original_events)} vs {len(replay_events)}"
+        assert len(original_events) == len(
+            replay_events
+        ), f"Event count mismatch: {len(original_events)} vs {len(replay_events)}"
 
         # Compare deterministic parts of events
         for i, (orig, repl) in enumerate(zip(original_events, replay_events)):
@@ -426,15 +425,13 @@ class TestGoldenReplay:
                 repl_det["run_id"] = "normalized"
 
             # Compare
-            assert orig_det["event_type"] == repl_det["event_type"], \
-                f"Event type mismatch at {i}"
+            assert orig_det["event_type"] == repl_det["event_type"], f"Event type mismatch at {i}"
 
             # For step events, compare output hashes
             if orig_det["event_type"] == "step":
                 orig_hash = orig_det["data"].get("output_hash")
                 repl_hash = repl_det["data"].get("output_hash")
-                assert orig_hash == repl_hash, \
-                    f"Output hash mismatch at step {i}: {orig_hash} vs {repl_hash}"
+                assert orig_hash == repl_hash, f"Output hash mismatch at step {i}: {orig_hash} vs {repl_hash}"
 
 
 class TestGoldenLifecycleEndToEnd:
@@ -467,9 +464,9 @@ class TestGoldenLifecycleEndToEnd:
         4. Restore from archive
         5. Replay and verify
         """
-        from app.workflow.golden import GoldenRecorder
-        from app.workflow.engine import WorkflowEngine, WorkflowSpec, StepDescriptor
         from app.workflow.checkpoint import InMemoryCheckpointStore
+        from app.workflow.engine import StepDescriptor, WorkflowEngine, WorkflowSpec
+        from app.workflow.golden import GoldenRecorder
 
         old_secret = "old-hmac-secret-v1"
         new_secret = "new-hmac-secret-v2"
@@ -538,19 +535,10 @@ class TestGoldenLifecycleEndToEnd:
         replay_events = replay_recorder.load_golden(replay_path)
 
         # Compare step output hashes
-        original_step_hashes = [
-            e.data.get("output_hash")
-            for e in original_events
-            if e.event_type == "step"
-        ]
-        replay_step_hashes = [
-            e.data.get("output_hash")
-            for e in replay_events
-            if e.event_type == "step"
-        ]
+        original_step_hashes = [e.data.get("output_hash") for e in original_events if e.event_type == "step"]
+        replay_step_hashes = [e.data.get("output_hash") for e in replay_events if e.event_type == "step"]
 
-        assert original_step_hashes == replay_step_hashes, \
-            "Replay produced different outputs than original"
+        assert original_step_hashes == replay_step_hashes, "Replay produced different outputs than original"
 
 
 class TestGoldenSignatureAtomicity:
@@ -605,8 +593,9 @@ class TestGoldenSignatureAtomicity:
         2. After all concurrent ops, exactly ONE secret produces a valid signature
         3. The signature file is not corrupted
         """
-        from app.workflow.golden import GoldenRecorder
         import asyncio
+
+        from app.workflow.golden import GoldenRecorder
 
         # Create initial golden file
         recorder = GoldenRecorder(dirpath=temp_golden_dir, secret="initial")
@@ -639,10 +628,7 @@ class TestGoldenSignatureAtomicity:
 
         # Run concurrently
         loop = asyncio.get_event_loop()
-        results = await asyncio.gather(*[
-            loop.run_in_executor(None, resign, r)
-            for r in recorders
-        ])
+        results = await asyncio.gather(*[loop.run_in_executor(None, resign, r) for r in recorders])
 
         # All sign operations should complete without error
         assert all(results), f"Some sign operations failed: {errors}"
@@ -656,6 +642,6 @@ class TestGoldenSignatureAtomicity:
 
         # Exactly one recorder should verify (the one whose signature was written last)
         verify_count = sum(1 for r in recorders if r.verify_golden(golden_path))
-        assert verify_count >= 1, f"No recorder can verify - signature file may be corrupted"
+        assert verify_count >= 1, "No recorder can verify - signature file may be corrupted"
         # Note: Due to race conditions, sometimes >1 may verify if verification happens
         # before the signature is overwritten. This is acceptable behavior.

@@ -27,14 +27,14 @@ Installation:
 """
 
 from __future__ import annotations
+
 import argparse
 import json
 import os
 import sys
-from typing import Any, Dict, List, Optional
-import urllib.request
 import urllib.error
-
+import urllib.request
+from typing import Any, Dict, Optional
 
 # Configuration
 DEFAULT_API_URL = "http://127.0.0.1:8000"
@@ -51,10 +51,7 @@ def get_api_key() -> Optional[str]:
 
 
 def api_request(
-    method: str,
-    path: str,
-    data: Optional[Dict[str, Any]] = None,
-    params: Optional[Dict[str, str]] = None
+    method: str, path: str, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, str]] = None
 ) -> Dict[str, Any]:
     """Make API request and return JSON response."""
     base_url = get_api_url()
@@ -101,6 +98,7 @@ def format_json(obj: Any, indent: int = 2) -> str:
 
 # ============== SIMULATE Command ==============
 
+
 def cmd_simulate(args):
     """
     Simulate a plan before execution.
@@ -127,22 +125,16 @@ def cmd_simulate(args):
         # Direct steps array
         steps = plan_data
     else:
-        print("Error: Plan must be {\"steps\": [...]} or a steps array", file=sys.stderr)
+        print('Error: Plan must be {"steps": [...]} or a steps array', file=sys.stderr)
         sys.exit(1)
 
     # Normalize steps format
     normalized_steps = []
     for step in steps:
         if "skill" in step:
-            normalized_steps.append({
-                "skill": step["skill"],
-                "params": step.get("params", {})
-            })
+            normalized_steps.append({"skill": step["skill"], "params": step.get("params", {})})
         elif "skill_id" in step:
-            normalized_steps.append({
-                "skill": step["skill_id"],
-                "params": step.get("inputs", step.get("params", {}))
-            })
+            normalized_steps.append({"skill": step["skill_id"], "params": step.get("inputs", step.get("params", {}))})
         else:
             print(f"Warning: Skipping step without skill: {step}", file=sys.stderr)
 
@@ -187,7 +179,9 @@ def cmd_simulate(args):
     # Step breakdown
     print("  📋 Step Estimates:")
     for step in result.get("step_estimates", []):
-        print(f"      [{step['step_index']}] {step['skill_id']:<20} cost={step['estimated_cost_cents']}c latency={step['estimated_latency_ms']}ms")
+        print(
+            f"      [{step['step_index']}] {step['skill_id']:<20} cost={step['estimated_cost_cents']}c latency={step['estimated_latency_ms']}ms"
+        )
     print()
 
     # Risks
@@ -238,6 +232,7 @@ def cmd_simulate(args):
 
 # ============== QUERY Command ==============
 
+
 def cmd_query(args):
     """
     Query runtime state.
@@ -284,6 +279,7 @@ def cmd_query(args):
 
 # ============== SKILLS Command ==============
 
+
 def cmd_skills(args):
     """List all available skills."""
     result = api_request("GET", "/api/v1/runtime/skills")
@@ -323,6 +319,7 @@ def cmd_skills(args):
 
 
 # ============== SKILL Command ==============
+
 
 def cmd_skill(args):
     """Describe a specific skill."""
@@ -388,6 +385,7 @@ def cmd_skill(args):
 
 # ============== CAPABILITIES Command ==============
 
+
 def cmd_capabilities(args):
     """Get capabilities for an agent."""
     params = {}
@@ -450,6 +448,7 @@ def cmd_capabilities(args):
 
 # ============== RECOVERY Commands (M10) ==============
 
+
 def cmd_recovery_candidates(args):
     """
     List recovery candidates for human review.
@@ -485,8 +484,8 @@ def cmd_recovery_candidates(args):
 
     for c in candidates:
         conf = f"{c['confidence']:.2f}"
-        suggestion = c['suggestion'][:37] + "..." if len(c['suggestion']) > 40 else c['suggestion']
-        error_code = (c.get('error_code') or 'N/A')[:20]
+        suggestion = c["suggestion"][:37] + "..." if len(c["suggestion"]) > 40 else c["suggestion"]
+        error_code = (c.get("error_code") or "N/A")[:20]
         print(f"  {c['id']:<6} {conf:>6} {c['decision']:<10} {error_code:<20} {suggestion:<40}")
 
     print()
@@ -525,7 +524,7 @@ def cmd_recovery_approve(args):
     print(f"  Decision:    {result.get('decision')}")
     print(f"  Approved By: {result.get('approved_by_human')}")
     print(f"  Approved At: {result.get('approved_at')}")
-    if result.get('review_note'):
+    if result.get("review_note"):
         print(f"  Note:        {result.get('review_note')}")
     print()
 
@@ -554,6 +553,7 @@ def cmd_recovery_stats(args):
 
 # ============== VERSION Command ==============
 
+
 def cmd_version(args):
     """Show version info."""
     # Local CLI version
@@ -575,6 +575,7 @@ def cmd_version(args):
 
 # ============== MAIN ==============
 
+
 def main():
     parser = argparse.ArgumentParser(
         prog="aos",
@@ -592,7 +593,7 @@ Examples:
 Environment:
   AOS_API_URL   API base URL (default: http://127.0.0.1:8000)
   AOS_API_KEY   API key for authentication
-"""
+""",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -638,9 +639,13 @@ Environment:
 
     # recovery candidates
     rc_parser = recovery_subparsers.add_parser("candidates", help="List recovery candidates")
-    rc_parser.add_argument("--status", "-s", default="pending",
-                          choices=["pending", "approved", "rejected", "all"],
-                          help="Filter by status (default: pending)")
+    rc_parser.add_argument(
+        "--status",
+        "-s",
+        default="pending",
+        choices=["pending", "approved", "rejected", "all"],
+        help="Filter by status (default: pending)",
+    )
     rc_parser.add_argument("--limit", "-l", type=int, default=50, help="Max results (default: 50)")
     rc_parser.add_argument("--offset", "-o", type=int, default=0, help="Pagination offset")
     rc_parser.add_argument("--verbose", "-v", action="store_true", help="Show raw response")

@@ -85,11 +85,11 @@ echo -e "${YELLOW}[5/5] Prometheus Metrics${NC}"
 PROM_URL="${PROMETHEUS_URL:-http://localhost:9090}"
 if curl -sf "$PROM_URL/api/v1/query?query=up" >/dev/null 2>&1; then
     echo "  Prometheus: ${GREEN}REACHABLE${NC}"
-    
+
     # Check workflow metrics if available
     REPLAY_TOTAL=$(curl -sf "$PROM_URL/api/v1/query?query=workflow_replay_verifications_total" 2>/dev/null | jq -r '.data.result[0].value[1] // "N/A"' 2>/dev/null || echo "N/A")
     REPLAY_FAIL=$(curl -sf "$PROM_URL/api/v1/query?query=workflow_replay_failures_total" 2>/dev/null | jq -r '.data.result[0].value[1] // "N/A"' 2>/dev/null || echo "N/A")
-    
+
     echo "  Replay verifications: $REPLAY_TOTAL"
     echo "  Replay failures: $REPLAY_FAIL"
 else

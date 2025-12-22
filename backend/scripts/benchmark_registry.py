@@ -38,20 +38,17 @@ def run_benchmark(num_skills: int = 1000) -> float:
 
     # Create mock skill class
     class MockSkill:
-        VERSION = '1.0.0'
-        DESCRIPTION = 'Benchmark test skill'
+        VERSION = "1.0.0"
+        DESCRIPTION = "Benchmark test skill"
 
         @classmethod
         async def execute(cls, params):
-            return {'ok': True}
+            return {"ok": True}
 
     start = time.perf_counter()
 
     for i in range(num_skills):
-        registry.register_skill(
-            name=f'skill.bench_{i:04d}',
-            cls=MockSkill
-        )
+        registry.register_skill(name=f"skill.bench_{i:04d}", cls=MockSkill)
 
     elapsed_ms = (time.perf_counter() - start) * 1000
     return elapsed_ms
@@ -62,7 +59,7 @@ def main():
     num_skills = 1000
     threshold_ms = 3000  # 3 seconds
 
-    print(f"Registry Performance Benchmark")
+    print("Registry Performance Benchmark")
     print(f"Skills per run: {num_skills}")
     print(f"Number of runs: {num_runs}")
     print(f"Threshold (p50): {threshold_ms}ms")
@@ -107,7 +104,7 @@ def main():
             "p90_ms": p90,
             "p99_ms": p99,
         },
-        "passed": p50 <= threshold_ms
+        "passed": p50 <= threshold_ms,
     }
 
     # Write artifact

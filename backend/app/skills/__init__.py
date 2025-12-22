@@ -8,40 +8,41 @@
 from typing import TYPE_CHECKING
 
 from .registry import (
-    # Core functions
-    get_skill,
-    get_skill_entry,
-    register_skill,
-    list_skills,
-    get_skill_manifest,
-    skill_exists,
+    SkillEntry,
+    # Types
+    SkillInterface,
     # Factory functions
     create_skill_instance,
     create_skill_with_config,
+    # Core functions
+    get_skill,
+    get_skill_config,
+    get_skill_entry,
+    get_skill_manifest,
+    get_skills_by_tag,
+    list_skills,
+    register_skill,
     # Configuration
     set_skill_config,
-    get_skill_config,
-    get_skills_by_tag,
-    # Types
-    SkillInterface,
-    SkillEntry,
     # Decorator
     skill,
+    skill_exists,
 )
 
 # Type hints only - no runtime import
 if TYPE_CHECKING:
-    from .http_call import HttpCallSkill
     from .calendar_write import CalendarWriteSkill
-    from .llm_invoke import LLMInvokeSkill
-    from .json_transform import JsonTransformSkill
-    from .postgres_query import PostgresQuerySkill
     from .email_send import EmailSendSkill
+    from .http_call import HttpCallSkill
+    from .json_transform import JsonTransformSkill
+
     # M11 Skills
     from .kv_store import KVStoreSkill
+    from .llm_invoke import LLMInvokeSkill
+    from .postgres_query import PostgresQuerySkill
     from .slack_send import SlackSendSkill
-    from .webhook_send import WebhookSendSkill
     from .voyage_embed import VoyageEmbedSkill
+    from .webhook_send import WebhookSendSkill
 
 
 # Skill module paths for lazy loading
@@ -82,6 +83,7 @@ def load_skill(name: str):
         raise ImportError(f"Unknown skill: {name}. Available: {list(_SKILL_MODULES.keys())}")
 
     import importlib
+
     module = importlib.import_module(_SKILL_MODULES[name], package="app.skills")
     skill_class = getattr(module, name)
     _loaded_skills[name] = skill_class

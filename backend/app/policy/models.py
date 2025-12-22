@@ -6,47 +6,51 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-
 
 # =============================================================================
 # Policy Categories
 # =============================================================================
 
+
 class PolicyCategory(str, Enum):
     """Categories of policies in the M19 Policy Layer."""
-    COMPLIANCE = "compliance"      # Jurisdictional, data handling, consent
-    ETHICAL = "ethical"            # No coercion, no fabrication, transparency
-    RISK = "risk"                  # Cost limits, retry limits, cascade limits
-    SAFETY = "safety"              # Action blocks, hard stops, escalations
-    BUSINESS = "business"          # SLAs, tiers, budgets, feature gates
+
+    COMPLIANCE = "compliance"  # Jurisdictional, data handling, consent
+    ETHICAL = "ethical"  # No coercion, no fabrication, transparency
+    RISK = "risk"  # Cost limits, retry limits, cascade limits
+    SAFETY = "safety"  # Action blocks, hard stops, escalations
+    BUSINESS = "business"  # SLAs, tiers, budgets, feature gates
 
 
 class PolicyDecision(str, Enum):
     """Possible decisions from policy evaluation."""
-    ALLOW = "allow"                # Action permitted
-    BLOCK = "block"                # Action denied
-    MODIFY = "modify"              # Action permitted with modifications
+
+    ALLOW = "allow"  # Action permitted
+    BLOCK = "block"  # Action denied
+    MODIFY = "modify"  # Action permitted with modifications
 
 
 class ActionType(str, Enum):
     """Types of actions that require policy evaluation."""
-    ROUTE = "route"                # Routing decision (CARE)
-    EXECUTE = "execute"            # Skill/task execution
-    ADAPT = "adapt"                # Strategy adaptation (SBA)
-    ESCALATE = "escalate"          # Escalation to human
-    SELF_MODIFY = "self_modify"    # Agent self-modification
-    SPAWN = "spawn"                # Agent spawning
-    INVOKE = "invoke"              # Agent invocation
-    DATA_ACCESS = "data_access"    # Data access request
+
+    ROUTE = "route"  # Routing decision (CARE)
+    EXECUTE = "execute"  # Skill/task execution
+    ADAPT = "adapt"  # Strategy adaptation (SBA)
+    ESCALATE = "escalate"  # Escalation to human
+    SELF_MODIFY = "self_modify"  # Agent self-modification
+    SPAWN = "spawn"  # Agent spawning
+    INVOKE = "invoke"  # Agent invocation
+    DATA_ACCESS = "data_access"  # Data access request
     EXTERNAL_CALL = "external_call"  # External API call
 
 
 class ViolationType(str, Enum):
     """Types of policy violations."""
+
     COMPLIANCE_BREACH = "compliance_breach"
     ETHICAL_VIOLATION = "ethical_violation"
     RISK_CEILING_BREACH = "risk_ceiling_breach"
@@ -58,9 +62,10 @@ class ViolationType(str, Enum):
 
 class ViolationSeverity(str, Enum):
     """Enhanced violation severity classifications (GAP 5)."""
+
     # Critical - Non-recoverable, immediate action required
-    ETHICAL_CRITICAL = "ethical_critical"       # Fundamental ethics breach
-    COMPLIANCE_CRITICAL = "compliance_critical" # Legal/regulatory breach
+    ETHICAL_CRITICAL = "ethical_critical"  # Fundamental ethics breach
+    COMPLIANCE_CRITICAL = "compliance_critical"  # Legal/regulatory breach
     OPERATIONAL_CRITICAL = "operational_critical"  # System stability threat
 
     # High - Recoverable but serious
@@ -78,6 +83,7 @@ class ViolationSeverity(str, Enum):
 
 class RecoverabilityType(str, Enum):
     """Whether a violation is recoverable."""
+
     NON_RECOVERABLE = "non_recoverable"  # Requires immediate freeze
     RECOVERABLE_MANUAL = "recoverable_manual"  # Needs human intervention
     RECOVERABLE_AUTO = "recoverable_auto"  # System can auto-recover
@@ -86,15 +92,17 @@ class RecoverabilityType(str, Enum):
 
 class SafetyRuleType(str, Enum):
     """Types of safety rules."""
-    ACTION_BLOCK = "action_block"        # Block specific actions
-    PATTERN_BLOCK = "pattern_block"      # Block based on patterns
+
+    ACTION_BLOCK = "action_block"  # Block specific actions
+    PATTERN_BLOCK = "pattern_block"  # Block based on patterns
     ESCALATION_REQUIRED = "escalation_required"  # Require human approval
-    HARD_STOP = "hard_stop"              # Emergency stop
-    COOLDOWN = "cooldown"                # Enforce cooldown period
+    HARD_STOP = "hard_stop"  # Emergency stop
+    COOLDOWN = "cooldown"  # Enforce cooldown period
 
 
 class EthicalConstraintType(str, Enum):
     """Types of ethical constraints."""
+
     NO_COERCION = "no_coercion"
     NO_FABRICATION = "no_fabrication"
     NO_MANIPULATION = "no_manipulation"
@@ -103,6 +111,7 @@ class EthicalConstraintType(str, Enum):
 
 class BusinessRuleType(str, Enum):
     """Types of business rules."""
+
     PRICING = "pricing"
     TIER_ACCESS = "tier_access"
     SLA = "sla"
@@ -114,8 +123,10 @@ class BusinessRuleType(str, Enum):
 # Request/Response Models
 # =============================================================================
 
+
 class PolicyEvaluationRequest(BaseModel):
     """Request for policy evaluation."""
+
     action_type: ActionType
     agent_id: Optional[str] = None
     tenant_id: Optional[str] = None
@@ -141,6 +152,7 @@ class PolicyEvaluationRequest(BaseModel):
 
 class PolicyModification(BaseModel):
     """Modification applied to an action by policy engine."""
+
     parameter: str
     original_value: Any
     modified_value: Any
@@ -149,6 +161,7 @@ class PolicyModification(BaseModel):
 
 class PolicyEvaluationResult(BaseModel):
     """Result of policy evaluation."""
+
     request_id: str
     decision: PolicyDecision
     decision_reason: Optional[str] = None
@@ -171,6 +184,7 @@ class PolicyEvaluationResult(BaseModel):
 
 class PolicyViolation(BaseModel):
     """A policy violation record."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     violation_type: ViolationType
     policy_name: str
@@ -195,8 +209,10 @@ class PolicyViolation(BaseModel):
 # Policy Definition Models
 # =============================================================================
 
+
 class PolicyRule(BaseModel):
     """A single rule within a policy."""
+
     name: str
     condition: Dict[str, Any]  # Condition expression
     action: PolicyDecision = PolicyDecision.BLOCK
@@ -206,6 +222,7 @@ class PolicyRule(BaseModel):
 
 class Policy(BaseModel):
     """A policy definition."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     category: PolicyCategory
@@ -232,6 +249,7 @@ class Policy(BaseModel):
 
 class RiskCeiling(BaseModel):
     """A risk ceiling definition."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     description: Optional[str] = None
@@ -256,6 +274,7 @@ class RiskCeiling(BaseModel):
 
 class SafetyRule(BaseModel):
     """A safety rule definition."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     description: Optional[str] = None
@@ -280,6 +299,7 @@ class SafetyRule(BaseModel):
 
 class EthicalConstraint(BaseModel):
     """An ethical constraint definition."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     description: str
@@ -301,6 +321,7 @@ class EthicalConstraint(BaseModel):
 
 class BusinessRule(BaseModel):
     """A business rule definition."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     description: Optional[str] = None
@@ -322,8 +343,10 @@ class BusinessRule(BaseModel):
 # Composite Models
 # =============================================================================
 
+
 class PolicyState(BaseModel):
     """Current state of the policy layer."""
+
     total_policies: int = 0
     active_policies: int = 0
     total_evaluations_today: int = 0
@@ -346,6 +369,7 @@ class PolicyState(BaseModel):
 
 class PolicyLoadResult(BaseModel):
     """Result of loading policies from database."""
+
     policies_loaded: int = 0
     risk_ceilings_loaded: int = 0
     safety_rules_loaded: int = 0
@@ -360,8 +384,10 @@ class PolicyLoadResult(BaseModel):
 # GAP 1: Policy Versioning & Provenance
 # =============================================================================
 
+
 class PolicyVersion(BaseModel):
     """A versioned snapshot of a policy set (GAP 1)."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     version: str  # Semantic version: "1.2.3"
     policy_hash: str  # SHA256 of policy content
@@ -389,6 +415,7 @@ class PolicyVersion(BaseModel):
 
 class PolicyProvenance(BaseModel):
     """Audit trail for policy changes (GAP 1)."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     policy_id: str
     policy_type: str  # "policy", "risk_ceiling", "safety_rule", etc.
@@ -411,8 +438,10 @@ class PolicyProvenance(BaseModel):
 # GAP 2: Policy Dependency Graph & Conflict Resolution
 # =============================================================================
 
+
 class PolicyDependency(BaseModel):
     """Dependency relationship between policies (GAP 2)."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     source_policy: str  # Policy ID that has the dependency
     target_policy: str  # Policy ID that is depended on
@@ -428,6 +457,7 @@ class PolicyDependency(BaseModel):
 
 class PolicyConflict(BaseModel):
     """A detected conflict between policies (GAP 2)."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     policy_a: str
     policy_b: str
@@ -449,6 +479,7 @@ class PolicyConflict(BaseModel):
 
 class DependencyGraph(BaseModel):
     """The complete policy dependency graph (GAP 2)."""
+
     nodes: Dict[str, Dict[str, Any]] = Field(default_factory=dict)  # policy_id -> policy_metadata
     edges: List[PolicyDependency] = Field(default_factory=list)
     conflicts: List[PolicyConflict] = Field(default_factory=list)
@@ -459,17 +490,20 @@ class DependencyGraph(BaseModel):
 # GAP 3: Temporal Policies (Sliding Windows)
 # =============================================================================
 
+
 class TemporalPolicyType(str, Enum):
     """Types of temporal policies."""
-    SLIDING_WINDOW = "sliding_window"      # Rolling window limit
+
+    SLIDING_WINDOW = "sliding_window"  # Rolling window limit
     CUMULATIVE_DAILY = "cumulative_daily"  # Resets daily
     CUMULATIVE_WEEKLY = "cumulative_weekly"
-    RATE_DECAY = "rate_decay"              # Exponential decay
-    BURST_LIMIT = "burst_limit"            # Short-term spike protection
+    RATE_DECAY = "rate_decay"  # Exponential decay
+    BURST_LIMIT = "burst_limit"  # Short-term spike protection
 
 
 class TemporalPolicy(BaseModel):
     """A temporal/sliding window policy (GAP 3)."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     description: Optional[str] = None
@@ -498,6 +532,7 @@ class TemporalPolicy(BaseModel):
 
 class TemporalMetricWindow(BaseModel):
     """A sliding window of metric values (GAP 3)."""
+
     policy_id: str
     agent_id: Optional[str] = None
     tenant_id: Optional[str] = None
@@ -517,6 +552,7 @@ class TemporalMetricWindow(BaseModel):
 # GAP 4: Policy Context Object
 # =============================================================================
 
+
 class PolicyContext(BaseModel):
     """
     Complete policy context passed through the decision cycle (GAP 4).
@@ -524,6 +560,7 @@ class PolicyContext(BaseModel):
     This object provides the full state needed for policy evaluation,
     enabling multi-agent coordination and trajectory-based decisions.
     """
+
     # Agent identity
     agent_id: Optional[str] = None
     agent_type: Optional[str] = None
@@ -575,8 +612,10 @@ class PolicyContext(BaseModel):
 # Enhanced Policy Evaluation with Context
 # =============================================================================
 
+
 class EnhancedPolicyEvaluationRequest(BaseModel):
     """Enhanced evaluation request with full context (GAP 4)."""
+
     action_type: ActionType
     policy_context: PolicyContext = Field(default_factory=PolicyContext)
 
@@ -601,6 +640,7 @@ class EnhancedPolicyEvaluationRequest(BaseModel):
 
 class EnhancedPolicyViolation(BaseModel):
     """Enhanced violation with severity classification (GAP 5)."""
+
     id: str = Field(default_factory=lambda: str(uuid4()))
 
     # Basic violation info
@@ -637,6 +677,7 @@ class EnhancedPolicyViolation(BaseModel):
 
 class EnhancedPolicyEvaluationResult(BaseModel):
     """Enhanced evaluation result with full context (GAPs 1-5)."""
+
     request_id: str
     decision: PolicyDecision
     decision_reason: Optional[str] = None

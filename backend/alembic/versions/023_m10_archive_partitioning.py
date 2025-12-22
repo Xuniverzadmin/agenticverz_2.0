@@ -32,20 +32,21 @@ Features:
 - Maintains all existing data
 """
 
-from alembic import op
-import sqlalchemy as sa
 from datetime import datetime, timedelta
 
+from alembic import op
+
 # revision identifiers
-revision = '023_m10_archive_partitioning'
-down_revision = '022_m10_production_hardening'
+revision = "023_m10_archive_partitioning"
+down_revision = "022_m10_production_hardening"
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
     # Create partitioned version of dead_letter_archive
-    op.execute("""
+    op.execute(
+        """
     -- Step 1: Rename existing table
     ALTER TABLE IF EXISTS m10_recovery.dead_letter_archive
     RENAME TO dead_letter_archive_old;
@@ -68,7 +69,8 @@ def upgrade():
     CREATE INDEX idx_dla_original_msg_id ON m10_recovery.dead_letter_archive (original_msg_id);
     CREATE INDEX idx_dla_archived_at ON m10_recovery.dead_letter_archive (archived_at);
     CREATE INDEX idx_dla_stream_key ON m10_recovery.dead_letter_archive (stream_key);
-    """)
+    """
+    )
 
     # Create partitions for current month and 3 months ahead
     now = datetime.utcnow()
@@ -80,15 +82,18 @@ def upgrade():
 
         partition_name = f"dead_letter_archive_{month_start.strftime('%Y_%m')}"
 
-        op.execute(f"""
+        op.execute(
+            f"""
         CREATE TABLE IF NOT EXISTS m10_recovery.{partition_name}
         PARTITION OF m10_recovery.dead_letter_archive
         FOR VALUES FROM ('{month_start.strftime('%Y-%m-%d')}')
         TO ('{month_end.strftime('%Y-%m-%d')}');
-        """)
+        """
+        )
 
     # Migrate existing data
-    op.execute("""
+    op.execute(
+        """
     -- Step 4: Migrate existing data to partitioned table
     INSERT INTO m10_recovery.dead_letter_archive
         (id, original_msg_id, dl_msg_id, stream_key, payload, failure_reason,
@@ -106,10 +111,12 @@ def upgrade():
         pg_get_serial_sequence('m10_recovery.dead_letter_archive', 'id'),
         COALESCE((SELECT MAX(id) FROM m10_recovery.dead_letter_archive), 1)
     );
-    """)
+    """
+    )
 
     # Create partition management functions
-    op.execute("""
+    op.execute(
+        """
     -- Function to create future partitions (run monthly via cron)
     CREATE OR REPLACE FUNCTION m10_recovery.create_archive_partition(
         p_month DATE DEFAULT date_trunc('month', now() + interval '1 month')
@@ -226,10 +233,12 @@ def upgrade():
     SELECT m10_recovery.create_archive_partition(date_trunc('month', now() + interval '1 month'));
     SELECT m10_recovery.create_archive_partition(date_trunc('month', now() + interval '2 months'));
     SELECT m10_recovery.create_archive_partition(date_trunc('month', now() + interval '3 months'));
-    """)
+    """
+    )
 
     # Also partition replay_log for consistency
-    op.execute("""
+    op.execute(
+        """
     -- Rename existing replay_log
     ALTER TABLE IF EXISTS m10_recovery.replay_log
     RENAME TO replay_log_old;
@@ -250,7 +259,8 @@ def upgrade():
 
     CREATE INDEX idx_replay_log_original ON m10_recovery.replay_log (original_msg_id);
     CREATE INDEX idx_replay_log_replayed_at ON m10_recovery.replay_log (replayed_at);
-    """)
+    """
+    )
 
     # Create replay_log partitions
     now = datetime.utcnow()
@@ -262,15 +272,18 @@ def upgrade():
 
         partition_name = f"replay_log_{month_start.strftime('%Y_%m')}"
 
-        op.execute(f"""
+        op.execute(
+            f"""
         CREATE TABLE IF NOT EXISTS m10_recovery.{partition_name}
         PARTITION OF m10_recovery.replay_log
         FOR VALUES FROM ('{month_start.strftime('%Y-%m-%d')}')
         TO ('{month_end.strftime('%Y-%m-%d')}');
-        """)
+        """
+        )
 
     # Migrate replay_log data
-    op.execute("""
+    op.execute(
+        """
     INSERT INTO m10_recovery.replay_log
         (id, original_msg_id, dl_msg_id, candidate_id, recovery_id,
          new_msg_id, replayed_at, replayed_by)
@@ -285,10 +298,12 @@ def upgrade():
         pg_get_serial_sequence('m10_recovery.replay_log', 'id'),
         COALESCE((SELECT MAX(id) FROM m10_recovery.replay_log), 1)
     );
-    """)
+    """
+    )
 
     # Update record_replay function for partitioned table
-    op.execute("""
+    op.execute(
+        """
     -- Updated record_replay for partitioned table
     CREATE OR REPLACE FUNCTION m10_recovery.record_replay(
         p_original_msg_id TEXT,
@@ -404,12 +419,14 @@ def upgrade():
         END LOOP;
     END;
     $$;
-    """)
+    """
+    )
 
 
 def downgrade():
     # Convert back to non-partitioned tables
-    op.execute("""
+    op.execute(
+        """
     -- Backup partitioned data
     CREATE TABLE m10_recovery.dead_letter_archive_backup AS
     SELECT * FROM m10_recovery.dead_letter_archive;
@@ -506,4 +523,5 @@ def downgrade():
     DROP FUNCTION IF EXISTS m10_recovery.list_archive_partitions();
     DROP FUNCTION IF EXISTS m10_recovery.create_replay_partition(DATE);
     DROP FUNCTION IF EXISTS m10_recovery.drop_replay_partition(INT);
-    """)
+    """
+    )

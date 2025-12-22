@@ -7,21 +7,21 @@
 # - M19 governance validation
 # - Audit logging
 
-from app.policy.runtime.deterministic_engine import (
-    ExecutionContext,
-    ExecutionResult,
-    DeterministicEngine,
-)
 from app.policy.runtime.dag_executor import (
     DAGExecutor,
-    StageResult,
     ExecutionTrace,
+    StageResult,
+)
+from app.policy.runtime.deterministic_engine import (
+    DeterministicEngine,
+    ExecutionContext,
+    ExecutionResult,
 )
 from app.policy.runtime.intent import (
-    IntentType,
     Intent,
-    IntentPayload,
     IntentEmitter,
+    IntentPayload,
+    IntentType,
 )
 
 __all__ = [

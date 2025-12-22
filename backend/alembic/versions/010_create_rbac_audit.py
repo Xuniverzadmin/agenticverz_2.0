@@ -8,13 +8,12 @@ Revises: 009_mem_pins
 Create Date: 2025-12-04
 """
 
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers
-revision = '010_create_rbac_audit'
-down_revision = '009_mem_pins'
+revision = "010_create_rbac_audit"
+down_revision = "009_mem_pins"
 branch_labels = None
 depends_on = None
 
@@ -26,7 +25,8 @@ def upgrade() -> None:
     op.execute("CREATE SCHEMA IF NOT EXISTS system")
 
     # Create rbac_audit table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS system.rbac_audit (
             id BIGSERIAL PRIMARY KEY,
             ts TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -43,36 +43,48 @@ def upgrade() -> None:
             latency_ms DOUBLE PRECISION,
             extra JSONB DEFAULT '{}'::jsonb
         )
-    """)
+    """
+    )
 
     # Create indexes for common queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_rbac_audit_ts
         ON system.rbac_audit(ts DESC)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_rbac_audit_subject
         ON system.rbac_audit(subject)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_rbac_audit_resource_action
         ON system.rbac_audit(resource, action)
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_rbac_audit_allowed
         ON system.rbac_audit(allowed) WHERE allowed = false
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX IF NOT EXISTS ix_rbac_audit_tenant
         ON system.rbac_audit(tenant_id) WHERE tenant_id IS NOT NULL
-    """)
+    """
+    )
 
     # Create function for automated cleanup of old audit records (retention policy)
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION system.cleanup_rbac_audit(retention_days INTEGER DEFAULT 90)
         RETURNS INTEGER AS $$
         DECLARE
@@ -84,13 +96,16 @@ def upgrade() -> None:
             RETURN deleted_count;
         END;
         $$ LANGUAGE plpgsql
-    """)
+    """
+    )
 
     # Add comment
-    op.execute("""
+    op.execute(
+        """
         COMMENT ON TABLE system.rbac_audit IS
         'Audit log for RBAC authorization decisions. M7 enhancement.'
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

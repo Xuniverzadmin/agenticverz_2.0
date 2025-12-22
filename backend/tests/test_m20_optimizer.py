@@ -8,24 +8,23 @@ Test suite for M20 Optimizer:
 - DAG sorting
 """
 
-import pytest
+from app.policy.compiler.grammar import ActionType, PolicyCategory
 from app.policy.compiler.parser import Parser
-from app.policy.compiler.grammar import PolicyCategory, ActionType
 from app.policy.ir.ir_builder import IRBuilder
 from app.policy.ir.ir_nodes import (
-    IRModule,
-    IRFunction,
-    IRBlock,
-    IRLoadConst,
-    IRBinaryOp,
-    IRCompare,
     IRAction,
-    IRJump,
+    IRBinaryOp,
+    IRBlock,
+    IRCompare,
+    IRFunction,
     IRGovernance,
+    IRJump,
+    IRLoadConst,
+    IRModule,
 )
-from app.policy.optimizer.folds import ConstantFolder, DeadCodeEliminator, PolicySimplifier
 from app.policy.optimizer.conflict_resolver import ConflictResolver, ConflictType
 from app.policy.optimizer.dag_sorter import DAGSorter, ExecutionPhase
+from app.policy.optimizer.folds import ConstantFolder, DeadCodeEliminator, PolicySimplifier
 
 
 class TestConstantFolder:

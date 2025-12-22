@@ -19,8 +19,7 @@ Usage:
 import logging
 import os
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
-from functools import lru_cache
+from typing import Any, Dict, List, Optional
 
 import httpx
 import jwt
@@ -41,6 +40,7 @@ RBAC_ENFORCE = os.getenv("RBAC_ENFORCE", "false").lower() == "true"
 @dataclass
 class ClerkUser:
     """Represents a Clerk user with role information."""
+
     user_id: str
     email: Optional[str]
     roles: List[str]
@@ -51,6 +51,7 @@ class ClerkUser:
 
 class ClerkAuthError(Exception):
     """Raised when Clerk authentication fails."""
+
     def __init__(self, message: str, user_id: Optional[str] = None):
         self.message = message
         self.user_id = user_id
@@ -263,8 +264,7 @@ class ClerkAuthProvider:
                 # Fail-closed: Production requires Clerk to be configured
                 logger.error("Clerk not configured but RBAC_ENFORCE=true")
                 raise ClerkAuthError(
-                    "Clerk auth required but not configured (set CLERK_SECRET_KEY and CLERK_ISSUER_URL)",
-                    user_id
+                    "Clerk auth required but not configured (set CLERK_SECRET_KEY and CLERK_ISSUER_URL)", user_id
                 )
             # Return mock for development when Clerk is not configured
             logger.warning("Clerk not configured, returning mock roles - NOT FOR PRODUCTION")
@@ -284,9 +284,7 @@ class ClerkAuthProvider:
 
         # If tenant_id is specified, verify user belongs to it
         if tenant_id and user_tenant and user_tenant != tenant_id:
-            logger.warning(
-                f"User {user_id} tenant mismatch: expected {tenant_id}, got {user_tenant}"
-            )
+            logger.warning(f"User {user_id} tenant mismatch: expected {tenant_id}, got {user_tenant}")
             # Could raise error here for strict tenant isolation
 
         return ClerkUser(

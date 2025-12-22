@@ -5,13 +5,13 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, Optional, Type
 
 import httpx
 from pydantic import BaseModel
 
+from ..schemas.skill import VoyageEmbedInput, VoyageEmbedOutput
 from .registry import skill
-from ..schemas.skill import VoyageEmbedInput, VoyageEmbedOutput, VoyageModel, VoyageInputType, SkillStatus
 
 logger = logging.getLogger("nova.skills.voyage_embed")
 
@@ -24,6 +24,7 @@ DEFAULT_TIMEOUT = 60.0
 
 class VoyageEmbedConfig(BaseModel):
     """Configuration schema for voyage_embed skill."""
+
     allow_external: bool = True
     api_key: Optional[str] = None
     default_model: str = DEFAULT_MODEL
@@ -122,7 +123,7 @@ class VoyageEmbedSkill:
                 "model": model,
                 "input_count": len(input_list),
                 "input_type": input_type,
-            }
+            },
         )
 
         # Validate input
@@ -156,14 +157,12 @@ class VoyageEmbedSkill:
             for i, text in enumerate(input_list):
                 # Use hash of text for deterministic stub
                 import hashlib
+
                 hash_val = int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
                 stub_embedding = [(hash_val + j) % 1000 / 1000.0 for j in range(dimensions)]
                 stub_embeddings.append(stub_embedding)
 
-            logger.info(
-                "voyage_embed_stubbed",
-                extra={"skill": "voyage_embed", "reason": "external_calls_disabled"}
-            )
+            logger.info("voyage_embed_stubbed", extra={"skill": "voyage_embed", "reason": "external_calls_disabled"})
             return {
                 "skill": "voyage_embed",
                 "skill_version": self.VERSION,
@@ -184,8 +183,7 @@ class VoyageEmbedSkill:
         if not self.api_key:
             duration = time.time() - start_time
             logger.error(
-                "voyage_embed_failed",
-                extra={"skill": "voyage_embed", "error": "VOYAGE_API_KEY not configured"}
+                "voyage_embed_failed", extra={"skill": "voyage_embed", "error": "VOYAGE_API_KEY not configured"}
             )
             return {
                 "skill": "voyage_embed",
@@ -247,7 +245,7 @@ class VoyageEmbedSkill:
                             "input_count": len(input_list),
                             "total_tokens": usage.get("total_tokens", 0),
                             "duration": round(duration, 3),
-                        }
+                        },
                     )
 
                     return {
@@ -277,7 +275,7 @@ class VoyageEmbedSkill:
                             "skill": "voyage_embed",
                             "http_status": response.status_code,
                             "error": error_body,
-                        }
+                        },
                     )
 
                     return {
@@ -300,10 +298,7 @@ class VoyageEmbedSkill:
 
         except httpx.TimeoutException:
             duration = time.time() - start_time
-            logger.warning(
-                "voyage_embed_timeout",
-                extra={"skill": "voyage_embed", "timeout": self.timeout}
-            )
+            logger.warning("voyage_embed_timeout", extra={"skill": "voyage_embed", "timeout": self.timeout})
             return {
                 "skill": "voyage_embed",
                 "skill_version": self.VERSION,
@@ -324,10 +319,7 @@ class VoyageEmbedSkill:
 
         except httpx.RequestError as e:
             duration = time.time() - start_time
-            logger.error(
-                "voyage_embed_failed",
-                extra={"skill": "voyage_embed", "error": str(e)[:200]}
-            )
+            logger.error("voyage_embed_failed", extra={"skill": "voyage_embed", "error": str(e)[:200]})
             return {
                 "skill": "voyage_embed",
                 "skill_version": self.VERSION,

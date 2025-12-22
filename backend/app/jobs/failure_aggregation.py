@@ -23,7 +23,6 @@ import argparse
 import hashlib
 import json
 import logging
-import os
 import sys
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -31,10 +30,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("nova.jobs.failure_aggregation")
 
 # Default output path
@@ -71,10 +67,12 @@ def fetch_unmatched_failures(
         List of aggregated failure patterns
     """
     try:
-        from app.db import engine
         from sqlmodel import Session, text
 
-        query = text("""
+        from app.db import engine
+
+        query = text(
+            """
             SELECT
                 error_code,
                 error_message,
@@ -91,28 +89,28 @@ def fetch_unmatched_failures(
             HAVING COUNT(*) >= :min_occurrences
             ORDER BY occurrence_count DESC
             LIMIT 100
-        """)
+        """
+        )
 
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
         with Session(engine) as session:
-            result = session.execute(
-                query,
-                {"cutoff": cutoff, "min_occurrences": min_occurrences}
-            )
+            result = session.execute(query, {"cutoff": cutoff, "min_occurrences": min_occurrences})
 
             patterns = []
             for row in result:
-                patterns.append({
-                    "error_code": row.error_code,
-                    "error_message": row.error_message,
-                    "occurrence_count": row.occurrence_count,
-                    "last_seen": row.last_seen.isoformat() if row.last_seen else None,
-                    "first_seen": row.first_seen.isoformat() if row.first_seen else None,
-                    "affected_skills": row.affected_skills or [],
-                    "affected_tenants": row.affected_tenants or [],
-                    "sample_run_ids": (row.sample_run_ids or [])[:5],  # Limit samples
-                })
+                patterns.append(
+                    {
+                        "error_code": row.error_code,
+                        "error_message": row.error_message,
+                        "occurrence_count": row.occurrence_count,
+                        "last_seen": row.last_seen.isoformat() if row.last_seen else None,
+                        "first_seen": row.first_seen.isoformat() if row.first_seen else None,
+                        "affected_skills": row.affected_skills or [],
+                        "affected_tenants": row.affected_tenants or [],
+                        "sample_run_ids": (row.sample_run_ids or [])[:5],  # Limit samples
+                    }
+                )
 
             return patterns
 
@@ -121,24 +119,24 @@ def fetch_unmatched_failures(
         return []
 
 
-def aggregate_patterns(
-    raw_patterns: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+def aggregate_patterns(raw_patterns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Aggregate patterns by signature for deduplication.
 
     Groups similar errors that may have slightly different messages.
     """
-    grouped: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
-        "signatures": [],
-        "error_codes": set(),
-        "total_occurrences": 0,
-        "affected_skills": set(),
-        "affected_tenants": set(),
-        "examples": [],
-        "last_seen": None,
-        "first_seen": None,
-    })
+    grouped: Dict[str, Dict[str, Any]] = defaultdict(
+        lambda: {
+            "signatures": [],
+            "error_codes": set(),
+            "total_occurrences": 0,
+            "affected_skills": set(),
+            "affected_tenants": set(),
+            "examples": [],
+            "last_seen": None,
+            "first_seen": None,
+        }
+    )
 
     for pattern in raw_patterns:
         sig = compute_signature(pattern["error_code"], pattern["error_message"])
@@ -152,11 +150,13 @@ def aggregate_patterns(
 
         # Track examples
         if len(group["examples"]) < 3:
-            group["examples"].append({
-                "error_code": pattern["error_code"],
-                "error_message": pattern["error_message"],
-                "occurrence_count": pattern["occurrence_count"],
-            })
+            group["examples"].append(
+                {
+                    "error_code": pattern["error_code"],
+                    "error_message": pattern["error_message"],
+                    "occurrence_count": pattern["occurrence_count"],
+                }
+            )
 
         # Update timestamps
         if pattern["last_seen"]:
@@ -169,19 +169,21 @@ def aggregate_patterns(
     # Convert to list
     result = []
     for sig, group in grouped.items():
-        result.append({
-            "signature": sig,
-            "primary_error_code": list(group["error_codes"])[0] if group["error_codes"] else "UNKNOWN",
-            "all_error_codes": list(group["error_codes"]),
-            "total_occurrences": group["total_occurrences"],
-            "affected_skills": list(group["affected_skills"]),
-            "affected_tenants": list(group["affected_tenants"]),
-            "examples": group["examples"],
-            "last_seen": group["last_seen"],
-            "first_seen": group["first_seen"],
-            "suggested_category": suggest_category(list(group["error_codes"])),
-            "suggested_recovery": suggest_recovery(list(group["error_codes"])),
-        })
+        result.append(
+            {
+                "signature": sig,
+                "primary_error_code": list(group["error_codes"])[0] if group["error_codes"] else "UNKNOWN",
+                "all_error_codes": list(group["error_codes"]),
+                "total_occurrences": group["total_occurrences"],
+                "affected_skills": list(group["affected_skills"]),
+                "affected_tenants": list(group["affected_tenants"]),
+                "examples": group["examples"],
+                "last_seen": group["last_seen"],
+                "first_seen": group["first_seen"],
+                "suggested_category": suggest_category(list(group["error_codes"])),
+                "suggested_recovery": suggest_recovery(list(group["error_codes"])),
+            }
+        )
 
     # Sort by occurrences
     result.sort(key=lambda x: x["total_occurrences"], reverse=True)
@@ -369,7 +371,9 @@ def run_aggregation(
         stats["r2_upload"] = {"status": "skipped"}
 
     # Log summary
-    logger.info(f"Aggregation complete: {stats['total_patterns']} patterns, {stats['total_occurrences']} total occurrences")
+    logger.info(
+        f"Aggregation complete: {stats['total_patterns']} patterns, {stats['total_occurrences']} total occurrences"
+    )
     if stats["top_error_codes"]:
         logger.info(f"Top error codes: {stats['top_error_codes'][:3]}")
 
@@ -378,37 +382,17 @@ def run_aggregation(
 
 def main():
     """CLI entrypoint."""
-    parser = argparse.ArgumentParser(
-        description="M9: Failure Pattern Aggregation Job"
-    )
-    parser.add_argument(
-        "--days",
-        type=int,
-        default=7,
-        help="Look back period in days (default: 7)"
-    )
-    parser.add_argument(
-        "--min-occurrences",
-        type=int,
-        default=3,
-        help="Minimum occurrences to include (default: 3)"
-    )
+    parser = argparse.ArgumentParser(description="M9: Failure Pattern Aggregation Job")
+    parser.add_argument("--days", type=int, default=7, help="Look back period in days (default: 7)")
+    parser.add_argument("--min-occurrences", type=int, default=3, help="Minimum occurrences to include (default: 3)")
     parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help="Output file path (default: /opt/agenticverz/state/candidate_failure_patterns.json)"
+        help="Output file path (default: /opt/agenticverz/state/candidate_failure_patterns.json)",
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output results as JSON"
-    )
-    parser.add_argument(
-        "--skip-r2",
-        action="store_true",
-        help="Skip R2 upload (local file only)"
-    )
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
+    parser.add_argument("--skip-r2", action="store_true", help="Skip R2 upload (local file only)")
 
     args = parser.parse_args()
 

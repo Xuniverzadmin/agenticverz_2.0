@@ -11,11 +11,8 @@ Run with:
     REDIS_TEST_URL=redis://localhost:6379/1 pytest tests/test_rate_limiter_chaos.py -v
 """
 
-import asyncio
-import logging
 import os
-import time
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -36,6 +33,7 @@ def redis_available():
     """Check if Redis is available for testing."""
     try:
         import redis
+
         client = redis.from_url(REDIS_TEST_URL, socket_connect_timeout=1)
         client.ping()
         client.close()
@@ -45,8 +43,7 @@ def redis_available():
 
 
 requires_redis = pytest.mark.skipif(
-    not redis_available(),
-    reason="Redis not available at REDIS_TEST_URL"
+    not redis_available(), reason="Redis not available at REDIS_TEST_URL"
 )
 
 
@@ -76,10 +73,7 @@ class TestRedisConnectionDropMidRequest:
         initial_errors = RATE_LIMIT_REDIS_ERRORS._value.get()
 
         # Should return True (allow) despite Redis error (fail-open)
-        result = await limiter.allow_request(
-            tenant_id="test-tenant",
-            ip="192.168.1.1"
-        )
+        result = await limiter.allow_request(tenant_id="test-tenant", ip="192.168.1.1")
 
         assert result is True, "Should fail-open and allow request"
 
@@ -105,10 +99,7 @@ class TestRedisConnectionDropMidRequest:
         mock_client.pipeline = MagicMock(return_value=mock_pipe)
         limiter._client = mock_client
 
-        result = await limiter.allow_request(
-            tenant_id="test-tenant",
-            ip="192.168.1.2"
-        )
+        result = await limiter.allow_request(tenant_id="test-tenant", ip="192.168.1.2")
 
         assert result is True, "Should fail-open on timeout"
 
@@ -126,10 +117,7 @@ class TestRedisConnectionDropMidRequest:
         mock_client.pipeline = MagicMock(return_value=mock_pipe)
         limiter._client = mock_client
 
-        result = await limiter.allow_request(
-            tenant_id="test-tenant",
-            ip="192.168.1.3"
-        )
+        result = await limiter.allow_request(tenant_id="test-tenant", ip="192.168.1.3")
 
         assert result is True, "Should fail-open on broken pipe"
 
@@ -159,10 +147,7 @@ class TestRedisConnectionDropMidRequest:
         limiter._client = mock_client
 
         # The gather will catch the exception and fail-open
-        result = await limiter.allow_request(
-            tenant_id="test-tenant",
-            ip="192.168.1.4"
-        )
+        result = await limiter.allow_request(tenant_id="test-tenant", ip="192.168.1.4")
 
         assert result is True, "Should fail-open even on partial failure"
 
@@ -174,16 +159,18 @@ class TestRedisUnavailableAtStartup:
     async def test_init_fails_sets_disconnected_state(self):
         """Redis unavailable at startup -> _connected=False, metric=0."""
         limiter = RedisRateLimiter(
-            redis_url="redis://nonexistent-host:6379/0",
-            default_rpm=100
+            redis_url="redis://nonexistent-host:6379/0", default_rpm=100
         )
 
         # Mock redis.asyncio module
-        with patch.dict('sys.modules', {'redis.asyncio': MagicMock()}):
+        with patch.dict("sys.modules", {"redis.asyncio": MagicMock()}):
             import sys
-            mock_aioredis = sys.modules['redis.asyncio']
+
+            mock_aioredis = sys.modules["redis.asyncio"]
             mock_client = MagicMock()
-            mock_client.ping = AsyncMock(side_effect=ConnectionRefusedError("Connection refused"))
+            mock_client.ping = AsyncMock(
+                side_effect=ConnectionRefusedError("Connection refused")
+            )
             mock_aioredis.from_url.return_value = mock_client
 
             # Reset client to force re-init
@@ -202,14 +189,13 @@ class TestRedisUnavailableAtStartup:
         limiter._client = None
 
         # Mock init to always fail reconnection
-        with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+        with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
             mock_init.return_value = False
 
             # Make many requests - all should be allowed
             for i in range(200):  # Way over the 100 RPM limit
                 result = await limiter.allow_request(
-                    tenant_id="test-tenant",
-                    ip=f"10.0.0.{i % 256}"
+                    tenant_id="test-tenant", ip=f"10.0.0.{i % 256}"
                 )
                 assert result is True, f"Request {i} should be allowed (fail-open)"
 
@@ -220,7 +206,7 @@ class TestRedisUnavailableAtStartup:
         limiter._connected = False
         limiter._client = None
 
-        with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+        with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
             mock_init.return_value = False  # Reconnect fails
 
             await limiter.allow_request(tenant_id="test", ip="1.2.3.4")
@@ -248,7 +234,7 @@ class TestRedisUnavailableAtStartup:
             limiter._client = mock_client
             return True
 
-        with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+        with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
             mock_init.side_effect = successful_init
 
             result = await limiter.allow_request(tenant_id="test", ip="1.2.3.4")
@@ -261,14 +247,14 @@ def fastapi_available():
     """Check if FastAPI is available."""
     try:
         import fastapi
+
         return True
     except ImportError:
         return False
 
 
 requires_fastapi = pytest.mark.skipif(
-    not fastapi_available(),
-    reason="FastAPI not available"
+    not fastapi_available(), reason="FastAPI not available"
 )
 
 
@@ -284,6 +270,7 @@ class TestReadinessProbeWithRedisFailure:
 
         # Temporarily set redis_rate_limiter to None
         import app.main as main_module
+
         original = main_module.redis_rate_limiter
         main_module.redis_rate_limiter = None
 
@@ -305,6 +292,7 @@ class TestReadinessProbeWithRedisFailure:
         from fastapi.testclient import TestClient
 
         import app.main as main_module
+
         original = main_module.redis_rate_limiter
 
         # Create disconnected limiter
@@ -331,6 +319,7 @@ class TestReadinessProbeWithRedisFailure:
         from fastapi.testclient import TestClient
 
         import app.main as main_module
+
         original = main_module.redis_rate_limiter
 
         # Create limiter with failing ping
@@ -383,13 +372,15 @@ class TestMetricsUnderChaos:
 
         initial_allowed = RATE_LIMIT_ALLOWED._value.get()
 
-        with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+        with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
             mock_init.return_value = False
 
             await limiter.allow_request(tenant_id="test", ip="1.2.3.4")
 
         new_allowed = RATE_LIMIT_ALLOWED._value.get()
-        assert new_allowed == initial_allowed + 1, "Should increment allowed metric on fail-open"
+        assert (
+            new_allowed == initial_allowed + 1
+        ), "Should increment allowed metric on fail-open"
 
 
 @requires_redis
@@ -400,9 +391,7 @@ class TestRedisChaoIntegration:
     async def limiter(self):
         """Create and initialize a rate limiter for testing."""
         limiter = RedisRateLimiter(
-            redis_url=REDIS_TEST_URL,
-            default_rpm=10,
-            window_seconds=5
+            redis_url=REDIS_TEST_URL, default_rpm=10, window_seconds=5
         )
         await limiter.init()
 
@@ -427,17 +416,16 @@ class TestRedisChaoIntegration:
         limiter._client = None
 
         # Requests should still be allowed (fail-open)
-        with patch.object(limiter, 'init', new_callable=AsyncMock) as mock_init:
+        with patch.object(limiter, "init", new_callable=AsyncMock) as mock_init:
             mock_init.return_value = False
             result = await limiter.allow_request(tenant_id="chaos-test", ip="10.0.0.1")
             assert result is True, "Should fail-open during outage"
 
         # Reconnect
         import redis.asyncio as aioredis
+
         limiter._client = aioredis.from_url(
-            REDIS_TEST_URL,
-            encoding="utf-8",
-            decode_responses=True
+            REDIS_TEST_URL, encoding="utf-8", decode_responses=True
         )
         await limiter._client.ping()
         limiter._connected = True

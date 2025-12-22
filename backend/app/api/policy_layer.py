@@ -9,7 +9,6 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -18,9 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db_async import get_async_session
 from app.policy import (
     ActionType,
-    PolicyCategory,
-    PolicyDecision,
-    PolicyEngine,
     PolicyEvaluationRequest,
     PolicyEvaluationResult,
     PolicyState,
@@ -36,8 +32,10 @@ router = APIRouter(prefix="/policy-layer", tags=["policy-layer"])
 # Request/Response Models
 # =============================================================================
 
+
 class EvaluateRequest(BaseModel):
     """Request to evaluate an action against policies."""
+
     action_type: ActionType
     agent_id: Optional[str] = None
     tenant_id: Optional[str] = None
@@ -53,6 +51,7 @@ class EvaluateRequest(BaseModel):
 
 class SimulateRequest(BaseModel):
     """Request to simulate policy evaluation (dry run)."""
+
     action_type: ActionType
     agent_id: Optional[str] = None
     tenant_id: Optional[str] = None
@@ -67,6 +66,7 @@ class SimulateRequest(BaseModel):
 
 class ViolationQuery(BaseModel):
     """Query parameters for violations."""
+
     violation_type: Optional[ViolationType] = None
     agent_id: Optional[str] = None
     tenant_id: Optional[str] = None
@@ -77,6 +77,7 @@ class ViolationQuery(BaseModel):
 
 class RiskCeilingUpdate(BaseModel):
     """Update for a risk ceiling."""
+
     max_value: Optional[float] = None
     window_seconds: Optional[int] = None
     breach_action: Optional[str] = None
@@ -85,6 +86,7 @@ class RiskCeilingUpdate(BaseModel):
 
 class SafetyRuleUpdate(BaseModel):
     """Update for a safety rule."""
+
     condition: Optional[Dict[str, Any]] = None
     action: Optional[str] = None
     cooldown_seconds: Optional[int] = None
@@ -93,6 +95,7 @@ class SafetyRuleUpdate(BaseModel):
 
 class CooldownInfo(BaseModel):
     """Information about an active cooldown."""
+
     agent_id: str
     rule_name: str
     started_at: datetime
@@ -102,6 +105,7 @@ class CooldownInfo(BaseModel):
 
 class PolicyMetrics(BaseModel):
     """Metrics from the policy engine."""
+
     total_evaluations: int
     total_blocks: int
     total_allows: int
@@ -115,6 +119,7 @@ class PolicyMetrics(BaseModel):
 # =============================================================================
 # Core Evaluation Endpoints
 # =============================================================================
+
 
 @router.post("/evaluate", response_model=PolicyEvaluationResult)
 async def evaluate_action(
@@ -238,6 +243,7 @@ async def reload_policies(
 # Violation Endpoints
 # =============================================================================
 
+
 @router.get("/violations", response_model=List[PolicyViolation])
 async def list_violations(
     violation_type: Optional[ViolationType] = None,
@@ -304,6 +310,7 @@ async def acknowledge_violation(
 # Risk Ceiling Endpoints
 # =============================================================================
 
+
 @router.get("/risk-ceilings")
 async def list_risk_ceilings(
     tenant_id: Optional[str] = None,
@@ -312,9 +319,7 @@ async def list_risk_ceilings(
 ) -> List[Dict[str, Any]]:
     """List all risk ceilings with current values."""
     engine = get_policy_engine()
-    ceilings = await engine.get_risk_ceilings(
-        db, tenant_id=tenant_id, include_inactive=include_inactive
-    )
+    ceilings = await engine.get_risk_ceilings(db, tenant_id=tenant_id, include_inactive=include_inactive)
     return [
         {
             "id": c.id,
@@ -397,6 +402,7 @@ async def reset_risk_ceiling(
 # Safety Rule Endpoints
 # =============================================================================
 
+
 @router.get("/safety-rules")
 async def list_safety_rules(
     tenant_id: Optional[str] = None,
@@ -405,9 +411,7 @@ async def list_safety_rules(
 ) -> List[Dict[str, Any]]:
     """List all safety rules."""
     engine = get_policy_engine()
-    rules = await engine.get_safety_rules(
-        db, tenant_id=tenant_id, include_inactive=include_inactive
-    )
+    rules = await engine.get_safety_rules(db, tenant_id=tenant_id, include_inactive=include_inactive)
     return [
         {
             "id": r.id,
@@ -446,6 +450,7 @@ async def update_safety_rule(
 # Ethical Constraint Endpoints
 # =============================================================================
 
+
 @router.get("/ethical-constraints")
 async def list_ethical_constraints(
     include_inactive: bool = False,
@@ -453,9 +458,7 @@ async def list_ethical_constraints(
 ) -> List[Dict[str, Any]]:
     """List all ethical constraints."""
     engine = get_policy_engine()
-    constraints = await engine.get_ethical_constraints(
-        db, include_inactive=include_inactive
-    )
+    constraints = await engine.get_ethical_constraints(db, include_inactive=include_inactive)
     return [
         {
             "id": c.id,
@@ -473,6 +476,7 @@ async def list_ethical_constraints(
 # =============================================================================
 # Cooldown Endpoints
 # =============================================================================
+
 
 @router.get("/cooldowns", response_model=List[CooldownInfo])
 async def list_active_cooldowns(
@@ -505,6 +509,7 @@ async def clear_cooldowns(
 # Metrics Endpoint
 # =============================================================================
 
+
 @router.get("/metrics", response_model=PolicyMetrics)
 async def get_policy_metrics(
     hours: int = Query(24, ge=1, le=720),
@@ -520,6 +525,7 @@ async def get_policy_metrics(
 # Batch Operations
 # =============================================================================
 
+
 @router.post("/evaluate/batch")
 async def evaluate_batch(
     requests: List[EvaluateRequest],
@@ -532,10 +538,7 @@ async def evaluate_batch(
     Limited to 50 requests per batch.
     """
     if len(requests) > 50:
-        raise HTTPException(
-            status_code=400,
-            detail="Batch size limited to 50 requests"
-        )
+        raise HTTPException(status_code=400, detail="Batch size limited to 50 requests")
 
     engine = get_policy_engine()
     results = []
@@ -562,14 +565,17 @@ async def evaluate_batch(
 # GAP 1: Policy Versioning & Provenance Endpoints
 # =============================================================================
 
+
 class CreateVersionRequest(BaseModel):
     """Request to create a new policy version."""
+
     description: str
     created_by: str = "system"
 
 
 class RollbackRequest(BaseModel):
     """Request to rollback to a previous version."""
+
     target_version: str
     reason: str
     rolled_back_by: str = "system"
@@ -676,6 +682,7 @@ async def get_version_provenance(
 # GAP 2: Policy Dependency Graph Endpoints
 # =============================================================================
 
+
 @router.get("/dependencies")
 async def get_dependency_graph(
     db: AsyncSession = Depends(get_async_session),
@@ -711,7 +718,8 @@ async def get_dependency_graph(
                 "description": c.description,
                 "resolved": c.resolved,
             }
-            for c in graph.conflicts if not c.resolved
+            for c in graph.conflicts
+            if not c.resolved
         ],
     }
 
@@ -747,6 +755,7 @@ async def list_conflicts(
 
 class ResolveConflictRequest(BaseModel):
     """Request to resolve a policy conflict."""
+
     resolution: str
     resolved_by: str = "system"
 
@@ -780,8 +789,10 @@ async def resolve_conflict(
 # GAP 3: Temporal Policy Endpoints
 # =============================================================================
 
+
 class TemporalPolicyCreate(BaseModel):
     """Request to create a temporal policy."""
+
     name: str
     description: Optional[str] = None
     temporal_type: str  # sliding_window, cumulative_daily, etc.
@@ -806,9 +817,7 @@ async def list_temporal_policies(
     These policies track cumulative metrics over time windows.
     """
     engine = get_policy_engine()
-    policies = await engine.get_temporal_policies(
-        db, metric=metric, include_inactive=include_inactive
-    )
+    policies = await engine.get_temporal_policies(db, metric=metric, include_inactive=include_inactive)
     return [
         {
             "id": p.id,
@@ -857,9 +866,7 @@ async def get_temporal_utilization(
     Shows how much of the limit has been consumed in the current window.
     """
     engine = get_policy_engine()
-    utilization = await engine.get_temporal_utilization(
-        db, policy_id=policy_id, agent_id=agent_id
-    )
+    utilization = await engine.get_temporal_utilization(db, policy_id=policy_id, agent_id=agent_id)
     return utilization
 
 
@@ -867,8 +874,10 @@ async def get_temporal_utilization(
 # GAP 4: Context-Aware Evaluation Endpoint
 # =============================================================================
 
+
 class ContextAwareEvaluateRequest(BaseModel):
     """Request for context-aware policy evaluation (GAP 4)."""
+
     action_type: ActionType
 
     # Agent context
@@ -907,7 +916,7 @@ async def evaluate_with_context(
     and temporal policy awareness. Returns updated context for
     use in subsequent evaluations.
     """
-    from app.policy import PolicyContext, EnhancedPolicyEvaluationRequest
+    from app.policy import PolicyContext
 
     engine = get_policy_engine()
 
@@ -956,8 +965,7 @@ async def evaluate_with_context(
         "temporal_utilization": result.temporal_utilization,
         "temporal_warnings": result.temporal_warnings,
         "conflicts_detected": [
-            {"policy_a": c.policy_a, "policy_b": c.policy_b, "type": c.conflict_type}
-            for c in result.conflicts_detected
+            {"policy_a": c.policy_a, "policy_b": c.policy_b, "type": c.conflict_type} for c in result.conflicts_detected
         ],
         "policy_version": result.policy_version,
         "policy_hash": result.policy_hash,
@@ -968,6 +976,7 @@ async def evaluate_with_context(
 # =============================================================================
 # ISSUE 1: DAG Enforcement & Cycle Detection Endpoints
 # =============================================================================
+
 
 @router.get("/dependencies/dag/validate")
 async def validate_dependency_dag(
@@ -994,6 +1003,7 @@ async def validate_dependency_dag(
 
 class AddDependencyRequest(BaseModel):
     """Request to add a policy dependency with DAG validation."""
+
     source_policy: str
     target_policy: str
     dependency_type: str  # requires, conflicts_with, overrides, modifies
@@ -1038,7 +1048,7 @@ async def add_dependency_with_dag_check(
                 detail={
                     "error": result.get("error"),
                     "cycle_path": result.get("cycle_path"),
-                }
+                },
             )
         raise HTTPException(status_code=400, detail=result.get("error"))
 
@@ -1078,8 +1088,10 @@ async def get_evaluation_order(
 # ISSUE 2: Temporal Metric Retention & Compaction Endpoints
 # =============================================================================
 
+
 class PruneTemporalMetricsRequest(BaseModel):
     """Request to prune temporal metrics."""
+
     retention_hours: int = 168  # 7 days
     compact_older_than_hours: int = 24  # Compact to hourly after 24h
     max_events_per_policy: int = 10000
@@ -1133,8 +1145,10 @@ async def get_temporal_storage_stats(
 # ISSUE 3: Version Activation with Pre-Activation Integrity Checks
 # =============================================================================
 
+
 class ActivateVersionRequest(BaseModel):
     """Request to activate a policy version."""
+
     version_id: str
     activated_by: str = "system"
     dry_run: bool = False  # If True, run checks but don't activate
@@ -1180,7 +1194,7 @@ async def activate_policy_version(
                 detail={
                     "error": result.get("error"),
                     "checks": result.get("checks"),
-                }
+                },
             )
         raise HTTPException(status_code=400, detail=result.get("error"))
 

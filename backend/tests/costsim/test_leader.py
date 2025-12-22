@@ -5,10 +5,10 @@ Test suite for PostgreSQL advisory lock-based leader election.
 Requires PostgreSQL with advisory lock support.
 """
 
-import pytest
 import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 # Skip if dependencies not available
 pytest.importorskip("asyncpg")
@@ -33,7 +33,7 @@ class TestLeaderElectionWithMock:
         mock_result.fetchone.return_value = (True,)
         mock_session.execute.return_value = mock_result
 
-        from app.costsim.leader import try_acquire_leader_lock, LOCK_CANARY_RUNNER
+        from app.costsim.leader import LOCK_CANARY_RUNNER, try_acquire_leader_lock
 
         result = await try_acquire_leader_lock(mock_session, LOCK_CANARY_RUNNER)
 
@@ -48,7 +48,7 @@ class TestLeaderElectionWithMock:
         mock_result.fetchone.return_value = (False,)
         mock_session.execute.return_value = mock_result
 
-        from app.costsim.leader import try_acquire_leader_lock, LOCK_CANARY_RUNNER
+        from app.costsim.leader import LOCK_CANARY_RUNNER, try_acquire_leader_lock
 
         result = await try_acquire_leader_lock(mock_session, LOCK_CANARY_RUNNER)
 
@@ -62,7 +62,7 @@ class TestLeaderElectionWithMock:
         mock_result.fetchone.return_value = (True,)
         mock_session.execute.return_value = mock_result
 
-        from app.costsim.leader import release_leader_lock, LOCK_CANARY_RUNNER
+        from app.costsim.leader import LOCK_CANARY_RUNNER, release_leader_lock
 
         result = await release_leader_lock(mock_session, LOCK_CANARY_RUNNER)
 
@@ -76,7 +76,7 @@ class TestLeaderElectionWithMock:
         mock_result.fetchone.return_value = (False,)
         mock_session.execute.return_value = mock_result
 
-        from app.costsim.leader import release_leader_lock, LOCK_ALERT_WORKER
+        from app.costsim.leader import LOCK_ALERT_WORKER, release_leader_lock
 
         result = await release_leader_lock(mock_session, LOCK_ALERT_WORKER)
 
@@ -97,7 +97,7 @@ class TestLeaderContext:
             mock_session.close = AsyncMock()
             mock_session_local.return_value = mock_session
 
-            from app.costsim.leader import LeaderContext, LOCK_CANARY_RUNNER
+            from app.costsim.leader import LOCK_CANARY_RUNNER, LeaderContext
 
             ctx = LeaderContext(LOCK_CANARY_RUNNER)
 
@@ -119,7 +119,7 @@ class TestLeaderContext:
             mock_session.close = AsyncMock()
             mock_session_local.return_value = mock_session
 
-            from app.costsim.leader import LeaderContext, LOCK_CANARY_RUNNER
+            from app.costsim.leader import LOCK_CANARY_RUNNER, LeaderContext
 
             async with LeaderContext(LOCK_CANARY_RUNNER) as is_leader:
                 assert is_leader is False
@@ -129,6 +129,7 @@ class TestLeaderContext:
         """Test LeaderContext handles timeout."""
         with patch("app.costsim.leader.AsyncSessionLocal") as mock_session_local:
             mock_session = AsyncMock()
+
             # Make execute hang longer than timeout
             async def slow_execute(*args, **kwargs):
                 await asyncio.sleep(10)
@@ -138,7 +139,7 @@ class TestLeaderContext:
             mock_session.close = AsyncMock()
             mock_session_local.return_value = mock_session
 
-            from app.costsim.leader import LeaderContext, LOCK_CANARY_RUNNER
+            from app.costsim.leader import LOCK_CANARY_RUNNER, LeaderContext
 
             # Short timeout
             ctx = LeaderContext(LOCK_CANARY_RUNNER, timeout_seconds=0.1)
@@ -162,7 +163,7 @@ class TestLeaderElectionFunction:
             mock_session.close = AsyncMock()
             mock_session_local.return_value = mock_session
 
-            from app.costsim.leader import leader_election, LOCK_CANARY_RUNNER
+            from app.costsim.leader import LOCK_CANARY_RUNNER, leader_election
 
             async with leader_election(LOCK_CANARY_RUNNER) as is_leader:
                 assert is_leader is True
@@ -176,7 +177,7 @@ class TestLeaderElectionFunction:
             mock_session.close = AsyncMock()
             mock_session_local.return_value = mock_session
 
-            from app.costsim.leader import leader_election, LOCK_CANARY_RUNNER
+            from app.costsim.leader import LOCK_CANARY_RUNNER, leader_election
 
             async with leader_election(LOCK_CANARY_RUNNER) as is_leader:
                 # Should return False on exception
@@ -198,7 +199,7 @@ class TestWithLeaderLock:
             mock_cm.__aexit__.return_value = None
             mock_election.return_value = mock_cm
 
-            from app.costsim.leader import with_leader_lock, LOCK_CANARY_RUNNER
+            from app.costsim.leader import LOCK_CANARY_RUNNER, with_leader_lock
 
             result = await with_leader_lock(LOCK_CANARY_RUNNER, callback, "arg1", key="val")
 
@@ -217,7 +218,7 @@ class TestWithLeaderLock:
             mock_cm.__aexit__.return_value = None
             mock_election.return_value = mock_cm
 
-            from app.costsim.leader import with_leader_lock, LOCK_CANARY_RUNNER
+            from app.costsim.leader import LOCK_CANARY_RUNNER, with_leader_lock
 
             result = await with_leader_lock(LOCK_CANARY_RUNNER, callback)
 
@@ -231,10 +232,10 @@ class TestLockConstants:
     def test_lock_ids_are_unique(self):
         """Test that all lock IDs are unique."""
         from app.costsim.leader import (
-            LOCK_CANARY_RUNNER,
             LOCK_ALERT_WORKER,
-            LOCK_PROVENANCE_ARCHIVER,
             LOCK_BASELINE_BACKFILL,
+            LOCK_CANARY_RUNNER,
+            LOCK_PROVENANCE_ARCHIVER,
         )
 
         lock_ids = [
@@ -249,12 +250,11 @@ class TestLockConstants:
     def test_lock_ids_in_expected_range(self):
         """Test that lock IDs are in the 7xxx range."""
         from app.costsim.leader import (
-            LOCK_CANARY_RUNNER,
             LOCK_ALERT_WORKER,
-            LOCK_PROVENANCE_ARCHIVER,
             LOCK_BASELINE_BACKFILL,
+            LOCK_CANARY_RUNNER,
+            LOCK_PROVENANCE_ARCHIVER,
         )
 
-        for lock_id in [LOCK_CANARY_RUNNER, LOCK_ALERT_WORKER,
-                        LOCK_PROVENANCE_ARCHIVER, LOCK_BASELINE_BACKFILL]:
+        for lock_id in [LOCK_CANARY_RUNNER, LOCK_ALERT_WORKER, LOCK_PROVENANCE_ARCHIVER, LOCK_BASELINE_BACKFILL]:
             assert 7000 <= lock_id < 8000, f"Lock ID {lock_id} not in 7xxx range"

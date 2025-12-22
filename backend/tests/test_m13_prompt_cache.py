@@ -10,29 +10,25 @@ Tests the prompt cache in llm_invoke.py to ensure:
 6. Metrics are recorded correctly
 """
 
-import asyncio
-import hashlib
-import json
-import pytest
-from datetime import datetime, timezone, timedelta
+import os
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.skills.llm_invoke import (
-    PromptCache,
-    CacheEntry,
-    get_prompt_cache,
-    configure_prompt_cache,
     LLMInvokeSkill,
+    PromptCache,
+    configure_prompt_cache,
+    get_prompt_cache,
 )
-
 
 # =============================================================================
 # CACHE KEY GENERATION TESTS
 # =============================================================================
+
 
 class TestCacheKeyGeneration:
     """Test cache key generation logic."""
@@ -135,6 +131,7 @@ class TestCacheKeyGeneration:
 # CACHE GET/SET TESTS
 # =============================================================================
 
+
 class TestCacheGetSet:
     """Test cache get and set operations."""
 
@@ -194,7 +191,13 @@ class TestCacheGetSet:
         cache = PromptCache(enabled=False)
 
         messages = [{"role": "user", "content": "Hello"}]
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 1, "output_tokens": 1, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+        }
 
         # Set (should be no-op)
         cache.set(
@@ -222,6 +225,7 @@ class TestCacheGetSet:
 # TTL EXPIRATION TESTS
 # =============================================================================
 
+
 class TestCacheTTL:
     """Test cache TTL expiration."""
 
@@ -230,7 +234,13 @@ class TestCacheTTL:
         cache = PromptCache(ttl_seconds=1, max_size=100)  # 1 second TTL
 
         messages = [{"role": "user", "content": "Short lived"}]
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 1, "output_tokens": 1, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+        }
 
         cache.set(
             provider="anthropic",
@@ -242,16 +252,20 @@ class TestCacheTTL:
         )
 
         # Immediately should work
-        assert cache.get(
-            provider="anthropic",
-            model="test",
-            messages=messages,
-            system_prompt=None,
-            temperature=0.7,
-        ) is not None
+        assert (
+            cache.get(
+                provider="anthropic",
+                model="test",
+                messages=messages,
+                system_prompt=None,
+                temperature=0.7,
+            )
+            is not None
+        )
 
         # Wait for expiration
         import time
+
         time.sleep(1.5)
 
         # Should be expired
@@ -269,6 +283,7 @@ class TestCacheTTL:
 # LRU EVICTION TESTS
 # =============================================================================
 
+
 class TestCacheLRUEviction:
     """Test LRU eviction when cache is at capacity."""
 
@@ -276,7 +291,13 @@ class TestCacheLRUEviction:
         """Should evict oldest entry when at capacity."""
         cache = PromptCache(ttl_seconds=3600, max_size=3)
 
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 1, "output_tokens": 1, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+        }
 
         # Fill cache
         for i in range(3):
@@ -329,6 +350,7 @@ class TestCacheLRUEviction:
 # CACHE STATS TESTS
 # =============================================================================
 
+
 class TestCacheStats:
     """Test cache statistics."""
 
@@ -336,7 +358,13 @@ class TestCacheStats:
         """Stats should return accurate cache information."""
         cache = PromptCache(ttl_seconds=3600, max_size=100)
 
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 10, "output_tokens": 5, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 10,
+            "output_tokens": 5,
+            "finish_reason": "stop",
+        }
 
         # Add some entries
         for i in range(5):
@@ -372,7 +400,13 @@ class TestCacheStats:
         """Clear should remove all cache entries."""
         cache = PromptCache(ttl_seconds=3600, max_size=100)
 
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 1, "output_tokens": 1, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+        }
 
         # Add entries
         for i in range(10):
@@ -397,19 +431,20 @@ class TestCacheStats:
 # INTEGRATION TESTS (with mocked LLM)
 # =============================================================================
 
+
 class TestLLMInvokeCacheIntegration:
     """Integration tests for cache in LLMInvokeSkill."""
 
     @pytest.fixture
     def mock_metrics(self):
         """Mock Prometheus metrics to avoid label errors in tests."""
-        with patch('app.skills.llm_invoke.nova_llm_invocations_total') as m1, \
-             patch('app.skills.llm_invoke.nova_llm_duration_seconds') as m2, \
-             patch('app.skills.llm_invoke.nova_llm_tokens_total') as m3, \
-             patch('app.skills.llm_invoke.nova_llm_cost_cents_total') as m4, \
-             patch('app.skills.llm_invoke.llm_cache_hits_total') as m5, \
-             patch('app.skills.llm_invoke.llm_cache_misses_total') as m6, \
-             patch('app.skills.llm_invoke.llm_cache_savings_cents') as m7:
+        with patch("app.skills.llm_invoke.nova_llm_invocations_total") as m1, patch(
+            "app.skills.llm_invoke.nova_llm_duration_seconds"
+        ) as m2, patch("app.skills.llm_invoke.nova_llm_tokens_total") as m3, patch(
+            "app.skills.llm_invoke.nova_llm_cost_cents_total"
+        ) as m4, patch("app.skills.llm_invoke.llm_cache_hits_total") as m5, patch(
+            "app.skills.llm_invoke.llm_cache_misses_total"
+        ) as m6, patch("app.skills.llm_invoke.llm_cache_savings_cents") as m7:
             # Setup mock labels
             for m in [m1, m2, m3, m4, m5, m6, m7]:
                 m.labels.return_value.inc = MagicMock()
@@ -419,10 +454,12 @@ class TestLLMInvokeCacheIntegration:
     @pytest.fixture
     def skill(self, mock_metrics):
         """Create LLMInvokeSkill with mocked clients."""
-        skill = LLMInvokeSkill({
-            "anthropic_api_key": "test-key",
-            "track_costs": True,
-        })
+        skill = LLMInvokeSkill(
+            {
+                "anthropic_api_key": "test-key",
+                "track_costs": True,
+            }
+        )
         return skill
 
     @pytest.mark.asyncio
@@ -431,7 +468,7 @@ class TestLLMInvokeCacheIntegration:
         # Configure fresh cache
         configure_prompt_cache(ttl_seconds=3600, max_size=100, enabled=True)
 
-        with patch.object(skill, '_invoke_anthropic', new_callable=AsyncMock) as mock_invoke:
+        with patch.object(skill, "_invoke_anthropic", new_callable=AsyncMock) as mock_invoke:
             mock_invoke.return_value = {
                 "response_text": "Hello!",
                 "model_used": "claude-sonnet-4-20250514",
@@ -440,12 +477,14 @@ class TestLLMInvokeCacheIntegration:
                 "finish_reason": "end_turn",
             }
 
-            result = await skill.execute({
-                "provider": "anthropic",
-                "model": "claude-sonnet-4-20250514",
-                "messages": [{"role": "user", "content": "Hi"}],
-                "enable_cache": True,
-            })
+            result = await skill.execute(
+                {
+                    "provider": "anthropic",
+                    "model": "claude-sonnet-4-20250514",
+                    "messages": [{"role": "user", "content": "Hi"}],
+                    "enable_cache": True,
+                }
+            )
 
             # Should have called the LLM
             mock_invoke.assert_called_once()
@@ -459,7 +498,7 @@ class TestLLMInvokeCacheIntegration:
         # Configure fresh cache
         configure_prompt_cache(ttl_seconds=3600, max_size=100, enabled=True)
 
-        with patch.object(skill, '_invoke_anthropic', new_callable=AsyncMock) as mock_invoke:
+        with patch.object(skill, "_invoke_anthropic", new_callable=AsyncMock) as mock_invoke:
             mock_invoke.return_value = {
                 "response_text": "Hello!",
                 "model_used": "claude-sonnet-4-20250514",
@@ -493,7 +532,7 @@ class TestLLMInvokeCacheIntegration:
         # Configure fresh cache
         configure_prompt_cache(ttl_seconds=3600, max_size=100, enabled=True)
 
-        with patch.object(skill, '_invoke_anthropic', new_callable=AsyncMock) as mock_invoke:
+        with patch.object(skill, "_invoke_anthropic", new_callable=AsyncMock) as mock_invoke:
             mock_invoke.return_value = {
                 "response_text": "Hello!",
                 "model_used": "claude-sonnet-4-20250514",
@@ -526,7 +565,7 @@ class TestLLMInvokeCacheIntegration:
         # Configure fresh cache
         configure_prompt_cache(ttl_seconds=3600, max_size=100, enabled=True)
 
-        with patch.object(skill, '_invoke_anthropic', new_callable=AsyncMock) as mock_invoke:
+        with patch.object(skill, "_invoke_anthropic", new_callable=AsyncMock) as mock_invoke:
             mock_invoke.return_value = {
                 "response_text": "Hello!",
                 "model_used": "claude-sonnet-4-20250514",
@@ -536,20 +575,24 @@ class TestLLMInvokeCacheIntegration:
             }
 
             # First call
-            result1 = await skill.execute({
-                "provider": "anthropic",
-                "model": "claude-sonnet-4-20250514",
-                "messages": [{"role": "user", "content": "Question A"}],
-                "enable_cache": True,
-            })
+            result1 = await skill.execute(
+                {
+                    "provider": "anthropic",
+                    "model": "claude-sonnet-4-20250514",
+                    "messages": [{"role": "user", "content": "Question A"}],
+                    "enable_cache": True,
+                }
+            )
 
             # Different message - should miss cache
-            result2 = await skill.execute({
-                "provider": "anthropic",
-                "model": "claude-sonnet-4-20250514",
-                "messages": [{"role": "user", "content": "Question B"}],
-                "enable_cache": True,
-            })
+            result2 = await skill.execute(
+                {
+                    "provider": "anthropic",
+                    "model": "claude-sonnet-4-20250514",
+                    "messages": [{"role": "user", "content": "Question B"}],
+                    "enable_cache": True,
+                }
+            )
 
             assert result1["result"]["cache_hit"] is False
             assert result2["result"]["cache_hit"] is False
@@ -559,6 +602,7 @@ class TestLLMInvokeCacheIntegration:
 # =============================================================================
 # GLOBAL CACHE CONFIGURATION TESTS
 # =============================================================================
+
 
 class TestGlobalCacheConfiguration:
     """Test global cache configuration."""
@@ -588,6 +632,7 @@ class TestGlobalCacheConfiguration:
 # =============================================================================
 # M13 ACCEPTANCE CRITERIA TESTS
 # =============================================================================
+
 
 class TestM13AcceptanceCriteria:
     """Tests verifying M13 prompt caching acceptance criteria."""
@@ -654,7 +699,13 @@ class TestM13AcceptanceCriteria:
         """AC3: Cache entries should expire after TTL."""
         cache = PromptCache(ttl_seconds=1)  # 1 second
 
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 1, "output_tokens": 1, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+        }
 
         cache.set(
             provider="anthropic",
@@ -670,6 +721,7 @@ class TestM13AcceptanceCriteria:
 
         # Wait for expiration
         import time
+
         time.sleep(1.5)
 
         # Should be expired
@@ -679,7 +731,13 @@ class TestM13AcceptanceCriteria:
         """AC4: LRU eviction should work when cache is at capacity."""
         cache = PromptCache(ttl_seconds=3600, max_size=2)
 
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 1, "output_tokens": 1, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+        }
 
         # Add 3 entries to cache with size 2
         for i in range(3):
@@ -707,7 +765,13 @@ class TestM13AcceptanceCriteria:
         """AC6: Cache should be disableable globally and per-request."""
         # Global disable
         cache = PromptCache(enabled=False)
-        response = {"response_text": "Hi", "model_used": "test", "input_tokens": 1, "output_tokens": 1, "finish_reason": "stop"}
+        response = {
+            "response_text": "Hi",
+            "model_used": "test",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+        }
 
         cache.set("anthropic", "test", [{"role": "user", "content": "test"}], None, 0.7, response)
         assert cache.get("anthropic", "test", [{"role": "user", "content": "test"}], None, 0.7) is None

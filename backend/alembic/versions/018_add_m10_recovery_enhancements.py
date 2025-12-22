@@ -11,13 +11,12 @@ M10 Recovery Suggestion Engine Enhancements:
 
 Based on comprehensive spec for rule-based recovery evaluation.
 """
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 # revision identifiers
-revision = '018_m10_recovery_enhancements'
-down_revision = '017_recovery_candidates'
+revision = "018_m10_recovery_enhancements"
+down_revision = "017_recovery_candidates"
 branch_labels = None
 depends_on = None
 
@@ -31,7 +30,8 @@ def upgrade() -> None:
     # ==========================================================================
     # 2. suggestion_input - Structured inputs for rule evaluation
     # ==========================================================================
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS m10_recovery.suggestion_input (
             id SERIAL PRIMARY KEY,
 
@@ -76,12 +76,14 @@ def upgrade() -> None:
             'Normalized/cleaned version for pattern matching';
         COMMENT ON COLUMN m10_recovery.suggestion_input.weight IS
             'Relative importance of this input in confidence calculation';
-    """)
+    """
+    )
 
     # ==========================================================================
     # 3. suggestion_action - Action catalog with templates
     # ==========================================================================
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS m10_recovery.suggestion_action (
             id SERIAL PRIMARY KEY,
 
@@ -138,12 +140,14 @@ def upgrade() -> None:
             'Historical success rate = successful_applications / total_applications';
         COMMENT ON COLUMN m10_recovery.suggestion_action.is_automated IS
             'Whether this action can be executed without human intervention';
-    """)
+    """
+    )
 
     # ==========================================================================
     # 4. suggestion_provenance - Lineage tracking for audit/debugging
     # ==========================================================================
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS m10_recovery.suggestion_provenance (
             id SERIAL PRIMARY KEY,
 
@@ -196,12 +200,14 @@ def upgrade() -> None:
             'Event-specific details (inputs, outputs, scores, etc.)';
         COMMENT ON COLUMN m10_recovery.suggestion_provenance.rule_id IS
             'Reference to rule that was evaluated (stored as text for flexibility)';
-    """)
+    """
+    )
 
     # ==========================================================================
     # 5. Add columns to recovery_candidates for enhanced tracking
     # ==========================================================================
-    op.execute("""
+    op.execute(
+        """
         -- Add action reference column
         ALTER TABLE recovery_candidates
         ADD COLUMN IF NOT EXISTS selected_action_id INT
@@ -234,12 +240,14 @@ def upgrade() -> None:
             'List of rules evaluated with scores [{rule_id, score, matched}]';
         COMMENT ON COLUMN recovery_candidates.execution_status IS
             'Status of action execution (if automated/approved)';
-    """)
+    """
+    )
 
     # ==========================================================================
     # 6. Create function for action success rate update
     # ==========================================================================
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION m10_recovery.update_action_success_rate()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -270,12 +278,14 @@ def upgrade() -> None:
             FOR EACH ROW
             WHEN (OLD.execution_status IS DISTINCT FROM NEW.execution_status)
             EXECUTE FUNCTION m10_recovery.update_action_success_rate();
-    """)
+    """
+    )
 
     # ==========================================================================
     # 7. Seed default actions
     # ==========================================================================
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO m10_recovery.suggestion_action
             (action_code, name, description, action_type, template,
              applies_to_error_codes, is_automated, requires_approval, priority)
@@ -329,12 +339,14 @@ def upgrade() -> None:
              ARRAY['NON_CRITICAL', 'OPTIONAL_TASK'],
              TRUE, TRUE, 20)
         ON CONFLICT (action_code) DO NOTHING;
-    """)
+    """
+    )
 
     # ==========================================================================
     # 8. Create view for suggestions with full context
     # ==========================================================================
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW m10_recovery.suggestions_full_context AS
         SELECT
             rc.id,
@@ -370,7 +382,8 @@ def upgrade() -> None:
 
         COMMENT ON VIEW m10_recovery.suggestions_full_context IS
             'M10: Complete view of suggestions with action and metadata counts';
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
@@ -382,13 +395,15 @@ def downgrade() -> None:
     op.execute("DROP FUNCTION IF EXISTS m10_recovery.update_action_success_rate();")
 
     # Remove columns from recovery_candidates
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE recovery_candidates DROP COLUMN IF EXISTS selected_action_id;
         ALTER TABLE recovery_candidates DROP COLUMN IF EXISTS rules_evaluated;
         ALTER TABLE recovery_candidates DROP COLUMN IF EXISTS execution_status;
         ALTER TABLE recovery_candidates DROP COLUMN IF EXISTS executed_at;
         ALTER TABLE recovery_candidates DROP COLUMN IF EXISTS execution_result;
-    """)
+    """
+    )
 
     # Drop tables (in dependency order)
     op.execute("DROP TABLE IF EXISTS m10_recovery.suggestion_provenance;")

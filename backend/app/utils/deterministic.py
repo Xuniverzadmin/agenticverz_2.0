@@ -1,8 +1,8 @@
 # Deterministic Utilities for M11 Skills
 # Provides seeded randomness and backoff for replay-safe operations
 
-import hmac
 import hashlib
+import hmac
 import struct
 import time
 from typing import Optional
@@ -35,7 +35,7 @@ def deterministic_backoff_ms(
     initial_ms: int = 200,
     multiplier: float = 2.0,
     jitter_pct: float = 0.1,
-    max_ms: int = 10000
+    max_ms: int = 10000,
 ) -> int:
     """
     Calculate exponential backoff with deterministic jitter.
@@ -119,5 +119,6 @@ def hash_params(params: dict) -> str:
         SHA256 hash prefix (16 chars)
     """
     import json
+
     canonical = json.dumps(params, sort_keys=True, default=str)
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]

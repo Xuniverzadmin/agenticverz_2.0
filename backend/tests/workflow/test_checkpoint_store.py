@@ -9,13 +9,13 @@ Tests:
 4. Delete checkpoints
 """
 
-import pytest
 import asyncio
 from datetime import datetime
 
+import pytest
+
 from app.workflow.checkpoint import (
     InMemoryCheckpointStore,
-    CheckpointData,
 )
 
 

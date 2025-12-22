@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .models import TraceStep, TraceSummary, TraceRecord, TraceStatus
+from .models import TraceRecord, TraceStatus, TraceStep, TraceSummary
 
 
 class TraceStore(ABC):
@@ -100,7 +100,8 @@ class SQLiteTraceStore(TraceStore):
     def _init_db(self) -> None:
         """Initialize database schema."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE TABLE IF NOT EXISTS traces (
                     run_id TEXT PRIMARY KEY,
                     correlation_id TEXT NOT NULL,
@@ -156,7 +157,8 @@ class SQLiteTraceStore(TraceStore):
                 CREATE INDEX IF NOT EXISTS idx_traces_agent ON traces(agent_id);
                 CREATE INDEX IF NOT EXISTS idx_traces_status ON traces(status);
                 CREATE INDEX IF NOT EXISTS idx_steps_idempotency ON trace_steps(idempotency_key);
-            """)
+            """
+            )
             conn.commit()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -174,6 +176,7 @@ class SQLiteTraceStore(TraceStore):
         plan: list[dict[str, Any]],
     ) -> None:
         """Start a new trace record."""
+
         def _insert():
             with self._get_conn() as conn:
                 conn.execute(
@@ -181,8 +184,14 @@ class SQLiteTraceStore(TraceStore):
                     INSERT INTO traces (run_id, correlation_id, tenant_id, agent_id, plan, started_at, status)
                     VALUES (?, ?, ?, ?, ?, ?, 'running')
                     """,
-                    (run_id, correlation_id, tenant_id, agent_id,
-                     json.dumps(plan), datetime.now(timezone.utc).isoformat()),
+                    (
+                        run_id,
+                        correlation_id,
+                        tenant_id,
+                        agent_id,
+                        json.dumps(plan),
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
                 )
                 conn.commit()
 
@@ -203,6 +212,7 @@ class SQLiteTraceStore(TraceStore):
         retry_count: int,
     ) -> None:
         """Record a step in the trace."""
+
         def _insert():
             with self._get_conn() as conn:
                 conn.execute(
@@ -212,11 +222,20 @@ class SQLiteTraceStore(TraceStore):
                      outcome_code, outcome_data, cost_cents, duration_ms, retry_count, timestamp)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (run_id, step_index, skill_name, json.dumps(params),
-                     status.value, outcome_category, outcome_code,
-                     json.dumps(outcome_data) if outcome_data else None,
-                     cost_cents, duration_ms, retry_count,
-                     datetime.now(timezone.utc).isoformat()),
+                    (
+                        run_id,
+                        step_index,
+                        skill_name,
+                        json.dumps(params),
+                        status.value,
+                        outcome_category,
+                        outcome_code,
+                        json.dumps(outcome_data) if outcome_data else None,
+                        cost_cents,
+                        duration_ms,
+                        retry_count,
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
                 )
                 conn.commit()
 
@@ -229,6 +248,7 @@ class SQLiteTraceStore(TraceStore):
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Mark a trace as completed."""
+
         def _update():
             with self._get_conn() as conn:
                 conn.execute(
@@ -237,8 +257,7 @@ class SQLiteTraceStore(TraceStore):
                     SET completed_at = ?, status = ?, metadata = ?
                     WHERE run_id = ?
                     """,
-                    (datetime.now(timezone.utc).isoformat(), status,
-                     json.dumps(metadata or {}), run_id),
+                    (datetime.now(timezone.utc).isoformat(), status, json.dumps(metadata or {}), run_id),
                 )
                 conn.commit()
 
@@ -246,20 +265,18 @@ class SQLiteTraceStore(TraceStore):
 
     async def get_trace(self, run_id: str) -> TraceRecord | None:
         """Get a complete trace by run_id."""
+
         def _fetch():
             with self._get_conn() as conn:
                 # Get trace record
-                row = conn.execute(
-                    "SELECT * FROM traces WHERE run_id = ?", (run_id,)
-                ).fetchone()
+                row = conn.execute("SELECT * FROM traces WHERE run_id = ?", (run_id,)).fetchone()
 
                 if not row:
                     return None
 
                 # Get steps
                 steps_rows = conn.execute(
-                    "SELECT * FROM trace_steps WHERE run_id = ? ORDER BY step_index",
-                    (run_id,)
+                    "SELECT * FROM trace_steps WHERE run_id = ? ORDER BY step_index", (run_id,)
                 ).fetchall()
 
                 steps = [
@@ -301,6 +318,7 @@ class SQLiteTraceStore(TraceStore):
         offset: int = 0,
     ) -> list[TraceSummary]:
         """List traces, optionally filtered by tenant."""
+
         def _fetch():
             with self._get_conn() as conn:
                 if tenant_id:
@@ -361,11 +379,10 @@ class SQLiteTraceStore(TraceStore):
 
     async def delete_trace(self, run_id: str) -> bool:
         """Delete a trace by run_id."""
+
         def _delete():
             with self._get_conn() as conn:
-                cursor = conn.execute(
-                    "DELETE FROM traces WHERE run_id = ?", (run_id,)
-                )
+                cursor = conn.execute("DELETE FROM traces WHERE run_id = ?", (run_id,))
                 conn.commit()
                 return cursor.rowcount > 0
 
@@ -373,13 +390,11 @@ class SQLiteTraceStore(TraceStore):
 
     async def get_trace_count(self, tenant_id: str | None = None) -> int:
         """Get total trace count."""
+
         def _count():
             with self._get_conn() as conn:
                 if tenant_id:
-                    row = conn.execute(
-                        "SELECT COUNT(*) FROM traces WHERE tenant_id = ?",
-                        (tenant_id,)
-                    ).fetchone()
+                    row = conn.execute("SELECT COUNT(*) FROM traces WHERE tenant_id = ?", (tenant_id,)).fetchone()
                 else:
                     row = conn.execute("SELECT COUNT(*) FROM traces").fetchone()
                 return row[0]
@@ -388,6 +403,7 @@ class SQLiteTraceStore(TraceStore):
 
     async def cleanup_old_traces(self, days: int = 30) -> int:
         """Delete traces older than specified days."""
+
         def _cleanup():
             with self._get_conn() as conn:
                 cursor = conn.execute(
@@ -437,6 +453,7 @@ class SQLiteTraceStore(TraceStore):
         Returns:
             List of matching trace summaries
         """
+
         def _search():
             conditions = []
             params = []
@@ -516,12 +533,10 @@ class SQLiteTraceStore(TraceStore):
 
     async def get_trace_by_root_hash(self, root_hash: str) -> TraceRecord | None:
         """Get a trace by its deterministic root hash."""
+
         def _fetch():
             with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT run_id FROM traces WHERE root_hash = ? LIMIT 1",
-                    (root_hash,)
-                ).fetchone()
+                row = conn.execute("SELECT run_id FROM traces WHERE root_hash = ? LIMIT 1", (root_hash,)).fetchone()
                 return row["run_id"] if row else None
 
         run_id = await asyncio.to_thread(_fetch)
@@ -550,6 +565,7 @@ class SQLiteTraceStore(TraceStore):
         plan_hash: str,
     ) -> None:
         """Update determinism fields after trace finalization."""
+
         def _update():
             with self._get_conn() as conn:
                 conn.execute(
@@ -681,25 +697,27 @@ class InMemoryTraceStore(TraceStore):
             traces = [t for t in traces if t.tenant_id == tenant_id]
 
         traces.sort(key=lambda t: t.started_at, reverse=True)
-        traces = traces[offset:offset + limit]
+        traces = traces[offset : offset + limit]
 
         summaries = []
         for t in traces:
             steps = self._steps.get(t.run_id, [])
-            summaries.append(TraceSummary(
-                run_id=t.run_id,
-                correlation_id=t.correlation_id,
-                tenant_id=t.tenant_id,
-                agent_id=t.agent_id,
-                total_steps=len(steps),
-                success_count=sum(1 for s in steps if s.status == TraceStatus.SUCCESS),
-                failure_count=sum(1 for s in steps if s.status == TraceStatus.FAILURE),
-                total_cost_cents=sum(s.cost_cents for s in steps),
-                total_duration_ms=sum(s.duration_ms for s in steps),
-                started_at=t.started_at,
-                completed_at=t.completed_at,
-                status=t.status,
-            ))
+            summaries.append(
+                TraceSummary(
+                    run_id=t.run_id,
+                    correlation_id=t.correlation_id,
+                    tenant_id=t.tenant_id,
+                    agent_id=t.agent_id,
+                    total_steps=len(steps),
+                    success_count=sum(1 for s in steps if s.status == TraceStatus.SUCCESS),
+                    failure_count=sum(1 for s in steps if s.status == TraceStatus.FAILURE),
+                    total_cost_cents=sum(s.cost_cents for s in steps),
+                    total_duration_ms=sum(s.duration_ms for s in steps),
+                    started_at=t.started_at,
+                    completed_at=t.completed_at,
+                    status=t.status,
+                )
+            )
         return summaries
 
     async def delete_trace(self, run_id: str) -> bool:

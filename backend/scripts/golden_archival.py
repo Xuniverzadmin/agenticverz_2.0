@@ -25,19 +25,15 @@ Usage:
 import argparse
 import hashlib
 import hmac
-import json
+import logging
 import os
 import shutil
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Tuple, Optional
-import logging
+from typing import List, Optional, Tuple
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 # Default paths
@@ -62,10 +58,7 @@ class GoldenArchiver:
 
         if older_than_days is not None:
             cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
-            files = [
-                f for f in files
-                if datetime.fromtimestamp(f.stat().st_mtime, timezone.utc) < cutoff
-            ]
+            files = [f for f in files if datetime.fromtimestamp(f.stat().st_mtime, timezone.utc) < cutoff]
 
         return sorted(files)
 
@@ -121,12 +114,7 @@ class GoldenArchiver:
 
         return sig
 
-    def archive_files(
-        self,
-        files: List[Path],
-        dest_dir: str,
-        delete_after: bool = False
-    ) -> int:
+    def archive_files(self, files: List[Path], dest_dir: str, delete_after: bool = False) -> int:
         """
         Archive golden files to destination directory.
 
@@ -143,12 +131,7 @@ class GoldenArchiver:
         else:
             return self._archive_to_local(files, dest_dir, delete_after)
 
-    def _archive_to_local(
-        self,
-        files: List[Path],
-        dest_dir: str,
-        delete_after: bool
-    ) -> int:
+    def _archive_to_local(self, files: List[Path], dest_dir: str, delete_after: bool) -> int:
         """Archive to local directory."""
         dest_path = Path(dest_dir)
         dest_path.mkdir(parents=True, exist_ok=True)
@@ -178,12 +161,7 @@ class GoldenArchiver:
 
         return archived
 
-    def _archive_to_s3(
-        self,
-        files: List[Path],
-        s3_url: str,
-        delete_after: bool
-    ) -> int:
+    def _archive_to_s3(self, files: List[Path], s3_url: str, delete_after: bool) -> int:
         """Archive to S3 bucket."""
         try:
             import boto3
@@ -325,11 +303,7 @@ def cmd_archive(args):
             logger.info(f"Would archive: {f.name}")
         return 0
 
-    archived = archiver.archive_files(
-        files,
-        args.dest,
-        delete_after=args.delete
-    )
+    archived = archiver.archive_files(files, args.dest, delete_after=args.delete)
     logger.info(f"Archived {archived} files to {args.dest}")
     return 0
 
@@ -347,10 +321,7 @@ def cmd_resign(args):
         logger.info(f"Would re-sign {len(files)} files")
         return 0
 
-    resigned, failed = archiver.resign_all(
-        args.new_secret,
-        verify_old=not args.skip_verify
-    )
+    resigned, failed = archiver.resign_all(args.new_secret, verify_old=not args.skip_verify)
 
     logger.info(f"Re-signed: {resigned}, Failed: {failed}")
     return 0 if failed == 0 else 1
@@ -389,13 +360,9 @@ def cmd_cleanup(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Golden file archival and key rotation tool"
-    )
+    parser = argparse.ArgumentParser(description="Golden file archival and key rotation tool")
     parser.add_argument(
-        "--golden-dir",
-        default=DEFAULT_GOLDEN_DIR,
-        help=f"Golden files directory (default: {DEFAULT_GOLDEN_DIR})"
+        "--golden-dir", default=DEFAULT_GOLDEN_DIR, help=f"Golden files directory (default: {DEFAULT_GOLDEN_DIR})"
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)

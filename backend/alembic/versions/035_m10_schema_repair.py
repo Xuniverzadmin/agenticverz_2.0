@@ -21,12 +21,12 @@ This migration repairs schema drift discovered in the Neon parent branch:
 
 This migration is fully idempotent and safe to run on any state.
 """
-from alembic import op
 from sqlalchemy import text
 
+from alembic import op
 
-revision = '035_m10_schema_repair'
-down_revision = '034_fix_outbox_constraint'
+revision = "035_m10_schema_repair"
+down_revision = "034_fix_outbox_constraint"
 branch_labels = None
 depends_on = None
 
@@ -37,14 +37,20 @@ def upgrade():
     # ==========================================================================
     # STEP 1: Ensure m10_recovery schema exists
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE SCHEMA IF NOT EXISTS m10_recovery;
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # STEP 2: Add missing columns to dead_letter_archive
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         BEGIN
             -- Add stream_msg_id column if missing
@@ -78,20 +84,28 @@ def upgrade():
                 RAISE NOTICE 'Added stream_name column to dead_letter_archive';
             END IF;
         END $$;
-    """))
+    """
+        )
+    )
 
     # Create index on stream_msg_id if it doesn't exist
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE INDEX IF NOT EXISTS idx_dla_stream_msg_id
         ON m10_recovery.dead_letter_archive(stream_msg_id)
         WHERE stream_msg_id IS NOT NULL;
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # STEP 3: Drop and recreate claim_outbox_events with correct signature
     # ==========================================================================
     # Drop all overloads first
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         DECLARE
             r RECORD;
@@ -109,10 +123,14 @@ def upgrade():
                 RAISE NOTICE 'Dropped claim_outbox_events(%)', r.args;
             END LOOP;
         END $$;
-    """))
+    """
+        )
+    )
 
     # Create the canonical version (matches migration 022 and worker code)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.claim_outbox_events(
             p_processor_id TEXT,
             p_batch_size INTEGER DEFAULT 10
@@ -144,10 +162,14 @@ def upgrade():
 
         COMMENT ON FUNCTION m10_recovery.claim_outbox_events(TEXT, INTEGER) IS
             'Claim batch of outbox events for processing (canonical signature)';
-    """))
+    """
+        )
+    )
 
     # Create overload for tests that call with (integer, text) positionally
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.claim_outbox_events(
             p_batch_size INTEGER,
             p_processor_id TEXT
@@ -169,13 +191,17 @@ def upgrade():
 
         COMMENT ON FUNCTION m10_recovery.claim_outbox_events(INTEGER, TEXT) IS
             'Claim batch of outbox events - overload for positional (batch, processor) calls';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # STEP 4: Drop and recreate complete_outbox_event with correct signature
     # ==========================================================================
     # Drop all overloads first (same pattern as claim_outbox_events)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         DECLARE
             r RECORD;
@@ -192,10 +218,14 @@ def upgrade():
                 RAISE NOTICE 'Dropped complete_outbox_event(%)', r.args;
             END LOOP;
         END $$;
-    """))
+    """
+        )
+    )
 
     # Create canonical version (matches migration 022 signature)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.complete_outbox_event(
             p_event_id BIGINT,
             p_processor_id TEXT,
@@ -225,10 +255,14 @@ def upgrade():
 
         COMMENT ON FUNCTION m10_recovery.complete_outbox_event(BIGINT, TEXT, BOOLEAN, TEXT, INTEGER) IS
             'Mark outbox event as processed or schedule retry (worker signature)';
-    """))
+    """
+        )
+    )
 
     # Create overload for test signature: (event_id, success, error, processor_id)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         CREATE OR REPLACE FUNCTION m10_recovery.complete_outbox_event(
             p_event_id BIGINT,
             p_success BOOLEAN,
@@ -244,12 +278,16 @@ def upgrade():
 
         COMMENT ON FUNCTION m10_recovery.complete_outbox_event(BIGINT, BOOLEAN, TEXT, TEXT) IS
             'Mark outbox event - overload for test signature (event_id, success, error, processor_id)';
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # STEP 5: Add process_after column if missing (for retry scheduling)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         BEGIN
             -- Add process_after column to outbox if missing
@@ -265,12 +303,16 @@ def upgrade():
                 RAISE NOTICE 'Added process_after column to outbox';
             END IF;
         END $$;
-    """))
+    """
+        )
+    )
 
     # ==========================================================================
     # STEP 6: Verify schema state (post-migration validation)
     # ==========================================================================
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DO $$
         DECLARE
             v_count INTEGER;
@@ -300,16 +342,22 @@ def upgrade():
                 RAISE WARNING 'dead_letter_archive.stream_msg_id column missing!';
             END IF;
         END $$;
-    """))
+    """
+        )
+    )
 
 
 def downgrade():
     conn = op.get_bind()
 
     # Remove the integer,text overload (keep the canonical text,integer version)
-    conn.execute(text("""
+    conn.execute(
+        text(
+            """
         DROP FUNCTION IF EXISTS m10_recovery.claim_outbox_events(INTEGER, TEXT);
-    """))
+    """
+        )
+    )
 
     # Note: We don't remove stream_msg_id or stream_name columns on downgrade
     # as they may contain data and are backward compatible

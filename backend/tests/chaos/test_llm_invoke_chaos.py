@@ -12,10 +12,10 @@ Tests retry behavior under various failure conditions:
 These tests validate error_contract.md compliance for LLM adapters.
 """
 
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -23,14 +23,11 @@ if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
 from app.skills.llm_invoke_v2 import (
-    llm_invoke_execute,
     LLM_ERROR_MAP,
     ErrorCategory,
     StubAdapter,
-    LLMConfig,
-    LLMResponse,
-    Message,
     _content_hash,
+    llm_invoke_execute,
 )
 
 
@@ -50,10 +47,7 @@ class TestLLMRateLimitHandling:
         prompt_hash = _content_hash("user: Rate limit test")
         StubAdapter.set_error(prompt_hash, "rate_limited", "Rate limit exceeded")
 
-        result = await llm_invoke_execute({
-            "prompt": "Rate limit test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Rate limit test", "adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_RATE_LIMITED"
@@ -66,10 +60,7 @@ class TestLLMRateLimitHandling:
         prompt_hash = _content_hash("user: Overload test")
         StubAdapter.set_error(prompt_hash, "overloaded", "API overloaded")
 
-        result = await llm_invoke_execute({
-            "prompt": "Overload test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Overload test", "adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_OVERLOADED"
@@ -92,10 +83,7 @@ class TestLLMTimeoutHandling:
         prompt_hash = _content_hash("user: Timeout test")
         StubAdapter.set_error(prompt_hash, "timeout", "Request timed out")
 
-        result = await llm_invoke_execute({
-            "prompt": "Timeout test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Timeout test", "adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_TIMEOUT"
@@ -118,10 +106,7 @@ class TestLLMAuthFailure:
         prompt_hash = _content_hash("user: Auth test")
         StubAdapter.set_error(prompt_hash, "auth_failed", "Invalid API key")
 
-        result = await llm_invoke_execute({
-            "prompt": "Auth test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Auth test", "adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_AUTH_FAILED"
@@ -144,10 +129,7 @@ class TestLLMContentBlocking:
         prompt_hash = _content_hash("user: Blocked content")
         StubAdapter.set_error(prompt_hash, "content_blocked", "Content policy violation")
 
-        result = await llm_invoke_execute({
-            "prompt": "Blocked content",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Blocked content", "adapter": "stub"})
 
         assert result.ok is False
         assert result.error["code"] == "ERR_LLM_CONTENT_BLOCKED"
@@ -167,12 +149,7 @@ class TestLLMDeterministicFallback:
     @pytest.mark.asyncio
     async def test_seeded_response_is_deterministic(self):
         """Seeded responses are deterministic."""
-        params = {
-            "prompt": "What is the meaning of life?",
-            "adapter": "stub",
-            "seed": 42,
-            "temperature": 0.0
-        }
+        params = {"prompt": "What is the meaning of life?", "adapter": "stub", "seed": 42, "temperature": 0.0}
 
         result1 = await llm_invoke_execute(params)
         result2 = await llm_invoke_execute(params)
@@ -185,17 +162,9 @@ class TestLLMDeterministicFallback:
     @pytest.mark.asyncio
     async def test_different_seeds_different_responses(self):
         """Different seeds produce different responses."""
-        result1 = await llm_invoke_execute({
-            "prompt": "Test prompt",
-            "adapter": "stub",
-            "seed": 42
-        })
+        result1 = await llm_invoke_execute({"prompt": "Test prompt", "adapter": "stub", "seed": 42})
 
-        result2 = await llm_invoke_execute({
-            "prompt": "Test prompt",
-            "adapter": "stub",
-            "seed": 123
-        })
+        result2 = await llm_invoke_execute({"prompt": "Test prompt", "adapter": "stub", "seed": 123})
 
         assert result1.ok is True
         assert result2.ok is True
@@ -204,16 +173,9 @@ class TestLLMDeterministicFallback:
     @pytest.mark.asyncio
     async def test_meta_indicates_deterministic_mode(self):
         """Meta indicates when response is deterministic."""
-        result_seeded = await llm_invoke_execute({
-            "prompt": "Test",
-            "adapter": "stub",
-            "seed": 42
-        })
+        result_seeded = await llm_invoke_execute({"prompt": "Test", "adapter": "stub", "seed": 42})
 
-        result_unseeded = await llm_invoke_execute({
-            "prompt": "Test",
-            "adapter": "stub"
-        })
+        result_unseeded = await llm_invoke_execute({"prompt": "Test", "adapter": "stub"})
 
         assert result_seeded.meta.get("deterministic") is True
         assert result_unseeded.meta.get("deterministic") is False
@@ -232,7 +194,7 @@ class TestLLMErrorContractCompliance:
             "content_blocked",
             "auth_failed",
             "context_too_long",
-            "invalid_model"
+            "invalid_model",
         ]
 
         for error_type in required_errors:
@@ -272,10 +234,7 @@ class TestLLMCostTracking:
     @pytest.mark.asyncio
     async def test_cost_tracked_on_success(self):
         """Cost is tracked on successful calls."""
-        result = await llm_invoke_execute({
-            "prompt": "Cost tracking test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Cost tracking test", "adapter": "stub"})
 
         assert result.ok is True
         assert "cost_cents" in result.result
@@ -284,10 +243,7 @@ class TestLLMCostTracking:
     @pytest.mark.asyncio
     async def test_tokens_tracked_on_success(self):
         """Tokens are tracked on successful calls."""
-        result = await llm_invoke_execute({
-            "prompt": "Token tracking test",
-            "adapter": "stub"
-        })
+        result = await llm_invoke_execute({"prompt": "Token tracking test", "adapter": "stub"})
 
         assert result.ok is True
         assert "input_tokens" in result.result

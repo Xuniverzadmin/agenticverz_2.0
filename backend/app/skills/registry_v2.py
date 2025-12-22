@@ -13,11 +13,14 @@ providing the new machine-native interfaces.
 """
 
 from __future__ import annotations
-import asyncio
+
+import json
 import logging
 import sqlite3
-import json
-from dataclasses import dataclass, field, asdict
+import sys
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -25,17 +28,13 @@ from typing import (
     Dict,
     List,
     Optional,
-    Tuple,
 )
-from pathlib import Path
-from datetime import datetime, timezone
 
-import sys
 _runtime_path = str(Path(__file__).parent.parent / "worker" / "runtime")
 if _runtime_path not in sys.path:
     sys.path.insert(0, _runtime_path)
 
-from core import SkillDescriptor, StructuredOutcome
+from core import SkillDescriptor
 
 logger = logging.getLogger("aos.skills.registry")
 
@@ -47,6 +46,7 @@ SkillHandler = Callable[[Dict[str, Any]], Coroutine[Any, Any, Any]]
 @dataclass
 class SkillVersion:
     """Semantic version for skills."""
+
     major: int
     minor: int
     patch: int
@@ -58,7 +58,7 @@ class SkillVersion:
         return cls(
             major=int(parts[0]) if len(parts) > 0 else 0,
             minor=int(parts[1]) if len(parts) > 1 else 0,
-            patch=int(parts[2]) if len(parts) > 2 else 0
+            patch=int(parts[2]) if len(parts) > 2 else 0,
         )
 
     def __str__(self) -> str:
@@ -83,6 +83,7 @@ class SkillRegistration:
 
     This is the internal representation used by the registry.
     """
+
     descriptor: SkillDescriptor
     handler: SkillHandler
     registered_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -108,7 +109,7 @@ class SkillRegistration:
             "descriptor": self.descriptor.to_dict(),
             "registered_at": self.registered_at,
             "is_stub": self.is_stub,
-            "tags": self.tags
+            "tags": self.tags,
         }
 
 
@@ -145,7 +146,8 @@ class SkillRegistry:
     def _init_persistence(self) -> None:
         """Initialize sqlite persistence layer."""
         self._db = sqlite3.connect(self._persistence_path)
-        self._db.execute("""
+        self._db.execute(
+            """
             CREATE TABLE IF NOT EXISTS skills (
                 skill_id TEXT NOT NULL,
                 version TEXT NOT NULL,
@@ -155,10 +157,13 @@ class SkillRegistry:
                 tags_json TEXT NOT NULL DEFAULT '[]',
                 PRIMARY KEY (skill_id, version)
             )
-        """)
-        self._db.execute("""
+        """
+        )
+        self._db.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_skills_id ON skills(skill_id)
-        """)
+        """
+        )
         self._db.commit()
 
     def register(
@@ -166,7 +171,7 @@ class SkillRegistry:
         descriptor: SkillDescriptor,
         handler: SkillHandler,
         is_stub: bool = False,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
     ) -> SkillRegistration:
         """
         Register a skill with its descriptor and handler.
@@ -183,12 +188,7 @@ class SkillRegistry:
         Raises:
             ValueError: If skill_id:version already registered
         """
-        registration = SkillRegistration(
-            descriptor=descriptor,
-            handler=handler,
-            is_stub=is_stub,
-            tags=tags or []
-        )
+        registration = SkillRegistration(descriptor=descriptor, handler=handler, is_stub=is_stub, tags=tags or [])
 
         # Check for duplicate versioned registration
         if registration.versioned_key in self._by_versioned_key:
@@ -205,11 +205,7 @@ class SkillRegistry:
 
         logger.info(
             "skill_registered",
-            extra={
-                "skill_id": descriptor.skill_id,
-                "version": descriptor.version,
-                "is_stub": is_stub
-            }
+            extra={"skill_id": descriptor.skill_id, "version": descriptor.version, "is_stub": is_stub},
         )
 
         return registration
@@ -231,8 +227,8 @@ class SkillRegistry:
                 json.dumps(reg.descriptor.to_dict()),
                 reg.registered_at,
                 1 if reg.is_stub else 0,
-                json.dumps(reg.tags)
-            )
+                json.dumps(reg.tags),
+            ),
         )
         self._db.commit()
 
@@ -256,8 +252,7 @@ class SkillRegistry:
                 del self._by_versioned_key[key]
                 removed = True
                 # Update latest if needed
-                remaining = [r for r in self._by_versioned_key.values()
-                           if r.skill_id == skill_id]
+                remaining = [r for r in self._by_versioned_key.values() if r.skill_id == skill_id]
                 if remaining:
                     latest = max(remaining, key=lambda r: SkillVersion.parse(r.version))
                     self._by_id[skill_id] = latest
@@ -267,8 +262,7 @@ class SkillRegistry:
                     self._handlers.pop(skill_id, None)
         else:
             # Remove all versions
-            keys_to_remove = [k for k in self._by_versioned_key
-                            if k.startswith(f"{skill_id}:")]
+            keys_to_remove = [k for k in self._by_versioned_key if k.startswith(f"{skill_id}:")]
             for key in keys_to_remove:
                 del self._by_versioned_key[key]
                 removed = True
@@ -278,24 +272,14 @@ class SkillRegistry:
         # Persist removal
         if removed and self._db:
             if version:
-                self._db.execute(
-                    "DELETE FROM skills WHERE skill_id = ? AND version = ?",
-                    (skill_id, version)
-                )
+                self._db.execute("DELETE FROM skills WHERE skill_id = ? AND version = ?", (skill_id, version))
             else:
-                self._db.execute(
-                    "DELETE FROM skills WHERE skill_id = ?",
-                    (skill_id,)
-                )
+                self._db.execute("DELETE FROM skills WHERE skill_id = ?", (skill_id,))
             self._db.commit()
 
         return removed
 
-    def resolve(
-        self,
-        skill_id: str,
-        version: Optional[str] = None
-    ) -> Optional[SkillRegistration]:
+    def resolve(self, skill_id: str, version: Optional[str] = None) -> Optional[SkillRegistration]:
         """
         Resolve a skill by ID and optional version.
 
@@ -351,7 +335,7 @@ class SkillRegistry:
                 "is_stub": reg.is_stub,
                 "cost_model": reg.descriptor.cost_model,
                 "failure_modes": list(reg.descriptor.failure_modes),
-                "tags": reg.tags
+                "tags": reg.tags,
             }
             for reg in self._by_id.values()
         ]
@@ -382,10 +366,7 @@ def set_global_registry(registry: SkillRegistry) -> None:
 
 
 def register_skill(
-    descriptor: SkillDescriptor,
-    handler: SkillHandler,
-    is_stub: bool = False,
-    tags: Optional[List[str]] = None
+    descriptor: SkillDescriptor, handler: SkillHandler, is_stub: bool = False, tags: Optional[List[str]] = None
 ) -> SkillRegistration:
     """Register a skill in the global registry."""
     return get_global_registry().register(descriptor, handler, is_stub, tags)
@@ -405,6 +386,7 @@ def get_skill_descriptor(skill_id: str) -> Optional[SkillDescriptor]:
 # Version-Gating + Contract Diffing
 # =============================================================================
 
+
 @dataclass
 class ContractDiff:
     """
@@ -415,6 +397,7 @@ class ContractDiff:
     - Breaking change detection
     - Migration planning
     """
+
     skill_id: str
     old_version: str
     new_version: str
@@ -441,7 +424,7 @@ class ContractDiff:
             "breaking_changes": self.breaking_changes,
             "non_breaking_changes": self.non_breaking_changes,
             "warnings": self.warnings,
-            "is_compatible": self.is_compatible
+            "is_compatible": self.is_compatible,
         }
 
 
@@ -464,10 +447,7 @@ def compare_versions(v1: str, v2: str) -> int:
     return 1
 
 
-def diff_contracts(
-    old_descriptor: SkillDescriptor,
-    new_descriptor: SkillDescriptor
-) -> ContractDiff:
+def diff_contracts(old_descriptor: SkillDescriptor, new_descriptor: SkillDescriptor) -> ContractDiff:
     """
     Compare two skill descriptors and identify changes.
 
@@ -491,9 +471,7 @@ def diff_contracts(
         ContractDiff with change analysis
     """
     diff = ContractDiff(
-        skill_id=new_descriptor.skill_id,
-        old_version=old_descriptor.version,
-        new_version=new_descriptor.version
+        skill_id=new_descriptor.skill_id, old_version=old_descriptor.version, new_version=new_descriptor.version
     )
 
     # Check major version bump
@@ -501,10 +479,7 @@ def diff_contracts(
     new_major = SkillVersion.parse(new_descriptor.version.split("-")[0]).major
 
     if new_major > old_major:
-        diff.warnings.append(
-            f"Major version bump from {old_major} to {new_major} - "
-            "breaking changes expected"
-        )
+        diff.warnings.append(f"Major version bump from {old_major} to {new_major} - " "breaking changes expected")
 
     # Check stable_fields changes
     old_stable = set(old_descriptor.stable_fields.keys())
@@ -512,22 +487,26 @@ def diff_contracts(
 
     removed_stable = old_stable - new_stable
     if removed_stable:
-        diff.breaking_changes.append({
-            "type": "stable_field_removed",
-            "fields": list(removed_stable),
-            "message": f"Stable fields removed: {removed_stable}"
-        })
+        diff.breaking_changes.append(
+            {
+                "type": "stable_field_removed",
+                "fields": list(removed_stable),
+                "message": f"Stable fields removed: {removed_stable}",
+            }
+        )
 
     # Check for determinism changes
     for field in old_stable & new_stable:
         old_val = old_descriptor.stable_fields.get(field)
         new_val = new_descriptor.stable_fields.get(field)
         if old_val == "DETERMINISTIC" and new_val != "DETERMINISTIC":
-            diff.breaking_changes.append({
-                "type": "determinism_weakened",
-                "field": field,
-                "message": f"Field {field} changed from DETERMINISTIC to {new_val}"
-            })
+            diff.breaking_changes.append(
+                {
+                    "type": "determinism_weakened",
+                    "field": field,
+                    "message": f"Field {field} changed from DETERMINISTIC to {new_val}",
+                }
+            )
 
     # Check failure_modes
     old_modes = {fm.get("code") for fm in old_descriptor.failure_modes if isinstance(fm, dict)}
@@ -535,19 +514,19 @@ def diff_contracts(
 
     removed_modes = old_modes - new_modes
     if removed_modes:
-        diff.breaking_changes.append({
-            "type": "failure_mode_removed",
-            "codes": list(removed_modes),
-            "message": f"Failure modes removed: {removed_modes}"
-        })
+        diff.breaking_changes.append(
+            {
+                "type": "failure_mode_removed",
+                "codes": list(removed_modes),
+                "message": f"Failure modes removed: {removed_modes}",
+            }
+        )
 
     added_modes = new_modes - old_modes
     if added_modes:
-        diff.non_breaking_changes.append({
-            "type": "failure_mode_added",
-            "codes": list(added_modes),
-            "message": f"New failure modes: {added_modes}"
-        })
+        diff.non_breaking_changes.append(
+            {"type": "failure_mode_added", "codes": list(added_modes), "message": f"New failure modes: {added_modes}"}
+        )
 
     # Check constraints
     old_constraints = old_descriptor.constraints or {}
@@ -559,33 +538,28 @@ def diff_contracts(
             new_val = new_constraints[key]
             if isinstance(old_val, (int, float)) and isinstance(new_val, (int, float)):
                 if new_val < old_val:
-                    diff.breaking_changes.append({
-                        "type": "constraint_tightened",
-                        "constraint": key,
-                        "old_value": old_val,
-                        "new_value": new_val,
-                        "message": f"Constraint {key} reduced from {old_val} to {new_val}"
-                    })
+                    diff.breaking_changes.append(
+                        {
+                            "type": "constraint_tightened",
+                            "constraint": key,
+                            "old_value": old_val,
+                            "new_value": new_val,
+                            "message": f"Constraint {key} reduced from {old_val} to {new_val}",
+                        }
+                    )
 
     # Check cost_model changes (informational)
     old_cost = old_descriptor.cost_model or {}
     new_cost = new_descriptor.cost_model or {}
     if old_cost != new_cost:
-        diff.non_breaking_changes.append({
-            "type": "cost_model_changed",
-            "old": old_cost,
-            "new": new_cost,
-            "message": "Cost model has changed"
-        })
+        diff.non_breaking_changes.append(
+            {"type": "cost_model_changed", "old": old_cost, "new": new_cost, "message": "Cost model has changed"}
+        )
 
     return diff
 
 
-def is_version_compatible(
-    required_version: str,
-    actual_version: str,
-    strict: bool = False
-) -> bool:
+def is_version_compatible(required_version: str, actual_version: str, strict: bool = False) -> bool:
     """
     Check if actual version satisfies the required version.
 
@@ -617,10 +591,7 @@ def is_version_compatible(
 
 
 def resolve_skill_with_version(
-    registry: SkillRegistry,
-    skill_id: str,
-    required_version: Optional[str] = None,
-    strict: bool = False
+    registry: SkillRegistry, skill_id: str, required_version: Optional[str] = None, strict: bool = False
 ) -> Optional[SkillRegistration]:
     """
     Resolve a skill with version compatibility checking.
@@ -653,16 +624,9 @@ def resolve_skill_with_version(
             return latest
 
         # Check all versions for compatibility
-        all_versions = [
-            reg for reg in registry.list_all_versions()
-            if reg.skill_id == skill_id
-        ]
+        all_versions = [reg for reg in registry.list_all_versions() if reg.skill_id == skill_id]
 
-        for reg in sorted(
-            all_versions,
-            key=lambda r: SkillVersion.parse(r.version.split("-")[0]),
-            reverse=True
-        ):
+        for reg in sorted(all_versions, key=lambda r: SkillVersion.parse(r.version.split("-")[0]), reverse=True):
             if is_version_compatible(required_version, reg.version):
                 return reg
 

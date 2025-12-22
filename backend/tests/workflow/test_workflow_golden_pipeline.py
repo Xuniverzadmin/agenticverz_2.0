@@ -9,18 +9,19 @@ Tests:
 4. Tamper detection
 """
 
-import pytest
-import tempfile
-import os
 import json
+import os
+import tempfile
 
+import pytest
+
+from app.workflow.engine import StepDescriptor, StepResult, WorkflowSpec
 from app.workflow.golden import (
-    GoldenRecorder,
     GoldenEvent,
+    GoldenRecorder,
     InMemoryGoldenRecorder,
     _canonical_json,
 )
-from app.workflow.engine import WorkflowSpec, StepDescriptor, StepResult
 
 
 @pytest.fixture
@@ -230,20 +231,30 @@ class TestGoldenComparison:
         file2 = os.path.join(golden_dir, "file2.jsonl")
 
         with open(file1, "w") as f:
-            f.write(_canonical_json({
-                "event_type": "run_start",
-                "run_id": "r1",
-                "timestamp": "2025-01-01T00:00:00Z",
-                "data": {"seed": 1}
-            }) + "\n")
+            f.write(
+                _canonical_json(
+                    {
+                        "event_type": "run_start",
+                        "run_id": "r1",
+                        "timestamp": "2025-01-01T00:00:00Z",
+                        "data": {"seed": 1},
+                    }
+                )
+                + "\n"
+            )
 
         with open(file2, "w") as f:
-            f.write(_canonical_json({
-                "event_type": "run_start",
-                "run_id": "r1",
-                "timestamp": "2025-01-02T00:00:00Z",  # Different timestamp
-                "data": {"seed": 1}
-            }) + "\n")
+            f.write(
+                _canonical_json(
+                    {
+                        "event_type": "run_start",
+                        "run_id": "r1",
+                        "timestamp": "2025-01-02T00:00:00Z",  # Different timestamp
+                        "data": {"seed": 1},
+                    }
+                )
+                + "\n"
+            )
 
         result = recorder.compare_golden(file1, file2, ignore_timestamps=True)
         assert result["match"] is True
@@ -254,20 +265,23 @@ class TestGoldenComparison:
         file2 = os.path.join(golden_dir, "file2.jsonl")
 
         with open(file1, "w") as f:
-            f.write(_canonical_json({
-                "event_type": "run_start",
-                "run_id": "r1",
-                "timestamp": "T1",
-                "data": {"seed": 1}
-            }) + "\n")
+            f.write(
+                _canonical_json({"event_type": "run_start", "run_id": "r1", "timestamp": "T1", "data": {"seed": 1}})
+                + "\n"
+            )
 
         with open(file2, "w") as f:
-            f.write(_canonical_json({
-                "event_type": "run_start",
-                "run_id": "r1",
-                "timestamp": "T1",
-                "data": {"seed": 999}  # Different seed
-            }) + "\n")
+            f.write(
+                _canonical_json(
+                    {
+                        "event_type": "run_start",
+                        "run_id": "r1",
+                        "timestamp": "T1",
+                        "data": {"seed": 999},  # Different seed
+                    }
+                )
+                + "\n"
+            )
 
         result = recorder.compare_golden(file1, file2)
 

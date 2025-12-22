@@ -11,6 +11,7 @@
 
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Schema version - must be checked at spawn time
@@ -25,16 +26,18 @@ DEPRECATED_VERSIONS: Set[str] = set()  # Versions that work but emit warnings
 
 class GovernanceProvider(str, Enum):
     """Supported governance providers."""
+
     BUDGETLLM = "BudgetLLM"
     NONE = "None"  # Only for testing/dev
 
 
 class DependencyType(str, Enum):
     """Types of dependencies an agent can have."""
-    TOOL = "tool"       # Skill/tool dependency
-    AGENT = "agent"     # Another agent dependency
-    API = "api"         # External API dependency
-    SERVICE = "service" # Internal service dependency
+
+    TOOL = "tool"  # Skill/tool dependency
+    AGENT = "agent"  # Another agent dependency
+    API = "api"  # External API dependency
+    SERVICE = "service"  # Internal service dependency
 
 
 class Dependency(BaseModel):
@@ -43,27 +46,12 @@ class Dependency(BaseModel):
 
     M15.1.1: Dependencies are now typed for semantic validation.
     """
-    type: DependencyType = Field(
-        ...,
-        description="Type of dependency (tool, agent, api, service)"
-    )
-    name: str = Field(
-        ...,
-        min_length=1,
-        description="Dependency identifier"
-    )
-    version: Optional[str] = Field(
-        default=None,
-        description="Version constraint (e.g., '>=1.0')"
-    )
-    required: bool = Field(
-        default=True,
-        description="Whether this dependency is required"
-    )
-    fallback: Optional[str] = Field(
-        default=None,
-        description="Fallback dependency name if primary unavailable"
-    )
+
+    type: DependencyType = Field(..., description="Type of dependency (tool, agent, api, service)")
+    name: str = Field(..., min_length=1, description="Dependency identifier")
+    version: Optional[str] = Field(default=None, description="Version constraint (e.g., '>=1.0')")
+    required: bool = Field(default=True, description="Whether this dependency is required")
+    fallback: Optional[str] = Field(default=None, description="Fallback dependency name if primary unavailable")
 
     def __hash__(self):
         return hash((self.type, self.name))
@@ -76,22 +64,11 @@ class Dependency(BaseModel):
 
 class EnvironmentRequirements(BaseModel):
     """Environment requirements for agent execution."""
-    cpu: Optional[str] = Field(
-        default="0.5",
-        description="CPU requirement (cores or millicores)"
-    )
-    memory: Optional[str] = Field(
-        default="256Mi",
-        description="Memory requirement (Mi/Gi)"
-    )
-    budget_tokens: Optional[int] = Field(
-        default=None,
-        description="Maximum tokens budget for LLM calls"
-    )
-    timeout_seconds: Optional[int] = Field(
-        default=300,
-        description="Maximum execution time"
-    )
+
+    cpu: Optional[str] = Field(default="0.5", description="CPU requirement (cores or millicores)")
+    memory: Optional[str] = Field(default="256Mi", description="Memory requirement (Mi/Gi)")
+    budget_tokens: Optional[int] = Field(default=None, description="Maximum tokens budget for LLM calls")
+    timeout_seconds: Optional[int] = Field(default=300, description="Maximum execution time")
 
 
 class HowToWin(BaseModel):
@@ -103,23 +80,16 @@ class HowToWin(BaseModel):
     - tests: How to validate success
     - fulfillment_metric: Target success rate (0.0-1.0)
     """
-    tasks: List[str] = Field(
-        ...,
-        min_length=1,
-        description="List of task descriptors the agent will execute"
-    )
+
+    tasks: List[str] = Field(..., min_length=1, description="List of task descriptors the agent will execute")
     tests: List[str] = Field(
-        default_factory=list,
-        description="Validation tests mapped to tasks (can be empty for retrofitted agents)"
+        default_factory=list, description="Validation tests mapped to tasks (can be empty for retrofitted agents)"
     )
     fulfillment_metric: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="Target fulfillment score (0.0-1.0), computed by orchestrator"
+        default=0.0, ge=0.0, le=1.0, description="Target fulfillment score (0.0-1.0), computed by orchestrator"
     )
 
-    @field_validator('tasks')
+    @field_validator("tasks")
     @classmethod
     def validate_tasks_not_empty(cls, v: List[str]) -> List[str]:
         """Ensure tasks list is not empty and contains non-empty strings."""
@@ -142,21 +112,19 @@ class CapabilitiesCapacity(BaseModel):
 
     M15.1.1: Now supports typed dependencies for semantic validation.
     """
+
     # Structured dependencies (preferred)
     dependencies: List[Dependency] = Field(
-        default_factory=list,
-        description="Typed dependencies (tool/agent/api/service)"
+        default_factory=list, description="Typed dependencies (tool/agent/api/service)"
     )
 
     # Legacy support - plain string list
     legacy_dependencies: List[str] = Field(
-        default_factory=list,
-        description="Legacy: List of dependency names (use 'dependencies' instead)"
+        default_factory=list, description="Legacy: List of dependency names (use 'dependencies' instead)"
     )
 
     env: EnvironmentRequirements = Field(
-        default_factory=EnvironmentRequirements,
-        description="Environment requirements"
+        default_factory=EnvironmentRequirements, description="Environment requirements"
     )
 
     def get_all_dependency_names(self) -> List[str]:
@@ -186,14 +154,10 @@ class EnablingManagementSystems(BaseModel):
     - orchestrator: The orchestrator that owns this agent
     - governance: The governance provider (MUST be BudgetLLM for production)
     """
-    orchestrator: str = Field(
-        ...,
-        min_length=1,
-        description="Orchestrator agent name/ID that owns this worker"
-    )
+
+    orchestrator: str = Field(..., min_length=1, description="Orchestrator agent name/ID that owns this worker")
     governance: GovernanceProvider = Field(
-        default=GovernanceProvider.BUDGETLLM,
-        description="Governance provider (must be BudgetLLM for production)"
+        default=GovernanceProvider.BUDGETLLM, description="Governance provider (must be BudgetLLM for production)"
     )
 
 
@@ -203,23 +167,27 @@ class WinningAspiration(BaseModel):
 
     This is NOT a task list - it describes the agent's PURPOSE.
     """
+
     description: str = Field(
-        ...,
-        min_length=10,
-        description="Clear statement of why this agent exists and what it aims to achieve"
+        ..., min_length=10, description="Clear statement of why this agent exists and what it aims to achieve"
     )
 
-    @field_validator('description')
+    @field_validator("description")
     @classmethod
     def validate_not_task_list(cls, v: str) -> str:
         """Ensure aspiration is a purpose statement, not a task list."""
         # Check for common task-list patterns
         task_indicators = [
-            "1.", "2.", "3.",
+            "1.",
+            "2.",
+            "3.",
             "- ",
             "* ",
-            "step 1", "step 2",
-            "first,", "second,", "third,",
+            "step 1",
+            "step 2",
+            "first,",
+            "second,",
+            "third,",
         ]
         lower_v = v.lower()
         for indicator in task_indicators:
@@ -241,26 +209,21 @@ class WhereToPlay(BaseModel):
     - allowed_tools: What tools the agent can use
     - allowed_contexts: What contexts the agent can operate in
     """
+
     domain: str = Field(
-        ...,
-        min_length=3,
-        description="Domain/area of operation (e.g., 'web-scraping', 'data-analysis')"
+        ..., min_length=3, description="Domain/area of operation (e.g., 'web-scraping', 'data-analysis')"
     )
     input_constraints: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="JSON schema or constraints for valid inputs"
+        default=None, description="JSON schema or constraints for valid inputs"
     )
     allowed_tools: List[str] = Field(
-        default_factory=list,
-        description="List of tools/skills the agent is allowed to use"
+        default_factory=list, description="List of tools/skills the agent is allowed to use"
     )
     allowed_contexts: List[str] = Field(
-        default_factory=lambda: ["job"],
-        description="Contexts where agent can operate: job, p2p, blackboard"
+        default_factory=lambda: ["job"], description="Contexts where agent can operate: job, p2p, blackboard"
     )
     boundaries: Optional[str] = Field(
-        default=None,
-        description="Natural language description of what the agent should NOT do"
+        default=None, description="Natural language description of what the agent should NOT do"
     )
 
 
@@ -282,67 +245,43 @@ class SBASchema(BaseModel):
     """
 
     # Schema version for forward compatibility
-    sba_version: str = Field(
-        default=SBA_VERSION,
-        description="SBA schema version"
-    )
+    sba_version: str = Field(default=SBA_VERSION, description="SBA schema version")
 
     # The 5 Strategy Cascade elements
-    winning_aspiration: WinningAspiration = Field(
-        ...,
-        description="Why the agent exists (not a task list)"
-    )
+    winning_aspiration: WinningAspiration = Field(..., description="Why the agent exists (not a task list)")
 
-    where_to_play: WhereToPlay = Field(
-        ...,
-        description="Boundaries and scope of operation"
-    )
+    where_to_play: WhereToPlay = Field(..., description="Boundaries and scope of operation")
 
-    how_to_win: HowToWin = Field(
-        ...,
-        description="Tasks, tests, and fulfillment metric"
-    )
+    how_to_win: HowToWin = Field(..., description="Tasks, tests, and fulfillment metric")
 
     capabilities_capacity: CapabilitiesCapacity = Field(
-        default_factory=CapabilitiesCapacity,
-        description="Dependencies and environment requirements"
+        default_factory=CapabilitiesCapacity, description="Dependencies and environment requirements"
     )
 
     enabling_management_systems: EnablingManagementSystems = Field(
-        ...,
-        description="Orchestrator and governance configuration"
+        ..., description="Orchestrator and governance configuration"
     )
 
     # Metadata
-    agent_id: Optional[str] = Field(
-        default=None,
-        description="Agent identifier (filled by registry)"
-    )
-    created_at: Optional[str] = Field(
-        default=None,
-        description="ISO timestamp of creation"
-    )
-    updated_at: Optional[str] = Field(
-        default=None,
-        description="ISO timestamp of last update"
-    )
+    agent_id: Optional[str] = Field(default=None, description="Agent identifier (filled by registry)")
+    created_at: Optional[str] = Field(default=None, description="ISO timestamp of creation")
+    updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSONB storage."""
-        return self.model_dump(mode='json')
+        return self.model_dump(mode="json")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SBASchema":
         """Create from dictionary (e.g., from JSONB)."""
         return cls.model_validate(data)
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_version_supported(self) -> "SBASchema":
         """Validate that the SBA version is supported."""
         if self.sba_version not in SUPPORTED_SBA_VERSIONS:
             raise ValueError(
-                f"SBA version '{self.sba_version}' is not supported. "
-                f"Supported versions: {SUPPORTED_SBA_VERSIONS}"
+                f"SBA version '{self.sba_version}' is not supported. " f"Supported versions: {SUPPORTED_SBA_VERSIONS}"
             )
         return self
 
@@ -402,15 +341,14 @@ def create_minimal_sba(
 # Version Negotiation Helpers
 # =============================================================================
 
+
 class SBAVersionError(Exception):
     """Raised when SBA version is not supported."""
+
     def __init__(self, version: str, supported: Set[str]):
         self.version = version
         self.supported = supported
-        super().__init__(
-            f"SBA version '{version}' is not supported. "
-            f"Supported: {supported}"
-        )
+        super().__init__(f"SBA version '{version}' is not supported. " f"Supported: {supported}")
 
 
 def check_version_supported(version: str) -> bool:
@@ -458,6 +396,7 @@ def get_version_info() -> Dict[str, Any]:
 # =============================================================================
 # Dependency Helpers
 # =============================================================================
+
 
 def create_tool_dependency(name: str, required: bool = True) -> Dependency:
     """Create a tool dependency."""

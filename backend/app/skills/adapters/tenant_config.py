@@ -20,10 +20,10 @@ Environment Variables:
 - DEFAULT_TENANT_BUDGET_CENTS: Default monthly budget in cents (default: 100000)
 """
 
-import os
 import logging
+import os
 from dataclasses import dataclass, field
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 logger = logging.getLogger("nova.adapters.tenant_config")
 
@@ -37,12 +37,14 @@ class TenantLLMConfig:
     # Model selection
     preferred_model: str = "claude-sonnet-4-20250514"
     fallback_model: str = "gpt-4o-mini"
-    allowed_models: List[str] = field(default_factory=lambda: [
-        "claude-sonnet-4-20250514",
-        "claude-3-5-sonnet-20241022",
-        "gpt-4o",
-        "gpt-4o-mini",
-    ])
+    allowed_models: List[str] = field(
+        default_factory=lambda: [
+            "claude-sonnet-4-20250514",
+            "claude-3-5-sonnet-20241022",
+            "gpt-4o",
+            "gpt-4o-mini",
+        ]
+    )
 
     # Rate limits
     requests_per_minute: int = 60
@@ -121,10 +123,7 @@ async def _load_config_from_vault(tenant_id: str) -> Optional[TenantLLMConfig]:
         url = f"{vault_addr}/v1/{path}"
 
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url,
-                headers={"X-Vault-Token": vault_token}
-            )
+            response = await client.get(url, headers={"X-Vault-Token": vault_token})
 
             if response.status_code != 200:
                 return None
@@ -218,10 +217,9 @@ def reset_config_cache():
 # Tenant Model Selector
 # =============================================================================
 
+
 async def get_model_for_tenant(
-    tenant_id: Optional[str] = None,
-    requested_model: Optional[str] = None,
-    task_type: str = "default"
+    tenant_id: Optional[str] = None, requested_model: Optional[str] = None, task_type: str = "default"
 ) -> str:
     """
     Get the appropriate model for a tenant and task.

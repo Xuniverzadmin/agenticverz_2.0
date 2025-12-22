@@ -11,20 +11,16 @@ Run with:
     pytest tests/test_metric_fuzzer.py -v
 """
 
-import json
-import os
 import random
 import string
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.rate_limiter import (
     RedisRateLimiter,
-    RATE_LIMIT_EXCEEDED,
-    RATE_LIMIT_ALLOWED,
 )
 
 
@@ -33,26 +29,35 @@ def fastapi_available():
     try:
         import fastapi
         from fastapi.testclient import TestClient
+
         return True
     except ImportError:
         return False
 
 
 requires_fastapi = pytest.mark.skipif(
-    not fastapi_available(),
-    reason="FastAPI not available"
+    not fastapi_available(), reason="FastAPI not available"
 )
 
 
 def generate_random_string(length: int = 10) -> str:
     """Generate a random string of specified length."""
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
 
 
 def generate_random_alertname() -> str:
     """Generate a realistic random alertname."""
     prefixes = ["High", "Low", "Critical", "Warning", "Info", ""]
-    metrics = ["CPU", "Memory", "Disk", "Network", "Latency", "Error", "Request", "Response"]
+    metrics = [
+        "CPU",
+        "Memory",
+        "Disk",
+        "Network",
+        "Latency",
+        "Error",
+        "Request",
+        "Response",
+    ]
     suffixes = ["Usage", "Rate", "Count", "Threshold", "Alert", "Warning", ""]
 
     return f"{random.choice(prefixes)}{random.choice(metrics)}{random.choice(suffixes)}".strip()
@@ -102,7 +107,9 @@ def generate_random_annotations() -> Dict[str, Any]:
         annotations["description"] = f"Description: {generate_random_string(100)}"
 
     if random.random() > 0.5:
-        annotations["runbook_url"] = f"https://runbooks.example.com/{generate_random_string(20)}"
+        annotations[
+            "runbook_url"
+        ] = f"https://runbooks.example.com/{generate_random_string(20)}"
 
     return annotations
 
@@ -138,7 +145,9 @@ def generate_random_alert() -> Dict[str, Any]:
 
 def generate_random_payload() -> Dict[str, Any]:
     """Generate a random webhook payload."""
-    payload_type = random.choice(["alertmanager", "single_alert", "custom", "empty", "nested"])
+    payload_type = random.choice(
+        ["alertmanager", "single_alert", "custom", "empty", "nested"]
+    )
 
     if payload_type == "alertmanager":
         # Standard Alertmanager format with multiple alerts
@@ -156,7 +165,9 @@ def generate_random_payload() -> Dict[str, Any]:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": {
                 "value": random.uniform(0, 1000),
-                "tags": [generate_random_string(5) for _ in range(random.randint(0, 5))],
+                "tags": [
+                    generate_random_string(5) for _ in range(random.randint(0, 5))
+                ],
             },
             "metadata": {
                 generate_random_string(8): generate_random_string(15)
@@ -176,19 +187,22 @@ def generate_random_payload() -> Dict[str, Any]:
                 generate_random_string(5): build_nested(depth - 1)
                 for _ in range(random.randint(1, 3))
             }
+
         return build_nested(random.randint(2, 5))
 
 
 def generate_malformed_payload() -> Any:
     """Generate potentially problematic payloads."""
-    malformed_type = random.choice([
-        "empty_string_keys",
-        "null_values",
-        "unicode",
-        "large_numbers",
-        "deep_nesting",
-        "special_chars",
-    ])
+    malformed_type = random.choice(
+        [
+            "empty_string_keys",
+            "null_values",
+            "unicode",
+            "large_numbers",
+            "deep_nesting",
+            "special_chars",
+        ]
+    )
 
     if malformed_type == "empty_string_keys":
         return {"": "empty_key", "normal": "value", "": "duplicate_empty"}
@@ -212,7 +226,7 @@ def generate_malformed_payload() -> Any:
         return {
             "value": 10**100,
             "float": 1e308,
-            "negative": -10**100,
+            "negative": -(10**100),
         }
 
     elif malformed_type == "deep_nesting":
@@ -260,7 +274,9 @@ class TestMetricFuzzer:
         mock_session = MagicMock()
         mock_session.add = MagicMock()
         mock_session.commit = MagicMock()
-        mock_session.refresh = MagicMock(side_effect=lambda x: setattr(x, 'id', random.randint(1, 10000)))
+        mock_session.refresh = MagicMock(
+            side_effect=lambda x: setattr(x, "id", random.randint(1, 10000))
+        )
 
         def override_get_db():
             yield mock_session
@@ -293,7 +309,7 @@ class TestMetricFuzzer:
                     headers={
                         "Content-Type": "application/json",
                         "X-Tenant-ID": f"tenant-{i % 10}",
-                    }
+                    },
                 )
 
                 # Should not raise KeyError - either succeed or return handled error
@@ -303,25 +319,31 @@ class TestMetricFuzzer:
                     # Rate limited is acceptable
                     pass
                 else:
-                    errors.append({
-                        "iteration": i,
-                        "status": response.status_code,
-                        "response": response.text[:200],
-                        "payload_type": type(payload).__name__,
-                    })
+                    errors.append(
+                        {
+                            "iteration": i,
+                            "status": response.status_code,
+                            "response": response.text[:200],
+                            "payload_type": type(payload).__name__,
+                        }
+                    )
 
             except KeyError as e:
                 pytest.fail(f"KeyError on iteration {i}: {e}")
             except Exception as e:
-                errors.append({
-                    "iteration": i,
-                    "error": str(e)[:200],
-                    "payload_type": type(payload).__name__,
-                })
+                errors.append(
+                    {
+                        "iteration": i,
+                        "error": str(e)[:200],
+                        "payload_type": type(payload).__name__,
+                    }
+                )
 
         # Allow some errors but not too many
         error_rate = len(errors) / 500
-        assert error_rate < 0.1, f"Error rate too high: {error_rate:.2%}, errors: {errors[:5]}"
+        assert (
+            error_rate < 0.1
+        ), f"Error rate too high: {error_rate:.2%}, errors: {errors[:5]}"
 
         # Should have many successes
         assert successes > 400, f"Too few successes: {successes}/500"
@@ -341,12 +363,13 @@ class TestMetricFuzzer:
                     headers={
                         "Content-Type": "application/json",
                         "X-Tenant-ID": "malformed-test",
-                    }
+                    },
                 )
 
                 # Should not crash - any HTTP response is acceptable
-                assert response.status_code in range(200, 600), \
-                    f"Invalid status code: {response.status_code}"
+                assert response.status_code in range(
+                    200, 600
+                ), f"Invalid status code: {response.status_code}"
 
             except KeyError as e:
                 pytest.fail(f"KeyError on malformed payload {i}: {e}")
@@ -370,15 +393,16 @@ class TestMetricFuzzer:
                 headers={
                     "Content-Type": "application/json",
                     "X-Tenant-ID": "metrics-test",
-                }
+                },
             )
 
             if response.status_code in (200, 201):
                 successful_requests += 1
 
         # Verify we got reasonable success rate
-        assert successful_requests > 80, \
-            f"Too few successful requests: {successful_requests}/{num_requests}"
+        assert (
+            successful_requests > 80
+        ), f"Too few successful requests: {successful_requests}/{num_requests}"
 
     def test_fuzzer_rate_limits_triggered_predictably(self):
         """
@@ -404,9 +428,9 @@ class TestMetricFuzzer:
             # Simulate INCR behavior - we track by incrementing
             # Return a count that increases with each call
             # This simulates the sliding window counter
-            key_counts['call_count'] = key_counts.get('call_count', 0) + 1
+            key_counts["call_count"] = key_counts.get("call_count", 0) + 1
             # Divide by 2 because each request makes 2 INCR calls (IP + tenant)
-            effective_request = (key_counts['call_count'] + 1) // 2
+            effective_request = (key_counts["call_count"] + 1) // 2
             return [effective_request]
 
         mock_client = MagicMock()
@@ -425,7 +449,7 @@ class TestMetricFuzzer:
         mock_session.add = MagicMock()
         mock_session.commit = MagicMock()
         mock_session.refresh = MagicMock(
-            side_effect=lambda x: setattr(x, 'id', random.randint(1, 10000))
+            side_effect=lambda x: setattr(x, "id", random.randint(1, 10000))
         )
 
         def override_get_db():
@@ -447,7 +471,7 @@ class TestMetricFuzzer:
                     headers={
                         "Content-Type": "application/json",
                         "X-Tenant-ID": "rate-test",
-                    }
+                    },
                 )
 
                 if response.status_code == 200:
@@ -458,7 +482,9 @@ class TestMetricFuzzer:
             # Should have some allowed and some limited
             # With rpm=10, first 10 should pass, rest should be limited
             assert allowed_count >= 10, f"Too few allowed: {allowed_count}"
-            assert limited_count > 0, f"Rate limiting should have kicked in (allowed={allowed_count}, limited={limited_count})"
+            assert (
+                limited_count > 0
+            ), f"Rate limiting should have kicked in (allowed={allowed_count}, limited={limited_count})"
 
         finally:
             app.dependency_overrides.clear()
@@ -492,12 +518,12 @@ class TestPayloadEdgeCases:
         main_module.redis_rate_limiter = mock_limiter
 
         # Mock database
-        with patch('app.main.get_db') as mock_get_db:
+        with patch("app.main.get_db") as mock_get_db:
             mock_session = MagicMock()
             mock_session.add = MagicMock()
             mock_session.commit = MagicMock()
             mock_session.refresh = MagicMock(
-                side_effect=lambda x: setattr(x, 'id', random.randint(1, 10000))
+                side_effect=lambda x: setattr(x, "id", random.randint(1, 10000))
             )
 
             def db_gen():
@@ -523,9 +549,7 @@ class TestPayloadEdgeCases:
     def test_null_payload(self, client):
         """Null payload should be handled."""
         response = client.post(
-            "/webhook",
-            content="null",
-            headers={"Content-Type": "application/json"}
+            "/webhook", content="null", headers={"Content-Type": "application/json"}
         )
         assert response.status_code in (200, 201, 422, 400, 500)
 
@@ -599,11 +623,15 @@ class TestFuzzerReproducibility:
 
     def test_reproducible_structure_with_seed(self):
         """Same seed should produce payloads with same structure (ignoring timestamps)."""
+
         def strip_timestamps(payload):
             """Remove timestamp fields for comparison."""
             if isinstance(payload, dict):
-                return {k: strip_timestamps(v) for k, v in payload.items()
-                        if k not in ('startsAt', 'endsAt', 'timestamp')}
+                return {
+                    k: strip_timestamps(v)
+                    for k, v in payload.items()
+                    if k not in ("startsAt", "endsAt", "timestamp")
+                }
             elif isinstance(payload, list):
                 return [strip_timestamps(item) for item in payload]
             return payload

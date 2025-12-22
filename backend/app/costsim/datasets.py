@@ -16,18 +16,15 @@ Each dataset provides:
 """
 
 from __future__ import annotations
-import json
+
 import logging
 import math
 import random
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
-from app.costsim.config import get_config
+from app.costsim.models import ValidationResult
 from app.costsim.v2_adapter import CostSimV2Adapter
-from app.costsim.models import ValidationResult, V2SimulationResult
 
 logger = logging.getLogger("nova.costsim.datasets")
 
@@ -100,50 +97,58 @@ class DatasetValidator:
 
         # Simple HTTP calls
         for i in range(10):
-            samples.append(DatasetSample(
-                id=f"lv_http_{i}",
-                plan=[{"skill": "http_call", "params": {"url": f"https://api{i}.example.com"}}],
-                budget_cents=100,
-                expected_cost_cents=0,
-                expected_feasible=True,
-                expected_confidence_min=0.8,
-                tags=["http", "simple"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"lv_http_{i}",
+                    plan=[{"skill": "http_call", "params": {"url": f"https://api{i}.example.com"}}],
+                    budget_cents=100,
+                    expected_cost_cents=0,
+                    expected_feasible=True,
+                    expected_confidence_min=0.8,
+                    tags=["http", "simple"],
+                )
+            )
 
         # Simple JSON transforms
         for i in range(10):
-            samples.append(DatasetSample(
-                id=f"lv_json_{i}",
-                plan=[{"skill": "json_transform", "params": {"expression": f"$.field{i}"}}],
-                budget_cents=100,
-                expected_cost_cents=0,
-                expected_feasible=True,
-                expected_confidence_min=0.95,
-                tags=["json", "simple"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"lv_json_{i}",
+                    plan=[{"skill": "json_transform", "params": {"expression": f"$.field{i}"}}],
+                    budget_cents=100,
+                    expected_cost_cents=0,
+                    expected_feasible=True,
+                    expected_confidence_min=0.95,
+                    tags=["json", "simple"],
+                )
+            )
 
         # Simple KV operations
         for i in range(5):
-            samples.append(DatasetSample(
-                id=f"lv_kv_get_{i}",
-                plan=[{"skill": "kv_get", "params": {"key": f"key{i}"}}],
-                budget_cents=100,
-                expected_cost_cents=0,
-                expected_feasible=True,
-                expected_confidence_min=0.95,
-                tags=["kv", "simple"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"lv_kv_get_{i}",
+                    plan=[{"skill": "kv_get", "params": {"key": f"key{i}"}}],
+                    budget_cents=100,
+                    expected_cost_cents=0,
+                    expected_feasible=True,
+                    expected_confidence_min=0.95,
+                    tags=["kv", "simple"],
+                )
+            )
 
         for i in range(5):
-            samples.append(DatasetSample(
-                id=f"lv_kv_set_{i}",
-                plan=[{"skill": "kv_set", "params": {"key": f"key{i}", "value": f"value{i}"}}],
-                budget_cents=100,
-                expected_cost_cents=0,
-                expected_feasible=True,
-                expected_confidence_min=0.95,
-                tags=["kv", "simple"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"lv_kv_set_{i}",
+                    plan=[{"skill": "kv_set", "params": {"key": f"key{i}", "value": f"value{i}"}}],
+                    budget_cents=100,
+                    expected_cost_cents=0,
+                    expected_feasible=True,
+                    expected_confidence_min=0.95,
+                    tags=["kv", "simple"],
+                )
+            )
 
         return ReferenceDataset(
             id="low_variance",
@@ -151,11 +156,11 @@ class DatasetValidator:
             description="Simple, predictable plans for baseline validation",
             samples=samples,
             validation_thresholds={
-                "max_mean_error": 1.0,      # Max 1 cent mean error
-                "max_median_error": 0.5,     # Max 0.5 cent median error
-                "max_std_deviation": 2.0,    # Max 2 cent std deviation
-                "max_outlier_pct": 0.02,     # Max 2% outliers
-                "max_drift_score": 0.05,     # Max 5% drift
+                "max_mean_error": 1.0,  # Max 1 cent mean error
+                "max_median_error": 0.5,  # Max 0.5 cent median error
+                "max_std_deviation": 2.0,  # Max 2 cent std deviation
+                "max_outlier_pct": 0.02,  # Max 2% outliers
+                "max_drift_score": 0.05,  # Max 5% drift
             },
         )
 
@@ -172,14 +177,16 @@ class DatasetValidator:
         prompt_lengths = [100, 500, 1000, 2000, 4000, 8000]
         for i, length in enumerate(prompt_lengths):
             prompt = "A" * length
-            samples.append(DatasetSample(
-                id=f"hv_llm_{i}",
-                plan=[{"skill": "llm_invoke", "params": {"prompt": prompt}}],
-                budget_cents=50,
-                expected_feasible=True,
-                expected_confidence_min=0.7,
-                tags=["llm", "variable"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"hv_llm_{i}",
+                    plan=[{"skill": "llm_invoke", "params": {"prompt": prompt}}],
+                    budget_cents=50,
+                    expected_feasible=True,
+                    expected_confidence_min=0.7,
+                    tags=["llm", "variable"],
+                )
+            )
 
         # Multi-step workflows
         for i in range(5):
@@ -193,28 +200,37 @@ class DatasetValidator:
                 else:
                     steps.append({"skill": skill, "params": {"prompt": f"Step {j} analysis"}})
 
-            samples.append(DatasetSample(
-                id=f"hv_workflow_{i}",
-                plan=steps,
-                budget_cents=200,
-                expected_feasible=True,
-                expected_confidence_min=0.5,
-                tags=["workflow", "complex"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"hv_workflow_{i}",
+                    plan=steps,
+                    budget_cents=200,
+                    expected_feasible=True,
+                    expected_confidence_min=0.5,
+                    tags=["workflow", "complex"],
+                )
+            )
 
         # External HTTP with timeouts
         for i in range(5):
-            samples.append(DatasetSample(
-                id=f"hv_external_{i}",
-                plan=[{"skill": "http_call", "params": {
-                    "url": f"https://external-api-{i}.com/data",
-                    "timeout": random.randint(10, 60),
-                }}],
-                budget_cents=100,
-                expected_feasible=True,
-                expected_confidence_min=0.6,
-                tags=["http", "external", "variable"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"hv_external_{i}",
+                    plan=[
+                        {
+                            "skill": "http_call",
+                            "params": {
+                                "url": f"https://external-api-{i}.com/data",
+                                "timeout": random.randint(10, 60),
+                            },
+                        }
+                    ],
+                    budget_cents=100,
+                    expected_feasible=True,
+                    expected_confidence_min=0.6,
+                    tags=["http", "external", "variable"],
+                )
+            )
 
         return ReferenceDataset(
             id="high_variance",
@@ -222,10 +238,10 @@ class DatasetValidator:
             description="Complex, variable plans for stress testing",
             samples=samples,
             validation_thresholds={
-                "max_mean_error": 10.0,      # Higher tolerance
+                "max_mean_error": 10.0,  # Higher tolerance
                 "max_median_error": 5.0,
                 "max_std_deviation": 15.0,
-                "max_outlier_pct": 0.10,     # 10% outliers acceptable
+                "max_outlier_pct": 0.10,  # 10% outliers acceptable
                 "max_drift_score": 0.15,
             },
         )
@@ -241,57 +257,65 @@ class DatasetValidator:
 
         # Morning batch: Mostly simple reads
         for i in range(10):
-            samples.append(DatasetSample(
-                id=f"mc_morning_{i}",
-                plan=[
-                    {"skill": "kv_get", "params": {"key": f"config_{i}"}},
-                    {"skill": "json_transform", "params": {"expression": "$.settings"}},
-                ],
-                budget_cents=50,
-                expected_feasible=True,
-                tags=["batch", "morning"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"mc_morning_{i}",
+                    plan=[
+                        {"skill": "kv_get", "params": {"key": f"config_{i}"}},
+                        {"skill": "json_transform", "params": {"expression": "$.settings"}},
+                    ],
+                    budget_cents=50,
+                    expected_feasible=True,
+                    tags=["batch", "morning"],
+                )
+            )
 
         # Midday peak: Complex workflows
         for i in range(5):
-            samples.append(DatasetSample(
-                id=f"mc_peak_{i}",
-                plan=[
-                    {"skill": "http_call", "params": {"url": f"https://data-api.example.com/{i}"}},
-                    {"skill": "llm_invoke", "params": {"prompt": "Analyze the response data"}},
-                    {"skill": "json_transform", "params": {"expression": "$.result"}},
-                    {"skill": "kv_set", "params": {"key": f"result_{i}", "value": "..."}},
-                ],
-                budget_cents=100,
-                expected_feasible=True,
-                tags=["workflow", "peak"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"mc_peak_{i}",
+                    plan=[
+                        {"skill": "http_call", "params": {"url": f"https://data-api.example.com/{i}"}},
+                        {"skill": "llm_invoke", "params": {"prompt": "Analyze the response data"}},
+                        {"skill": "json_transform", "params": {"expression": "$.result"}},
+                        {"skill": "kv_set", "params": {"key": f"result_{i}", "value": "..."}},
+                    ],
+                    budget_cents=100,
+                    expected_feasible=True,
+                    tags=["workflow", "peak"],
+                )
+            )
 
         # Afternoon: Email and webhooks
         for i in range(5):
-            samples.append(DatasetSample(
-                id=f"mc_afternoon_{i}",
-                plan=[
-                    {"skill": "json_transform", "params": {"expression": "$.notification"}},
-                    {"skill": "webhook_send", "params": {"url": f"https://notify.example.com/{i}"}},
-                ],
-                budget_cents=50,
-                expected_feasible=True,
-                tags=["notification", "afternoon"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"mc_afternoon_{i}",
+                    plan=[
+                        {"skill": "json_transform", "params": {"expression": "$.notification"}},
+                        {"skill": "webhook_send", "params": {"url": f"https://notify.example.com/{i}"}},
+                    ],
+                    budget_cents=50,
+                    expected_feasible=True,
+                    tags=["notification", "afternoon"],
+                )
+            )
 
         # Evening: Heavy LLM usage
         for i in range(5):
-            samples.append(DatasetSample(
-                id=f"mc_evening_{i}",
-                plan=[
-                    {"skill": "llm_invoke", "params": {"prompt": "Generate daily report"}},
-                    {"skill": "email_send", "params": {"to": f"user{i}@example.com"}},
-                ],
-                budget_cents=100,
-                expected_feasible=True,
-                tags=["report", "evening"],
-            ))
+            samples.append(
+                DatasetSample(
+                    id=f"mc_evening_{i}",
+                    plan=[
+                        {"skill": "llm_invoke", "params": {"prompt": "Generate daily report"}},
+                        {"skill": "email_send", "params": {"to": f"user{i}@example.com"}},
+                    ],
+                    budget_cents=100,
+                    expected_feasible=True,
+                    tags=["report", "evening"],
+                )
+            )
 
         return ReferenceDataset(
             id="mixed_city",
@@ -316,84 +340,100 @@ class DatasetValidator:
         samples = []
 
         # Empty plan
-        samples.append(DatasetSample(
-            id="ni_empty",
-            plan=[],
-            budget_cents=100,
-            expected_feasible=False,
-            tags=["edge_case", "empty"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_empty",
+                plan=[],
+                budget_cents=100,
+                expected_feasible=False,
+                tags=["edge_case", "empty"],
+            )
+        )
 
         # Unknown skill
-        samples.append(DatasetSample(
-            id="ni_unknown_skill",
-            plan=[{"skill": "unknown_skill_xyz", "params": {}}],
-            budget_cents=100,
-            expected_feasible=True,  # Should still work, with low confidence
-            expected_confidence_min=0.3,
-            tags=["edge_case", "unknown"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_unknown_skill",
+                plan=[{"skill": "unknown_skill_xyz", "params": {}}],
+                budget_cents=100,
+                expected_feasible=True,  # Should still work, with low confidence
+                expected_confidence_min=0.3,
+                tags=["edge_case", "unknown"],
+            )
+        )
 
         # Budget exactly zero
-        samples.append(DatasetSample(
-            id="ni_zero_budget",
-            plan=[{"skill": "http_call", "params": {"url": "https://api.example.com"}}],
-            budget_cents=0,
-            expected_feasible=True,  # HTTP is free
-            tags=["edge_case", "budget"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_zero_budget",
+                plan=[{"skill": "http_call", "params": {"url": "https://api.example.com"}}],
+                budget_cents=0,
+                expected_feasible=True,  # HTTP is free
+                tags=["edge_case", "budget"],
+            )
+        )
 
         # Very small budget
-        samples.append(DatasetSample(
-            id="ni_tiny_budget",
-            plan=[
-                {"skill": "llm_invoke", "params": {"prompt": "Hello"}},
-            ],
-            budget_cents=1,
-            expected_feasible=False,  # LLM should exceed 1 cent
-            tags=["edge_case", "budget"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_tiny_budget",
+                plan=[
+                    {"skill": "llm_invoke", "params": {"prompt": "Hello"}},
+                ],
+                budget_cents=1,
+                expected_feasible=False,  # LLM should exceed 1 cent
+                tags=["edge_case", "budget"],
+            )
+        )
 
         # Very long plan
-        samples.append(DatasetSample(
-            id="ni_long_plan",
-            plan=[{"skill": "json_transform", "params": {"expression": f"$.field{i}"}} for i in range(50)],
-            budget_cents=100,
-            expected_feasible=True,
-            tags=["edge_case", "long"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_long_plan",
+                plan=[{"skill": "json_transform", "params": {"expression": f"$.field{i}"}} for i in range(50)],
+                budget_cents=100,
+                expected_feasible=True,
+                tags=["edge_case", "long"],
+            )
+        )
 
         # Very long prompt
-        samples.append(DatasetSample(
-            id="ni_long_prompt",
-            plan=[{"skill": "llm_invoke", "params": {"prompt": "X" * 100000}}],
-            budget_cents=1000,
-            expected_feasible=True,
-            expected_confidence_min=0.4,  # Lower confidence for extreme cases
-            tags=["edge_case", "long_prompt"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_long_prompt",
+                plan=[{"skill": "llm_invoke", "params": {"prompt": "X" * 100000}}],
+                budget_cents=1000,
+                expected_feasible=True,
+                expected_confidence_min=0.4,  # Lower confidence for extreme cases
+                tags=["edge_case", "long_prompt"],
+            )
+        )
 
         # Missing params
-        samples.append(DatasetSample(
-            id="ni_missing_params",
-            plan=[{"skill": "http_call", "params": {}}],  # Missing URL
-            budget_cents=100,
-            expected_feasible=True,  # Should handle gracefully
-            tags=["edge_case", "missing"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_missing_params",
+                plan=[{"skill": "http_call", "params": {}}],  # Missing URL
+                budget_cents=100,
+                expected_feasible=True,  # Should handle gracefully
+                tags=["edge_case", "missing"],
+            )
+        )
 
         # Duplicate steps
-        samples.append(DatasetSample(
-            id="ni_duplicate",
-            plan=[
-                {"skill": "http_call", "params": {"url": "https://api.example.com"}},
-                {"skill": "http_call", "params": {"url": "https://api.example.com"}},
-                {"skill": "http_call", "params": {"url": "https://api.example.com"}},
-            ],
-            budget_cents=100,
-            expected_feasible=True,
-            tags=["edge_case", "duplicate"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="ni_duplicate",
+                plan=[
+                    {"skill": "http_call", "params": {"url": "https://api.example.com"}},
+                    {"skill": "http_call", "params": {"url": "https://api.example.com"}},
+                    {"skill": "http_call", "params": {"url": "https://api.example.com"}},
+                ],
+                budget_cents=100,
+                expected_feasible=True,
+                tags=["edge_case", "duplicate"],
+            )
+        )
 
         return ReferenceDataset(
             id="noise_injected",
@@ -401,10 +441,10 @@ class DatasetValidator:
             description="Edge cases and invalid inputs for robustness testing",
             samples=samples,
             validation_thresholds={
-                "max_mean_error": 20.0,      # Higher tolerance for edge cases
+                "max_mean_error": 20.0,  # Higher tolerance for edge cases
                 "max_median_error": 10.0,
                 "max_std_deviation": 25.0,
-                "max_outlier_pct": 0.30,     # Many outliers expected
+                "max_outlier_pct": 0.30,  # Many outliers expected
                 "max_drift_score": 0.25,
             },
         )
@@ -419,72 +459,82 @@ class DatasetValidator:
         samples = []
 
         # Typical API integration workflow
-        samples.append(DatasetSample(
-            id="hist_api_integration",
-            plan=[
-                {"skill": "http_call", "params": {"url": "https://api.service.com/auth"}},
-                {"skill": "http_call", "params": {"url": "https://api.service.com/data"}},
-                {"skill": "json_transform", "params": {"expression": "$.results"}},
-                {"skill": "kv_set", "params": {"key": "cache_data", "value": "..."}},
-            ],
-            budget_cents=100,
-            expected_cost_cents=0,
-            expected_feasible=True,
-            tags=["historical", "integration"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="hist_api_integration",
+                plan=[
+                    {"skill": "http_call", "params": {"url": "https://api.service.com/auth"}},
+                    {"skill": "http_call", "params": {"url": "https://api.service.com/data"}},
+                    {"skill": "json_transform", "params": {"expression": "$.results"}},
+                    {"skill": "kv_set", "params": {"key": "cache_data", "value": "..."}},
+                ],
+                budget_cents=100,
+                expected_cost_cents=0,
+                expected_feasible=True,
+                tags=["historical", "integration"],
+            )
+        )
 
         # Content generation workflow
-        samples.append(DatasetSample(
-            id="hist_content_gen",
-            plan=[
-                {"skill": "kv_get", "params": {"key": "template"}},
-                {"skill": "llm_invoke", "params": {"prompt": "Generate content based on template"}},
-                {"skill": "json_transform", "params": {"expression": "$.content"}},
-            ],
-            budget_cents=100,
-            expected_feasible=True,
-            tags=["historical", "content"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="hist_content_gen",
+                plan=[
+                    {"skill": "kv_get", "params": {"key": "template"}},
+                    {"skill": "llm_invoke", "params": {"prompt": "Generate content based on template"}},
+                    {"skill": "json_transform", "params": {"expression": "$.content"}},
+                ],
+                budget_cents=100,
+                expected_feasible=True,
+                tags=["historical", "content"],
+            )
+        )
 
         # Data pipeline workflow
-        samples.append(DatasetSample(
-            id="hist_data_pipeline",
-            plan=[
-                {"skill": "fs_read", "params": {"path": "/data/input.json"}},
-                {"skill": "json_transform", "params": {"expression": "$.records[*]"}},
-                {"skill": "llm_invoke", "params": {"prompt": "Summarize this data"}},
-                {"skill": "fs_write", "params": {"path": "/data/output.json"}},
-            ],
-            budget_cents=150,
-            expected_feasible=True,
-            tags=["historical", "pipeline"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="hist_data_pipeline",
+                plan=[
+                    {"skill": "fs_read", "params": {"path": "/data/input.json"}},
+                    {"skill": "json_transform", "params": {"expression": "$.records[*]"}},
+                    {"skill": "llm_invoke", "params": {"prompt": "Summarize this data"}},
+                    {"skill": "fs_write", "params": {"path": "/data/output.json"}},
+                ],
+                budget_cents=150,
+                expected_feasible=True,
+                tags=["historical", "pipeline"],
+            )
+        )
 
         # Notification workflow
-        samples.append(DatasetSample(
-            id="hist_notification",
-            plan=[
-                {"skill": "kv_get", "params": {"key": "user_prefs"}},
-                {"skill": "json_transform", "params": {"expression": "$.notification_settings"}},
-                {"skill": "webhook_send", "params": {"url": "https://notify.service.com"}},
-            ],
-            budget_cents=50,
-            expected_feasible=True,
-            tags=["historical", "notification"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="hist_notification",
+                plan=[
+                    {"skill": "kv_get", "params": {"key": "user_prefs"}},
+                    {"skill": "json_transform", "params": {"expression": "$.notification_settings"}},
+                    {"skill": "webhook_send", "params": {"url": "https://notify.service.com"}},
+                ],
+                budget_cents=50,
+                expected_feasible=True,
+                tags=["historical", "notification"],
+            )
+        )
 
         # Monitoring workflow
-        samples.append(DatasetSample(
-            id="hist_monitoring",
-            plan=[
-                {"skill": "http_call", "params": {"url": "https://api.monitoring.com/metrics"}},
-                {"skill": "json_transform", "params": {"expression": "$.metrics"}},
-                {"skill": "shell_lite", "params": {"command": "echo 'Metrics logged'"}},
-            ],
-            budget_cents=50,
-            expected_feasible=True,
-            tags=["historical", "monitoring"],
-        ))
+        samples.append(
+            DatasetSample(
+                id="hist_monitoring",
+                plan=[
+                    {"skill": "http_call", "params": {"url": "https://api.monitoring.com/metrics"}},
+                    {"skill": "json_transform", "params": {"expression": "$.metrics"}},
+                    {"skill": "shell_lite", "params": {"command": "echo 'Metrics logged'"}},
+                ],
+                budget_cents=50,
+                expected_feasible=True,
+                tags=["historical", "monitoring"],
+            )
+        )
 
         return ReferenceDataset(
             id="historical",
@@ -508,9 +558,7 @@ class DatasetValidator:
         """Get a dataset by ID."""
         return self._datasets.get(dataset_id)
 
-    async def validate_dataset(
-        self, dataset_id: str
-    ) -> ValidationResult:
+    async def validate_dataset(self, dataset_id: str) -> ValidationResult:
         """
         Validate V2 against a reference dataset.
 
@@ -582,11 +630,11 @@ class DatasetValidator:
         # Determine verdict
         thresholds = dataset.validation_thresholds
         acceptable = (
-            mean_error <= thresholds["max_mean_error"] and
-            median_error <= thresholds["max_median_error"] and
-            std_deviation <= thresholds["max_std_deviation"] and
-            outlier_pct <= thresholds["max_outlier_pct"] and
-            drift_score <= thresholds["max_drift_score"]
+            mean_error <= thresholds["max_mean_error"]
+            and median_error <= thresholds["max_median_error"]
+            and std_deviation <= thresholds["max_std_deviation"]
+            and outlier_pct <= thresholds["max_outlier_pct"]
+            and drift_score <= thresholds["max_drift_score"]
         )
 
         return ValidationResult(
@@ -622,12 +670,7 @@ class DatasetValidator:
         outlier_score = outlier_pct / thresholds["max_outlier_pct"] if thresholds["max_outlier_pct"] > 0 else 0
 
         # Weighted average
-        drift_score = (
-            0.3 * mean_score +
-            0.3 * median_score +
-            0.2 * std_score +
-            0.2 * outlier_score
-        )
+        drift_score = 0.3 * mean_score + 0.3 * median_score + 0.2 * std_score + 0.2 * outlier_score
 
         return min(drift_score, 1.0)
 

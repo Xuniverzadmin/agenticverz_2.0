@@ -18,9 +18,9 @@ from uuid import UUID
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from .schema import SBASchema
-from .validator import SBAValidator, SBAValidationResult, validate_at_spawn
 from .generator import generate_sba_from_agent
+from .schema import SBASchema
+from .validator import SBAValidationResult, validate_at_spawn
 
 logger = logging.getLogger("nova.agents.sba.service")
 
@@ -28,6 +28,7 @@ logger = logging.getLogger("nova.agents.sba.service")
 @dataclass
 class AgentDefinition:
     """Agent definition from registry."""
+
     id: UUID
     agent_id: str
     agent_name: Optional[str]
@@ -56,7 +57,7 @@ class SBAService:
     """
 
     def __init__(self, database_url: Optional[str] = None):
-        self.database_url = database_url or os.environ.get("DATABASE_URL")
+        self.database_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         if not self.database_url:
             raise RuntimeError("DATABASE_URL required for SBAService")
 
@@ -108,16 +109,15 @@ class SBAService:
         if validate:
             result = validate_at_spawn(agent_id, sba.to_dict())
             if not result.valid:
-                raise ValueError(
-                    f"SBA validation failed: {result.get_error_summary()}"
-                )
+                raise ValueError(f"SBA validation failed: {result.get_error_summary()}")
 
         sba_dict = sba.to_dict()
-        sba_dict['agent_id'] = agent_id  # Ensure agent_id is set
+        sba_dict["agent_id"] = agent_id  # Ensure agent_id is set
 
         with self.Session() as session:
             session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO agents.agent_registry (
                         agent_id, agent_name, description, agent_type,
                         sba, sba_version, sba_validated, sba_validated_at,
@@ -137,7 +137,8 @@ class SBAService:
                         capabilities = CAST(:capabilities AS JSONB),
                         config = CAST(:config AS JSONB),
                         updated_at = now()
-                """),
+                """
+                ),
                 {
                     "agent_id": agent_id,
                     "agent_name": agent_name,
@@ -150,7 +151,7 @@ class SBAService:
                     "capabilities": json.dumps(capabilities or {}),
                     "config": json.dumps(config or {}),
                     "tenant_id": tenant_id,
-                }
+                },
             )
             session.commit()
 
@@ -161,15 +162,17 @@ class SBAService:
         """Get agent definition by ID."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, agent_id, agent_name, description, agent_type,
                         sba, sba_version, sba_validated, capabilities, config,
                         status, enabled, tenant_id, created_at
                     FROM agents.agent_registry
                     WHERE agent_id = :agent_id
-                """),
-                {"agent_id": agent_id}
+                """
+                ),
+                {"agent_id": agent_id},
             )
             row = result.fetchone()
 
@@ -232,22 +235,24 @@ class SBAService:
             agents = []
 
             for row in result:
-                agents.append(AgentDefinition(
-                    id=UUID(str(row[0])),
-                    agent_id=row[1],
-                    agent_name=row[2],
-                    description=row[3],
-                    agent_type=row[4],
-                    sba=row[5] if isinstance(row[5], dict) else json.loads(row[5]) if row[5] else None,
-                    sba_version=row[6],
-                    sba_validated=row[7],
-                    capabilities=row[8] if isinstance(row[8], dict) else json.loads(row[8]) if row[8] else {},
-                    config=row[9] if isinstance(row[9], dict) else json.loads(row[9]) if row[9] else {},
-                    status=row[10],
-                    enabled=row[11],
-                    tenant_id=row[12],
-                    created_at=row[13],
-                ))
+                agents.append(
+                    AgentDefinition(
+                        id=UUID(str(row[0])),
+                        agent_id=row[1],
+                        agent_name=row[2],
+                        description=row[3],
+                        agent_type=row[4],
+                        sba=row[5] if isinstance(row[5], dict) else json.loads(row[5]) if row[5] else None,
+                        sba_version=row[6],
+                        sba_validated=row[7],
+                        capabilities=row[8] if isinstance(row[8], dict) else json.loads(row[8]) if row[8] else {},
+                        config=row[9] if isinstance(row[9], dict) else json.loads(row[9]) if row[9] else {},
+                        status=row[10],
+                        enabled=row[11],
+                        tenant_id=row[12],
+                        created_at=row[13],
+                    )
+                )
 
             return agents
 
@@ -298,11 +303,13 @@ class SBAService:
                 except ValueError as e:
                     return SBAValidationResult(
                         valid=False,
-                        errors=[{
-                            "code": "AUTO_GENERATION_FAILED",
-                            "field": "sba",
-                            "message": str(e),
-                        }],
+                        errors=[
+                            {
+                                "code": "AUTO_GENERATION_FAILED",
+                                "field": "sba",
+                                "message": str(e),
+                            }
+                        ],
                     )
 
             # No agent and no auto-generate
@@ -361,25 +368,27 @@ class SBAService:
                 raise ValueError(f"SBA validation failed: {result.get_error_summary()}")
 
         sba_dict = sba.to_dict()
-        sba_dict['agent_id'] = agent_id
+        sba_dict["agent_id"] = agent_id
 
         with self.Session() as session:
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE agents.agent_registry
                     SET sba = CAST(:sba AS JSONB),
                         sba_version = :sba_version,
                         sba_validated = :validated,
                         sba_validated_at = :validated_at
                     WHERE agent_id = :agent_id
-                """),
+                """
+                ),
                 {
                     "agent_id": agent_id,
                     "sba": json.dumps(sba_dict),
                     "sba_version": sba.sba_version,
                     "validated": validate,
                     "validated_at": datetime.now(timezone.utc) if validate else None,
-                }
+                },
             )
             session.commit()
 
@@ -405,19 +414,22 @@ class SBAService:
         with self.Session() as session:
             # Get current metric for history
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT sba->'how_to_win'->>'fulfillment_metric'
                     FROM agents.agent_registry
                     WHERE agent_id = :agent_id AND sba IS NOT NULL
-                """),
-                {"agent_id": agent_id}
+                """
+                ),
+                {"agent_id": agent_id},
             )
             old_metric_row = result.fetchone()
             old_metric = float(old_metric_row[0]) if old_metric_row and old_metric_row[0] else 0.0
 
             # Update metric and append to history
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE agents.agent_registry
                     SET sba = jsonb_set(
                         jsonb_set(
@@ -436,7 +448,8 @@ class SBAService:
                         )::jsonb
                     )
                     WHERE agent_id = :agent_id AND sba IS NOT NULL
-                """),
+                """
+                ),
                 {
                     "agent_id": agent_id,
                     "metric": str(fulfillment_metric),
@@ -444,7 +457,7 @@ class SBAService:
                     "reason": reason,
                     "job_id": job_id,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
-                }
+                },
             )
             session.commit()
 
@@ -455,7 +468,7 @@ class SBAService:
                 "old_metric": old_metric,
                 "new_metric": fulfillment_metric,
                 "reason": reason,
-            }
+            },
         )
         return True
 
@@ -499,18 +512,16 @@ class SBAService:
             return 0.0
 
         # Compute weighted score
-        raw_score = (
-            completed_items * weight_success +
-            failed_items * weight_failure +
-            blocked_items * weight_blocked
-        )
+        raw_score = completed_items * weight_success + failed_items * weight_failure + blocked_items * weight_blocked
 
         # Normalize to 0-1 range (max possible is all items * weight_success)
         max_score = total_items * weight_success
         fulfillment = max(0.0, min(1.0, raw_score / max_score))
 
         # Update with computed metric
-        reason = f"job_completion: {completed_items}/{total_items} success, {failed_items} failed, {blocked_items} blocked"
+        reason = (
+            f"job_completion: {completed_items}/{total_items} success, {failed_items} failed, {blocked_items} blocked"
+        )
         self.update_fulfillment_metric(
             agent_id=agent_id,
             fulfillment_metric=fulfillment,
@@ -533,12 +544,14 @@ class SBAService:
         """
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT sba->'how_to_win'->'fulfillment_history'
                     FROM agents.agent_registry
                     WHERE agent_id = :agent_id AND sba IS NOT NULL
-                """),
-                {"agent_id": agent_id}
+                """
+                ),
+                {"agent_id": agent_id},
             )
             row = result.fetchone()
 
@@ -567,12 +580,14 @@ class SBAService:
         with self.Session() as session:
             # Find agents without SBA
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT agent_id, capabilities, config
                     FROM agents.agent_registry
                     WHERE sba IS NULL AND tenant_id = :tenant_id
-                """),
-                {"tenant_id": tenant_id}
+                """
+                ),
+                {"tenant_id": tenant_id},
             )
 
             for row in result:
@@ -590,21 +605,23 @@ class SBAService:
 
                 # Update in DB
                 sba_dict = sba.to_dict()
-                sba_dict['agent_id'] = agent_id
+                sba_dict["agent_id"] = agent_id
 
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.agent_registry
                         SET sba = CAST(:sba AS JSONB),
                             sba_version = :sba_version,
                             sba_validated = false
                         WHERE agent_id = :agent_id
-                    """),
+                    """
+                    ),
                     {
                         "agent_id": agent_id,
                         "sba": json.dumps(sba_dict),
                         "sba_version": sba.sba_version,
-                    }
+                    },
                 )
 
                 retrofitted.append(agent_id)

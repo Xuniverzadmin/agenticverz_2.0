@@ -14,14 +14,13 @@ Usage:
 """
 
 from __future__ import annotations
+
 import contextvars
 import logging
 import uuid
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-
 
 # Context variables for thread-safe propagation
 _run_id: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("run_id", default=None)
@@ -243,32 +242,53 @@ class StructuredFormatter(logging.Formatter):
         }
 
         # Add context fields
-        for field in [
-            "correlation_id", "run_id", "workflow_id", "agent_id",
-            "step_id", "step_index", "tenant_id"
-        ]:
+        for field in ["correlation_id", "run_id", "workflow_id", "agent_id", "step_id", "step_index", "tenant_id"]:
             if hasattr(record, field) and getattr(record, field) is not None:
                 log_data[field] = getattr(record, field)
 
         # Add any other extra fields
         if hasattr(record, "__dict__"):
             for key, value in record.__dict__.items():
-                if key not in log_data and not key.startswith("_") and key not in [
-                    "name", "msg", "args", "created", "filename", "funcName",
-                    "levelname", "levelno", "lineno", "module", "msecs",
-                    "pathname", "process", "processName", "relativeCreated",
-                    "stack_info", "exc_info", "exc_text", "thread", "threadName",
-                    "message", "asctime"
-                ]:
+                if (
+                    key not in log_data
+                    and not key.startswith("_")
+                    and key
+                    not in [
+                        "name",
+                        "msg",
+                        "args",
+                        "created",
+                        "filename",
+                        "funcName",
+                        "levelname",
+                        "levelno",
+                        "lineno",
+                        "module",
+                        "msecs",
+                        "pathname",
+                        "process",
+                        "processName",
+                        "relativeCreated",
+                        "stack_info",
+                        "exc_info",
+                        "exc_text",
+                        "thread",
+                        "threadName",
+                        "message",
+                        "asctime",
+                    ]
+                ):
                     try:
                         # Only include JSON-serializable values
                         import json
+
                         json.dumps(value)
                         log_data[key] = value
                     except (TypeError, ValueError):
                         pass
 
         import json
+
         return json.dumps(log_data)
 
 

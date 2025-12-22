@@ -12,15 +12,15 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 # Add budgetllm to path
-_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+_project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 _budgetllm_path = os.path.join(_project_root, "budgetllm")
 if _budgetllm_path not in sys.path:
     sys.path.insert(0, _budgetllm_path)
@@ -32,14 +32,17 @@ logger = logging.getLogger("nova.agents.skills.llm_invoke_governed")
 # Input/Output Schemas
 # =============================================================================
 
+
 class LLMMessage(BaseModel):
     """Chat message."""
+
     role: str = Field(..., description="Message role: system, user, assistant")
     content: str = Field(..., description="Message content")
 
 
 class LLMInvokeGovernedInput(BaseModel):
     """Input schema for governed LLM invoke skill."""
+
     messages: List[LLMMessage] = Field(..., description="Chat messages")
     model: str = Field(default="gpt-4o-mini", description="Model to use")
     temperature: Optional[float] = Field(default=0.7, ge=0.0, le=2.0)
@@ -48,22 +51,15 @@ class LLMInvokeGovernedInput(BaseModel):
 
     # Governance parameters (can be overridden per-call)
     budget_cents: Optional[int] = Field(
-        default=None,
-        description="Budget limit for this call (overrides worker budget)"
+        default=None, description="Budget limit for this call (overrides worker budget)"
     )
-    enforce_safety: bool = Field(
-        default=True,
-        description="Whether to block high-risk outputs"
-    )
-    risk_threshold: float = Field(
-        default=0.6,
-        ge=0.0, le=1.0,
-        description="Risk score threshold for blocking"
-    )
+    enforce_safety: bool = Field(default=True, description="Whether to block high-risk outputs")
+    risk_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="Risk score threshold for blocking")
 
 
 class LLMInvokeGovernedOutput(BaseModel):
     """Output schema for governed LLM invoke skill."""
+
     success: bool
     content: Optional[str] = None
 
@@ -93,9 +89,11 @@ class LLMInvokeGovernedOutput(BaseModel):
 # Governance Configuration
 # =============================================================================
 
+
 @dataclass
 class GovernanceConfig:
     """Configuration for LLM governance."""
+
     # Budget limits
     budget_cents: Optional[int] = None
     daily_limit_cents: Optional[int] = None
@@ -135,6 +133,7 @@ def get_default_governance_config() -> GovernanceConfig:
 # BudgetLLM Client Wrapper
 # =============================================================================
 
+
 class GovernedLLMClient:
     """
     LLM client with BudgetLLM governance integration.
@@ -161,7 +160,7 @@ class GovernedLLMClient:
             return
 
         try:
-            from budgetllm import Client, BudgetExceededError, HighRiskOutputError
+            from budgetllm import BudgetExceededError, Client, HighRiskOutputError
 
             self._client = Client(
                 openai_key=self.openai_key,
@@ -180,10 +179,7 @@ class GovernedLLMClient:
 
         except ImportError as e:
             logger.error(f"BudgetLLM not available: {e}")
-            raise ImportError(
-                "budgetllm package not available. "
-                "Ensure budgetllm/ is in the Python path."
-            )
+            raise ImportError("budgetllm package not available. " "Ensure budgetllm/ is in the Python path.")
 
     def invoke(
         self,
@@ -264,8 +260,8 @@ class GovernedLLMClient:
                 success=False,
                 blocked=True,
                 blocked_reason="high_risk_output",
-                risk_score=e.risk_score if hasattr(e, 'risk_score') else 0.0,
-                risk_factors=e.risk_factors if hasattr(e, 'risk_factors') else {},
+                risk_score=e.risk_score if hasattr(e, "risk_score") else 0.0,
+                risk_factors=e.risk_factors if hasattr(e, "risk_factors") else {},
                 error=str(e),
                 error_code="ERR_LLM_HIGH_RISK",
             )
@@ -288,6 +284,7 @@ class GovernedLLMClient:
 # =============================================================================
 # Governed LLM Invoke Skill
 # =============================================================================
+
 
 class LLMInvokeGovernedSkill:
     """
@@ -331,10 +328,7 @@ class LLMInvokeGovernedSkill:
             LLMInvokeGovernedOutput with response and governance data
         """
         # Convert messages to dict format
-        messages = [
-            {"role": m.role, "content": m.content}
-            for m in input_data.messages
-        ]
+        messages = [{"role": m.role, "content": m.content} for m in input_data.messages]
 
         # Add system prompt if provided
         if input_data.system_prompt:
@@ -402,7 +396,7 @@ class LLMInvokeGovernedSkill:
                         "blocked": result.blocked,
                         "blocked_reason": result.blocked_reason,
                         "params_clamped": result.params_clamped,
-                    }
+                    },
                 )
                 await session.commit()
 
@@ -467,10 +461,7 @@ async def governed_llm_invoke(
     skill = get_governed_llm_skill()
 
     # Build input
-    msg_objects = [
-        LLMMessage(role=m["role"], content=m["content"])
-        for m in messages
-    ]
+    msg_objects = [LLMMessage(role=m["role"], content=m["content"]) for m in messages]
 
     input_data = LLMInvokeGovernedInput(
         messages=msg_objects,

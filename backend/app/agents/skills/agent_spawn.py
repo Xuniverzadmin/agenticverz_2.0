@@ -6,19 +6,18 @@
 
 import logging
 import os
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
-from uuid import UUID
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from ..services.job_service import JobService, JobConfig, get_job_service
+from ..services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
+from ..services.job_service import JobConfig, JobService, get_job_service
 from ..services.registry_service import RegistryService, get_registry_service
-from ..services.credit_service import CreditService, get_credit_service, CREDIT_COSTS
 
 # M15.1: SBA imports
 try:
     from ..sba.service import SBAService, get_sba_service
+
     SBA_AVAILABLE = True
 except ImportError:
     SBA_AVAILABLE = False
@@ -33,6 +32,7 @@ SBA_AUTO_GENERATE = os.environ.get("SBA_AUTO_GENERATE", "true").lower() == "true
 
 class AgentSpawnInput(BaseModel):
     """Input schema for agent_spawn skill."""
+
     orchestrator_agent: str = Field(..., description="Orchestrator agent type")
     worker_agent: str = Field(..., description="Worker agent type to spawn")
     task: str = Field(..., description="Task name/description")
@@ -43,31 +43,21 @@ class AgentSpawnInput(BaseModel):
 
     # M15: LLM Governance parameters
     llm_budget_cents: Optional[int] = Field(
-        default=None,
-        description="Total LLM budget in cents for this job (None = unlimited)"
+        default=None, description="Total LLM budget in cents for this job (None = unlimited)"
     )
     llm_budget_per_item: Optional[int] = Field(
-        default=None,
-        description="LLM budget per item in cents (auto-calculated from total if not set)"
+        default=None, description="LLM budget per item in cents (auto-calculated from total if not set)"
     )
     llm_risk_threshold: float = Field(
-        default=0.6,
-        ge=0.0, le=1.0,
-        description="Risk score threshold for blocking (0.6 = moderate)"
+        default=0.6, ge=0.0, le=1.0, description="Risk score threshold for blocking (0.6 = moderate)"
     )
-    llm_max_temperature: float = Field(
-        default=1.0,
-        ge=0.0, le=2.0,
-        description="Max temperature allowed for LLM calls"
-    )
-    llm_enforce_safety: bool = Field(
-        default=True,
-        description="Whether to block high-risk LLM outputs"
-    )
+    llm_max_temperature: float = Field(default=1.0, ge=0.0, le=2.0, description="Max temperature allowed for LLM calls")
+    llm_enforce_safety: bool = Field(default=True, description="Whether to block high-risk LLM outputs")
 
 
 class AgentSpawnOutput(BaseModel):
     """Output schema for agent_spawn skill."""
+
     success: bool
     job_id: Optional[str] = None
     orchestrator_instance_id: Optional[str] = None
@@ -174,7 +164,7 @@ class AgentSpawnSkill:
                     extra={
                         "orchestrator": input_data.orchestrator_agent,
                         "worker": input_data.worker_agent,
-                    }
+                    },
                 )
 
             # Register orchestrator
@@ -240,7 +230,7 @@ class AgentSpawnSkill:
                     # M15
                     "llm_budget_cents": input_data.llm_budget_cents,
                     "llm_budget_per_item": llm_budget_per_item,
-                }
+                },
             )
 
             return AgentSpawnOutput(

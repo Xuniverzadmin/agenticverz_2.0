@@ -51,8 +51,16 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 
 # Add backend to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "backend"))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "backend",
+    ),
+)
 
 logger = logging.getLogger("m10.orchestrator")
 
@@ -64,11 +72,11 @@ WORKER_ID = f"orchestrator:{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().he
 
 # Available tasks in execution order
 TASK_ORDER = [
-    "outbox",       # Process pending outbox events first
-    "dl_reconcile", # Then reconcile dead-letter
-    "matview",      # Refresh materialized views
-    "retention",    # Archive old records
-    "reclaim_gc",   # Clean up stale reclaim attempts
+    "outbox",  # Process pending outbox events first
+    "dl_reconcile",  # Then reconcile dead-letter
+    "matview",  # Refresh materialized views
+    "retention",  # Archive old records
+    "reclaim_gc",  # Clean up stale reclaim attempts
 ]
 
 
@@ -108,9 +116,13 @@ async def run_outbox_task(db_url: str, dry_run: bool = False) -> TaskResult:
 
         with Session(engine) as session:
             # Get pending count (outbox table uses processed_at IS NULL for pending)
-            pending = session.execute(text("""
+            pending = session.execute(
+                text(
+                    """
                 SELECT COUNT(*) FROM m10_recovery.outbox WHERE processed_at IS NULL
-            """)).scalar()
+            """
+                )
+            ).scalar()
 
             result.details["pending_count"] = pending
 
@@ -127,6 +139,7 @@ async def run_outbox_task(db_url: str, dry_run: bool = False) -> TaskResult:
             # Import and run outbox processor
             try:
                 from app.worker.outbox_processor import OutboxProcessor
+
                 processor = OutboxProcessor(db_url)
                 await processor.start()
 
@@ -161,9 +174,14 @@ async def run_dl_reconcile_task(db_url: str, dry_run: bool = False) -> TaskResul
 
         # Check if we can acquire the lock
         with Session(engine) as session:
-            lock_acquired = session.execute(text("""
+            lock_acquired = session.execute(
+                text(
+                    """
                 SELECT m10_recovery.acquire_lock('dl_reconcile', :holder_id, 300)
-            """), {"holder_id": WORKER_ID}).scalar()
+            """
+                ),
+                {"holder_id": WORKER_ID},
+            ).scalar()
 
             if not lock_acquired:
                 result.skipped = True
@@ -173,10 +191,14 @@ async def run_dl_reconcile_task(db_url: str, dry_run: bool = False) -> TaskResul
 
             try:
                 # Get dead-letter count
-                dl_count = session.execute(text("""
+                dl_count = session.execute(
+                    text(
+                        """
                     SELECT COUNT(*) FROM m10_recovery.dead_letter_archive
                     WHERE archived_at > NOW() - INTERVAL '1 hour'
-                """)).scalar()
+                """
+                    )
+                ).scalar()
 
                 result.details["recent_dl_count"] = dl_count
 
@@ -188,6 +210,7 @@ async def run_dl_reconcile_task(db_url: str, dry_run: bool = False) -> TaskResul
                 # Run actual reconciliation
                 try:
                     from scripts.ops.reconcile_dl import reconcile_dead_letter
+
                     reconciled = reconcile_dead_letter(session)
                     result.details["reconciled"] = reconciled
                 except ImportError:
@@ -197,9 +220,14 @@ async def run_dl_reconcile_task(db_url: str, dry_run: bool = False) -> TaskResul
                 session.commit()
             finally:
                 # Release lock
-                session.execute(text("""
+                session.execute(
+                    text(
+                        """
                     SELECT m10_recovery.release_lock('dl_reconcile', :holder_id)
-                """), {"holder_id": WORKER_ID})
+                """
+                    ),
+                    {"holder_id": WORKER_ID},
+                )
                 session.commit()
 
     except Exception as e:
@@ -226,9 +254,14 @@ async def run_matview_task(db_url: str, dry_run: bool = False) -> TaskResult:
             for view_name in views:
                 # Try to acquire view-specific lock
                 lock_name = f"matview_{view_name}"
-                lock_acquired = session.execute(text("""
+                lock_acquired = session.execute(
+                    text(
+                        """
                     SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, 120)
-                """), {"lock_name": lock_name, "holder_id": WORKER_ID}).scalar()
+                """
+                    ),
+                    {"lock_name": lock_name, "holder_id": WORKER_ID},
+                ).scalar()
 
                 if not lock_acquired:
                     result.details[view_name] = "lock_held"
@@ -236,11 +269,16 @@ async def run_matview_task(db_url: str, dry_run: bool = False) -> TaskResult:
 
                 try:
                     # Check view age
-                    age = session.execute(text("""
+                    age = session.execute(
+                        text(
+                            """
                         SELECT EXTRACT(EPOCH FROM (NOW() - last_refresh))::int
                         FROM pg_stat_user_tables
                         WHERE relname = :view_name
-                    """), {"view_name": view_name}).scalar()
+                    """
+                        ),
+                        {"view_name": view_name},
+                    ).scalar()
 
                     result.details[f"{view_name}_age_seconds"] = age or 0
 
@@ -250,18 +288,27 @@ async def run_matview_task(db_url: str, dry_run: bool = False) -> TaskResult:
 
                     # Refresh if older than 5 minutes
                     if age is None or age > 300:
-                        session.execute(text(f"""
+                        session.execute(
+                            text(
+                                f"""
                             REFRESH MATERIALIZED VIEW CONCURRENTLY m10_recovery.{view_name}
-                        """))
+                        """
+                            )
+                        )
                         session.commit()
                         refreshed.append(view_name)
                         result.details[view_name] = "refreshed"
                     else:
                         result.details[view_name] = "fresh"
                 finally:
-                    session.execute(text("""
+                    session.execute(
+                        text(
+                            """
                         SELECT m10_recovery.release_lock(:lock_name, :holder_id)
-                    """), {"lock_name": lock_name, "holder_id": WORKER_ID})
+                    """
+                        ),
+                        {"lock_name": lock_name, "holder_id": WORKER_ID},
+                    )
                     session.commit()
 
         result.details["refreshed_count"] = len(refreshed)
@@ -286,9 +333,14 @@ async def run_retention_task(db_url: str, dry_run: bool = False) -> TaskResult:
 
         with Session(engine) as session:
             # Acquire retention lock
-            lock_acquired = session.execute(text("""
+            lock_acquired = session.execute(
+                text(
+                    """
                 SELECT m10_recovery.acquire_lock('retention_cleanup', :holder_id, 600)
-            """), {"holder_id": WORKER_ID}).scalar()
+            """
+                ),
+                {"holder_id": WORKER_ID},
+            ).scalar()
 
             if not lock_acquired:
                 result.skipped = True
@@ -298,15 +350,23 @@ async def run_retention_task(db_url: str, dry_run: bool = False) -> TaskResult:
 
             try:
                 # Count old records (> 30 days)
-                old_replay = session.execute(text("""
+                old_replay = session.execute(
+                    text(
+                        """
                     SELECT COUNT(*) FROM m10_recovery.replay_log
                     WHERE processed_at < NOW() - INTERVAL '30 days'
-                """)).scalar()
+                """
+                    )
+                ).scalar()
 
-                old_archive = session.execute(text("""
+                old_archive = session.execute(
+                    text(
+                        """
                     SELECT COUNT(*) FROM m10_recovery.dead_letter_archive
                     WHERE archived_at < NOW() - INTERVAL '30 days'
-                """)).scalar()
+                """
+                    )
+                ).scalar()
 
                 result.details["old_replay_log"] = old_replay
                 result.details["old_archive"] = old_archive
@@ -317,17 +377,25 @@ async def run_retention_task(db_url: str, dry_run: bool = False) -> TaskResult:
                     return result
 
                 # Delete old records (keep last 30 days)
-                deleted_replay = session.execute(text("""
+                deleted_replay = session.execute(
+                    text(
+                        """
                     DELETE FROM m10_recovery.replay_log
                     WHERE processed_at < NOW() - INTERVAL '30 days'
                     RETURNING 1
-                """)).rowcount
+                """
+                    )
+                ).rowcount
 
-                deleted_archive = session.execute(text("""
+                deleted_archive = session.execute(
+                    text(
+                        """
                     DELETE FROM m10_recovery.dead_letter_archive
                     WHERE archived_at < NOW() - INTERVAL '30 days'
                     RETURNING 1
-                """)).rowcount
+                """
+                    )
+                ).rowcount
 
                 session.commit()
 
@@ -335,9 +403,14 @@ async def run_retention_task(db_url: str, dry_run: bool = False) -> TaskResult:
                 result.details["deleted_archive"] = deleted_archive
                 result.success = True
             finally:
-                session.execute(text("""
+                session.execute(
+                    text(
+                        """
                     SELECT m10_recovery.release_lock('retention_cleanup', :holder_id)
-                """), {"holder_id": WORKER_ID})
+                """
+                    ),
+                    {"holder_id": WORKER_ID},
+                )
                 session.commit()
 
     except Exception as e:
@@ -359,9 +432,14 @@ async def run_reclaim_gc_task(db_url: str, dry_run: bool = False) -> TaskResult:
 
         with Session(engine) as session:
             # Acquire GC lock
-            lock_acquired = session.execute(text("""
+            lock_acquired = session.execute(
+                text(
+                    """
                 SELECT m10_recovery.acquire_lock('reclaim_gc', :holder_id, 300)
-            """), {"holder_id": WORKER_ID}).scalar()
+            """
+                ),
+                {"holder_id": WORKER_ID},
+            ).scalar()
 
             if not lock_acquired:
                 result.skipped = True
@@ -371,10 +449,14 @@ async def run_reclaim_gc_task(db_url: str, dry_run: bool = False) -> TaskResult:
 
             try:
                 # Count stale locks (held > 1 hour with no heartbeat)
-                stale_count = session.execute(text("""
+                stale_count = session.execute(
+                    text(
+                        """
                     SELECT COUNT(*) FROM m10_recovery.distributed_locks
                     WHERE expires_at < NOW()
-                """)).scalar()
+                """
+                    )
+                ).scalar()
 
                 result.details["stale_locks"] = stale_count
 
@@ -384,20 +466,29 @@ async def run_reclaim_gc_task(db_url: str, dry_run: bool = False) -> TaskResult:
                     return result
 
                 # Clean up expired locks
-                cleaned = session.execute(text("""
+                cleaned = session.execute(
+                    text(
+                        """
                     DELETE FROM m10_recovery.distributed_locks
                     WHERE expires_at < NOW()
                     RETURNING 1
-                """)).rowcount
+                """
+                    )
+                ).rowcount
 
                 session.commit()
 
                 result.details["cleaned_locks"] = cleaned
                 result.success = True
             finally:
-                session.execute(text("""
+                session.execute(
+                    text(
+                        """
                     SELECT m10_recovery.release_lock('reclaim_gc', :holder_id)
-                """), {"holder_id": WORKER_ID})
+                """
+                    ),
+                    {"holder_id": WORKER_ID},
+                )
                 session.commit()
 
     except Exception as e:
@@ -537,12 +628,14 @@ def main():
     if args.dry_run:
         logger.info("DRY RUN MODE - No changes will be made")
 
-    results = asyncio.run(run_orchestrator(
-        db_url=db_url,
-        tasks=tasks,
-        dry_run=args.dry_run,
-        timeout=args.timeout,
-    ))
+    results = asyncio.run(
+        run_orchestrator(
+            db_url=db_url,
+            tasks=tasks,
+            dry_run=args.dry_run,
+            timeout=args.timeout,
+        )
+    )
 
     # Output results
     if args.json:
@@ -559,7 +652,9 @@ def main():
             if task_result["skipped"]:
                 status = "⊘"
 
-            print(f"  {status} {task_result['name']} ({task_result['duration_seconds']:.2f}s)")
+            print(
+                f"  {status} {task_result['name']} ({task_result['duration_seconds']:.2f}s)"
+            )
 
             if task_result["error"]:
                 print(f"      Error: {task_result['error']}")

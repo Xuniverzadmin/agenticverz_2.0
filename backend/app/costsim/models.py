@@ -4,16 +4,18 @@ Data models for CostSim V2 sandbox evaluation.
 """
 
 from __future__ import annotations
+
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-import hashlib
-import json
 
 
 class V2SimulationStatus(str, Enum):
     """V2 simulation result status."""
+
     SUCCESS = "success"
     ERROR = "error"
     TIMEOUT = "timeout"
@@ -22,10 +24,11 @@ class V2SimulationStatus(str, Enum):
 
 class ComparisonVerdict(str, Enum):
     """Verdict from V1 vs V2 comparison."""
-    MATCH = "match"              # Results within tolerance
+
+    MATCH = "match"  # Results within tolerance
     MINOR_DRIFT = "minor_drift"  # Small deviation
     MAJOR_DRIFT = "major_drift"  # Large deviation
-    MISMATCH = "mismatch"        # Incompatible results
+    MISMATCH = "mismatch"  # Incompatible results
 
 
 @dataclass

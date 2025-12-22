@@ -6,20 +6,20 @@ Create Date: 2025-12-06
 
 Tracks replay mismatches for operator review and automated ticketing.
 """
+
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 # revision identifiers
-revision = '014_trace_mismatches'
-down_revision = '013_add_trace_retention'
+revision = "014_trace_mismatches"
+down_revision = "013_add_trace_retention"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     # Create trace mismatches table
-    op.execute("""
+    op.execute(
+        """
         CREATE TABLE IF NOT EXISTS aos_trace_mismatches (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             trace_id TEXT NOT NULL,
@@ -47,10 +47,12 @@ def upgrade() -> None:
 
         -- Comment
         COMMENT ON TABLE aos_trace_mismatches IS 'Tracks replay mismatches for operator review';
-    """)
+    """
+    )
 
     # Create metrics view for Prometheus scraping
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE VIEW aos_mismatch_metrics AS
         SELECT
             tenant_id,
@@ -60,7 +62,8 @@ def upgrade() -> None:
             COUNT(*) FILTER (WHERE notification_sent = FALSE AND resolved = FALSE) AS pending_notification_count
         FROM aos_trace_mismatches
         GROUP BY tenant_id;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

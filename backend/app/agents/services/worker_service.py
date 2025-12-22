@@ -7,15 +7,14 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import UUID
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from .credit_service import get_credit_service, CreditService
-from .governance_service import get_governance_service, GovernanceService
+from .credit_service import CreditService, get_credit_service
+from .governance_service import GovernanceService, get_governance_service
 
 logger = logging.getLogger("nova.agents.worker_service")
 
@@ -23,6 +22,7 @@ logger = logging.getLogger("nova.agents.worker_service")
 @dataclass
 class ClaimedItem:
     """A claimed job item ready for processing."""
+
     id: UUID
     job_id: UUID
     item_index: int
@@ -38,6 +38,7 @@ class ClaimedItem:
 @dataclass
 class WorkerStats:
     """Statistics for a worker."""
+
     instance_id: str
     items_claimed: int
     items_completed: int
@@ -94,16 +95,18 @@ class WorkerService:
             # Use the pre-built claim function or raw SQL
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT * FROM agents.claim_job_item(
                             CAST(:job_id AS UUID),
                             :worker_instance_id
                         )
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "worker_instance_id": worker_instance_id,
-                    }
+                    },
                 )
                 row = result.fetchone()
                 session.commit()
@@ -113,12 +116,14 @@ class WorkerService:
 
                 # Fetch full item details
                 item_result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id, job_id, item_index, input, max_retries, retry_count
                         FROM agents.job_items
                         WHERE id = :item_id
-                    """),
-                    {"item_id": str(row[0])}
+                    """
+                    ),
+                    {"item_id": str(row[0])},
                 )
                 item_row = item_result.fetchone()
 
@@ -131,7 +136,7 @@ class WorkerService:
                         "job_id": str(job_id),
                         "item_id": str(row[0]),
                         "worker_instance_id": worker_instance_id,
-                    }
+                    },
                 )
 
                 # M15: Get LLM governance config from job
@@ -173,7 +178,8 @@ class WorkerService:
         """Fallback raw SQL claim (from M10 pattern)."""
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     WITH claimed AS (
                         SELECT id
                         FROM agents.job_items
@@ -191,11 +197,12 @@ class WorkerService:
                     RETURNING agents.job_items.id, agents.job_items.job_id,
                               agents.job_items.item_index, agents.job_items.input,
                               agents.job_items.max_retries, agents.job_items.retry_count
-                """),
+                """
+                ),
                 {
                     "job_id": str(job_id),
                     "worker_instance_id": worker_instance_id,
-                }
+                },
             )
             row = result.fetchone()
             session.commit()
@@ -221,12 +228,14 @@ class WorkerService:
         """Get LLM governance config from job (M15)."""
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT llm_budget_cents, llm_config, config
                     FROM agents.jobs
                     WHERE id = :job_id
-                """),
-                {"job_id": str(job_id)}
+                """
+                ),
+                {"job_id": str(job_id)},
             )
             row = result.fetchone()
 
@@ -253,8 +262,7 @@ class WorkerService:
             elif llm_budget:
                 # Calculate per-item budget
                 total_items_result = session.execute(
-                    text("SELECT total_items FROM agents.jobs WHERE id = :job_id"),
-                    {"job_id": str(job_id)}
+                    text("SELECT total_items FROM agents.jobs WHERE id = :job_id"), {"job_id": str(job_id)}
                 )
                 total_row = total_items_result.fetchone()
                 if total_row and total_row[0]:
@@ -279,13 +287,15 @@ class WorkerService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.job_items
                         SET status = 'running'
                         WHERE id = :item_id AND status = 'claimed'
                         RETURNING id
-                    """),
-                    {"item_id": str(item_id)}
+                    """
+                    ),
+                    {"item_id": str(item_id)},
                 )
                 row = result.fetchone()
                 session.commit()
@@ -332,12 +342,14 @@ class WorkerService:
             try:
                 # Get job_id for credit tracking
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT job_id, status
                         FROM agents.job_items
                         WHERE id = :item_id
-                    """),
-                    {"item_id": str(item_id)}
+                    """
+                    ),
+                    {"item_id": str(item_id)},
                 )
                 row = result.fetchone()
 
@@ -352,7 +364,8 @@ class WorkerService:
 
                 # Update item (M15: include governance data)
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.job_items
                         SET status = 'completed',
                             output = CAST(:output AS JSONB),
@@ -365,7 +378,8 @@ class WorkerService:
                             llm_cost_cents = COALESCE(:llm_cost, llm_cost_cents),
                             llm_tokens_used = COALESCE(:llm_tokens, llm_tokens_used)
                         WHERE id = :item_id
-                    """),
+                    """
+                    ),
                     {
                         "item_id": str(item_id),
                         "output": json.dumps(output) if not isinstance(output, str) else output,
@@ -376,25 +390,27 @@ class WorkerService:
                         "params_clamped": json.dumps(params_clamped) if params_clamped else None,
                         "llm_cost": llm_cost_cents,
                         "llm_tokens": llm_tokens_used,
-                    }
+                    },
                 )
 
                 # Update job counters (M15: include LLM budget usage)
                 llm_cost_int = int(llm_cost_cents) if llm_cost_cents else 0
                 session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.jobs
                         SET completed_items = completed_items + 1,
                             credits_spent = credits_spent + 2,
                             llm_budget_used = llm_budget_used + :llm_cost,
                             llm_risk_violations = llm_risk_violations + CASE WHEN :blocked THEN 1 ELSE 0 END
                         WHERE id = :job_id
-                    """),
+                    """
+                    ),
                     {
                         "job_id": str(job_id),
                         "llm_cost": llm_cost_int,
                         "blocked": blocked,
-                    }
+                    },
                 )
 
                 session.commit()
@@ -407,7 +423,7 @@ class WorkerService:
                         "risk_score": risk_score,
                         "llm_cost_cents": llm_cost_cents,
                         "blocked": blocked,
-                    }
+                    },
                 )
 
                 return True
@@ -441,12 +457,14 @@ class WorkerService:
             try:
                 # Get current state
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT job_id, retry_count, max_retries, status
                         FROM agents.job_items
                         WHERE id = :item_id
-                    """),
-                    {"item_id": str(item_id)}
+                    """
+                    ),
+                    {"item_id": str(item_id)},
                 )
                 row = result.fetchone()
 
@@ -465,7 +483,8 @@ class WorkerService:
                 if can_retry:
                     # Reset to pending for retry
                     session.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE agents.job_items
                             SET status = 'pending',
                                 worker_instance_id = NULL,
@@ -473,44 +492,49 @@ class WorkerService:
                                 retry_count = retry_count + 1,
                                 error_message = :error
                             WHERE id = :item_id
-                        """),
+                        """
+                        ),
                         {
                             "item_id": str(item_id),
                             "error": error_message[:1000],
-                        }
+                        },
                     )
                     logger.info(
                         "item_retrying",
                         extra={
                             "item_id": str(item_id),
                             "retry_count": (retry_count or 0) + 1,
-                        }
+                        },
                     )
                 else:
                     # Mark as permanently failed
                     session.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE agents.job_items
                             SET status = 'failed',
                                 error_message = :error,
                                 completed_at = now()
                             WHERE id = :item_id
-                        """),
+                        """
+                        ),
                         {
                             "item_id": str(item_id),
                             "error": error_message[:1000],
-                        }
+                        },
                     )
 
                     # Update job counters and refund credits
                     session.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE agents.jobs
                             SET failed_items = failed_items + 1,
                                 credits_refunded = credits_refunded + 2
                             WHERE id = :job_id
-                        """),
-                        {"job_id": str(job_id)}
+                        """
+                        ),
+                        {"job_id": str(job_id)},
                     )
 
                     logger.info(
@@ -519,7 +543,7 @@ class WorkerService:
                             "item_id": str(item_id),
                             "job_id": str(job_id),
                             "error": error_message[:100],
-                        }
+                        },
                     )
 
                 session.commit()
@@ -545,7 +569,8 @@ class WorkerService:
         with self.Session() as session:
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE agents.job_items
                         SET status = 'pending',
                             worker_instance_id = NULL,
@@ -553,8 +578,9 @@ class WorkerService:
                         WHERE worker_instance_id = :worker_instance_id
                           AND status IN ('claimed', 'running')
                         RETURNING id
-                    """),
-                    {"worker_instance_id": worker_instance_id}
+                    """
+                    ),
+                    {"worker_instance_id": worker_instance_id},
                 )
                 released = len(result.fetchall())
                 session.commit()
@@ -565,7 +591,7 @@ class WorkerService:
                         extra={
                             "worker_instance_id": worker_instance_id,
                             "count": released,
-                        }
+                        },
                     )
 
                 return released
@@ -579,15 +605,17 @@ class WorkerService:
         """Get statistics for a worker."""
         with self.Session() as session:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         COUNT(*) FILTER (WHERE status IN ('claimed', 'running')) as claimed,
                         COUNT(*) FILTER (WHERE status = 'completed') as completed,
                         COUNT(*) FILTER (WHERE status = 'failed') as failed
                     FROM agents.job_items
                     WHERE worker_instance_id = :worker_instance_id
-                """),
-                {"worker_instance_id": worker_instance_id}
+                """
+                ),
+                {"worker_instance_id": worker_instance_id},
             )
             row = result.fetchone()
 

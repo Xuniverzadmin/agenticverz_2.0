@@ -5,10 +5,11 @@ Tests for Email Send Skill (Resend)
 Tests stubbed behavior, validation, error handling, and API integration.
 """
 
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Path setup
 _backend = Path(__file__).parent.parent.parent
@@ -23,6 +24,7 @@ class TestEmailSendSkillStubbed:
     def stubbed_skill(self):
         """Create skill with external calls disabled."""
         from app.skills.email_send import EmailSendSkill
+
         return EmailSendSkill(allow_external=False)
 
     @pytest.mark.asyncio
@@ -68,6 +70,7 @@ class TestEmailSendSkillValidation:
     def skill(self):
         """Create skill with external calls enabled but fake API key for validation tests."""
         from app.skills.email_send import EmailSendSkill
+
         return EmailSendSkill(allow_external=True, api_key="test_key")
 
     @pytest.mark.asyncio
@@ -104,10 +107,12 @@ class TestEmailSendSkillConfiguration:
 
     def test_api_key_from_env(self):
         """API key can be loaded from environment."""
-        with patch.dict('os.environ', {'RESEND_API_KEY': 'env_key_123'}):
+        with patch.dict("os.environ", {"RESEND_API_KEY": "env_key_123"}):
             # Force re-import to pick up env var
             import importlib
+
             import app.skills.email_send as email_module
+
             importlib.reload(email_module)
             skill = email_module.EmailSendSkill()
             assert skill.api_key == "env_key_123"
@@ -115,18 +120,21 @@ class TestEmailSendSkillConfiguration:
     def test_api_key_from_constructor(self):
         """API key from constructor takes precedence."""
         from app.skills.email_send import EmailSendSkill
+
         skill = EmailSendSkill(api_key="constructor_key")
         assert skill.api_key == "constructor_key"
 
     def test_from_address_default(self):
         """Default from address is set."""
         from app.skills.email_send import EmailSendSkill
+
         skill = EmailSendSkill()
         assert "agenticverz.com" in skill.from_address
 
     def test_from_address_from_constructor(self):
         """From address can be overridden."""
         from app.skills.email_send import EmailSendSkill
+
         skill = EmailSendSkill(from_address="custom@example.com")
         assert skill.from_address == "custom@example.com"
 
@@ -138,6 +146,7 @@ class TestEmailSendSkillApiIntegration:
     def skill(self):
         """Create skill with test API key."""
         from app.skills.email_send import EmailSendSkill
+
         return EmailSendSkill(allow_external=True, api_key="test_api_key")
 
     @pytest.mark.asyncio
@@ -147,7 +156,7 @@ class TestEmailSendSkillApiIntegration:
         mock_response.status_code = 200
         mock_response.json.return_value = {"id": "msg_123abc"}
 
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post.return_value = mock_response
             mock_instance.__aenter__.return_value = mock_instance
@@ -174,7 +183,7 @@ class TestEmailSendSkillApiIntegration:
         mock_response.status_code = 400
         mock_response.text = '{"error": "Invalid email address"}'
 
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post.return_value = mock_response
             mock_instance.__aenter__.return_value = mock_instance
@@ -198,7 +207,7 @@ class TestEmailSendSkillApiIntegration:
         """Timeout returns timeout status."""
         import httpx
 
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post.side_effect = httpx.TimeoutException("Request timed out")
             mock_instance.__aenter__.return_value = mock_instance
@@ -220,7 +229,7 @@ class TestEmailSendSkillApiIntegration:
         """Network error returns error status."""
         import httpx
 
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post.side_effect = httpx.ConnectError("Connection refused")
             mock_instance.__aenter__.return_value = mock_instance
@@ -245,6 +254,7 @@ class TestEmailSendSkillHtmlSupport:
     def skill(self):
         """Create skill with test API key."""
         from app.skills.email_send import EmailSendSkill
+
         return EmailSendSkill(allow_external=True, api_key="test_api_key")
 
     @pytest.mark.asyncio
@@ -254,7 +264,7 @@ class TestEmailSendSkillHtmlSupport:
         mock_response.status_code = 200
         mock_response.json.return_value = {"id": "msg_html"}
 
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post.return_value = mock_response
             mock_instance.__aenter__.return_value = mock_instance
@@ -271,7 +281,7 @@ class TestEmailSendSkillHtmlSupport:
 
             # Check that the post was called with html field
             call_args = mock_instance.post.call_args
-            payload = call_args.kwargs.get('json') or call_args[1].get('json')
+            payload = call_args.kwargs.get("json") or call_args[1].get("json")
             assert "html" in payload
             assert payload["html"] == "<h1>Hello</h1><p>World</p>"
             assert "text" not in payload
@@ -283,7 +293,7 @@ class TestEmailSendSkillHtmlSupport:
         mock_response.status_code = 200
         mock_response.json.return_value = {"id": "msg_text"}
 
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post.return_value = mock_response
             mock_instance.__aenter__.return_value = mock_instance
@@ -299,7 +309,7 @@ class TestEmailSendSkillHtmlSupport:
             result = await skill.execute(params)
 
             call_args = mock_instance.post.call_args
-            payload = call_args.kwargs.get('json') or call_args[1].get('json')
+            payload = call_args.kwargs.get("json") or call_args[1].get("json")
             assert "text" in payload
             assert payload["text"] == "Plain text content"
             assert "html" not in payload
@@ -319,7 +329,7 @@ class TestEmailSendSkillRegistry:
 
     def test_skill_has_correct_metadata(self):
         """Skill has correct metadata in registry."""
-        from app.skills import load_skill, get_skill_entry
+        from app.skills import get_skill_entry, load_skill
 
         load_skill("EmailSendSkill")
         entry = get_skill_entry("email_send")
@@ -332,7 +342,7 @@ class TestEmailSendSkillRegistry:
 
     def test_skill_input_schema_available(self):
         """Input schema is available for validation."""
-        from app.skills import load_skill, get_skill_entry
+        from app.skills import get_skill_entry, load_skill
 
         load_skill("EmailSendSkill")
         entry = get_skill_entry("email_send")

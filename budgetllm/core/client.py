@@ -28,7 +28,6 @@ import uuid
 from typing import Any, Dict, List, Optional, Union
 
 from budgetllm.core.budget import (
-    BudgetExceededError,
     BudgetTracker,
     InMemoryStateAdapter,
     RedisStateAdapter,
@@ -36,7 +35,7 @@ from budgetllm.core.budget import (
 from budgetllm.core.cache import PromptCache
 from budgetllm.core.backends.memory import MemoryBackend
 from budgetllm.core.backends.redis import RedisBackend
-from budgetllm.core.safety import SafetyController, HighRiskOutputError
+from budgetllm.core.safety import SafetyController
 
 
 # Cost per 1M tokens (in cents) - approximate as of Dec 2024
@@ -105,9 +104,7 @@ class ChatCompletions:
             raise ValueError("messages parameter is required")
 
         if stream:
-            raise NotImplementedError(
-                "Streaming not yet supported. Use stream=False."
-            )
+            raise NotImplementedError("Streaming not yet supported. Use stream=False.")
 
         return self._client._handle_chat_request(
             messages=messages,
@@ -413,8 +410,12 @@ class Client:
 
         # Track what was clamped
         params_clamped = self.safety.was_clamped(
-            original_temp, original_top_p, original_max_tokens,
-            clamped_temp, clamped_top_p, clamped_max_tokens,
+            original_temp,
+            original_top_p,
+            original_max_tokens,
+            clamped_temp,
+            clamped_top_p,
+            clamped_max_tokens,
         )
 
         # Use clamped values
@@ -434,7 +435,9 @@ class Client:
                 # Return cached response with cache_hit=True, cost=0
                 # Use cached risk data if available
                 return self._build_openai_response(
-                    response_id=cached.get("id", f"chatcmpl-cached-{uuid.uuid4().hex[:8]}"),
+                    response_id=cached.get(
+                        "id", f"chatcmpl-cached-{uuid.uuid4().hex[:8]}"
+                    ),
                     model=model,
                     content=cached.get("content", ""),
                     finish_reason=cached.get("finish_reason", "stop"),
@@ -582,6 +585,7 @@ class Client:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 def create_client(
     openai_key: Optional[str] = None,

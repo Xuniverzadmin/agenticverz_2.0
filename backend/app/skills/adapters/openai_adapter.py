@@ -24,8 +24,8 @@ Environment Variables:
 import hashlib
 import logging
 import os
-import time
 import threading
+import time
 from collections import deque
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -51,6 +51,7 @@ ALLOWED_MODELS = os.getenv("OPENAI_ALLOWED_MODELS", "").split(",") if os.getenv(
 
 class SafetyLimitExceeded(Exception):
     """Raised when a safety limit is exceeded."""
+
     pass
 
 
@@ -101,12 +102,13 @@ class RateLimiter:
 # Import base types from llm_invoke_v2
 def _get_base_types():
     from app.skills.llm_invoke_v2 import (
+        LLM_ERROR_MAP,
         LLMAdapter,
         LLMConfig,
         LLMResponse,
         Message,
-        LLM_ERROR_MAP,
     )
+
     return LLMAdapter, LLMConfig, LLMResponse, Message, LLM_ERROR_MAP
 
 
@@ -130,6 +132,7 @@ DEFAULT_MODEL = "gpt-4o-mini"  # Cost-effective default
 # =============================================================================
 # OpenAI Adapter
 # =============================================================================
+
 
 class OpenAIAdapter:
     """
@@ -162,8 +165,8 @@ class OpenAIAdapter:
             max_tokens_per_request: Override max tokens limit (default from env or 16000)
             max_cost_cents_per_request: Override max cost limit (default from env or 50)
         """
-        self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
-        self._default_model = default_model or os.environ.get("OPENAI_DEFAULT_MODEL", DEFAULT_MODEL)
+        self._api_key = api_key if api_key is not None else os.environ.get("OPENAI_API_KEY")
+        self._default_model = default_model if default_model is not None else os.environ.get("OPENAI_DEFAULT_MODEL", DEFAULT_MODEL)
         self._client = None
         self._max_tokens = max_tokens_per_request or MAX_TOKENS_PER_REQUEST
         self._max_cost_cents = max_cost_cents_per_request or MAX_COST_CENTS_PER_REQUEST
@@ -190,12 +193,10 @@ class OpenAIAdapter:
         if self._client is None:
             try:
                 from openai import OpenAI
+
                 self._client = OpenAI(api_key=self._api_key)
             except ImportError:
-                raise ImportError(
-                    "openai package not installed. "
-                    "Install with: pip install openai"
-                )
+                raise ImportError("openai package not installed. " "Install with: pip install openai")
         return self._client
 
     def _map_api_error(self, error: Exception) -> Tuple[str, str, bool]:
@@ -255,10 +256,7 @@ class OpenAIAdapter:
         return input_cost + output_cost
 
     def _check_safety_limits(
-        self,
-        model: str,
-        max_tokens: int,
-        estimated_input_tokens: int
+        self, model: str, max_tokens: int, estimated_input_tokens: int
     ) -> Optional[Tuple[str, str, bool]]:
         """
         Check safety limits before making API call.
@@ -272,7 +270,7 @@ class OpenAIAdapter:
                 "rate_limited",
                 f"Rate limit exceeded ({REQUESTS_PER_MINUTE} req/min). "
                 f"Remaining: {remaining}. Please wait before retrying.",
-                True  # Retryable
+                True,  # Retryable
             )
 
         # Check model restrictions
@@ -280,7 +278,7 @@ class OpenAIAdapter:
             return (
                 "invalid_model",
                 f"Model '{model}' is not in allowed list: {ALLOWED_MODELS}",
-                False  # Not retryable
+                False,  # Not retryable
             )
 
         # Check max tokens
@@ -289,7 +287,7 @@ class OpenAIAdapter:
                 "invalid_prompt",
                 f"Requested max_tokens ({max_tokens}) exceeds limit ({self._max_tokens}). "
                 f"Reduce max_tokens to continue.",
-                False
+                False,
             )
 
         # Estimate max possible cost (input + max output)
@@ -299,16 +297,12 @@ class OpenAIAdapter:
                 "budget_exceeded",
                 f"Estimated max cost ({estimated_max_cost:.2f}¢) exceeds limit "
                 f"({self._max_cost_cents:.2f}¢). Reduce prompt size or max_tokens.",
-                False
+                False,
             )
 
         return None
 
-    async def invoke(
-        self,
-        prompt: Union[str, List],
-        config
-    ) -> Union[Any, Tuple[str, str, bool]]:
+    async def invoke(self, prompt: Union[str, List], config) -> Union[Any, Tuple[str, str, bool]]:
         """
         Invoke OpenAI API with safety limits.
 
@@ -344,7 +338,7 @@ class OpenAIAdapter:
                 messages.append({"role": "user", "content": prompt})
             else:
                 for m in prompt:
-                    if hasattr(m, 'role'):
+                    if hasattr(m, "role"):
                         role, content = m.role, m.content
                     else:
                         role, content = m.get("role", "user"), m.get("content", "")
@@ -361,9 +355,7 @@ class OpenAIAdapter:
             # === SAFETY LIMIT CHECKS ===
             safety_error = self._check_safety_limits(model, max_tokens, estimated_input_tokens)
             if safety_error:
-                logger.warning(
-                    f"Safety limit blocked request: {safety_error[0]} - {safety_error[1]}"
-                )
+                logger.warning(f"Safety limit blocked request: {safety_error[0]} - {safety_error[1]}")
                 return safety_error
 
             request_kwargs = {
@@ -413,7 +405,7 @@ class OpenAIAdapter:
                 model=response.model,
                 finish_reason=finish_reason,
                 latency_ms=latency_ms,
-                seed=config.seed
+                seed=config.seed,
             )
 
         except Exception as e:
@@ -424,6 +416,7 @@ class OpenAIAdapter:
 # =============================================================================
 # OpenAI Adapter Stub (for testing)
 # =============================================================================
+
 
 class OpenAIAdapterStub(OpenAIAdapter):
     """
@@ -444,11 +437,7 @@ class OpenAIAdapterStub(OpenAIAdapter):
         """Clear all mock responses."""
         self._mock_responses.clear()
 
-    async def invoke(
-        self,
-        prompt: Union[str, List],
-        config
-    ) -> Union[Any, Tuple[str, str, bool]]:
+    async def invoke(self, prompt: Union[str, List], config) -> Union[Any, Tuple[str, str, bool]]:
         """Return mock responses for testing."""
         LLMAdapter, LLMConfig, LLMResponse, Message, LLM_ERROR_MAP = _get_base_types()
 
@@ -460,7 +449,7 @@ class OpenAIAdapterStub(OpenAIAdapter):
         else:
             parts = []
             for m in prompt:
-                if hasattr(m, 'role'):
+                if hasattr(m, "role"):
                     parts.append(f"{m.role}: {m.content}")
                 else:
                     parts.append(f"{m.get('role', 'user')}: {m.get('content', '')}")
@@ -492,7 +481,7 @@ class OpenAIAdapterStub(OpenAIAdapter):
             model=config.model or self.default_model,
             finish_reason="end_turn",
             latency_ms=latency_ms,
-            seed=config.seed
+            seed=config.seed,
         )
 
 
@@ -500,10 +489,12 @@ class OpenAIAdapterStub(OpenAIAdapter):
 # Registration
 # =============================================================================
 
+
 def register_openai_adapter():
     """Register OpenAI adapter with the adapter registry."""
     try:
         from app.skills.llm_invoke_v2 import register_adapter
+
         adapter = OpenAIAdapter()
         register_adapter(adapter)
         return adapter

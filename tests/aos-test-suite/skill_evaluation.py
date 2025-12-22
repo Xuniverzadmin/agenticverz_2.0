@@ -8,11 +8,12 @@ import os
 import json
 import requests
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from datetime import datetime
 
 API_BASE = os.getenv("AOS_API_BASE", "http://localhost:8000")
 API_KEY = os.getenv("AOS_API_KEY", "test")
+
 
 @dataclass
 class SkillEvaluation:
@@ -29,9 +30,10 @@ class SkillEvaluation:
         if self.issues is None:
             self.issues = []
 
+
 class SkillEvaluator:
     def __init__(self, base_url: str, api_key: str):
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.evaluations: Dict[str, SkillEvaluation] = {}
 
@@ -44,7 +46,7 @@ class SkillEvaluator:
             f"{self.base_url}{path}",
             headers=self._headers(),
             timeout=30,
-            **kwargs
+            **kwargs,
         )
 
     def get_capabilities(self) -> Dict:
@@ -56,7 +58,7 @@ class SkillEvaluator:
         """Simulate a single skill execution"""
         payload = {
             "plan": [{"skill": skill_id, "params": params or {}}],
-            "budget_cents": 1000
+            "budget_cents": 1000,
         }
         resp = self._request("POST", "/api/v1/runtime/simulate", json=payload)
         return resp.json()
@@ -69,7 +71,7 @@ class SkillEvaluator:
             cost_cents=skill_info.get("cost_estimate_cents", 0),
             latency_ms=skill_info.get("avg_latency_ms", 0),
             rate_limit_remaining=skill_info.get("rate_limit_remaining", 0),
-            known_failure_patterns=skill_info.get("known_failure_patterns", [])
+            known_failure_patterns=skill_info.get("known_failure_patterns", []),
         )
 
         # Identify potential issues
@@ -77,7 +79,9 @@ class SkillEvaluator:
             evaluation.issues.append("Skill is unavailable")
 
         if evaluation.rate_limit_remaining < 10:
-            evaluation.issues.append(f"Low rate limit: {evaluation.rate_limit_remaining}")
+            evaluation.issues.append(
+                f"Low rate limit: {evaluation.rate_limit_remaining}"
+            )
 
         if evaluation.latency_ms > 5000:
             evaluation.issues.append(f"High latency: {evaluation.latency_ms}ms")
@@ -86,7 +90,9 @@ class SkillEvaluator:
             evaluation.issues.append(f"High cost: {evaluation.cost_cents}¢")
 
         if evaluation.known_failure_patterns:
-            evaluation.issues.append(f"Known failures: {evaluation.known_failure_patterns}")
+            evaluation.issues.append(
+                f"Known failures: {evaluation.known_failure_patterns}"
+            )
 
         # Test simulation
         try:
@@ -95,7 +101,9 @@ class SkillEvaluator:
                 evaluation.test_result = "PASS"
             else:
                 evaluation.test_result = "FAIL"
-                evaluation.issues.append(f"Simulation not feasible: {result.get('risks', [])}")
+                evaluation.issues.append(
+                    f"Simulation not feasible: {result.get('risks', [])}"
+                )
         except Exception as e:
             evaluation.test_result = "ERROR"
             evaluation.issues.append(f"Simulation error: {str(e)}")
@@ -122,7 +130,7 @@ class SkillEvaluator:
             if evaluation.test_result == "PASS" and not evaluation.issues:
                 print("✅ OK")
             elif evaluation.test_result == "PASS":
-                print(f"⚠️ OK with warnings")
+                print("⚠️ OK with warnings")
             else:
                 print(f"❌ {evaluation.test_result}")
 
@@ -134,9 +142,11 @@ class SkillEvaluator:
             "timestamp": datetime.now().isoformat(),
             "total_skills": len(self.evaluations),
             "available": sum(1 for e in self.evaluations.values() if e.available),
-            "passed": sum(1 for e in self.evaluations.values() if e.test_result == "PASS"),
+            "passed": sum(
+                1 for e in self.evaluations.values() if e.test_result == "PASS"
+            ),
             "with_issues": sum(1 for e in self.evaluations.values() if e.issues),
-            "skills": {}
+            "skills": {},
         }
 
         for skill_id, evaluation in self.evaluations.items():
@@ -146,7 +156,7 @@ class SkillEvaluator:
                 "latency_ms": evaluation.latency_ms,
                 "rate_limit": evaluation.rate_limit_remaining,
                 "test_result": evaluation.test_result,
-                "issues": evaluation.issues
+                "issues": evaluation.issues,
             }
 
         return report
@@ -168,9 +178,17 @@ class SkillEvaluator:
         print("Skill Details:")
         print("-" * 60)
         for skill_id, details in report["skills"].items():
-            status = "✅" if details["test_result"] == "PASS" and not details["issues"] else "⚠️" if details["test_result"] == "PASS" else "❌"
+            status = (
+                "✅"
+                if details["test_result"] == "PASS" and not details["issues"]
+                else "⚠️"
+                if details["test_result"] == "PASS"
+                else "❌"
+            )
             print(f"\n{status} {skill_id}")
-            print(f"   Cost: {details['cost_cents']}¢ | Latency: {details['latency_ms']}ms | Rate Limit: {details['rate_limit']}")
+            print(
+                f"   Cost: {details['cost_cents']}¢ | Latency: {details['latency_ms']}ms | Rate Limit: {details['rate_limit']}"
+            )
             if details["issues"]:
                 for issue in details["issues"]:
                     print(f"   ⚠ {issue}")
@@ -186,7 +204,9 @@ class SkillEvaluator:
             print(f"\n📊 High cost skills (>10¢): {', '.join(high_cost)}")
             print("   Consider budget limits for these skills")
 
-        high_latency = [s for s, d in report["skills"].items() if d["latency_ms"] > 1000]
+        high_latency = [
+            s for s, d in report["skills"].items() if d["latency_ms"] > 1000
+        ]
         if high_latency:
             print(f"\n⏱️ High latency skills (>1s): {', '.join(high_latency)}")
             print("   Consider timeouts and async handling")
@@ -195,6 +215,7 @@ class SkillEvaluator:
         if low_rate:
             print(f"\n🚦 Low rate limit skills (<20): {', '.join(low_rate)}")
             print("   Consider rate limiting in orchestration")
+
 
 def main():
     evaluator = SkillEvaluator(API_BASE, API_KEY)
@@ -205,7 +226,8 @@ def main():
     report = evaluator.generate_report()
     with open("/tmp/skill_evaluation_report.json", "w") as f:
         json.dump(report, f, indent=2)
-    print(f"\nFull report saved to: /tmp/skill_evaluation_report.json")
+    print("\nFull report saved to: /tmp/skill_evaluation_report.json")
+
 
 if __name__ == "__main__":
     main()

@@ -40,7 +40,7 @@ import socket
 import sys
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Optional, Set
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -63,6 +63,7 @@ async def get_redis():
     """Get async Redis client."""
     try:
         import redis.asyncio as aioredis
+
         return aioredis.from_url(
             REDIS_URL,
             encoding="utf-8",
@@ -70,6 +71,7 @@ async def get_redis():
         )
     except ImportError:
         import aioredis
+
         return await aioredis.from_url(
             REDIS_URL,
             encoding="utf-8",
@@ -81,6 +83,7 @@ def _update_lock_metric(lock_name: str, acquired: bool):
     """Update Prometheus metrics for lock operations."""
     try:
         from app.metrics import m10_lock_acquired_total, m10_lock_failed_total
+
         if acquired:
             m10_lock_acquired_total.labels(lock_name=lock_name).inc()
         else:
@@ -113,7 +116,7 @@ def acquire_lock(db_url: Optional[str] = None) -> bool:
         with Session(engine) as session:
             result = session.execute(
                 text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID, "ttl": LOCK_TTL}
+                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID, "ttl": LOCK_TTL},
             )
             acquired = result.scalar()
             session.commit()
@@ -151,7 +154,7 @@ def release_lock(db_url: Optional[str] = None) -> bool:
         with Session(engine) as session:
             result = session.execute(
                 text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID}
+                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID},
             )
             released = result.scalar()
             session.commit()
@@ -184,7 +187,7 @@ def extend_lock(db_url: Optional[str] = None) -> bool:
         with Session(engine) as session:
             result = session.execute(
                 text("SELECT m10_recovery.extend_lock(:lock_name, :holder_id, :ttl)"),
-                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID, "ttl": LOCK_TTL}
+                {"lock_name": LOCK_NAME, "holder_id": HOLDER_ID, "ttl": LOCK_TTL},
             )
             extended = result.scalar()
             session.commit()
@@ -322,32 +325,23 @@ async def reconcile_once(dry_run: bool = False) -> Dict[str, int]:
         stats["duplicates_found"] = len(duplicates)
 
         if not duplicates:
-            logger.info(
-                f"No duplicates found. Pending: {stats['pending_count']}, "
-                f"DL: {stats['dl_count']}"
-            )
+            logger.info(f"No duplicates found. Pending: {stats['pending_count']}, " f"DL: {stats['dl_count']}")
             return stats
 
-        logger.warning(
-            f"Found {len(duplicates)} duplicates (in both pending and DL)"
-        )
+        logger.warning(f"Found {len(duplicates)} duplicates (in both pending and DL)")
 
         # Resolve duplicates by XACKing the original
         for original_id in duplicates:
             dl_id = dl_originals[original_id]
 
             if dry_run:
-                logger.info(
-                    f"[DRY-RUN] Would XACK {original_id} (already in DL as {dl_id})"
-                )
+                logger.info(f"[DRY-RUN] Would XACK {original_id} (already in DL as {dl_id})")
                 stats["acked"] += 1
             else:
                 try:
                     result = await redis.xack(STREAM_KEY, CONSUMER_GROUP, original_id)
                     if result > 0:
-                        logger.info(
-                            f"Reconciled: XACK {original_id} (in DL as {dl_id})"
-                        )
+                        logger.info(f"Reconciled: XACK {original_id} (in DL as {dl_id})")
                         stats["acked"] += 1
                     else:
                         # Already acked by another process
@@ -364,9 +358,7 @@ async def reconcile_once(dry_run: bool = False) -> Dict[str, int]:
 
 async def main():
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Reconcile dead-letter duplicates"
-    )
+    parser = argparse.ArgumentParser(description="Reconcile dead-letter duplicates")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -413,8 +405,8 @@ async def main():
             if args.json:
                 print(json.dumps(stats, indent=2))
             else:
-                print(f"\n=== Dead-Letter Reconciliation ===")
-                print(f"Status: Skipped - another instance is running")
+                print("\n=== Dead-Letter Reconciliation ===")
+                print("Status: Skipped - another instance is running")
                 print(f"Holder ID: {HOLDER_ID}")
             return
     else:
@@ -429,7 +421,7 @@ async def main():
         if args.json:
             print(json.dumps(stats, indent=2))
         else:
-            print(f"\n=== Dead-Letter Reconciliation ===")
+            print("\n=== Dead-Letter Reconciliation ===")
             print(f"Timestamp: {stats['timestamp']}")
             print(f"Holder ID: {HOLDER_ID}")
             print(f"Dry Run: {stats['dry_run']}")
@@ -439,8 +431,8 @@ async def main():
             print(f"Messages ACKed: {stats['acked']}")
             print(f"Errors: {stats['errors']}")
 
-            if stats['duplicates_found'] > 0 and stats['dry_run']:
-                print(f"\nRun without --dry-run to resolve duplicates")
+            if stats["duplicates_found"] > 0 and stats["dry_run"]:
+                print("\nRun without --dry-run to resolve duplicates")
     finally:
         # Always release the lock when done
         if lock_acquired:

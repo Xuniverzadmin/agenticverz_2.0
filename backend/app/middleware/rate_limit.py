@@ -22,11 +22,12 @@ Usage:
     ):
         ...
 """
+import logging
 import os
 import time
-import logging
 from typing import Optional
-from fastapi import HTTPException, Depends, Request
+
+from fastapi import HTTPException, Request
 
 try:
     import redis.asyncio as aioredis
@@ -38,29 +39,13 @@ from prometheus_client import Counter, Gauge
 logger = logging.getLogger(__name__)
 
 # Prometheus metrics
-rl_allowed = Counter(
-    "aos_rate_limit_allowed_total",
-    "Rate-limit allowed requests",
-    ["tier", "tenant_id"]
-)
-rl_blocked = Counter(
-    "aos_rate_limit_blocked_total",
-    "Rate-limit blocked requests",
-    ["tier", "tenant_id"]
-)
-rl_limit_gauge = Gauge(
-    "aos_rate_limit_tier_limit",
-    "Configured requests/interval for tier",
-    ["tier"]
-)
+rl_allowed = Counter("aos_rate_limit_allowed_total", "Rate-limit allowed requests", ["tier", "tenant_id"])
+rl_blocked = Counter("aos_rate_limit_blocked_total", "Rate-limit blocked requests", ["tier", "tenant_id"])
+rl_limit_gauge = Gauge("aos_rate_limit_tier_limit", "Configured requests/interval for tier", ["tier"])
 rl_redis_connected = Gauge(
-    "aos_rate_limit_redis_connected",
-    "Whether Redis is connected for rate limiting (1=connected, 0=disconnected)"
+    "aos_rate_limit_redis_connected", "Whether Redis is connected for rate limiting (1=connected, 0=disconnected)"
 )
-rl_redis_errors = Counter(
-    "aos_rate_limit_redis_errors_total",
-    "Total Redis errors in rate limiting"
-)
+rl_redis_errors = Counter("aos_rate_limit_redis_errors_total", "Total Redis errors in rate limiting")
 
 # Configuration
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
@@ -69,9 +54,9 @@ RATE_LIMIT_FAIL_OPEN = os.environ.get("RATE_LIMIT_FAIL_OPEN", "true").lower() ==
 
 # Tier configurations: (requests_per_window, window_seconds)
 RATE_LIMIT_TIERS = {
-    "free": (60, 60),      # 60 req/min
-    "dev": (300, 60),      # 300 req/min
-    "pro": (1200, 60),     # 1200 req/min
+    "free": (60, 60),  # 60 req/min
+    "dev": (300, 60),  # 300 req/min
+    "pro": (1200, 60),  # 1200 req/min
     "enterprise": (6000, 60),  # 6000 req/min
     "unlimited": (10**9, 60),  # Effectively unlimited
 }
@@ -172,11 +157,11 @@ async def check_rate_limit(tenant_id: str, tier: str) -> tuple:
 
         if RATE_LIMIT_FAIL_OPEN:
             # Fail-open: allow request if Redis unavailable
-            logger.warning(f"Rate limit check failed (FAIL_OPEN=true, allowing request)")
+            logger.warning("Rate limit check failed (FAIL_OPEN=true, allowing request)")
             return True, 0, reqs_limit, reqs_limit
         else:
             # Fail-closed: deny request if Redis unavailable
-            logger.error(f"Rate limit check failed (FAIL_OPEN=false, denying request)")
+            logger.error("Rate limit check failed (FAIL_OPEN=false, denying request)")
             return False, 0, reqs_limit, 0
 
 
@@ -229,7 +214,7 @@ async def rate_limit_dependency(request: Request) -> bool:
                 "Retry-After": "60",
                 "X-RateLimit-Limit": str(limit),
                 "X-RateLimit-Remaining": "0",
-            }
+            },
         )
 
 

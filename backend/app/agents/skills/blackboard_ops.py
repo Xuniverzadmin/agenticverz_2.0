@@ -8,20 +8,21 @@
 
 import logging
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from ..services.blackboard_service import BlackboardService, get_blackboard_service
-from ..services.credit_service import CreditService, get_credit_service, CREDIT_COSTS
+from ..services.credit_service import CREDIT_COSTS, CreditService, get_credit_service
 
 logger = logging.getLogger("nova.agents.skills.blackboard_ops")
 
 
 # ============ Blackboard Read Skill ============
 
+
 class BlackboardReadInput(BaseModel):
     """Input schema for blackboard_read skill."""
+
     key: str = Field(..., description="Key to read")
     pattern: Optional[str] = Field(default=None, description="Optional pattern for scan (e.g., 'job:*:result')")
     max_results: int = Field(default=100, ge=1, le=1000, description="Max results for pattern scan")
@@ -29,6 +30,7 @@ class BlackboardReadInput(BaseModel):
 
 class BlackboardReadOutput(BaseModel):
     """Output schema for blackboard_read skill."""
+
     success: bool
     value: Optional[Any] = None
     values: Optional[List[Dict[str, Any]]] = None  # For pattern reads
@@ -109,8 +111,10 @@ class BlackboardReadSkill:
 
 # ============ Blackboard Write Skill ============
 
+
 class BlackboardWriteInput(BaseModel):
     """Input schema for blackboard_write skill."""
+
     key: str = Field(..., description="Key to write")
     value: Any = Field(..., description="Value to store")
     ttl: Optional[int] = Field(default=None, ge=1, le=86400, description="TTL in seconds")
@@ -119,6 +123,7 @@ class BlackboardWriteInput(BaseModel):
 
 class BlackboardWriteOutput(BaseModel):
     """Output schema for blackboard_write skill."""
+
     success: bool
     new_value: Optional[Any] = None  # For increments
     error: Optional[str] = None
@@ -196,8 +201,10 @@ class BlackboardWriteSkill:
 
 # ============ Blackboard Lock Skill ============
 
+
 class BlackboardLockInput(BaseModel):
     """Input schema for blackboard_lock skill."""
+
     key: str = Field(..., description="Lock name")
     holder: str = Field(..., description="Lock holder identity")
     action: str = Field(default="acquire", description="Action: acquire, release, extend")
@@ -206,6 +213,7 @@ class BlackboardLockInput(BaseModel):
 
 class BlackboardLockOutput(BaseModel):
     """Output schema for blackboard_lock skill."""
+
     success: bool
     acquired: Optional[bool] = None
     released: Optional[bool] = None

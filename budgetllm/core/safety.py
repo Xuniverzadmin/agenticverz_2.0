@@ -168,7 +168,10 @@ class SafetyController:
                 "clamped_to": clamped_top_p,
             }
 
-        if original_max_tokens is not None and clamped_max_tokens != original_max_tokens:
+        if (
+            original_max_tokens is not None
+            and clamped_max_tokens != original_max_tokens
+        ):
             clamped["max_tokens"] = {
                 "original": original_max_tokens,
                 "clamped_to": clamped_max_tokens,
@@ -264,7 +267,11 @@ class SafetyController:
                     f"Consider lowering temperature from {temperature} to 0.5 for more stable output."
                 )
 
-            if prompt_type == "factual" and temperature is not None and temperature > 0.3:
+            if (
+                prompt_type == "factual"
+                and temperature is not None
+                and temperature > 0.3
+            ):
                 suggestions.append(
                     "For factual queries, temperature=0.2 or lower produces more reliable answers."
                 )
