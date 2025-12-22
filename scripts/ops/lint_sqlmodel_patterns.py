@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""SQLModel Pattern Linter v2.0 - Detect Unsafe Query Patterns
+"""SQLModel Pattern Linter v2.1 - Detect Unsafe Query Patterns
 
 Enhanced to catch patterns discovered during M24 production debugging:
 1. DetachedInstanceError - ORM objects returned after session closes
 2. Row tuple extraction issues
 3. SQLModel version differences in .first() return type
 4. Missing session.get() for direct ID lookups
+5. Config value access with None values (PIN-120 PREV-9)
+6. Migration SQL ON CONFLICT patterns (PIN-120 PREV-11)
 
 Usage:
     python scripts/ops/lint_sqlmodel_patterns.py [path]
@@ -17,7 +19,7 @@ Exit codes:
     1 - Issues found
     2 - Critical issues found (blocking)
 
-RCA Reference: PIN-118 M24.2 Bug Fix
+RCA Reference: PIN-118 M24.2 Bug Fix, PIN-120 Test Suite Stabilization
 """
 
 import re
@@ -138,6 +140,34 @@ UNSAFE_PATTERNS = [
         "severity": Severity.WARNING,
         "multiline": True,
     },
+    # =========================================================================
+    # CATEGORY 6: Config Value Access (PIN-120 PREV-9)
+    # =========================================================================
+    {
+        "id": "CFG001",
+        "regex": r"if\s+['\"](\w+)['\"]\s+in\s+(\w+):\s*\n[^\n]*\2\[['\"]?\1['\"]?\]\s*\*",
+        "message": "Unsafe: 'key' in dict check followed by multiplication - value may be None",
+        "suggestion": "Use: if config.get('key') is not None: value = config['key'] * multiplier",
+        "severity": Severity.WARNING,
+        "multiline": True,
+    },
+    {
+        "id": "CFG002",
+        "regex": r"(\w+)\s*=\s*(\w+)\s+or\s+os\.environ\.get\(",
+        "message": "Potential issue: empty string '' is falsy, will fall through to env var",
+        "suggestion": "Use: value = param if param is not None else os.environ.get('KEY')",
+        "severity": Severity.WARNING,
+    },
+    # =========================================================================
+    # CATEGORY 7: Migration SQL Patterns (PIN-120 PREV-11)
+    # =========================================================================
+    {
+        "id": "MIG001",
+        "regex": r"ON\s+CONFLICT\s+ON\s+CONSTRAINT\s+(\w+)",
+        "message": "ON CONFLICT ON CONSTRAINT requires actual CONSTRAINT, not UNIQUE INDEX",
+        "suggestion": "For partial unique indexes, use: ON CONFLICT (column) WHERE condition",
+        "severity": Severity.WARNING,
+    },
 ]
 
 # Safe patterns that indicate proper handling
@@ -160,6 +190,12 @@ SAFE_PATTERNS = [
     r"->.*dict",  # Return type annotation is dict (safe)
     r"->.*Dict\[",  # Return type annotation is Dict (safe)
     r"session\.get\(\w+,",  # Using session.get() (safe for ID lookup)
+    # PIN-120 PREV-9: Config value access patterns (safe)
+    r"\.get\(['\"]?\w+['\"]?\)\s+is\s+not\s+None",  # Proper None check
+    r"if\s+\w+\s+is\s+not\s+None\s*:",  # Explicit None check before use
+    r"param\s+if\s+param\s+is\s+not\s+None\s+else",  # Ternary with None check
+    # PIN-120 PREV-11: Migration patterns (safe when proper syntax used)
+    r"ON\s+CONFLICT\s+\(\w+\)\s+WHERE",  # Correct partial index syntax
 ]
 
 # Files/directories to skip
@@ -294,7 +330,7 @@ def main():
         path = Path(args[0]) if args else Path("backend/app")
 
     print("=" * 70)
-    print("SQLModel Pattern Linter v2.0 - Detecting Unsafe Query Patterns")
+    print("SQLModel Pattern Linter v2.1 - Detecting Unsafe Query Patterns")
     print("=" * 70)
     print()
     print("Rules enforced:")
@@ -303,6 +339,8 @@ def main():
     print("  GET001:        session.get() recommendations")
     print("  SQL001:        Raw SQL safety")
     print("  SCOPE001:      Session scope issues")
+    print("  CFG001-002:    Config value access patterns (PIN-120 PREV-9)")
+    print("  MIG001:        Migration ON CONFLICT patterns (PIN-120 PREV-11)")
     print()
 
     if path.is_file():
@@ -363,6 +401,15 @@ def main():
     print()
     print("4. Import helpers:")
     print("   from app.utils.db_helpers import query_one, query_all")
+    print()
+    print("5. Config value access (PIN-120 PREV-9):")
+    print("   # WRONG: if 'key' in config: val = config['key'] * 10")
+    print("   # RIGHT: if config.get('key') is not None: val = config['key'] * 10")
+    print()
+    print("6. Migration ON CONFLICT (PIN-120 PREV-11):")
+    print("   # For partial unique indexes, use column syntax:")
+    print("   # ON CONFLICT (column) WHERE condition DO UPDATE ...")
+    print("   # NOT: ON CONFLICT ON CONSTRAINT index_name ...")
     print()
 
     # Exit code based on severity
