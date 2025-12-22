@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
-"""SQLModel Pattern Linter v2.1 - Detect Unsafe Query Patterns
+"""SQLModel Pattern Linter v2.2 - Detect Unsafe Query Patterns
 
-Enhanced to catch patterns discovered during M24 production debugging:
+Enhanced with PIN-120 Test Suite Stabilization Prevention Mechanisms.
+
+Patterns Detected:
 1. DetachedInstanceError - ORM objects returned after session closes
 2. Row tuple extraction issues
 3. SQLModel version differences in .first() return type
 4. Missing session.get() for direct ID lookups
-5. Config value access with None values (PIN-120 PREV-9)
-6. Migration SQL ON CONFLICT patterns (PIN-120 PREV-11)
+5. Config value access with None values (PREV-9)
+6. Migration SQL ON CONFLICT patterns (PREV-11)
+7. Non-idempotent Prometheus metric registration (PREV-1)
+8. Metric naming convention violations (PREV-2)
+9. Concurrent claim SQL without FOR UPDATE SKIP LOCKED (PREV-6)
+10. Test isolation fixture issues (PREV-5)
+11. Cache timestamp initialization (PREV-4)
+12. Async event loop lifecycle issues (PREV-12)
 
 Usage:
     python scripts/ops/lint_sqlmodel_patterns.py [path]
@@ -168,6 +176,67 @@ UNSAFE_PATTERNS = [
         "suggestion": "For partial unique indexes, use: ON CONFLICT (column) WHERE condition",
         "severity": Severity.WARNING,
     },
+    # =========================================================================
+    # CATEGORY 8: Prometheus Metrics (PIN-120 PREV-1, PREV-2)
+    # =========================================================================
+    {
+        "id": "PROM001",
+        "regex": r"^(\w+)\s*=\s*(Counter|Gauge|Histogram)\s*\(\s*['\"](\w+)['\"]",
+        "message": "Non-idempotent Prometheus metric - may cause 'Duplicated timeseries' in tests",
+        "suggestion": "Use idempotent registration: get_or_create_counter() from app.utils.metrics_helpers",
+        "severity": Severity.WARNING,
+        "multiline": True,
+    },
+    {
+        "id": "PROM002",
+        "regex": r"(Counter|Gauge|Histogram)\s*\(\s*['\"](?![\w_]+_)(\w+)['\"]",
+        "message": "Metric name should be prefixed with module name to avoid conflicts",
+        "suggestion": "Use format: {module}_{metric_name}_total (e.g., drift_detector_detected_total)",
+        "severity": Severity.WARNING,
+    },
+    # =========================================================================
+    # CATEGORY 9: Concurrent Claim SQL Patterns (PIN-120 PREV-6)
+    # =========================================================================
+    {
+        "id": "CONC001",
+        "regex": r"UPDATE\s+\w+\s+SET\s+\w+\s*=\s*['\"]?(pending|executing|processing)['\"]?.*WHERE",
+        "message": "Status UPDATE without FOR UPDATE SKIP LOCKED may cause race conditions",
+        "suggestion": "Use CTE: WITH claimed AS (SELECT ... FOR UPDATE SKIP LOCKED) UPDATE ... FROM claimed",
+        "severity": Severity.WARNING,
+        "multiline": True,
+    },
+    # =========================================================================
+    # CATEGORY 10: Test Isolation (PIN-120 PREV-5)
+    # =========================================================================
+    {
+        "id": "TEST001",
+        "regex": r"def\s+test_\w+.*:\s*\n(?:[^\n]*\n)*?session\.add\(",
+        "message": "Test adds data to session without cleanup fixture",
+        "suggestion": "Use db_session fixture with pre/post cleanup: DELETE FROM table WHERE type = 'test'",
+        "severity": Severity.WARNING,
+        "multiline": True,
+    },
+    # =========================================================================
+    # CATEGORY 11: Cache Initialization (PIN-120 PREV-4)
+    # =========================================================================
+    {
+        "id": "CACHE001",
+        "regex": r"def\s+_?load_\w+cache\w*\([^)]*\).*:\s*\n(?:[^\n]*\n)*?(?!.*_cache_loaded_at)",
+        "message": "Cache loading method should set _cache_loaded_at timestamp",
+        "suggestion": "Add: self._cache_loaded_at = datetime.now(timezone.utc) at start of method",
+        "severity": Severity.WARNING,
+        "multiline": True,
+    },
+    # =========================================================================
+    # CATEGORY 12: Async Event Loop (PIN-120 PREV-12)
+    # =========================================================================
+    {
+        "id": "ASYNC001",
+        "regex": r"create_async_engine\([^)]*\)\s*$",
+        "message": "Module-level async engine may cause event loop lifecycle issues in tests",
+        "suggestion": "Use fixture-scoped engine or mark tests with @pytest.mark.flaky",
+        "severity": Severity.WARNING,
+    },
 ]
 
 # Safe patterns that indicate proper handling
@@ -196,6 +265,19 @@ SAFE_PATTERNS = [
     r"param\s+if\s+param\s+is\s+not\s+None\s+else",  # Ternary with None check
     # PIN-120 PREV-11: Migration patterns (safe when proper syntax used)
     r"ON\s+CONFLICT\s+\(\w+\)\s+WHERE",  # Correct partial index syntax
+    # PIN-120 PREV-1: Idempotent Prometheus registration (safe patterns)
+    r"get_or_create_counter\(|get_or_create_gauge\(|get_or_create_histogram\(",
+    r"_find_existing_metric\(",
+    r"_get_or_create_\w+\(",
+    # PIN-120 PREV-6: Concurrent claim SQL (safe patterns)
+    r"FOR\s+UPDATE\s+SKIP\s+LOCKED",
+    r"WITH\s+claimed\s+AS",
+    # PIN-120 PREV-5: Test isolation (safe patterns)
+    r"@pytest\.fixture.*\n.*DELETE\s+FROM",  # Cleanup fixtures
+    r"yield\s+session.*\n.*DELETE\s+FROM",
+    # PIN-120 PREV-12: Async event loop (safe patterns)
+    r"@pytest\.fixture\(scope=['\"]module['\"]\).*\n.*event_loop",
+    r"pytest\.mark\.flaky",
 ]
 
 # Files/directories to skip
@@ -330,7 +412,8 @@ def main():
         path = Path(args[0]) if args else Path("backend/app")
 
     print("=" * 70)
-    print("SQLModel Pattern Linter v2.1 - Detecting Unsafe Query Patterns")
+    print("SQLModel Pattern Linter v2.2 - Detecting Unsafe Query Patterns")
+    print("  PIN-120 Test Suite Stabilization Prevention Mechanisms")
     print("=" * 70)
     print()
     print("Rules enforced:")
@@ -339,8 +422,13 @@ def main():
     print("  GET001:        session.get() recommendations")
     print("  SQL001:        Raw SQL safety")
     print("  SCOPE001:      Session scope issues")
-    print("  CFG001-002:    Config value access patterns (PIN-120 PREV-9)")
-    print("  MIG001:        Migration ON CONFLICT patterns (PIN-120 PREV-11)")
+    print("  CFG001-002:    Config value access patterns (PREV-9)")
+    print("  MIG001:        Migration ON CONFLICT patterns (PREV-11)")
+    print("  PROM001-002:   Prometheus metric registration (PREV-1, PREV-2)")
+    print("  CONC001:       Concurrent claim SQL patterns (PREV-6)")
+    print("  TEST001:       Test isolation fixtures (PREV-5)")
+    print("  CACHE001:      Cache timestamp initialization (PREV-4)")
+    print("  ASYNC001:      Async event loop lifecycle (PREV-12)")
     print()
 
     if path.is_file():
@@ -406,10 +494,27 @@ def main():
     print("   # WRONG: if 'key' in config: val = config['key'] * 10")
     print("   # RIGHT: if config.get('key') is not None: val = config['key'] * 10")
     print()
-    print("6. Migration ON CONFLICT (PIN-120 PREV-11):")
+    print("6. Migration ON CONFLICT (PREV-11):")
     print("   # For partial unique indexes, use column syntax:")
     print("   # ON CONFLICT (column) WHERE condition DO UPDATE ...")
     print("   # NOT: ON CONFLICT ON CONSTRAINT index_name ...")
+    print()
+    print("7. Prometheus metrics (PREV-1, PREV-2):")
+    print("   # Use idempotent registration:")
+    print("   from app.utils.metrics_helpers import get_or_create_counter")
+    print("   # Prefix with module name: drift_detector_detected_total")
+    print()
+    print("8. Concurrent claim SQL (PREV-6):")
+    print("   # Use FOR UPDATE SKIP LOCKED in CTE:")
+    print("   WITH claimed AS (SELECT ... FOR UPDATE SKIP LOCKED) UPDATE ...")
+    print()
+    print("9. Cache initialization (PREV-4):")
+    print("   # Set timestamp in cache load methods:")
+    print("   self._cache_loaded_at = datetime.now(timezone.utc)")
+    print()
+    print("10. Async event loop (PREV-12):")
+    print("    # Use module-scoped event_loop fixture or mark flaky:")
+    print("    @pytest.fixture(scope='module') def event_loop(): ...")
     print()
 
     # Exit code based on severity

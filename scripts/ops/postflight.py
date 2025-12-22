@@ -43,6 +43,7 @@ Categories:
     - api: FastAPI patterns, response models, error handling
     - duplication: Repeated code blocks
     - unused: Dead code detection
+    - testhygiene: PIN-120 test patterns (slow markers, isolation, async lifecycle)
 
 Warning Budgets (defaults):
     - errors: 0 (always fail)
@@ -80,6 +81,11 @@ DEFAULT_BUDGETS = {
     "api": {"error": 0, "warning": 20, "suggestion": 100},
     "duplication": {"error": 0, "warning": 20, "suggestion": 100},
     "unused": {"error": 0, "warning": 50, "suggestion": 100},
+    "testhygiene": {
+        "error": 0,
+        "warning": 30,
+        "suggestion": 100,
+    },  # PIN-120 PREV-5/7/10/12
 }
 
 BASELINE_FILE = ".postflight-baseline.json"
@@ -676,7 +682,6 @@ class PostflightChecker:
             return issues
 
         content = path.read_text()
-        lines = content.split("\n")
 
         # Look for repeated SQL queries
         sql_queries = re.findall(
@@ -795,6 +800,130 @@ class PostflightChecker:
         return issues
 
     # =========================================================================
+    # TEST HYGIENE (PIN-120 PREV-5, PREV-7, PREV-10, PREV-12)
+    # =========================================================================
+
+    def check_test_hygiene(self, file_path: str) -> List[Issue]:
+        """Check test files for hygiene issues from PIN-120."""
+        issues = []
+        path = (
+            self.root / file_path
+            if not Path(file_path).is_absolute()
+            else Path(file_path)
+        )
+
+        # Only check test files
+        if not path.exists() or "test" not in str(path):
+            return issues
+
+        try:
+            content = path.read_text()
+            lines = content.split("\n")
+
+            # PREV-7: Check for slow tests without markers
+            slow_indicators = [
+                r"time\.sleep\(\s*(\d+)",
+                r"asyncio\.sleep\(\s*(\d+)",
+                r"for\s+\w+\s+in\s+range\(\s*(\d{3,})",  # Large loops
+                r"Thread\s*\(",
+                r"concurrent\.futures",
+            ]
+
+            has_slow_marker = "@pytest.mark.slow" in content
+
+            for pattern in slow_indicators:
+                for match in re.finditer(pattern, content):
+                    line_num = content[: match.start()].count("\n") + 1
+                    if not has_slow_marker:
+                        issues.append(
+                            Issue(
+                                severity="warning",
+                                category="testhygiene",
+                                message="Potentially slow test without @pytest.mark.slow",
+                                file=str(file_path),
+                                line=line_num,
+                                suggestion="Add @pytest.mark.slow to class or function",
+                            )
+                        )
+                        break  # One warning per file is enough
+
+            # PREV-10: Check for concurrent tests without slow marker
+            concurrent_patterns = [
+                r"ThreadPoolExecutor\s*\(\s*max_workers\s*=\s*(\d+)",
+                r"workers\s*=\s*(\d+)",
+                r"range\(\s*(\d+)\s*\)",
+            ]
+
+            for pattern in concurrent_patterns:
+                for match in re.finditer(pattern, content):
+                    try:
+                        count = int(match.group(1))
+                        if count >= 10 and not has_slow_marker:
+                            line_num = content[: match.start()].count("\n") + 1
+                            issues.append(
+                                Issue(
+                                    severity="warning",
+                                    category="testhygiene",
+                                    message=f"High concurrency ({count}) test without @pytest.mark.slow",
+                                    file=str(file_path),
+                                    line=line_num,
+                                    suggestion="Add @pytest.mark.slow for tests with >10 concurrent operations",
+                                )
+                            )
+                            break
+                    except ValueError:
+                        pass
+
+            # PREV-12: Check for async tests with module-level engines
+            if "create_async_engine" in content:
+                has_module_loop = (
+                    "@pytest.fixture(scope=" in content and "event_loop" in content
+                )
+                has_flaky_marker = (
+                    "@pytest.mark.flaky" in content or "pytest.mark.flaky" in content
+                )
+
+                if not has_module_loop and not has_flaky_marker:
+                    for i, line in enumerate(lines, 1):
+                        if "create_async_engine" in line:
+                            issues.append(
+                                Issue(
+                                    severity="warning",
+                                    category="testhygiene",
+                                    message="Async engine without module-scoped event_loop fixture",
+                                    file=str(file_path),
+                                    line=i,
+                                    suggestion="Add module-scoped event_loop fixture or @pytest.mark.flaky",
+                                )
+                            )
+                            break
+
+            # PREV-5: Check for test isolation (tests adding data without cleanup)
+            if "session.add(" in content:
+                has_cleanup = (
+                    "DELETE FROM" in content or "session.rollback()" in content
+                )
+                if not has_cleanup:
+                    for i, line in enumerate(lines, 1):
+                        if "session.add(" in line:
+                            issues.append(
+                                Issue(
+                                    severity="suggestion",
+                                    category="testhygiene",
+                                    message="Test adds data without visible cleanup",
+                                    file=str(file_path),
+                                    line=i,
+                                    suggestion="Use db_session fixture with pre/post cleanup",
+                                )
+                            )
+                            break
+
+        except Exception:
+            pass
+
+        return issues
+
+    # =========================================================================
     # FULL CHECK
     # =========================================================================
 
@@ -814,6 +943,7 @@ class PostflightChecker:
             "api": self.check_api_patterns,
             "duplication": self.check_duplication,
             "unused": self.check_unused,
+            "testhygiene": self.check_test_hygiene,  # PIN-120 PREV-5, PREV-7, PREV-10, PREV-12
         }
 
         for name, check_fn in checks.items():
