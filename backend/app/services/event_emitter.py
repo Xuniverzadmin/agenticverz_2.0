@@ -10,6 +10,7 @@ Provides:
 - Automatic timestamp and metadata handling
 """
 
+import json as json_lib
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -204,7 +205,7 @@ class EventEmitter:
             ) VALUES (
                 :event_id, :timestamp, :tenant_id, :user_id, :session_id,
                 :event_type, :entity_type, :entity_id,
-                :severity, :latency_ms, :cost_usd, :metadata::jsonb
+                :severity, :latency_ms, :cost_usd, CAST(:metadata AS jsonb)
             )
         """
             ),
@@ -220,7 +221,7 @@ class EventEmitter:
                 "severity": event.severity,
                 "latency_ms": event.latency_ms,
                 "cost_usd": float(event.cost_usd) if event.cost_usd else None,
-                "metadata": str(metadata_json).replace("'", '"'),  # Convert to JSON string
+                "metadata": json_lib.dumps(metadata_json),  # Proper JSON serialization
             },
         )
 
