@@ -215,7 +215,7 @@ if config.get('llm_budget_cents') is not None:
 
 ---
 
-### RC-11: Migration Index vs Constraint Mismatch
+### RC-11: Migration Index vs Constraint Mismatch ✅ RESOLVED
 
 **Symptom:** `constraint "uq_work_queue_candidate_pending" does not exist`
 
@@ -234,12 +234,15 @@ PostgreSQL `ON CONFLICT ON CONSTRAINT` only works with actual constraints, not i
 
 **Location:** `backend/alembic/versions/021_m10_durable_queue_fallback.py`
 
-**Fix Applied:** Marked affected tests with `@pytest.mark.xfail` pending migration fix.
-
-**Proper Fix (TODO):** Change SQL function to:
+**Fix Applied:** **Migration 041** (`backend/alembic/versions/041_fix_enqueue_work_constraint.py`)
 ```sql
 ON CONFLICT (candidate_id) WHERE processed_at IS NULL
 ```
+
+**Result:** All 5 previously-xfailed tests now pass:
+- `TestRedisFailureFallback` (3 tests)
+- `TestDeadLetterPath` (1 test)
+- `TestRedisOutageFallbackComplete` (1 test)
 
 **Prevention:** See PREV-11 below.
 
