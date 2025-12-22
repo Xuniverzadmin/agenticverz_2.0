@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-127 Replay Determinism Proof)
+**Last Updated:** 2025-12-22 (PIN-128 Master Plan M25-M30)
 
 ---
 
@@ -149,6 +149,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-125](PIN-125-sdk-parity-ci-fix-prevention.md) | **SDK Cross-Language Parity - CI Fix & Prevention** | Infrastructure / CI / SDK | **✅ COMPLETE** | 2025-12-22 |
 | [PIN-126](PIN-126-test-infrastructure-prevention-blueprint.md) | **Test Infrastructure & Prevention Blueprint** | Testing / Prevention / Code Quality | **✅ COMPLETE** | 2025-12-22 |
 | [PIN-127](PIN-127-replay-determinism-proof.md) | **Replay Determinism Proof** | Core Infrastructure / Determinism | **✅ COMPLETE** | 2025-12-22 |
+| [PIN-128](PIN-128-master-plan-m25-m30.md) | **Master Plan M25-M30** | Planning / Architecture / Roadmap | **🎯 STRATEGIC** | 2025-12-22 |
 
 ---
 
@@ -914,6 +915,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-128 Master Plan M25-M30** - Strategic roadmap answering "build missing vs integrate first?" VERDICT: Integrate First. Sequence: M25 (Pillar Integration, 2wk) → M26 (Cost Intelligence, 1.5wk) → M27 (Cost→Loop, 1wk) → M28 (Unified Console, 1.5wk). Conditional: M29 (Quality Score) and M30 (Trust Badge) only if customers demand. Total P0: 6 weeks. Key insight: Integration reveals real gaps, not hypothetical ones. |
 | 2025-12-22 | **PIN-127 Replay Determinism Proof** - THE INVARIANT: Given a frozen execution trace, the system must produce identical determinism signature, or fail loudly with reason. Tagged `v1.0.0-determinism-proof`. Implementation: (1) Added `SCHEMA_VERSION: ClassVar[str] = "1.0.0"` to TraceRecord, (2) Added `_normalize_for_determinism()` for float precision (6 decimals), (3) Created 13-test invariant suite in `test_determinism_invariant.py` (0.25s, CI-blocking). Files: `backend/app/traces/models.py`, `backend/tests/test_determinism_invariant.py`, `backend/tests/fixtures/golden_trace.json`. This is a proof artifact, not a framework. |
 | 2025-12-22 | **PIN-126 Test Infrastructure & Prevention Blueprint** - Implemented complete prevention blueprint: (1) Added pyright to CI (non-blocking, generates summary), (2) Added 3 route sanity tests (`TestRouteSanity` - endpoints exist, callable, 50+ routes), (3) Added 4 registry integrity tests (`TestRegistryIntegrity` - skills load, have version, instantiable, have execute), (4) Created OpenAPI snapshot (`tests/snapshots/ops_api_contracts.json`) with 3 contract drift tests (`TestOpsAPIContractSnapshot`). Total: 26 route contract tests all passing. Prevention mechanisms PREV-20 to PREV-23 documented. |
 | 2025-12-22 | **PIN-120 RC-13 & PREV-20 Timezone Prevention** - Fixed E2E test failure: `TypeError: can't subtract offset-naive and offset-aware datetimes` in `main.py:559`. Root cause: SQLModel returns timezone-naive datetime from DB. Fix: Ensure DB datetime is timezone-aware before subtraction. Added TZ001-TZ003 linter rules to `lint_sqlmodel_patterns.py`, new `timezone` category in `postflight.py`. Prevention mechanism PREV-20 documented. |
