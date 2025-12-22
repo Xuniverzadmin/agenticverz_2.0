@@ -166,7 +166,9 @@ class OpenAIAdapter:
             max_cost_cents_per_request: Override max cost limit (default from env or 50)
         """
         self._api_key = api_key if api_key is not None else os.environ.get("OPENAI_API_KEY")
-        self._default_model = default_model if default_model is not None else os.environ.get("OPENAI_DEFAULT_MODEL", DEFAULT_MODEL)
+        self._default_model = (
+            default_model if default_model is not None else os.environ.get("OPENAI_DEFAULT_MODEL", DEFAULT_MODEL)
+        )
         self._client = None
         self._max_tokens = max_tokens_per_request or MAX_TOKENS_PER_REQUEST
         self._max_cost_cents = max_cost_cents_per_request or MAX_COST_CENTS_PER_REQUEST

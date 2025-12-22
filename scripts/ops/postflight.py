@@ -44,6 +44,8 @@ Categories:
     - duplication: Repeated code blocks
     - unused: Dead code detection
     - testhygiene: PIN-120 test patterns (slow markers, isolation, async lifecycle)
+    - mypy: PIN-121 type checking (baseline 572 errors, track regressions)
+    - sdkparity: PIN-125 JS/Python SDK cross-language parity (exports, hash algorithm)
 
 Warning Budgets (defaults):
     - errors: 0 (always fail)
@@ -86,6 +88,16 @@ DEFAULT_BUDGETS = {
         "warning": 30,
         "suggestion": 100,
     },  # PIN-120 PREV-5/7/10/12
+    "mypy": {
+        "error": 0,
+        "warning": 572,  # PIN-121 baseline: 572 errors
+        "suggestion": 1000,
+    },  # PIN-121 PREV-13/14/15
+    "sdkparity": {
+        "error": 0,
+        "warning": 5,
+        "suggestion": 10,
+    },  # PIN-125 PREV-16/17 (SDK cross-language parity)
 }
 
 BASELINE_FILE = ".postflight-baseline.json"
@@ -924,6 +936,248 @@ class PostflightChecker:
         return issues
 
     # =========================================================================
+    # MYPY TYPE CHECKING (PIN-121 PREV-13/14/15)
+    # =========================================================================
+
+    def check_mypy(self, file_path: str) -> List[Issue]:
+        """Run mypy on file and report type errors (PIN-121)."""
+        import subprocess
+
+        issues = []
+        path = (
+            self.root / file_path
+            if not Path(file_path).is_absolute()
+            else Path(file_path)
+        )
+
+        if not path.exists() or not path.suffix == ".py":
+            return issues
+
+        try:
+            result = subprocess.run(
+                [
+                    "mypy",
+                    str(path),
+                    "--ignore-missing-imports",
+                    "--show-error-codes",
+                    "--no-error-summary",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            # Parse mypy output
+            for line in result.stdout.strip().split("\n"):
+                if not line or ": error:" not in line:
+                    continue
+
+                # Format: file:line: error: message [error-code]
+                match = re.match(r"([^:]+):(\d+): error: (.+)", line)
+                if match:
+                    _, line_num, message = match.groups()
+
+                    # Categorize by known SQLModel/SQLAlchemy issues (low priority)
+                    if "table" in message and "call-arg" in message:
+                        severity = "suggestion"  # Known SQLModel limitation
+                    elif "Invalid base class" in message:
+                        severity = "suggestion"  # SQLAlchemy declarative_base
+                    elif "datetime" in message and "desc" in message:
+                        severity = "suggestion"  # SQLAlchemy column methods
+                    else:
+                        severity = "warning"  # Genuine type issues
+
+                    issues.append(
+                        Issue(
+                            severity=severity,
+                            category="mypy",
+                            message=message[:100],  # Truncate long messages
+                            file=str(file_path),
+                            line=int(line_num),
+                        )
+                    )
+
+        except FileNotFoundError:
+            # mypy not installed - skip silently
+            pass
+        except subprocess.TimeoutExpired:
+            issues.append(
+                Issue(
+                    severity="warning",
+                    category="mypy",
+                    message="mypy check timed out (>30s)",
+                    file=str(file_path),
+                )
+            )
+        except Exception as e:
+            issues.append(
+                Issue(
+                    severity="warning",
+                    category="mypy",
+                    message=f"mypy check failed: {str(e)[:50]}",
+                    file=str(file_path),
+                )
+            )
+
+        return issues
+
+    # =========================================================================
+    # SDK PARITY CHECK (PIN-125 PREV-16, PREV-17)
+    # =========================================================================
+
+    def check_sdk_parity(self, file_path: str = None) -> List[Issue]:
+        """
+        Verify JS SDK exports and cross-language parity.
+
+        PIN-125 Prevention Mechanisms:
+        - PREV-16: SDK Export Verification
+        - PREV-17: Cross-Language Parity Pre-Commit
+
+        Only runs when changes affect sdk/ directories.
+        """
+        issues = []
+
+        # Only check SDK files or run in full mode (file_path=None or sdk/ path)
+        if file_path and not file_path.startswith("sdk/"):
+            return issues
+
+        # Required JS SDK exports (must match Python SDK)
+        required_exports = [
+            "AOSClient",
+            "Trace",
+            "TraceStep",
+            "RuntimeContext",
+            "canonicalJson",
+            "hashData",
+            "hashTrace",
+            "TRACE_SCHEMA_VERSION",
+            "freezeTime",
+            "diffTraces",
+            "createTraceFromContext",
+            "replayStep",
+            "generateIdempotencyKey",
+            "resetIdempotencyState",
+            "markIdempotencyKeyExecuted",
+            "isIdempotencyKeyExecuted",
+        ]
+
+        js_dist_index = self.root / "sdk/js/aos-sdk/dist/index.js"
+
+        # Check if JS SDK dist exists
+        if not js_dist_index.exists():
+            issues.append(
+                Issue(
+                    severity="warning",
+                    category="sdkparity",
+                    message="JS SDK dist/index.js not found - run 'npm run build' in sdk/js/aos-sdk",
+                    file=str(js_dist_index),
+                )
+            )
+            return issues
+
+        # Read and check exports
+        try:
+            content = js_dist_index.read_text()
+
+            # Check for module.exports pattern
+            exports_match = re.search(
+                r"module\.exports\s*=\s*\{([^}]+)\}", content, re.DOTALL
+            )
+
+            if not exports_match:
+                # Try ESM exports pattern
+                exports_match = re.search(r"export\s*\{([^}]+)\}", content, re.DOTALL)
+
+            if exports_match:
+                exports_content = exports_match.group(1)
+                exported_names = [
+                    name.strip().split(":")[0].strip()
+                    for name in exports_content.split(",")
+                    if name.strip()
+                ]
+
+                # Check for missing exports
+                missing = set(required_exports) - set(exported_names)
+                if missing:
+                    issues.append(
+                        Issue(
+                            severity="error",
+                            category="sdkparity",
+                            message=f"JS SDK missing exports: {', '.join(sorted(missing)[:5])}{'...' if len(missing) > 5 else ''}",
+                            file=str(js_dist_index),
+                            line=1,
+                            fix="Run 'npm run build' in sdk/js/aos-sdk to rebuild",
+                        )
+                    )
+            else:
+                issues.append(
+                    Issue(
+                        severity="warning",
+                        category="sdkparity",
+                        message="Could not parse JS SDK exports - check dist/index.js format",
+                        file=str(js_dist_index),
+                    )
+                )
+
+        except Exception as e:
+            issues.append(
+                Issue(
+                    severity="warning",
+                    category="sdkparity",
+                    message=f"Failed to check JS SDK exports: {str(e)[:50]}",
+                    file=str(js_dist_index),
+                )
+            )
+
+        # Check compare_with_python.js uses CommonJS (not ES modules)
+        compare_script = self.root / "sdk/js/aos-sdk/scripts/compare_with_python.js"
+        if compare_script.exists():
+            try:
+                script_content = compare_script.read_text()
+
+                # Check for ES module syntax (should use CommonJS)
+                if re.search(
+                    r'^import\s+\w+\s+from\s+["\']', script_content, re.MULTILINE
+                ):
+                    issues.append(
+                        Issue(
+                            severity="error",
+                            category="sdkparity",
+                            message="compare_with_python.js uses ES modules - must use CommonJS require()",
+                            file=str(compare_script),
+                            line=1,
+                            fix="Change 'import x from \"y\"' to 'const x = require(\"y\")'",
+                        )
+                    )
+
+                # Check hash chain uses colon separator
+                if (
+                    "currentHash + stepHash" in script_content
+                    and "${currentHash}:${stepHash}" not in script_content
+                ):
+                    issues.append(
+                        Issue(
+                            severity="error",
+                            category="sdkparity",
+                            message="Hash chain missing colon separator - must use `${currentHash}:${stepHash}`",
+                            file=str(compare_script),
+                            fix="Add colon separator: const combined = `${currentHash}:${stepHash}`",
+                        )
+                    )
+
+            except Exception as e:
+                issues.append(
+                    Issue(
+                        severity="warning",
+                        category="sdkparity",
+                        message=f"Failed to check compare script: {str(e)[:50]}",
+                        file=str(compare_script),
+                    )
+                )
+
+        return issues
+
+    # =========================================================================
     # FULL CHECK
     # =========================================================================
 
@@ -944,6 +1198,8 @@ class PostflightChecker:
             "duplication": self.check_duplication,
             "unused": self.check_unused,
             "testhygiene": self.check_test_hygiene,  # PIN-120 PREV-5, PREV-7, PREV-10, PREV-12
+            "mypy": self.check_mypy,  # PIN-121 PREV-13, PREV-14, PREV-15
+            "sdkparity": self.check_sdk_parity,  # PIN-125 PREV-16, PREV-17
         }
 
         for name, check_fn in checks.items():

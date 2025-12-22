@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-20
+**Last Updated:** 2025-12-22
 
 ---
 
@@ -209,6 +209,100 @@ RBAC_ENFORCE=true
 | PIN-032 | M7 RBAC Enablement | ENFORCED |
 | PIN-009 | External Rollout (Auth Blocker) | BLOCKING M8 |
 | PIN-005 | Machine-Native Architecture | PRIMARY (vision) |
+| PIN-120 | Test Suite Stabilization & Prevention | COMPLETE (PREV-1 to PREV-12) |
+| PIN-121 | Mypy Technical Debt Remediation | ACTIVE (baseline 572 errors) |
+| PIN-125 | SDK Cross-Language Parity | COMPLETE (PREV-16 to PREV-19) |
+
+---
+
+## Mypy Technical Debt (PIN-121)
+
+**Baseline:** 572 errors in 118 files (known limitation)
+
+### Error Categories
+- SQLModel `table=True` keyword (27) - Known limitation, low priority
+- None + operator issues (14) - P1, genuine bugs
+- Type assignment mismatches (13) - P2, gradual fix
+- SQLAlchemy `Base` inheritance (8) - False positive
+
+### Prevention Mechanisms
+| ID | Rule | Enforcement |
+|----|------|-------------|
+| PREV-13 | Mypy pre-commit (warning mode) | `.pre-commit-config.yaml` |
+| PREV-14 | CI mypy step (non-blocking) | `.github/workflows/ci.yml` |
+| PREV-15 | Postflight mypy category | `postflight.py` |
+
+### Commands
+```bash
+# Run mypy on changed files
+mypy backend/app/ --ignore-missing-imports --show-error-codes
+
+# Skip mypy for commits with known issues
+SKIP=mypy git commit -m "message"
+
+# Check postflight mypy category
+./scripts/ops/postflight.py --category mypy
+```
+
+See PIN-121 for full remediation plan and root cause analysis.
+
+---
+
+## SDK Cross-Language Parity (PIN-125)
+
+**Status:** Python and JS SDKs must produce identical deterministic hashes.
+
+### Hash Algorithm (MUST match in both SDKs)
+
+```
+1. base_string = f"{seed}:{timestamp}:{tenant_id}"
+2. chain_hash = SHA256(base_string).hexdigest()
+3. For each step:
+   a. step_payload = canonical_json(deterministic_payload)
+   b. step_hash = SHA256(step_payload).hexdigest()
+   c. combined = f"{chain_hash}:{step_hash}"  # COLON SEPARATOR
+   d. chain_hash = SHA256(combined).hexdigest()
+4. root_hash = chain_hash
+```
+
+### Prevention Mechanisms
+| ID | Rule | Enforcement |
+|----|------|-------------|
+| PREV-16 | SDK Export Verification | `postflight.py` sdkparity check |
+| PREV-17 | Cross-Language Parity Pre-Commit | `postflight.py` sdkparity check |
+| PREV-18 | SDK Build Freshness | `preflight.py` + CI workflow |
+| PREV-19 | Hash Algorithm Parity Test | CI workflow parity tests |
+
+### Common Issues (Fixed in PIN-125)
+
+1. **Hash Chain Separator**: Must use colon `:` between hashes
+   - ❌ `currentHash + stepHash` (wrong)
+   - ✅ `${currentHash}:${stepHash}` (correct)
+
+2. **ES Modules vs CommonJS**: JS scripts must use CommonJS
+   - ❌ `import fs from "fs"` (wrong in non-module package)
+   - ✅ `const fs = require("fs")` (correct)
+
+3. **Missing SDK Exports**: JS dist/ must export all functions
+   - Run `npm run build` after any SDK changes
+
+### Commands
+```bash
+# Build JS SDK (always do this after changes)
+cd sdk/js/aos-sdk && npm run build
+
+# Run local parity check
+python3 -c "from aos_sdk import Trace, RuntimeContext; ..."  # Generate trace
+node sdk/js/aos-sdk/scripts/compare_with_python.js /tmp/trace.json
+
+# Run postflight SDK parity check
+./scripts/ops/postflight.py --category sdkparity
+
+# Run preflight SDK build check
+./scripts/ops/preflight.py --full
+```
+
+See PIN-125 for full root cause analysis and fix details.
 
 ---
 

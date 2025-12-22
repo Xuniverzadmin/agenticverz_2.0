@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'sdk/python/**'
+      - 'sdk/js/**'  # PIN-125: Include JS SDK for cross-language parity
       - 'backend/app/worker/**'
       - 'examples/**'
   push:
     branches: [main, develop]
     paths:
       - 'sdk/python/**'
+      - 'sdk/js/**'  # PIN-125: Include JS SDK for cross-language parity
       - 'backend/app/worker/**'
       - 'examples/**'
   schedule:
@@ -536,6 +538,9 @@ jobs:
           retention-days: 7
 
   cross-language-parity-script:
+    # PIN-125: Cross-language parity verification
+    # - PREV-18: Always rebuild JS SDK before parity tests
+    # - PREV-19: Verify hash algorithm matches Python exactly
     name: Cross-Language Parity (Script)
     runs-on: ubuntu-latest
     needs: determinism-unit-tests
@@ -556,10 +561,11 @@ jobs:
       - name: Install Python SDK
         run: pip install -e sdk/python/
 
-      - name: Install JS SDK
+      # PIN-125 PREV-18: Always rebuild JS SDK to ensure dist/ is fresh
+      - name: Build JS SDK (ensure fresh)
         run: |
           cd sdk/js/aos-sdk
-          npm install
+          npm ci
           npm run build
 
       - name: Generate Python trace for parity check

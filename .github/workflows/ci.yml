@@ -296,6 +296,68 @@ jobs:
 
           echo "✅ All baseline secrets are verified false positives"
 
+  # ============================================================================
+  # MYPY TYPE CHECKING (PIN-121 PREV-14) - Non-blocking, tracks regressions
+  # ============================================================================
+  mypy-check:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking per PIN-121
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install mypy types-PyYAML types-redis types-requests
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run mypy
+        id: mypy
+        run: |
+          echo "=== Mypy Type Checking (PIN-121) ==="
+          echo "Baseline: 572 errors (2025-12-22)"
+          echo ""
+
+          cd backend
+          mypy app/ --ignore-missing-imports --show-error-codes 2>&1 | tee /tmp/mypy-output.txt || true
+
+          ERROR_COUNT=$(grep -c ": error:" /tmp/mypy-output.txt || echo "0")
+          echo ""
+          echo "Total errors: $ERROR_COUNT"
+          echo "error_count=$ERROR_COUNT" >> $GITHUB_OUTPUT
+
+          # Warn if errors increased from baseline
+          if [ "$ERROR_COUNT" -gt 600 ]; then
+            echo "::warning::Mypy errors increased significantly ($ERROR_COUNT > 600)"
+          fi
+
+      - name: Generate mypy summary
+        if: always()
+        run: |
+          echo "## 🔍 Mypy Type Check (PIN-121)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          ERROR_COUNT="${{ steps.mypy.outputs.error_count }}"
+          BASELINE=572
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Current Errors | $ERROR_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Baseline (2025-12-22) | $BASELINE |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$ERROR_COUNT" -le "$BASELINE" ]; then
+            echo "✅ Type safety maintained or improved" >> $GITHUB_STEP_SUMMARY
+          else
+            DIFF=$((ERROR_COUNT - BASELINE))
+            echo "⚠️ $DIFF new type errors introduced" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See PIN-121 for remediation plan." >> $GITHUB_STEP_SUMMARY
+
   # UI Hygiene Check - blocks merge on stale buttons, orphaned pages, silent mutations
   ui-hygiene:
     runs-on: ubuntu-latest

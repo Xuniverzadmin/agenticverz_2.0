@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-124 Unified Identity Hybrid Architecture)
+**Last Updated:** 2025-12-22 (PIN-125 SDK Cross-Language Parity CI Fix)
 
 ---
 
@@ -146,6 +146,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-122](PIN-122-master-milestone-compendium-m0-m21.md) | **Master Milestone Compendium (M0-M21)** | Architecture / Compendium | **📚 REFERENCE** | 2025-12-22 |
 | [PIN-123](PIN-123-strategic-product-plan-2025.md) | **Strategic Product Plan 2025** | Strategy / Product / GTM | **🎯 STRATEGIC** | 2025-12-22 |
 | [PIN-124](PIN-124-unified-identity-hybrid-architecture.md) | **Unified Identity Hybrid Architecture** | Architecture / Strategy / Product | **🎯 STRATEGIC** | 2025-12-22 |
+| [PIN-125](PIN-125-sdk-parity-ci-fix-prevention.md) | **SDK Cross-Language Parity - CI Fix & Prevention** | Infrastructure / CI / SDK | **✅ COMPLETE** | 2025-12-22 |
 
 ---
 
@@ -911,6 +912,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-125 SDK Cross-Language Parity CI Fix** - Fixed CI failures in Determinism Check workflow. Root causes: (1) ES modules in CommonJS package, (2) missing colon separator in JS hash chain, (3) stale JS SDK dist. Prevention mechanisms PREV-16 to PREV-19 added to postflight.py, preflight.py, and CI workflow. Updated CLAUDE.md with SDK parity section. |
 | 2025-12-22 | **PIN-124 Unified Identity Hybrid Architecture** - Strategic synthesis: GPT's identity-centric simplicity + AOS's deep capabilities. Core principle: "One console, four views, every token tracked." Defines Unified Identity Layer, API Gateway, and four views (Cost, Incident, Self-Heal, Governance) with feedback loops. |
 | 2025-12-22 | **PIN-122 + PIN-123 Strategic Plan** - Created Master Milestone Compendium (M0-M21) and Strategic Product Plan 2025 with three pillars, pricing strategy, and GTM phases. |
 | 2025-12-22 | **PIN-120 RC-11 RESOLVED** - Migration 041 fixes `enqueue_work` constraint issue; all M10 recovery enhanced tests now pass |

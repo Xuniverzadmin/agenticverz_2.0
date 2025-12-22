@@ -21,8 +21,14 @@ Usage:
     # Generate runtime validation hook
     ./scripts/ops/preflight.py --generate-hook
 
-    # Full pre-flight check
+    # Full pre-flight check (includes SDK build freshness)
     ./scripts/ops/preflight.py --full
+
+Checks:
+    - Route collisions (semantic collision detection)
+    - Untyped path parameters
+    - Import analysis
+    - SDK build freshness (PIN-125 PREV-18)
 """
 
 import ast
@@ -533,6 +539,77 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
         return issues
 
     # =========================================================================
+    # SDK BUILD VERIFICATION (PIN-125 PREV-18)
+    # =========================================================================
+
+    def check_sdk_build_freshness(self) -> List[Issue]:
+        """
+        Verify JS SDK dist is up to date with source.
+
+        PIN-125 Prevention Mechanism:
+        - PREV-18: SDK Build Freshness
+
+        Checks if any source file in sdk/js/aos-sdk/src/ is newer than dist/.
+        """
+        issues = []
+
+        src_dir = self.root / "sdk/js/aos-sdk/src"
+        dist_dir = self.root / "sdk/js/aos-sdk/dist"
+
+        if not src_dir.exists():
+            return issues  # No JS SDK source
+
+        if not dist_dir.exists():
+            issues.append(
+                Issue(
+                    severity="error",
+                    category="sdk_build",
+                    message="JS SDK dist/ not found - must run 'npm run build'",
+                    file=str(dist_dir),
+                    suggestion="cd sdk/js/aos-sdk && npm run build",
+                )
+            )
+            return issues
+
+        # Get latest source modification time
+        src_files = list(src_dir.rglob("*.ts"))
+        if not src_files:
+            return issues
+
+        latest_src_mtime = max(f.stat().st_mtime for f in src_files)
+        latest_src_file = max(src_files, key=lambda f: f.stat().st_mtime)
+
+        # Get earliest dist modification time (conservative check)
+        dist_files = list(dist_dir.glob("index.*"))
+        if not dist_files:
+            issues.append(
+                Issue(
+                    severity="error",
+                    category="sdk_build",
+                    message="JS SDK dist/ is empty - must run 'npm run build'",
+                    file=str(dist_dir),
+                    suggestion="cd sdk/js/aos-sdk && npm run build",
+                )
+            )
+            return issues
+
+        earliest_dist_mtime = min(f.stat().st_mtime for f in dist_files)
+
+        # If any source is newer than dist, warn
+        if latest_src_mtime > earliest_dist_mtime:
+            issues.append(
+                Issue(
+                    severity="warning",
+                    category="sdk_build",
+                    message=f"JS SDK source ({latest_src_file.name}) modified after dist/",
+                    file=str(latest_src_file),
+                    suggestion="cd sdk/js/aos-sdk && npm run build",
+                )
+            )
+
+        return issues
+
+    # =========================================================================
     # FULL PREFLIGHT
     # =========================================================================
 
@@ -543,6 +620,7 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
             "route_issues": [],
             "untyped_issues": [],
             "import_issues": [],
+            "sdk_issues": [],
             "summary": {},
         }
 
@@ -564,13 +642,18 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
                 rel_path = str(py_file.relative_to(self.root))
                 results["import_issues"].extend(self.analyze_imports(rel_path))
 
+        # SDK build freshness check (PIN-125 PREV-18)
+        results["sdk_issues"] = self.check_sdk_build_freshness()
+
         # Summary
-        errors = [i for i in route_issues if i.severity == "error"]
-        warnings = [i for i in route_issues if i.severity == "warning"]
+        all_issues = route_issues + results["sdk_issues"]
+        errors = [i for i in all_issues if i.severity == "error"]
+        warnings = [i for i in all_issues if i.severity == "warning"]
         results["summary"] = {
             "total_routes": len(routes),
             "errors": len(errors),
             "warnings": len(warnings) + len(results["untyped_issues"]),
+            "sdk_issues": len(results["sdk_issues"]),
             "pass": len(errors) == 0,
         }
 
@@ -620,6 +703,24 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
                 print(f"  {issue.message}")
                 if issue.suggestion:
                     print(f"    → {issue.suggestion}")
+
+        # SDK build issues (PIN-125 PREV-18)
+        sdk_issues = results.get("sdk_issues", [])
+        if sdk_issues:
+            sdk_errors = [i for i in sdk_issues if i.severity == "error"]
+            sdk_warnings = [i for i in sdk_issues if i.severity == "warning"]
+            if sdk_errors:
+                print(f"\n🔴 SDK BUILD ERRORS ({len(sdk_errors)}):")
+                for issue in sdk_errors:
+                    print(f"  [{issue.category}] {issue.message}")
+                    if issue.suggestion:
+                        print(f"    → {issue.suggestion}")
+            if sdk_warnings and verbose:
+                print(f"\n⚠️  SDK BUILD WARNINGS ({len(sdk_warnings)}):")
+                for issue in sdk_warnings:
+                    print(f"  [{issue.category}] {issue.message}")
+                    if issue.suggestion:
+                        print(f"    → {issue.suggestion}")
 
         # Summary
         summary = results.get("summary", {})

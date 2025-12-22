@@ -556,7 +556,14 @@ async def _execute_run_inner(run_id: str):
         run.tool_calls_json = json.dumps(tool_calls)
         run.error_message = error_message
         run.completed_at = completed_at
-        run.duration_ms = (completed_at - run.started_at).total_seconds() * 1000 if run.started_at else None
+        if run.started_at:
+            # Ensure started_at is timezone-aware before subtraction
+            started_at_aware = (
+                run.started_at.replace(tzinfo=timezone.utc) if run.started_at.tzinfo is None else run.started_at
+            )
+            run.duration_ms = (completed_at - started_at_aware).total_seconds() * 1000
+        else:
+            run.duration_ms = None
         session.add(run)
         session.commit()
 
