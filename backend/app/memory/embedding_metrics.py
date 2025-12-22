@@ -11,7 +11,7 @@ Tracks:
 
 import os
 
-from prometheus_client import Counter, Gauge, Histogram
+from app.utils.metrics_helpers import get_or_create_counter, get_or_create_gauge, get_or_create_histogram
 
 # Feature flags
 VECTOR_SEARCH_ENABLED = os.getenv("VECTOR_SEARCH_ENABLED", "true").lower() == "true"
@@ -21,71 +21,71 @@ VECTOR_SEARCH_FALLBACK = os.getenv("VECTOR_SEARCH_FALLBACK", "true").lower() == 
 EMBEDDING_DAILY_QUOTA = int(os.getenv("EMBEDDING_DAILY_QUOTA", "10000"))
 EMBEDDING_QUOTA_EXCEEDED = False  # Runtime flag to block new requests
 
-# Backfill metrics
-BACKFILL_PROGRESS = Gauge(
+# Backfill metrics - using idempotent registration (PIN-120 PREV-1)
+BACKFILL_PROGRESS = get_or_create_gauge(
     "aos_memory_backfill_progress_total",
     "Number of memory rows with embeddings backfilled",
     ["status"],  # success, pending, failed
 )
 
-BACKFILL_BATCH_DURATION = Histogram(
+BACKFILL_BATCH_DURATION = get_or_create_histogram(
     "aos_memory_backfill_batch_duration_seconds",
     "Time to process a backfill batch",
     buckets=[0.5, 1, 2, 5, 10, 30, 60],
 )
 
 # Embedding API metrics
-EMBEDDING_API_CALLS = Counter(
+EMBEDDING_API_CALLS = get_or_create_counter(
     "aos_embedding_api_calls_total",
     "Total embedding API calls",
     ["provider", "status"],  # openai/anthropic, success/error
 )
 
-EMBEDDING_API_LATENCY = Histogram(
+EMBEDDING_API_LATENCY = get_or_create_histogram(
     "aos_embedding_api_latency_seconds",
     "Embedding API call latency",
     ["provider"],
     buckets=[0.1, 0.25, 0.5, 1, 2, 5, 10],
 )
 
-EMBEDDING_ERRORS = Counter(
+EMBEDDING_ERRORS = get_or_create_counter(
     "aos_embedding_errors_total",
     "Total embedding errors",
     ["provider", "error_type"],  # rate_limit, timeout, auth, other
 )
 
-EMBEDDING_TOKENS = Counter(
+EMBEDDING_TOKENS = get_or_create_counter(
     "aos_embedding_tokens_total",
     "Total tokens processed for embeddings",
     ["provider"],
 )
 
 # Vector search metrics
-VECTOR_QUERY_LATENCY = Histogram(
+VECTOR_QUERY_LATENCY = get_or_create_histogram(
     "aos_vector_query_latency_seconds",
     "Vector similarity search latency",
     buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
 )
 
-VECTOR_QUERY_RESULTS = Histogram(
+VECTOR_QUERY_RESULTS = get_or_create_histogram(
     "aos_vector_query_results_count",
     "Number of results returned from vector search",
     buckets=[0, 1, 5, 10, 20, 50, 100],
 )
 
-VECTOR_FALLBACK_COUNT = Counter(
+VECTOR_FALLBACK_COUNT = get_or_create_counter(
     "aos_vector_fallback_total",
     "Times vector search fell back to keyword search",
     ["reason"],  # no_embedding, below_threshold, error
 )
 
 # Index health metrics
-VECTOR_INDEX_SIZE = Gauge(
+VECTOR_INDEX_SIZE = get_or_create_gauge(
     "aos_vector_index_size",
     "Number of vectors in the index",
 )
 
-VECTOR_INDEX_NULL_COUNT = Gauge(
+VECTOR_INDEX_NULL_COUNT = get_or_create_gauge(
     "aos_vector_index_null_count",
     "Number of rows without embeddings",
 )
@@ -105,12 +105,12 @@ def update_backfill_progress(success: int, pending: int, failed: int):
 
 
 # Quota exceeded counter
-EMBEDDING_QUOTA_EXCEEDED_COUNT = Counter(
+EMBEDDING_QUOTA_EXCEEDED_COUNT = get_or_create_counter(
     "aos_embedding_quota_exhausted_total",
     "Times embedding quota was exceeded and requests blocked",
 )
 
-EMBEDDING_DAILY_CALL_COUNT = Gauge(
+EMBEDDING_DAILY_CALL_COUNT = get_or_create_gauge(
     "aos_embedding_daily_calls",
     "Current daily embedding call count (resets at midnight UTC)",
 )

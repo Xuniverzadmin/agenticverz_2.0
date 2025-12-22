@@ -29,13 +29,14 @@ from typing import Any, Dict, Optional
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
-from prometheus_client import Counter, Histogram
 from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
+
+from app.utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
 
 logger = logging.getLogger("nova.jobs.storage")
 
@@ -109,23 +110,26 @@ os.makedirs(LOCAL_FALLBACK_DIR, exist_ok=True)
 # Prometheus Metrics
 # =============================================================================
 
-R2_UPLOAD_ATTEMPTS = Counter(
+# Using idempotent registration (PIN-120 PREV-1)
+R2_UPLOAD_ATTEMPTS = get_or_create_counter(
     "failure_agg_r2_upload_attempt_total",
     "Total R2 upload attempts",
     ["status"],  # uploaded, fallback_local, error
 )
 
-R2_UPLOAD_DURATION = Histogram(
+R2_UPLOAD_DURATION = get_or_create_histogram(
     "failure_agg_r2_upload_duration_seconds",
     "R2 upload duration in seconds",
     buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0],
 )
 
-R2_UPLOAD_FALLBACK = Counter("failure_agg_r2_upload_fallback_total", "Total uploads that fell back to local storage")
+R2_UPLOAD_FALLBACK = get_or_create_counter(
+    "failure_agg_r2_upload_fallback_total", "Total uploads that fell back to local storage"
+)
 
-R2_RETRY_SUCCESS = Counter("failure_agg_r2_retry_success_total", "Uploads that succeeded after retry")
+R2_RETRY_SUCCESS = get_or_create_counter("failure_agg_r2_retry_success_total", "Uploads that succeeded after retry")
 
-R2_UPLOAD_BYTES = Counter("failure_agg_r2_upload_bytes_total", "Total bytes uploaded to R2")
+R2_UPLOAD_BYTES = get_or_create_counter("failure_agg_r2_upload_bytes_total", "Total bytes uploaded to R2")
 
 # =============================================================================
 # S3 Client Factory

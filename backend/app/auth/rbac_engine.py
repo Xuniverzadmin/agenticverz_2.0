@@ -27,7 +27,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import jwt
 from fastapi import Request
-from prometheus_client import Counter, Gauge, Histogram
+
+from ..utils.metrics_helpers import get_or_create_counter, get_or_create_gauge, get_or_create_histogram
 
 logger = logging.getLogger("nova.auth.rbac_engine")
 
@@ -50,21 +51,21 @@ POLICY_FILE = os.getenv("RBAC_POLICY_FILE", str(Path(__file__).parent.parent / "
 # Prometheus Metrics
 # =============================================================================
 
-RBAC_ENGINE_DECISIONS = Counter(
+RBAC_ENGINE_DECISIONS = get_or_create_counter(
     "rbac_engine_decisions_total", "RBAC engine authorization decisions", ["resource", "action", "decision", "reason"]
 )
 
-RBAC_ENGINE_LATENCY = Histogram(
+RBAC_ENGINE_LATENCY = get_or_create_histogram(
     "rbac_engine_latency_seconds",
     "RBAC engine decision latency",
     buckets=[0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1],
 )
 
-RBAC_POLICY_LOADS = Counter("rbac_policy_loads_total", "Policy file reload attempts", ["status"])
+RBAC_POLICY_LOADS = get_or_create_counter("rbac_policy_loads_total", "Policy file reload attempts", ["status"])
 
-RBAC_POLICY_VERSION = Gauge("rbac_policy_version_info", "Current policy version (hash as integer)")
+RBAC_POLICY_VERSION = get_or_create_gauge("rbac_policy_version_info", "Current policy version (hash as integer)")
 
-RBAC_AUDIT_WRITES = Counter("rbac_audit_writes_total", "Audit log writes", ["status"])
+RBAC_AUDIT_WRITES = get_or_create_counter("rbac_audit_writes_total", "Audit log writes", ["status"])
 
 
 # =============================================================================

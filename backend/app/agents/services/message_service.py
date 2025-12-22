@@ -7,6 +7,7 @@
 import json
 import logging
 import os
+import re
 import select
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -18,6 +19,29 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger("nova.agents.message_service")
+
+
+def _sanitize_channel_name(channel: str) -> str:
+    """
+    Sanitize PostgreSQL LISTEN/NOTIFY channel name.
+
+    PostgreSQL identifiers should only contain alphanumeric chars and underscores.
+    This prevents any SQL injection attempts via channel names.
+
+    Args:
+        channel: Raw channel name (e.g., "msg_{instance_id}")
+
+    Returns:
+        Sanitized channel name containing only [a-zA-Z0-9_]
+
+    Raises:
+        ValueError: If channel is empty after sanitization
+    """
+    # Remove any characters that aren't alphanumeric or underscore
+    sanitized = re.sub(r"[^a-zA-Z0-9_]", "", channel)
+    if not sanitized:
+        raise ValueError(f"Invalid channel name: {channel!r}")
+    return sanitized
 
 
 @dataclass
@@ -380,14 +404,16 @@ class MessageService:
         Returns:
             Message if received, None on timeout
         """
-        channel = f"msg_{instance_id}"
+        # Sanitize channel name to prevent SQL injection (defense in depth)
+        channel = _sanitize_channel_name(f"msg_{instance_id}")
 
         try:
             # Use raw psycopg2 connection for LISTEN
             conn = psycopg2.connect(self.database_url)
             conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
             cur = conn.cursor()
-            cur.execute(f"LISTEN {channel}")
+            # LISTEN doesn't support parameterized queries, but channel is sanitized
+            cur.execute(f"LISTEN {channel}")  # postflight: ignore[security]
 
             # Wait for notification
             if select.select([conn], [], [], timeout_seconds) == ([], [], []):
@@ -444,12 +470,14 @@ class MessageService:
                 return None
 
             # Listen on the sender's channel for reply
-            channel = f"msg_{orig.from_instance_id}"
+            # Sanitize channel name to prevent SQL injection (defense in depth)
+            channel = _sanitize_channel_name(f"msg_{orig.from_instance_id}")
 
             conn = psycopg2.connect(self.database_url)
             conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
             cur = conn.cursor()
-            cur.execute(f"LISTEN {channel}")
+            # LISTEN doesn't support parameterized queries, but channel is sanitized
+            cur.execute(f"LISTEN {channel}")  # postflight: ignore[security]
 
             start_time = datetime.now(timezone.utc)
             deadline = start_time.timestamp() + timeout_seconds

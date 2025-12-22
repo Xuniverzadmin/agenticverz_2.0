@@ -158,8 +158,11 @@ class PostgresQuerySkill:
             conn.set_session(readonly=readonly)
 
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Set statement timeout
-                cur.execute(f"SET statement_timeout = '{QUERY_TIMEOUT_SECONDS}s'")
+                # Set statement timeout (validated integer constant)
+                # Note: SET does not support parameter substitution, but QUERY_TIMEOUT_SECONDS
+                # is a validated integer from environment, not user input
+                timeout_ms = int(QUERY_TIMEOUT_SECONDS) * 1000  # postflight: ignore[security]
+                cur.execute("SET statement_timeout = %s", (timeout_ms,))
 
                 # Execute the query
                 cur.execute(query, query_params)

@@ -12,8 +12,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
-from prometheus_client import Counter, Gauge
-
 from ..metrics import (
     nova_llm_cost_cents_total,
     nova_llm_duration_seconds,
@@ -25,38 +23,39 @@ from ..schemas.skill import (
     LLMInvokeOutput,
     SkillStatus,
 )
+from ..utils.metrics_helpers import get_or_create_counter, get_or_create_gauge
 from .registry import skill
 
 logger = logging.getLogger("nova.skills.llm_invoke")
 
 # =============================================================================
-# PROMPT CACHE METRICS
+# PROMPT CACHE METRICS - using idempotent registration (PIN-120 PREV-1)
 # =============================================================================
 
-llm_cache_hits_total = Counter(
+llm_cache_hits_total = get_or_create_counter(
     "llm_cache_hits_total",
     "Total LLM cache hits (saved API calls)",
     ["provider", "model"],
 )
 
-llm_cache_misses_total = Counter(
+llm_cache_misses_total = get_or_create_counter(
     "llm_cache_misses_total",
     "Total LLM cache misses",
     ["provider", "model"],
 )
 
-llm_cache_savings_cents = Counter(
+llm_cache_savings_cents = get_or_create_counter(
     "llm_cache_savings_cents",
     "Estimated cost savings from cache hits in cents",
     ["provider", "model"],
 )
 
-llm_cache_size = Gauge(
+llm_cache_size = get_or_create_gauge(
     "llm_cache_size",
     "Current number of entries in LLM cache",
 )
 
-llm_cache_evictions_total = Counter(
+llm_cache_evictions_total = get_or_create_counter(
     "llm_cache_evictions_total",
     "Total cache entries evicted due to TTL or size limit",
 )
@@ -486,7 +485,6 @@ class LLMInvokeSkill:
         # PROMPT CACHE CHECK - Check cache before making LLM call
         # =========================================================
         cache = get_prompt_cache()
-        cache_hit = False
         cached_response = None
 
         if input_data.enable_cache and cache.enabled:
@@ -499,7 +497,6 @@ class LLMInvokeSkill:
             )
 
             if cached_response is not None:
-                cache_hit = True
                 duration = time.time() - start_time
                 completed_at = datetime.now(timezone.utc)
 

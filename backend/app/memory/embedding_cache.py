@@ -19,7 +19,7 @@ import logging
 import os
 from typing import List, Optional
 
-from prometheus_client import Counter, Histogram
+from app.utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
 
 logger = logging.getLogger("nova.memory.embedding_cache")
 
@@ -28,20 +28,20 @@ EMBEDDING_CACHE_ENABLED = os.getenv("EMBEDDING_CACHE_ENABLED", "true").lower() =
 EMBEDDING_CACHE_TTL = int(os.getenv("EMBEDDING_CACHE_TTL", str(7 * 24 * 3600)))  # 7 days default
 EMBEDDING_CACHE_PREFIX = "emb:v1:"
 
-# Metrics
-EMBEDDING_CACHE_HITS = Counter(
+# Metrics - using idempotent registration (PIN-120 PREV-1)
+EMBEDDING_CACHE_HITS = get_or_create_counter(
     "aos_embedding_cache_hits_total",
     "Embedding cache hits",
     ["provider"],
 )
 
-EMBEDDING_CACHE_MISSES = Counter(
+EMBEDDING_CACHE_MISSES = get_or_create_counter(
     "aos_embedding_cache_misses_total",
     "Embedding cache misses",
     ["provider"],
 )
 
-EMBEDDING_CACHE_LATENCY = Histogram(
+EMBEDDING_CACHE_LATENCY = get_or_create_histogram(
     "aos_embedding_cache_latency_seconds",
     "Cache lookup latency",
     buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1],

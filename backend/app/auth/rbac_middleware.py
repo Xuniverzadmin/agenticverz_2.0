@@ -27,10 +27,10 @@ from typing import Any, Dict, List, Optional
 import jwt
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from prometheus_client import Counter, Histogram
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from ..utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
 from .oidc_provider import (
     OIDC_ENABLED,
     TokenValidationError,
@@ -47,11 +47,11 @@ MACHINE_SECRET_TOKEN = os.getenv("MACHINE_SECRET_TOKEN", "")
 JWT_SECRET = os.getenv("JWT_SECRET", "")  # For signature verification (optional)
 JWT_VERIFY_SIGNATURE = os.getenv("JWT_VERIFY_SIGNATURE", "false").lower() == "true"
 
-# Prometheus metrics
-RBAC_DECISIONS = Counter(
+# Prometheus metrics - using idempotent registration (PIN-120 PREV-1)
+RBAC_DECISIONS = get_or_create_counter(
     "rbac_decisions_total", "RBAC authorization decisions", ["resource", "action", "decision", "reason"]
 )
-RBAC_LATENCY = Histogram(
+RBAC_LATENCY = get_or_create_histogram(
     "rbac_latency_seconds", "RBAC decision latency", buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1]
 )
 

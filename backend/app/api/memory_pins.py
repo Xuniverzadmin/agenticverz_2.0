@@ -23,21 +23,25 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from prometheus_client import Counter, Histogram
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from ..db import get_session as get_db_session
+from ..utils.metrics_helpers import get_or_create_counter, get_or_create_histogram
 
 logger = logging.getLogger("nova.api.memory_pins")
 
 # Feature flag
 MEMORY_PINS_ENABLED = os.getenv("MEMORY_PINS_ENABLED", "true").lower() == "true"
 
-# Prometheus metrics
-MEMORY_PINS_OPERATIONS = Counter("memory_pins_operations_total", "Total memory pin operations", ["operation", "status"])
-MEMORY_PINS_LATENCY = Histogram(
+# Prometheus metrics (idempotent registration - PIN-120 PREV-1)
+MEMORY_PINS_OPERATIONS = get_or_create_counter(
+    "memory_pins_operations_total",
+    "Total memory pin operations",
+    ["operation", "status"],
+)
+MEMORY_PINS_LATENCY = get_or_create_histogram(
     "memory_pins_latency_seconds",
     "Memory pin operation latency",
     ["operation"],

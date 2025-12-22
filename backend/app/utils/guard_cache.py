@@ -20,7 +20,7 @@ import logging
 import os
 from typing import Dict, Optional
 
-from prometheus_client import Counter, Histogram
+from .metrics_helpers import get_or_create_counter, get_or_create_histogram
 
 logger = logging.getLogger("nova.guard.cache")
 
@@ -31,20 +31,20 @@ GUARD_SNAPSHOT_TTL = int(os.getenv("GUARD_SNAPSHOT_TTL", "10"))  # 10 seconds
 GUARD_INCIDENTS_TTL = int(os.getenv("GUARD_INCIDENTS_TTL", "5"))  # 5 seconds
 GUARD_CACHE_PREFIX = "guard:"
 
-# Metrics
-GUARD_CACHE_HITS = Counter(
+# Metrics - using idempotent registration (PIN-120 PREV-1)
+GUARD_CACHE_HITS = get_or_create_counter(
     "aos_guard_cache_hits_total",
     "Guard cache hits",
     ["endpoint"],
 )
 
-GUARD_CACHE_MISSES = Counter(
+GUARD_CACHE_MISSES = get_or_create_counter(
     "aos_guard_cache_misses_total",
     "Guard cache misses",
     ["endpoint"],
 )
 
-GUARD_CACHE_LATENCY = Histogram(
+GUARD_CACHE_LATENCY = get_or_create_histogram(
     "aos_guard_cache_latency_seconds",
     "Guard cache lookup latency",
     buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1],

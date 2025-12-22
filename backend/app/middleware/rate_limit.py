@@ -34,18 +34,18 @@ try:
 except ImportError:
     import aioredis
 
-from prometheus_client import Counter, Gauge
+from app.utils.metrics_helpers import get_or_create_counter, get_or_create_gauge
 
 logger = logging.getLogger(__name__)
 
-# Prometheus metrics
-rl_allowed = Counter("aos_rate_limit_allowed_total", "Rate-limit allowed requests", ["tier", "tenant_id"])
-rl_blocked = Counter("aos_rate_limit_blocked_total", "Rate-limit blocked requests", ["tier", "tenant_id"])
-rl_limit_gauge = Gauge("aos_rate_limit_tier_limit", "Configured requests/interval for tier", ["tier"])
-rl_redis_connected = Gauge(
+# Prometheus metrics - using idempotent registration (PIN-120 PREV-1)
+rl_allowed = get_or_create_counter("aos_rate_limit_allowed_total", "Rate-limit allowed requests", ["tier", "tenant_id"])
+rl_blocked = get_or_create_counter("aos_rate_limit_blocked_total", "Rate-limit blocked requests", ["tier", "tenant_id"])
+rl_limit_gauge = get_or_create_gauge("aos_rate_limit_tier_limit", "Configured requests/interval for tier", ["tier"])
+rl_redis_connected = get_or_create_gauge(
     "aos_rate_limit_redis_connected", "Whether Redis is connected for rate limiting (1=connected, 0=disconnected)"
 )
-rl_redis_errors = Counter("aos_rate_limit_redis_errors_total", "Total Redis errors in rate limiting")
+rl_redis_errors = get_or_create_counter("aos_rate_limit_redis_errors_total", "Total Redis errors in rate limiting")
 
 # Configuration
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

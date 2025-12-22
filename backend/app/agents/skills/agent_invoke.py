@@ -6,6 +6,7 @@
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
@@ -21,6 +22,19 @@ from ..services.message_service import MessageService, get_message_service
 from ..services.registry_service import RegistryService, get_registry_service
 
 logger = logging.getLogger("nova.agents.skills.agent_invoke")
+
+
+def _sanitize_channel_name(channel: str) -> str:
+    """
+    Sanitize PostgreSQL LISTEN/NOTIFY channel name.
+
+    PostgreSQL identifiers should only contain alphanumeric chars and underscores.
+    This prevents any SQL injection attempts via channel names.
+    """
+    sanitized = re.sub(r"[^a-zA-Z0-9_]", "", channel)
+    if not sanitized:
+        raise ValueError(f"Invalid channel name: {channel!r}")
+    return sanitized
 
 
 class AgentInvokeInput(BaseModel):
@@ -279,7 +293,8 @@ class AgentInvokeSkill:
             time.sleep(min(timeout_seconds, 5))
             return None
 
-        channel = f"invoke_{invoke_id}"
+        # Sanitize channel name to prevent SQL injection (defense in depth)
+        channel = _sanitize_channel_name(f"invoke_{invoke_id}")
 
         try:
             import select
@@ -290,7 +305,8 @@ class AgentInvokeSkill:
             conn = psycopg2.connect(self.database_url)
             conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
             cur = conn.cursor()
-            cur.execute(f"LISTEN {channel}")
+            # LISTEN doesn't support parameterized queries, but channel is sanitized
+            cur.execute(f"LISTEN {channel}")  # postflight: ignore[security]
 
             deadline = time.time() + timeout_seconds
 
