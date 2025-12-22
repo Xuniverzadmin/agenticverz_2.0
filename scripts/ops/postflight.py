@@ -44,6 +44,7 @@ Categories:
     - duplication: Repeated code blocks
     - unused: Dead code detection
     - testhygiene: PIN-120 test patterns (slow markers, isolation, async lifecycle)
+    - timezone: PIN-120 PREV-20 timezone-naive datetime operations
     - mypy: PIN-121 type checking (baseline 572 errors, track regressions)
     - sdkparity: PIN-125 JS/Python SDK cross-language parity (exports, hash algorithm)
 
@@ -88,6 +89,11 @@ DEFAULT_BUDGETS = {
         "warning": 30,
         "suggestion": 100,
     },  # PIN-120 PREV-5/7/10/12
+    "timezone": {
+        "error": 0,
+        "warning": 5,
+        "suggestion": 20,
+    },  # PIN-120 PREV-20 (timezone-naive datetime ops)
     "mypy": {
         "error": 0,
         "warning": 572,  # PIN-121 baseline: 572 errors
@@ -936,6 +942,82 @@ class PostflightChecker:
         return issues
 
     # =========================================================================
+    # TIMEZONE-NAIVE DATETIME OPERATIONS (PIN-120 PREV-20)
+    # =========================================================================
+
+    def check_timezone(self, file_path: str) -> List[Issue]:
+        """Check for timezone-naive datetime subtraction patterns (PIN-120 PREV-20).
+
+        Detects patterns that may cause TypeError when subtracting
+        timezone-aware and timezone-naive datetimes.
+        """
+        issues = []
+        path = (
+            self.root / file_path
+            if not Path(file_path).is_absolute()
+            else Path(file_path)
+        )
+
+        if not path.exists() or not path.suffix == ".py":
+            return issues
+
+        try:
+            content = path.read_text()
+            lines = content.split("\n")
+
+            # Patterns that indicate potential timezone issues
+            dangerous_patterns = [
+                # datetime.now(timezone.utc) - something (may be naive)
+                (r"datetime\.now\(timezone\.utc\)\s*-\s*\w+\.\w+", "TZ001"),
+                # something - datetime.now(timezone.utc) (may be naive)
+                (r"\w+\.\w+\s*-\s*datetime\.now\(timezone\.utc\)", "TZ002"),
+                # .total_seconds() * 1000 with started_at/created_at
+                (r"\(.*(?:started_at|created_at|updated_at).*\)\.total_seconds\(\)", "TZ003"),
+            ]
+
+            # Safe patterns - indicate proper handling
+            safe_patterns = [
+                r"\.replace\(tzinfo=timezone\.utc\)",
+                r"if\s+\w+\.tzinfo\s+is\s+None",
+                r"_aware\s*=",
+                r"ensure_utc\(",
+            ]
+
+            for line_num, line in enumerate(lines, 1):
+                # Skip comments and strings
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+
+                for pattern, rule_id in dangerous_patterns:
+                    if re.search(pattern, line):
+                        # Check if safe pattern exists nearby (within 5 lines)
+                        context_start = max(0, line_num - 6)
+                        context_end = min(len(lines), line_num + 2)
+                        context = "\n".join(lines[context_start:context_end])
+
+                        is_safe = any(
+                            re.search(sp, context) for sp in safe_patterns
+                        )
+
+                        if not is_safe:
+                            issues.append(
+                                Issue(
+                                    severity="warning",
+                                    category="timezone",
+                                    file=str(path.relative_to(self.root)),
+                                    line=line_num,
+                                    message=f"[{rule_id}] Datetime subtraction may fail with naive DB datetime",
+                                    suggestion="Ensure DB datetime is timezone-aware: dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt",
+                                )
+                            )
+
+        except Exception:
+            pass
+
+        return issues
+
+    # =========================================================================
     # MYPY TYPE CHECKING (PIN-121 PREV-13/14/15)
     # =========================================================================
 
@@ -1198,6 +1280,7 @@ class PostflightChecker:
             "duplication": self.check_duplication,
             "unused": self.check_unused,
             "testhygiene": self.check_test_hygiene,  # PIN-120 PREV-5, PREV-7, PREV-10, PREV-12
+            "timezone": self.check_timezone,  # PIN-120 PREV-20
             "mypy": self.check_mypy,  # PIN-121 PREV-13, PREV-14, PREV-15
             "sdkparity": self.check_sdk_parity,  # PIN-125 PREV-16, PREV-17
         }

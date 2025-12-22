@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-125 SDK Cross-Language Parity CI Fix)
+**Last Updated:** 2025-12-22 (PIN-120 RC-13 & PREV-20 Timezone Prevention)
 
 ---
 
@@ -912,6 +912,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-120 RC-13 & PREV-20 Timezone Prevention** - Fixed E2E test failure: `TypeError: can't subtract offset-naive and offset-aware datetimes` in `main.py:559`. Root cause: SQLModel returns timezone-naive datetime from DB. Fix: Ensure DB datetime is timezone-aware before subtraction. Added TZ001-TZ003 linter rules to `lint_sqlmodel_patterns.py`, new `timezone` category in `postflight.py`. Prevention mechanism PREV-20 documented. |
 | 2025-12-22 | **PIN-125 SDK Cross-Language Parity CI Fix** - Fixed CI failures in Determinism Check workflow. Root causes: (1) ES modules in CommonJS package, (2) missing colon separator in JS hash chain, (3) stale JS SDK dist. Prevention mechanisms PREV-16 to PREV-19 added to postflight.py, preflight.py, and CI workflow. Updated CLAUDE.md with SDK parity section. |
 | 2025-12-22 | **PIN-124 Unified Identity Hybrid Architecture** - Strategic synthesis: GPT's identity-centric simplicity + AOS's deep capabilities. Core principle: "One console, four views, every token tracked." Defines Unified Identity Layer, API Gateway, and four views (Cost, Incident, Self-Heal, Governance) with feedback loops. |
 | 2025-12-22 | **PIN-122 + PIN-123 Strategic Plan** - Created Master Milestone Compendium (M0-M21) and Strategic Product Plan 2025 with three pillars, pricing strategy, and GTM phases. |

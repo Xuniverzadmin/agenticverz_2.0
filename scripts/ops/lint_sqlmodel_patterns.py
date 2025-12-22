@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SQLModel Pattern Linter v2.2 - Detect Unsafe Query Patterns
+"""SQLModel Pattern Linter v2.3 - Detect Unsafe Query Patterns
 
 Enhanced with PIN-120 Test Suite Stabilization Prevention Mechanisms.
 
@@ -16,6 +16,7 @@ Patterns Detected:
 10. Test isolation fixture issues (PREV-5)
 11. Cache timestamp initialization (PREV-4)
 12. Async event loop lifecycle issues (PREV-12)
+13. Timezone-naive datetime operations (PREV-20)
 
 Usage:
     python scripts/ops/lint_sqlmodel_patterns.py [path]
@@ -237,6 +238,30 @@ UNSAFE_PATTERNS = [
         "suggestion": "Use fixture-scoped engine or mark tests with @pytest.mark.flaky",
         "severity": Severity.WARNING,
     },
+    # =========================================================================
+    # CATEGORY 13: Timezone-Aware Datetime Operations (PIN-120 PREV-20)
+    # =========================================================================
+    {
+        "id": "TZ001",
+        "regex": r"datetime\.now\(timezone\.utc\)\s*-\s*\w+\.\w+",
+        "message": "Subtracting database datetime from timezone-aware datetime may fail (naive vs aware)",
+        "suggestion": "Ensure DB datetime is aware: dt_aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt",
+        "severity": Severity.WARNING,
+    },
+    {
+        "id": "TZ002",
+        "regex": r"\w+\.\w+\s*-\s*datetime\.now\(timezone\.utc\)",
+        "message": "Subtracting timezone-aware datetime from database datetime may fail (naive vs aware)",
+        "suggestion": "Ensure DB datetime is aware: dt_aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt",
+        "severity": Severity.WARNING,
+    },
+    {
+        "id": "TZ003",
+        "regex": r"\.total_seconds\(\)\s*\*\s*1000.*started_at|started_at.*\.total_seconds\(\)\s*\*\s*1000",
+        "message": "Duration calculation with started_at may involve naive datetime from DB",
+        "suggestion": "Ensure started_at is timezone-aware before subtraction",
+        "severity": Severity.WARNING,
+    },
 ]
 
 # Safe patterns that indicate proper handling
@@ -297,6 +322,12 @@ SAFE_PATTERNS = [
     r"session:\s*Session\s*=\s*Depends",  # DI session parameter
     # ASYNC001 safe patterns - intentional async engine configurations
     r"def\s+__init__\s*\([^)]*\):",  # Engine inside class __init__ is managed
+    # PIN-120 PREV-20: Timezone-aware datetime patterns (safe)
+    r"\.replace\(tzinfo=timezone\.utc\)",  # Explicit timezone assignment
+    r"if\s+\w+\.tzinfo\s+is\s+None",  # Checking for naive datetime
+    r"ensure_utc\(",  # Helper function for timezone
+    r"_aware\s*=",  # Using _aware suffix for aware datetime vars
+    r"#.*timezone.aware|#.*tzinfo",  # Comment indicating awareness
     r"self\.engine\s*=\s*create_async_engine",  # Class-scoped engine
     r"async_engine:\s*AsyncEngine",  # Typed module engine (intentional)
     r"pool_size\s*=",  # Production engine with pool config
@@ -451,6 +482,7 @@ def main():
     print("  TEST001:       Test isolation fixtures (PREV-5)")
     print("  CACHE001:      Cache timestamp initialization (PREV-4)")
     print("  ASYNC001:      Async event loop lifecycle (PREV-12)")
+    print("  TZ001-003:     Timezone-naive datetime operations (PREV-20)")
     print()
 
     if path.is_file():
@@ -537,6 +569,11 @@ def main():
     print("10. Async event loop (PREV-12):")
     print("    # Use module-scoped event_loop fixture or mark flaky:")
     print("    @pytest.fixture(scope='module') def event_loop(): ...")
+    print()
+    print("11. Timezone-aware datetime (PREV-20):")
+    print("    # Ensure DB datetime is timezone-aware before subtraction:")
+    print("    started_at_aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt")
+    print("    duration = (datetime.now(timezone.utc) - started_at_aware).total_seconds()")
     print()
 
     # Exit code based on severity

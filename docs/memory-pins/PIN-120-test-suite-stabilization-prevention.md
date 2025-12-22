@@ -262,6 +262,36 @@ ON CONFLICT (candidate_id) WHERE processed_at IS NULL
 
 ---
 
+### RC-13: Timezone-Naive Datetime Subtraction
+
+**Symptom:** `TypeError: can't subtract offset-naive and offset-aware datetimes`
+
+**Root Cause:** SQLAlchemy/SQLModel datetime fields lose timezone info when retrieved from the database. Code that creates new datetimes with `datetime.now(timezone.utc)` (timezone-aware) then subtracts a database-retrieved datetime (timezone-naive) fails.
+
+**Location:** `backend/app/main.py:559` in `_execute_run_inner()`
+
+**Original Code:**
+```python
+completed_at = datetime.now(timezone.utc)  # Timezone-aware
+run.duration_ms = (completed_at - run.started_at).total_seconds() * 1000  # started_at is naive!
+```
+
+**Fix Applied:**
+```python
+if run.started_at:
+    started_at_aware = (
+        run.started_at.replace(tzinfo=timezone.utc)
+        if run.started_at.tzinfo is None else run.started_at
+    )
+    run.duration_ms = (completed_at - started_at_aware).total_seconds() * 1000
+else:
+    run.duration_ms = None
+```
+
+**Prevention:** See PREV-20 below.
+
+---
+
 ## Prevention Mechanisms
 
 ### PREV-1: Idempotent Prometheus Metric Registration
@@ -508,6 +538,42 @@ pytestmark = [
 
 ---
 
+### PREV-20: Timezone-Aware Datetime Operations
+
+**Rule:** When subtracting datetimes where one may come from the database, always ensure timezone consistency.
+
+**Pattern:**
+```python
+from datetime import datetime, timezone
+
+# WRONG - database datetime may be naive
+duration = (datetime.now(timezone.utc) - db_record.created_at).total_seconds()
+
+# CORRECT - ensure timezone awareness before subtraction
+def ensure_utc(dt: datetime) -> datetime:
+    """Ensure datetime is timezone-aware UTC."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+created_at_aware = ensure_utc(db_record.created_at)
+duration = (datetime.now(timezone.utc) - created_at_aware).total_seconds()
+```
+
+**When to Apply:**
+- Any datetime subtraction with database-sourced values
+- Duration calculations (`end - start`)
+- Age/elapsed time calculations
+- Expiry checks
+
+**SQLModel Note:** Even if you set `started_at = datetime.now(timezone.utc)` when creating a record, the retrieved value will be timezone-naive.
+
+**Enforcement:**
+- Linter rule TZ001 in `lint_sqlmodel_patterns.py`
+- Postflight `timezone` category check
+
+---
+
 ## CI Consistency Checker Updates
 
 Added to `scripts/ops/ci_consistency_check.sh`:
@@ -565,6 +631,7 @@ M12 Load Tests:            Pass with @slow marker
 | 2025-12-22 | Initial creation - 29 test failures fixed, 7 prevention mechanisms established |
 | 2025-12-22 | Update: Added RC-8 through RC-12, PREV-8 through PREV-12, full test suite pass |
 | 2025-12-22 | **RC-11 RESOLVED**: Migration 041 fixes `enqueue_work` constraint issue; xfail markers removed; fixed 2 additional test bugs (success column, xrevrange for dead-letter) |
+| 2025-12-22 | Added RC-13 (timezone-naive datetime subtraction) and PREV-20 (timezone-aware datetime operations) - fixes E2E test failure in `_execute_run_inner()` |
 
 ---
 
