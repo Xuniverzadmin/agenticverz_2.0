@@ -13,13 +13,9 @@
  *   2 - Usage error
  */
 
-import fs from "fs";
-import crypto from "crypto";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const fs = require("fs");
+const crypto = require("crypto");
+const path = require("path");
 
 // Canonical JSON: sorted keys, compact format (matches Python implementation)
 function canonicalJson(obj) {
@@ -75,11 +71,11 @@ function computeRootHash(trace) {
     .update(baseString, "utf8")
     .digest("hex");
 
-  // Chain step hashes
+  // Chain step hashes (with colon separator, matching Python)
   const steps = trace.steps ?? [];
   for (const step of steps) {
     const stepHash = stepDeterministicHash(step);
-    const combined = currentHash + stepHash;
+    const combined = `${currentHash}:${stepHash}`;
     currentHash = crypto
       .createHash("sha256")
       .update(combined, "utf8")
@@ -110,7 +106,7 @@ function verifyParity(pythonTracePath) {
   const declaredRootHash = trace.root_hash;
   const declaredSeed = trace.seed ?? 42;
   const declaredTimestamp = trace.frozen_timestamp ?? trace.timestamp;
-  const declaredSchemaVersion = trace.schema_version ?? trace.trace_version ?? "1.1";
+  const declaredSchemaVersion = trace.schema_version ?? trace.version ?? "1.1.0";
 
   console.log("Trace metadata:");
   console.log(`  Schema version: ${declaredSchemaVersion}`);

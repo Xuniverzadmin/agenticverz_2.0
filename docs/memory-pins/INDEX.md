@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-120 Test Suite Stabilization & Prevention)
+**Last Updated:** 2025-12-22 (PIN-124 Unified Identity Hybrid Architecture)
 
 ---
 
@@ -142,6 +142,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-118](PIN-118-m24-customer-onboarding.md) | **M24 Customer Onboarding - OAuth & Email Verification** | Authentication / Onboarding | **🚀 DEPLOYED** | 2025-12-21 |
 | [PIN-119](PIN-119-sqlmodel-session-safety.md) | **SQLModel Session Safety - Prevention Mechanisms** | Developer Tooling / Prevention | **✅ ACTIVE** | 2025-12-21 |
 | [PIN-120](PIN-120-test-suite-stabilization-prevention.md) | **Test Suite Stabilization & Prevention** | Testing / Infrastructure | **✅ COMPLETE** | 2025-12-22 |
+| [PIN-121](PIN-121-mypy-technical-debt.md) | **Mypy Technical Debt Remediation** | Developer Tooling / Code Quality | **⏳ ACTIVE** | 2025-12-22 |
+| [PIN-122](PIN-122-master-milestone-compendium-m0-m21.md) | **Master Milestone Compendium (M0-M21)** | Architecture / Compendium | **📚 REFERENCE** | 2025-12-22 |
+| [PIN-123](PIN-123-strategic-product-plan-2025.md) | **Strategic Product Plan 2025** | Strategy / Product / GTM | **🎯 STRATEGIC** | 2025-12-22 |
+| [PIN-124](PIN-124-unified-identity-hybrid-architecture.md) | **Unified Identity Hybrid Architecture** | Architecture / Strategy / Product | **🎯 STRATEGIC** | 2025-12-22 |
 
 ---
 
@@ -907,6 +911,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-124 Unified Identity Hybrid Architecture** - Strategic synthesis: GPT's identity-centric simplicity + AOS's deep capabilities. Core principle: "One console, four views, every token tracked." Defines Unified Identity Layer, API Gateway, and four views (Cost, Incident, Self-Heal, Governance) with feedback loops. |
+| 2025-12-22 | **PIN-122 + PIN-123 Strategic Plan** - Created Master Milestone Compendium (M0-M21) and Strategic Product Plan 2025 with three pillars, pricing strategy, and GTM phases. |
 | 2025-12-22 | **PIN-120 RC-11 RESOLVED** - Migration 041 fixes `enqueue_work` constraint issue; all M10 recovery enhanced tests now pass |
 | 2025-12-22 | **PIN-120 Test Suite Stabilization & Prevention** - Fixed 29+ test failures, 12 prevention mechanisms; Added RC-8 through RC-12, PREV-8 through PREV-12 |
 | 2025-12-22 | **PIN-119 SQLModel Session Safety - Prevention Mechanisms** - Updated: Updates |
@@ -1278,3 +1284,4 @@ When resuming work on this project:
 | 2025-12-16 | **Anthropic API Key Configured** - User-provided API key stored in `.env` and Vault (`agenticverz/llm`). Backend and worker containers restarted. LLM integration now live with real Claude calls. |
 | 2025-12-16 | **🔒 Golden Replay Guard CI** - Mandatory CI job added to `.github/workflows/ci.yml`. Runs `golden_test.py` covering M4, M6, M14, M17, M18, M19. Blocks merge on any diff. Protects determinism moat from silent regressions. |
 | 2025-12-16 | **🛡️ Content Policy Validation Gate** - Implemented constitutional enforcement in `worker.py`. Added `_validate_content_policy()` with 10 universal forbidden patterns (guarantees, 100% claims, clinically proven, etc.). M9/M10/M18/M19 now fire on adversarial input. Drift score=0.8 on scammy content. Test reports: TR-001 (happy path PASS), TR-002 (pre-fix GAPS), TR-003 (post-fix PASS). Demo ready. |
+| 2025-12-22 | **PIN-121 Mypy Technical Debt** - Documented 572 mypy errors in 118 files. Added PREV-13 (pre-commit), PREV-14 (CI step), PREV-15 (postflight category). 6 root causes identified. 4-phase remediation plan. |

@@ -337,14 +337,390 @@ declare class AOSClient {
 declare const NovaClient: typeof AOSClient;
 
 /**
+ * AOS Deterministic Runtime Context (JavaScript)
+ *
+ * Provides deterministic primitives for simulation and replay:
+ * - Fixed seed for reproducible randomness (using seedrandom algorithm)
+ * - Frozen time for time-independent simulation
+ * - Tenant isolation
+ * - RNG state capture for audit
+ *
+ * IMPORTANT: This implementation must produce IDENTICAL results to Python
+ * for the same seed to ensure cross-language trace parity.
+ *
+ * Usage:
+ *   const ctx = new RuntimeContext({ seed: 42, now: "2025-12-06T12:00:00Z" });
+ *   const value = ctx.randint(1, 100);  // Same result for same seed as Python
+ *   const ts = ctx.timestamp();  // Frozen timestamp
+ *
+ * @module runtime
+ */
+interface RuntimeContextOptions {
+    /** Random seed for deterministic behavior (default: 42) */
+    seed?: number;
+    /** Frozen timestamp as ISO8601 string or Date (default: current UTC time) */
+    now?: string | Date;
+    /** Tenant identifier for isolation */
+    tenantId?: string;
+    /** Recorded environment variables (for audit) */
+    env?: Record<string, string>;
+}
+/**
+ * Deterministic runtime context for AOS simulation and replay.
+ *
+ * All randomness and time access must go through this context
+ * to ensure reproducible behavior across Python and JavaScript.
+ */
+declare class RuntimeContext {
+    readonly seed: number;
+    readonly now: Date;
+    readonly tenantId: string;
+    readonly env: Record<string, string>;
+    readonly rngState: string;
+    private _rng;
+    constructor(options?: RuntimeContextOptions);
+    /**
+     * Capture RNG state as hex string for audit.
+     */
+    private _captureRngState;
+    /**
+     * Get current RNG state (for step recording)
+     */
+    captureRngState(): string;
+    /**
+     * Deterministic random integer in [a, b] inclusive.
+     */
+    randint(a: number, b: number): number;
+    /**
+     * Deterministic random float in [0, 1).
+     */
+    random(): number;
+    /**
+     * Deterministic random choice from array.
+     */
+    choice<T>(arr: T[]): T;
+    /**
+     * Deterministic in-place shuffle.
+     */
+    shuffle<T>(arr: T[]): void;
+    /**
+     * Deterministic UUID based on seed and counter.
+     */
+    uuid(): string;
+    /**
+     * Return frozen timestamp as ISO8601 string.
+     */
+    timestamp(): string;
+    /**
+     * Serialize context for trace.
+     */
+    toDict(): Record<string, unknown>;
+    /**
+     * Deserialize context from trace.
+     */
+    static fromDict(data: Record<string, unknown>): RuntimeContext;
+}
+/**
+ * Parse ISO8601 string to Date.
+ */
+declare function freezeTime(isoString: string): Date;
+/**
+ * Serialize object to canonical JSON (sorted keys, compact).
+ *
+ * This ensures identical objects produce identical byte output
+ * across Python and JavaScript.
+ */
+declare function canonicalJson(obj: unknown): string;
+/**
+ * Compute deterministic hash of a trace or any data.
+ *
+ * Uses SHA256 with canonical JSON serialization.
+ */
+declare function hashTrace(trace: Record<string, unknown>): string;
+/**
+ * Compute deterministic hash of any data (truncated).
+ */
+declare function hashData(data: unknown): string;
+
+/**
+ * AOS Trace Schema v1.1 (JavaScript)
+ *
+ * Canonical trace format for simulation replay and verification.
+ * Must produce IDENTICAL root_hash as Python for same inputs.
+ *
+ * Design Principles:
+ * - Traces are immutable records of simulation/execution
+ * - DETERMINISTIC fields (seed, plan, input/output hashes) form the root_hash
+ * - AUDIT fields (timestamps, duration_ms) are preserved but excluded from hash
+ * - Canonical JSON ensures identical bytes for identical data
+ * - Hash chain provides integrity verification
+ *
+ * Hash Rules (v1.1):
+ * - root_hash computed ONLY from deterministic fields
+ * - Audit fields (timestamp, duration_ms) preserved for logging but excluded
+ * - Two traces with same seed+plan+inputs+outputs will have IDENTICAL root_hash
+ *
+ * @module trace
+ */
+
+/** Trace schema version - must match Python */
+declare const TRACE_SCHEMA_VERSION = "1.1.0";
+/** Step outcome types */
+type StepOutcome = "success" | "failure" | "skipped";
+/** Replay behavior for idempotency */
+type ReplayBehavior = "execute" | "skip" | "check";
+interface TraceStepData {
+    step_index: number;
+    skill_id: string;
+    input_hash: string;
+    output_hash: string;
+    rng_state_before: string;
+    outcome: StepOutcome;
+    idempotency_key?: string | null;
+    replay_behavior?: ReplayBehavior;
+    duration_ms?: number;
+    error_code?: string | null;
+    timestamp?: string | null;
+}
+/**
+ * Individual step in a trace.
+ *
+ * Fields are split into:
+ * - DETERMINISTIC: step_index, skill_id, input_hash, output_hash, rng_state_before, outcome, idempotency_key, replay_behavior
+ * - AUDIT: timestamp, duration_ms, error_code (for debugging, excluded from hash)
+ *
+ * Idempotency:
+ *   idempotency_key: Unique key for this step's side effects
+ *   replay_behavior: How to handle during replay ("execute", "skip", "check")
+ */
+declare class TraceStep {
+    readonly stepIndex: number;
+    readonly skillId: string;
+    readonly inputHash: string;
+    readonly outputHash: string;
+    readonly rngStateBefore: string;
+    readonly outcome: StepOutcome;
+    readonly idempotencyKey: string | null;
+    readonly replayBehavior: ReplayBehavior;
+    readonly durationMs: number;
+    readonly errorCode: string | null;
+    readonly timestamp: string;
+    constructor(data: TraceStepData);
+    /**
+     * Return ONLY deterministic fields for hashing.
+     *
+     * This payload is used to compute the step's contribution to root_hash.
+     * Audit fields (timestamp, duration_ms) are excluded.
+     * Idempotency fields (idempotency_key, replay_behavior) ARE included.
+     */
+    deterministicPayload(): Record<string, unknown>;
+    /**
+     * Compute hash of deterministic payload only.
+     * Must match Python's TraceStep.deterministic_hash()
+     */
+    deterministicHash(): string;
+    /**
+     * Serialize step to dict (includes all fields for storage).
+     */
+    toDict(): TraceStepData;
+    /**
+     * Deserialize step from dict.
+     */
+    static fromDict(data: TraceStepData): TraceStep;
+}
+interface TraceData {
+    version?: string;
+    seed: number;
+    timestamp?: string;
+    tenant_id?: string;
+    plan: Record<string, unknown>[];
+    steps?: TraceStepData[];
+    root_hash?: string | null;
+    finalized?: boolean;
+    metadata?: Record<string, unknown>;
+}
+interface AddStepOptions {
+    skillId: string;
+    inputData: unknown;
+    outputData: unknown;
+    rngState: string;
+    durationMs: number;
+    outcome: StepOutcome;
+    errorCode?: string | null;
+    /** Unique key for non-idempotent operations (e.g., payment_id) */
+    idempotencyKey?: string | null;
+    /** How to handle during replay: "execute" (default), "skip", or "check" */
+    replayBehavior?: ReplayBehavior;
+}
+/**
+ * Complete execution trace for replay and verification.
+ *
+ * A trace captures everything needed to replay a simulation:
+ * - Random seed (deterministic)
+ * - Frozen timestamp (deterministic - part of context)
+ * - Plan (deterministic)
+ * - Each step's input/output hashes (deterministic)
+ * - Audit data (timestamps, durations - for logging only)
+ *
+ * The root_hash is computed ONLY from deterministic fields, ensuring
+ * two traces with identical seeds and inputs produce identical hashes
+ * regardless of when they were executed.
+ */
+declare class Trace {
+    readonly version: string;
+    readonly seed: number;
+    readonly timestamp: string;
+    readonly tenantId: string;
+    readonly plan: Record<string, unknown>[];
+    readonly steps: TraceStep[];
+    readonly metadata: Record<string, unknown>;
+    rootHash: string | null;
+    finalized: boolean;
+    constructor(data: TraceData);
+    /**
+     * Add a step to the trace.
+     *
+     * @throws Error if trace is already finalized
+     */
+    addStep(options: AddStepOptions): TraceStep;
+    /**
+     * Finalize trace and compute root hash.
+     *
+     * The root_hash is computed from DETERMINISTIC fields only:
+     * - seed, timestamp (frozen), tenant_id
+     * - Each step's deterministic_payload
+     *
+     * @throws Error if trace is already finalized
+     */
+    finalize(): string;
+    /**
+     * Compute Merkle-like root hash over deterministic fields only.
+     *
+     * Hash chain construction (must match Python exactly):
+     * 1. Start with seed:timestamp:tenant_id
+     * 2. For each step, chain with step.deterministic_hash()
+     */
+    private _computeRootHash;
+    /**
+     * Verify trace integrity.
+     */
+    verify(): boolean;
+    /**
+     * Serialize trace to dict (includes all fields).
+     */
+    toDict(): TraceData;
+    /**
+     * Serialize to canonical JSON string.
+     */
+    toJson(): string;
+    /**
+     * Deserialize trace from dict.
+     */
+    static fromDict(data: TraceData): Trace;
+    /**
+     * Deserialize from JSON string.
+     */
+    static fromJson(jsonStr: string): Trace;
+    /**
+     * Save trace to file.
+     */
+    save(path: string): void;
+    /**
+     * Load trace from file.
+     */
+    static load(path: string): Trace;
+}
+interface DiffResult {
+    match: boolean;
+    differences: Array<{
+        field: string;
+        trace1: unknown;
+        trace2: unknown;
+    }>;
+    summary: string;
+}
+/**
+ * Compare two traces for DETERMINISTIC equality.
+ *
+ * Compares only deterministic fields:
+ * - seed, timestamp (frozen), tenant_id
+ * - step input/output hashes, rng_state, outcome
+ * - root_hash
+ *
+ * Audit fields (step timestamps, duration_ms) are NOT compared.
+ */
+declare function diffTraces(trace1: Trace, trace2: Trace): DiffResult;
+/**
+ * Create a new trace from a RuntimeContext.
+ */
+declare function createTraceFromContext(ctx: RuntimeContext, plan: Record<string, unknown>[]): Trace;
+
+/**
+ * Reset idempotency tracking (for testing).
+ */
+declare function resetIdempotencyState(): void;
+/**
+ * Mark an idempotency key as executed.
+ */
+declare function markIdempotencyKeyExecuted(key: string): void;
+/**
+ * Check if an idempotency key has been executed.
+ */
+declare function isIdempotencyKeyExecuted(key: string): boolean;
+/** Result of replaying a trace step */
+interface ReplayResult {
+    stepIndex: number;
+    action: "executed" | "skipped" | "checked" | "failed";
+    reason?: string | null;
+    outputMatch?: boolean | null;
+}
+/**
+ * Replay a single trace step with idempotency safety.
+ *
+ * Behavior based on replay_behavior:
+ * - "execute": Always execute the step
+ * - "skip": Skip if idempotency_key already executed
+ * - "check": Execute and verify output matches original
+ */
+declare function replayStep(step: TraceStep, executeFn?: () => unknown, idempotencyStore?: Set<string>): ReplayResult;
+/**
+ * Generate a deterministic idempotency key for a step.
+ *
+ * Use this for non-idempotent operations like:
+ * - Payment processing
+ * - Database writes
+ * - External API calls with side effects
+ */
+declare function generateIdempotencyKey(runId: string, stepIndex: number, skillId: string, inputHash: string): string;
+
+/**
  * AOS SDK for JavaScript/TypeScript
  *
  * The official JavaScript/TypeScript SDK for AOS (Agentic Operating System).
  * The most predictable, reliable, deterministic SDK for building machine-native agents.
+ *
+ * Core Classes:
+ *   AOSClient: HTTP client for AOS API
+ *   RuntimeContext: Deterministic runtime context (seed, time, RNG)
+ *   Trace: Execution trace for replay and verification
+ *
+ * Usage:
+ *   import { AOSClient, RuntimeContext, Trace } from "@agenticverz/aos-sdk";
+ *
+ *   // Deterministic simulation
+ *   const ctx = new RuntimeContext({ seed: 42, now: "2025-12-06T12:00:00Z" });
+ *   const client = new AOSClient();
+ *   const result = await client.simulate(plan, { seed: ctx.seed });
+ *
+ *   // Trace and replay
+ *   const trace = new Trace({ seed: 42, plan });
+ *   trace.addStep({ ... });
+ *   trace.finalize();
+ *   trace.save("run.trace.json");
  *
  * @packageDocumentation
  */
 
 declare const VERSION = "0.1.0";
 
-export { AOSClient, type AOSClientOptions, AOSError, type AOSErrorResponse, type Agent, type Capabilities, type CostModel, type FailureMode, type MemoryEntry, type MemoryResult, NovaClient, type PlanStep, type QueryResult, type QueryType, type RateLimit, type ResourceContract, type Run, type RunOutcome, type RunStatus, type SimulateResult, type Skill, type SkillDescriptor, type StepSimulation, VERSION };
+export { AOSClient, type AOSClientOptions, AOSError, type AOSErrorResponse, type AddStepOptions, type Agent, type Capabilities, type CostModel, type DiffResult, type FailureMode, type MemoryEntry, type MemoryResult, NovaClient, type PlanStep, type QueryResult, type QueryType, type RateLimit, type ReplayBehavior, type ReplayResult, type ResourceContract, type Run, type RunOutcome, type RunStatus, RuntimeContext, type RuntimeContextOptions, type SimulateResult, type Skill, type SkillDescriptor, type StepOutcome, type StepSimulation, TRACE_SCHEMA_VERSION, Trace, type TraceData, TraceStep, type TraceStepData, VERSION, canonicalJson, createTraceFromContext, diffTraces, freezeTime, generateIdempotencyKey, hashData, hashTrace, isIdempotencyKeyExecuted, markIdempotencyKeyExecuted, replayStep, resetIdempotencyState };

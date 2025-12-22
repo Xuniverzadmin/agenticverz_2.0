@@ -285,11 +285,578 @@ var AOSClient = class {
 };
 var NovaClient = AOSClient;
 
+// src/runtime.ts
+import { createHash } from "crypto";
+var SeededRandom = class {
+  state;
+  constructor(seed) {
+    this.state = seed >>> 0;
+  }
+  /**
+   * Generate next random number in [0, 1)
+   * Uses xorshift32 algorithm for determinism
+   */
+  random() {
+    let x = this.state;
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    this.state = x >>> 0;
+    return (this.state >>> 0) / 4294967296;
+  }
+  /**
+   * Random integer in [a, b] inclusive
+   */
+  randint(a, b) {
+    return Math.floor(this.random() * (b - a + 1)) + a;
+  }
+  /**
+   * Random choice from array
+   */
+  choice(arr) {
+    return arr[this.randint(0, arr.length - 1)];
+  }
+  /**
+   * In-place shuffle (Fisher-Yates)
+   */
+  shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = this.randint(0, i);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+  /**
+   * Get state for audit
+   */
+  getState() {
+    return this.state;
+  }
+};
+var RuntimeContext = class _RuntimeContext {
+  seed;
+  now;
+  tenantId;
+  env;
+  rngState;
+  _rng;
+  constructor(options = {}) {
+    this.seed = options.seed ?? 42;
+    this.tenantId = options.tenantId ?? "default";
+    this.env = options.env ?? {};
+    if (options.now === void 0 || options.now === null) {
+      this.now = /* @__PURE__ */ new Date();
+    } else if (typeof options.now === "string") {
+      this.now = new Date(options.now);
+    } else {
+      this.now = options.now;
+    }
+    this._rng = new SeededRandom(this.seed);
+    this.rngState = this._captureRngState();
+  }
+  /**
+   * Capture RNG state as hex string for audit.
+   */
+  _captureRngState() {
+    const stateStr = JSON.stringify({ state: this._rng.getState(), seed: this.seed });
+    return createHash("sha256").update(stateStr).digest("hex").slice(0, 16);
+  }
+  /**
+   * Get current RNG state (for step recording)
+   */
+  captureRngState() {
+    return this._captureRngState();
+  }
+  /**
+   * Deterministic random integer in [a, b] inclusive.
+   */
+  randint(a, b) {
+    return this._rng.randint(a, b);
+  }
+  /**
+   * Deterministic random float in [0, 1).
+   */
+  random() {
+    return this._rng.random();
+  }
+  /**
+   * Deterministic random choice from array.
+   */
+  choice(arr) {
+    return this._rng.choice(arr);
+  }
+  /**
+   * Deterministic in-place shuffle.
+   */
+  shuffle(arr) {
+    this._rng.shuffle(arr);
+  }
+  /**
+   * Deterministic UUID based on seed and counter.
+   */
+  uuid() {
+    const bytes = [];
+    for (let i = 0; i < 16; i++) {
+      bytes.push(this._rng.randint(0, 255));
+    }
+    const hex = bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+  }
+  /**
+   * Return frozen timestamp as ISO8601 string.
+   */
+  timestamp() {
+    return this.now.toISOString();
+  }
+  /**
+   * Serialize context for trace.
+   */
+  toDict() {
+    return {
+      seed: this.seed,
+      now: this.now.toISOString(),
+      tenant_id: this.tenantId,
+      env: this.env,
+      rng_state: this.rngState
+    };
+  }
+  /**
+   * Deserialize context from trace.
+   */
+  static fromDict(data) {
+    return new _RuntimeContext({
+      seed: data.seed ?? 42,
+      now: data.now,
+      tenantId: data.tenant_id ?? "default",
+      env: data.env ?? {}
+    });
+  }
+};
+function freezeTime(isoString) {
+  return new Date(isoString);
+}
+function canonicalJson(obj) {
+  return JSON.stringify(obj, (_, value) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return Object.keys(value).sort().reduce((sorted, key) => {
+        sorted[key] = value[key];
+        return sorted;
+      }, {});
+    }
+    return value;
+  });
+}
+function hashTrace(trace) {
+  const canonical = canonicalJson(trace);
+  return createHash("sha256").update(canonical).digest("hex");
+}
+function hashData(data) {
+  const canonical = canonicalJson(data);
+  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
+}
+
+// src/trace.ts
+import { createHash as createHash2 } from "crypto";
+import { readFileSync, writeFileSync } from "fs";
+var TRACE_SCHEMA_VERSION = "1.1.0";
+var TraceStep = class _TraceStep {
+  // Deterministic fields (included in hash)
+  stepIndex;
+  skillId;
+  inputHash;
+  outputHash;
+  rngStateBefore;
+  outcome;
+  // Idempotency fields (deterministic - included in hash)
+  idempotencyKey;
+  replayBehavior;
+  // Audit fields (excluded from deterministic hash)
+  durationMs;
+  errorCode;
+  timestamp;
+  constructor(data) {
+    this.stepIndex = data.step_index;
+    this.skillId = data.skill_id;
+    this.inputHash = data.input_hash;
+    this.outputHash = data.output_hash;
+    this.rngStateBefore = data.rng_state_before;
+    this.outcome = data.outcome;
+    this.idempotencyKey = data.idempotency_key ?? null;
+    this.replayBehavior = data.replay_behavior ?? "execute";
+    this.durationMs = data.duration_ms ?? 0;
+    this.errorCode = data.error_code ?? null;
+    this.timestamp = data.timestamp ?? (/* @__PURE__ */ new Date()).toISOString();
+  }
+  /**
+   * Return ONLY deterministic fields for hashing.
+   *
+   * This payload is used to compute the step's contribution to root_hash.
+   * Audit fields (timestamp, duration_ms) are excluded.
+   * Idempotency fields (idempotency_key, replay_behavior) ARE included.
+   */
+  deterministicPayload() {
+    return {
+      step_index: this.stepIndex,
+      skill_id: this.skillId,
+      input_hash: this.inputHash,
+      output_hash: this.outputHash,
+      rng_state_before: this.rngStateBefore,
+      outcome: this.outcome,
+      idempotency_key: this.idempotencyKey,
+      replay_behavior: this.replayBehavior
+    };
+  }
+  /**
+   * Compute hash of deterministic payload only.
+   * Must match Python's TraceStep.deterministic_hash()
+   */
+  deterministicHash() {
+    const canonical = canonicalJson(this.deterministicPayload());
+    return createHash2("sha256").update(canonical).digest("hex");
+  }
+  /**
+   * Serialize step to dict (includes all fields for storage).
+   */
+  toDict() {
+    return {
+      step_index: this.stepIndex,
+      skill_id: this.skillId,
+      input_hash: this.inputHash,
+      output_hash: this.outputHash,
+      rng_state_before: this.rngStateBefore,
+      outcome: this.outcome,
+      idempotency_key: this.idempotencyKey,
+      replay_behavior: this.replayBehavior,
+      duration_ms: this.durationMs,
+      error_code: this.errorCode,
+      timestamp: this.timestamp
+    };
+  }
+  /**
+   * Deserialize step from dict.
+   */
+  static fromDict(data) {
+    return new _TraceStep(data);
+  }
+};
+var Trace = class _Trace {
+  version;
+  seed;
+  timestamp;
+  tenantId;
+  plan;
+  steps;
+  metadata;
+  rootHash;
+  finalized;
+  constructor(data) {
+    this.version = data.version ?? TRACE_SCHEMA_VERSION;
+    this.seed = data.seed;
+    this.timestamp = data.timestamp ?? (/* @__PURE__ */ new Date()).toISOString();
+    this.tenantId = data.tenant_id ?? "default";
+    this.plan = data.plan;
+    this.steps = (data.steps ?? []).map((s) => TraceStep.fromDict(s));
+    this.rootHash = data.root_hash ?? null;
+    this.finalized = data.finalized ?? false;
+    this.metadata = data.metadata ?? {};
+  }
+  /**
+   * Add a step to the trace.
+   *
+   * @throws Error if trace is already finalized
+   */
+  addStep(options) {
+    if (this.finalized) {
+      throw new Error("Cannot add steps to finalized trace");
+    }
+    const step = new TraceStep({
+      step_index: this.steps.length,
+      skill_id: options.skillId,
+      input_hash: hashData(options.inputData),
+      output_hash: hashData(options.outputData),
+      rng_state_before: options.rngState,
+      outcome: options.outcome,
+      idempotency_key: options.idempotencyKey ?? null,
+      replay_behavior: options.replayBehavior ?? "execute",
+      duration_ms: options.durationMs,
+      error_code: options.errorCode ?? null,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    this.steps.push(step);
+    return step;
+  }
+  /**
+   * Finalize trace and compute root hash.
+   *
+   * The root_hash is computed from DETERMINISTIC fields only:
+   * - seed, timestamp (frozen), tenant_id
+   * - Each step's deterministic_payload
+   *
+   * @throws Error if trace is already finalized
+   */
+  finalize() {
+    if (this.finalized) {
+      throw new Error("Trace already finalized");
+    }
+    this.finalized = true;
+    this.rootHash = this._computeRootHash();
+    return this.rootHash;
+  }
+  /**
+   * Compute Merkle-like root hash over deterministic fields only.
+   *
+   * Hash chain construction (must match Python exactly):
+   * 1. Start with seed:timestamp:tenant_id
+   * 2. For each step, chain with step.deterministic_hash()
+   */
+  _computeRootHash() {
+    const base = `${this.seed}:${this.timestamp}:${this.tenantId}`;
+    let chainHash = createHash2("sha256").update(base).digest("hex");
+    for (const step of this.steps) {
+      const stepDetHash = step.deterministicHash();
+      const combined = `${chainHash}:${stepDetHash}`;
+      chainHash = createHash2("sha256").update(combined).digest("hex");
+    }
+    return chainHash;
+  }
+  /**
+   * Verify trace integrity.
+   */
+  verify() {
+    if (!this.finalized || !this.rootHash) {
+      return false;
+    }
+    return this.rootHash === this._computeRootHash();
+  }
+  /**
+   * Serialize trace to dict (includes all fields).
+   */
+  toDict() {
+    return {
+      version: this.version,
+      seed: this.seed,
+      timestamp: this.timestamp,
+      tenant_id: this.tenantId,
+      plan: this.plan,
+      steps: this.steps.map((s) => s.toDict()),
+      root_hash: this.rootHash,
+      finalized: this.finalized,
+      metadata: this.metadata
+    };
+  }
+  /**
+   * Serialize to canonical JSON string.
+   */
+  toJson() {
+    return canonicalJson(this.toDict());
+  }
+  /**
+   * Deserialize trace from dict.
+   */
+  static fromDict(data) {
+    return new _Trace(data);
+  }
+  /**
+   * Deserialize from JSON string.
+   */
+  static fromJson(jsonStr) {
+    return _Trace.fromDict(JSON.parse(jsonStr));
+  }
+  /**
+   * Save trace to file.
+   */
+  save(path) {
+    writeFileSync(path, this.toJson());
+  }
+  /**
+   * Load trace from file.
+   */
+  static load(path) {
+    return _Trace.fromJson(readFileSync(path, "utf-8"));
+  }
+};
+function diffTraces(trace1, trace2) {
+  const differences = [];
+  if (trace1.seed !== trace2.seed) {
+    differences.push({
+      field: "seed",
+      trace1: trace1.seed,
+      trace2: trace2.seed
+    });
+  }
+  if (trace1.timestamp !== trace2.timestamp) {
+    differences.push({
+      field: "timestamp",
+      trace1: trace1.timestamp,
+      trace2: trace2.timestamp
+    });
+  }
+  if (trace1.tenantId !== trace2.tenantId) {
+    differences.push({
+      field: "tenant_id",
+      trace1: trace1.tenantId,
+      trace2: trace2.tenantId
+    });
+  }
+  if (trace1.steps.length !== trace2.steps.length) {
+    differences.push({
+      field: "step_count",
+      trace1: trace1.steps.length,
+      trace2: trace2.steps.length
+    });
+  }
+  const minSteps = Math.min(trace1.steps.length, trace2.steps.length);
+  for (let i = 0; i < minSteps; i++) {
+    const s1 = trace1.steps[i];
+    const s2 = trace2.steps[i];
+    if (s1.skillId !== s2.skillId) {
+      differences.push({
+        field: `step[${i}].skill_id`,
+        trace1: s1.skillId,
+        trace2: s2.skillId
+      });
+    }
+    if (s1.inputHash !== s2.inputHash) {
+      differences.push({
+        field: `step[${i}].input_hash`,
+        trace1: s1.inputHash,
+        trace2: s2.inputHash
+      });
+    }
+    if (s1.outputHash !== s2.outputHash) {
+      differences.push({
+        field: `step[${i}].output_hash`,
+        trace1: s1.outputHash,
+        trace2: s2.outputHash
+      });
+    }
+    if (s1.rngStateBefore !== s2.rngStateBefore) {
+      differences.push({
+        field: `step[${i}].rng_state`,
+        trace1: s1.rngStateBefore,
+        trace2: s2.rngStateBefore
+      });
+    }
+    if (s1.outcome !== s2.outcome) {
+      differences.push({
+        field: `step[${i}].outcome`,
+        trace1: s1.outcome,
+        trace2: s2.outcome
+      });
+    }
+  }
+  if (trace1.rootHash !== trace2.rootHash) {
+    differences.push({
+      field: "root_hash",
+      trace1: trace1.rootHash,
+      trace2: trace2.rootHash
+    });
+  }
+  const match = differences.length === 0;
+  let summary;
+  if (match) {
+    summary = "Traces are deterministically identical";
+  } else {
+    const fields = differences.slice(0, 3).map((d) => d.field);
+    summary = `Traces differ in ${differences.length} field(s): ${fields.join(", ")}`;
+    if (differences.length > 3) {
+      summary += ` and ${differences.length - 3} more`;
+    }
+  }
+  return { match, differences, summary };
+}
+function createTraceFromContext(ctx, plan) {
+  return new Trace({
+    seed: ctx.seed,
+    timestamp: ctx.timestamp(),
+    tenant_id: ctx.tenantId,
+    plan
+  });
+}
+var executedIdempotencyKeys = /* @__PURE__ */ new Set();
+function resetIdempotencyState() {
+  executedIdempotencyKeys.clear();
+}
+function markIdempotencyKeyExecuted(key) {
+  executedIdempotencyKeys.add(key);
+}
+function isIdempotencyKeyExecuted(key) {
+  return executedIdempotencyKeys.has(key);
+}
+function replayStep(step, executeFn, idempotencyStore) {
+  const store = idempotencyStore ?? executedIdempotencyKeys;
+  if (step.replayBehavior === "skip" && step.idempotencyKey) {
+    if (store.has(step.idempotencyKey)) {
+      return {
+        stepIndex: step.stepIndex,
+        action: "skipped",
+        reason: `Idempotency key '${step.idempotencyKey}' already executed`
+      };
+    }
+  }
+  if (!executeFn) {
+    if (step.replayBehavior === "skip" && step.idempotencyKey) {
+      store.add(step.idempotencyKey);
+    }
+    return {
+      stepIndex: step.stepIndex,
+      action: step.replayBehavior !== "check" ? "executed" : "checked",
+      reason: "Dry run - no execution function provided",
+      outputMatch: step.replayBehavior === "check" ? true : null
+    };
+  }
+  try {
+    const output = executeFn();
+    const outputHash = hashData(output);
+    if (step.idempotencyKey) {
+      store.add(step.idempotencyKey);
+    }
+    if (step.replayBehavior === "check") {
+      const matches = outputHash === step.outputHash;
+      return {
+        stepIndex: step.stepIndex,
+        action: matches ? "checked" : "failed",
+        reason: matches ? null : `Output hash mismatch: ${outputHash} != ${step.outputHash}`,
+        outputMatch: matches
+      };
+    }
+    return {
+      stepIndex: step.stepIndex,
+      action: "executed",
+      reason: null
+    };
+  } catch (e) {
+    return {
+      stepIndex: step.stepIndex,
+      action: "failed",
+      reason: e instanceof Error ? e.message : String(e)
+    };
+  }
+}
+function generateIdempotencyKey(runId, stepIndex, skillId, inputHash) {
+  const keyData = `${runId}:${stepIndex}:${skillId}:${inputHash}`;
+  return createHash2("sha256").update(keyData).digest("hex").slice(0, 32);
+}
+
 // src/index.ts
 var VERSION = "0.1.0";
 export {
   AOSClient,
   AOSError,
   NovaClient,
-  VERSION
+  RuntimeContext,
+  TRACE_SCHEMA_VERSION,
+  Trace,
+  TraceStep,
+  VERSION,
+  canonicalJson,
+  createTraceFromContext,
+  diffTraces,
+  freezeTime,
+  generateIdempotencyKey,
+  hashData,
+  hashTrace,
+  isIdempotencyKeyExecuted,
+  markIdempotencyKeyExecuted,
+  replayStep,
+  resetIdempotencyState
 };
