@@ -6,6 +6,10 @@ These models define the structure of execution traces used for:
 - Debugging and inspection
 - Replay verification
 - Determinism testing
+
+Determinism Invariant (PIN-126):
+- Given the same trace input, replay must produce identical output hash
+- Or fail loudly with a classified reason
 """
 
 import hashlib
@@ -13,7 +17,26 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
+
+
+def _normalize_for_determinism(value: Any) -> Any:
+    """
+    Normalize a value for deterministic hashing.
+
+    Handles:
+    - Floats: Round to 6 decimal places to avoid precision drift
+    - Dicts: Recursively normalize values
+    - Lists: Recursively normalize elements
+    - Other types: Pass through unchanged
+    """
+    if isinstance(value, float):
+        return round(value, 6)
+    elif isinstance(value, dict):
+        return {k: _normalize_for_determinism(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [_normalize_for_determinism(v) for v in value]
+    return value
 
 
 class TraceStatus(str, Enum):
@@ -94,8 +117,11 @@ class TraceStep:
         Compute hash of determinism-relevant fields only.
 
         This hash should be identical for replayed runs with same inputs.
+        Floats are normalized to 6 decimal places to avoid precision drift.
         """
         relevant = {k: getattr(self, k) for k in self._determinism_fields}
+        # Normalize all values for deterministic hashing (handles floats, nested dicts)
+        relevant = _normalize_for_determinism(relevant)
         # Normalize params for consistent hashing
         if "params" in relevant:
             relevant["params"] = json.dumps(relevant["params"], sort_keys=True)
@@ -149,7 +175,15 @@ class TraceRecord:
     - seed: Random seed for deterministic simulation
     - frozen_timestamp: Frozen time for deterministic context
     - root_hash: Merkle root of deterministic fields (for replay verification)
+
+    v1.2 Schema versioning (PIN-126):
+    - SCHEMA_VERSION: Version of trace format for compatibility checks
+    - schema_version in to_dict(): Included in serialization
+    - checksum: determinism_signature() for integrity verification
     """
+
+    # Schema version for trace format compatibility (PIN-126)
+    SCHEMA_VERSION: ClassVar[str] = "1.0.0"
 
     run_id: str
     correlation_id: str
@@ -189,6 +223,8 @@ class TraceRecord:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage."""
         return {
+            # Schema version for compatibility (PIN-126)
+            "schema_version": self.SCHEMA_VERSION,
             "run_id": self.run_id,
             "correlation_id": self.correlation_id,
             "tenant_id": self.tenant_id,
@@ -203,6 +239,8 @@ class TraceRecord:
             "seed": self.seed,
             "frozen_timestamp": self.frozen_timestamp,
             "root_hash": self.root_hash,
+            # Integrity checksum (PIN-126)
+            "checksum": self.determinism_signature(),
         }
 
     @classmethod
