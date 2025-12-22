@@ -17,13 +17,11 @@ Requirements:
 """
 
 import os
-import json
-import time
-import pytest
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch, AsyncMock
-from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from fastapi.testclient import TestClient
 
 # Test configuration
 MACHINE_TOKEN = os.getenv("MACHINE_SECRET_TOKEN", "test-machine-token")
@@ -42,6 +40,7 @@ def test_app():
     os.environ["MEMORY_AUDIT_ENABLED"] = "false"  # Speed up tests
 
     from app.main import app
+
     return app
 
 
@@ -54,19 +53,14 @@ def client(test_app):
 @pytest.fixture
 def mock_memory_service():
     """Create mock memory service for isolated tests."""
-    from app.memory.memory_service import MemoryService, MemoryEntry, MemoryResult
+    from app.memory.memory_service import MemoryEntry, MemoryResult, MemoryService
 
     mock_storage = {}
 
     async def mock_get(tenant_id, key, agent_id=None):
         cache_key = f"{tenant_id}:{key}"
         if cache_key in mock_storage:
-            return MemoryResult(
-                success=True,
-                entry=mock_storage[cache_key],
-                cache_hit=False,
-                latency_ms=1.0
-            )
+            return MemoryResult(success=True, entry=mock_storage[cache_key], cache_hit=False, latency_ms=1.0)
         return MemoryResult(success=True, entry=None, latency_ms=1.0)
 
     async def mock_set(tenant_id, key, value, source="test", ttl_seconds=None, agent_id=None):
@@ -78,7 +72,7 @@ def mock_memory_service():
             source=source,
             created_at=now,
             updated_at=now,
-            ttl_seconds=ttl_seconds
+            ttl_seconds=ttl_seconds,
         )
         mock_storage[f"{tenant_id}:{key}"] = entry
         return MemoryResult(success=True, entry=entry, latency_ms=1.0)
@@ -116,7 +110,7 @@ class TestBaselineMemoryParity:
             "budget_cents": 1000,
             "tenant_id": "test-parity-tenant",
             "workflow_id": "wf-parity-1",
-            "inject_memory": False
+            "inject_memory": False,
         }
 
         # Baseline run (explicitly without memory)
@@ -145,12 +139,10 @@ class TestBaselineMemoryParity:
         mem_v1_feasible = mem_result.get("v1_feasible")
 
         # V1 results should be identical (V1 doesn't use memory)
-        assert baseline_v1_cost == mem_v1_cost, (
-            f"V1 cost mismatch: baseline={baseline_v1_cost}, memory={mem_v1_cost}"
-        )
-        assert baseline_v1_feasible == mem_v1_feasible, (
-            f"V1 feasibility mismatch: baseline={baseline_v1_feasible}, memory={mem_v1_feasible}"
-        )
+        assert baseline_v1_cost == mem_v1_cost, f"V1 cost mismatch: baseline={baseline_v1_cost}, memory={mem_v1_cost}"
+        assert (
+            baseline_v1_feasible == mem_v1_feasible
+        ), f"V1 feasibility mismatch: baseline={baseline_v1_feasible}, memory={mem_v1_feasible}"
 
         # Memory context keys should be empty or None (no memory pins exist)
         memory_keys = mem_result.get("memory_context_keys")
@@ -165,7 +157,7 @@ class TestBaselineMemoryParity:
             "budget_cents": 500,
             "tenant_id": "test-drift-tenant",
             "workflow_id": "wf-drift-1",
-            "inject_memory": True
+            "inject_memory": True,
         }
 
         r = client.post("/costsim/v2/simulate", json=trace_payload, headers=HEADERS_JSON)
@@ -183,9 +175,9 @@ class TestBaselineMemoryParity:
         drift_score = result.get("drift_score", 0.0)
 
         # Either drift_detected is False/None or drift_score is 0
-        assert not drift_detected or drift_score == 0.0, (
-            f"Unexpected drift with empty memory: detected={drift_detected}, score={drift_score}"
-        )
+        assert (
+            not drift_detected or drift_score == 0.0
+        ), f"Unexpected drift with empty memory: detected={drift_detected}, score={drift_score}"
 
 
 class TestMemoryPostUpdateEffects:
@@ -208,7 +200,7 @@ class TestMemoryPostUpdateEffects:
             "tenant_id": "test-update-tenant",
             "workflow_id": "wf-update-1",
             "agent_id": "agent-test-1",
-            "inject_memory": True
+            "inject_memory": True,
         }
 
         r = client.post("/costsim/v2/simulate", json=trace_payload, headers=HEADERS_JSON)
@@ -224,9 +216,9 @@ class TestMemoryPostUpdateEffects:
         # Check memory_updates_applied field exists
         # Note: This will be 0 if the underlying simulation doesn't trigger V2
         updates_applied = result.get("memory_updates_applied")
-        assert updates_applied is not None or result.get("v2_result") is None, (
-            "memory_updates_applied should be present when V2 runs"
-        )
+        assert (
+            updates_applied is not None or result.get("v2_result") is None
+        ), "memory_updates_applied should be present when V2 runs"
 
     def test_subsequent_runs_see_memory_changes(self, client, mock_memory_service):
         """
@@ -243,6 +235,7 @@ class TestMemoryPostUpdateEffects:
         with patch("app.api.costsim.get_memory_service", return_value=mock_memory_service):
             # Pre-seed memory
             import asyncio
+
             asyncio.get_event_loop().run_until_complete(
                 mock_memory_service.set(
                     tenant_id,
@@ -251,15 +244,13 @@ class TestMemoryPostUpdateEffects:
                         "last_simulation": datetime.now(timezone.utc).isoformat(),
                         "last_cost_cents": 500,
                         "last_feasible": True,
-                        "total_simulations": 1
-                    }
+                        "total_simulations": 1,
+                    },
                 )
             )
 
             # Now the memory exists - verify it can be retrieved
-            result = asyncio.get_event_loop().run_until_complete(
-                mock_memory_service.get(tenant_id, "costsim:history")
-            )
+            result = asyncio.get_event_loop().run_until_complete(mock_memory_service.get(tenant_id, "costsim:history"))
 
             assert result.success is True
             assert result.entry is not None
@@ -285,7 +276,7 @@ class TestDriftDetection:
             "budget_cents": 100,
             "tenant_id": "test-drift-response",
             "workflow_id": "wf-drift-response-1",
-            "inject_memory": True
+            "inject_memory": True,
         }
 
         r = client.post("/costsim/v2/simulate", json=trace_payload, headers=HEADERS_JSON)
@@ -308,30 +299,18 @@ class TestDriftDetectorUnit:
 
     def test_compare_identical_traces_no_drift(self):
         """Test comparing identical traces shows no drift."""
-        from app.memory.drift_detector import (
-            DriftDetector, ExecutionTrace, TraceStep
-        )
+        from app.memory.drift_detector import DriftDetector, ExecutionTrace, TraceStep
 
         detector = DriftDetector(drift_threshold=5.0)
 
-        steps = [
-            TraceStep(index=0, skill="test", params={"a": 1}, result={"b": 2}, status="completed")
-        ]
+        steps = [TraceStep(index=0, skill="test", params={"a": 1}, result={"b": 2}, status="completed")]
 
         baseline = ExecutionTrace(
-            workflow_id="wf-test",
-            agent_id="agent-1",
-            steps=steps,
-            final_state={"done": True},
-            memory_enabled=False
+            workflow_id="wf-test", agent_id="agent-1", steps=steps, final_state={"done": True}, memory_enabled=False
         )
 
         memory_enabled = ExecutionTrace(
-            workflow_id="wf-test",
-            agent_id="agent-1",
-            steps=steps,
-            final_state={"done": True},
-            memory_enabled=True
+            workflow_id="wf-test", agent_id="agent-1", steps=steps, final_state={"done": True}, memory_enabled=True
         )
 
         result = detector.compare(baseline, memory_enabled)
@@ -342,26 +321,20 @@ class TestDriftDetectorUnit:
 
     def test_compare_different_results_detects_drift(self):
         """Test comparing traces with different results detects drift."""
-        from app.memory.drift_detector import (
-            DriftDetector, ExecutionTrace, TraceStep
-        )
+        from app.memory.drift_detector import DriftDetector, ExecutionTrace, TraceStep
 
         detector = DriftDetector(drift_threshold=5.0)
 
-        baseline_steps = [
-            TraceStep(index=0, skill="test", params={"a": 1}, result={"value": 100}, status="completed")
-        ]
+        baseline_steps = [TraceStep(index=0, skill="test", params={"a": 1}, result={"value": 100}, status="completed")]
 
-        memory_steps = [
-            TraceStep(index=0, skill="test", params={"a": 1}, result={"value": 200}, status="completed")
-        ]
+        memory_steps = [TraceStep(index=0, skill="test", params={"a": 1}, result={"value": 200}, status="completed")]
 
         baseline = ExecutionTrace(
             workflow_id="wf-test",
             agent_id="agent-1",
             steps=baseline_steps,
             final_state={"total": 100},
-            memory_enabled=False
+            memory_enabled=False,
         )
 
         memory_enabled = ExecutionTrace(
@@ -369,7 +342,7 @@ class TestDriftDetectorUnit:
             agent_id="agent-1",
             steps=memory_steps,
             final_state={"total": 200},
-            memory_enabled=True
+            memory_enabled=True,
         )
 
         result = detector.compare(baseline, memory_enabled)
@@ -384,10 +357,10 @@ class TestMemoryServiceIntegration:
 
     def test_memory_service_get_set_roundtrip(self):
         """Test memory service get/set roundtrip."""
-        from app.memory.memory_service import MemoryService, MemoryEntry, MemoryResult
-        from unittest.mock import MagicMock
         from datetime import datetime, timezone
-        import json
+        from unittest.mock import MagicMock
+
+        from app.memory.memory_service import MemoryService
 
         # Create mock database session
         mock_session = MagicMock()
@@ -415,9 +388,8 @@ class TestMemoryServiceIntegration:
 
         # Test set operation
         import asyncio
-        result = asyncio.get_event_loop().run_until_complete(
-            service.set("test-tenant", "test-key", {"data": "value"})
-        )
+
+        result = asyncio.get_event_loop().run_until_complete(service.set("test-tenant", "test-key", {"data": "value"}))
 
         assert result.success is True
         assert result.entry is not None
@@ -436,7 +408,6 @@ class TestFeatureFlagBehavior:
         monkeypatch.setenv("DRIFT_DETECTION_ENABLED", "false")
 
         # Import with flags disabled
-        import importlib
         import app.api.costsim as costsim_module
 
         # Check that stubs are used
@@ -447,20 +418,36 @@ class TestFeatureFlagBehavior:
         """
         When memory features are enabled but modules are missing,
         the app should fail to start unless MEMORY_FAIL_OPEN_OVERRIDE is set.
+
+        NOTE: This test verifies the fail-fast logic EXISTS, not that it triggers.
+        The actual fail-fast behavior is tested implicitly:
+        - If modules were missing AND features enabled, the module wouldn't load
+        - Since the test runs, either modules exist OR features are disabled
+
+        The flag _memory_features_enabled is computed at module import time,
+        so monkeypatch.setenv() after import cannot affect its value.
         """
-        # This test verifies the fail-fast logic exists
-        # Actual failure would prevent the module from loading
+        from app.api.costsim import (
+            DRIFT_DETECTION_ENABLED,
+            MEMORY_CONTEXT_INJECTION,
+            MEMORY_POST_UPDATE,
+            _memory_features_enabled,
+        )
 
-        monkeypatch.setenv("MEMORY_CONTEXT_INJECTION", "true")
-        monkeypatch.setenv("MEMORY_FAIL_OPEN_OVERRIDE", "false")
+        # Verify the flag correctly reflects the env vars read at import time
+        expected = MEMORY_CONTEXT_INJECTION or MEMORY_POST_UPDATE or DRIFT_DETECTION_ENABLED
+        assert _memory_features_enabled == expected
 
-        # The fail-fast behavior is tested implicitly:
-        # If this test runs, the modules are available
-        # If they weren't, the test module itself wouldn't load
+        # If any memory feature is enabled, verify the modules actually loaded
+        if _memory_features_enabled:
+            # These would have failed at import time if unavailable
+            from app.memory.drift_detector import get_drift_detector
+            from app.memory.memory_service import get_memory_service
+            from app.memory.update_rules import get_update_rules_engine
 
-        from app.api.costsim import _memory_features_enabled
-        # Just verify the flag is computed correctly
-        assert _memory_features_enabled is True
+            assert callable(get_memory_service)
+            assert callable(get_update_rules_engine)
+            assert callable(get_drift_detector)
 
 
 class TestCostSimEndpointMemoryFields:
@@ -477,7 +464,7 @@ class TestCostSimEndpointMemoryFields:
             tenant_id="test",
             workflow_id="wf-1",
             agent_id="agent-1",
-            inject_memory=True
+            inject_memory=True,
         )
 
         assert request.workflow_id == "wf-1"
@@ -497,7 +484,7 @@ class TestCostSimEndpointMemoryFields:
             memory_context_keys=["config", "history"],
             memory_updates_applied=2,
             drift_detected=False,
-            drift_score=0.0
+            drift_score=0.0,
         )
 
         assert response.memory_context_keys == ["config", "history"]

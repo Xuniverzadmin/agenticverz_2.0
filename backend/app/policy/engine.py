@@ -11,8 +11,6 @@
 #
 # The Policy Engine is the "Constitution" of the multi-agent ecosystem.
 
-import hashlib
-import hmac
 import json
 import logging
 import os
@@ -22,7 +20,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -73,6 +70,7 @@ DEFAULT_CONCURRENT_AGENTS = 50
 # Policy Engine
 # =============================================================================
 
+
 class PolicyEngine:
     """
     M19 Policy Engine - Constitutional Governance Layer.
@@ -90,7 +88,8 @@ class PolicyEngine:
     """
 
     def __init__(self, database_url: Optional[str] = None, governor=None):
-        self._db_url = database_url or os.environ.get("DATABASE_URL")
+        # Use database_url if provided (even if empty), otherwise fall back to env var
+        self._db_url = database_url if database_url is not None else os.environ.get("DATABASE_URL")
         self._governor = governor  # M18 Governor for violation routing
 
         # In-memory policy cache
@@ -121,7 +120,9 @@ class PolicyEngine:
     # Core Evaluation
     # =========================================================================
 
-    async def evaluate(self, request: PolicyEvaluationRequest, db=None, dry_run: bool = False) -> PolicyEvaluationResult:
+    async def evaluate(
+        self, request: PolicyEvaluationRequest, db=None, dry_run: bool = False
+    ) -> PolicyEvaluationResult:
         """
         Evaluate a request against all applicable policies.
 
@@ -188,11 +189,11 @@ class PolicyEngine:
 
         # Count policies evaluated
         policies_evaluated = (
-            len(self._ethical_constraints) +
-            len(self._safety_rules) +
-            len(self._risk_ceilings) +
-            len(self._policies) +
-            len(self._business_rules)
+            len(self._ethical_constraints)
+            + len(self._safety_rules)
+            + len(self._risk_ceilings)
+            + len(self._policies)
+            + len(self._business_rules)
         )
 
         # Determine final decision
@@ -252,7 +253,7 @@ class PolicyEngine:
                 "policies_evaluated": policies_evaluated,
                 "violations": len(violations),
                 "evaluation_ms": evaluation_ms,
-            }
+            },
         )
 
         return result
@@ -261,10 +262,7 @@ class PolicyEngine:
     # Ethical Constraints (Non-Negotiables)
     # =========================================================================
 
-    async def _check_ethical_constraints(
-        self,
-        request: PolicyEvaluationRequest
-    ) -> List[PolicyViolation]:
+    async def _check_ethical_constraints(self, request: PolicyEvaluationRequest) -> List[PolicyViolation]:
         """Check request against ethical constraints."""
         violations = []
 
@@ -279,9 +277,7 @@ class PolicyEngine:
         return violations
 
     def _evaluate_ethical_constraint(
-        self,
-        constraint: EthicalConstraint,
-        request: PolicyEvaluationRequest
+        self, constraint: EthicalConstraint, request: PolicyEvaluationRequest
     ) -> Optional[PolicyViolation]:
         """Evaluate a single ethical constraint."""
 
@@ -348,10 +344,7 @@ class PolicyEngine:
     # Safety Rules (Hard Stops)
     # =========================================================================
 
-    async def _check_safety_rules(
-        self,
-        request: PolicyEvaluationRequest
-    ) -> List[PolicyViolation]:
+    async def _check_safety_rules(self, request: PolicyEvaluationRequest) -> List[PolicyViolation]:
         """Check request against safety rules."""
         violations = []
 
@@ -381,11 +374,7 @@ class PolicyEngine:
 
         return violations
 
-    def _evaluate_safety_rule(
-        self,
-        rule: SafetyRule,
-        request: PolicyEvaluationRequest
-    ) -> Optional[PolicyViolation]:
+    def _evaluate_safety_rule(self, rule: SafetyRule, request: PolicyEvaluationRequest) -> Optional[PolicyViolation]:
         """Evaluate a single safety rule."""
         condition = rule.condition
 
@@ -505,8 +494,7 @@ class PolicyEngine:
     # =========================================================================
 
     async def _check_risk_ceilings(
-        self,
-        request: PolicyEvaluationRequest
+        self, request: PolicyEvaluationRequest
     ) -> Tuple[List[PolicyViolation], List[PolicyModification]]:
         """Check request against risk ceilings."""
         violations = []
@@ -531,9 +519,7 @@ class PolicyEngine:
         return violations, modifications
 
     def _evaluate_risk_ceiling(
-        self,
-        ceiling: RiskCeiling,
-        request: PolicyEvaluationRequest
+        self, ceiling: RiskCeiling, request: PolicyEvaluationRequest
     ) -> Tuple[Optional[PolicyViolation], Optional[PolicyModification]]:
         """Evaluate a single risk ceiling."""
 
@@ -594,7 +580,7 @@ class PolicyEngine:
                         "metric": ceiling.metric,
                         "current_value": current_value,
                         "max_value": ceiling.max_value,
-                    }
+                    },
                 )
 
         # Update current value
@@ -627,10 +613,7 @@ class PolicyEngine:
     # Compliance Policies
     # =========================================================================
 
-    async def _check_compliance(
-        self,
-        request: PolicyEvaluationRequest
-    ) -> List[PolicyViolation]:
+    async def _check_compliance(self, request: PolicyEvaluationRequest) -> List[PolicyViolation]:
         """Check request against compliance policies."""
         violations = []
 
@@ -652,10 +635,7 @@ class PolicyEngine:
         return violations
 
     def _evaluate_compliance_rule(
-        self,
-        policy: Policy,
-        rule: PolicyRule,
-        request: PolicyEvaluationRequest
+        self, policy: Policy, rule: PolicyRule, request: PolicyEvaluationRequest
     ) -> Optional[PolicyViolation]:
         """Evaluate a compliance rule."""
         condition = rule.condition
@@ -718,8 +698,7 @@ class PolicyEngine:
     # =========================================================================
 
     async def _check_business_rules(
-        self,
-        request: PolicyEvaluationRequest
+        self, request: PolicyEvaluationRequest
     ) -> Tuple[List[PolicyViolation], List[PolicyModification]]:
         """Check request against business rules."""
         violations = []
@@ -747,9 +726,7 @@ class PolicyEngine:
         return violations, modifications
 
     def _evaluate_business_rule(
-        self,
-        rule: BusinessRule,
-        request: PolicyEvaluationRequest
+        self, rule: BusinessRule, request: PolicyEvaluationRequest
     ) -> Tuple[Optional[PolicyViolation], Optional[PolicyModification]]:
         """Evaluate a business rule."""
         condition = rule.condition
@@ -829,8 +806,7 @@ class PolicyEngine:
                 # Severe violation - request freeze
                 try:
                     await self._governor.force_freeze(
-                        duration_seconds=300,
-                        reason=f"Policy violation: {violation.description}"
+                        duration_seconds=300, reason=f"Policy violation: {violation.description}"
                     )
                     violation.governor_action = "freeze"
                 except Exception as e:
@@ -847,7 +823,7 @@ class PolicyEngine:
                     "policy_name": violation.policy_name,
                     "severity": violation.severity,
                     "governor_action": violation.governor_action,
-                }
+                },
             )
 
     # =========================================================================
@@ -868,106 +844,130 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 # Load ethical constraints
-                rows = conn.execute(text("""
+                rows = conn.execute(
+                    text(
+                        """
                     SELECT id, name, description, constraint_type,
                            forbidden_patterns, required_disclosures,
                            transparency_threshold, enforcement_level,
                            violation_action, is_active, violated_count
                     FROM policy.ethical_constraints
                     WHERE is_active = true
-                """))
+                """
+                    )
+                )
                 self._ethical_constraints = []
                 for row in rows:
-                    self._ethical_constraints.append(EthicalConstraint(
-                        id=str(row[0]),
-                        name=row[1],
-                        description=row[2] or "",
-                        constraint_type=EthicalConstraintType(row[3]),
-                        forbidden_patterns=row[4],
-                        required_disclosures=row[5],
-                        transparency_threshold=row[6],
-                        enforcement_level=row[7],
-                        violation_action=row[8],
-                        is_active=row[9],
-                        violated_count=row[10],
-                    ))
+                    self._ethical_constraints.append(
+                        EthicalConstraint(
+                            id=str(row[0]),
+                            name=row[1],
+                            description=row[2] or "",
+                            constraint_type=EthicalConstraintType(row[3]),
+                            forbidden_patterns=row[4],
+                            required_disclosures=row[5],
+                            transparency_threshold=row[6],
+                            enforcement_level=row[7],
+                            violation_action=row[8],
+                            is_active=row[9],
+                            violated_count=row[10],
+                        )
+                    )
                 result.ethical_constraints_loaded = len(self._ethical_constraints)
 
                 # Load risk ceilings
-                rows = conn.execute(text("""
+                rows = conn.execute(
+                    text(
+                        """
                     SELECT id, name, description, metric, max_value,
                            current_value, window_seconds, applies_to,
                            tenant_id, breach_action, breach_count, is_active
                     FROM policy.risk_ceilings
                     WHERE is_active = true
-                """))
+                """
+                    )
+                )
                 self._risk_ceilings = []
                 for row in rows:
-                    self._risk_ceilings.append(RiskCeiling(
-                        id=str(row[0]),
-                        name=row[1],
-                        description=row[2],
-                        metric=row[3],
-                        max_value=row[4],
-                        current_value=row[5],
-                        window_seconds=row[6],
-                        applies_to=row[7],
-                        tenant_id=row[8],
-                        breach_action=row[9],
-                        breach_count=row[10],
-                        is_active=row[11],
-                    ))
+                    self._risk_ceilings.append(
+                        RiskCeiling(
+                            id=str(row[0]),
+                            name=row[1],
+                            description=row[2],
+                            metric=row[3],
+                            max_value=row[4],
+                            current_value=row[5],
+                            window_seconds=row[6],
+                            applies_to=row[7],
+                            tenant_id=row[8],
+                            breach_action=row[9],
+                            breach_count=row[10],
+                            is_active=row[11],
+                        )
+                    )
                 result.risk_ceilings_loaded = len(self._risk_ceilings)
 
                 # Load safety rules
-                rows = conn.execute(text("""
+                rows = conn.execute(
+                    text(
+                        """
                     SELECT id, name, description, rule_type, condition,
                            action, cooldown_seconds, applies_to, tenant_id,
                            priority, is_active, triggered_count
                     FROM policy.safety_rules
                     WHERE is_active = true
                     ORDER BY priority ASC
-                """))
+                """
+                    )
+                )
                 self._safety_rules = []
                 for row in rows:
-                    self._safety_rules.append(SafetyRule(
-                        id=str(row[0]),
-                        name=row[1],
-                        description=row[2],
-                        rule_type=SafetyRuleType(row[3]),
-                        condition=row[4] if isinstance(row[4], dict) else json.loads(row[4] or "{}"),
-                        action=row[5],
-                        cooldown_seconds=row[6],
-                        applies_to=row[7],
-                        tenant_id=row[8],
-                        priority=row[9],
-                        is_active=row[10],
-                        triggered_count=row[11],
-                    ))
+                    self._safety_rules.append(
+                        SafetyRule(
+                            id=str(row[0]),
+                            name=row[1],
+                            description=row[2],
+                            rule_type=SafetyRuleType(row[3]),
+                            condition=row[4] if isinstance(row[4], dict) else json.loads(row[4] or "{}"),
+                            action=row[5],
+                            cooldown_seconds=row[6],
+                            applies_to=row[7],
+                            tenant_id=row[8],
+                            priority=row[9],
+                            is_active=row[10],
+                            triggered_count=row[11],
+                        )
+                    )
                 result.safety_rules_loaded = len(self._safety_rules)
 
                 # Load business rules
-                rows = conn.execute(text("""
+                rows = conn.execute(
+                    text(
+                        """
                     SELECT id, name, description, rule_type, condition,
                            constraint, tenant_id, customer_tier, priority, is_active
                     FROM policy.business_rules
                     WHERE is_active = true
                     ORDER BY priority ASC
-                """))
+                """
+                    )
+                )
                 self._business_rules = []
                 for row in rows:
-                    self._business_rules.append(BusinessRule(
-                        id=str(row[0]),
-                        name=row[1],
-                        description=row[2],
-                        rule_type=BusinessRuleType(row[3]),
-                        condition=row[4] if isinstance(row[4], dict) else json.loads(row[4] or "{}"),
-                        constraint=row[5] if isinstance(row[5], dict) else json.loads(row[5] or "{}"),
-                        tenant_id=row[6],
-                        customer_tier=row[7],
-                        priority=row[8],
-                        is_active=row[9],
-                    ))
+                    self._business_rules.append(
+                        BusinessRule(
+                            id=str(row[0]),
+                            name=row[1],
+                            description=row[2],
+                            rule_type=BusinessRuleType(row[3]),
+                            condition=row[4] if isinstance(row[4], dict) else json.loads(row[4] or "{}"),
+                            constraint=row[5] if isinstance(row[5], dict) else json.loads(row[5] or "{}"),
+                            tenant_id=row[6],
+                            customer_tier=row[7],
+                            priority=row[8],
+                            is_active=row[9],
+                        )
+                    )
                 result.business_rules_loaded = len(self._business_rules)
 
             engine.dispose()
@@ -987,13 +987,16 @@ class PolicyEngine:
                 "risk_ceilings": result.risk_ceilings_loaded,
                 "safety_rules": result.safety_rules_loaded,
                 "business_rules": result.business_rules_loaded,
-            }
+            },
         )
 
         return result
 
     def _load_default_policies(self) -> None:
         """Load default policies when database is unavailable."""
+        # Mark cache as loaded to prevent re-loading
+        self._cache_loaded_at = datetime.now(timezone.utc)
+
         # Default ethical constraints
         self._ethical_constraints = [
             EthicalConstraint(
@@ -1053,11 +1056,7 @@ class PolicyEngine:
     # Persistence
     # =========================================================================
 
-    async def _persist_evaluation(
-        self,
-        request: PolicyEvaluationRequest,
-        result: PolicyEvaluationResult
-    ) -> None:
+    async def _persist_evaluation(self, request: PolicyEvaluationRequest, result: PolicyEvaluationResult) -> None:
         """Persist evaluation to audit log."""
         if not self._db_url:
             return
@@ -1066,7 +1065,8 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO policy.evaluations (
                             id, action_type, agent_id, tenant_id,
                             request_context, decision, decision_reason,
@@ -1078,7 +1078,8 @@ class PolicyEngine:
                             CAST(:modifications AS JSONB), :eval_ms, :policies,
                             :rules, :evaluated_at
                         )
-                    """),
+                    """
+                    ),
                     {
                         "id": result.request_id,
                         "action_type": request.action_type.value,
@@ -1092,14 +1093,15 @@ class PolicyEngine:
                         "policies": result.policies_evaluated,
                         "rules": result.rules_matched,
                         "evaluated_at": result.evaluated_at,
-                    }
+                    },
                 )
                 conn.commit()
 
                 # Persist violations
                 for violation in result.violations:
                     conn.execute(
-                        text("""
+                        text(
+                            """
                             INSERT INTO policy.violations (
                                 id, evaluation_id, policy_name, violation_type,
                                 severity, description, evidence, agent_id,
@@ -1111,7 +1113,8 @@ class PolicyEngine:
                                 :agent_id, :tenant_id, :action, :routed,
                                 :gov_action, :detected_at
                             )
-                        """),
+                        """
+                        ),
                         {
                             "id": violation.id,
                             "eval_id": result.request_id,
@@ -1126,7 +1129,7 @@ class PolicyEngine:
                             "routed": violation.routed_to_governor,
                             "gov_action": violation.governor_action,
                             "detected_at": violation.detected_at,
-                        }
+                        },
                     )
                 conn.commit()
 
@@ -1142,8 +1145,14 @@ class PolicyEngine:
     async def get_state(self, db=None) -> PolicyState:
         """Get current policy layer state."""
         return PolicyState(
-            total_policies=len(self._policies) + len(self._ethical_constraints) + len(self._safety_rules) + len(self._business_rules),
-            active_policies=len([p for p in self._policies if p.is_active]) + len(self._ethical_constraints) + len(self._safety_rules) + len(self._business_rules),
+            total_policies=len(self._policies)
+            + len(self._ethical_constraints)
+            + len(self._safety_rules)
+            + len(self._business_rules),
+            active_policies=len([p for p in self._policies if p.is_active])
+            + len(self._ethical_constraints)
+            + len(self._safety_rules)
+            + len(self._business_rules),
             total_evaluations_today=self._evaluations_count,
             total_violations_today=self._violations_count,
             block_rate=self._blocks_count / max(1, self._evaluations_count),
@@ -1212,20 +1221,22 @@ class PolicyEngine:
 
                 rows = conn.execute(text(sql), params)
                 for row in rows:
-                    violations.append(PolicyViolation(
-                        id=str(row[0]),
-                        policy_name=row[1],
-                        violation_type=ViolationType(row[2]),
-                        severity=row[3],
-                        description=row[4],
-                        evidence=row[5] if isinstance(row[5], dict) else json.loads(row[5] or "{}"),
-                        agent_id=row[6],
-                        tenant_id=row[7],
-                        action_attempted=row[8],
-                        routed_to_governor=row[9],
-                        governor_action=row[10],
-                        detected_at=row[11],
-                    ))
+                    violations.append(
+                        PolicyViolation(
+                            id=str(row[0]),
+                            policy_name=row[1],
+                            violation_type=ViolationType(row[2]),
+                            severity=row[3],
+                            description=row[4],
+                            evidence=row[5] if isinstance(row[5], dict) else json.loads(row[5] or "{}"),
+                            agent_id=row[6],
+                            tenant_id=row[7],
+                            action_attempted=row[8],
+                            routed_to_governor=row[9],
+                            governor_action=row[10],
+                            detected_at=row[11],
+                        )
+                    )
             engine.dispose()
         except SQLAlchemyError as e:
             logger.debug(f"Failed to get violations: {e}")
@@ -1243,14 +1254,16 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 row = conn.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id, policy_name, violation_type, severity, description,
                                evidence, agent_id, tenant_id, action_attempted,
                                routed_to_governor, governor_action, detected_at
                         FROM policy.violations
                         WHERE id = CAST(:id AS UUID)
-                    """),
-                    {"id": violation_id}
+                    """
+                    ),
+                    {"id": violation_id},
                 ).fetchone()
 
                 if row:
@@ -1283,13 +1296,15 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 result = conn.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE policy.violations
                         SET acknowledged_at = NOW(),
                             acknowledgement_notes = :notes
                         WHERE id = CAST(:id AS UUID)
-                    """),
-                    {"id": violation_id, "notes": notes}
+                    """
+                    ),
+                    {"id": violation_id, "notes": notes},
                 )
                 conn.commit()
                 return result.rowcount > 0
@@ -1338,12 +1353,14 @@ class PolicyEngine:
 
                 if set_clauses:
                     conn.execute(
-                        text(f"""
+                        text(
+                            f"""
                             UPDATE policy.risk_ceilings
                             SET {", ".join(set_clauses)}
                             WHERE id = CAST(:id AS UUID)
-                        """),
-                        params
+                        """
+                        ),
+                        params,
                     )
                     conn.commit()
             engine.dispose()
@@ -1364,12 +1381,14 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 result = conn.execute(
-                    text("""
+                    text(
+                        """
                         UPDATE policy.risk_ceilings
                         SET current_value = 0
                         WHERE id = CAST(:id AS UUID)
-                    """),
-                    {"id": ceiling_id}
+                    """
+                    ),
+                    {"id": ceiling_id},
                 )
                 conn.commit()
                 return result.rowcount > 0
@@ -1414,12 +1433,14 @@ class PolicyEngine:
 
                 if set_clauses:
                     conn.execute(
-                        text(f"""
+                        text(
+                            f"""
                             UPDATE policy.safety_rules
                             SET {", ".join(set_clauses)}
                             WHERE id = CAST(:id AS UUID)
-                        """),
-                        params
+                        """
+                        ),
+                        params,
                     )
                     conn.commit()
             engine.dispose()
@@ -1463,13 +1484,15 @@ class PolicyEngine:
             if agent_id and cd_agent_id != agent_id:
                 continue
 
-            cooldowns.append({
-                "agent_id": cd_agent_id,
-                "rule_name": rule_name,
-                "started_at": expires_at - timedelta(seconds=300),  # Approximate
-                "expires_at": expires_at,
-                "remaining_seconds": (expires_at - now).total_seconds(),
-            })
+            cooldowns.append(
+                {
+                    "agent_id": cd_agent_id,
+                    "rule_name": rule_name,
+                    "started_at": expires_at - timedelta(seconds=300),  # Approximate
+                    "expires_at": expires_at,
+                    "remaining_seconds": (expires_at - now).total_seconds(),
+                }
+            )
 
         return cooldowns
 
@@ -1544,12 +1567,16 @@ class PolicyEngine:
         try:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
-                row = conn.execute(text("""
+                row = conn.execute(
+                    text(
+                        """
                     SELECT id, version, policy_hash, created_by, created_at, description
                     FROM policy.policy_versions
                     WHERE is_active = true
                     ORDER BY created_at DESC LIMIT 1
-                """)).fetchone()
+                """
+                    )
+                ).fetchone()
 
                 if row:
                     return {
@@ -1569,16 +1596,21 @@ class PolicyEngine:
     async def create_policy_version(self, db, description: str, created_by: str = "system"):
         """Create a new policy version snapshot."""
         import hashlib
+
         from app.policy.models import PolicyVersion
 
         # Compute hash of current policies
-        policy_data = json.dumps({
-            "policies": [p.model_dump() for p in self._policies],
-            "risk_ceilings": [c.model_dump() for c in self._risk_ceilings],
-            "safety_rules": [r.model_dump() for r in self._safety_rules],
-            "ethical_constraints": [c.model_dump() for c in self._ethical_constraints],
-            "business_rules": [r.model_dump() for r in self._business_rules],
-        }, sort_keys=True, default=str)
+        policy_data = json.dumps(
+            {
+                "policies": [p.model_dump() for p in self._policies],
+                "risk_ceilings": [c.model_dump() for c in self._risk_ceilings],
+                "safety_rules": [r.model_dump() for r in self._safety_rules],
+                "ethical_constraints": [c.model_dump() for c in self._ethical_constraints],
+                "business_rules": [r.model_dump() for r in self._business_rules],
+            },
+            sort_keys=True,
+            default=str,
+        )
         policy_hash = hashlib.sha256(policy_data.encode()).hexdigest()[:16]
 
         # Increment version
@@ -1605,16 +1637,21 @@ class PolicyEngine:
                     conn.execute(text("UPDATE policy.policy_versions SET is_active = false"))
 
                     # Insert new version
-                    conn.execute(text("""
+                    conn.execute(
+                        text(
+                            """
                         INSERT INTO policy.policy_versions
                         (id, version, policy_hash, created_by, description, is_active)
                         VALUES (gen_random_uuid(), :version, :hash, :by, :desc, true)
-                    """), {
-                        "version": new_version,
-                        "hash": policy_hash,
-                        "by": created_by,
-                        "desc": description,
-                    })
+                    """
+                        ),
+                        {
+                            "version": new_version,
+                            "hash": policy_hash,
+                            "by": created_by,
+                            "desc": description,
+                        },
+                    )
                     conn.commit()
                 engine.dispose()
             except Exception as e:
@@ -1632,36 +1669,56 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 # Find target version
-                row = conn.execute(text("""
+                row = conn.execute(
+                    text(
+                        """
                     SELECT id, version, policies_snapshot, risk_ceilings_snapshot,
                            safety_rules_snapshot, ethical_constraints_snapshot
                     FROM policy.policy_versions
                     WHERE version = :version
-                """), {"version": target_version}).fetchone()
+                """
+                    ),
+                    {"version": target_version},
+                ).fetchone()
 
                 if not row:
                     return {"success": False, "error": f"Version {target_version} not found"}
 
                 # Mark current as rolled back
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     UPDATE policy.policy_versions
                     SET rolled_back_at = NOW(), rolled_back_by = :by
                     WHERE is_active = true
-                """), {"by": rolled_back_by})
+                """
+                    ),
+                    {"by": rolled_back_by},
+                )
 
                 # Activate target version
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     UPDATE policy.policy_versions
                     SET is_active = true
                     WHERE version = :version
-                """), {"version": target_version})
+                """
+                    ),
+                    {"version": target_version},
+                )
 
                 # Record provenance
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     INSERT INTO policy.policy_provenance
                     (policy_id, policy_type, action, changed_by, policy_version, reason)
                     VALUES (gen_random_uuid(), 'version', 'rollback', :by, :version, :reason)
-                """), {"by": rolled_back_by, "version": target_version, "reason": reason})
+                """
+                    ),
+                    {"by": rolled_back_by, "version": target_version, "reason": reason},
+                )
 
                 conn.commit()
 
@@ -1682,12 +1739,17 @@ class PolicyEngine:
         try:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
-                rows = conn.execute(text("""
+                rows = conn.execute(
+                    text(
+                        """
                     SELECT policy_type, action, changed_by, changed_at, reason
                     FROM policy.policy_provenance
                     WHERE policy_version = :version
                     ORDER BY changed_at DESC
-                """), {"version": version_id})
+                """
+                    ),
+                    {"version": version_id},
+                )
                 return [
                     {
                         "policy_type": row[0],
@@ -1709,7 +1771,7 @@ class PolicyEngine:
 
     async def get_dependency_graph(self, db=None):
         """Get the policy dependency graph."""
-        from app.policy.models import DependencyGraph, PolicyDependency, PolicyConflict
+        from app.policy.models import DependencyGraph, PolicyConflict, PolicyDependency
 
         dependencies = []
         conflicts = []
@@ -1719,41 +1781,53 @@ class PolicyEngine:
                 engine = create_engine(self._db_url)
                 with engine.connect() as conn:
                     # Get dependencies
-                    rows = conn.execute(text("""
+                    rows = conn.execute(
+                        text(
+                            """
                         SELECT id, source_policy, target_policy, dependency_type,
                                resolution_strategy, priority, description
                         FROM policy.policy_dependencies
                         WHERE is_active = true
-                    """))
+                    """
+                        )
+                    )
                     for row in rows:
-                        dependencies.append(PolicyDependency(
-                            id=str(row[0]),
-                            source_policy=row[1],
-                            target_policy=row[2],
-                            dependency_type=row[3],
-                            resolution_strategy=row[4],
-                            priority=row[5],
-                            description=row[6],
-                        ))
+                        dependencies.append(
+                            PolicyDependency(
+                                id=str(row[0]),
+                                source_policy=row[1],
+                                target_policy=row[2],
+                                dependency_type=row[3],
+                                resolution_strategy=row[4],
+                                priority=row[5],
+                                description=row[6],
+                            )
+                        )
 
                     # Get conflicts
-                    rows = conn.execute(text("""
+                    rows = conn.execute(
+                        text(
+                            """
                         SELECT id, policy_a, policy_b, conflict_type, severity,
                                description, affected_action_types, resolved, resolution
                         FROM policy.policy_conflicts
-                    """))
+                    """
+                        )
+                    )
                     for row in rows:
-                        conflicts.append(PolicyConflict(
-                            id=str(row[0]),
-                            policy_a=row[1],
-                            policy_b=row[2],
-                            conflict_type=row[3],
-                            severity=row[4],
-                            description=row[5],
-                            affected_action_types=row[6] or [],
-                            resolved=row[7],
-                            resolution=row[8],
-                        ))
+                        conflicts.append(
+                            PolicyConflict(
+                                id=str(row[0]),
+                                policy_a=row[1],
+                                policy_b=row[2],
+                                conflict_type=row[3],
+                                severity=row[4],
+                                description=row[5],
+                                affected_action_types=row[6] or [],
+                                resolved=row[7],
+                                resolution=row[8],
+                            )
+                        )
                 engine.dispose()
             except Exception as e:
                 logger.debug(f"Failed to get dependency graph: {e}")
@@ -1788,14 +1862,16 @@ class PolicyEngine:
 
                     rows = conn.execute(text(sql))
                     for row in rows:
-                        conflicts.append(PolicyConflict(
-                            id=str(row[0]),
-                            policy_a=row[1],
-                            policy_b=row[2],
-                            conflict_type=row[3],
-                            severity=row[4],
-                            description=row[5],
-                        ))
+                        conflicts.append(
+                            PolicyConflict(
+                                id=str(row[0]),
+                                policy_a=row[1],
+                                policy_b=row[2],
+                                conflict_type=row[3],
+                                severity=row[4],
+                                description=row[5],
+                            )
+                        )
                 engine.dispose()
             except Exception as e:
                 logger.debug(f"Failed to get conflicts: {e}")
@@ -1809,11 +1885,16 @@ class PolicyEngine:
         try:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
-                result = conn.execute(text("""
+                result = conn.execute(
+                    text(
+                        """
                     UPDATE policy.policy_conflicts
                     SET resolved = true, resolution = :res, resolved_by = :by, resolved_at = NOW()
                     WHERE id = CAST(:id AS UUID)
-                """), {"id": conflict_id, "res": resolution, "by": resolved_by})
+                """
+                    ),
+                    {"id": conflict_id, "res": resolution, "by": resolved_by},
+                )
                 conn.commit()
                 return result.rowcount > 0
             engine.dispose()
@@ -1825,7 +1906,9 @@ class PolicyEngine:
     # GAP 3: Temporal Policies
     # =========================================================================
 
-    async def get_temporal_policies(self, db=None, metric: Optional[str] = None, include_inactive: bool = False) -> List:
+    async def get_temporal_policies(
+        self, db=None, metric: Optional[str] = None, include_inactive: bool = False
+    ) -> List:
         """Get temporal (sliding window) policies."""
         from app.policy.models import TemporalPolicy
 
@@ -1844,18 +1927,20 @@ class PolicyEngine:
 
                     rows = conn.execute(text(sql), params)
                     for row in rows:
-                        policies.append(TemporalPolicy(
-                            id=str(row[0]),
-                            name=row[1],
-                            description=row[2],
-                            temporal_type=row[3],
-                            metric=row[4],
-                            max_value=row[5],
-                            window_seconds=row[6],
-                            breach_action=row[11],
-                            breach_count=row[14],
-                            is_active=row[13],
-                        ))
+                        policies.append(
+                            TemporalPolicy(
+                                id=str(row[0]),
+                                name=row[1],
+                                description=row[2],
+                                temporal_type=row[3],
+                                metric=row[4],
+                                max_value=row[5],
+                                window_seconds=row[6],
+                                breach_action=row[11],
+                                breach_count=row[14],
+                                is_active=row[13],
+                            )
+                        )
                 engine.dispose()
             except Exception as e:
                 logger.debug(f"Failed to get temporal policies: {e}")
@@ -1871,21 +1956,26 @@ class PolicyEngine:
             try:
                 engine = create_engine(self._db_url)
                 with engine.connect() as conn:
-                    conn.execute(text("""
+                    conn.execute(
+                        text(
+                            """
                         INSERT INTO policy.temporal_policies
                         (name, description, temporal_type, metric, max_value,
                          window_seconds, breach_action, cooldown_on_breach)
                         VALUES (:name, :desc, :type, :metric, :max, :window, :action, :cooldown)
-                    """), {
-                        "name": data["name"],
-                        "desc": data.get("description"),
-                        "type": data["temporal_type"],
-                        "metric": data["metric"],
-                        "max": data["max_value"],
-                        "window": data["window_seconds"],
-                        "action": data.get("breach_action", "block"),
-                        "cooldown": data.get("cooldown_on_breach", 0),
-                    })
+                    """
+                        ),
+                        {
+                            "name": data["name"],
+                            "desc": data.get("description"),
+                            "type": data["temporal_type"],
+                            "metric": data["metric"],
+                            "max": data["max_value"],
+                            "window": data["window_seconds"],
+                            "action": data.get("breach_action", "block"),
+                            "cooldown": data.get("cooldown_on_breach", 0),
+                        },
+                    )
                     conn.commit()
                 engine.dispose()
             except Exception as e:
@@ -1902,21 +1992,31 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 # Get policy
-                policy = conn.execute(text("""
+                policy = conn.execute(
+                    text(
+                        """
                     SELECT max_value, window_seconds FROM policy.temporal_policies
                     WHERE id = CAST(:id AS UUID)
-                """), {"id": policy_id}).fetchone()
+                """
+                    ),
+                    {"id": policy_id},
+                ).fetchone()
 
                 if not policy:
                     return {"error": "Policy not found"}
 
                 # Get current window sum
-                row = conn.execute(text("""
+                row = conn.execute(
+                    text(
+                        """
                     SELECT COALESCE(SUM(value), 0) as total
                     FROM policy.temporal_metric_events
                     WHERE policy_id = CAST(:id AS UUID)
                     AND occurred_at > NOW() - INTERVAL ':window seconds'
-                """.replace(":window", str(policy[1]))), {"id": policy_id}).fetchone()
+                """.replace(":window", str(policy[1]))
+                    ),
+                    {"id": policy_id},
+                ).fetchone()
 
                 current = row[0] if row else 0
                 utilization = current / policy[0] if policy[0] > 0 else 0
@@ -1952,9 +2052,9 @@ class PolicyEngine:
         from app.policy.models import (
             EnhancedPolicyEvaluationResult,
             EnhancedPolicyViolation,
-            ViolationSeverity,
-            RecoverabilityType,
             PolicyDecision,
+            RecoverabilityType,
+            ViolationSeverity,
         )
 
         start_time = time.time()
@@ -1971,30 +2071,34 @@ class PolicyEngine:
         # Check if agent is quarantined
         if policy_context.is_quarantined:
             if policy_context.quarantine_until and datetime.now(timezone.utc) < policy_context.quarantine_until:
-                violations.append(EnhancedPolicyViolation(
-                    violation_type=ViolationType.SAFETY_RULE_TRIGGERED,
-                    policy_name="quarantine",
-                    severity=1.0,
-                    severity_class=ViolationSeverity.OPERATIONAL_CRITICAL,
-                    recoverability=RecoverabilityType.NON_RECOVERABLE,
-                    description="Agent is quarantined",
-                    agent_id=policy_context.agent_id,
-                    action_chain_depth=policy_context.action_chain_depth,
-                ))
+                violations.append(
+                    EnhancedPolicyViolation(
+                        violation_type=ViolationType.SAFETY_RULE_TRIGGERED,
+                        policy_name="quarantine",
+                        severity=1.0,
+                        severity_class=ViolationSeverity.OPERATIONAL_CRITICAL,
+                        recoverability=RecoverabilityType.NON_RECOVERABLE,
+                        description="Agent is quarantined",
+                        agent_id=policy_context.agent_id,
+                        action_chain_depth=policy_context.action_chain_depth,
+                    )
+                )
 
         # Check action chain depth
         max_depth = 5  # From risk ceilings
         if policy_context.action_chain_depth > max_depth:
-            violations.append(EnhancedPolicyViolation(
-                violation_type=ViolationType.RISK_CEILING_BREACH,
-                policy_name="cascade_depth",
-                severity=0.8,
-                severity_class=ViolationSeverity.OPERATIONAL_HIGH,
-                recoverability=RecoverabilityType.RECOVERABLE_AUTO,
-                description=f"Action chain depth {policy_context.action_chain_depth} exceeds max {max_depth}",
-                agent_id=policy_context.agent_id,
-                action_chain_depth=policy_context.action_chain_depth,
-            ))
+            violations.append(
+                EnhancedPolicyViolation(
+                    violation_type=ViolationType.RISK_CEILING_BREACH,
+                    policy_name="cascade_depth",
+                    severity=0.8,
+                    severity_class=ViolationSeverity.OPERATIONAL_HIGH,
+                    recoverability=RecoverabilityType.RECOVERABLE_AUTO,
+                    description=f"Action chain depth {policy_context.action_chain_depth} exceeds max {max_depth}",
+                    agent_id=policy_context.agent_id,
+                    action_chain_depth=policy_context.action_chain_depth,
+                )
+            )
 
         # Check temporal policies
         temporal_policies = await self.get_temporal_policies(db)
@@ -2006,17 +2110,19 @@ class PolicyEngine:
                 temporal_warnings.append(f"{tp.metric} at {utilization['utilization']:.0%} of limit")
 
             if utilization.get("utilization", 0) >= 1.0:
-                violations.append(EnhancedPolicyViolation(
-                    violation_type=ViolationType.TEMPORAL_LIMIT_EXCEEDED,
-                    policy_name=tp.name,
-                    severity=0.7,
-                    severity_class=ViolationSeverity.OPERATIONAL_HIGH,
-                    recoverability=RecoverabilityType.RECOVERABLE_AUTO,
-                    description=f"Temporal limit exceeded for {tp.metric}",
-                    is_temporal_violation=True,
-                    temporal_window_seconds=tp.window_seconds,
-                    temporal_metric_value=utilization.get("current_value", 0),
-                ))
+                violations.append(
+                    EnhancedPolicyViolation(
+                        violation_type=ViolationType.TEMPORAL_LIMIT_EXCEEDED,
+                        policy_name=tp.name,
+                        severity=0.7,
+                        severity_class=ViolationSeverity.OPERATIONAL_HIGH,
+                        recoverability=RecoverabilityType.RECOVERABLE_AUTO,
+                        description=f"Temporal limit exceeded for {tp.metric}",
+                        is_temporal_violation=True,
+                        temporal_window_seconds=tp.window_seconds,
+                        temporal_metric_value=utilization.get("current_value", 0),
+                    )
+                )
 
         # Standard policy checks (reuse existing logic)
         basic_request = PolicyEvaluationRequest(
@@ -2033,17 +2139,19 @@ class PolicyEngine:
 
         # Convert basic violations to enhanced
         for v in basic_result.violations:
-            violations.append(EnhancedPolicyViolation(
-                violation_type=v.violation_type,
-                policy_name=v.policy_name,
-                severity=v.severity,
-                severity_class=self._classify_severity(v),
-                recoverability=self._classify_recoverability(v),
-                description=v.description,
-                evidence=v.evidence,
-                agent_id=v.agent_id,
-                action_chain_depth=policy_context.action_chain_depth,
-            ))
+            violations.append(
+                EnhancedPolicyViolation(
+                    violation_type=v.violation_type,
+                    policy_name=v.policy_name,
+                    severity=v.severity,
+                    severity_class=self._classify_severity(v),
+                    recoverability=self._classify_recoverability(v),
+                    description=v.description,
+                    evidence=v.evidence,
+                    agent_id=v.agent_id,
+                    action_chain_depth=policy_context.action_chain_depth,
+                )
+            )
 
         # Determine decision
         if violations:
@@ -2140,11 +2248,15 @@ class PolicyEngine:
             try:
                 engine = create_engine(self._db_url)
                 with engine.connect() as conn:
-                    rows = conn.execute(text("""
+                    rows = conn.execute(
+                        text(
+                            """
                         SELECT source_policy, target_policy, dependency_type
                         FROM policy.policy_dependencies
                         WHERE is_active = true
-                    """))
+                    """
+                        )
+                    )
                     for row in rows:
                         source, target = row[0], row[1]
                         all_nodes.add(source)
@@ -2178,12 +2290,14 @@ class PolicyEngine:
                     # Found cycle - extract it
                     cycle_start = path.index(neighbor) if neighbor in path else 0
                     cycle = path[cycle_start:] + [node, neighbor]
-                    cycles.append({
-                        "cycle": cycle,
-                        "type": "back_edge",
-                        "edge": f"{node} -> {neighbor}",
-                        "dependency_type": dep_type,
-                    })
+                    cycles.append(
+                        {
+                            "cycle": cycle,
+                            "type": "back_edge",
+                            "edge": f"{node} -> {neighbor}",
+                            "dependency_type": dep_type,
+                        }
+                    )
                     return True
 
                 elif color[neighbor] == WHITE:
@@ -2235,11 +2349,15 @@ class PolicyEngine:
             with engine.connect() as conn:
                 # First, simulate adding the edge and check for cycles
                 # Get existing dependencies
-                rows = conn.execute(text("""
+                rows = conn.execute(
+                    text(
+                        """
                     SELECT source_policy, target_policy
                     FROM policy.policy_dependencies
                     WHERE is_active = true
-                """))
+                """
+                    )
+                )
 
                 graph = {}
                 all_nodes = set()
@@ -2285,18 +2403,23 @@ class PolicyEngine:
                     }
 
                 # Safe to add - insert the dependency
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     INSERT INTO policy.policy_dependencies
                     (source_policy, target_policy, dependency_type, resolution_strategy, priority, description)
                     VALUES (:source, :target, :dtype, :strategy, :priority, :desc)
-                """), {
-                    "source": source_policy,
-                    "target": target_policy,
-                    "dtype": dependency_type,
-                    "strategy": resolution_strategy,
-                    "priority": priority,
-                    "desc": description,
-                })
+                """
+                    ),
+                    {
+                        "source": source_policy,
+                        "target": target_policy,
+                        "dtype": dependency_type,
+                        "strategy": resolution_strategy,
+                        "priority": priority,
+                        "desc": description,
+                    },
+                )
                 conn.commit()
 
                 return {
@@ -2322,8 +2445,8 @@ class PolicyEngine:
         all_nodes = set()
 
         for dep in dependencies:
-            src = dep.source_policy if hasattr(dep, 'source_policy') else dep['source_policy']
-            tgt = dep.target_policy if hasattr(dep, 'target_policy') else dep['target_policy']
+            src = dep.source_policy if hasattr(dep, "source_policy") else dep["source_policy"]
+            tgt = dep.target_policy if hasattr(dep, "target_policy") else dep["target_policy"]
 
             all_nodes.add(src)
             all_nodes.add(tgt)
@@ -2393,15 +2516,21 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 # 1. Delete events older than retention period
-                result = conn.execute(text("""
+                result = conn.execute(
+                    text(
+                        """
                     DELETE FROM policy.temporal_metric_events
                     WHERE occurred_at < NOW() - INTERVAL ':hours hours'
-                """.replace(":hours", str(retention_hours))))
+                """.replace(":hours", str(retention_hours))
+                    )
+                )
                 stats["deleted_expired"] = result.rowcount
 
                 # 2. Compact events older than threshold to hourly aggregates
                 # First, insert aggregates into windows table
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     INSERT INTO policy.temporal_metric_windows
                     (policy_id, agent_id, tenant_id, window_key, current_sum, current_count,
                      current_max, window_start, window_end, updated_at)
@@ -2425,20 +2554,26 @@ class PolicyEngine:
                         current_count = policy.temporal_metric_windows.current_count + EXCLUDED.current_count,
                         current_max = GREATEST(policy.temporal_metric_windows.current_max, EXCLUDED.current_max),
                         updated_at = NOW()
-                """.replace(":hours", str(compact_older_than_hours))
-                   .replace(":retention", str(retention_hours))))
+                """.replace(":hours", str(compact_older_than_hours)).replace(":retention", str(retention_hours))
+                    )
+                )
 
                 # Delete the compacted events
-                result = conn.execute(text("""
+                result = conn.execute(
+                    text(
+                        """
                     DELETE FROM policy.temporal_metric_events
                     WHERE occurred_at < NOW() - INTERVAL ':hours hours'
                         AND occurred_at >= NOW() - INTERVAL ':retention hours'
-                """.replace(":hours", str(compact_older_than_hours))
-                   .replace(":retention", str(retention_hours))))
+                """.replace(":hours", str(compact_older_than_hours)).replace(":retention", str(retention_hours))
+                    )
+                )
                 stats["compacted_hourly"] = result.rowcount
 
                 # 3. Cap events per policy (keep newest)
-                result = conn.execute(text("""
+                result = conn.execute(
+                    text(
+                        """
                     WITH ranked AS (
                         SELECT id, policy_id,
                                ROW_NUMBER() OVER (PARTITION BY policy_id ORDER BY occurred_at DESC) as rn
@@ -2449,17 +2584,24 @@ class PolicyEngine:
                     )
                     DELETE FROM policy.temporal_metric_events
                     WHERE id IN (SELECT id FROM to_delete)
-                """), {"max_events": max_events_per_policy})
+                """
+                    ),
+                    {"max_events": max_events_per_policy},
+                )
                 stats["capped_overflow"] = result.rowcount
 
                 conn.commit()
 
                 # Get current counts for reporting
-                counts = conn.execute(text("""
+                counts = conn.execute(
+                    text(
+                        """
                     SELECT COUNT(*) as event_count,
                            (SELECT COUNT(*) FROM policy.temporal_metric_windows) as window_count
                     FROM policy.temporal_metric_events
-                """)).fetchone()
+                """
+                    )
+                ).fetchone()
 
                 stats["remaining_events"] = counts[0] if counts else 0
                 stats["total_windows"] = counts[1] if counts else 0
@@ -2481,7 +2623,9 @@ class PolicyEngine:
         try:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
-                stats = conn.execute(text("""
+                stats = conn.execute(
+                    text(
+                        """
                     SELECT
                         (SELECT COUNT(*) FROM policy.temporal_metric_events) as event_count,
                         (SELECT COUNT(*) FROM policy.temporal_metric_windows) as window_count,
@@ -2490,7 +2634,9 @@ class PolicyEngine:
                         (SELECT COUNT(DISTINCT policy_id) FROM policy.temporal_metric_events) as policies_with_events,
                         (SELECT pg_size_pretty(pg_total_relation_size('policy.temporal_metric_events'))) as events_size,
                         (SELECT pg_size_pretty(pg_total_relation_size('policy.temporal_metric_windows'))) as windows_size
-                """)).fetchone()
+                """
+                    )
+                ).fetchone()
 
                 return {
                     "event_count": stats[0],
@@ -2554,21 +2700,30 @@ class PolicyEngine:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 # Get version info
-                version = conn.execute(text("""
+                version = conn.execute(
+                    text(
+                        """
                     SELECT id, version, policy_hash, is_active
                     FROM policy.policy_versions
                     WHERE id = CAST(:id AS UUID) OR version = :id
-                """), {"id": version_id}).fetchone()
+                """
+                    ),
+                    {"id": version_id},
+                ).fetchone()
 
                 if not version:
                     return {"success": False, "error": f"Version {version_id} not found"}
 
                 # CHECK 1: Dependency Closure
-                deps = conn.execute(text("""
+                deps = conn.execute(
+                    text(
+                        """
                     SELECT source_policy, target_policy
                     FROM policy.policy_dependencies
                     WHERE is_active = true
-                """)).fetchall()
+                """
+                    )
+                ).fetchall()
 
                 # Collect all referenced policies
                 referenced = set()
@@ -2579,14 +2734,18 @@ class PolicyEngine:
                 # Check if all referenced policies exist
                 existing = set()
                 for cat_table, name_col in [
-                    ('ethical_constraints', 'name'),
-                    ('safety_rules', 'name'),
-                    ('risk_ceilings', 'name'),
-                    ('business_rules', 'name'),
+                    ("ethical_constraints", "name"),
+                    ("safety_rules", "name"),
+                    ("risk_ceilings", "name"),
+                    ("business_rules", "name"),
                 ]:
-                    rows = conn.execute(text(f"""
+                    rows = conn.execute(
+                        text(
+                            f"""
                         SELECT {name_col} FROM policy.{cat_table} WHERE is_active = true
-                    """))
+                    """
+                        )
+                    )
                     for row in rows:
                         existing.add(row[0])
                         # Also add category-prefixed version
@@ -2602,11 +2761,15 @@ class PolicyEngine:
                     checks["dependency_closure"]["passed"] = True
 
                 # CHECK 2: Conflict Scan
-                unresolved = conn.execute(text("""
+                unresolved = conn.execute(
+                    text(
+                        """
                     SELECT policy_a, policy_b, conflict_type, severity, description
                     FROM policy.policy_conflicts
                     WHERE resolved = false AND severity >= 0.7
-                """)).fetchall()
+                """
+                    )
+                ).fetchall()
 
                 if unresolved:
                     for conflict in unresolved:
@@ -2620,19 +2783,23 @@ class PolicyEngine:
                 # CHECK 3: DAG Validation
                 dag_result = await self.validate_dependency_dag(db)
                 if not dag_result.get("is_dag", False):
-                    checks["dag_validation"]["issues"].extend([
-                        f"Cycle detected: {c['edge']}" for c in dag_result.get("cycles", [])
-                    ])
+                    checks["dag_validation"]["issues"].extend(
+                        [f"Cycle detected: {c['edge']}" for c in dag_result.get("cycles", [])]
+                    )
                     all_passed = False
                 else:
                     checks["dag_validation"]["passed"] = True
 
                 # CHECK 4: Temporal Policy Integrity
-                temporal = conn.execute(text("""
+                temporal = conn.execute(
+                    text(
+                        """
                     SELECT name, metric, max_value, window_seconds, breach_action
                     FROM policy.temporal_policies
                     WHERE is_active = true
-                """)).fetchall()
+                """
+                    )
+                ).fetchall()
 
                 temporal_issues = []
                 for tp in temporal:
@@ -2640,7 +2807,7 @@ class PolicyEngine:
                         temporal_issues.append(f"{tp[0]}: max_value must be positive (got {tp[2]})")
                     if tp[3] <= 0:
                         temporal_issues.append(f"{tp[0]}: window_seconds must be positive (got {tp[3]})")
-                    if tp[4] not in ['block', 'throttle', 'alert', 'escalate']:
+                    if tp[4] not in ["block", "throttle", "alert", "escalate"]:
                         temporal_issues.append(f"{tp[0]}: invalid breach_action '{tp[4]}'")
 
                 if temporal_issues:
@@ -2651,15 +2818,19 @@ class PolicyEngine:
 
                 # CHECK 5: Severity Compatibility
                 # Ensure ethical and compliance constraints have proper escalation paths
-                ethical = conn.execute(text("""
+                ethical = conn.execute(
+                    text(
+                        """
                     SELECT name, enforcement_level, violation_action
                     FROM policy.ethical_constraints
                     WHERE is_active = true
-                """)).fetchall()
+                """
+                    )
+                ).fetchall()
 
                 severity_issues = []
                 for ec in ethical:
-                    if ec[1] == 'strict' and ec[2] not in ['block', 'escalate']:
+                    if ec[1] == "strict" and ec[2] not in ["block", "escalate"]:
                         severity_issues.append(
                             f"Ethical constraint '{ec[0]}' has strict enforcement but action is '{ec[2]}' (should be block/escalate)"
                         )
@@ -2725,23 +2896,37 @@ class PolicyEngine:
 
                 # All checks passed - activate the version
                 # Deactivate current version
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     UPDATE policy.policy_versions SET is_active = false WHERE is_active = true
-                """))
+                """
+                    )
+                )
 
                 # Activate new version
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     UPDATE policy.policy_versions
                     SET is_active = true
                     WHERE id = CAST(:id AS UUID)
-                """), {"id": str(version[0])})
+                """
+                    ),
+                    {"id": str(version[0])},
+                )
 
                 # Record provenance
-                conn.execute(text("""
+                conn.execute(
+                    text(
+                        """
                     INSERT INTO policy.policy_provenance
                     (policy_id, policy_type, action, changed_by, policy_version, reason)
                     VALUES (CAST(:vid AS UUID), 'version', 'activate', :by, :version, 'Pre-activation checks passed')
-                """), {"vid": str(version[0]), "by": activated_by, "version": version[1]})
+                """
+                    ),
+                    {"vid": str(version[0]), "by": activated_by, "version": version[1]},
+                )
 
                 conn.commit()
 
@@ -2778,6 +2963,7 @@ def get_policy_engine() -> PolicyEngine:
         # Wire up M18 Governor for violation routing
         try:
             from app.routing import get_governor
+
             governor = get_governor()
             _policy_engine.set_governor(governor)
             logger.info("M19 Policy Engine connected to M18 Governor")

@@ -10,13 +10,12 @@
 # - Governor integration (freeze on severe violations)
 # - API endpoints
 
-import asyncio
-import pytest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from unittest.mock import AsyncMock
 
-from app.policy.engine import PolicyEngine, get_policy_engine
+import pytest
+
+from app.policy.engine import PolicyEngine
 from app.policy.models import (
     ActionType,
     BusinessRule,
@@ -27,26 +26,24 @@ from app.policy.models import (
     PolicyCategory,
     PolicyDecision,
     PolicyEvaluationRequest,
-    PolicyEvaluationResult,
-    PolicyModification,
     PolicyRule,
     PolicyState,
-    PolicyViolation,
     RiskCeiling,
     SafetyRule,
     SafetyRuleType,
     ViolationType,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def policy_engine():
     """Create a fresh policy engine for testing."""
-    engine = PolicyEngine(database_url=None)  # In-memory mode
+    # Pass empty string to force in-memory mode (None falls back to DATABASE_URL env var)
+    engine = PolicyEngine(database_url="")
     engine._load_default_policies()
     return engine
 
@@ -69,6 +66,7 @@ def policy_engine_with_governor(policy_engine, mock_governor):
 # =============================================================================
 # Policy Evaluation Tests
 # =============================================================================
+
 
 class TestPolicyEvaluation:
     """Test core policy evaluation functionality."""
@@ -125,6 +123,7 @@ class TestPolicyEvaluation:
 # Ethical Constraint Tests
 # =============================================================================
 
+
 class TestEthicalConstraints:
     """Test ethical constraint enforcement."""
 
@@ -161,14 +160,16 @@ class TestEthicalConstraints:
     async def test_transparency_threshold(self, policy_engine):
         """Test transparency threshold enforcement."""
         # Add transparency constraint
-        policy_engine._ethical_constraints.append(EthicalConstraint(
-            name="transparency_test",
-            description="Test transparency",
-            constraint_type=EthicalConstraintType.TRANSPARENCY,
-            transparency_threshold=0.8,
-            enforcement_level="strict",
-            violation_action="block",
-        ))
+        policy_engine._ethical_constraints.append(
+            EthicalConstraint(
+                name="transparency_test",
+                description="Test transparency",
+                constraint_type=EthicalConstraintType.TRANSPARENCY,
+                transparency_threshold=0.8,
+                enforcement_level="strict",
+                violation_action="block",
+            )
+        )
 
         # Low explainability should be blocked
         request = PolicyEvaluationRequest(
@@ -186,6 +187,7 @@ class TestEthicalConstraints:
 # =============================================================================
 # Safety Rule Tests
 # =============================================================================
+
 
 class TestSafetyRules:
     """Test safety rule enforcement."""
@@ -208,13 +210,15 @@ class TestSafetyRules:
     async def test_cooldown_enforcement(self, policy_engine):
         """Test cooldown enforcement after failures."""
         # Add cooldown rule
-        policy_engine._safety_rules.append(SafetyRule(
-            name="test_cooldown",
-            rule_type=SafetyRuleType.COOLDOWN,
-            condition={"failure_count": 3, "window_seconds": 60},
-            action="cooldown",
-            cooldown_seconds=300,
-        ))
+        policy_engine._safety_rules.append(
+            SafetyRule(
+                name="test_cooldown",
+                rule_type=SafetyRuleType.COOLDOWN,
+                condition={"failure_count": 3, "window_seconds": 60},
+                action="cooldown",
+                cooldown_seconds=300,
+            )
+        )
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.EXECUTE,
@@ -253,13 +257,15 @@ class TestSafetyRules:
     async def test_escalation_required(self, policy_engine):
         """Test that high-cost operations require escalation."""
         # Add escalation rule
-        policy_engine._safety_rules.append(SafetyRule(
-            name="high_cost_escalation",
-            rule_type=SafetyRuleType.ESCALATION_REQUIRED,
-            condition={"cost_threshold": 10.0},
-            action="escalate",
-            priority=10,
-        ))
+        policy_engine._safety_rules.append(
+            SafetyRule(
+                name="high_cost_escalation",
+                rule_type=SafetyRuleType.ESCALATION_REQUIRED,
+                condition={"cost_threshold": 10.0},
+                action="escalate",
+                priority=10,
+            )
+        )
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.EXECUTE,
@@ -277,6 +283,7 @@ class TestSafetyRules:
 # Risk Ceiling Tests
 # =============================================================================
 
+
 class TestRiskCeilings:
     """Test risk ceiling enforcement."""
 
@@ -284,13 +291,15 @@ class TestRiskCeilings:
     async def test_cost_ceiling_block(self, policy_engine):
         """Test that cost ceiling breaches are blocked."""
         # Set a very low cost ceiling
-        policy_engine._risk_ceilings = [RiskCeiling(
-            name="test_cost_ceiling",
-            metric="cost_per_hour",
-            max_value=1.0,
-            breach_action="block",
-            window_seconds=3600,
-        )]
+        policy_engine._risk_ceilings = [
+            RiskCeiling(
+                name="test_cost_ceiling",
+                metric="cost_per_hour",
+                max_value=1.0,
+                breach_action="block",
+                window_seconds=3600,
+            )
+        ]
 
         # First request should use up the ceiling
         for _ in range(2):
@@ -308,13 +317,15 @@ class TestRiskCeilings:
     @pytest.mark.asyncio
     async def test_cost_ceiling_throttle(self, policy_engine):
         """Test that cost ceiling can throttle instead of block."""
-        policy_engine._risk_ceilings = [RiskCeiling(
-            name="throttle_ceiling",
-            metric="cost_per_hour",
-            max_value=10.0,
-            breach_action="throttle",
-            window_seconds=3600,
-        )]
+        policy_engine._risk_ceilings = [
+            RiskCeiling(
+                name="throttle_ceiling",
+                metric="cost_per_hour",
+                max_value=10.0,
+                breach_action="throttle",
+                window_seconds=3600,
+            )
+        ]
 
         # Accumulate cost to exceed ceiling
         for _ in range(3):
@@ -332,12 +343,14 @@ class TestRiskCeilings:
     @pytest.mark.asyncio
     async def test_retry_rate_ceiling(self, policy_engine):
         """Test retry rate ceiling."""
-        policy_engine._risk_ceilings = [RiskCeiling(
-            name="retry_ceiling",
-            metric="retries_per_minute",
-            max_value=5,
-            breach_action="block",
-        )]
+        policy_engine._risk_ceilings = [
+            RiskCeiling(
+                name="retry_ceiling",
+                metric="retries_per_minute",
+                max_value=5,
+                breach_action="block",
+            )
+        ]
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.EXECUTE,
@@ -355,18 +368,21 @@ class TestRiskCeilings:
 # Business Rule Tests
 # =============================================================================
 
+
 class TestBusinessRules:
     """Test business rule enforcement."""
 
     @pytest.mark.asyncio
     async def test_budget_rule(self, policy_engine):
         """Test daily budget enforcement."""
-        policy_engine._business_rules = [BusinessRule(
-            name="daily_budget",
-            rule_type=BusinessRuleType.BUDGET,
-            condition={},
-            constraint={"max_daily_budget": 100.0},
-        )]
+        policy_engine._business_rules = [
+            BusinessRule(
+                name="daily_budget",
+                rule_type=BusinessRuleType.BUDGET,
+                condition={},
+                constraint={"max_daily_budget": 100.0},
+            )
+        ]
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.EXECUTE,
@@ -383,12 +399,14 @@ class TestBusinessRules:
     @pytest.mark.asyncio
     async def test_tier_access_rule(self, policy_engine):
         """Test tier access enforcement."""
-        policy_engine._business_rules = [BusinessRule(
-            name="enterprise_feature",
-            rule_type=BusinessRuleType.TIER_ACCESS,
-            condition={},
-            constraint={"required_tier": "enterprise"},
-        )]
+        policy_engine._business_rules = [
+            BusinessRule(
+                name="enterprise_feature",
+                rule_type=BusinessRuleType.TIER_ACCESS,
+                condition={},
+                constraint={"required_tier": "enterprise"},
+            )
+        ]
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.EXECUTE,
@@ -404,12 +422,14 @@ class TestBusinessRules:
     @pytest.mark.asyncio
     async def test_feature_gate(self, policy_engine):
         """Test feature gate enforcement."""
-        policy_engine._business_rules = [BusinessRule(
-            name="beta_feature_gate",
-            rule_type=BusinessRuleType.FEATURE_GATE,
-            condition={"feature": "self_modify"},
-            constraint={"enabled": False},
-        )]
+        policy_engine._business_rules = [
+            BusinessRule(
+                name="beta_feature_gate",
+                rule_type=BusinessRuleType.FEATURE_GATE,
+                condition={"feature": "self_modify"},
+                constraint={"enabled": False},
+            )
+        ]
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.SELF_MODIFY,
@@ -425,6 +445,7 @@ class TestBusinessRules:
 # =============================================================================
 # Governor Integration Tests
 # =============================================================================
+
 
 class TestGovernorIntegration:
     """Test M18 Governor integration."""
@@ -464,6 +485,7 @@ class TestGovernorIntegration:
 # =============================================================================
 # State and Metrics Tests
 # =============================================================================
+
 
 class TestStateAndMetrics:
     """Test state and metrics functionality."""
@@ -517,6 +539,7 @@ class TestStateAndMetrics:
 # Reload and Cache Tests
 # =============================================================================
 
+
 class TestCacheAndReload:
     """Test policy caching and reloading."""
 
@@ -534,21 +557,26 @@ class TestCacheAndReload:
 # Compliance Tests
 # =============================================================================
 
+
 class TestComplianceRules:
     """Test compliance policy enforcement."""
 
     @pytest.mark.asyncio
     async def test_data_category_restriction(self, policy_engine):
         """Test forbidden data category blocking."""
-        policy_engine._policies = [Policy(
-            name="pii_restriction",
-            category=PolicyCategory.COMPLIANCE,
-            rules=[PolicyRule(
-                name="no_pii_external",
-                condition={"forbidden_data_categories": ["pii", "financial"]},
-                action=PolicyDecision.BLOCK,
-            )],
-        )]
+        policy_engine._policies = [
+            Policy(
+                name="pii_restriction",
+                category=PolicyCategory.COMPLIANCE,
+                rules=[
+                    PolicyRule(
+                        name="no_pii_external",
+                        condition={"forbidden_data_categories": ["pii", "financial"]},
+                        action=PolicyDecision.BLOCK,
+                    )
+                ],
+            )
+        ]
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.EXTERNAL_CALL,
@@ -564,15 +592,19 @@ class TestComplianceRules:
     @pytest.mark.asyncio
     async def test_jurisdiction_restriction(self, policy_engine):
         """Test jurisdiction compliance."""
-        policy_engine._policies = [Policy(
-            name="gdpr_compliance",
-            category=PolicyCategory.COMPLIANCE,
-            rules=[PolicyRule(
-                name="eu_only",
-                condition={"allowed_jurisdictions": ["EU", "US"]},
-                action=PolicyDecision.BLOCK,
-            )],
-        )]
+        policy_engine._policies = [
+            Policy(
+                name="gdpr_compliance",
+                category=PolicyCategory.COMPLIANCE,
+                rules=[
+                    PolicyRule(
+                        name="eu_only",
+                        condition={"allowed_jurisdictions": ["EU", "US"]},
+                        action=PolicyDecision.BLOCK,
+                    )
+                ],
+            )
+        ]
 
         request = PolicyEvaluationRequest(
             action_type=ActionType.DATA_ACCESS,
@@ -589,6 +621,7 @@ class TestComplianceRules:
 # =============================================================================
 # Edge Case Tests
 # =============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases and error handling."""
@@ -639,6 +672,7 @@ class TestEdgeCases:
 # AsyncSession Regression Test (CI guardrail)
 # =============================================================================
 
+
 class TestAsyncSessionGuardrail:
     """Ensure policy endpoints use AsyncSession - prevents sync DB regression."""
 
@@ -654,6 +688,7 @@ class TestAsyncSessionGuardrail:
         If this test fails, someone has regressed to sync sessions.
         """
         import inspect
+
         from app.api.policy import evaluate_policy, get_approval_request
 
         # Check evaluate_policy signature
@@ -667,9 +702,7 @@ class TestAsyncSessionGuardrail:
         # Check get_approval_request signature
         sig = inspect.signature(get_approval_request)
         params_str = str(sig)
-        assert "AsyncSession" in params_str, (
-            "get_approval_request must use AsyncSession dependency injection."
-        )
+        assert "AsyncSession" in params_str, "get_approval_request must use AsyncSession dependency injection."
 
     def test_no_sync_session_import_in_policy_api(self):
         """Ensure policy.py doesn't import sync Session from sqlmodel."""

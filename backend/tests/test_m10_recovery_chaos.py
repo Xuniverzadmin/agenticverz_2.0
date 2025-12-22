@@ -16,16 +16,16 @@ Note: Some tests require Redis/PostgreSQL to be available.
 Skip with: pytest tests/test_m10_recovery_chaos.py -v -m "not integration"
 """
 
-import asyncio
 import hashlib
 import os
-import pytest
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import List, Dict, Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any, Dict
+from unittest.mock import patch
+
+import pytest
 
 # Mark all tests as integration tests (require external services)
 pytestmark = pytest.mark.integration
@@ -34,6 +34,7 @@ pytestmark = pytest.mark.integration
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def db_url():
@@ -50,6 +51,7 @@ def redis_url():
 # =============================================================================
 # Test: Concurrent Upsert Correctness
 # =============================================================================
+
 
 class TestConcurrentUpsert:
     """Test atomic upsert behavior under concurrent load."""
@@ -75,17 +77,24 @@ class TestConcurrentUpsert:
 
         # Clean up any existing test data
         with Session(engine) as session:
-            session.execute(text("""
+            session.execute(
+                text(
+                    """
                 DELETE FROM recovery_candidates
                 WHERE error_signature = :sig
-            """), {"sig": error_signature})
+            """
+                ),
+                {"sig": error_signature},
+            )
             session.commit()
 
         def do_upsert(worker_id: int) -> Dict[str, Any]:
             """Single upsert operation."""
             with Session(engine) as session:
                 try:
-                    result = session.execute(text("""
+                    result = session.execute(
+                        text(
+                            """
                         INSERT INTO recovery_candidates (
                             failure_match_id, suggestion, confidence, explain,
                             error_code, error_signature, source, created_by,
@@ -102,15 +111,18 @@ class TestConcurrentUpsert:
                             last_occurrence_at = now(),
                             updated_at = now()
                         RETURNING id, (xmax = 0) AS is_insert, occurrence_count
-                    """), {
-                        "failure_match_id": failure_match_id,
-                        "suggestion": f"Test suggestion {test_id}",
-                        "confidence": 0.5,
-                        "explain": '{"test": true}',
-                        "error_code": "TEST_ERROR",
-                        "error_signature": error_signature,
-                        "source": "chaos_test",
-                    })
+                    """
+                        ),
+                        {
+                            "failure_match_id": failure_match_id,
+                            "suggestion": f"Test suggestion {test_id}",
+                            "confidence": 0.5,
+                            "explain": '{"test": true}',
+                            "error_code": "TEST_ERROR",
+                            "error_signature": error_signature,
+                            "source": "chaos_test",
+                        },
+                    )
                     row = result.fetchone()
                     session.commit()
                     return {
@@ -143,24 +155,35 @@ class TestConcurrentUpsert:
 
         # Verify final occurrence_count
         with Session(engine) as session:
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 SELECT occurrence_count FROM recovery_candidates
                 WHERE error_signature = :sig
-            """), {"sig": error_signature})
+            """
+                ),
+                {"sig": error_signature},
+            )
             row = result.fetchone()
             assert row is not None, "Candidate not found"
             assert row[0] == 100, f"Expected occurrence_count=100, got {row[0]}"
 
             # Cleanup
-            session.execute(text("""
+            session.execute(
+                text(
+                    """
                 DELETE FROM recovery_candidates WHERE error_signature = :sig
-            """), {"sig": error_signature})
+            """
+                ),
+                {"sig": error_signature},
+            )
             session.commit()
 
 
 # =============================================================================
 # Test: Dead-Letter Replay Idempotence
 # =============================================================================
+
 
 class TestDeadLetterReplayIdempotence:
     """Test that dead-letter replay is idempotent."""
@@ -172,14 +195,13 @@ class TestDeadLetterReplayIdempotence:
             pytest.skip("REDIS_URL not configured")
 
         from app.tasks.recovery_queue_stream import (
+            DEAD_LETTER_STREAM,
+            REPLAY_TRACKING_KEY,
+            STREAM_KEY,
+            ensure_consumer_group,
             get_redis,
             move_to_dead_letter,
             replay_dead_letter,
-            STREAM_KEY,
-            DEAD_LETTER_STREAM,
-            CONSUMER_GROUP,
-            ensure_consumer_group,
-            REPLAY_TRACKING_KEY,
         )
 
         redis = await get_redis()
@@ -232,16 +254,16 @@ class TestDeadLetterReplayIdempotence:
 # Test: Exponential Backoff
 # =============================================================================
 
+
 class TestExponentialBackoff:
     """Test exponential backoff calculations."""
 
     def test_backoff_calculation_progression(self):
         """Verify backoff increases exponentially."""
         from app.tasks.recovery_queue_stream import (
-            calculate_backoff_ms,
-            RECLAIM_BASE_BACKOFF_MS,
-            RECLAIM_MAX_BACKOFF_MS,
             CLAIM_IDLE_MS,
+            RECLAIM_MAX_BACKOFF_MS,
+            calculate_backoff_ms,
         )
 
         # First reclaim uses default idle time
@@ -253,8 +275,7 @@ class TestExponentialBackoff:
         # Each backoff should be roughly 2x the previous (up to max)
         for i in range(1, len(backoffs)):
             if backoffs[i] < RECLAIM_MAX_BACKOFF_MS:
-                assert backoffs[i] >= backoffs[i-1], \
-                    f"Backoff should increase: {backoffs[i-1]} -> {backoffs[i]}"
+                assert backoffs[i] >= backoffs[i - 1], f"Backoff should increase: {backoffs[i-1]} -> {backoffs[i]}"
 
         # Should eventually hit max
         assert calculate_backoff_ms(100) == RECLAIM_MAX_BACKOFF_MS
@@ -266,9 +287,9 @@ class TestExponentialBackoff:
             pytest.skip("REDIS_URL not configured")
 
         from app.tasks.recovery_queue_stream import (
+            clear_reclaim_attempts,
             get_reclaim_attempts,
             increment_reclaim_attempts,
-            clear_reclaim_attempts,
         )
 
         test_msg_id = f"test-{uuid.uuid4()}"
@@ -298,6 +319,7 @@ class TestExponentialBackoff:
 # Test: Redis Crash Fallback to DB
 # =============================================================================
 
+
 class TestRedisFailoverToDb:
     """Test DB fallback when Redis is unavailable."""
 
@@ -310,7 +332,7 @@ class TestRedisFailoverToDb:
         from app.api.recovery_ingest import _enqueue_evaluation_async
 
         # Mock Redis to fail
-        with patch('app.tasks.recovery_queue_stream.get_redis') as mock_redis:
+        with patch("app.tasks.recovery_queue_stream.get_redis") as mock_redis:
             mock_redis.side_effect = Exception("Redis connection refused")
 
             # Enqueue should fall back to DB
@@ -337,9 +359,13 @@ class TestRedisFailoverToDb:
         # Check if work_queue table exists
         with Session(engine) as session:
             try:
-                result = session.execute(text("""
+                result = session.execute(
+                    text(
+                        """
                     SELECT COUNT(*) FROM m10_recovery.work_queue LIMIT 1
-                """))
+                """
+                    )
+                )
                 result.fetchone()
             except Exception:
                 pytest.skip("m10_recovery.work_queue table not found")
@@ -347,9 +373,13 @@ class TestRedisFailoverToDb:
         # Test claim function exists and works
         with Session(engine) as session:
             try:
-                result = session.execute(text("""
+                result = session.execute(
+                    text(
+                        """
                     SELECT * FROM m10_recovery.claim_work('test-worker', 1)
-                """))
+                """
+                    )
+                )
                 # Should not error
                 list(result)
             except Exception as e:
@@ -359,6 +389,7 @@ class TestRedisFailoverToDb:
 # =============================================================================
 # Test: Worker Execution Guard
 # =============================================================================
+
 
 class TestWorkerExecutionGuard:
     """Test exactly-once execution guard for workers."""
@@ -379,7 +410,9 @@ class TestWorkerExecutionGuard:
         candidate_id = None
 
         with Session(engine) as session:
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 INSERT INTO recovery_candidates (
                     failure_match_id, suggestion, confidence, explain,
                     error_code, error_signature, source, created_by,
@@ -390,26 +423,41 @@ class TestWorkerExecutionGuard:
                     'pending'
                 )
                 RETURNING id
-            """), {
-                "fmid": test_id,
-                "sig": test_id[:16],
-            })
+            """
+                ),
+                {
+                    "fmid": test_id,
+                    "sig": test_id[:16],
+                },
+            )
             candidate_id = result.fetchone()[0]
             session.commit()
 
         assert candidate_id is not None
 
         def attempt_claim(worker_name: str) -> bool:
-            """Attempt to claim candidate for execution."""
+            """Attempt to claim candidate for execution using proper row locking."""
             with Session(engine) as session:
-                result = session.execute(text("""
-                    UPDATE recovery_candidates
+                # Use SELECT FOR UPDATE SKIP LOCKED to properly serialize claims
+                # This ensures only one worker can claim the row
+                result = session.execute(
+                    text(
+                        """
+                    WITH claimed AS (
+                        SELECT id FROM recovery_candidates
+                        WHERE id = :id AND execution_status = 'pending'
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    UPDATE recovery_candidates rc
                     SET execution_status = 'executing',
                         updated_at = now()
-                    WHERE id = :id
-                      AND (executed_at IS NULL OR execution_status = 'pending')
-                    RETURNING id
-                """), {"id": candidate_id})
+                    FROM claimed
+                    WHERE rc.id = claimed.id
+                    RETURNING rc.id
+                """
+                    ),
+                    {"id": candidate_id},
+                )
                 row = result.fetchone()
                 session.commit()
                 return row is not None
@@ -425,15 +473,21 @@ class TestWorkerExecutionGuard:
 
         # Cleanup
         with Session(engine) as session:
-            session.execute(text("""
+            session.execute(
+                text(
+                    """
                 DELETE FROM recovery_candidates WHERE id = :id
-            """), {"id": candidate_id})
+            """
+                ),
+                {"id": candidate_id},
+            )
             session.commit()
 
 
 # =============================================================================
 # Test: Load Test - High Volume Ingest
 # =============================================================================
+
 
 class TestHighVolumeIngest:
     """Load tests for high-volume ingestion."""
@@ -445,10 +499,11 @@ class TestHighVolumeIngest:
         if not db_url:
             pytest.skip("DATABASE_URL not configured")
 
-        from sqlalchemy import text
-        from sqlmodel import Session, create_engine
         import hashlib
         import json
+
+        from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True, pool_size=50, max_overflow=50)
 
@@ -462,7 +517,9 @@ class TestHighVolumeIngest:
             with Session(engine) as session:
                 try:
                     start = time.perf_counter()
-                    result = session.execute(text("""
+                    result = session.execute(
+                        text(
+                            """
                         INSERT INTO recovery_candidates (
                             failure_match_id, suggestion, confidence, explain,
                             error_code, error_signature, source, created_by,
@@ -476,15 +533,18 @@ class TestHighVolumeIngest:
                         SET occurrence_count = recovery_candidates.occurrence_count + 1,
                             last_occurrence_at = now()
                         RETURNING id
-                    """), {
-                        "fmid": failure_match_id,
-                        "suggestion": f"Load test {i}",
-                        "confidence": 0.5,
-                        "explain": json.dumps({"batch": test_batch, "index": i}),
-                        "error_code": "LOAD_TEST",
-                        "sig": sig,
-                        "source": "load_test",
-                    })
+                    """
+                        ),
+                        {
+                            "fmid": failure_match_id,
+                            "suggestion": f"Load test {i}",
+                            "confidence": 0.5,
+                            "explain": json.dumps({"batch": test_batch, "index": i}),
+                            "error_code": "LOAD_TEST",
+                            "sig": sig,
+                            "source": "load_test",
+                        },
+                    )
                     cid = result.fetchone()[0]
                     session.commit()
                     duration = time.perf_counter() - start
@@ -507,7 +567,7 @@ class TestHighVolumeIngest:
         successes = [r for r in results if not r.get("error")]
         durations = [r["duration_ms"] for r in successes if r.get("duration_ms")]
 
-        print(f"\n=== Load Test Results ===")
+        print("\n=== Load Test Results ===")
         print(f"Total time: {total_time:.2f}s")
         print(f"Throughput: {1000/total_time:.1f} req/s")
         print(f"Successes: {len(successes)}")
@@ -522,11 +582,16 @@ class TestHighVolumeIngest:
 
         # Cleanup
         with Session(engine) as session:
-            result = session.execute(text("""
+            result = session.execute(
+                text(
+                    """
                 DELETE FROM recovery_candidates
                 WHERE source = 'load_test'
                   AND explain->>'batch' = :batch
-            """), {"batch": test_batch})
+            """
+                ),
+                {"batch": test_batch},
+            )
             deleted = result.rowcount
             session.commit()
             print(f"Cleaned up {deleted} test records")
@@ -535,6 +600,7 @@ class TestHighVolumeIngest:
 # =============================================================================
 # Test: Metrics Collection
 # =============================================================================
+
 
 class TestMetricsCollection:
     """Test that metrics are collected correctly."""

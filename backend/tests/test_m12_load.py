@@ -4,30 +4,30 @@
 # Based on: PIN-063-m12.1-stabilization.md
 # Purpose: Validate FOR UPDATE SKIP LOCKED under production-like load
 
-import asyncio
-import json
 import os
-import pytest
 import random
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone, timedelta
-from decimal import Decimal
 from typing import Any, Dict, List, Tuple
 from uuid import UUID, uuid4
 
+import pytest
+
 # Set test environment
-os.environ.setdefault("DATABASE_URL", "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require")
+os.environ.setdefault(
+    "DATABASE_URL",
+    "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
+)
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from app.agents.services.job_service import JobService, JobConfig, JobProgress, get_job_service
-from app.agents.services.worker_service import WorkerService, get_worker_service
-from app.agents.services.blackboard_service import BlackboardService, get_blackboard_service
+from app.agents.services.blackboard_service import get_blackboard_service
 from app.agents.services.credit_service import CreditService, get_credit_service
+from app.agents.services.job_service import JobConfig, JobService, get_job_service
+from app.agents.services.worker_service import WorkerService, get_worker_service
 
 # Test configuration
 LOAD_TEST_ITEMS = int(os.environ.get("LOAD_TEST_ITEMS", "1000"))
@@ -76,8 +76,12 @@ class LoadTestMetrics:
                 "errors": len(self.errors),
                 "avg_claim_ms": sum(self.claim_times) / len(self.claim_times) if self.claim_times else 0,
                 "max_claim_ms": max(self.claim_times) if self.claim_times else 0,
-                "avg_completion_ms": sum(self.completion_times) / len(self.completion_times) if self.completion_times else 0,
-                "p95_claim_ms": sorted(self.claim_times)[int(len(self.claim_times) * 0.95)] if len(self.claim_times) > 20 else 0,
+                "avg_completion_ms": sum(self.completion_times) / len(self.completion_times)
+                if self.completion_times
+                else 0,
+                "p95_claim_ms": sorted(self.claim_times)[int(len(self.claim_times) * 0.95)]
+                if len(self.claim_times) > 20
+                else 0,
             }
 
 
@@ -145,8 +149,13 @@ def credit_service():
     return get_credit_service()
 
 
+@pytest.mark.slow
 class TestM12HighConcurrency:
-    """High-concurrency load tests for M12 multi-agent system."""
+    """High-concurrency load tests for M12 multi-agent system.
+
+    These are stress tests designed for load testing, not CI. Run with:
+    LOAD_TEST_ITEMS=100 LOAD_TEST_WORKERS=10 pytest tests/test_m12_load.py -v
+    """
 
     @pytest.mark.timeout(LOAD_TEST_TIMEOUT + 30)
     def test_concurrent_job_claim_1000x50(
@@ -218,7 +227,7 @@ class TestM12HighConcurrency:
         summary = metrics.summary()
 
         # Print results
-        print(f"\n[LOAD TEST RESULTS]")
+        print("\n[LOAD TEST RESULTS]")
         print(f"  Duration: {elapsed:.2f}s")
         print(f"  Items: {LOAD_TEST_ITEMS}")
         print(f"  Workers: {LOAD_TEST_WORKERS}")
@@ -232,20 +241,24 @@ class TestM12HighConcurrency:
         print(f"  Throughput: {summary['claims'] / elapsed:.1f} items/sec")
 
         # Assertions
-        assert summary['double_claims'] == 0, f"Double claims detected: {summary['double_claims']}"
-        assert summary['claims'] == LOAD_TEST_ITEMS, f"Not all items claimed: {summary['claims']}/{LOAD_TEST_ITEMS}"
-        assert summary['completions'] == LOAD_TEST_ITEMS, f"Not all items completed: {summary['completions']}/{LOAD_TEST_ITEMS}"
+        assert summary["double_claims"] == 0, f"Double claims detected: {summary['double_claims']}"
+        assert summary["claims"] == LOAD_TEST_ITEMS, f"Not all items claimed: {summary['claims']}/{LOAD_TEST_ITEMS}"
+        assert (
+            summary["completions"] == LOAD_TEST_ITEMS
+        ), f"Not all items completed: {summary['completions']}/{LOAD_TEST_ITEMS}"
 
-        error_rate = summary['errors'] / max(summary['claims'], 1)
+        error_rate = summary["errors"] / max(summary["claims"], 1)
         assert error_rate < 0.01, f"Error rate too high: {error_rate:.2%}"
 
         # Verify job status
         job = job_service.get_job(job_id)
         assert job is not None
         # Job should be completed
-        assert job.progress.completed == LOAD_TEST_ITEMS, f"Job completed mismatch: {job.progress.completed}/{LOAD_TEST_ITEMS}"
+        assert (
+            job.progress.completed == LOAD_TEST_ITEMS
+        ), f"Job completed mismatch: {job.progress.completed}/{LOAD_TEST_ITEMS}"
 
-        print(f"\n[LOAD TEST] ✓ PASSED - No double claims, all items processed")
+        print("\n[LOAD TEST] ✓ PASSED - No double claims, all items processed")
 
     @pytest.mark.timeout(60)
     def test_concurrent_blackboard_operations(self):
@@ -274,7 +287,7 @@ class TestM12HighConcurrency:
                     success = blackboard.write(job_id, f"{key}_{writer_id}_{i}", value)
                     with lock:
                         results.append((f"{writer_id}_{i}", success))
-                except Exception as e:
+                except Exception:
                     with lock:
                         results.append((f"{writer_id}_{i}", False))
 
@@ -290,7 +303,7 @@ class TestM12HighConcurrency:
         success_count = sum(1 for _, s in results if s)
         total = num_writers * writes_per_writer
 
-        print(f"\n[BLACKBOARD LOAD TEST]")
+        print("\n[BLACKBOARD LOAD TEST]")
         print(f"  Writers: {num_writers}")
         print(f"  Writes/writer: {writes_per_writer}")
         print(f"  Total writes: {total}")
@@ -325,7 +338,7 @@ class TestM12HighConcurrency:
         assert expected_channel.replace("_", "").isalnum(), "Channel name has invalid chars"
 
         print(f"\n[NOTIFY TEST] Channel: {expected_channel}")
-        print(f"  ✓ Channel naming valid")
+        print("  ✓ Channel naming valid")
 
         # Test respond_to_invoke doesn't crash with invalid invoke_id
         result = AgentInvokeSkill.respond_to_invoke(
@@ -334,11 +347,15 @@ class TestM12HighConcurrency:
             database_url=db_url,
         )
         assert result is False, "Should return False for nonexistent invoke"
-        print(f"  ✓ respond_to_invoke handles missing invokes correctly")
+        print("  ✓ respond_to_invoke handles missing invokes correctly")
 
 
+@pytest.mark.slow
 class TestM12StressPatterns:
-    """Stress test specific patterns from M12."""
+    """Stress test specific patterns from M12.
+
+    These are stress tests designed for validating concurrent access patterns.
+    """
 
     @pytest.mark.timeout(30)
     def test_for_update_skip_locked_correctness(self, job_service: JobService):
@@ -375,7 +392,8 @@ class TestM12StressPatterns:
             with Session() as session:
                 try:
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                             UPDATE agents.job_items
                             SET status = 'claimed',
                                 worker_instance_id = :worker_id,
@@ -388,8 +406,9 @@ class TestM12StressPatterns:
                                 FOR UPDATE SKIP LOCKED
                             )
                             RETURNING id::text
-                        """),
-                        {"job_id": str(job_id), "worker_id": worker_id}
+                        """
+                        ),
+                        {"job_id": str(job_id), "worker_id": worker_id},
                     )
                     row = result.fetchone()
                     session.commit()
@@ -397,23 +416,20 @@ class TestM12StressPatterns:
                     if row:
                         with lock:
                             claimed_ids.append(row[0])
-                except Exception as e:
+                except Exception:
                     session.rollback()
 
         # Race 50 threads to claim 10 items
         with ThreadPoolExecutor(max_workers=50) as executor:
-            futures = [
-                executor.submit(claim_one, f"worker_{i}")
-                for i in range(50)
-            ]
+            futures = [executor.submit(claim_one, f"worker_{i}") for i in range(50)]
             for f in as_completed(futures, timeout=10):
                 f.result()
 
         # Verify exactly 10 unique claims (no duplicates)
         assert len(claimed_ids) == 10, f"Expected 10 claims, got {len(claimed_ids)}"
-        assert len(set(claimed_ids)) == 10, f"Duplicate claims detected"
+        assert len(set(claimed_ids)) == 10, "Duplicate claims detected"
 
-        print(f"\n[SKIP LOCKED TEST] ✓ 10 items claimed by 50 racing threads with no duplicates")
+        print("\n[SKIP LOCKED TEST] ✓ 10 items claimed by 50 racing threads with no duplicates")
 
     @pytest.mark.timeout(30)
     def test_job_cancellation_under_load(

@@ -20,39 +20,69 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
-from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram
 
 logger = logging.getLogger("nova.memory.drift_detector")
 
 # =============================================================================
-# Prometheus Metrics
+# Prometheus Metrics (with idempotent registration to prevent test conflicts)
 # =============================================================================
 
-DRIFT_COMPARISONS = Counter(
-    "drift_comparisons_total",
-    "Total drift comparisons",
-    ["status"]
+
+def _find_existing_metric(name: str):
+    """Find an existing metric in the registry by name.
+
+    Note: Prometheus registers metrics under multiple keys (base name, _total, _created).
+    The collector's _name attribute contains the base name, not the suffixed versions.
+    So we check for both: the base name as _name attribute, or direct registry key lookup.
+    """
+    # First check if base name is in registry keys
+    if name in REGISTRY._names_to_collectors:
+        return REGISTRY._names_to_collectors[name]
+
+    # Also check collector's _name attribute (for base name)
+    for collector in list(REGISTRY._names_to_collectors.values()):
+        if hasattr(collector, "_name") and collector._name == name:
+            return collector
+    return None
+
+
+def _get_or_create_counter(name: str, documentation: str, labelnames: list) -> Counter:
+    """Get existing counter or create new one - idempotent."""
+    existing = _find_existing_metric(name)
+    if existing is not None:
+        return existing
+    return Counter(name, documentation, labelnames)
+
+
+def _get_or_create_gauge(name: str, documentation: str, labelnames: list) -> Gauge:
+    """Get existing gauge or create new one - idempotent."""
+    existing = _find_existing_metric(name)
+    if existing is not None:
+        return existing
+    return Gauge(name, documentation, labelnames)
+
+
+def _get_or_create_histogram(name: str, documentation: str, buckets: list) -> Histogram:
+    """Get existing histogram or create new one - idempotent."""
+    existing = _find_existing_metric(name)
+    if existing is not None:
+        return existing
+    return Histogram(name, documentation, buckets=buckets)
+
+
+DRIFT_COMPARISONS = _get_or_create_counter("drift_comparisons_total", "Total drift comparisons", ["status"])
+
+DRIFT_DETECTED = _get_or_create_counter(
+    "drift_detector_detected_total", "Total drift detections from DriftDetector", ["severity", "component"]
 )
 
-DRIFT_DETECTED = Counter(
-    "drift_detected_total",
-    "Total drift detections",
-    ["severity", "component"]
-)
+DRIFT_SCORE = _get_or_create_gauge("drift_score_current", "Current drift score (0-100)", ["workflow_id"])
 
-DRIFT_SCORE = Gauge(
-    "drift_score_current",
-    "Current drift score (0-100)",
-    ["workflow_id"]
-)
-
-DRIFT_LATENCY = Histogram(
-    "drift_comparison_latency_seconds",
-    "Drift comparison latency",
-    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+DRIFT_LATENCY = _get_or_create_histogram(
+    "drift_comparison_latency_seconds", "Drift comparison latency", [0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
 )
 
 
@@ -60,9 +90,11 @@ DRIFT_LATENCY = Histogram(
 # Data Classes
 # =============================================================================
 
+
 @dataclass
 class TraceStep:
     """Single step in an execution trace."""
+
     index: int
     skill: str
     params: Dict[str, Any]
@@ -75,6 +107,7 @@ class TraceStep:
 @dataclass
 class ExecutionTrace:
     """Complete execution trace."""
+
     workflow_id: str
     agent_id: Optional[str]
     steps: List[TraceStep]
@@ -87,6 +120,7 @@ class ExecutionTrace:
 @dataclass
 class DriftPoint:
     """Point where drift was detected."""
+
     step_index: int
     field_path: str
     baseline_value: Any
@@ -98,6 +132,7 @@ class DriftPoint:
 @dataclass
 class DriftResult:
     """Result of drift comparison."""
+
     has_drift: bool
     drift_score: float  # 0-100, higher = more drift
     drift_points: List[DriftPoint]
@@ -126,6 +161,7 @@ class DriftResult:
 # Drift Detector
 # =============================================================================
 
+
 class DriftDetector:
     """
     Detects determinism drift between execution traces.
@@ -139,17 +175,22 @@ class DriftDetector:
 
     # Default fields to ignore when comparing
     DEFAULT_IGNORED_FIELDS: Set[str] = {
-        "timestamp", "ts", "created_at", "updated_at",
-        "execution_time", "duration_ms", "latency_ms",
-        "request_id", "trace_id", "span_id",
-        "memory_context", "context_injected", "memories_loaded"
+        "timestamp",
+        "ts",
+        "created_at",
+        "updated_at",
+        "execution_time",
+        "duration_ms",
+        "latency_ms",
+        "request_id",
+        "trace_id",
+        "span_id",
+        "memory_context",
+        "context_injected",
+        "memories_loaded",
     }
 
-    def __init__(
-        self,
-        ignored_fields: Optional[Set[str]] = None,
-        drift_threshold: float = 5.0
-    ):
+    def __init__(self, ignored_fields: Optional[Set[str]] = None, drift_threshold: float = 5.0):
         """
         Initialize drift detector.
 
@@ -162,11 +203,7 @@ class DriftDetector:
             self._ignored.update(ignored_fields)
         self._threshold = drift_threshold
 
-    def compare(
-        self,
-        baseline: ExecutionTrace,
-        memory_enabled: ExecutionTrace
-    ) -> DriftResult:
+    def compare(self, baseline: ExecutionTrace, memory_enabled: ExecutionTrace) -> DriftResult:
         """
         Compare two traces for drift.
 
@@ -178,6 +215,7 @@ class DriftDetector:
             DriftResult with comparison details
         """
         import time
+
         start_time = time.time()
 
         try:
@@ -185,14 +223,16 @@ class DriftDetector:
 
             # Compare step counts
             if len(baseline.steps) != len(memory_enabled.steps):
-                drift_points.append(DriftPoint(
-                    step_index=-1,
-                    field_path="steps.length",
-                    baseline_value=len(baseline.steps),
-                    memory_value=len(memory_enabled.steps),
-                    severity="high",
-                    category="behavior"
-                ))
+                drift_points.append(
+                    DriftPoint(
+                        step_index=-1,
+                        field_path="steps.length",
+                        baseline_value=len(baseline.steps),
+                        memory_value=len(memory_enabled.steps),
+                        severity="high",
+                        category="behavior",
+                    )
+                )
 
             # Compare steps
             for i, (b_step, m_step) in enumerate(zip(baseline.steps, memory_enabled.steps)):
@@ -200,11 +240,7 @@ class DriftDetector:
                 drift_points.extend(step_drifts)
 
             # Compare final state
-            state_drifts = self._compare_dicts(
-                baseline.final_state,
-                memory_enabled.final_state,
-                "final_state"
-            )
+            state_drifts = self._compare_dicts(baseline.final_state, memory_enabled.final_state, "final_state")
             drift_points.extend(state_drifts)
 
             # Calculate drift score
@@ -224,19 +260,14 @@ class DriftDetector:
                 baseline_hash=baseline_hash,
                 memory_hash=memory_hash,
                 comparison_time_ms=(time.time() - start_time) * 1000,
-                ignored_fields=list(self._ignored)
+                ignored_fields=list(self._ignored),
             )
 
             # Record metrics
-            DRIFT_COMPARISONS.labels(
-                status="drift" if has_drift else "no_drift"
-            ).inc()
+            DRIFT_COMPARISONS.labels(status="drift" if has_drift else "no_drift").inc()
 
             if has_drift:
-                DRIFT_DETECTED.labels(
-                    severity=result.severity,
-                    component="unknown"
-                ).inc()
+                DRIFT_DETECTED.labels(severity=result.severity, component="unknown").inc()
                 DRIFT_SCORE.labels(workflow_id=baseline.workflow_id).set(drift_score)
 
             DRIFT_LATENCY.observe(time.time() - start_time)
@@ -249,8 +280,8 @@ class DriftDetector:
                     "drift_score": drift_score,
                     "drift_points": len(drift_points),
                     "baseline_hash": baseline_hash,
-                    "memory_hash": memory_hash
-                }
+                    "memory_hash": memory_hash,
+                },
             )
 
             return result
@@ -260,71 +291,59 @@ class DriftDetector:
             DRIFT_COMPARISONS.labels(status="error").inc()
             raise
 
-    def _compare_steps(
-        self,
-        index: int,
-        baseline: TraceStep,
-        memory: TraceStep
-    ) -> List[DriftPoint]:
+    def _compare_steps(self, index: int, baseline: TraceStep, memory: TraceStep) -> List[DriftPoint]:
         """Compare two trace steps."""
         drifts = []
 
         # Compare skill
         if baseline.skill != memory.skill:
-            drifts.append(DriftPoint(
-                step_index=index,
-                field_path=f"steps[{index}].skill",
-                baseline_value=baseline.skill,
-                memory_value=memory.skill,
-                severity="critical",
-                category="behavior"
-            ))
+            drifts.append(
+                DriftPoint(
+                    step_index=index,
+                    field_path=f"steps[{index}].skill",
+                    baseline_value=baseline.skill,
+                    memory_value=memory.skill,
+                    severity="critical",
+                    category="behavior",
+                )
+            )
 
         # Compare params
-        param_drifts = self._compare_dicts(
-            baseline.params,
-            memory.params,
-            f"steps[{index}].params"
-        )
+        param_drifts = self._compare_dicts(baseline.params, memory.params, f"steps[{index}].params")
         drifts.extend(param_drifts)
 
         # Compare result
         if baseline.result and memory.result:
-            result_drifts = self._compare_dicts(
-                baseline.result,
-                memory.result,
-                f"steps[{index}].result"
-            )
+            result_drifts = self._compare_dicts(baseline.result, memory.result, f"steps[{index}].result")
             drifts.extend(result_drifts)
         elif baseline.result != memory.result:
-            drifts.append(DriftPoint(
-                step_index=index,
-                field_path=f"steps[{index}].result",
-                baseline_value=baseline.result,
-                memory_value=memory.result,
-                severity="high",
-                category="output"
-            ))
+            drifts.append(
+                DriftPoint(
+                    step_index=index,
+                    field_path=f"steps[{index}].result",
+                    baseline_value=baseline.result,
+                    memory_value=memory.result,
+                    severity="high",
+                    category="output",
+                )
+            )
 
         # Compare status
         if baseline.status != memory.status:
-            drifts.append(DriftPoint(
-                step_index=index,
-                field_path=f"steps[{index}].status",
-                baseline_value=baseline.status,
-                memory_value=memory.status,
-                severity="high",
-                category="state"
-            ))
+            drifts.append(
+                DriftPoint(
+                    step_index=index,
+                    field_path=f"steps[{index}].status",
+                    baseline_value=baseline.status,
+                    memory_value=memory.status,
+                    severity="high",
+                    category="state",
+                )
+            )
 
         return drifts
 
-    def _compare_dicts(
-        self,
-        baseline: Dict[str, Any],
-        memory: Dict[str, Any],
-        path_prefix: str
-    ) -> List[DriftPoint]:
+    def _compare_dicts(self, baseline: Dict[str, Any], memory: Dict[str, Any], path_prefix: str) -> List[DriftPoint]:
         """Recursively compare two dictionaries."""
         drifts = []
 
@@ -352,35 +371,34 @@ class DriftDetector:
             else:
                 # Different values
                 severity = self._classify_severity(key, b_val, m_val)
-                drifts.append(DriftPoint(
-                    step_index=-1,
-                    field_path=field_path,
-                    baseline_value=b_val,
-                    memory_value=m_val,
-                    severity=severity,
-                    category=self._classify_category(key)
-                ))
+                drifts.append(
+                    DriftPoint(
+                        step_index=-1,
+                        field_path=field_path,
+                        baseline_value=b_val,
+                        memory_value=m_val,
+                        severity=severity,
+                        category=self._classify_category(key),
+                    )
+                )
 
         return drifts
 
-    def _compare_lists(
-        self,
-        baseline: List[Any],
-        memory: List[Any],
-        path_prefix: str
-    ) -> List[DriftPoint]:
+    def _compare_lists(self, baseline: List[Any], memory: List[Any], path_prefix: str) -> List[DriftPoint]:
         """Compare two lists."""
         drifts = []
 
         if len(baseline) != len(memory):
-            drifts.append(DriftPoint(
-                step_index=-1,
-                field_path=f"{path_prefix}.length",
-                baseline_value=len(baseline),
-                memory_value=len(memory),
-                severity="medium",
-                category="output"
-            ))
+            drifts.append(
+                DriftPoint(
+                    step_index=-1,
+                    field_path=f"{path_prefix}.length",
+                    baseline_value=len(baseline),
+                    memory_value=len(memory),
+                    severity="medium",
+                    category="output",
+                )
+            )
 
         # Compare element by element
         for i, (b_item, m_item) in enumerate(zip(baseline, memory)):
@@ -388,23 +406,20 @@ class DriftDetector:
                 nested = self._compare_dicts(b_item, m_item, f"{path_prefix}[{i}]")
                 drifts.extend(nested)
             elif b_item != m_item:
-                drifts.append(DriftPoint(
-                    step_index=-1,
-                    field_path=f"{path_prefix}[{i}]",
-                    baseline_value=b_item,
-                    memory_value=m_item,
-                    severity="medium",
-                    category="output"
-                ))
+                drifts.append(
+                    DriftPoint(
+                        step_index=-1,
+                        field_path=f"{path_prefix}[{i}]",
+                        baseline_value=b_item,
+                        memory_value=m_item,
+                        severity="medium",
+                        category="output",
+                    )
+                )
 
         return drifts
 
-    def _classify_severity(
-        self,
-        key: str,
-        baseline_value: Any,
-        memory_value: Any
-    ) -> str:
+    def _classify_severity(self, key: str, baseline_value: Any, memory_value: Any) -> str:
         """Classify drift severity based on field and values."""
         # Critical fields
         critical_fields = {"status", "error", "success", "result_type"}
@@ -465,36 +480,33 @@ class DriftDetector:
 
     def _compute_trace_hash(self, trace: ExecutionTrace) -> str:
         """Compute deterministic hash of trace (excluding ignored fields)."""
+
         def filter_dict(d: Dict[str, Any]) -> Dict[str, Any]:
             return {
-                k: filter_dict(v) if isinstance(v, dict) else v
-                for k, v in sorted(d.items())
-                if k not in self._ignored
+                k: filter_dict(v) if isinstance(v, dict) else v for k, v in sorted(d.items()) if k not in self._ignored
             }
 
         filtered_steps = []
         for step in trace.steps:
-            filtered_steps.append({
-                "skill": step.skill,
-                "params": filter_dict(step.params),
-                "result": filter_dict(step.result) if step.result else None,
-                "status": step.status
-            })
+            filtered_steps.append(
+                {
+                    "skill": step.skill,
+                    "params": filter_dict(step.params),
+                    "result": filter_dict(step.result) if step.result else None,
+                    "status": step.status,
+                }
+            )
 
         data = {
             "workflow_id": trace.workflow_id,
             "steps": filtered_steps,
-            "final_state": filter_dict(trace.final_state)
+            "final_state": filter_dict(trace.final_state),
         }
 
         canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
-    def _generate_summary(
-        self,
-        drift_points: List[DriftPoint],
-        score: float
-    ) -> str:
+    def _generate_summary(self, drift_points: List[DriftPoint], score: float) -> str:
         """Generate human-readable summary."""
         if not drift_points:
             return "No drift detected"
@@ -526,10 +538,7 @@ def get_drift_detector() -> DriftDetector:
     return _detector
 
 
-def init_drift_detector(
-    ignored_fields: Optional[Set[str]] = None,
-    drift_threshold: float = 5.0
-) -> DriftDetector:
+def init_drift_detector(ignored_fields: Optional[Set[str]] = None, drift_threshold: float = 5.0) -> DriftDetector:
     """Initialize global drift detector."""
     global _detector
     _detector = DriftDetector(ignored_fields, drift_threshold)

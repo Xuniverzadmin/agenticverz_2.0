@@ -34,12 +34,13 @@ os.environ.setdefault("MACHINE_SECRET_TOKEN", "46bff817a6bb074b4322db92d56529058
 # This allows test re-imports without "Duplicated timeseries" errors
 from prometheus_client import REGISTRY
 
+
 def _clear_prometheus_registry():
     """Clear all custom metrics from Prometheus registry for test isolation."""
     collectors_to_remove = []
     for name, collector in list(REGISTRY._names_to_collectors.items()):
         # Skip default collectors (gc, platform, process)
-        if name.startswith(('python_', 'process_', 'gc_')):
+        if name.startswith(("python_", "process_", "gc_")):
             continue
         collectors_to_remove.append(collector)
 
@@ -48,6 +49,7 @@ def _clear_prometheus_registry():
             REGISTRY.unregister(collector)
         except Exception:
             pass
+
 
 _clear_prometheus_registry()
 
@@ -79,14 +81,8 @@ def sample_agent_profile():
         "version": "1.0.0",
         "description": "Agent for testing",
         "allowed_skills": ["http_call", "json_transform"],
-        "budget": {
-            "max_cost_cents_per_run": 100,
-            "max_cost_cents_per_day": 1000
-        },
-        "policies": {
-            "require_human_approval": False,
-            "allowed_domains": ["api.example.com"]
-        }
+        "budget": {"max_cost_cents_per_run": 100, "max_cost_cents_per_day": 1000},
+        "policies": {"require_human_approval": False, "allowed_domains": ["api.example.com"]},
     }
 
 
@@ -102,11 +98,7 @@ def sample_skill_metadata():
         "side_effects": ["network"],
         "cost_estimate_cents": 0,
         "avg_latency_ms": 500,
-        "retry": {
-            "max_retries": 3,
-            "backoff_base_ms": 100,
-            "backoff_multiplier": 2.0
-        }
+        "retry": {"max_retries": 3, "backoff_base_ms": 100, "backoff_multiplier": 2.0},
     }
 
 
@@ -114,6 +106,7 @@ def sample_skill_metadata():
 def sample_structured_outcome():
     """Sample StructuredOutcome for testing."""
     from datetime import datetime, timezone
+
     return {
         "status": "success",
         "code": "OK_HTTP_CALL",
@@ -124,17 +117,26 @@ def sample_structured_outcome():
         "retryable": False,
         "details": {"status_code": 200},
         "side_effects": [],
-        "metadata": {"skill_id": "http_call", "skill_version": "1.0.0"}
+        "metadata": {"skill_id": "http_call", "skill_version": "1.0.0"},
     }
 
 
 # Markers for test categories
 def pytest_configure(config):
-    """Register custom markers."""
+    """Register custom markers.
+
+    Test Categorization (PIN-120 / PREV-7):
+    - @pytest.mark.slow: Tests > 30 seconds, excluded from normal CI
+    - @pytest.mark.stress: Load/stress tests, run in nightly builds only
+    - @pytest.mark.integration: Requires external services (DB, Redis)
+    - @pytest.mark.flaky: Known intermittent failures (retry in CI)
+    """
     config.addinivalue_line("markers", "unit: Unit tests (no external deps)")
     config.addinivalue_line("markers", "integration: Integration tests (require services)")
     config.addinivalue_line("markers", "e2e: End-to-end tests (full stack)")
     config.addinivalue_line("markers", "security: Security tests")
-    config.addinivalue_line("markers", "slow: Slow tests (>5s)")
+    config.addinivalue_line("markers", "slow: Slow tests (>30s) - excluded from normal CI")
+    config.addinivalue_line("markers", "stress: Load/stress tests - run in nightly builds")
+    config.addinivalue_line("markers", "flaky: Known intermittent failures - retry in CI")
     config.addinivalue_line("markers", "determinism: Determinism validation tests")
     config.addinivalue_line("markers", "chaos: Chaos tests (resource stress, failure injection)")

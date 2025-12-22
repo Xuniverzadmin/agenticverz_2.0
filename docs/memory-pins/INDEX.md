@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-119 SQLModel Session Safety - Prevention Mechanisms - Updates)
+**Last Updated:** 2025-12-22 (PIN-120 Test Suite Stabilization & Prevention)
 
 ---
 
@@ -141,6 +141,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-117](PIN-117-evidence-report-enhancements.md) | **Evidence Report Enhancements & ID Type Safety** | M23 / Prevention / PDF Export | **✅ COMPLETE** | 2025-12-21 |
 | [PIN-118](PIN-118-m24-customer-onboarding.md) | **M24 Customer Onboarding - OAuth & Email Verification** | Authentication / Onboarding | **🚀 DEPLOYED** | 2025-12-21 |
 | [PIN-119](PIN-119-sqlmodel-session-safety.md) | **SQLModel Session Safety - Prevention Mechanisms** | Developer Tooling / Prevention | **✅ ACTIVE** | 2025-12-21 |
+| [PIN-120](PIN-120-test-suite-stabilization-prevention.md) | **Test Suite Stabilization & Prevention** | Testing / Infrastructure | **✅ COMPLETE** | 2025-12-22 |
 
 ---
 
@@ -906,6 +907,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-120 Test Suite Stabilization & Prevention** - Fixed 29 test failures, 7 prevention mechanisms |
 | 2025-12-22 | **PIN-119 SQLModel Session Safety - Prevention Mechanisms** - Updated: Updates |
 | 2025-12-21 | **PIN-118 M24.1 REAL Safety Verification** - Fixed 3 onboarding gaps: (1) Step 4 now fires REAL guardrails instead of simulation - evaluates prompt_injection_block pattern, creates real incidents, (2) Added killswitch_demo test type to show cost-spike protection, (3) CompletePage updated to "Your AI is Now Protected" with active status messaging. New endpoint: `POST /guard/onboarding/verify?tenant_id=X` returns `{incident_id, was_blocked, blocked_by}`. Key insight: Replace perceived safety with experienced safety. |
 | 2025-12-21 | **PIN-118 M24 Customer Onboarding COMPLETE** - Full OAuth + Email onboarding system. Backend: Google OAuth, Azure AD OAuth, Email OTP (6-digit via Resend), JWT tokens, Redis session management. Frontend: 5-step onboarding wizard (Connect→Safety→Alerts→Verify→Complete), hybrid auth in Guard Console (OAuth primary, API key fallback). Migration 040 applied. Verified: `/api/v1/auth/providers` → google, azure, email all enabled. Guard Console at `/console/guard` loads with "Sign in with Google or Microsoft", "or use API key", and "Try Demo Mode". Pending: OAuth redirect URIs in Google Cloud Console and Azure Portal. |
