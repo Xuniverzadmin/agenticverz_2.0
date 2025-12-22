@@ -29,7 +29,7 @@ Fixed 29+ pre-existing test failures across multiple categories and established 
 | Recovery CLI | 2 | ✅ FIXED | (pre-existing fix) |
 | M12 Agent Tests | 3 | ✅ FIXED | `test_m12_agents.py`, `generator.py` |
 | M10 Production Hardening | 1 | ✅ MARKED SLOW | `test_m10_production_hardening.py` |
-| M10 Recovery Enhanced | 3 | ✅ MARKED XFAIL | `test_m10_recovery_enhanced.py` (migration issue) |
+| M10 Recovery Enhanced | 3 | ✅ FIXED | `test_m10_recovery_enhanced.py`, migration 041 |
 
 ---
 
@@ -561,10 +561,11 @@ M12 Load Tests:            Pass with @slow marker
 |------|--------|
 | 2025-12-22 | Initial creation - 29 test failures fixed, 7 prevention mechanisms established |
 | 2025-12-22 | Update: Added RC-8 through RC-12, PREV-8 through PREV-12, full test suite pass |
+| 2025-12-22 | **RC-11 RESOLVED**: Migration 041 fixes `enqueue_work` constraint issue; xfail markers removed; fixed 2 additional test bugs (success column, xrevrange for dead-letter) |
 
 ---
 
-## TODO (Future Migrations)
+## Resolved TODOs
 
-1. **Migration 044**: Fix `enqueue_work` function to use `ON CONFLICT (candidate_id) WHERE processed_at IS NULL` instead of `ON CONFLICT ON CONSTRAINT`
-2. Remove `@pytest.mark.xfail` from M10 recovery enhanced tests after migration fix
+1. ~~**Migration 044**: Fix `enqueue_work` function~~ → **DONE** as Migration 041 (`ON CONFLICT (candidate_id) WHERE processed_at IS NULL`)
+2. ~~Remove `@pytest.mark.xfail` from M10 recovery enhanced tests~~ → **DONE** (all 5 tests now pass)

@@ -22,16 +22,13 @@ See: https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#using-multipl
 
 import asyncio
 import os
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
-from unittest.mock import patch
 
 # Skip if no DATABASE_URL
 pytestmark = [
-    pytest.mark.skipif(
-        not os.environ.get("DATABASE_URL"),
-        reason="DATABASE_URL not set - skipping real DB tests"
-    ),
+    pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set - skipping real DB tests"),
     pytest.mark.asyncio,  # Mark all tests in this module as async
     pytest.mark.integration,
     pytest.mark.flaky,  # Event loop lifecycle issues cause intermittent failures
@@ -51,6 +48,7 @@ def event_loop():
     # Dispose engine before closing loop
     try:
         from app.db_async import async_engine
+
         loop.run_until_complete(async_engine.dispose())
     except Exception:
         pass
@@ -59,19 +57,28 @@ def event_loop():
 
 async def cleanup_test_data():
     """Clean up test data helper."""
-    from app.db_async import AsyncSessionLocal
     from sqlalchemy import text
+
+    from app.db_async import AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
         # Clean up test data (be careful not to delete production data)
         # incidents table uses reason column, not disabled_by
-        await session.execute(text("""
+        await session.execute(
+            text(
+                """
             DELETE FROM costsim_cb_incidents WHERE reason LIKE '%test%' OR reason LIKE '%Integration%';
-        """))
-        await session.execute(text("""
+        """
+            )
+        )
+        await session.execute(
+            text(
+                """
             UPDATE costsim_cb_state SET disabled = false, incident_id = NULL
             WHERE name = 'costsim_v2' AND (disabled_reason LIKE '%test%' OR disabled_by LIKE 'test-%');
-        """))
+        """
+            )
+        )
         await session.commit()
 
 
@@ -84,8 +91,8 @@ async def test_real_db_circuit_breaker_state_query():
     state = await get_state()
 
     assert state is not None
-    assert hasattr(state, 'is_open')
-    assert hasattr(state, 'consecutive_failures')
+    assert hasattr(state, "is_open")
+    assert hasattr(state, "consecutive_failures")
     assert isinstance(state.is_open, bool)
     assert isinstance(state.consecutive_failures, int)
 
@@ -109,8 +116,8 @@ async def test_real_db_disable_enable_cycle():
     from app.costsim.circuit_breaker_async import (
         disable_v2,
         enable_v2,
-        is_v2_disabled,
         get_state,
+        is_v2_disabled,
     )
 
     # Ensure we start with V2 enabled
@@ -158,7 +165,7 @@ async def test_real_db_report_drift():
     """Test drift reporting with real DB."""
     await cleanup_test_data()
 
-    from app.costsim.circuit_breaker_async import report_drift, get_state, enable_v2
+    from app.costsim.circuit_breaker_async import enable_v2, get_state, report_drift
 
     # Ensure V2 is enabled first
     await enable_v2(enabled_by="test-setup", reason="test setup")
@@ -179,9 +186,9 @@ async def test_real_db_report_drift():
 async def test_real_db_leader_election():
     """Test leader election with real PostgreSQL advisory locks."""
     from app.costsim.leader import (
-        try_acquire_leader_lock,
-        release_leader_lock,
         LOCK_CANARY_RUNNER,
+        release_leader_lock,
+        try_acquire_leader_lock,
     )
     from app.db_async import AsyncSessionLocal
 
@@ -208,12 +215,13 @@ async def test_real_db_leader_election():
 
 async def test_real_db_provenance_write_and_query():
     """Test provenance write and query with real DB."""
-    from app.costsim.provenance_async import (
-        write_provenance,
-        query_provenance,
-        check_duplicate,
-    )
     import uuid
+
+    from app.costsim.provenance_async import (
+        check_duplicate,
+        query_provenance,
+        write_provenance,
+    )
 
     test_input_hash = f"test-hash-{uuid.uuid4().hex[:8]}"
 
@@ -244,16 +252,19 @@ async def test_real_db_provenance_write_and_query():
 
 async def test_real_db_alert_queue_enqueue():
     """Test alert queue enqueue with real DB."""
+    from sqlalchemy import text
+
     from app.costsim.alert_worker import enqueue_alert
     from app.db_async import AsyncSessionLocal
-    from sqlalchemy import text
 
     # Enqueue an alert
     alert_id = await enqueue_alert(
-        payload=[{
-            "labels": {"alertname": "TestAlert", "severity": "info"},
-            "annotations": {"summary": "Integration test alert"},
-        }],
+        payload=[
+            {
+                "labels": {"alertname": "TestAlert", "severity": "info"},
+                "annotations": {"summary": "Integration test alert"},
+            }
+        ],
         alert_type="test",
         circuit_breaker_name="costsim_v2",
         incident_id=None,
@@ -263,10 +274,15 @@ async def test_real_db_alert_queue_enqueue():
 
     # Verify in DB
     async with AsyncSessionLocal() as session:
-        result = await session.execute(text("""
+        result = await session.execute(
+            text(
+                """
             SELECT id, alert_type, status FROM costsim_alert_queue
             WHERE id = :id
-        """), {"id": alert_id})
+        """
+            ),
+            {"id": alert_id},
+        )
         row = result.fetchone()
 
         assert row is not None
@@ -274,19 +290,24 @@ async def test_real_db_alert_queue_enqueue():
         assert row[2] == "pending"
 
         # Clean up
-        await session.execute(text("""
+        await session.execute(
+            text(
+                """
             DELETE FROM costsim_alert_queue WHERE id = :id
-        """), {"id": alert_id})
+        """
+            ),
+            {"id": alert_id},
+        )
         await session.commit()
 
 
 async def test_sync_wrapper_from_async_context():
     """Test that sync wrapper works correctly from async context."""
-    from app.costsim.cb_sync_wrapper import is_v2_disabled_sync
-
     # Call sync wrapper from async context (this was the original bug)
     # This needs to be run in a thread to avoid nested event loop issues
     import concurrent.futures
+
+    from app.costsim.cb_sync_wrapper import is_v2_disabled_sync
 
     def call_sync():
         return is_v2_disabled_sync(timeout=5.0)
@@ -301,7 +322,7 @@ async def test_sync_wrapper_from_async_context():
 
 async def test_concurrent_leader_election():
     """Test concurrent leader election doesn't cause issues."""
-    from app.costsim.leader import leader_election, LOCK_ALERT_WORKER
+    from app.costsim.leader import LOCK_ALERT_WORKER, leader_election
 
     results = []
 
@@ -380,16 +401,18 @@ async def test_alertmanager_integration():
             pytest.skip(f"Alertmanager not reachable: {e}")
 
     # Test sending a test alert
-    test_alert = [{
-        "labels": {
-            "alertname": "CostSimIntegrationTest",
-            "severity": "info",
-            "environment": "test",
-        },
-        "annotations": {
-            "summary": "Integration test alert - can be ignored",
-        },
-    }]
+    test_alert = [
+        {
+            "labels": {
+                "alertname": "CostSimIntegrationTest",
+                "severity": "info",
+                "environment": "test",
+            },
+            "annotations": {
+                "summary": "Integration test alert - can be ignored",
+            },
+        }
+    ]
 
     # Send alert directly to Alertmanager
     async with httpx.AsyncClient() as client:
@@ -413,12 +436,12 @@ async def test_db_connection_pool():
     assert len(results) == 20
     for state in results:
         assert state is not None
-        assert hasattr(state, 'is_open')
+        assert hasattr(state, "is_open")
 
 
 async def test_canary_lock_prevents_duplicate_runs():
     """Test that canary lock prevents duplicate simultaneous runs."""
-    from app.costsim.leader import try_acquire_leader_lock, release_leader_lock, LOCK_CANARY_RUNNER
+    from app.costsim.leader import LOCK_CANARY_RUNNER, release_leader_lock, try_acquire_leader_lock
     from app.db_async import AsyncSessionLocal
 
     # Simulate two canary processes trying to run simultaneously

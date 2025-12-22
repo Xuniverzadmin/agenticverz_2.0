@@ -10,15 +10,15 @@ Tests:
 - API endpoints (enhanced)
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+import pytest
 
 # =============================================================================
 # Rule Engine Tests
 # =============================================================================
+
 
 class TestRuleEngine:
     """Test recovery rule engine."""
@@ -289,6 +289,7 @@ class TestRuleEngine:
 # Worker Evaluator Tests
 # =============================================================================
 
+
 class TestRecoveryEvaluator:
     """Test recovery evaluator worker."""
 
@@ -367,12 +368,14 @@ class TestRecoveryEvaluator:
         """Test evaluator when disabled."""
         # Need to reimport to pick up env change
         import importlib
+
         import app.worker.recovery_evaluator as evaluator_module
+
         importlib.reload(evaluator_module)
 
         from app.worker.recovery_evaluator import (
-            RecoveryEvaluator,
             FailureEvent,
+            RecoveryEvaluator,
         )
 
         # Force disabled state
@@ -397,6 +400,7 @@ class TestRecoveryEvaluator:
 # =============================================================================
 # API Endpoint Tests
 # =============================================================================
+
 
 class TestRecoveryAPIEnhanced:
     """Test enhanced recovery API endpoints."""
@@ -457,6 +461,7 @@ class TestRecoveryAPIEnhanced:
 # =============================================================================
 # Model Tests
 # =============================================================================
+
 
 class TestM10RecoveryModels:
     """Test SQLAlchemy models."""
@@ -547,6 +552,7 @@ class TestM10RecoveryModels:
 # Integration Tests (require database)
 # =============================================================================
 
+
 class TestM10Integration:
     """Integration tests requiring database."""
 
@@ -554,19 +560,21 @@ class TestM10Integration:
     def mock_db_session(self):
         """Create mock database session."""
         session = MagicMock()
-        session.execute = MagicMock(return_value=MagicMock(
-            fetchone=MagicMock(return_value=None),
-            fetchall=MagicMock(return_value=[]),
-            scalar=MagicMock(return_value=1),
-        ))
+        session.execute = MagicMock(
+            return_value=MagicMock(
+                fetchone=MagicMock(return_value=None),
+                fetchall=MagicMock(return_value=[]),
+                scalar=MagicMock(return_value=1),
+            )
+        )
         session.commit = MagicMock()
         return session
 
     def test_rule_engine_with_custom_rules(self):
         """Test rule engine with custom rules."""
         from app.services.recovery_rule_engine import (
-            RecoveryRuleEngine,
             ErrorCodeRule,
+            RecoveryRuleEngine,
             RuleContext,
         )
 
@@ -613,6 +621,7 @@ class TestM10Integration:
 # Concurrent Ingest & Worker Claim Tests
 # =============================================================================
 
+
 class TestConcurrentIngest:
     """Tests for concurrent ingest race condition handling."""
 
@@ -627,8 +636,8 @@ class TestConcurrentIngest:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         idempotency_key = str(uuid4())
@@ -640,11 +649,13 @@ class TestConcurrentIngest:
             try:
                 # Check for existing
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id FROM recovery_candidates
                         WHERE idempotency_key = CAST(:key AS uuid)
-                    """),
-                    {"key": idempotency_key}
+                    """
+                    ),
+                    {"key": idempotency_key},
                 )
                 existing = result.fetchone()
                 if existing:
@@ -653,7 +664,8 @@ class TestConcurrentIngest:
                 # Try insert
                 try:
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                             INSERT INTO recovery_candidates (
                                 failure_match_id, suggestion, confidence,
                                 explain, error_code, idempotency_key
@@ -662,8 +674,9 @@ class TestConcurrentIngest:
                                 '{}', 'TEST', CAST(:key AS uuid)
                             )
                             RETURNING id
-                        """),
-                        {"fid": failure_match_id, "key": idempotency_key}
+                        """
+                        ),
+                        {"fid": failure_match_id, "key": idempotency_key},
                     )
                     new_id = result.scalar()
                     session.commit()
@@ -671,11 +684,13 @@ class TestConcurrentIngest:
                 except Exception:
                     session.rollback()
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                             SELECT id FROM recovery_candidates
                             WHERE idempotency_key = CAST(:key AS uuid)
-                        """),
-                        {"key": idempotency_key}
+                        """
+                        ),
+                        {"key": idempotency_key},
                     )
                     existing = result.fetchone()
                     return {"attempt": attempt_num, "id": existing[0] if existing else None, "new": False}
@@ -701,18 +716,17 @@ class TestConcurrentIngest:
         Uses threading to simulate concurrent HTTP requests.
         Validates that only 1 row is created despite race conditions.
         """
-        import asyncio
-        import os
         import concurrent.futures
+        import os
         from uuid import uuid4
 
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
         from sqlalchemy.exc import IntegrityError
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True, pool_size=20)
         idempotency_key = str(uuid4())
@@ -727,7 +741,8 @@ class TestConcurrentIngest:
 
                 try:
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                             INSERT INTO recovery_candidates (
                                 failure_match_id, suggestion, confidence,
                                 explain, error_code, source, idempotency_key
@@ -736,33 +751,36 @@ class TestConcurrentIngest:
                                 '{}', 'RACE_TEST', :source, CAST(:key AS uuid)
                             )
                             RETURNING id
-                        """),
+                        """
+                        ),
                         {
                             "fid": fid,
                             "suggestion": f"Race test worker {worker_id}",
                             "source": test_marker,
-                            "key": idempotency_key
-                        }
+                            "key": idempotency_key,
+                        },
                     )
                     new_id = result.scalar()
                     session.commit()
                     return {"worker": worker_id, "id": new_id, "new": True, "error": None}
-                except IntegrityError as e:
+                except IntegrityError:
                     session.rollback()
                     # Duplicate key - find existing
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                             SELECT id FROM recovery_candidates
                             WHERE idempotency_key = CAST(:key AS uuid)
-                        """),
-                        {"key": idempotency_key}
+                        """
+                        ),
+                        {"key": idempotency_key},
                     )
                     existing = result.fetchone()
                     return {
                         "worker": worker_id,
                         "id": existing[0] if existing else None,
                         "new": False,
-                        "error": "integrity"
+                        "error": "integrity",
                     }
             except Exception as e:
                 return {"worker": worker_id, "id": None, "new": False, "error": str(e)}
@@ -793,11 +811,13 @@ class TestConcurrentIngest:
         session = Session(engine)
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) FROM recovery_candidates
                     WHERE idempotency_key = CAST(:key AS uuid)
-                """),
-                {"key": idempotency_key}
+                """
+                ),
+                {"key": idempotency_key},
             )
             count = result.scalar()
             assert count == 1, f"Expected exactly 1 row in DB, got {count}"
@@ -817,8 +837,8 @@ class TestWorkerClaimPattern:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
@@ -827,7 +847,8 @@ class TestWorkerClaimPattern:
             # Insert test candidate
             failure_match_id = str(uuid4())
             session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO recovery_candidates (
                         failure_match_id, suggestion, confidence,
                         explain, error_code, decision, execution_status
@@ -835,14 +856,16 @@ class TestWorkerClaimPattern:
                         CAST(:fid AS uuid), 'Claim test', 0.1,
                         '{}', 'TEST', 'pending', NULL
                     )
-                """),
-                {"fid": failure_match_id}
+                """
+                ),
+                {"fid": failure_match_id},
             )
             session.commit()
 
             # Claim with FOR UPDATE SKIP LOCKED
             result = session.execute(
-                text("""
+                text(
+                    """
                     WITH claimed AS (
                         SELECT id FROM recovery_candidates
                         WHERE decision = 'pending'
@@ -856,7 +879,8 @@ class TestWorkerClaimPattern:
                     FROM claimed
                     WHERE rc.id = claimed.id
                     RETURNING rc.id
-                """)
+                """
+                )
             )
             claimed_ids = [row[0] for row in result.fetchall()]
             session.commit()
@@ -876,8 +900,8 @@ class TestWorkerClaimPattern:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
 
@@ -885,39 +909,45 @@ class TestWorkerClaimPattern:
         session1 = Session(engine)
         failure_match_id = str(uuid4())
         session1.execute(
-            text("""
+            text(
+                """
                 INSERT INTO recovery_candidates (
                     failure_match_id, suggestion, confidence,
                     explain, error_code, decision
                 ) VALUES (
                     CAST(:fid AS uuid), 'Lock test', 0.1, '{}', 'TEST', 'pending'
                 )
-            """),
-            {"fid": failure_match_id}
+            """
+            ),
+            {"fid": failure_match_id},
         )
         session1.commit()
 
         try:
             # Session 1 locks the row (don't commit)
             session1.execute(
-                text("""
+                text(
+                    """
                     SELECT id FROM recovery_candidates
                     WHERE failure_match_id = CAST(:fid AS uuid)
                     FOR UPDATE
-                """),
-                {"fid": failure_match_id}
+                """
+                ),
+                {"fid": failure_match_id},
             )
 
             # Session 2 tries to claim with SKIP LOCKED
             session2 = Session(engine)
             try:
                 result = session2.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id FROM recovery_candidates
                         WHERE failure_match_id = CAST(:fid AS uuid)
                         FOR UPDATE SKIP LOCKED
-                    """),
-                    {"fid": failure_match_id}
+                    """
+                    ),
+                    {"fid": failure_match_id},
                 )
                 skipped = result.fetchall()
 
@@ -943,16 +973,14 @@ class TestMaterializedViewRefresh:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
 
         try:
-            session.execute(
-                text("REFRESH MATERIALIZED VIEW CONCURRENTLY m10_recovery.mv_top_pending")
-            )
+            session.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY m10_recovery.mv_top_pending"))
             session.commit()
         except Exception as e:
             if "does not exist" in str(e).lower():
@@ -973,19 +1001,21 @@ class TestRetentionArchive:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
 
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT table_name FROM information_schema.tables
                     WHERE table_schema = 'm10_recovery'
                       AND table_name LIKE '%_archive'
-                """)
+                """
+                )
             )
             tables = [row[0] for row in result.fetchall()]
 
@@ -1006,18 +1036,20 @@ class TestRetentionArchive:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
 
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT name, retention_days
                     FROM m10_recovery.retention_jobs
-                """)
+                """
+                )
             )
             jobs = {row[0]: row[1] for row in result.fetchall()}
 
@@ -1039,7 +1071,7 @@ class TestRetentionArchive:
 # Failure Mode Tests
 # =============================================================================
 
-@pytest.mark.xfail(reason="Migration 021 creates UNIQUE INDEX but function uses ON CONFLICT ON CONSTRAINT - needs fix")
+
 class TestRedisFailureFallback:
     """Tests for Redis failure and DB fallback behavior."""
 
@@ -1047,15 +1079,15 @@ class TestRedisFailureFallback:
     async def test_enqueue_fallback_when_redis_unavailable(self):
         """Test that enqueue falls back to DB when Redis is unavailable."""
         import os
+        from unittest.mock import patch
         from uuid import uuid4
-        from unittest.mock import patch, AsyncMock
 
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
 
@@ -1082,11 +1114,13 @@ class TestRedisFailureFallback:
 
                     # Check if fallback to DB occurred
                     check = session.execute(
-                        text("""
+                        text(
+                            """
                             SELECT id, method FROM m10_recovery.work_queue
                             WHERE candidate_id = :cid
-                        """),
-                        {"cid": candidate_id}
+                        """
+                        ),
+                        {"cid": candidate_id},
                     )
                     row = check.fetchone()
 
@@ -1105,14 +1139,13 @@ class TestRedisFailureFallback:
     def test_db_fallback_queue_claim(self):
         """Test that DB fallback queue can be claimed by workers."""
         import os
-        from uuid import uuid4
 
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
@@ -1121,20 +1154,24 @@ class TestRedisFailureFallback:
             # Insert test work item
             candidate_id = 888888
             session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO m10_recovery.work_queue (candidate_id, method, priority)
                     VALUES (:cid, 'test', 0)
                     ON CONFLICT DO NOTHING
-                """),
-                {"cid": candidate_id}
+                """
+                ),
+                {"cid": candidate_id},
             )
             session.commit()
 
             # Claim work
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT * FROM m10_recovery.claim_work('test_worker', 10)
-                """)
+                """
+                )
             )
             claimed = result.fetchall()
 
@@ -1143,10 +1180,7 @@ class TestRedisFailureFallback:
                 work_id = claimed[0][0]
 
                 # Complete work
-                session.execute(
-                    text("SELECT m10_recovery.complete_work(:wid, TRUE, NULL)"),
-                    {"wid": work_id}
-                )
+                session.execute(text("SELECT m10_recovery.complete_work(:wid, TRUE, NULL)"), {"wid": work_id})
                 session.commit()
 
         except Exception as e:
@@ -1160,14 +1194,13 @@ class TestRedisFailureFallback:
     def test_stalled_work_release(self):
         """Test that stalled work items can be released."""
         import os
-        from uuid import uuid4
 
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
@@ -1176,32 +1209,34 @@ class TestRedisFailureFallback:
             # Insert stalled work item (claimed 10 minutes ago)
             candidate_id = 777777
             session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO m10_recovery.work_queue
                         (candidate_id, method, claimed_at, claimed_by)
                     VALUES
                         (:cid, 'test_stalled', now() - interval '10 minutes', 'dead_worker')
                     ON CONFLICT DO NOTHING
-                """),
-                {"cid": candidate_id}
+                """
+                ),
+                {"cid": candidate_id},
             )
             session.commit()
 
             # Release stalled (5 minute threshold)
-            result = session.execute(
-                text("SELECT m10_recovery.release_stalled_work(300)")
-            )
+            result = session.execute(text("SELECT m10_recovery.release_stalled_work(300)"))
             released_count = result.scalar()
 
             assert released_count >= 0, "Should return count of released items"
 
             # Verify item is now unclaimed
             check = session.execute(
-                text("""
+                text(
+                    """
                     SELECT claimed_at, claimed_by FROM m10_recovery.work_queue
                     WHERE candidate_id = :cid AND processed_at IS NULL
-                """),
-                {"cid": candidate_id}
+                """
+                ),
+                {"cid": candidate_id},
             )
             row = check.fetchone()
 
@@ -1232,9 +1267,9 @@ class TestRedisStreamsIntegration:
 
         try:
             from app.tasks.recovery_queue_stream import (
-                enqueue_stream,
-                consume_batch,
                 ack_message,
+                consume_batch,
+                enqueue_stream,
                 ensure_consumer_group,
             )
 
@@ -1312,8 +1347,8 @@ class TestUpsertDeduplication:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
@@ -1324,7 +1359,8 @@ class TestUpsertDeduplication:
         try:
             # First insert
             session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO recovery_candidates (
                         failure_match_id, suggestion, confidence, explain,
                         error_code, error_signature, occurrence_count
@@ -1332,40 +1368,47 @@ class TestUpsertDeduplication:
                         CAST(:fid AS uuid), 'Test upsert', 0.5, '{}',
                         'TEST', :sig, 1
                     )
-                """),
-                {"fid": failure_match_id, "sig": error_signature}
+                """
+                ),
+                {"fid": failure_match_id, "sig": error_signature},
             )
             session.commit()
 
             # Get initial count
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT occurrence_count FROM recovery_candidates
                     WHERE failure_match_id = CAST(:fid AS uuid)
-                """),
-                {"fid": failure_match_id}
+                """
+                ),
+                {"fid": failure_match_id},
             )
             initial_count = result.scalar()
             assert initial_count == 1
 
             # Simulate second occurrence (manual increment for test)
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE recovery_candidates
                     SET occurrence_count = occurrence_count + 1
                     WHERE failure_match_id = CAST(:fid AS uuid)
-                """),
-                {"fid": failure_match_id}
+                """
+                ),
+                {"fid": failure_match_id},
             )
             session.commit()
 
             # Verify increment
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT occurrence_count FROM recovery_candidates
                     WHERE failure_match_id = CAST(:fid AS uuid)
-                """),
-                {"fid": failure_match_id}
+                """
+                ),
+                {"fid": failure_match_id},
             )
             new_count = result.scalar()
             assert new_count == 2, f"Expected 2, got {new_count}"
@@ -1386,17 +1429,15 @@ class TestMatviewTrackedRefresh:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
 
         try:
             # Call tracked refresh
-            result = session.execute(
-                text("SELECT * FROM m10_recovery.refresh_mv_tracked('mv_top_pending')")
-            )
+            result = session.execute(text("SELECT * FROM m10_recovery.refresh_mv_tracked('mv_top_pending')"))
             row = result.fetchone()
 
             if row:
@@ -1406,13 +1447,15 @@ class TestMatviewTrackedRefresh:
 
             # Check log entry
             log_result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT success, duration_ms
                     FROM m10_recovery.matview_refresh_log
                     WHERE view_name = 'mv_top_pending'
                     ORDER BY started_at DESC
                     LIMIT 1
-                """)
+                """
+                )
             )
             log_row = log_result.fetchone()
 
@@ -1434,18 +1477,20 @@ class TestMatviewTrackedRefresh:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
         session = Session(engine)
 
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT view_name, age_seconds, last_success
                     FROM m10_recovery.matview_freshness
-                """)
+                """
+                )
             )
             rows = result.fetchall()
 
@@ -1466,6 +1511,7 @@ class TestMatviewTrackedRefresh:
 # =============================================================================
 # Redis Outage Simulation Tests
 # =============================================================================
+
 
 class TestRedisOutageScenarios:
     """
@@ -1489,15 +1535,15 @@ class TestRedisOutageScenarios:
         3. Metrics reflect fallback usage
         """
         import os
+        from unittest.mock import patch
         from uuid import uuid4
-        from unittest.mock import patch, AsyncMock
 
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
 
@@ -1515,7 +1561,8 @@ class TestRedisOutageScenarios:
                 try:
                     # Insert a test candidate first
                     session.execute(
-                        text("""
+                        text(
+                            """
                             INSERT INTO recovery_candidates (
                                 failure_match_id, suggestion, confidence,
                                 explain, error_code, source
@@ -1524,42 +1571,49 @@ class TestRedisOutageScenarios:
                                 '{}', 'REDIS_TEST', 'outage_test'
                             )
                             RETURNING id
-                        """),
-                        {"fid": failure_match_id}
+                        """
+                        ),
+                        {"fid": failure_match_id},
                     )
                     session.commit()
 
                     # Get the candidate ID
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                             SELECT id FROM recovery_candidates
                             WHERE failure_match_id = CAST(:fid AS uuid)
-                        """),
-                        {"fid": failure_match_id}
+                        """
+                        ),
+                        {"fid": failure_match_id},
                     )
                     candidate_id = result.scalar()
 
                     # Now try to enqueue - should fall back to DB
                     try:
                         session.execute(
-                            text("""
+                            text(
+                                """
                                 SELECT m10_recovery.enqueue_work(
                                     p_candidate_id := :cid,
                                     p_priority := 0,
                                     p_method := 'db_fallback'
                                 )
-                            """),
-                            {"cid": candidate_id}
+                            """
+                            ),
+                            {"cid": candidate_id},
                         )
                         session.commit()
 
                         # Verify it's in the DB queue
                         result = session.execute(
-                            text("""
+                            text(
+                                """
                                 SELECT id, method FROM m10_recovery.work_queue
                                 WHERE candidate_id = :cid
-                            """),
-                            {"cid": candidate_id}
+                            """
+                            ),
+                            {"cid": candidate_id},
                         )
                         row = result.fetchone()
 
@@ -1578,10 +1632,9 @@ class TestRedisOutageScenarios:
     @pytest.mark.asyncio
     async def test_redis_timeout_graceful_handling(self):
         """Test that Redis timeouts are handled gracefully without data loss."""
-        import os
         import asyncio
-        from uuid import uuid4
-        from unittest.mock import patch, AsyncMock
+        import os
+        from unittest.mock import AsyncMock, patch
 
         redis_url = os.getenv("REDIS_URL")
         if not redis_url:
@@ -1624,10 +1677,10 @@ class TestRedisOutageScenarios:
 
         try:
             from app.tasks.recovery_queue_stream import (
-                move_to_dead_letter,
-                get_dead_letter_count,
-                replay_dead_letter,
                 DEAD_LETTER_STREAM,
+                get_dead_letter_count,
+                move_to_dead_letter,
+                replay_dead_letter,
             )
 
             # Move a test message to dead-letter
@@ -1665,7 +1718,6 @@ class TestRedisOutageScenarios:
     async def test_stalled_message_reclaim_with_dead_letter(self):
         """Test that stalled messages are either reclaimed or dead-lettered."""
         import os
-        from unittest.mock import patch, AsyncMock, MagicMock
 
         redis_url = os.getenv("REDIS_URL")
         if not redis_url:
@@ -1702,7 +1754,6 @@ class TestMetricsCollection:
     async def test_metrics_collector_runs(self):
         """Test that metrics collector runs without error."""
         import os
-        from unittest.mock import patch, AsyncMock
 
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
@@ -1755,6 +1806,7 @@ class TestMetricsCollection:
 # High-Value Tests (Priority Issues)
 # =============================================================================
 
+
 class TestUpsertConcurrency:
     """
     Test atomic upsert correctness under high concurrency.
@@ -1768,18 +1820,18 @@ class TestUpsertConcurrency:
         Run 100 concurrent inserts with same failure_match_id+error_signature.
         Assert final occurrence_count == 100.
         """
-        import os
         import hashlib
+        import os
         import threading
-        from uuid import uuid4
         from concurrent.futures import ThreadPoolExecutor, as_completed
+        from uuid import uuid4
 
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True, pool_size=20, max_overflow=30)
 
@@ -1797,7 +1849,8 @@ class TestUpsertConcurrency:
             session = Session(engine)
             try:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO recovery_candidates (
                             failure_match_id,
                             suggestion,
@@ -1827,13 +1880,14 @@ class TestUpsertConcurrency:
                             last_occurrence_at = now(),
                             updated_at = now()
                         RETURNING id, (xmax = 0) AS is_insert, occurrence_count
-                    """),
+                    """
+                    ),
                     {
                         "failure_match_id": failure_match_id,
                         "suggestion": suggestion,
                         "error_code": error_type,
                         "error_signature": error_signature,
-                    }
+                    },
                 )
                 row = result.fetchone()
                 session.commit()
@@ -1871,23 +1925,27 @@ class TestUpsertConcurrency:
         session = Session(engine)
         try:
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT occurrence_count FROM recovery_candidates
                     WHERE failure_match_id = CAST(:fid AS uuid)
                       AND error_signature = :sig
-                """),
-                {"fid": failure_match_id, "sig": error_signature}
+                """
+                ),
+                {"fid": failure_match_id, "sig": error_signature},
             )
             final_count = result.scalar()
 
             # Cleanup
             session.execute(
-                text("""
+                text(
+                    """
                     DELETE FROM recovery_candidates
                     WHERE failure_match_id = CAST(:fid AS uuid)
                       AND error_signature = :sig
-                """),
-                {"fid": failure_match_id, "sig": error_signature}
+                """
+                ),
+                {"fid": failure_match_id, "sig": error_signature},
             )
             session.commit()
 
@@ -1901,7 +1959,6 @@ class TestUpsertConcurrency:
             session.close()
 
 
-@pytest.mark.xfail(reason="Migration 021 creates UNIQUE INDEX but function uses ON CONFLICT ON CONSTRAINT - needs fix")
 class TestDeadLetterPath:
     """
     Test dead-letter stream handling.
@@ -1917,7 +1974,6 @@ class TestDeadLetterPath:
         assert it appears in dead-letter stream.
         """
         import os
-        from uuid import uuid4
 
         redis_url = os.getenv("REDIS_URL")
         if not redis_url:
@@ -1925,11 +1981,11 @@ class TestDeadLetterPath:
 
         try:
             from app.tasks.recovery_queue_stream import (
-                enqueue_stream,
-                move_to_dead_letter,
-                get_dead_letter_count,
                 DEAD_LETTER_STREAM,
+                enqueue_stream,
+                get_dead_letter_count,
                 get_redis,
+                move_to_dead_letter,
             )
 
             redis = await get_redis()
@@ -1968,18 +2024,29 @@ class TestDeadLetterPath:
             assert new_dl_count > initial_dl_count, "Dead-letter count should increase"
 
             # Verify message content in dead-letter
-            messages = await redis.xrange(DEAD_LETTER_STREAM, "-", "+", count=10)
+            # Use xrevrange to read newest messages first (test message is at the end)
+            messages = await redis.xrevrange(DEAD_LETTER_STREAM, "+", "-", count=20)
             found = False
             for dl_msg_id, dl_fields in messages:
-                if dl_fields.get("original_msg_id") == msg_id:
+                # Redis returns bytes, decode if needed
+                orig_msg_id = dl_fields.get("original_msg_id")
+                if isinstance(orig_msg_id, bytes):
+                    orig_msg_id = orig_msg_id.decode()
+                if orig_msg_id == msg_id:
                     found = True
-                    assert dl_fields.get("reason") == "test_poison_message"
-                    assert dl_fields.get("orig_candidate_id") == str(test_candidate_id)
+                    reason = dl_fields.get("reason")
+                    if isinstance(reason, bytes):
+                        reason = reason.decode()
+                    orig_cid = dl_fields.get("orig_candidate_id")
+                    if isinstance(orig_cid, bytes):
+                        orig_cid = orig_cid.decode()
+                    assert reason == "test_poison_message"
+                    assert orig_cid == str(test_candidate_id)
                     # Cleanup: delete test message from dead-letter
                     await redis.xdel(DEAD_LETTER_STREAM, dl_msg_id)
                     break
 
-            assert found, f"Test message {msg_id} not found in dead-letter stream"
+            assert found, f"Test message {msg_id} not found in dead-letter stream (checked 20 newest entries)"
 
         except ImportError:
             pytest.skip("redis.asyncio not available")
@@ -2007,9 +2074,9 @@ class TestReclaimBackoff:
 
         try:
             from app.tasks.recovery_queue_stream import (
-                process_stalled_with_dead_letter,
-                MAX_RECLAIM_PER_LOOP,
                 CLAIM_IDLE_MS,
+                MAX_RECLAIM_PER_LOOP,
+                process_stalled_with_dead_letter,
             )
 
             # Verify rate limit constant is reasonable
@@ -2040,7 +2107,6 @@ class TestReclaimBackoff:
             raise
 
 
-@pytest.mark.xfail(reason="Migration 021 creates UNIQUE INDEX but function uses ON CONFLICT ON CONSTRAINT - needs fix")
 class TestRedisOutageFallbackComplete:
     """
     Complete test for Redis outage → DB fallback → worker consumption.
@@ -2057,8 +2123,8 @@ class TestRedisOutageFallbackComplete:
         if not db_url:
             pytest.skip("DATABASE_URL not set")
 
-        from sqlmodel import Session, create_engine
         from sqlalchemy import text
+        from sqlmodel import Session, create_engine
 
         engine = create_engine(db_url, pool_pre_ping=True)
 
@@ -2071,7 +2137,8 @@ class TestRedisOutageFallbackComplete:
         try:
             # Step 1: Insert candidate
             result = session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO recovery_candidates (
                         failure_match_id, suggestion, confidence,
                         explain, error_code, source
@@ -2080,29 +2147,34 @@ class TestRedisOutageFallbackComplete:
                         '{}', 'FALLBACK_TEST', 'test'
                     )
                     RETURNING id
-                """),
-                {"fid": failure_match_id}
+                """
+                ),
+                {"fid": failure_match_id},
             )
             candidate_id = result.scalar()
             session.commit()
 
             # Step 2: Enqueue to DB fallback queue (simulating Redis failure)
             session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO m10_recovery.work_queue (candidate_id, method, priority)
                     VALUES (:cid, 'db_fallback', 0)
-                """),
-                {"cid": candidate_id}
+                """
+                ),
+                {"cid": candidate_id},
             )
             session.commit()
 
             # Step 3: Verify in queue
             result = session.execute(
-                text("""
+                text(
+                    """
                     SELECT id, processed_at FROM m10_recovery.work_queue
                     WHERE candidate_id = :cid
-                """),
-                {"cid": candidate_id}
+                """
+                ),
+                {"cid": candidate_id},
             )
             row = result.fetchone()
             assert row is not None, "Work item should be in queue"
@@ -2111,7 +2183,8 @@ class TestRedisOutageFallbackComplete:
 
             # Step 4: Claim work (simulating worker)
             result = session.execute(
-                text("""
+                text(
+                    """
                     WITH cte AS (
                         SELECT id FROM m10_recovery.work_queue
                         WHERE candidate_id = :cid
@@ -2124,35 +2197,39 @@ class TestRedisOutageFallbackComplete:
                     SET claimed_at = now(), claimed_by = 'test_worker'
                     FROM cte WHERE w.id = cte.id
                     RETURNING w.id
-                """),
-                {"cid": candidate_id}
+                """
+                ),
+                {"cid": candidate_id},
             )
             claimed = result.fetchone()
             session.commit()
             assert claimed is not None, "Should claim work item"
 
-            # Step 5: Complete work
+            # Step 5: Complete work (work_queue uses processed_at, not success column)
             session.execute(
-                text("""
+                text(
+                    """
                     UPDATE m10_recovery.work_queue
-                    SET processed_at = now(), success = TRUE
+                    SET processed_at = now()
                     WHERE id = :wid
-                """),
-                {"wid": work_id}
+                """
+                ),
+                {"wid": work_id},
             )
             session.commit()
 
             # Step 6: Verify processed
             result = session.execute(
-                text("""
-                    SELECT processed_at, success FROM m10_recovery.work_queue
+                text(
+                    """
+                    SELECT processed_at FROM m10_recovery.work_queue
                     WHERE id = :wid
-                """),
-                {"wid": work_id}
+                """
+                ),
+                {"wid": work_id},
             )
             row = result.fetchone()
-            assert row[0] is not None, "Should have processed_at"
-            assert row[1] is True, "Should be marked successful"
+            assert row[0] is not None, "Should have processed_at timestamp"
 
         except Exception as e:
             if "does not exist" in str(e).lower():
@@ -2162,15 +2239,9 @@ class TestRedisOutageFallbackComplete:
         finally:
             # Cleanup
             if work_id:
-                session.execute(
-                    text("DELETE FROM m10_recovery.work_queue WHERE id = :wid"),
-                    {"wid": work_id}
-                )
+                session.execute(text("DELETE FROM m10_recovery.work_queue WHERE id = :wid"), {"wid": work_id})
             if candidate_id:
-                session.execute(
-                    text("DELETE FROM recovery_candidates WHERE id = :id"),
-                    {"id": candidate_id}
-                )
+                session.execute(text("DELETE FROM recovery_candidates WHERE id = :id"), {"id": candidate_id})
             session.commit()
             session.close()
 

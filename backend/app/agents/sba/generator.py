@@ -15,23 +15,20 @@
 
 import inspect
 import logging
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Type
+from typing import Any, Callable, Dict, List, Optional, Type
 
 from .schema import (
-    SBASchema,
-    WinningAspiration,
-    WhereToPlay,
-    HowToWin,
     CapabilitiesCapacity,
     EnablingManagementSystems,
     EnvironmentRequirements,
     GovernanceProvider,
-    Dependency,
-    DependencyType,
+    HowToWin,
+    SBASchema,
+    WhereToPlay,
+    WinningAspiration,
 )
 
 logger = logging.getLogger("nova.agents.sba.generator")
@@ -40,9 +37,10 @@ logger = logging.getLogger("nova.agents.sba.generator")
 # M15.1.1: Generation quality tracking
 class GenerationQuality(str, Enum):
     """Quality level of generated SBA content."""
-    HIGH = "high"        # All fields from explicit source
-    MEDIUM = "medium"    # Mix of explicit and inferred
-    LOW = "low"          # Mostly placeholder content
+
+    HIGH = "high"  # All fields from explicit source
+    MEDIUM = "medium"  # Mix of explicit and inferred
+    LOW = "low"  # Mostly placeholder content
 
 
 @dataclass
@@ -53,6 +51,7 @@ class GenerationReport:
     Tracks which fields were auto-generated vs provided,
     enabling audit and enforcement of strict mode.
     """
+
     agent_id: str
     quality: GenerationQuality
     explicit_fields: List[str] = field(default_factory=list)
@@ -228,7 +227,7 @@ class SBAGenerator:
                     "agent_id": agent_id,
                     "quality": report.quality.value,
                     "placeholder_fields": report.placeholder_fields,
-                }
+                },
             )
 
         return SBASchema(
@@ -277,28 +276,28 @@ class SBAGenerator:
 
             # Re-compute report (generate() doesn't return it)
             docstring = self._extract_docstring(
-                kwargs.get('agent_class'),
-                kwargs.get('agent_func'),
+                kwargs.get("agent_class"),
+                kwargs.get("agent_func"),
             )
             aspiration = sba.winning_aspiration.description
             domain = sba.where_to_play.domain
             tasks = sba.how_to_win.tasks
 
-            if kwargs.get('aspiration_override'):
+            if kwargs.get("aspiration_override"):
                 report.explicit_fields.append("winning_aspiration")
             elif self._is_placeholder_aspiration(aspiration):
                 report.placeholder_fields.append("winning_aspiration")
             else:
                 report.inferred_fields.append("winning_aspiration")
 
-            if kwargs.get('domain_override'):
+            if kwargs.get("domain_override"):
                 report.explicit_fields.append("domain")
             elif domain == "general-purpose":
                 report.placeholder_fields.append("domain")
             else:
                 report.inferred_fields.append("domain")
 
-            if kwargs.get('tasks_override'):
+            if kwargs.get("tasks_override"):
                 report.explicit_fields.append("tasks")
             elif self._are_placeholder_tasks(tasks):
                 report.placeholder_fields.append("tasks")
@@ -334,11 +333,7 @@ class SBAGenerator:
 
     def _compute_quality(self, report: GenerationReport) -> GenerationQuality:
         """Compute overall quality from report."""
-        total_fields = (
-            len(report.explicit_fields) +
-            len(report.inferred_fields) +
-            len(report.placeholder_fields)
-        )
+        total_fields = len(report.explicit_fields) + len(report.inferred_fields) + len(report.placeholder_fields)
         if total_fields == 0:
             return GenerationQuality.LOW
 
@@ -369,15 +364,11 @@ class SBAGenerator:
 
         # Check domain
         if domain in STRICT_MODE_REQUIREMENTS["domain_forbidden"]:
-            report.strict_violations.append(
-                f"Domain '{domain}' is too generic. Provide domain_override."
-            )
+            report.strict_violations.append(f"Domain '{domain}' is too generic. Provide domain_override.")
 
         # Check tasks
         if self._are_placeholder_tasks(tasks):
-            report.strict_violations.append(
-                f"Tasks are placeholder content ({tasks}). Provide tasks_override."
-            )
+            report.strict_violations.append(f"Tasks are placeholder content ({tasks}). Provide tasks_override.")
 
     def _extract_docstring(
         self,
@@ -402,10 +393,10 @@ class SBAGenerator:
         # Try to extract purpose from docstring
         if docstring:
             # Look for purpose-like sentences
-            lines = docstring.split('\n')
+            lines = docstring.split("\n")
             for line in lines:
                 line = line.strip()
-                if line and not line.startswith('-') and not line.startswith('*'):
+                if line and not line.startswith("-") and not line.startswith("*"):
                     # First non-list line is likely the purpose
                     if len(line) >= 20:
                         return line[:200]
@@ -418,12 +409,12 @@ class SBAGenerator:
         """Convert agent_id to human-readable form."""
         # scraper_worker -> scraper worker
         # data-analyzer -> data analyzer
-        readable = agent_id.replace('_', ' ').replace('-', ' ')
+        readable = agent_id.replace("_", " ").replace("-", " ")
 
         # Remove common suffixes
-        for suffix in ['worker', 'agent', 'service']:
-            if readable.endswith(f' {suffix}'):
-                readable = readable[:-len(suffix)-1]
+        for suffix in ["worker", "agent", "service"]:
+            if readable.endswith(f" {suffix}"):
+                readable = readable[: -len(suffix) - 1]
 
         return readable.strip() or agent_id
 
@@ -436,26 +427,26 @@ class SBAGenerator:
         """Infer domain from agent info."""
         # Check capabilities for domain hints
         if capabilities:
-            if 'domain' in capabilities:
-                return capabilities['domain']
-            if 'role' in capabilities:
-                return capabilities['role']
+            if "domain" in capabilities:
+                return capabilities["domain"]
+            if "role" in capabilities:
+                return capabilities["role"]
 
         # Infer from agent_id patterns
         domain_patterns = {
-            'scraper': 'web-scraping',
-            'crawler': 'web-scraping',
-            'analyzer': 'data-analysis',
-            'processor': 'data-processing',
-            'validator': 'validation',
-            'checker': 'validation',
-            'writer': 'content-generation',
-            'generator': 'content-generation',
-            'formatter': 'data-transformation',
-            'parser': 'data-parsing',
-            'extractor': 'data-extraction',
-            'aggregator': 'aggregation',
-            'orchestrator': 'orchestration',
+            "scraper": "web-scraping",
+            "crawler": "web-scraping",
+            "analyzer": "data-analysis",
+            "processor": "data-processing",
+            "validator": "validation",
+            "checker": "validation",
+            "writer": "content-generation",
+            "generator": "content-generation",
+            "formatter": "data-transformation",
+            "parser": "data-parsing",
+            "extractor": "data-extraction",
+            "aggregator": "aggregation",
+            "orchestrator": "orchestration",
         }
 
         agent_lower = agent_id.lower()
@@ -464,7 +455,7 @@ class SBAGenerator:
                 return domain
 
         # Default domain
-        return 'general-purpose'
+        return "general-purpose"
 
     def _infer_tasks(
         self,
@@ -478,22 +469,22 @@ class SBAGenerator:
 
         # Extract from capabilities
         if capabilities:
-            if 'task' in capabilities:
-                tasks.append(capabilities['task'])
-            if 'tasks' in capabilities:
-                tasks.extend(capabilities['tasks'])
+            if "task" in capabilities:
+                tasks.append(capabilities["task"])
+            if "tasks" in capabilities:
+                tasks.extend(capabilities["tasks"])
 
         # Extract from config
         if config:
-            if 'task' in config:
-                tasks.append(config['task'])
+            if "task" in config:
+                tasks.append(config["task"])
 
         # Extract from docstring (look for bullet points)
         if docstring:
-            lines = docstring.split('\n')
+            lines = docstring.split("\n")
             for line in lines:
                 line = line.strip()
-                if line.startswith('- ') or line.startswith('* '):
+                if line.startswith("- ") or line.startswith("* "):
                     task = line[2:].strip()
                     if task and len(task) < 200:
                         tasks.append(task)
@@ -522,18 +513,18 @@ class SBAGenerator:
         deps = []
 
         if capabilities:
-            if 'dependencies' in capabilities:
-                deps.extend(capabilities['dependencies'])
-            if 'skills' in capabilities:
-                deps.extend(capabilities['skills'])
-            if 'tools' in capabilities:
-                deps.extend(capabilities['tools'])
+            if "dependencies" in capabilities:
+                deps.extend(capabilities["dependencies"])
+            if "skills" in capabilities:
+                deps.extend(capabilities["skills"])
+            if "tools" in capabilities:
+                deps.extend(capabilities["tools"])
 
         if config:
-            if 'dependencies' in config:
-                deps.extend(config['dependencies'])
-            if 'required_skills' in config:
-                deps.extend(config['required_skills'])
+            if "dependencies" in config:
+                deps.extend(config["dependencies"])
+            if "required_skills" in config:
+                deps.extend(config["required_skills"])
 
         # Deduplicate
         return list(set(deps))
@@ -547,14 +538,14 @@ class SBAGenerator:
         tools = []
 
         if capabilities:
-            if 'allowed_tools' in capabilities:
-                tools.extend(capabilities['allowed_tools'])
-            if 'skills' in capabilities:
-                tools.extend(capabilities['skills'])
+            if "allowed_tools" in capabilities:
+                tools.extend(capabilities["allowed_tools"])
+            if "skills" in capabilities:
+                tools.extend(capabilities["skills"])
 
         if config:
-            if 'allowed_tools' in config:
-                tools.extend(config['allowed_tools'])
+            if "allowed_tools" in config:
+                tools.extend(config["allowed_tools"])
 
         return list(set(tools))
 
@@ -566,15 +557,15 @@ class SBAGenerator:
         env = EnvironmentRequirements()
 
         if config:
-            if 'timeout' in config:
-                env.timeout_seconds = config['timeout']
-            if 'timeout_per_item' in config:
-                env.timeout_seconds = config['timeout_per_item']
-            if 'budget_tokens' in config:
-                env.budget_tokens = config['budget_tokens']
-            if config.get('llm_budget_cents') is not None:
+            if "timeout" in config:
+                env.timeout_seconds = config["timeout"]
+            if "timeout_per_item" in config:
+                env.timeout_seconds = config["timeout_per_item"]
+            if "budget_tokens" in config:
+                env.budget_tokens = config["budget_tokens"]
+            if config.get("llm_budget_cents") is not None:
                 # Rough conversion: 100 cents ~ 50k tokens for GPT-4
-                env.budget_tokens = config['llm_budget_cents'] * 500
+                env.budget_tokens = config["llm_budget_cents"] * 500
 
         return env
 
@@ -582,6 +573,7 @@ class SBAGenerator:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 def generate_sba_from_agent(
     agent_id: str,
@@ -661,9 +653,9 @@ def retrofit_existing_agents(
 
     for agent in agents:
         sba = generator.generate(
-            agent_id=agent.get('agent_id', 'unknown'),
-            capabilities=agent.get('capabilities'),
-            config=agent.get('config'),
+            agent_id=agent.get("agent_id", "unknown"),
+            capabilities=agent.get("capabilities"),
+            config=agent.get("config"),
             orchestrator=orchestrator,
         )
         schemas.append(sba)

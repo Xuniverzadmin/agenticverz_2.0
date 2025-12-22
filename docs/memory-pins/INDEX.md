@@ -907,6 +907,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-120 RC-11 RESOLVED** - Migration 041 fixes `enqueue_work` constraint issue; all M10 recovery enhanced tests now pass |
 | 2025-12-22 | **PIN-120 Test Suite Stabilization & Prevention** - Fixed 29+ test failures, 12 prevention mechanisms; Added RC-8 through RC-12, PREV-8 through PREV-12 |
 | 2025-12-22 | **PIN-119 SQLModel Session Safety - Prevention Mechanisms** - Updated: Updates |
 | 2025-12-21 | **PIN-118 M24.1 REAL Safety Verification** - Fixed 3 onboarding gaps: (1) Step 4 now fires REAL guardrails instead of simulation - evaluates prompt_injection_block pattern, creates real incidents, (2) Added killswitch_demo test type to show cost-spike protection, (3) CompletePage updated to "Your AI is Now Protected" with active status messaging. New endpoint: `POST /guard/onboarding/verify?tenant_id=X` returns `{incident_id, was_blocked, blocked_by}`. Key insight: Replace perceived safety with experienced safety. |

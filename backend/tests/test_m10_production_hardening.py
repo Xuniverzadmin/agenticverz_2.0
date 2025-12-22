@@ -14,24 +14,18 @@ Run:
     DATABASE_URL="$DATABASE_URL" PYTHONPATH=. pytest tests/test_m10_production_hardening.py -v
 """
 
-import asyncio
 import os
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 # Skip if no database
 DATABASE_URL = os.getenv("DATABASE_URL")
-pytestmark = pytest.mark.skipif(
-    not DATABASE_URL,
-    reason="DATABASE_URL not set"
-)
+pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="DATABASE_URL not set")
 
 
 class TestLeaderElectionChaos:
@@ -39,6 +33,7 @@ class TestLeaderElectionChaos:
 
     def get_engine(self):
         from sqlmodel import create_engine
+
         return create_engine(DATABASE_URL, pool_pre_ping=True)
 
     def cleanup_locks(self, lock_prefix: str):
@@ -50,7 +45,7 @@ class TestLeaderElectionChaos:
         with Session(engine) as session:
             session.execute(
                 text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name LIKE :prefix"),
-                {"prefix": f"{lock_prefix}%"}
+                {"prefix": f"{lock_prefix}%"},
             )
             session.commit()
 
@@ -68,7 +63,7 @@ class TestLeaderElectionChaos:
                 # Acquire lock
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60}
+                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60},
                 )
                 acquired = result.scalar()
                 session.commit()
@@ -77,7 +72,7 @@ class TestLeaderElectionChaos:
                 # Second acquisition by same holder should succeed (idempotent)
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60}
+                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60},
                 )
                 acquired2 = result.scalar()
                 session.commit()
@@ -86,7 +81,7 @@ class TestLeaderElectionChaos:
                 # Different holder should fail
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": "other_holder", "ttl": 60}
+                    {"lock_name": lock_name, "holder_id": "other_holder", "ttl": 60},
                 )
                 other_acquired = result.scalar()
                 session.commit()
@@ -95,7 +90,7 @@ class TestLeaderElectionChaos:
                 # Release lock
                 result = session.execute(
                     text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                    {"lock_name": lock_name, "holder_id": holder_id}
+                    {"lock_name": lock_name, "holder_id": holder_id},
                 )
                 released = result.scalar()
                 session.commit()
@@ -122,7 +117,7 @@ class TestLeaderElectionChaos:
             with Session(engine) as session:
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60}
+                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60},
                 )
                 acquired = result.scalar()
                 session.commit()
@@ -160,7 +155,7 @@ class TestLeaderElectionChaos:
                 # Acquire with very short TTL
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder1, "ttl": 1}  # 1 second TTL
+                    {"lock_name": lock_name, "holder_id": holder1, "ttl": 1},  # 1 second TTL
                 )
                 assert result.scalar() is True
                 session.commit()
@@ -176,7 +171,7 @@ class TestLeaderElectionChaos:
                 # Second holder should now acquire
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder2, "ttl": 60}
+                    {"lock_name": lock_name, "holder_id": holder2, "ttl": 60},
                 )
                 acquired = result.scalar()
                 session.commit()
@@ -199,21 +194,21 @@ class TestLeaderElectionChaos:
                 # Acquire lock
                 session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 10}
+                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 10},
                 )
                 session.commit()
 
                 # Get initial expiry
                 result = session.execute(
                     text("SELECT expires_at FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                    {"lock_name": lock_name}
+                    {"lock_name": lock_name},
                 )
                 initial_expiry = result.scalar()
 
                 # Extend lock
                 result = session.execute(
                     text("SELECT m10_recovery.extend_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 300}
+                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 300},
                 )
                 extended = result.scalar()
                 session.commit()
@@ -222,7 +217,7 @@ class TestLeaderElectionChaos:
                 # Verify new expiry
                 result = session.execute(
                     text("SELECT expires_at FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                    {"lock_name": lock_name}
+                    {"lock_name": lock_name},
                 )
                 new_expiry = result.scalar()
                 assert new_expiry > initial_expiry, "Expiry should be extended"
@@ -236,6 +231,7 @@ class TestOutboxE2E:
 
     def get_engine(self):
         from sqlmodel import create_engine
+
         return create_engine(DATABASE_URL, pool_pre_ping=True)
 
     def cleanup_outbox(self, aggregate_type: str = "test"):
@@ -246,8 +242,7 @@ class TestOutboxE2E:
         engine = self.get_engine()
         with Session(engine) as session:
             session.execute(
-                text("DELETE FROM m10_recovery.outbox WHERE aggregate_type = :agg_type"),
-                {"agg_type": aggregate_type}
+                text("DELETE FROM m10_recovery.outbox WHERE aggregate_type = :agg_type"), {"agg_type": aggregate_type}
             )
             session.commit()
 
@@ -263,13 +258,15 @@ class TestOutboxE2E:
             with Session(engine) as session:
                 # Publish event
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT m10_recovery.publish_outbox(
                             'test', :agg_id, 'http:call',
                             '{"url": "https://example.com/webhook", "method": "POST"}'::jsonb
                         )
-                    """),
-                    {"agg_id": aggregate_id}
+                    """
+                    ),
+                    {"agg_id": aggregate_id},
                 )
                 event_id = result.scalar()
                 session.commit()
@@ -288,14 +285,13 @@ class TestOutboxE2E:
                 # Complete event
                 session.execute(
                     text("SELECT m10_recovery.complete_outbox_event(:event_id, true, NULL, 'test-processor')"),
-                    {"event_id": event_id}
+                    {"event_id": event_id},
                 )
                 session.commit()
 
                 # Verify processed
                 result = session.execute(
-                    text("SELECT processed_at FROM m10_recovery.outbox WHERE id = :id"),
-                    {"id": event_id}
+                    text("SELECT processed_at FROM m10_recovery.outbox WHERE id = :id"), {"id": event_id}
                 )
                 processed_at = result.scalar()
                 assert processed_at is not None, "Event should be marked processed"
@@ -315,13 +311,15 @@ class TestOutboxE2E:
             with Session(engine) as session:
                 # Publish event
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT m10_recovery.publish_outbox(
                             'test', :agg_id, 'http:call',
                             '{"url": "https://example.com/webhook"}'::jsonb
                         )
-                    """),
-                    {"agg_id": aggregate_id}
+                    """
+                    ),
+                    {"agg_id": aggregate_id},
                 )
                 event_id = result.scalar()
                 session.commit()
@@ -333,15 +331,16 @@ class TestOutboxE2E:
                 session.commit()
 
                 session.execute(
-                    text("SELECT m10_recovery.complete_outbox_event(:event_id, false, 'Connection refused', 'test-processor')"),
-                    {"event_id": event_id}
+                    text(
+                        "SELECT m10_recovery.complete_outbox_event(:event_id, false, 'Connection refused', 'test-processor')"
+                    ),
+                    {"event_id": event_id},
                 )
                 session.commit()
 
                 # Check retry_count increased
                 result = session.execute(
-                    text("SELECT retry_count, process_after FROM m10_recovery.outbox WHERE id = :id"),
-                    {"id": event_id}
+                    text("SELECT retry_count, process_after FROM m10_recovery.outbox WHERE id = :id"), {"id": event_id}
                 )
                 row = result.fetchone()
                 assert row[0] == 1, "Retry count should be 1"
@@ -353,9 +352,10 @@ class TestOutboxE2E:
     @pytest.mark.asyncio
     async def test_outbox_processor_integration(self):
         """Test outbox processor with mock HTTP."""
-        from app.worker.outbox_processor import OutboxProcessor
         from sqlalchemy import text
         from sqlmodel import Session
+
+        from app.worker.outbox_processor import OutboxProcessor
 
         engine = self.get_engine()
         aggregate_id = str(uuid.uuid4())
@@ -364,13 +364,15 @@ class TestOutboxE2E:
             # Publish event
             with Session(engine) as session:
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT m10_recovery.publish_outbox(
                             'test', :agg_id, 'notify:log',
                             '{"channel": "log", "message": "Test notification"}'::jsonb
                         )
-                    """),
-                    {"agg_id": aggregate_id}
+                    """
+                    ),
+                    {"agg_id": aggregate_id},
                 )
                 event_id = result.scalar()
                 session.commit()
@@ -389,8 +391,7 @@ class TestOutboxE2E:
             # Verify processed
             with Session(engine) as session:
                 result = session.execute(
-                    text("SELECT processed_at FROM m10_recovery.outbox WHERE id = :id"),
-                    {"id": event_id}
+                    text("SELECT processed_at FROM m10_recovery.outbox WHERE id = :id"), {"id": event_id}
                 )
                 processed_at = result.scalar()
                 assert processed_at is not None, "Event should be processed"
@@ -404,6 +405,7 @@ class TestArchiveAndTrimSafety:
 
     def get_engine(self):
         from sqlmodel import create_engine
+
         return create_engine(DATABASE_URL, pool_pre_ping=True)
 
     def test_archive_before_delete(self):
@@ -418,19 +420,21 @@ class TestArchiveAndTrimSafety:
             with Session(engine) as session:
                 # Archive a message
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO m10_recovery.dead_letter_archive
                         (stream_msg_id, stream_name, payload, reason)
                         VALUES (:msg_id, 'm10:eval', '{"test": true}'::jsonb, 'test_archive')
-                    """),
-                    {"msg_id": test_msg_id}
+                    """
+                    ),
+                    {"msg_id": test_msg_id},
                 )
                 session.commit()
 
                 # Verify archived
                 result = session.execute(
                     text("SELECT payload, reason FROM m10_recovery.dead_letter_archive WHERE stream_msg_id = :msg_id"),
-                    {"msg_id": test_msg_id}
+                    {"msg_id": test_msg_id},
                 )
                 row = result.fetchone()
                 assert row is not None, "Archive record should exist"
@@ -450,6 +454,7 @@ class TestReplayLogDurability:
 
     def get_engine(self):
         from sqlmodel import create_engine
+
         return create_engine(DATABASE_URL, pool_pre_ping=True)
 
     def cleanup_replay_log(self, prefix: str = "test"):
@@ -460,8 +465,7 @@ class TestReplayLogDurability:
         engine = self.get_engine()
         with Session(engine) as session:
             session.execute(
-                text("DELETE FROM m10_recovery.replay_log WHERE original_msg_id LIKE :prefix"),
-                {"prefix": f"{prefix}%"}
+                text("DELETE FROM m10_recovery.replay_log WHERE original_msg_id LIKE :prefix"), {"prefix": f"{prefix}%"}
             )
             session.commit()
 
@@ -477,16 +481,18 @@ class TestReplayLogDurability:
             with Session(engine) as session:
                 # First replay
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT * FROM m10_recovery.record_replay(
                             :orig_id, :dl_id, NULL, NULL, :new_id, 'test'
                         )
-                    """),
+                    """
+                    ),
                     {
                         "orig_id": original_msg_id,
                         "dl_id": f"dl-{uuid.uuid4().hex[:8]}",
-                        "new_id": f"new-{uuid.uuid4().hex[:8]}"
-                    }
+                        "new_id": f"new-{uuid.uuid4().hex[:8]}",
+                    },
                 )
                 row = result.fetchone()
                 session.commit()
@@ -497,16 +503,18 @@ class TestReplayLogDurability:
 
                 # Second replay of same original
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT * FROM m10_recovery.record_replay(
                             :orig_id, :dl_id, NULL, NULL, :new_id, 'test'
                         )
-                    """),
+                    """
+                    ),
                     {
                         "orig_id": original_msg_id,  # Same original
                         "dl_id": f"dl-{uuid.uuid4().hex[:8]}",
-                        "new_id": f"new-{uuid.uuid4().hex[:8]}"
-                    }
+                        "new_id": f"new-{uuid.uuid4().hex[:8]}",
+                    },
                 )
                 row = result.fetchone()
                 session.commit()
@@ -524,6 +532,7 @@ class TestRetentionGC:
 
     def get_engine(self):
         from sqlmodel import create_engine
+
         return create_engine(DATABASE_URL, pool_pre_ping=True)
 
     def test_retention_cleanup_dry_run(self):
@@ -547,6 +556,7 @@ class TestRetentionGC:
         """Test cleanup of expired locks."""
         from sqlalchemy import text
         from sqlmodel import Session
+
         from scripts.ops.m10_retention_cleanup import cleanup_expired_locks
 
         engine = self.get_engine()
@@ -556,11 +566,13 @@ class TestRetentionGC:
             # Create already-expired lock directly
             with Session(engine) as session:
                 session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO m10_recovery.distributed_locks (lock_name, holder_id, expires_at)
                         VALUES (:lock_name, 'test-holder', now() - interval '1 hour')
-                    """),
-                    {"lock_name": lock_name}
+                    """
+                    ),
+                    {"lock_name": lock_name},
                 )
                 session.commit()
 
@@ -573,16 +585,14 @@ class TestRetentionGC:
             with Session(engine) as session:
                 result = session.execute(
                     text("SELECT COUNT(*) FROM m10_recovery.distributed_locks WHERE lock_name = :lock_name"),
-                    {"lock_name": lock_name}
+                    {"lock_name": lock_name},
                 )
                 count = result.scalar()
                 assert count == 0, "Expired lock should be deleted"
 
         finally:
             with Session(engine) as session:
-                session.execute(
-                    text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name LIKE 'test:expired%'")
-                )
+                session.execute(text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name LIKE 'test:expired%'"))
                 session.commit()
 
 
@@ -592,6 +602,7 @@ class TestScaleConcurrency:
 
     def get_engine(self):
         from sqlmodel import create_engine
+
         return create_engine(DATABASE_URL, pool_pre_ping=True)
 
     def test_high_volume_outbox(self):
@@ -607,13 +618,15 @@ class TestScaleConcurrency:
             with Session(engine) as session:
                 for i in range(num_events):
                     session.execute(
-                        text("""
+                        text(
+                            """
                             SELECT m10_recovery.publish_outbox(
                                 'scale_test', :agg_id, 'notify:log',
                                 '{"message": "Event"}'::jsonb
                             )
-                        """),
-                        {"agg_id": f"scale-{i}"}
+                        """
+                        ),
+                        {"agg_id": f"scale-{i}"},
                     )
                 session.commit()
 
@@ -649,7 +662,7 @@ class TestScaleConcurrency:
                 # Try acquire
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
-                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60}
+                    {"lock_name": lock_name, "holder_id": holder_id, "ttl": 60},
                 )
                 acquired = result.scalar()
                 session.commit()
@@ -667,7 +680,7 @@ class TestScaleConcurrency:
                     # Release
                     result = session.execute(
                         text("SELECT m10_recovery.release_lock(:lock_name, :holder_id)"),
-                        {"lock_name": lock_name, "holder_id": holder_id}
+                        {"lock_name": lock_name, "holder_id": holder_id},
                     )
                     released = result.scalar()
                     session.commit()

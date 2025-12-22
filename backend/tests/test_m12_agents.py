@@ -1,38 +1,40 @@
 # M12 Multi-Agent System Unit Tests
 # Tests for job service, worker service, blackboard, and registry
 
-import json
 import os
-import pytest
 import time
-from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List
-from unittest.mock import MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
+
+import pytest
 
 # Set test environment
-os.environ.setdefault("DATABASE_URL", "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require")
+os.environ.setdefault(
+    "DATABASE_URL",
+    "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
+)
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
-from app.agents.services.job_service import JobService, JobConfig, get_job_service
-from app.agents.services.worker_service import WorkerService, get_worker_service
-from app.agents.services.blackboard_service import BlackboardService, get_blackboard_service
-from app.agents.services.message_service import MessageService, get_message_service
-from app.agents.services.registry_service import RegistryService, get_registry_service
-from app.agents.services.credit_service import CreditService, get_credit_service, CREDIT_COSTS
-from app.agents.skills.agent_spawn import AgentSpawnSkill, AgentSpawnInput
-from app.agents.skills.agent_invoke import AgentInvokeSkill, AgentInvokeInput
+from app.agents.services.blackboard_service import get_blackboard_service
+from app.agents.services.credit_service import CREDIT_COSTS, get_credit_service
+from app.agents.services.job_service import JobConfig, get_job_service
+from app.agents.services.message_service import get_message_service
+from app.agents.services.registry_service import get_registry_service
+from app.agents.services.worker_service import get_worker_service
+from app.agents.skills.agent_spawn import AgentSpawnInput, AgentSpawnSkill
 from app.agents.skills.blackboard_ops import (
-    BlackboardReadSkill, BlackboardReadInput,
-    BlackboardWriteSkill, BlackboardWriteInput,
-    BlackboardLockSkill, BlackboardLockInput
+    BlackboardLockInput,
+    BlackboardLockSkill,
+    BlackboardReadInput,
+    BlackboardReadSkill,
+    BlackboardWriteInput,
+    BlackboardWriteSkill,
 )
-
 
 # =====================
 # Test Fixtures
 # =====================
+
 
 @pytest.fixture
 def job_service():
@@ -77,6 +79,7 @@ def credit_service():
 # Credit Service Tests
 # =====================
 
+
 class TestCreditService:
     """Tests for credit service."""
 
@@ -100,6 +103,7 @@ class TestCreditService:
 # =====================
 # Job Service Tests
 # =====================
+
 
 class TestJobService:
     """Tests for job service."""
@@ -192,6 +196,7 @@ class TestJobService:
 # =====================
 # Worker Service Tests
 # =====================
+
 
 class TestWorkerService:
     """Tests for worker service (SKIP LOCKED pattern)."""
@@ -294,6 +299,7 @@ class TestWorkerService:
 # Blackboard Service Tests
 # =====================
 
+
 class TestBlackboardService:
     """Tests for Redis blackboard."""
 
@@ -386,6 +392,7 @@ class TestBlackboardService:
 # Registry Service Tests
 # =====================
 
+
 class TestRegistryService:
     """Tests for agent registry."""
 
@@ -442,6 +449,7 @@ class TestRegistryService:
 # Message Service Tests
 # =====================
 
+
 class TestMessageService:
     """Tests for P2P messaging."""
 
@@ -489,6 +497,7 @@ class TestMessageService:
 # =====================
 # Skill Tests
 # =====================
+
 
 class TestAgentSpawnSkill:
     """Tests for agent_spawn skill."""
@@ -572,21 +581,25 @@ class TestBlackboardSkills:
         skill = BlackboardLockSkill()
 
         # Acquire
-        output = skill.execute(BlackboardLockInput(
-            key=lock_key,
-            holder="test_holder",
-            action="acquire",
-        ))
+        output = skill.execute(
+            BlackboardLockInput(
+                key=lock_key,
+                holder="test_holder",
+                action="acquire",
+            )
+        )
 
         assert output.success is True
         assert output.acquired is True
 
         # Release
-        output2 = skill.execute(BlackboardLockInput(
-            key=lock_key,
-            holder="test_holder",
-            action="release",
-        ))
+        output2 = skill.execute(
+            BlackboardLockInput(
+                key=lock_key,
+                holder="test_holder",
+                action="release",
+            )
+        )
 
         assert output2.success is True
         assert output2.released is True
@@ -595,6 +608,7 @@ class TestBlackboardSkills:
 # =====================
 # Integration Tests
 # =====================
+
 
 class TestJobWorkflow:
     """Integration tests for complete job workflow."""
