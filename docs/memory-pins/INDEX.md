@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-130 M26 Cost Intelligence Blueprint)
+**Last Updated:** 2025-12-22 (PIN-131 M27 Cost Loop Integration Blueprint)
 
 ---
 
@@ -152,6 +152,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-128](PIN-128-master-plan-m25-m30.md) | **Master Plan M25-M30** | Planning / Architecture / Roadmap | **🎯 STRATEGIC** | 2025-12-22 |
 | [PIN-129](PIN-129-m25-pillar-integration-blueprint.md) | **M25 Pillar Integration Blueprint** | Milestone / Architecture / Integration | **📋 SPECIFICATION** | 2025-12-22 |
 | [PIN-130](PIN-130-m26-cost-intelligence-blueprint.md) | **M26 Cost Intelligence Blueprint** | Milestone / Cost Management / Dashboard | **📋 SPECIFICATION** | 2025-12-22 |
+| [PIN-131](PIN-131-m27-cost-loop-integration-blueprint.md) | **M27 Cost Loop Integration Blueprint** | Milestone / Cost Management / Integration | **📋 SPECIFICATION** | 2025-12-22 |
 
 ---
 
@@ -917,6 +918,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-22 | **PIN-131 M27 Cost Loop Integration Blueprint** - Wires M26 cost intelligence into M25 feedback loop. 5 cost-specific bridges (C1-C5): Cost Anomaly→Incident, Pattern Matcher, Recovery Generator, Policy Generator, Routing Adjuster. CostEstimationProbe for CARE routing. Cost-aware recovery strategies (rate limiting, model downgrade, budget enforcement). Migration 044 adds cost_routing_adjustments table. 7-day implementation (Phase 1: C1-C2, Phase 2: C3-C4, Phase 3: C5+Probe, Phase 4: Testing). Integration points: CostAnomalyDetector→IntegrationDispatcher, RecoveryEvaluator+CostRecoveryGenerator, PolicyGenerator+CostPolicyTemplates, CARE+CostEstimationProbe. |
+| 2025-12-22 | **PIN-130 M26 Cost Intelligence Blueprint** - Full cost intelligence dashboard spec. Feature Tagging API, Cost Attribution Dashboard (by feature/user/model/time), Cost Anomaly Detection (z-score, budget, rate-of-change), Budget Alert System (configurable thresholds), Cost Projection Engine (30-day forecasts). Migration 043 with feature_tags, cost_records, cost_anomalies, cost_budgets, cost_daily_aggregates. Console UI: CostDashboardPage, CostByFeatureChart, CostByUserTable, AnomalyAlertPanel, ProjectionChart, FeatureTagManager. 11-day implementation (Phase 1: Feature tagging, Phase 2: Dashboard, Phase 3: Anomaly detection, Phase 4: Alerts+Projection, Phase 5: M25 Loop Integration). |
+| 2025-12-22 | **PIN-129 M25 Pillar Integration Blueprint** - First detailed blueprint from PIN-128. 5 integration bridges: (1) Incident→Catalog, (2) Pattern→Recovery, (3) Recovery→Policy, (4) Policy→CARE, (5) Status→Console. IntegrationDispatcher event-driven architecture with Redis pub/sub + PostgreSQL durability. LoopEvent/LoopStage tracking. Migration 042_m25_integration_loop adds integration_events, loop_telemetry, bridge_configs tables. 14-day implementation across 6 phases. Success criteria: <5s incident-to-catalog, <2s pattern-to-recovery, <1s policy-to-CARE, <500ms status-to-console. |
 | 2025-12-22 | **PIN-128 Master Plan M25-M30** - Strategic roadmap answering "build missing vs integrate first?" VERDICT: Integrate First. Sequence: M25 (Pillar Integration, 2wk) → M26 (Cost Intelligence, 1.5wk) → M27 (Cost→Loop, 1wk) → M28 (Unified Console, 1.5wk). Conditional: M29 (Quality Score) and M30 (Trust Badge) only if customers demand. Total P0: 6 weeks. Key insight: Integration reveals real gaps, not hypothetical ones. |
 | 2025-12-22 | **PIN-127 Replay Determinism Proof** - THE INVARIANT: Given a frozen execution trace, the system must produce identical determinism signature, or fail loudly with reason. Tagged `v1.0.0-determinism-proof`. Implementation: (1) Added `SCHEMA_VERSION: ClassVar[str] = "1.0.0"` to TraceRecord, (2) Added `_normalize_for_determinism()` for float precision (6 decimals), (3) Created 13-test invariant suite in `test_determinism_invariant.py` (0.25s, CI-blocking). Files: `backend/app/traces/models.py`, `backend/tests/test_determinism_invariant.py`, `backend/tests/fixtures/golden_trace.json`. This is a proof artifact, not a framework. |
 | 2025-12-22 | **PIN-126 Test Infrastructure & Prevention Blueprint** - Implemented complete prevention blueprint: (1) Added pyright to CI (non-blocking, generates summary), (2) Added 3 route sanity tests (`TestRouteSanity` - endpoints exist, callable, 50+ routes), (3) Added 4 registry integrity tests (`TestRegistryIntegrity` - skills load, have version, instantiable, have execute), (4) Created OpenAPI snapshot (`tests/snapshots/ops_api_contracts.json`) with 3 contract drift tests (`TestOpsAPIContractSnapshot`). Total: 26 route contract tests all passing. Prevention mechanisms PREV-20 to PREV-23 documented. |
