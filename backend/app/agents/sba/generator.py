@@ -572,7 +572,7 @@ class SBAGenerator:
                 env.timeout_seconds = config['timeout_per_item']
             if 'budget_tokens' in config:
                 env.budget_tokens = config['budget_tokens']
-            if 'llm_budget_cents' in config:
+            if config.get('llm_budget_cents') is not None:
                 # Rough conversion: 100 cents ~ 50k tokens for GPT-4
                 env.budget_tokens = config['llm_budget_cents'] * 500
 

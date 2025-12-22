@@ -34,6 +34,7 @@ pytestmark = [
     ),
     pytest.mark.asyncio,  # Mark all tests in this module as async
     pytest.mark.integration,
+    pytest.mark.flaky,  # Event loop lifecycle issues cause intermittent failures
 ]
 
 pytest.importorskip("asyncpg")

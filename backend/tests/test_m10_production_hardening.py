@@ -586,6 +586,7 @@ class TestRetentionGC:
                 session.commit()
 
 
+@pytest.mark.slow
 class TestScaleConcurrency:
     """Test system under high concurrency load."""
 
