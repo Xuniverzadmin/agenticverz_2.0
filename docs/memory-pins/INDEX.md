@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-128 Master Plan M25-M30)
+**Last Updated:** 2025-12-22 (PIN-129 M25 Pillar Integration Blueprint)
 
 ---
 
@@ -150,6 +150,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-126](PIN-126-test-infrastructure-prevention-blueprint.md) | **Test Infrastructure & Prevention Blueprint** | Testing / Prevention / Code Quality | **✅ COMPLETE** | 2025-12-22 |
 | [PIN-127](PIN-127-replay-determinism-proof.md) | **Replay Determinism Proof** | Core Infrastructure / Determinism | **✅ COMPLETE** | 2025-12-22 |
 | [PIN-128](PIN-128-master-plan-m25-m30.md) | **Master Plan M25-M30** | Planning / Architecture / Roadmap | **🎯 STRATEGIC** | 2025-12-22 |
+| [PIN-129](PIN-129-m25-pillar-integration-blueprint.md) | **M25 Pillar Integration Blueprint** | Milestone / Architecture / Integration | **📋 SPECIFICATION** | 2025-12-22 |
 
 ---
 
@@ -1294,3 +1295,6 @@ When resuming work on this project:
 | 2025-12-16 | **🔒 Golden Replay Guard CI** - Mandatory CI job added to `.github/workflows/ci.yml`. Runs `golden_test.py` covering M4, M6, M14, M17, M18, M19. Blocks merge on any diff. Protects determinism moat from silent regressions. |
 | 2025-12-16 | **🛡️ Content Policy Validation Gate** - Implemented constitutional enforcement in `worker.py`. Added `_validate_content_policy()` with 10 universal forbidden patterns (guarantees, 100% claims, clinically proven, etc.). M9/M10/M18/M19 now fire on adversarial input. Drift score=0.8 on scammy content. Test reports: TR-001 (happy path PASS), TR-002 (pre-fix GAPS), TR-003 (post-fix PASS). Demo ready. |
 | 2025-12-22 | **PIN-121 Mypy Technical Debt** - Documented 572 mypy errors in 118 files. Added PREV-13 (pre-commit), PREV-14 (CI step), PREV-15 (postflight category). 6 root causes identified. 4-phase remediation plan. |
+| 2025-12-22 | **PIN-127 Replay Determinism Proof** - THE INVARIANT: "Given a frozen execution trace, the system must produce identical determinism signature, or fail loudly with reason." 13-test suite proving schema versioning, float normalization, drift detection. Tagged `v1.0.0-determinism-proof`. |
+| 2025-12-22 | **PIN-128 Master Plan M25-M30** - Strategic roadmap answering "build missing vs integrate first". Recommendation: INTEGRATE FIRST. Sequence: M25 (Pillar Integration) → M26 (Cost Intelligence) → M27 (Cost→Loop) → M28 (Unified Console). P0: 6 weeks. Conditional: M29 (Quality Score), M30 (Trust Badge). |
+| 2025-12-22 | **PIN-129 M25 Pillar Integration Blueprint** - Comprehensive specification for wiring the three pillars (Incident Console, Self-Healing, Governance) into a closed feedback loop. 5 bridges: Incident→Catalog, Pattern→Recovery, Recovery→Policy, Policy→CARE, Status→Console. Event bus architecture. Migration 042. 14-day implementation plan. |

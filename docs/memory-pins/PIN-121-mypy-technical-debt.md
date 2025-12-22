@@ -152,43 +152,69 @@ if cert is not None:
 
 ---
 
-## Remediation Plan
+## Remediation Plan (Revised)
 
-### Phase 1: Prevention (Immediate)
+> **Principle:** We are not trying to reach zero warnings. We are trying to reach "warnings that matter."
 
-**Completed:**
-- [x] Added mypy to pre-commit hooks (warning mode)
+### Phase 0: Stop the Bleeding (P1 Bugs) ✅ COMPLETE
+
+**Target:** Fix None + operator issues that cause runtime errors
+
+**Completed (2025-12-22):**
+- [x] `backend/app/policy/compiler/tokenizer.py` - Added None guard in `read_operator()`
+- [x] `backend/app/policy/ast/nodes.py` - Changed 7 fields from `ExprNode = None` to `Optional[ExprNode] = None`
+- [x] `backend/app/policy/ast/nodes.py` - Added abstract methods to `ASTVisitor` class
+- [x] `backend/app/policy/ast/visitors.py` - Removed duplicate `ASTVisitor`, added None checks
+- [x] `backend/app/policy/validators/prevention_hook.py` - Fixed 2 Optional type declarations
+
+**Result:** P1 None bugs in policy compiler = 0 errors
+
+### Phase 1: Structural Cleanup (With Whitelist)
+
+**Target:** Remove dead code without breaking dynamic dispatch
+
+**Prerequisites:**
+- Create whitelist for dynamic dispatch (skill registry, plugins, event handlers)
+- Audit reflection usage in agent registry and SBA system
+- Document entrypoints that shouldn't be pruned
+
+**Files to address:**
+- Registry patterns in `app/agents/services/registry_service.py`
+- Dynamic skill loading in `app/skills/`
+- Event handlers in `app/routing/`
+
+### Phase 2: API Normalization
+
+**Target:** Fix the 121 API warnings (not "Phase 4" material)
+
+**Areas:**
+- Response schema consistency across endpoints
+- Error response format standardization
+- Query parameter naming conventions
+
+### Phase 3: Typing Hygiene
+
+**Target:** Address remaining mypy errors (type assignment, visitor pattern)
+
+**Files:**
+- `backend/app/traces/redact.py` - Type assignment mismatches
+- `backend/app/workflow/canonicalize.py` - Type re-assignments
+- `backend/app/services/evidence_report.py` - None guards
+
+### Phase 4: Tests & Coverage
+
+**Target:** Add tests AFTER cleanup (not before)
+
+**Rationale:** Coverage before cleanup = "tests for garbage"
+
+---
+
+## Prevention Completed
+
+- [x] Added mypy to pre-commit hooks (warning mode) - PREV-13
 - [x] Created PIN-121 documenting issues
-- [x] Updated postflight.py with mypy category
-
-**In Progress:**
-- [ ] Configure mypy for gradual adoption (`--strict` on new files)
-- [ ] Add CI mypy step (non-blocking initially)
-
-### Phase 2: Critical Fixes (P1)
-
-**Target:** Fix 14 None + operator issues
-
-Files to fix:
-1. `backend/app/policy/compiler/tokenizer.py` - 4 errors
-2. `backend/app/policy/validators/prevention_hook.py` - 2 errors
-3. `backend/app/policy/ast/nodes.py` - 8 errors
-
-### Phase 3: Gradual Fix (P2)
-
-**Target:** Fix type assignment and visitor pattern issues
-
-1. Add abstract methods to `ASTVisitor` base class
-2. Fix type assignments in `redact.py` and `canonicalize.py`
-3. Add None guards in `evidence_report.py`
-
-### Phase 4: Type Stubs & Annotations (P3)
-
-**Target:** Suppress known false positives
-
-1. Add `# type: ignore[call-arg]` for SQLModel `table=True`
-2. Add `# type: ignore[misc]` for `Base` inheritance
-3. Install missing type stubs (`types-PyYAML`)
+- [x] Updated postflight.py with mypy category - PREV-15
+- [x] CI mypy step (non-blocking) - PREV-14
 
 ---
 
@@ -310,3 +336,5 @@ Track progress against this baseline:
 |------|--------|
 | 2025-12-22 | Initial creation - 572 errors documented, 6 root causes identified |
 | 2025-12-22 | Added PREV-13, PREV-14, PREV-15 prevention mechanisms |
+| 2025-12-22 | **Phase 0 COMPLETE** - Fixed all P1 None bugs in policy compiler |
+| 2025-12-22 | Revised roadmap based on expert feedback (cleanup before coverage) |
