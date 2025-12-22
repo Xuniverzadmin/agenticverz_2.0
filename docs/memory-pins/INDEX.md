@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-22 (PIN-129 M25 Pillar Integration Blueprint)
+**Last Updated:** 2025-12-22 (PIN-130 M26 Cost Intelligence Blueprint)
 
 ---
 
@@ -151,6 +151,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-127](PIN-127-replay-determinism-proof.md) | **Replay Determinism Proof** | Core Infrastructure / Determinism | **✅ COMPLETE** | 2025-12-22 |
 | [PIN-128](PIN-128-master-plan-m25-m30.md) | **Master Plan M25-M30** | Planning / Architecture / Roadmap | **🎯 STRATEGIC** | 2025-12-22 |
 | [PIN-129](PIN-129-m25-pillar-integration-blueprint.md) | **M25 Pillar Integration Blueprint** | Milestone / Architecture / Integration | **📋 SPECIFICATION** | 2025-12-22 |
+| [PIN-130](PIN-130-m26-cost-intelligence-blueprint.md) | **M26 Cost Intelligence Blueprint** | Milestone / Cost Management / Dashboard | **📋 SPECIFICATION** | 2025-12-22 |
 
 ---
 
@@ -1298,3 +1299,4 @@ When resuming work on this project:
 | 2025-12-22 | **PIN-127 Replay Determinism Proof** - THE INVARIANT: "Given a frozen execution trace, the system must produce identical determinism signature, or fail loudly with reason." 13-test suite proving schema versioning, float normalization, drift detection. Tagged `v1.0.0-determinism-proof`. |
 | 2025-12-22 | **PIN-128 Master Plan M25-M30** - Strategic roadmap answering "build missing vs integrate first". Recommendation: INTEGRATE FIRST. Sequence: M25 (Pillar Integration) → M26 (Cost Intelligence) → M27 (Cost→Loop) → M28 (Unified Console). P0: 6 weeks. Conditional: M29 (Quality Score), M30 (Trust Badge). |
 | 2025-12-22 | **PIN-129 M25 Pillar Integration Blueprint** - Comprehensive specification for wiring the three pillars (Incident Console, Self-Healing, Governance) into a closed feedback loop. 5 bridges: Incident→Catalog, Pattern→Recovery, Recovery→Policy, Policy→CARE, Status→Console. Event bus architecture. Migration 042. 14-day implementation plan. |
+| 2025-12-22 | **PIN-130 M26 Cost Intelligence Blueprint** - Comprehensive specification for Cost Intelligence Dashboard. Feature tagging API, cost attribution by feature/user/model, anomaly detection (reusing M9 patterns), budget alerts, cost projection engine, M25 loop integration (cost anomaly → incident → policy). Migration 043. 11-day implementation plan. |
