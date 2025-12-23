@@ -1,0 +1,29 @@
+{
+  "id": 2,
+  "level": "ROLLBACK_SAFE",
+  "gates_json": {
+    "gate2_rollback": {
+      "passed": true,
+      "regret_count": 0
+    },
+    "gate3_timeline": {
+      "views": 0,
+      "passed": false
+    },
+    "gate1_prevention": {
+      "count": 1,
+      "passed": true
+    }
+  },
+  "computed_at": "2025-12-23T07:08:03.195675+00:00",
+  "is_degraded": false,
+  "degraded_from": null,
+  "degradation_reason": null,
+  "evidence_snapshot": {
+    "policy_id": "pol_eff9bcd477874df3",
+    "tenant_id": "tenant_demo",
+    "pattern_id": "pat_1a1fcbbf6cd2483a",
+    "gates_passed": 2,
+    "evaluation_type": "m25_graduation_delta"
+  }
+}

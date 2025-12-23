@@ -1659,6 +1659,8 @@ async def seed_demo_incident(
     session: Session = Depends(get_session),
 ):
     """
+    DEPRECATED: Demo endpoint - disabled in production.
+
     Seed a demo incident for the 7-minute demo flow.
 
     Creates the "contract auto-renewal" incident:
@@ -1667,6 +1669,16 @@ async def seed_demo_incident(
     - Bug: AI asserted fact when data was missing
     - Root cause: CONTENT_ACCURACY policy gap
     """
+    # ==========================================================================
+    # M25 HYGIENE: Demo endpoints disabled in production
+    # See PIN-140 for rationale: "Proof tools ≠ product tools"
+    # ==========================================================================
+    import os
+    if not os.getenv("DEMO_ENDPOINTS_ENABLED", "").lower() == "true":
+        raise HTTPException(
+            status_code=410,  # Gone
+            detail="Demo endpoint disabled. Set DEMO_ENDPOINTS_ENABLED=true for testing."
+        )
     import json
 
     # Create the demo proxy call
@@ -1828,6 +1840,8 @@ async def validate_content_accuracy_endpoint(
     tenant_id: str = Query(..., description="Tenant ID"),
 ):
     """
+    DEPRECATED: Internal validation endpoint - disabled in production.
+
     Validate content accuracy of an LLM output.
 
     This endpoint tests the CONTENT_ACCURACY prevention mechanism:
@@ -1839,6 +1853,16 @@ async def validate_content_accuracy_endpoint(
     2. Debug why a response was blocked
     3. Validate context data completeness
     """
+    # ==========================================================================
+    # M25 HYGIENE: Validation endpoints disabled in production
+    # See PIN-140 for rationale: "Proof tools ≠ product tools"
+    # ==========================================================================
+    import os
+    if not os.getenv("DEMO_ENDPOINTS_ENABLED", "").lower() == "true":
+        raise HTTPException(
+            status_code=410,  # Gone
+            detail="Validation endpoint disabled. Set DEMO_ENDPOINTS_ENABLED=true for testing."
+        )
     from app.policy.validators import PreventionAction, evaluate_response
 
     result = evaluate_response(

@@ -56,7 +56,7 @@ ARCHITECTURE NOTES (Phase-2):
 import json
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -455,6 +455,50 @@ class InfraLimits(BaseModel):
 
     # Warnings
     limit_warnings: List[Dict[str, Any]]
+
+
+# =============================================================================
+# Event Stream Models (Phase 2 normalization)
+# =============================================================================
+
+
+class OpsEvent(BaseModel):
+    """Single ops event from event stream."""
+
+    event_id: str
+    timestamp: Optional[datetime] = None
+    tenant_id: Optional[str] = None
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    event_type: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    severity: Optional[str] = None
+    latency_ms: Optional[int] = None
+    cost_usd: Optional[float] = None
+    metadata: Dict[str, Any] = {}
+
+
+class OpsEventListResponse(BaseModel):
+    """Response for /ops/events endpoint."""
+
+    events: List[OpsEvent]
+    total: int
+    window_hours: int
+
+
+# =============================================================================
+# Background Job Models (Phase 2 normalization)
+# =============================================================================
+
+
+class OpsJobResult(BaseModel):
+    """Response for /ops/jobs/* background job endpoints."""
+
+    status: Literal["completed", "error"]
+    message: str
+    affected_count: Optional[int] = None
+    job_type: Literal["detect-silent-churn", "compute-stickiness"]
 
 
 # =============================================================================
@@ -1729,14 +1773,14 @@ async def get_infra_limits(
 # =============================================================================
 
 
-@router.get("/events")
+@router.get("/events", response_model=OpsEventListResponse)
 async def get_event_stream(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     hours: int = Query(24, ge=1, le=168, description="Hours to look back"),
     limit: int = Query(100, ge=1, le=1000),
     session: Session = Depends(get_session),
-):
+) -> OpsEventListResponse:
     """
     Event Stream - Raw events for debugging and analysis.
 
@@ -1779,29 +1823,32 @@ async def get_event_stream(
             },
         ).all()
 
-        return {
-            "events": [
-                {
-                    "event_id": str(r[0]),
-                    "timestamp": r[1].isoformat() if r[1] else None,
-                    "tenant_id": str(r[2]) if r[2] else None,
-                    "user_id": str(r[3]) if r[3] else None,
-                    "session_id": str(r[4]) if r[4] else None,
-                    "event_type": r[5],
-                    "entity_type": r[6],
-                    "entity_id": str(r[7]) if r[7] else None,
-                    "severity": r[8],
-                    "latency_ms": r[9],
-                    "cost_usd": float(r[10]) if r[10] else None,
-                    "metadata": r[11] or {},
-                }
-                for r in rows
-            ],
-            "total": len(rows),
-            "window_hours": hours,
-        }
+        events = [
+            OpsEvent(
+                event_id=str(r[0]),
+                timestamp=r[1],  # datetime, not str - FastAPI handles serialization
+                tenant_id=str(r[2]) if r[2] else None,
+                user_id=str(r[3]) if r[3] else None,
+                session_id=str(r[4]) if r[4] else None,
+                event_type=r[5],
+                entity_type=r[6],
+                entity_id=str(r[7]) if r[7] else None,
+                severity=r[8],
+                latency_ms=r[9],
+                cost_usd=float(r[10]) if r[10] else None,
+                metadata=r[11] or {},
+            )
+            for r in rows
+        ]
+
+        return OpsEventListResponse(
+            events=events,
+            total=len(rows),
+            window_hours=hours,
+        )
     except Exception as e:
-        return {"events": [], "total": 0, "window_hours": hours, "error": str(e)}
+        logger.error(f"Failed to fetch ops events: {e}")
+        return OpsEventListResponse(events=[], total=0, window_hours=hours)
 
 
 # =============================================================================
@@ -1809,16 +1856,28 @@ async def get_event_stream(
 # =============================================================================
 
 
-@router.post("/jobs/detect-silent-churn")
+@router.post("/jobs/detect-silent-churn", response_model=OpsJobResult)
 async def detect_silent_churn(
     session: Session = Depends(get_session),
-):
+) -> OpsJobResult:
     """
+    DEPRECATED: Internal job endpoint - should run via systemd timer, not API.
+
     Background job to detect silent churn.
 
     Silent churn = API active but investigation behavior stopped.
     Updates ops_customer_segments table.
     """
+    # ==========================================================================
+    # M25 HYGIENE: Job triggers disabled in production API
+    # See PIN-140: "Internal mechanics exposed" - move to cron/systemd
+    # ==========================================================================
+    import os
+    if not os.getenv("JOB_ENDPOINTS_ENABLED", "").lower() == "true":
+        raise HTTPException(
+            status_code=410,  # Gone
+            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true."
+        )
     try:
         stmt = text(
             """
@@ -1838,12 +1897,22 @@ async def detect_silent_churn(
             )
         """
         )
-        session.execute(stmt)
+        result = session.execute(stmt)
         session.commit()
 
-        return {"status": "completed", "message": "Silent churn detection completed"}
+        return OpsJobResult(
+            status="completed",
+            message="Silent churn detection completed",
+            affected_count=result.rowcount if hasattr(result, "rowcount") else None,
+            job_type="detect-silent-churn",
+        )
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.error(f"Silent churn detection failed: {e}")
+        return OpsJobResult(
+            status="error",
+            message=str(e),
+            job_type="detect-silent-churn",
+        )
 
 
 # =============================================================================
@@ -1851,11 +1920,13 @@ async def detect_silent_churn(
 # =============================================================================
 
 
-@router.post("/jobs/compute-stickiness")
+@router.post("/jobs/compute-stickiness", response_model=OpsJobResult)
 async def compute_stickiness(
     session: Session = Depends(get_session),
-):
+) -> OpsJobResult:
     """
+    DEPRECATED: Internal job endpoint - should run via systemd timer, not API.
+
     Background job to compute comprehensive stickiness scores.
 
     Computes:
@@ -1868,6 +1939,16 @@ async def compute_stickiness(
     Stickiness = weighted sum of (incidents * 0.2) + (replays * 0.3) + (exports * 0.5)
     With time decay: recent (7d) actions weighted 2x.
     """
+    # ==========================================================================
+    # M25 HYGIENE: Job triggers disabled in production API
+    # See PIN-140: "Internal mechanics exposed" - move to cron/systemd
+    # ==========================================================================
+    import os
+    if not os.getenv("JOB_ENDPOINTS_ENABLED", "").lower() == "true":
+        raise HTTPException(
+            status_code=410,  # Gone
+            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true."
+        )
     try:
         stmt = text(
             """
@@ -1959,9 +2040,19 @@ async def compute_stickiness(
                 computed_at = now()
         """
         )
-        session.execute(stmt)
+        result = session.execute(stmt)
         session.commit()
 
-        return {"status": "completed", "message": "Stickiness computation completed"}
+        return OpsJobResult(
+            status="completed",
+            message="Stickiness computation completed",
+            affected_count=result.rowcount if hasattr(result, "rowcount") else None,
+            job_type="compute-stickiness",
+        )
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.error(f"Stickiness computation failed: {e}")
+        return OpsJobResult(
+            status="error",
+            message=str(e),
+            job_type="compute-stickiness",
+        )
