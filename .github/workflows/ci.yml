@@ -296,6 +296,67 @@ jobs:
 
           echo "✅ All baseline secrets are verified false positives"
 
+  # M25 Frozen Files Guard - prevents modification of frozen graduation components
+  frozen-files-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for frozen file modifications
+        run: |
+          echo "=== M25 Frozen Files Guard ==="
+          echo "These files are frozen per PIN-140 and require explicit approval to modify."
+          echo ""
+
+          # List of frozen files (M25_FROZEN)
+          FROZEN_FILES=(
+            "backend/app/integrations/events.py"
+            "scripts/ops/m25_graduation_delta.py"
+            "backend/app/integrations/prevention_contract.py"
+          )
+
+          # Check if any frozen files were modified in this PR/push
+          MODIFIED_FROZEN=""
+          for file in "${FROZEN_FILES[@]}"; do
+            if git diff --name-only origin/main...HEAD 2>/dev/null | grep -q "^${file}$"; then
+              MODIFIED_FROZEN="${MODIFIED_FROZEN}${file}\n"
+            fi
+          done
+
+          # Also check direct commit comparison for pushes to main
+          if [ -z "$MODIFIED_FROZEN" ]; then
+            for file in "${FROZEN_FILES[@]}"; do
+              if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "^${file}$"; then
+                MODIFIED_FROZEN="${MODIFIED_FROZEN}${file}\n"
+              fi
+            done
+          fi
+
+          if [ -n "$MODIFIED_FROZEN" ]; then
+            # Check for override flag in commit message
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+            if echo "$COMMIT_MSG" | grep -q "M25_REOPEN"; then
+              echo "⚠️ M25_REOPEN flag detected - frozen file modification allowed"
+              echo "Modified frozen files:"
+              echo -e "$MODIFIED_FROZEN"
+              echo ""
+              echo "WARNING: This change invalidates prior M25 graduation evidence."
+            else
+              echo "::error::Frozen files modified without M25_REOPEN flag!"
+              echo ""
+              echo "Modified frozen files:"
+              echo -e "$MODIFIED_FROZEN"
+              echo ""
+              echo "These files are frozen per PIN-140 (M25 Complete - Rollback Safe)."
+              echo "To modify, add 'M25_REOPEN' to your commit message and get approval."
+              exit 1
+            fi
+          else
+            echo "✅ No frozen files modified"
+          fi
+
   # ============================================================================
   # MYPY TYPE CHECKING (PIN-121 PREV-14) - Non-blocking, tracks regressions
   # ============================================================================
@@ -357,6 +418,58 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See PIN-121 for remediation plan." >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # PYRIGHT TYPE CHECKING (Prevention Blueprint) - Catches tuple/arg errors mypy misses
+  # ============================================================================
+  pyright-check:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking initially - builds enforcement
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pyright
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run pyright
+        id: pyright
+        run: |
+          echo "=== Pyright Type Checking (Prevention Blueprint) ==="
+          echo "Catches: tuple unpacking, wrong arg counts, incompatible overloads"
+          echo ""
+
+          cd backend
+          pyright app/ --outputjson 2>&1 | tee /tmp/pyright-output.json || true
+
+          # Parse error count
+          ERROR_COUNT=$(jq '.summary.errorCount // 0' /tmp/pyright-output.json 2>/dev/null || echo "0")
+          WARNING_COUNT=$(jq '.summary.warningCount // 0' /tmp/pyright-output.json 2>/dev/null || echo "0")
+
+          echo ""
+          echo "Errors: $ERROR_COUNT"
+          echo "Warnings: $WARNING_COUNT"
+          echo "error_count=$ERROR_COUNT" >> $GITHUB_OUTPUT
+          echo "warning_count=$WARNING_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Generate pyright summary
+        if: always()
+        run: |
+          echo "## 🔍 Pyright Type Check (Prevention Blueprint)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Errors | ${{ steps.pyright.outputs.error_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Warnings | ${{ steps.pyright.outputs.warning_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Pyright catches tuple/arg errors that mypy misses." >> $GITHUB_STEP_SUMMARY
 
   # UI Hygiene Check - blocks merge on stale buttons, orphaned pages, silent mutations
   ui-hygiene:
