@@ -10,11 +10,11 @@ Visitors for:
 - Governance analysis
 """
 
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
 from app.policy.ast.nodes import (
     ActionBlockNode,
+    ASTVisitor,
     AttrAccessNode,
     BinaryOpNode,
     ConditionBlockNode,
@@ -31,74 +31,6 @@ from app.policy.ast.nodes import (
     UnaryOpNode,
 )
 from app.policy.compiler.grammar import PolicyCategory
-
-
-class ASTVisitor(ABC):
-    """
-    Base visitor interface for AST traversal.
-
-    Implements the visitor pattern for PLang AST.
-    """
-
-    @abstractmethod
-    def visit_program(self, node: ProgramNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_policy_decl(self, node: PolicyDeclNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_rule_decl(self, node: RuleDeclNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_import(self, node: ImportNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_rule_ref(self, node: RuleRefNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_priority(self, node: PriorityNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_condition_block(self, node: ConditionBlockNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_action_block(self, node: ActionBlockNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_route_target(self, node: RouteTargetNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_binary_op(self, node: BinaryOpNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_unary_op(self, node: UnaryOpNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_ident(self, node: IdentNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_literal(self, node: LiteralNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_func_call(self, node: FuncCallNode) -> Any:
-        pass
-
-    @abstractmethod
-    def visit_attr_access(self, node: AttrAccessNode) -> Any:
-        pass
 
 
 class BaseVisitor(ASTVisitor):
@@ -212,11 +144,13 @@ class PrintVisitor(BaseVisitor):
     def visit_condition_block(self, node: ConditionBlockNode) -> Any:
         self._emit("When:")
         self.indent += 1
-        node.condition.accept(self)
+        if node.condition:
+            node.condition.accept(self)
         self.indent -= 1
         self._emit("Then:")
         self.indent += 1
-        node.action.accept(self)
+        if node.action:
+            node.action.accept(self)
         self.indent -= 1
 
     def visit_action_block(self, node: ActionBlockNode) -> Any:
@@ -229,14 +163,17 @@ class PrintVisitor(BaseVisitor):
     def visit_binary_op(self, node: BinaryOpNode) -> Any:
         self._emit(f"BinaryOp: {node.op}")
         self.indent += 1
-        node.left.accept(self)
-        node.right.accept(self)
+        if node.left:
+            node.left.accept(self)
+        if node.right:
+            node.right.accept(self)
         self.indent -= 1
 
     def visit_unary_op(self, node: UnaryOpNode) -> Any:
         self._emit(f"UnaryOp: {node.op}")
         self.indent += 1
-        node.operand.accept(self)
+        if node.operand:
+            node.operand.accept(self)
         self.indent -= 1
 
     def visit_ident(self, node: IdentNode) -> Any:
@@ -248,7 +185,8 @@ class PrintVisitor(BaseVisitor):
     def visit_func_call(self, node: FuncCallNode) -> Any:
         self._emit("FuncCall:")
         self.indent += 1
-        node.callee.accept(self)
+        if node.callee:
+            node.callee.accept(self)
         self._emit("Args:")
         self.indent += 1
         for arg in node.args:
@@ -258,7 +196,8 @@ class PrintVisitor(BaseVisitor):
     def visit_attr_access(self, node: AttrAccessNode) -> Any:
         self._emit(f"AttrAccess: .{node.attr}")
         self.indent += 1
-        node.obj.accept(self)
+        if node.obj:
+            node.obj.accept(self)
         self.indent -= 1
 
 

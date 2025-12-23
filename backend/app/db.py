@@ -1,8 +1,12 @@
 import os
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
+from sqlalchemy import Column, JSON
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 from sqlmodel import Field, Session, SQLModel, create_engine
 
 
@@ -29,6 +33,44 @@ engine = create_engine(
     pool_recycle=1800,
     pool_pre_ping=True,  # Verify connections before use
 )
+
+# Async engine for async endpoints (M25 integration loop)
+# Convert postgresql:// to postgresql+asyncpg://
+ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://").replace("?sslmode=require", "?ssl=require")
+async_engine = create_async_engine(
+    ASYNC_DATABASE_URL,
+    echo=False,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_recycle=1800,
+)
+
+# Async session factory
+AsyncSessionLocal = sessionmaker(
+    async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+
+@asynccontextmanager
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Async session context manager for async endpoints.
+
+    Usage:
+        async with get_async_session() as session:
+            result = await session.execute(...)
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 
 class Agent(SQLModel, table=True):
@@ -847,3 +889,132 @@ def log_status_change(
 
     # Safe: session is DI-managed and stays open for caller
     return record
+
+
+# =============================================================================
+# M26 Cost Intelligence Models
+# =============================================================================
+# Every token spent is attributable to tenant → user → feature → request.
+# Every anomaly must trigger an action, not a chart.
+# =============================================================================
+
+
+class FeatureTag(SQLModel, table=True):
+    """
+    Registered feature namespaces for cost attribution.
+
+    This is the KEY UNLOCK for:
+    - Feature ROI analysis
+    - Kill-switch precision
+    - Product pricing
+
+    No tag → request defaulted to 'unclassified' (and flagged).
+    """
+    __tablename__ = "feature_tags"
+
+    id: str = Field(default_factory=lambda: f"ft_{uuid.uuid4().hex[:16]}", primary_key=True)
+    tenant_id: str = Field(index=True)
+    tag: str = Field(index=True)  # e.g., "customer_support.chat"
+    display_name: str
+    description: Optional[str] = None
+    budget_cents: Optional[int] = None  # Per-feature budget
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class CostRecord(SQLModel, table=True):
+    """
+    High-volume raw cost metering (append-only).
+
+    Design rule: Raw writes fast, reads aggregated.
+    Never dashboard off raw rows.
+    """
+    __tablename__ = "cost_records"
+
+    id: str = Field(default_factory=lambda: f"cr_{uuid.uuid4().hex[:16]}", primary_key=True)
+    tenant_id: str = Field(index=True)
+    user_id: Optional[str] = Field(default=None, index=True)  # Who made the request
+    feature_tag: Optional[str] = Field(default=None, index=True)  # Which feature
+    request_id: Optional[str] = None  # Trace linkage
+    workflow_id: Optional[str] = None
+    skill_id: Optional[str] = None
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_cents: float
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class CostAnomaly(SQLModel, table=True):
+    """
+    Detected cost anomalies.
+
+    Four signals initially (keep it small):
+    - USER_SPIKE: One user behaving abnormally
+    - FEATURE_SPIKE: Feature cost exploding
+    - BUDGET_WARNING: Projected overrun
+    - BUDGET_EXCEEDED: Hard stop
+
+    Anything more early = noise.
+    """
+    __tablename__ = "cost_anomalies"
+
+    id: str = Field(default_factory=lambda: f"ca_{uuid.uuid4().hex[:16]}", primary_key=True)
+    tenant_id: str = Field(index=True)
+    anomaly_type: str  # USER_SPIKE, FEATURE_SPIKE, BUDGET_WARNING, BUDGET_EXCEEDED
+    severity: str  # LOW, MEDIUM, HIGH, CRITICAL
+    entity_type: str  # user, feature, model, tenant
+    entity_id: Optional[str] = None  # user_id, feature_tag, model name
+    current_value_cents: float
+    expected_value_cents: float
+    deviation_pct: float
+    threshold_pct: float = 200.0  # What deviation % triggered this
+    message: str
+    incident_id: Optional[str] = None  # Link to M25 incident if escalated
+    action_taken: Optional[str] = None  # What action was taken
+    resolved: bool = False
+    resolved_at: Optional[datetime] = None
+    metadata_json: Optional[dict] = Field(default=None, sa_column=Column("metadata", JSON, nullable=True))
+    detected_at: datetime = Field(default_factory=utc_now)
+
+
+class CostBudget(SQLModel, table=True):
+    """
+    Per-tenant and per-feature budget limits.
+    """
+    __tablename__ = "cost_budgets"
+
+    id: str = Field(default_factory=lambda: f"cb_{uuid.uuid4().hex[:16]}", primary_key=True)
+    tenant_id: str = Field(index=True)
+    budget_type: str  # tenant, feature, user
+    entity_id: Optional[str] = None  # null for tenant-level
+    daily_limit_cents: Optional[int] = None
+    monthly_limit_cents: Optional[int] = None
+    warn_threshold_pct: int = 80
+    hard_limit_enabled: bool = False
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class CostDailyAggregate(SQLModel, table=True):
+    """
+    Pre-aggregated daily costs for fast dashboard reads.
+
+    Never dashboard off raw rows.
+    """
+    __tablename__ = "cost_daily_aggregates"
+
+    id: str = Field(default_factory=lambda: f"cda_{uuid.uuid4().hex[:16]}", primary_key=True)
+    tenant_id: str = Field(index=True)
+    date: datetime  # Date only (no time)
+    feature_tag: Optional[str] = None  # null for tenant-level
+    user_id: Optional[str] = None  # null for tenant/feature-level
+    model: Optional[str] = None  # null for higher-level aggregates
+    total_cost_cents: float = 0.0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    request_count: int = 0
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)

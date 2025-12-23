@@ -1504,7 +1504,7 @@ async def get_revenue_risk(
             FROM ops_customer_segments
         """
         )
-        row = session.exec(stmt).first()
+        row = session.execute(stmt).first()
         critical = row[0] if row else 0
         high = row[1] if row else 0
         silent_churn = row[2] if row else 0
@@ -1593,11 +1593,11 @@ async def get_infra_limits(
     # Database connection check
     try:
         stmt = text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'")
-        row = session.exec(stmt).first()
+        row = session.execute(stmt).first()
         db_connections = row[0] if row else 0
 
         stmt = text("SHOW max_connections")
-        row = session.exec(stmt).first()
+        row = session.execute(stmt).first()
         db_max = int(row[0]) if row else 100
     except Exception:
         db_connections = 0
@@ -1606,7 +1606,7 @@ async def get_infra_limits(
     # Database size
     try:
         stmt = text("SELECT pg_database_size(current_database()) / 1024 / 1024 / 1024.0")
-        row = session.exec(stmt).first()
+        row = session.execute(stmt).first()
         db_size_gb = float(row[0]) if row else 0.0
     except Exception:
         db_size_gb = 0.0
@@ -1873,10 +1873,11 @@ async def detect_silent_churn(
     # See PIN-140: "Internal mechanics exposed" - move to cron/systemd
     # ==========================================================================
     import os
+
     if not os.getenv("JOB_ENDPOINTS_ENABLED", "").lower() == "true":
         raise HTTPException(
             status_code=410,  # Gone
-            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true."
+            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true.",
         )
     try:
         stmt = text(
@@ -1944,10 +1945,11 @@ async def compute_stickiness(
     # See PIN-140: "Internal mechanics exposed" - move to cron/systemd
     # ==========================================================================
     import os
+
     if not os.getenv("JOB_ENDPOINTS_ENABLED", "").lower() == "true":
         raise HTTPException(
             status_code=410,  # Gone
-            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true."
+            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true.",
         )
     try:
         stmt = text(

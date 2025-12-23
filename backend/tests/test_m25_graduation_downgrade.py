@@ -14,22 +14,20 @@ IMPORTANT: These tests are part of the M25 code freeze enforcement (PIN-130).
 Any changes to graduation logic must pass these tests.
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
-from dataclasses import dataclass
+import os
 
 # Import graduation engine components
 import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.integrations.graduation_engine import (
+    CapabilityGates,
+    ComputedGraduationStatus,
     GraduationEngine,
     GraduationEvidence,
     GraduationLevel,
-    GraduationThresholds,
-    ComputedGraduationStatus,
-    CapabilityGates,
 )
 
 
@@ -236,10 +234,8 @@ class TestGraduationDowngrade:
         candidate_status = self.engine.compute(healthy_evidence)
 
         # At CANDIDATE, should have some capabilities
-        assert CapabilityGates.can_auto_apply_recovery(candidate_status), \
-            "CANDIDATE should have auto_apply_recovery"
-        assert CapabilityGates.can_auto_activate_policy(candidate_status), \
-            "CANDIDATE should have auto_activate_policy"
+        assert CapabilityGates.can_auto_apply_recovery(candidate_status), "CANDIDATE should have auto_apply_recovery"
+        assert CapabilityGates.can_auto_activate_policy(candidate_status), "CANDIDATE should have auto_activate_policy"
 
         # Now create degraded evidence
         degraded_evidence = self._make_evidence(
@@ -261,12 +257,13 @@ class TestGraduationDowngrade:
         degraded_status = new_engine.compute(degraded_evidence, previous)
 
         # Capabilities should be blocked at DEGRADED level
-        assert not CapabilityGates.can_auto_apply_recovery(degraded_status), \
-            "DEGRADED should not have auto_apply_recovery"
-        assert not CapabilityGates.can_auto_activate_policy(degraded_status), \
-            "DEGRADED should not have auto_activate_policy"
-        assert not CapabilityGates.can_full_auto_routing(degraded_status), \
-            "DEGRADED should not have full_auto_routing"
+        assert not CapabilityGates.can_auto_apply_recovery(
+            degraded_status
+        ), "DEGRADED should not have auto_apply_recovery"
+        assert not CapabilityGates.can_auto_activate_policy(
+            degraded_status
+        ), "DEGRADED should not have auto_activate_policy"
+        assert not CapabilityGates.can_full_auto_routing(degraded_status), "DEGRADED should not have full_auto_routing"
 
     # =========================================================================
     # TEST: Downgrade is Recorded

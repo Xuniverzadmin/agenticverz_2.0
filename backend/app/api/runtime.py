@@ -279,7 +279,7 @@ DEFAULT_SKILL_METADATA = {
 @router.post("/simulate", response_model=SimulateResponse)
 async def simulate_plan(
     request: SimulateRequest,
-    http_request: Request = None,
+    _http_request: Request = None,
     _rate_limited: bool = Depends(rate_limit_dependency),
 ):
     """

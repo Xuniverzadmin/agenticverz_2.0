@@ -44,7 +44,7 @@ DEFAULT_POLL_INTERVAL = int(os.getenv("RECOVERY_WORKER_POLL_INTERVAL", "10"))
 _shutdown_requested = False
 
 
-def signal_handler(signum, frame):
+def signal_handler(signum, _frame):
     """Handle shutdown signals gracefully."""
     global _shutdown_requested
     logger.info(f"Received signal {signum}, initiating graceful shutdown...")

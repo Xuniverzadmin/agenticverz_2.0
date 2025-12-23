@@ -283,3 +283,443 @@ class TestPIN108Regressions:
             pytest.fail("'version' should not be a valid UUID")
         except ValueError:
             pass  # Expected
+
+
+# =============================================================================
+# Ops API Hygiene Tests (PIN-121 Phase 2.1)
+# =============================================================================
+
+
+class TestOpsAPIHygiene:
+    """
+    API hygiene tests for /ops endpoints.
+
+    Enforces:
+    1. Every ops endpoint must have response_model
+    2. No ops endpoint may return bare dicts
+    3. Jobs must use OpsJobResult with Literal status
+
+    These tests prevent API drift and ensure contract stability.
+    """
+
+    def test_all_ops_routes_have_response_model(self):
+        """
+        Every /ops endpoint must declare response_model.
+
+        This prevents ad-hoc dict responses and ensures OpenAPI schema accuracy.
+        """
+        from app.main import app
+
+        missing_response_model = []
+
+        for route in app.routes:
+            if not hasattr(route, "path"):
+                continue
+
+            # Only check /ops routes
+            if "/ops" not in route.path:
+                continue
+
+            # Skip parameter-only routes (like the main router)
+            if not hasattr(route, "response_model"):
+                continue
+
+            # Check if response_model is set
+            if route.response_model is None:
+                missing_response_model.append(
+                    f"{route.methods} {route.path} -> handler: {route.endpoint.__name__}"
+                )
+
+        assert len(missing_response_model) == 0, (
+            f"Ops endpoints missing response_model:\n"
+            + "\n".join(f"  - {r}" for r in missing_response_model)
+        )
+
+    def test_ops_job_endpoints_use_literal_status(self):
+        """
+        Job endpoints must use OpsJobResult with Literal["completed", "error"].
+
+        This ensures UI can safely match on status values.
+        """
+        from typing import Literal, get_args, get_origin
+
+        from app.api.ops import OpsJobResult
+
+        # Check that status field uses Literal
+        status_annotation = OpsJobResult.__annotations__.get("status")
+        assert status_annotation is not None, "OpsJobResult must have status field"
+
+        # Check it's a Literal type
+        origin = get_origin(status_annotation)
+        assert origin is Literal, f"status must be Literal, got {origin}"
+
+        # Check it contains expected values
+        args = get_args(status_annotation)
+        assert "completed" in args, "status Literal must include 'completed'"
+        assert "error" in args, "status Literal must include 'error'"
+
+    def test_ops_events_endpoint_returns_typed_model(self):
+        """
+        /ops/events must return OpsEventListResponse, not bare dict.
+        """
+        from app.api.ops import OpsEventListResponse
+        from app.main import app
+
+        events_route = None
+        for route in app.routes:
+            if hasattr(route, "path") and route.path == "/ops/events":
+                events_route = route
+                break
+
+        assert events_route is not None, "Route /ops/events not found"
+        assert events_route.response_model is OpsEventListResponse, (
+            f"/ops/events must use response_model=OpsEventListResponse, "
+            f"got {events_route.response_model}"
+        )
+
+    def test_ops_job_endpoints_have_correct_response_model(self):
+        """
+        All /ops/jobs/* endpoints must use OpsJobResult.
+        """
+        from app.api.ops import OpsJobResult
+        from app.main import app
+
+        job_routes_without_model = []
+
+        for route in app.routes:
+            if not hasattr(route, "path"):
+                continue
+
+            if "/ops/jobs/" not in route.path:
+                continue
+
+            if not hasattr(route, "response_model") or route.response_model is None:
+                job_routes_without_model.append(route.path)
+            elif route.response_model is not OpsJobResult:
+                job_routes_without_model.append(
+                    f"{route.path} (has {route.response_model}, expected OpsJobResult)"
+                )
+
+        assert len(job_routes_without_model) == 0, (
+            f"Job endpoints with incorrect response_model:\n"
+            + "\n".join(f"  - {r}" for r in job_routes_without_model)
+        )
+
+
+# =============================================================================
+# Route Sanity Tests (PIN-121 Prevention Blueprint)
+# =============================================================================
+
+
+class TestRouteSanity:
+    """
+    Route sanity tests per Prevention Blueprint.
+
+    These tests catch misconfigured routes at build time rather than runtime.
+    """
+
+    def test_all_routes_have_endpoints(self):
+        """
+        CRITICAL: Every route must have a non-None endpoint.
+
+        This catches routes that are registered but not properly bound to handlers.
+        """
+        from app.main import app
+
+        broken_routes = []
+
+        for route in app.routes:
+            if not hasattr(route, "path"):
+                continue
+
+            # Skip OpenAPI and docs routes
+            if route.path in ("/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"):
+                continue
+
+            if not hasattr(route, "endpoint") or route.endpoint is None:
+                broken_routes.append(route.path)
+
+        assert len(broken_routes) == 0, (
+            f"Routes with missing endpoints:\n" + "\n".join(f"  - {r}" for r in broken_routes)
+        )
+
+    def test_all_routes_are_callable(self):
+        """
+        Every route endpoint must be callable.
+
+        Catches cases where endpoint is accidentally set to a non-callable.
+        """
+        from app.main import app
+
+        non_callable_routes = []
+
+        for route in app.routes:
+            if not hasattr(route, "path") or not hasattr(route, "endpoint"):
+                continue
+
+            if route.endpoint is not None and not callable(route.endpoint):
+                non_callable_routes.append(f"{route.path} -> {type(route.endpoint)}")
+
+        assert len(non_callable_routes) == 0, (
+            f"Routes with non-callable endpoints:\n"
+            + "\n".join(f"  - {r}" for r in non_callable_routes)
+        )
+
+    def test_route_count_above_minimum(self):
+        """
+        App must have at least a minimum number of routes.
+
+        Catches catastrophic registration failures where routers don't mount.
+        """
+        from app.main import app
+
+        # Count actual API routes (not OpenAPI/docs)
+        api_routes = [
+            r
+            for r in app.routes
+            if hasattr(r, "path") and r.path not in ("/openapi.json", "/docs", "/redoc")
+        ]
+
+        # We expect at least 50 routes in a healthy app
+        MIN_EXPECTED_ROUTES = 50
+
+        assert len(api_routes) >= MIN_EXPECTED_ROUTES, (
+            f"Too few routes registered: {len(api_routes)} (expected >= {MIN_EXPECTED_ROUTES}). "
+            "This may indicate routers failed to mount."
+        )
+
+
+# =============================================================================
+# Registry Integrity Tests (PIN-121 Prevention Blueprint)
+# =============================================================================
+
+
+class TestRegistryIntegrity:
+    """
+    Registry integrity tests per Prevention Blueprint.
+
+    Ensures:
+    1. All registered skills are loadable
+    2. Each skill has required attributes
+    3. Skills can be instantiated
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_skills(self):
+        """Load all skills before running registry tests."""
+        from app.skills import load_all_skills
+
+        load_all_skills()
+
+    def test_skill_registry_not_empty(self):
+        """
+        Skill registry must have registered skills.
+
+        Catches import failures that prevent skill registration.
+        """
+        from app.skills.registry import list_skills
+
+        skills = list_skills()
+
+        # We expect at least 3 core skills
+        MIN_EXPECTED_SKILLS = 3
+
+        assert len(skills) >= MIN_EXPECTED_SKILLS, (
+            f"Too few skills registered: {len(skills)} (expected >= {MIN_EXPECTED_SKILLS}). "
+            "This may indicate skill modules failed to load."
+        )
+
+    def test_all_skills_have_version(self):
+        """
+        Every registered skill must have a version string.
+        """
+        from app.skills.registry import list_skills
+
+        skills = list_skills()
+        skills_without_version = []
+
+        for skill in skills:
+            if not skill.get("version"):
+                skills_without_version.append(skill.get("name", "unknown"))
+
+        assert len(skills_without_version) == 0, (
+            f"Skills missing version:\n" + "\n".join(f"  - {s}" for s in skills_without_version)
+        )
+
+    def test_all_skills_instantiable(self):
+        """
+        Every registered skill must be instantiable.
+
+        This catches skills with broken __init__ methods.
+        """
+        from app.skills.registry import _REGISTRY, get_skill_entry
+
+        instantiation_failures = []
+
+        for name in _REGISTRY.keys():
+            entry = get_skill_entry(name)
+            if entry is None:
+                instantiation_failures.append(f"{name}: entry not found")
+                continue
+
+            try:
+                instance = entry.create_instance()
+                if instance is None:
+                    instantiation_failures.append(f"{name}: create_instance returned None")
+            except Exception as e:
+                instantiation_failures.append(f"{name}: {type(e).__name__}: {e}")
+
+        assert len(instantiation_failures) == 0, (
+            f"Skills that failed instantiation:\n"
+            + "\n".join(f"  - {f}" for f in instantiation_failures)
+        )
+
+    def test_all_skills_have_execute_method(self):
+        """
+        Every registered skill must have an execute method.
+
+        This validates the SkillInterface protocol compliance.
+        """
+        from app.skills.registry import _REGISTRY
+
+        skills_without_execute = []
+
+        for name, entry in _REGISTRY.items():
+            if not hasattr(entry.cls, "execute"):
+                skills_without_execute.append(name)
+
+        assert len(skills_without_execute) == 0, (
+            f"Skills missing execute method:\n"
+            + "\n".join(f"  - {s}" for s in skills_without_execute)
+        )
+
+
+# =============================================================================
+# OpenAPI Contract Snapshot Tests (PIN-121 Prevention Blueprint)
+# =============================================================================
+
+
+class TestOpsAPIContractSnapshot:
+    """
+    API contract snapshot tests per Prevention Blueprint.
+
+    These tests detect API drift by comparing current endpoints against a baseline.
+    To update the snapshot, run: python scripts/ops/update_api_snapshot.py
+    """
+
+    def test_ops_endpoint_count_matches_snapshot(self):
+        """
+        Ops endpoint count must match snapshot.
+
+        Catches additions or removals of endpoints.
+        """
+        import json
+        from pathlib import Path
+
+        from app.main import app
+
+        # Load snapshot
+        snapshot_path = Path(__file__).parent / "snapshots" / "ops_api_contracts.json"
+        with open(snapshot_path) as f:
+            snapshot = json.load(f)
+
+        # Count current ops endpoints
+        schema = app.openapi()
+        current_count = sum(
+            1
+            for path, methods in schema.get("paths", {}).items()
+            if "/ops" in path
+            for method in methods
+            if method in ("get", "post", "put", "delete", "patch")
+        )
+
+        assert current_count == snapshot["endpoint_count"], (
+            f"Ops endpoint count changed: {current_count} (current) vs {snapshot['endpoint_count']} (snapshot). "
+            "Update the snapshot if this is intentional."
+        )
+
+    def test_ops_endpoints_match_snapshot(self):
+        """
+        All ops endpoints in snapshot must exist.
+
+        Catches endpoint removals or renames.
+        """
+        import json
+        from pathlib import Path
+
+        from app.main import app
+
+        # Load snapshot
+        snapshot_path = Path(__file__).parent / "snapshots" / "ops_api_contracts.json"
+        with open(snapshot_path) as f:
+            snapshot = json.load(f)
+
+        # Get current endpoints
+        schema = app.openapi()
+        current_endpoints = set()
+        for path, methods in schema.get("paths", {}).items():
+            if "/ops" not in path:
+                continue
+            for method in methods:
+                if method in ("get", "post", "put", "delete", "patch"):
+                    current_endpoints.add(f"{method.upper()} {path}")
+
+        snapshot_endpoints = set(snapshot["contracts"].keys())
+
+        # Check for missing endpoints
+        missing = snapshot_endpoints - current_endpoints
+        assert len(missing) == 0, (
+            f"Endpoints removed from API (breaks consumers):\n"
+            + "\n".join(f"  - {e}" for e in sorted(missing))
+        )
+
+        # Check for new endpoints (informational, not blocking)
+        new_endpoints = current_endpoints - snapshot_endpoints
+        if new_endpoints:
+            # Just warn, don't fail - new endpoints are OK
+            pass
+
+    def test_typed_endpoints_stay_typed(self):
+        """
+        Endpoints with response_model must not regress to untyped.
+
+        Catches accidental removal of response_model.
+        """
+        import json
+        from pathlib import Path
+
+        from app.main import app
+
+        # Load snapshot
+        snapshot_path = Path(__file__).parent / "snapshots" / "ops_api_contracts.json"
+        with open(snapshot_path) as f:
+            snapshot = json.load(f)
+
+        # Get current response models
+        schema = app.openapi()
+        regressions = []
+
+        for endpoint, contract in snapshot["contracts"].items():
+            if contract["response_model"] == "untyped":
+                continue  # Was already untyped, skip
+
+            # Parse endpoint
+            method, path = endpoint.split(" ", 1)
+            method = method.lower()
+
+            # Find in current schema
+            current_path = schema.get("paths", {}).get(path, {}).get(method, {})
+            response = current_path.get("responses", {}).get("200", {})
+            content = response.get("content", {}).get("application/json", {})
+            schema_ref = content.get("schema", {}).get("$ref", "")
+            current_model = schema_ref.split("/")[-1] if schema_ref else "untyped"
+
+            if current_model == "untyped" and contract["response_model"] != "untyped":
+                regressions.append(
+                    f"{endpoint}: was {contract['response_model']}, now untyped"
+                )
+
+        assert len(regressions) == 0, (
+            f"Endpoints regressed to untyped (breaks consumers):\n"
+            + "\n".join(f"  - {r}" for r in regressions)
+        )

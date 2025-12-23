@@ -389,7 +389,7 @@ class CapabilityProber:
         await self._set_cached(cache_key, result)
         return result
 
-    async def probe_service(self, service_name: str, health_url: str) -> CapabilityProbeResult:
+    async def probe_service(self, _service_name: str, health_url: str) -> CapabilityProbeResult:
         """Probe internal service health."""
         return await self.probe_http(health_url)
 

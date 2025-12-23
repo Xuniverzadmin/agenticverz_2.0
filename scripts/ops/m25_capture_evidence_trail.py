@@ -26,11 +26,13 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 # Ensure proper path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 
 def compute_hash(data: dict) -> str:
@@ -73,11 +75,16 @@ def capture_evidence_trail(
         # =====================================================================
         # STAGE 1: Incident Metadata
         # =====================================================================
-        incident_result = conn.execute(text("""
+        incident_result = conn.execute(
+            text(
+                """
             SELECT id, tenant_id, title, severity, created_at, status
             FROM incidents
             WHERE id = :incident_id
-        """), {"incident_id": incident_id}).fetchone()
+        """
+            ),
+            {"incident_id": incident_id},
+        ).fetchone()
 
         if not incident_result:
             return {
@@ -114,24 +121,33 @@ def capture_evidence_trail(
         # STAGE 2: Loop Trace & Pattern Matching
         # =====================================================================
         # Check if loop_traces table exists
-        table_check = conn.execute(text("""
+        table_check = conn.execute(
+            text(
+                """
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
                 WHERE table_name = 'loop_traces'
             )
-        """)).scalar()
+        """
+            )
+        ).scalar()
 
         stage_2 = None
         loop_trace_id = None
 
         if table_check:
-            loop_trace_result = conn.execute(text("""
+            loop_trace_result = conn.execute(
+                text(
+                    """
                 SELECT id, stages, failure_state, started_at, completed_at, is_complete
                 FROM loop_traces
                 WHERE incident_id = :incident_id
                 ORDER BY started_at DESC
                 LIMIT 1
-            """), {"incident_id": incident_id}).fetchone()
+            """
+                ),
+                {"incident_id": incident_id},
+            ).fetchone()
 
             if loop_trace_result:
                 loop_trace_id = loop_trace_result[0]
@@ -147,24 +163,35 @@ def capture_evidence_trail(
                     "matched_at": pattern_stage.get("matched_at"),
                     "stages": stages,
                     "failure_state": loop_trace_result[2],
-                    "started_at": str(loop_trace_result[3]) if loop_trace_result[3] else None,
-                    "completed_at": str(loop_trace_result[4]) if loop_trace_result[4] else None,
+                    "started_at": str(loop_trace_result[3])
+                    if loop_trace_result[3]
+                    else None,
+                    "completed_at": str(loop_trace_result[4])
+                    if loop_trace_result[4]
+                    else None,
                     "is_complete": loop_trace_result[5],
                 }
         else:
-            stage_2 = {"warning": "loop_traces table not found - migrations 042+ not applied"}
+            stage_2 = {
+                "warning": "loop_traces table not found - migrations 042+ not applied"
+            }
 
         # Also check loop_events for pattern matching
         loop_event_result = None
         if table_check:
-            loop_event_result = conn.execute(text("""
+            loop_event_result = conn.execute(
+                text(
+                    """
                 SELECT id, stage, details, confidence_band, created_at
                 FROM loop_events
                 WHERE incident_id = :incident_id
                 AND stage = 'pattern_matched'
                 ORDER BY created_at DESC
                 LIMIT 1
-            """), {"incident_id": incident_id}).fetchone()
+            """
+                ),
+                {"incident_id": incident_id},
+            ).fetchone()
 
             if loop_event_result and stage_2:
                 stage_2["loop_event_id"] = loop_event_result[0]
@@ -175,44 +202,62 @@ def capture_evidence_trail(
         # STAGE 3: Recovery Application
         # =====================================================================
         # Check schema version - M25 migrations add source_incident_id column
-        has_source_incident_id = conn.execute(text("""
+        has_source_incident_id = conn.execute(
+            text(
+                """
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.columns
                 WHERE table_name = 'recovery_candidates'
                 AND column_name = 'source_incident_id'
             )
-        """)).scalar()
+        """
+            )
+        ).scalar()
 
         stage_3 = None
 
         if has_source_incident_id:
             # M25 schema - query by source_incident_id
-            recovery_result = conn.execute(text("""
+            recovery_result = conn.execute(
+                text(
+                    """
                 SELECT id, decision, suggestion, executed_at, created_at
                 FROM recovery_candidates
                 WHERE source_incident_id = :incident_id
                 AND decision = 'applied'
                 ORDER BY executed_at DESC
                 LIMIT 1
-            """), {"incident_id": incident_id}).fetchone()
+            """
+                ),
+                {"incident_id": incident_id},
+            ).fetchone()
 
             if recovery_result:
                 stage_3 = {
                     "recovery_id": str(recovery_result[0]),
                     "status": recovery_result[1],
                     "suggestion": recovery_result[2],
-                    "applied_at": str(recovery_result[3]) if recovery_result[3] else None,
-                    "created_at": str(recovery_result[4]) if recovery_result[4] else None,
+                    "applied_at": str(recovery_result[3])
+                    if recovery_result[3]
+                    else None,
+                    "created_at": str(recovery_result[4])
+                    if recovery_result[4]
+                    else None,
                 }
             else:
                 # Check if any recovery exists (not just applied)
-                any_recovery = conn.execute(text("""
+                any_recovery = conn.execute(
+                    text(
+                        """
                     SELECT id, decision, suggestion, created_at
                     FROM recovery_candidates
                     WHERE source_incident_id = :incident_id
                     ORDER BY created_at DESC
                     LIMIT 1
-                """), {"incident_id": incident_id}).fetchone()
+                """
+                    ),
+                    {"incident_id": incident_id},
+                ).fetchone()
 
                 if any_recovery:
                     stage_3 = {
@@ -222,7 +267,9 @@ def capture_evidence_trail(
                         "suggestion": any_recovery[2],
                     }
                 else:
-                    stage_3 = {"warning": "No recovery candidate found for this incident"}
+                    stage_3 = {
+                        "warning": "No recovery candidate found for this incident"
+                    }
         else:
             # Pre-M25 schema - migrations not applied
             # The current schema doesn't directly link incidents to recovery_candidates
@@ -241,29 +288,42 @@ def capture_evidence_trail(
         # STAGE 4: Policy Generation & Mode Transition
         # =====================================================================
         # Check if policy_rules table exists
-        policy_table_check = conn.execute(text("""
+        policy_table_check = conn.execute(
+            text(
+                """
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
                 WHERE table_name = 'policy_rules'
             )
-        """)).scalar()
+        """
+            )
+        ).scalar()
 
         stage_4 = None
         policy_id = None
 
         if policy_table_check:
             # Find policy born from this recovery
-            recovery_id = stage_3.get("recovery_id") if stage_3 and "recovery_id" in stage_3 else None
+            recovery_id = (
+                stage_3.get("recovery_id")
+                if stage_3 and "recovery_id" in stage_3
+                else None
+            )
 
             if recovery_id:
-                policy_result = conn.execute(text("""
+                policy_result = conn.execute(
+                    text(
+                        """
                     SELECT id, mode, source_type, created_at, activated_at,
                            shadow_evaluations, shadow_would_block, confirmations_received
                     FROM policy_rules
                     WHERE source_recovery_id = :recovery_id
                     ORDER BY created_at DESC
                     LIMIT 1
-                """), {"recovery_id": recovery_id}).fetchone()
+                """
+                    ),
+                    {"recovery_id": recovery_id},
+                ).fetchone()
 
                 if policy_result:
                     policy_id = policy_result[0]
@@ -271,36 +331,50 @@ def capture_evidence_trail(
                         "policy_id": policy_id,
                         "mode": policy_result[1],
                         "source_type": policy_result[2],
-                        "created_at": str(policy_result[3]) if policy_result[3] else None,
-                        "activated_at": str(policy_result[4]) if policy_result[4] else None,
+                        "created_at": str(policy_result[3])
+                        if policy_result[3]
+                        else None,
+                        "activated_at": str(policy_result[4])
+                        if policy_result[4]
+                        else None,
                         "shadow_evaluations": policy_result[5],
                         "shadow_would_block": policy_result[6],
                         "confirmations_received": policy_result[7],
-                        "mode_transition": "pending" if not policy_result[4] else "shadow -> active",
+                        "mode_transition": "pending"
+                        if not policy_result[4]
+                        else "shadow -> active",
                     }
                 else:
                     stage_4 = {"warning": f"No policy found for recovery {recovery_id}"}
             else:
                 stage_4 = {"warning": "No recovery_id to trace policy from"}
         else:
-            stage_4 = {"warning": "policy_rules table not found - migrations not complete"}
+            stage_4 = {
+                "warning": "policy_rules table not found - migrations not complete"
+            }
 
         # =====================================================================
         # STAGE 5: Prevention Event (THE PROOF)
         # =====================================================================
         # Check if prevention_records table exists
-        prevention_table_check = conn.execute(text("""
+        prevention_table_check = conn.execute(
+            text(
+                """
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
                 WHERE table_name = 'prevention_records'
             )
-        """)).scalar()
+        """
+            )
+        ).scalar()
 
         stage_5 = None
 
         if prevention_table_check:
             # Find prevention event that references original incident
-            prevention_result = conn.execute(text("""
+            prevention_result = conn.execute(
+                text(
+                    """
                 SELECT id, policy_id, pattern_id, blocked_incident_id, outcome,
                        signature_match_confidence, is_simulated, created_at
                 FROM prevention_records
@@ -308,7 +382,10 @@ def capture_evidence_trail(
                 AND is_simulated = false
                 ORDER BY created_at DESC
                 LIMIT 1
-            """), {"incident_id": incident_id}).fetchone()
+            """
+                ),
+                {"incident_id": incident_id},
+            ).fetchone()
 
             if prevention_result:
                 # CRITICAL: Verify is_simulated = false
@@ -327,17 +404,24 @@ def capture_evidence_trail(
                         "outcome": prevention_result[4],
                         "signature_match_confidence": prevention_result[5],
                         "is_simulated": False,
-                        "created_at": str(prevention_result[7]) if prevention_result[7] else None,
+                        "created_at": str(prevention_result[7])
+                        if prevention_result[7]
+                        else None,
                     }
             else:
                 # Check if any prevention exists (including simulated)
-                any_prevention = conn.execute(text("""
+                any_prevention = conn.execute(
+                    text(
+                        """
                     SELECT id, is_simulated, created_at
                     FROM prevention_records
                     WHERE original_incident_id = :incident_id
                     ORDER BY created_at DESC
                     LIMIT 1
-                """), {"incident_id": incident_id}).fetchone()
+                """
+                    ),
+                    {"incident_id": incident_id},
+                ).fetchone()
 
                 if any_prevention:
                     stage_5 = {
@@ -351,42 +435,63 @@ def capture_evidence_trail(
                         "status": "WAITING_FOR_PREVENTION",
                     }
         else:
-            stage_5 = {"warning": "prevention_records table not found - migrations 043+ not applied"}
+            stage_5 = {
+                "warning": "prevention_records table not found - migrations 043+ not applied"
+            }
 
         # =====================================================================
         # STAGE 6: Graduation Delta
         # =====================================================================
         # Check if graduation_history table exists
-        graduation_table_check = conn.execute(text("""
+        graduation_table_check = conn.execute(
+            text(
+                """
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
                 WHERE table_name = 'graduation_history'
             )
-        """)).scalar()
+        """
+            )
+        ).scalar()
 
         stage_6 = None
 
-        if graduation_table_check and stage_5 and "prevention_id" in stage_5 and not stage_5.get("is_simulated"):
+        if (
+            graduation_table_check
+            and stage_5
+            and "prevention_id" in stage_5
+            and not stage_5.get("is_simulated")
+        ):
             prevention_created_at = stage_5.get("created_at")
 
             if prevention_created_at:
                 # Get graduation state BEFORE prevention
-                before_result = conn.execute(text("""
+                before_result = conn.execute(
+                    text(
+                        """
                     SELECT level, gates_json, computed_at, is_degraded
                     FROM graduation_history
                     WHERE computed_at < :prevention_time
                     ORDER BY computed_at DESC
                     LIMIT 1
-                """), {"prevention_time": prevention_created_at}).fetchone()
+                """
+                    ),
+                    {"prevention_time": prevention_created_at},
+                ).fetchone()
 
                 # Get graduation state AFTER prevention
-                after_result = conn.execute(text("""
+                after_result = conn.execute(
+                    text(
+                        """
                     SELECT level, gates_json, computed_at, is_degraded
                     FROM graduation_history
                     WHERE computed_at >= :prevention_time
                     ORDER BY computed_at ASC
                     LIMIT 1
-                """), {"prevention_time": prevention_created_at}).fetchone()
+                """
+                    ),
+                    {"prevention_time": prevention_created_at},
+                ).fetchone()
 
                 before_state = None
                 after_state = None
@@ -395,7 +500,9 @@ def capture_evidence_trail(
                     before_state = {
                         "level": before_result[0],
                         "gates": before_result[1],
-                        "computed_at": str(before_result[2]) if before_result[2] else None,
+                        "computed_at": str(before_result[2])
+                        if before_result[2]
+                        else None,
                         "is_degraded": before_result[3],
                     }
 
@@ -403,7 +510,9 @@ def capture_evidence_trail(
                     after_state = {
                         "level": after_result[0],
                         "gates": after_result[1],
-                        "computed_at": str(after_result[2]) if after_result[2] else None,
+                        "computed_at": str(after_result[2])
+                        if after_result[2]
+                        else None,
                         "is_degraded": after_result[3],
                     }
 
@@ -414,7 +523,9 @@ def capture_evidence_trail(
                     after_gates = after_state.get("gates") or {}
 
                     delta = {
-                        "level_change": f"{before_state['level']} -> {after_state['level']}" if before_state['level'] != after_state['level'] else "unchanged",
+                        "level_change": f"{before_state['level']} -> {after_state['level']}"
+                        if before_state["level"] != after_state["level"]
+                        else "unchanged",
                         "gate1_change": f"{before_gates.get('prevention', False)} -> {after_gates.get('prevention', False)}",
                         "gate2_change": f"{before_gates.get('rollback', False)} -> {after_gates.get('rollback', False)}",
                         "gate3_change": f"{before_gates.get('timeline', False)} -> {after_gates.get('timeline', False)}",
@@ -429,9 +540,13 @@ def capture_evidence_trail(
                 if not before_state and not after_state:
                     stage_6["warning"] = "No graduation history records found"
             else:
-                stage_6 = {"warning": "Cannot compute delta without prevention timestamp"}
+                stage_6 = {
+                    "warning": "Cannot compute delta without prevention timestamp"
+                }
         else:
-            stage_6 = {"warning": "graduation_history table not found or no valid prevention event"}
+            stage_6 = {
+                "warning": "graduation_history table not found or no valid prevention event"
+            }
 
     # =========================================================================
     # BUILD EVIDENCE BUNDLE
@@ -443,10 +558,8 @@ def capture_evidence_trail(
         "captured_at": captured_at,
         "capture_version": "1.0.0",
         "is_simulated": False,
-
         "source_incident_id": incident_id,
         "tenant_id": effective_tenant_id,
-
         "stages": {
             "stage_1_incident": stage_1,
             "stage_2_pattern": stage_2,
@@ -455,27 +568,30 @@ def capture_evidence_trail(
             "stage_5_prevention": stage_5,
             "stage_6_graduation": stage_6,
         },
-
         "completeness": {
             "has_incident": stage_1 is not None and "error" not in stage_1,
             "has_loop_trace": stage_2 is not None and "warning" not in stage_2,
             "has_recovery": stage_3 is not None and "warning" not in stage_3,
             "has_policy": stage_4 is not None and "warning" not in stage_4,
-            "has_prevention": stage_5 is not None and "prevention_id" in stage_5 and not stage_5.get("is_simulated"),
+            "has_prevention": stage_5 is not None
+            and "prevention_id" in stage_5
+            and not stage_5.get("is_simulated"),
             "has_graduation_delta": stage_6 is not None and "delta" in stage_6,
         },
     }
 
     # Compute completeness score
     completeness = evidence_bundle["completeness"]
-    stages_complete = sum([
-        completeness["has_incident"],
-        completeness["has_loop_trace"],
-        completeness["has_recovery"],
-        completeness["has_policy"],
-        completeness["has_prevention"],
-        completeness["has_graduation_delta"],
-    ])
+    stages_complete = sum(
+        [
+            completeness["has_incident"],
+            completeness["has_loop_trace"],
+            completeness["has_recovery"],
+            completeness["has_policy"],
+            completeness["has_prevention"],
+            completeness["has_graduation_delta"],
+        ]
+    )
 
     evidence_bundle["completeness"]["score"] = f"{stages_complete}/6"
     evidence_bundle["completeness"]["is_complete"] = stages_complete == 6
@@ -484,15 +600,25 @@ def capture_evidence_trail(
     if stages_complete == 6:
         evidence_bundle["status"] = "COMPLETE"
         evidence_bundle["message"] = "Full closed-loop proof captured. M26 can proceed."
-    elif completeness["has_incident"] and completeness["has_recovery"] and not completeness["has_prevention"]:
+    elif (
+        completeness["has_incident"]
+        and completeness["has_recovery"]
+        and not completeness["has_prevention"]
+    ):
         evidence_bundle["status"] = "WAITING_FOR_PREVENTION"
-        evidence_bundle["message"] = "Incident processed, recovery applied, awaiting prevention event."
+        evidence_bundle[
+            "message"
+        ] = "Incident processed, recovery applied, awaiting prevention event."
     elif not completeness["has_incident"]:
         evidence_bundle["status"] = "INVALID"
         evidence_bundle["message"] = "Source incident not found."
     else:
         evidence_bundle["status"] = "INCOMPLETE"
-        missing = [k.replace("has_", "") for k, v in completeness.items() if isinstance(v, bool) and not v]
+        missing = [
+            k.replace("has_", "")
+            for k, v in completeness.items()
+            if isinstance(v, bool) and not v
+        ]
         evidence_bundle["message"] = f"Missing stages: {', '.join(missing)}"
 
     # =========================================================================
@@ -505,11 +631,13 @@ def capture_evidence_trail(
             stage_hashes[stage_name] = compute_hash(stage_data)
 
     # Compute root hash
-    root_hash = compute_hash({
-        "stages": stage_hashes,
-        "captured_at": captured_at,
-        "source_incident_id": incident_id,
-    })
+    root_hash = compute_hash(
+        {
+            "stages": stage_hashes,
+            "captured_at": captured_at,
+            "source_incident_id": incident_id,
+        }
+    )
 
     evidence_bundle["integrity"] = {
         "stage_hashes": stage_hashes,
@@ -524,42 +652,38 @@ def capture_evidence_trail(
 def main():
     parser = argparse.ArgumentParser(
         description="M25 Evidence Trail Capture (READ-ONLY)",
-        epilog="Per PIN-131: M25 Real Evidence Trail Capture Protocol"
+        epilog="Per PIN-131: M25 Real Evidence Trail Capture Protocol",
     )
     parser.add_argument(
         "--incident-id",
         required=True,
-        help="Real incident ID (must NOT have sim_ prefix)"
+        help="Real incident ID (must NOT have sim_ prefix)",
     )
-    parser.add_argument(
-        "--tenant-id",
-        help="Optional tenant ID filter"
-    )
+    parser.add_argument("--tenant-id", help="Optional tenant ID filter")
     parser.add_argument(
         "--time-window",
         type=int,
         default=168,
-        help="Time window in hours (default: 168 = 7 days)"
+        help="Time window in hours (default: 168 = 7 days)",
     )
+    parser.add_argument("--output", "-o", help="Output file path (default: stdout)")
     parser.add_argument(
-        "--output",
-        "-o",
-        help="Output file path (default: stdout)"
-    )
-    parser.add_argument(
-        "--pretty",
-        action="store_true",
-        help="Pretty print JSON output"
+        "--pretty", action="store_true", help="Pretty print JSON output"
     )
 
     args = parser.parse_args()
 
     # Validate incident ID doesn't have simulation prefix
     if args.incident_id.startswith("sim_") or args.incident_id.startswith("inc_sim_"):
-        print(json.dumps({
-            "error": "REJECTED: Incident ID has simulation prefix. Real evidence only.",
-            "incident_id": args.incident_id,
-        }, indent=2))
+        print(
+            json.dumps(
+                {
+                    "error": "REJECTED: Incident ID has simulation prefix. Real evidence only.",
+                    "incident_id": args.incident_id,
+                },
+                indent=2,
+            )
+        )
         sys.exit(1)
 
     # Capture evidence

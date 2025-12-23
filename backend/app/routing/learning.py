@@ -338,7 +338,7 @@ class HysteresisManager:
 
     async def should_switch(
         self,
-        current_agent: str,
+        _current_agent: str,
         candidate_agent: str,
         current_score: float,
         candidate_score: float,

@@ -752,7 +752,7 @@ async def archive_dead_letter_to_db(
 
 async def archive_and_trim_dead_letter(
     max_len: int = DEAD_LETTER_MAX_LEN,
-    archive_batch_size: int = 100,
+    _archive_batch_size: int = 100,
 ) -> Dict[str, int]:
     """
     Archive old dead-letter messages to DB, then trim the Redis stream.

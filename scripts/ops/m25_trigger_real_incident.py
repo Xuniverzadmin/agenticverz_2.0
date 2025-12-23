@@ -28,11 +28,10 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
-from decimal import Decimal
 from uuid import uuid4
 
 # Ensure proper path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../backend"))
 
 
 async def create_real_incident(
@@ -65,7 +64,8 @@ async def create_real_incident(
     with Session(engine) as session:
         # Create the real incident (using actual schema)
         session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO incidents (
                     id, tenant_id, title, severity, status,
                     trigger_type, trigger_value, calls_affected,
@@ -75,7 +75,8 @@ async def create_real_incident(
                     :trigger_type, :trigger_value, 1,
                     0, 'block', :now, :now
                 )
-            """),
+            """
+            ),
             {
                 "id": incident_id,
                 "tenant_id": tenant_id,
@@ -89,13 +90,15 @@ async def create_real_incident(
 
         # Create incident event
         session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO incident_events (
                     id, incident_id, event_type, description, created_at
                 ) VALUES (
                     :id, :incident_id, 'TRIGGERED', :description, :now
                 )
-            """),
+            """
+            ),
             {
                 "id": str(uuid4()),
                 "incident_id": incident_id,
@@ -135,7 +138,7 @@ async def trigger_m25_loop(incident_data: dict) -> dict:
     4. Policy -> Routing (Bridge 4)
     5. Loop -> Console (Bridge 5)
     """
-    from app.integrations import trigger_integration_loop, LoopStage
+    from app.integrations import trigger_integration_loop
 
     incident_id = incident_data["incident_id"]
     tenant_id = incident_data["tenant_id"]
@@ -158,7 +161,7 @@ async def trigger_m25_loop(incident_data: dict) -> dict:
         },
     )
 
-    print(f"\nLoop result:")
+    print("\nLoop result:")
     print(f"  Final stage: {result.stage.value}")
     print(f"  Success: {result.is_success}")
     if result.failure_state:
@@ -186,36 +189,42 @@ async def verify_loop_trace(incident_id: str) -> dict:
     with engine.connect() as conn:
         # Check loop_traces
         trace_result = conn.execute(
-            text("""
+            text(
+                """
                 SELECT id, stages, is_complete, started_at, completed_at
                 FROM loop_traces
                 WHERE incident_id = :incident_id
                 ORDER BY started_at DESC
                 LIMIT 1
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         ).fetchone()
 
         # Check loop_events
         events_result = conn.execute(
-            text("""
+            text(
+                """
                 SELECT stage, COUNT(*) as count
                 FROM loop_events
                 WHERE incident_id = :incident_id
                 GROUP BY stage
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         ).fetchall()
 
         # Check failure_patterns
         pattern_result = conn.execute(
-            text("""
+            text(
+                """
                 SELECT id, signature, occurrence_count
                 FROM failure_patterns
                 WHERE first_incident_id = :incident_id
                 ORDER BY created_at DESC
                 LIMIT 1
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         ).fetchone()
 
@@ -331,12 +340,13 @@ async def main():
             print(f"Pattern created: {verification['pattern']['id']}")
         print()
         print("To capture evidence trail later:")
-        print(f"  python scripts/ops/m25_capture_evidence_trail.py \\")
+        print("  python scripts/ops/m25_capture_evidence_trail.py \\")
         print(f"      --incident-id {incident_data['incident_id']}")
 
     except Exception as e:
         print(f"\nERROR: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "description": "Ops API Contract Snapshot - PIN-121 Prevention Blueprint",
+  "endpoint_count": 13,
+  "contracts": {
+    "GET /ops/customers": {
+      "response_model": "untyped",
+      "operation_id": "get_customer_segments_ops_customers_get"
+    },
+    "GET /ops/customers/at-risk": {
+      "response_model": "untyped",
+      "operation_id": "get_customers_at_risk_ops_customers_at_risk_get"
+    },
+    "GET /ops/customers/{tenant_id}": {
+      "response_model": "CustomerSegment",
+      "operation_id": "get_customer_detail_ops_customers__tenant_id__get"
+    },
+    "GET /ops/events": {
+      "response_model": "OpsEventListResponse",
+      "operation_id": "get_event_stream_ops_events_get"
+    },
+    "GET /ops/incidents/patterns": {
+      "response_model": "untyped",
+      "operation_id": "get_incident_patterns_ops_incidents_patterns_get"
+    },
+    "GET /ops/infra": {
+      "response_model": "InfraLimits",
+      "operation_id": "get_infra_limits_ops_infra_get"
+    },
+    "GET /ops/playbooks": {
+      "response_model": "untyped",
+      "operation_id": "get_founder_playbooks_ops_playbooks_get"
+    },
+    "GET /ops/playbooks/{playbook_id}": {
+      "response_model": "PlaybookDetail",
+      "operation_id": "get_playbook_detail_ops_playbooks__playbook_id__get"
+    },
+    "GET /ops/pulse": {
+      "response_model": "SystemPulse",
+      "operation_id": "get_system_pulse_ops_pulse_get"
+    },
+    "GET /ops/revenue": {
+      "response_model": "RevenueRisk",
+      "operation_id": "get_revenue_risk_ops_revenue_get"
+    },
+    "GET /ops/stickiness": {
+      "response_model": "untyped",
+      "operation_id": "get_stickiness_by_feature_ops_stickiness_get"
+    },
+    "POST /ops/jobs/compute-stickiness": {
+      "response_model": "OpsJobResult",
+      "operation_id": "compute_stickiness_ops_jobs_compute_stickiness_post"
+    },
+    "POST /ops/jobs/detect-silent-churn": {
+      "response_model": "OpsJobResult",
+      "operation_id": "detect_silent_churn_ops_jobs_detect_silent_churn_post"
+    }
+  }
+}

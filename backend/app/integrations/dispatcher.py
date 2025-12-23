@@ -16,21 +16,21 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, Optional
 from uuid import uuid4
 
 from .events import (
-    LOOP_MECHANICS_VERSION,
     LOOP_MECHANICS_FROZEN_AT,
-    LoopStage,
-    LoopFailureState,
-    LoopEvent,
-    LoopStatus,
+    LOOP_MECHANICS_VERSION,
+    ConfidenceBand,
     HumanCheckpoint,
     HumanCheckpointType,
-    ConfidenceBand,
+    LoopEvent,
+    LoopFailureState,
+    LoopStage,
+    LoopStatus,
     ensure_json_serializable,
 )
 
@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DispatcherConfig:
     """Configuration for the integration dispatcher."""
+
     # Feature flags
     enabled: bool = True
     bridge_1_enabled: bool = True  # Incident → Catalog
@@ -71,6 +72,7 @@ class DispatcherConfig:
     def from_env(cls) -> "DispatcherConfig":
         """Load config from environment variables."""
         import os
+
         return cls(
             enabled=os.getenv("INTEGRATION_LOOP_ENABLED", "true").lower() == "true",
             bridge_1_enabled=os.getenv("BRIDGE_1_ENABLED", "true").lower() == "true",
@@ -119,9 +121,7 @@ class IntegrationDispatcher:
         self.config = config or DispatcherConfig.from_env()
 
         # Handler registry - will be populated by bridges
-        self._handlers: dict[LoopStage, list[Handler]] = {
-            stage: [] for stage in LoopStage
-        }
+        self._handlers: dict[LoopStage, list[Handler]] = {stage: [] for stage in LoopStage}
 
         # Active loop statuses (in-memory cache, backed by DB)
         self._active_loops: dict[str, LoopStatus] = {}
@@ -197,9 +197,7 @@ class IntegrationDispatcher:
 
         # Also check database for persistence-based idempotency
         if await self._check_db_idempotency(event.incident_id, event.stage):
-            logger.warning(
-                f"DB idempotency blocked: {idempotency_key} exists in database."
-            )
+            logger.warning(f"DB idempotency blocked: {idempotency_key} exists in database.")
             event.details["idempotency_blocked"] = True
             return event
 
@@ -268,13 +266,16 @@ class IntegrationDispatcher:
         try:
             async with self.db_factory() as session:
                 from sqlalchemy import text
+
                 result = await session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT 1 FROM loop_events
                         WHERE incident_id = :incident_id
                         AND stage = :stage
                         LIMIT 1
-                    """),
+                    """
+                    ),
                     {"incident_id": incident_id, "stage": stage.value},
                 )
                 return result.fetchone() is not None
@@ -315,9 +316,7 @@ class IntegrationDispatcher:
     # HUMAN CHECKPOINT HANDLING
     # =========================================================================
 
-    async def _check_human_checkpoint_needed(
-        self, event: LoopEvent
-    ) -> Optional[HumanCheckpoint]:
+    async def _check_human_checkpoint_needed(self, event: LoopEvent) -> Optional[HumanCheckpoint]:
         """
         Check if a human checkpoint is needed for this event.
 
@@ -331,10 +330,7 @@ class IntegrationDispatcher:
             return None
 
         # Weak match checkpoint
-        if (
-            event.confidence_band == ConfidenceBand.WEAK_MATCH
-            and self.config.require_human_for_weak_match
-        ):
+        if event.confidence_band == ConfidenceBand.WEAK_MATCH and self.config.require_human_for_weak_match:
             return HumanCheckpoint.create(
                 checkpoint_type=HumanCheckpointType.APPROVE_RECOVERY,
                 incident_id=event.incident_id,
@@ -348,20 +344,14 @@ class IntegrationDispatcher:
             )
 
         # Novel pattern checkpoint
-        if (
-            event.confidence_band == ConfidenceBand.NOVEL
-            and self.config.require_human_for_novel
-        ):
+        if event.confidence_band == ConfidenceBand.NOVEL and self.config.require_human_for_novel:
             return HumanCheckpoint.create(
                 checkpoint_type=HumanCheckpointType.APPROVE_POLICY,
                 incident_id=event.incident_id,
                 tenant_id=event.tenant_id,
                 stage=event.stage,
                 target_id=event.details.get("pattern_id", event.event_id),
-                description=(
-                    "Novel pattern detected (low confidence). "
-                    "Review before creating new failure pattern."
-                ),
+                description=("Novel pattern detected (low confidence). " "Review before creating new failure pattern."),
             )
 
         return None
@@ -442,9 +432,7 @@ class IntegrationDispatcher:
 
         return loop_status
 
-    async def _update_loop_status(
-        self, loop_status: LoopStatus, event: LoopEvent
-    ) -> None:
+    async def _update_loop_status(self, loop_status: LoopStatus, event: LoopEvent) -> None:
         """Update loop status after event processing."""
         loop_status.current_stage = event.stage
 
@@ -467,17 +455,20 @@ class IntegrationDispatcher:
             loop_status.routing_adjustment = event.details.get("adjustment")
 
         # Check if loop is complete
-        all_stages = {"incident_created", "pattern_matched", "recovery_suggested",
-                      "policy_generated", "routing_adjusted"}
+        all_stages = {
+            "incident_created",
+            "pattern_matched",
+            "recovery_suggested",
+            "policy_generated",
+            "routing_adjusted",
+        }
         if set(loop_status.stages_completed) >= all_stages:
             loop_status.is_complete = True
             loop_status.completed_at = datetime.now(timezone.utc)
 
         await self._persist_loop_status(loop_status)
 
-    async def _trigger_next_stage(
-        self, event: LoopEvent, loop_status: LoopStatus
-    ) -> Optional[LoopEvent]:
+    async def _trigger_next_stage(self, event: LoopEvent, loop_status: LoopStatus) -> Optional[LoopEvent]:
         """Determine and create the next stage event if needed."""
         stage_sequence = [
             LoopStage.INCIDENT_CREATED,
@@ -527,11 +518,13 @@ class IntegrationDispatcher:
                 from sqlalchemy import text
 
                 await session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO loop_events (id, incident_id, tenant_id, stage, details, created_at)
                         VALUES (:id, :incident_id, :tenant_id, :stage, CAST(:details AS jsonb), :created_at)
                         ON CONFLICT (id) DO UPDATE SET details = CAST(:details AS jsonb)
-                    """),
+                    """
+                    ),
                     {
                         "id": event.event_id,
                         "incident_id": event.incident_id,
@@ -556,22 +549,26 @@ class IntegrationDispatcher:
                 from sqlalchemy import text
 
                 await session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO loop_traces (id, incident_id, tenant_id, stages, started_at, completed_at, is_complete)
                         VALUES (:id, :incident_id, :tenant_id, CAST(:stages AS jsonb), :started_at, :completed_at, :is_complete)
                         ON CONFLICT (id) DO UPDATE SET
                             stages = CAST(:stages AS jsonb),
                             completed_at = :completed_at,
                             is_complete = :is_complete
-                    """),
+                    """
+                    ),
                     {
                         "id": status.loop_id,
                         "incident_id": status.incident_id,
                         "tenant_id": status.tenant_id,
-                        "stages": json.dumps({
-                            "completed": status.stages_completed,
-                            "failed": status.stages_failed,
-                        }),
+                        "stages": json.dumps(
+                            {
+                                "completed": status.stages_completed,
+                                "failed": status.stages_failed,
+                            }
+                        ),
                         "started_at": status.started_at,
                         "completed_at": status.completed_at,
                         "is_complete": status.is_complete,
@@ -588,7 +585,8 @@ class IntegrationDispatcher:
                 from sqlalchemy import text
 
                 await session.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO human_checkpoints
                         (id, checkpoint_type, incident_id, tenant_id, stage, target_id,
                          description, options, created_at, resolved_at, resolved_by, resolution)
@@ -598,7 +596,8 @@ class IntegrationDispatcher:
                             resolved_at = :resolved_at,
                             resolved_by = :resolved_by,
                             resolution = :resolution
-                    """),
+                    """
+                    ),
                     {
                         "id": checkpoint.checkpoint_id,
                         "type": checkpoint.checkpoint_type.value,
@@ -625,13 +624,15 @@ class IntegrationDispatcher:
                 from sqlalchemy import text
 
                 result = await session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id, incident_id, tenant_id, stages, started_at, completed_at, is_complete
                         FROM loop_traces
                         WHERE incident_id = :incident_id
                         ORDER BY started_at DESC
                         LIMIT 1
-                    """),
+                    """
+                    ),
                     {"incident_id": incident_id},
                 )
                 row = result.fetchone()
@@ -659,9 +660,11 @@ class IntegrationDispatcher:
                 from sqlalchemy import text
 
                 result = await session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT * FROM human_checkpoints WHERE id = :id
-                    """),
+                    """
+                    ),
                     {"id": checkpoint_id},
                 )
                 row = result.fetchone()
@@ -702,13 +705,15 @@ class IntegrationDispatcher:
             channel = f"checkpoints:{checkpoint.tenant_id}"
             await self.redis.publish(
                 channel,
-                json.dumps({
-                    "type": "checkpoint_needed",
-                    "checkpoint_id": checkpoint.checkpoint_id,
-                    "incident_id": checkpoint.incident_id,
-                    "checkpoint_type": checkpoint.checkpoint_type.value,
-                    "description": checkpoint.description,
-                }),
+                json.dumps(
+                    {
+                        "type": "checkpoint_needed",
+                        "checkpoint_id": checkpoint.checkpoint_id,
+                        "incident_id": checkpoint.incident_id,
+                        "checkpoint_type": checkpoint.checkpoint_type.value,
+                        "description": checkpoint.description,
+                    }
+                ),
             )
         except Exception as e:
             logger.error(f"Failed to publish checkpoint needed: {e}")
@@ -725,14 +730,9 @@ class IntegrationDispatcher:
 
     async def get_pending_checkpoints(self, tenant_id: str) -> list[HumanCheckpoint]:
         """Get all pending human checkpoints for a tenant."""
-        return [
-            cp for cp in self._pending_checkpoints.values()
-            if cp.tenant_id == tenant_id and cp.is_pending
-        ]
+        return [cp for cp in self._pending_checkpoints.values() if cp.tenant_id == tenant_id and cp.is_pending]
 
-    async def retry_failed_stage(
-        self, incident_id: str, stage: LoopStage, tenant_id: str
-    ) -> Optional[LoopEvent]:
+    async def retry_failed_stage(self, incident_id: str, stage: LoopStage, tenant_id: str) -> Optional[LoopEvent]:
         """Retry a failed stage in the loop."""
         loop_status = await self.get_loop_status(incident_id)
         if not loop_status:
@@ -755,9 +755,7 @@ class IntegrationDispatcher:
 
         return await self.dispatch(retry_event)
 
-    async def revert_loop(
-        self, incident_id: str, user_id: str, reason: str
-    ) -> None:
+    async def revert_loop(self, incident_id: str, user_id: str, reason: str) -> None:
         """
         Revert all changes made by a loop.
 
@@ -768,8 +766,7 @@ class IntegrationDispatcher:
             raise ValueError(f"No loop found for incident {incident_id}")
 
         logger.warning(
-            f"Reverting loop {loop_status.loop_id} for incident {incident_id} "
-            f"by user {user_id}: {reason}"
+            f"Reverting loop {loop_status.loop_id} for incident {incident_id} " f"by user {user_id}: {reason}"
         )
 
         # Revert each applied change

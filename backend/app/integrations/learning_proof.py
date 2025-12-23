@@ -16,12 +16,11 @@ not just executes. It tracks:
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Optional
-from collections import defaultdict
-
+from typing import Optional
 
 # =============================================================================
 # PREVENTION PROOF (Gate 1)
@@ -30,10 +29,11 @@ from collections import defaultdict
 
 class PreventionOutcome(str, Enum):
     """Outcome of a prevention attempt."""
-    PREVENTED = "prevented"           # Same pattern, blocked by policy
-    MITIGATED = "mitigated"           # Same pattern, reduced severity
-    FAILED_TO_PREVENT = "failed"      # Same pattern, still occurred
-    NOT_APPLICABLE = "not_applicable" # Different pattern, unrelated
+
+    PREVENTED = "prevented"  # Same pattern, blocked by policy
+    MITIGATED = "mitigated"  # Same pattern, reduced severity
+    FAILED_TO_PREVENT = "failed"  # Same pattern, still occurred
+    NOT_APPLICABLE = "not_applicable"  # Different pattern, unrelated
 
 
 @dataclass
@@ -44,19 +44,20 @@ class PreventionRecord:
     This is THE critical proof that M25 works. Without this,
     we have plumbing, not learning.
     """
+
     record_id: str
     policy_id: str
     pattern_id: str
-    original_incident_id: str   # The incident that created the policy
-    blocked_incident_id: str    # The incident that was prevented
+    original_incident_id: str  # The incident that created the policy
+    blocked_incident_id: str  # The incident that was prevented
     tenant_id: str
     outcome: PreventionOutcome
     created_at: datetime
 
     # Evidence
     signature_match_confidence: float  # How similar was the blocked incident?
-    time_since_policy: timedelta       # How long policy was active before prevention
-    calls_evaluated: int               # How many calls evaluated by policy before block
+    time_since_policy: timedelta  # How long policy was active before prevention
+    calls_evaluated: int  # How many calls evaluated by policy before block
 
     @classmethod
     def create_prevention(
@@ -90,7 +91,7 @@ class PreventionRecord:
         return {
             "type": "prevention",
             "timestamp": self.created_at.isoformat(),
-            "headline": f"Policy prevented recurrence",
+            "headline": "Policy prevented recurrence",
             "details": {
                 "original_incident": self.original_incident_id,
                 "would_be_incident": self.blocked_incident_id,
@@ -110,6 +111,7 @@ class PreventionTracker:
 
     Answers: "Are our policies actually preventing incidents?"
     """
+
     policies_with_prevention: set[str] = field(default_factory=set)
     prevention_by_pattern: dict[str, list[PreventionRecord]] = field(default_factory=lambda: defaultdict(list))
     total_preventions: int = 0
@@ -151,11 +153,12 @@ class PreventionTracker:
 
 class RegretType(str, Enum):
     """Types of policy regret."""
-    FALSE_POSITIVE = "false_positive"     # Blocked legitimate request
-    PERFORMANCE_DEGRADATION = "perf"      # Caused slowdown
-    ESCALATION_NOISE = "escalation"       # Created unnecessary alerts
-    USER_OVERRIDE = "user_override"       # User had to manually override
-    CASCADING_FAILURE = "cascade"         # Triggered other failures
+
+    FALSE_POSITIVE = "false_positive"  # Blocked legitimate request
+    PERFORMANCE_DEGRADATION = "perf"  # Caused slowdown
+    ESCALATION_NOISE = "escalation"  # Created unnecessary alerts
+    USER_OVERRIDE = "user_override"  # User had to manually override
+    CASCADING_FAILURE = "cascade"  # Triggered other failures
 
 
 @dataclass
@@ -166,6 +169,7 @@ class RegretEvent:
     "Regret" is the opposite of prevention. It's when our attempt
     to improve made things worse.
     """
+
     regret_id: str
     policy_id: str
     tenant_id: str
@@ -191,6 +195,7 @@ class PolicyRegretTracker:
 
     Implements automatic demotion when regret threshold exceeded.
     """
+
     policy_id: str
     regret_events: list[RegretEvent] = field(default_factory=list)
     regret_score: float = 0.0  # Weighted score
@@ -198,9 +203,9 @@ class PolicyRegretTracker:
     demoted_reason: Optional[str] = None
 
     # Thresholds
-    auto_demote_score: float = 5.0      # Demote if score exceeds this
-    auto_demote_count: int = 3          # Demote if N regret events
-    decay_rate: float = 0.1             # Daily decay of regret score
+    auto_demote_score: float = 5.0  # Demote if score exceeds this
+    auto_demote_count: int = 3  # Demote if N regret events
+    decay_rate: float = 0.1  # Daily decay of regret score
 
     def add_regret(self, event: RegretEvent) -> bool:
         """
@@ -242,7 +247,7 @@ class PolicyRegretTracker:
         return {
             "type": "rollback",
             "timestamp": self.demoted_at.isoformat(),
-            "headline": f"Policy auto-demoted due to regret",
+            "headline": "Policy auto-demoted due to regret",
             "details": {
                 "policy": self.policy_id,
                 "reason": self.demoted_reason,
@@ -260,6 +265,7 @@ class GlobalRegretTracker:
 
     Answers: "Is the system causing harm?"
     """
+
     policy_trackers: dict[str, PolicyRegretTracker] = field(default_factory=dict)
     total_regret_events: int = 0
     total_auto_demotions: int = 0
@@ -304,6 +310,7 @@ class PatternCalibration:
 
     Replaces static 0.85/0.60 thresholds with empirical ones.
     """
+
     pattern_id: str
 
     # Outcome tracking
@@ -391,6 +398,7 @@ class AdaptiveConfidenceSystem:
 
     Moves from "cargo cult math" to empirical calibration.
     """
+
     pattern_calibrations: dict[str, PatternCalibration] = field(default_factory=dict)
 
     # Global statistics
@@ -410,9 +418,8 @@ class AdaptiveConfidenceSystem:
 
         # Update global accuracy (rolling)
         self.global_accuracy = (
-            (self.global_accuracy * (self.total_predictions - 1) + (1 if was_correct else 0))
-            / self.total_predictions
-        )
+            self.global_accuracy * (self.total_predictions - 1) + (1 if was_correct else 0)
+        ) / self.total_predictions
 
     def get_threshold_for_pattern(self, pattern_id: str) -> tuple[float, float]:
         """Get calibrated strong/weak thresholds for a pattern."""
@@ -450,11 +457,12 @@ class AdaptiveConfidenceSystem:
 
 class CheckpointPriority(str, Enum):
     """Priority levels for human checkpoints."""
-    CRITICAL = "critical"     # Must resolve before system proceeds
-    HIGH = "high"             # Should resolve within 1 hour
-    NORMAL = "normal"         # Should resolve within 24 hours
-    LOW = "low"               # Advisory only, can auto-dismiss
-    ADVISORY = "advisory"     # Non-blocking, informational
+
+    CRITICAL = "critical"  # Must resolve before system proceeds
+    HIGH = "high"  # Should resolve within 1 hour
+    NORMAL = "normal"  # Should resolve within 24 hours
+    LOW = "low"  # Advisory only, can auto-dismiss
+    ADVISORY = "advisory"  # Non-blocking, informational
 
 
 @dataclass
@@ -464,26 +472,35 @@ class CheckpointConfig:
 
     Prevents checkpoint fatigue by allowing customization.
     """
+
     tenant_id: str
 
     # Which checkpoints are enabled
-    enabled_types: set[str] = field(default_factory=lambda: {
-        "approve_policy", "approve_recovery", "simulate_routing",
-        "revert_loop", "override_guardrail"
-    })
+    enabled_types: set[str] = field(
+        default_factory=lambda: {
+            "approve_policy",
+            "approve_recovery",
+            "simulate_routing",
+            "revert_loop",
+            "override_guardrail",
+        }
+    )
 
     # Priority overrides
     priority_overrides: dict[str, CheckpointPriority] = field(default_factory=dict)
 
     # Thresholds
     auto_approve_confidence: float = 0.95  # Auto-approve above this
-    auto_dismiss_after_hours: int = 48     # Auto-dismiss LOW after 48h
-    max_pending_checkpoints: int = 10      # Alert if more than 10 pending
+    auto_dismiss_after_hours: int = 48  # Auto-dismiss LOW after 48h
+    max_pending_checkpoints: int = 10  # Alert if more than 10 pending
 
     # Behavior
-    blocking_checkpoints: set[str] = field(default_factory=lambda: {
-        "approve_policy", "override_guardrail"  # These block the loop
-    })
+    blocking_checkpoints: set[str] = field(
+        default_factory=lambda: {
+            "approve_policy",
+            "override_guardrail",  # These block the loop
+        }
+    )
 
     def is_blocking(self, checkpoint_type: str) -> bool:
         """Check if checkpoint type blocks loop progress."""
@@ -524,6 +541,7 @@ class PrioritizedCheckpoint:
     """
     Enhanced checkpoint with priority and configurability.
     """
+
     checkpoint_id: str
     checkpoint_type: str
     incident_id: str
@@ -695,76 +713,87 @@ class PreventionTimeline:
 
     Gate 3 requirement: User must SEE the system learn.
     """
+
     incident_id: str
     tenant_id: str
     events: list[dict] = field(default_factory=list)
 
     def add_incident_created(self, timestamp: datetime, details: dict) -> None:
         """Original incident that created the pattern/policy."""
-        self.events.append({
-            "type": "incident_created",
-            "timestamp": timestamp.isoformat(),
-            "icon": "🚨",
-            "headline": "Incident A detected",
-            "description": details.get("title", "Unknown incident"),
-            "details": details,
-        })
+        self.events.append(
+            {
+                "type": "incident_created",
+                "timestamp": timestamp.isoformat(),
+                "icon": "🚨",
+                "headline": "Incident A detected",
+                "description": details.get("title", "Unknown incident"),
+                "details": details,
+            }
+        )
 
     def add_policy_born(self, timestamp: datetime, policy_id: str, policy_name: str) -> None:
         """Policy was created from this incident."""
-        self.events.append({
-            "type": "policy_born",
-            "timestamp": timestamp.isoformat(),
-            "icon": "📋",
-            "headline": "Policy born from failure",
-            "description": f"Policy '{policy_name}' created to prevent recurrence",
-            "details": {"policy_id": policy_id},
-        })
+        self.events.append(
+            {
+                "type": "policy_born",
+                "timestamp": timestamp.isoformat(),
+                "icon": "📋",
+                "headline": "Policy born from failure",
+                "description": f"Policy '{policy_name}' created to prevent recurrence",
+                "details": {"policy_id": policy_id},
+            }
+        )
 
     def add_prevention(self, timestamp: datetime, record: PreventionRecord) -> None:
         """The prevention event - this is the proof."""
-        self.events.append({
-            "type": "prevention",
-            "timestamp": timestamp.isoformat(),
-            "icon": "🛡️",
-            "headline": "Incident B PREVENTED",
-            "description": f"Same pattern detected, blocked by policy",
-            "details": {
-                "blocked_incident": record.blocked_incident_id,
-                "policy": record.policy_id,
-                "confidence": f"{record.signature_match_confidence:.0%}",
-            },
-            "is_milestone": True,
-        })
+        self.events.append(
+            {
+                "type": "prevention",
+                "timestamp": timestamp.isoformat(),
+                "icon": "🛡️",
+                "headline": "Incident B PREVENTED",
+                "description": "Same pattern detected, blocked by policy",
+                "details": {
+                    "blocked_incident": record.blocked_incident_id,
+                    "policy": record.policy_id,
+                    "confidence": f"{record.signature_match_confidence:.0%}",
+                },
+                "is_milestone": True,
+            }
+        )
 
     def add_regret(self, timestamp: datetime, event: RegretEvent) -> None:
         """Regret event if policy caused harm."""
-        self.events.append({
-            "type": "regret",
-            "timestamp": timestamp.isoformat(),
-            "icon": "⚠️",
-            "headline": "Policy caused harm (regret)",
-            "description": event.description,
-            "details": {
-                "regret_type": event.regret_type.value,
-                "severity": event.severity,
-            },
-        })
+        self.events.append(
+            {
+                "type": "regret",
+                "timestamp": timestamp.isoformat(),
+                "icon": "⚠️",
+                "headline": "Policy caused harm (regret)",
+                "description": event.description,
+                "details": {
+                    "regret_type": event.regret_type.value,
+                    "severity": event.severity,
+                },
+            }
+        )
 
     def add_rollback(self, timestamp: datetime, tracker: PolicyRegretTracker) -> None:
         """Auto-rollback event."""
-        self.events.append({
-            "type": "rollback",
-            "timestamp": timestamp.isoformat(),
-            "icon": "↩️",
-            "headline": "Policy auto-demoted",
-            "description": tracker.demoted_reason or "Excessive regret",
-            "details": {
-                "policy": tracker.policy_id,
-                "regret_score": f"{tracker.regret_score:.1f}",
-            },
-            "is_milestone": True,
-        })
+        self.events.append(
+            {
+                "type": "rollback",
+                "timestamp": timestamp.isoformat(),
+                "icon": "↩️",
+                "headline": "Policy auto-demoted",
+                "description": tracker.demoted_reason or "Excessive regret",
+                "details": {
+                    "policy": tracker.policy_id,
+                    "regret_score": f"{tracker.regret_score:.1f}",
+                },
+                "is_milestone": True,
+            }
+        )
 
     def to_console(self) -> dict:
         """Format for console display."""
@@ -797,14 +826,8 @@ class PreventionTimeline:
                 "The system learned, protected, and self-corrected."
             )
         elif has_prevention:
-            return (
-                "This incident proves learning: "
-                "a policy born from failure successfully prevented a recurrence."
-            )
+            return "This incident proves learning: " "a policy born from failure successfully prevented a recurrence."
         elif has_rollback:
-            return (
-                "This incident shows self-correction: "
-                "a policy that caused harm was automatically demoted."
-            )
+            return "This incident shows self-correction: " "a policy that caused harm was automatically demoted."
         else:
             return "This incident is part of the feedback loop."

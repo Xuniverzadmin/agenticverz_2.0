@@ -242,6 +242,10 @@ class Tokenizer:
         start_col = self.column
         char = self.current_char
 
+        # Caller (tokenize) guarantees char is not None
+        if char is None:
+            raise TokenizerError("Unexpected end of input", start_line, start_col)
+
         # Two-character operators
         if char in "=!<>":
             next_char = self.peek()

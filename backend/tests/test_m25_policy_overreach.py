@@ -7,21 +7,18 @@ This is the most important safety test for the M25 graduation system.
 If policies start blocking unrelated requests, the system is unsafe.
 """
 
-import pytest
-import json
-from datetime import datetime, timezone
-from uuid import uuid4
 
-from app.integrations.events import (
-    LoopStage,
-    ConfidenceBand,
-    PolicyMode,
-    PolicyRule,
-    LoopEvent,
-)
+import pytest
+
 from app.integrations.bridges import (
     ConfidenceCalculator,
-    PolicyActivationAudit,
+)
+from app.integrations.events import (
+    ConfidenceBand,
+    LoopEvent,
+    LoopStage,
+    PolicyMode,
+    PolicyRule,
 )
 
 
@@ -65,8 +62,8 @@ class TestPolicyOverreach:
         matches = "rate_limit" in unrelated_incident.get("error_type", "")
 
         assert matches is False, (
-            f"Policy for 'rate_limit' incorrectly matched 'timeout' error. "
-            f"This is a CRITICAL safety violation - policy overreach detected."
+            "Policy for 'rate_limit' incorrectly matched 'timeout' error. "
+            "This is a CRITICAL safety violation - policy overreach detected."
         )
 
     def test_policy_does_not_match_different_tenant(self):
@@ -90,9 +87,7 @@ class TestPolicyOverreach:
         # Check scope
         other_tenant = "tenant_B"
 
-        assert policy.scope_id != other_tenant, (
-            "Policy should be scoped to tenant_A only"
-        )
+        assert policy.scope_id != other_tenant, "Policy should be scoped to tenant_A only"
 
         # In production, the policy evaluation would check:
         # if policy.scope_type == "tenant" and policy.scope_id != request_tenant_id:
@@ -112,8 +107,7 @@ class TestPolicyOverreach:
         should_auto = ConfidenceCalculator.should_auto_apply(confidence, occurrence_count=1)
 
         assert should_auto is False, (
-            f"Weak match (confidence={confidence}) should NOT auto-apply. "
-            f"Version={version}, details={details}"
+            f"Weak match (confidence={confidence}) should NOT auto-apply. " f"Version={version}, details={details}"
         )
 
     def test_confidence_calculator_requires_3_occurrences_for_auto_apply(self):
@@ -150,17 +144,12 @@ class TestPolicyOverreach:
         )
 
         # High confidence policies start in shadow mode
-        assert policy.mode == PolicyMode.SHADOW, (
-            "High confidence policies should start in SHADOW mode"
-        )
+        assert policy.mode == PolicyMode.SHADOW, "High confidence policies should start in SHADOW mode"
 
         # Shadow mode should not block
         should_block = policy.mode == PolicyMode.ACTIVE
 
-        assert should_block is False, (
-            "SHADOW mode policy must NOT block requests. "
-            "Only ACTIVE policies can enforce."
-        )
+        assert should_block is False, "SHADOW mode policy must NOT block requests. " "Only ACTIVE policies can enforce."
 
     def test_policy_with_high_regret_is_disabled(self):
         """
@@ -184,8 +173,7 @@ class TestPolicyOverreach:
         policy.record_regret()
 
         assert policy.mode == PolicyMode.DISABLED, (
-            f"Policy with regret_count={policy.regret_count} should be DISABLED. "
-            f"Current mode: {policy.mode.value}"
+            f"Policy with regret_count={policy.regret_count} should be DISABLED. " f"Current mode: {policy.mode.value}"
         )
 
     def test_loop_event_failure_state_blocks_next_stage(self):
@@ -201,9 +189,7 @@ class TestPolicyOverreach:
             failure_state=LoopFailureState.MATCH_LOW_CONFIDENCE,
         )
 
-        assert event.is_success is False, (
-            "Event with failure_state should not be considered success"
-        )
+        assert event.is_success is False, "Event with failure_state should not be considered success"
 
     def test_novel_pattern_requires_human_review(self):
         """
@@ -211,12 +197,8 @@ class TestPolicyOverreach:
         """
         band = ConfidenceBand.NOVEL
 
-        assert band.requires_human_review is True, (
-            "Novel patterns must require human review"
-        )
-        assert band.allows_auto_apply is False, (
-            "Novel patterns must NOT allow auto-apply"
-        )
+        assert band.requires_human_review is True, "Novel patterns must require human review"
+        assert band.allows_auto_apply is False, "Novel patterns must NOT allow auto-apply"
 
 
 class TestPreventionContract:
@@ -234,9 +216,7 @@ class TestPreventionContract:
         # This would NOT count as prevention
         is_valid_prevention = original_incident_tenant == prevention_tenant
 
-        assert is_valid_prevention is False, (
-            "Prevention across tenants is NOT valid"
-        )
+        assert is_valid_prevention is False, "Prevention across tenants is NOT valid"
 
     def test_prevention_requires_active_policy(self):
         """
@@ -246,9 +226,7 @@ class TestPreventionContract:
 
         is_valid_prevention = policy_mode == PolicyMode.ACTIVE
 
-        assert is_valid_prevention is False, (
-            "Shadow mode policies do NOT create valid preventions"
-        )
+        assert is_valid_prevention is False, "Shadow mode policies do NOT create valid preventions"
 
     def test_prevention_must_not_create_incident(self):
         """
@@ -257,9 +235,7 @@ class TestPreventionContract:
         # If we're counting prevention, incident_created should be False
         incident_created = False
 
-        assert incident_created is False, (
-            "Prevention means no incident was created"
-        )
+        assert incident_created is False, "Prevention means no incident was created"
 
 
 if __name__ == "__main__":

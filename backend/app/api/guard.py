@@ -1674,10 +1674,11 @@ async def seed_demo_incident(
     # See PIN-140 for rationale: "Proof tools ≠ product tools"
     # ==========================================================================
     import os
+
     if not os.getenv("DEMO_ENDPOINTS_ENABLED", "").lower() == "true":
         raise HTTPException(
             status_code=410,  # Gone
-            detail="Demo endpoint disabled. Set DEMO_ENDPOINTS_ENABLED=true for testing."
+            detail="Demo endpoint disabled. Set DEMO_ENDPOINTS_ENABLED=true for testing.",
         )
     import json
 
@@ -1858,10 +1859,11 @@ async def validate_content_accuracy_endpoint(
     # See PIN-140 for rationale: "Proof tools ≠ product tools"
     # ==========================================================================
     import os
+
     if not os.getenv("DEMO_ENDPOINTS_ENABLED", "").lower() == "true":
         raise HTTPException(
             status_code=410,  # Gone
-            detail="Validation endpoint disabled. Set DEMO_ENDPOINTS_ENABLED=true for testing."
+            detail="Validation endpoint disabled. Set DEMO_ENDPOINTS_ENABLED=true for testing.",
         )
     from app.policy.validators import PreventionAction, evaluate_response
 

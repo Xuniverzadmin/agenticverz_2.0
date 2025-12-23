@@ -31,7 +31,8 @@ def main():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cur:
             # Find the strongest policy
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     pr.id AS policy_id,
                     pr.name,
@@ -49,20 +50,23 @@ def main():
                 AND pr.regret_count = 0
                 ORDER BY fp.occurrence_count DESC NULLS LAST, pr.generation_confidence DESC
                 LIMIT 1
-            """)
+            """
+            )
             row = cur.fetchone()
 
             if not row:
                 print("ERROR: No eligible policy found for activation")
-                print("Requirements: confidence >= 0.85, mode = shadow, regret_count = 0")
+                print(
+                    "Requirements: confidence >= 0.85, mode = shadow, regret_count = 0"
+                )
                 sys.exit(1)
 
-            policy_id = row['policy_id']
-            pattern_id = row['source_pattern_id']
-            recovery_id = row['source_recovery_id'] or 'unknown'
-            confidence = row['generation_confidence']
-            tenant_id = row['tenant_id']
-            occurrence_count = row['occurrence_count']
+            policy_id = row["policy_id"]
+            pattern_id = row["source_pattern_id"]
+            recovery_id = row["source_recovery_id"] or "unknown"
+            confidence = row["generation_confidence"]
+            tenant_id = row["tenant_id"]
+            occurrence_count = row["occurrence_count"]
 
             print("=" * 60)
             print("M25 POLICY ACTIVATION")
@@ -75,17 +79,21 @@ def main():
             print("=" * 60)
 
             # Activate the policy
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE policy_rules
                 SET mode = 'active',
                     is_active = TRUE,
                     updated_at = NOW()
                 WHERE id = %s
-            """, (policy_id,))
+            """,
+                (policy_id,),
+            )
 
             # Create activation audit record
             loop_trace_id = "loop_activation_m25"  # Manual activation trace
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO policy_activation_audit
                 (policy_id, source_pattern_id, source_recovery_id,
                  confidence_at_activation, confidence_version, approval_path,
@@ -96,15 +104,17 @@ def main():
                     confidence_at_activation = EXCLUDED.confidence_at_activation,
                     approval_path = 'manual:m25_graduation',
                     activated_at = EXCLUDED.activated_at
-            """, (
-                policy_id,
-                pattern_id,
-                recovery_id,
-                confidence,
-                loop_trace_id,
-                datetime.now(timezone.utc),
-                tenant_id,
-            ))
+            """,
+                (
+                    policy_id,
+                    pattern_id,
+                    recovery_id,
+                    confidence,
+                    loop_trace_id,
+                    datetime.now(timezone.utc),
+                    tenant_id,
+                ),
+            )
 
             conn.commit()
 
@@ -117,7 +127,7 @@ def main():
             print("3. Verify prevention_record is created")
             print("4. Check graduation gate movement")
             print()
-            print(f"Pattern signature to trigger: data_export_blocked")
+            print("Pattern signature to trigger: data_export_blocked")
             print()
 
     except Exception as e:

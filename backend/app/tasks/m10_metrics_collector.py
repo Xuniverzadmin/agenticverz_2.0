@@ -348,7 +348,7 @@ async def daemon_main():
 
     stop_event = asyncio.Event()
 
-    def handle_shutdown(signum, frame):
+    def handle_shutdown(signum, _frame):
         logger.info(f"Received signal {signum}, initiating shutdown...")
         stop_event.set()
 

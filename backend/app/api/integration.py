@@ -14,38 +14,29 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone, timedelta
-from typing import Any, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+
 
 # Simple tenant/user helpers for integration endpoints
 def get_tenant_id(tenant_id: str = Query(..., description="Tenant ID")) -> str:
     """Get tenant ID from query parameter."""
     return tenant_id
 
+
 def get_current_user(user_id: Optional[str] = Query(None, description="User ID")) -> Optional[dict]:
     """Get current user from query parameter (optional)."""
     if user_id:
         return {"id": user_id}
     return None
+
+
 from app.integrations.events import (
     LoopStage,
-    LoopFailureState,
-    HumanCheckpointType,
-)
-from app.integrations.learning_proof import (
-    PreventionOutcome,
-    PreventionRecord,
-    PreventionTracker,
-    RegretType,
-    RegretEvent,
-    PolicyRegretTracker,
-    GlobalRegretTracker,
-    M25GraduationStatus,
-    PreventionTimeline,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,6 +51,7 @@ router = APIRouter(prefix="/integration", tags=["integration"])
 
 class LoopStatusResponse(BaseModel):
     """Response for loop status endpoint."""
+
     loop_id: str
     incident_id: str
     tenant_id: str
@@ -77,6 +69,7 @@ class LoopStatusResponse(BaseModel):
 
 class StageDetail(BaseModel):
     """Detail for a single stage."""
+
     stage: str
     status: str  # completed, failed, pending, in_progress
     timestamp: Optional[datetime] = None
@@ -87,6 +80,7 @@ class StageDetail(BaseModel):
 
 class CheckpointResponse(BaseModel):
     """Response for human checkpoint."""
+
     checkpoint_id: str
     checkpoint_type: str
     incident_id: str
@@ -103,11 +97,13 @@ class CheckpointResponse(BaseModel):
 
 class ResolveCheckpointRequest(BaseModel):
     """Request to resolve a checkpoint."""
+
     resolution: str = Field(..., description="One of the available options")
 
 
 class IntegrationStatsResponse(BaseModel):
     """Statistics for integration loop."""
+
     total_incidents: int
     patterns_matched: int
     patterns_created: int
@@ -131,11 +127,13 @@ class IntegrationStatsResponse(BaseModel):
 
 class RetryStageRequest(BaseModel):
     """Request to retry a failed stage."""
+
     stage: str = Field(..., description="Stage to retry")
 
 
 class RevertLoopRequest(BaseModel):
     """Request to revert a loop."""
+
     reason: str = Field(..., description="Reason for revert")
 
 
@@ -159,6 +157,7 @@ async def get_loop_status(
     """
     # Get dispatcher (lazy import to avoid circular deps)
     from app.integrations import get_dispatcher
+
     dispatcher = get_dispatcher()
 
     loop_status = await dispatcher.get_loop_status(incident_id)
@@ -193,31 +192,36 @@ async def get_loop_stages(
     tenant_id: str = Depends(get_tenant_id),
 ) -> list[StageDetail]:
     """Get detailed stage information for a loop."""
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     async with get_async_session() as session:
         result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT stage, details, failure_state, confidence_band, created_at
                 FROM loop_events
                 WHERE incident_id = :incident_id
                 ORDER BY created_at ASC
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         )
         events = result.fetchall()
 
     stages = []
     for event in events:
-        stages.append(StageDetail(
-            stage=event.stage,
-            status="failed" if event.failure_state else "completed",
-            timestamp=event.created_at,
-            details=event.details if isinstance(event.details, dict) else {},
-            failure_state=event.failure_state,
-            confidence_band=event.confidence_band,
-        ))
+        stages.append(
+            StageDetail(
+                stage=event.stage,
+                status="failed" if event.failure_state else "completed",
+                timestamp=event.created_at,
+                details=event.details if isinstance(event.details, dict) else {},
+                failure_state=event.failure_state,
+                confidence_band=event.confidence_band,
+            )
+        )
 
     return stages
 
@@ -232,11 +236,11 @@ async def stream_loop_status(
 
     Connect to receive real-time updates as the loop progresses.
     """
-    import asyncio
     import json
 
     async def event_generator():
         from app.integrations import get_redis_client
+
         redis = get_redis_client()
 
         channel = f"loop:{tenant_id}:{incident_id}"
@@ -246,6 +250,7 @@ async def stream_loop_status(
         try:
             # Send initial status
             from app.integrations import get_dispatcher
+
             dispatcher = get_dispatcher()
             status = await dispatcher.get_loop_status(incident_id)
             if status:
@@ -276,6 +281,7 @@ async def retry_loop_stage(
 ) -> LoopStatusResponse:
     """Retry a failed loop stage."""
     from app.integrations import get_dispatcher
+
     dispatcher = get_dispatcher()
 
     try:
@@ -315,6 +321,7 @@ async def revert_loop(
     This is the ultimate human override - use with caution.
     """
     from app.integrations import get_dispatcher
+
     dispatcher = get_dispatcher()
 
     user_id = user.get("sub", "unknown")
@@ -342,6 +349,7 @@ async def list_pending_checkpoints(
 ) -> list[CheckpointResponse]:
     """List all pending human checkpoints for the tenant."""
     from app.integrations import get_dispatcher
+
     dispatcher = get_dispatcher()
 
     checkpoints = await dispatcher.get_pending_checkpoints(tenant_id)
@@ -371,15 +379,18 @@ async def get_checkpoint(
     tenant_id: str = Depends(get_tenant_id),
 ) -> CheckpointResponse:
     """Get details of a specific checkpoint."""
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     async with get_async_session() as session:
         result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT * FROM human_checkpoints
                 WHERE id = :id AND tenant_id = :tenant_id
-            """),
+            """
+            ),
             {"id": checkpoint_id, "tenant_id": tenant_id},
         )
         row = result.fetchone()
@@ -388,6 +399,7 @@ async def get_checkpoint(
         raise HTTPException(status_code=404, detail="Checkpoint not found")
 
     import json
+
     options = row.options if isinstance(row.options, list) else json.loads(row.options or "[]")
 
     return CheckpointResponse(
@@ -423,14 +435,13 @@ async def resolve_checkpoint(
     - revert_loop: confirm_revert, cancel
     """
     from app.integrations import get_dispatcher
+
     dispatcher = get_dispatcher()
 
     user_id = user.get("sub", "unknown")
 
     try:
-        result = await dispatcher.resolve_checkpoint(
-            checkpoint_id, user_id, request.resolution
-        )
+        result = await dispatcher.resolve_checkpoint(checkpoint_id, user_id, request.resolution)
 
         return {
             "status": "resolved",
@@ -454,15 +465,17 @@ async def get_integration_stats(
     hours: int = Query(24, ge=1, le=720, description="Period in hours"),
 ) -> IntegrationStatsResponse:
     """Get integration loop statistics for the specified period."""
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
     async with get_async_session() as session:
         # Get loop counts
         loops_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) as total,
                     COUNT(*) FILTER (WHERE is_complete) as complete,
@@ -471,14 +484,16 @@ async def get_integration_stats(
                 FROM loop_traces
                 WHERE tenant_id = :tenant_id
                 AND started_at >= :cutoff
-            """),
+            """
+            ),
             {"tenant_id": tenant_id, "cutoff": cutoff},
         )
         loops = loops_result.fetchone()
 
         # Get pattern match stats
         patterns_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) as total,
                     COUNT(*) FILTER (WHERE confidence_band = 'strong_match') as strong,
@@ -488,14 +503,16 @@ async def get_integration_stats(
                 WHERE tenant_id = :tenant_id
                 AND stage = 'pattern_matched'
                 AND created_at >= :cutoff
-            """),
+            """
+            ),
             {"tenant_id": tenant_id, "cutoff": cutoff},
         )
         patterns = patterns_result.fetchone()
 
         # Get recovery stats
         recovery_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) as total,
                     COUNT(*) FILTER (WHERE status = 'applied') as applied,
@@ -506,14 +523,16 @@ async def get_integration_stats(
                     WHERE tenant_id = :tenant_id
                 )
                 AND created_at >= :cutoff
-            """),
+            """
+            ),
             {"tenant_id": tenant_id, "cutoff": cutoff},
         )
         recoveries = recovery_result.fetchone()
 
         # Get policy stats
         policy_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) as total,
                     COUNT(*) FILTER (WHERE mode = 'shadow') as shadow,
@@ -521,34 +540,39 @@ async def get_integration_stats(
                 FROM policy_rules
                 WHERE source_type = 'recovery'
                 AND created_at >= :cutoff
-            """),
+            """
+            ),
             {"cutoff": cutoff},
         )
         policies = policy_result.fetchone()
 
         # Get routing adjustment stats
         routing_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) as total,
                     COUNT(*) FILTER (WHERE was_rolled_back) as rolled_back
                 FROM routing_policy_adjustments
                 WHERE created_at >= :cutoff
-            """),
+            """
+            ),
             {"cutoff": cutoff},
         )
         routing = routing_result.fetchone()
 
         # Get checkpoint stats
         checkpoint_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) FILTER (WHERE resolved_at IS NULL) as pending,
                     COUNT(*) FILTER (WHERE resolved_at IS NOT NULL) as resolved
                 FROM human_checkpoints
                 WHERE tenant_id = :tenant_id
                 AND created_at >= :cutoff
-            """),
+            """
+            ),
             {"tenant_id": tenant_id, "cutoff": cutoff},
         )
         checkpoints = checkpoint_result.fetchone()
@@ -598,6 +622,7 @@ async def get_loop_narrative(
     - agent_improvement: How agent behavior improved
     """
     from app.integrations import get_dispatcher
+
     dispatcher = get_dispatcher()
 
     loop_status = await dispatcher.get_loop_status(incident_id)
@@ -631,6 +656,7 @@ async def get_loop_narrative(
 
 class GateEvidenceResponse(BaseModel):
     """Evidence for a graduation gate."""
+
     name: str
     description: str
     passed: bool
@@ -641,12 +667,14 @@ class GateEvidenceResponse(BaseModel):
 
 class CapabilityStatus(BaseModel):
     """Status of a capability gate."""
+
     unlocked: list[str]
     blocked: list[str]
 
 
 class SimulationStatus(BaseModel):
     """Simulation mode status - separate from real graduation."""
+
     is_demo_mode: bool
     simulated_gates: dict[str, bool]
     warning: Optional[str] = None
@@ -662,6 +690,7 @@ class HardenedGraduationResponse(BaseModel):
     - Includes simulation status (separate from real)
     - Includes degradation info
     """
+
     # Derived status
     status: str
     level: str
@@ -709,15 +738,15 @@ async def get_graduation_status(
     - Status is re-evaluated on each call
     - Degradation occurs when evidence regresses
     """
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     # Import graduation engine
     from app.integrations.graduation_engine import (
+        CapabilityGates,
         GraduationEngine,
         GraduationEvidence,
-        CapabilityGates,
-        SimulationState,
     )
 
     async with get_async_session() as session:
@@ -762,8 +791,12 @@ async def get_graduation_status(
                         degraded=False,
                     ),
                 },
-                capabilities=CapabilityStatus(unlocked=[], blocked=["auto_apply_recovery", "auto_activate_policy", "full_auto_routing"]),
-                simulation=SimulationStatus(is_demo_mode=False, simulated_gates={"gate1": False, "gate2": False, "gate3": False}),
+                capabilities=CapabilityStatus(
+                    unlocked=[], blocked=["auto_apply_recovery", "auto_activate_policy", "full_auto_routing"]
+                ),
+                simulation=SimulationStatus(
+                    is_demo_mode=False, simulated_gates={"gate1": False, "gate2": False, "gate3": False}
+                ),
                 computed_at=datetime.now(timezone.utc).isoformat(),
                 evidence_window_days=30,
                 next_action="Run migration 044_m25_graduation_hardening first",
@@ -771,12 +804,14 @@ async def get_graduation_status(
 
         # Get simulation state (separate from real)
         sim_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     EXISTS(SELECT 1 FROM prevention_records WHERE is_simulated = true) as sim_gate1,
                     EXISTS(SELECT 1 FROM regret_events WHERE is_simulated = true) as sim_gate2,
                     EXISTS(SELECT 1 FROM timeline_views WHERE is_simulated = true) as sim_gate3
-            """)
+            """
+            )
         )
         sim_row = sim_result.fetchone()
 
@@ -787,7 +822,9 @@ async def get_graduation_status(
                 "gate2": sim_row.sim_gate2 if sim_row else False,
                 "gate3": sim_row.sim_gate3 if sim_row else False,
             },
-            warning="SIMULATION DATA EXISTS - Real graduation excludes simulated records" if (sim_row and (sim_row.sim_gate1 or sim_row.sim_gate2 or sim_row.sim_gate3)) else None,
+            warning="SIMULATION DATA EXISTS - Real graduation excludes simulated records"
+            if (sim_row and (sim_row.sim_gate1 or sim_row.sim_gate2 or sim_row.sim_gate3))
+            else None,
         )
 
     # Build gate responses
@@ -817,9 +854,13 @@ async def get_graduation_status(
         next_action = "M25 COMPLETE. All capabilities unlocked. Proceed to M26."
     elif status.is_degraded:
         next_action = f"DEGRADED: {status.degradation_reason}. Fix evidence regression."
-    elif not gates.get("prevention", GateEvidenceResponse(name="", description="", passed=False, score=0, evidence={}, degraded=False)).passed:
+    elif not gates.get(
+        "prevention", GateEvidenceResponse(name="", description="", passed=False, score=0, evidence={}, degraded=False)
+    ).passed:
         next_action = "Waiting for real prevention evidence (not simulated)"
-    elif not gates.get("rollback", GateEvidenceResponse(name="", description="", passed=False, score=0, evidence={}, degraded=False)).passed:
+    elif not gates.get(
+        "rollback", GateEvidenceResponse(name="", description="", passed=False, score=0, evidence={}, degraded=False)
+    ).passed:
         next_action = "Waiting for real regret/demotion evidence (not simulated)"
     else:
         next_action = "Waiting for real timeline view evidence (not simulated)"
@@ -838,13 +879,16 @@ async def get_graduation_status(
             "from_level": status.degraded_from.value if status.degraded_from else None,
             "at": status.degraded_at.isoformat() if status.degraded_at else None,
             "reason": status.degradation_reason,
-        } if status.is_degraded else None,
+        }
+        if status.is_degraded
+        else None,
         next_action=next_action,
     )
 
 
 class SimulatePreventionRequest(BaseModel):
     """Request to simulate a prevention event for demo/testing."""
+
     policy_id: str = Field(..., description="Policy that prevented the recurrence")
     pattern_id: str = Field(..., description="Pattern that matched")
     original_incident_id: str = Field(..., description="Original incident that created the policy")
@@ -865,8 +909,9 @@ async def simulate_prevention(
     This endpoint creates demo data for UI testing only.
     Real graduation requires real prevention evidence.
     """
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     # Use sim_ prefix to make simulated records obvious
     record_id = f"prev_sim_{uuid.uuid4().hex[:12]}"
@@ -876,7 +921,8 @@ async def simulate_prevention(
         # Insert prevention record WITH is_simulated=true
         # This record is EXCLUDED from real graduation computation
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO prevention_records (
                     id, policy_id, pattern_id, original_incident_id,
                     blocked_incident_id, tenant_id, outcome,
@@ -888,7 +934,8 @@ async def simulate_prevention(
                     :confidence, 3600,
                     true, NOW()
                 )
-            """),
+            """
+            ),
             {
                 "id": record_id,
                 "policy_id": request.policy_id,
@@ -919,6 +966,7 @@ async def simulate_prevention(
 
 class SimulateRegretRequest(BaseModel):
     """Request to simulate a regret event for demo/testing."""
+
     policy_id: str = Field(..., description="Policy that caused harm")
     regret_type: str = Field("false_positive", description="Type of regret")
     severity: int = Field(7, ge=1, le=10, description="Severity 1-10")
@@ -939,8 +987,9 @@ async def simulate_regret(
     This endpoint creates demo data for UI testing only.
     Real graduation requires real regret/demotion evidence.
     """
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     # Use sim_ prefix to make simulated records obvious
     regret_id = f"regret_sim_{uuid.uuid4().hex[:12]}"
@@ -949,7 +998,8 @@ async def simulate_regret(
         # Insert regret event WITH is_simulated=true
         # This record is EXCLUDED from real graduation computation
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO regret_events (
                     id, policy_id, tenant_id, regret_type,
                     description, severity, affected_calls, affected_users,
@@ -959,7 +1009,8 @@ async def simulate_regret(
                     :description, :severity, 50, 10,
                     true, true, NOW()
                 )
-            """),
+            """
+            ),
             {
                 "id": regret_id,
                 "policy_id": request.policy_id,
@@ -973,7 +1024,8 @@ async def simulate_regret(
         # Insert or update policy regret summary for demo purposes
         # Note: This is simulated demotion, not real
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO policy_regret_summary (
                     policy_id, regret_score, regret_event_count,
                     demoted_at, demoted_reason, last_updated
@@ -988,7 +1040,8 @@ async def simulate_regret(
                     demoted_at = NOW(),
                     demoted_reason = 'SIMULATED demotion - does not count toward graduation',
                     last_updated = NOW()
-            """),
+            """
+            ),
             {
                 "policy_id": request.policy_id,
                 "score": request.severity * 0.5,
@@ -1026,8 +1079,9 @@ async def simulate_timeline_view(
     This endpoint creates demo data for UI testing only.
     Real graduation requires real timeline views.
     """
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     view_id = f"tv_sim_{uuid.uuid4().hex[:12]}"
 
@@ -1035,7 +1089,8 @@ async def simulate_timeline_view(
         # Insert into timeline_views WITH is_simulated=true
         # This record is EXCLUDED from real graduation computation
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO timeline_views (
                     id, incident_id, tenant_id, user_id,
                     has_prevention, has_rollback,
@@ -1045,7 +1100,8 @@ async def simulate_timeline_view(
                     true, false,
                     true, :session_id, NOW()
                 )
-            """),
+            """
+            ),
             {
                 "id": view_id,
                 "incident_id": incident_id,
@@ -1089,8 +1145,9 @@ async def record_timeline_view(
     - User opens the prevention timeline UI
     - Timeline shows learning proof (prevention or rollback)
     """
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     view_id = f"tv_{uuid.uuid4().hex[:12]}"
     user_id = user.get("sub", "unknown")
@@ -1100,7 +1157,8 @@ async def record_timeline_view(
         # Insert REAL timeline view (is_simulated=false)
         # This COUNTS toward graduation
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO timeline_views (
                     id, incident_id, tenant_id, user_id,
                     has_prevention, has_rollback,
@@ -1110,7 +1168,8 @@ async def record_timeline_view(
                     :has_prevention, :has_rollback,
                     false, :session_id, NOW()
                 )
-            """),
+            """
+            ),
             {
                 "id": view_id,
                 "incident_id": incident_id,
@@ -1150,10 +1209,11 @@ async def trigger_graduation_re_evaluation(
     Note: Graduation is automatically re-evaluated on GET /graduation,
     but this endpoint forces a fresh computation and stores history.
     """
-    from app.db import get_async_session
-    from sqlalchemy import text
     import json
 
+    from sqlalchemy import text
+
+    from app.db import get_async_session
     from app.integrations.graduation_engine import (
         GraduationEngine,
         GraduationEvidence,
@@ -1174,7 +1234,8 @@ async def trigger_graduation_re_evaluation(
 
         # Store in graduation_history for audit trail
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO graduation_history (
                     level, gates_json, computed_at, is_degraded,
                     degraded_from, degradation_reason, evidence_snapshot
@@ -1182,35 +1243,41 @@ async def trigger_graduation_re_evaluation(
                     :level, :gates_json, NOW(), :is_degraded,
                     :degraded_from, :degradation_reason, :evidence_snapshot
                 )
-            """),
+            """
+            ),
             {
                 "level": status.level.value,
-                "gates_json": json.dumps({
-                    name: {
-                        "passed": gate.passed,
-                        "score": gate.score,
-                        "degraded": gate.degraded,
+                "gates_json": json.dumps(
+                    {
+                        name: {
+                            "passed": gate.passed,
+                            "score": gate.score,
+                            "degraded": gate.degraded,
+                        }
+                        for name, gate in status.gates.items()
                     }
-                    for name, gate in status.gates.items()
-                }),
+                ),
                 "is_degraded": status.is_degraded,
                 "degraded_from": status.degraded_from.value if status.degraded_from else None,
                 "degradation_reason": status.degradation_reason,
-                "evidence_snapshot": json.dumps({
-                    "prevention_count": evidence.prevention_count,
-                    "regret_count": evidence.regret_count,
-                    "demotion_count": evidence.demotion_count,
-                    "timeline_view_count": evidence.timeline_view_count,
-                    "prevention_rate": evidence.prevention_rate,
-                    "regret_rate": evidence.regret_rate,
-                }),
+                "evidence_snapshot": json.dumps(
+                    {
+                        "prevention_count": evidence.prevention_count,
+                        "regret_count": evidence.regret_count,
+                        "demotion_count": evidence.demotion_count,
+                        "timeline_view_count": evidence.timeline_view_count,
+                        "prevention_rate": evidence.prevention_rate,
+                        "regret_rate": evidence.regret_rate,
+                    }
+                ),
             },
         )
 
         # Update m25_graduation_status with derived values
         # (This table still exists for backward compat, but values are DERIVED)
         await session.execute(
-            text("""
+            text(
+                """
                 UPDATE m25_graduation_status
                 SET is_derived = true,
                     last_evidence_eval = NOW(),
@@ -1221,7 +1288,8 @@ async def trigger_graduation_re_evaluation(
                     gate3_passed = :gate3_passed,
                     last_checked = NOW()
                 WHERE id = 1
-            """),
+            """
+            ),
             {
                 "status_label": status.status_label,
                 "is_graduated": status.is_graduated,
@@ -1251,6 +1319,7 @@ async def trigger_graduation_re_evaluation(
 
 class TimelineEventResponse(BaseModel):
     """A single event in the prevention timeline."""
+
     type: str
     timestamp: str
     icon: str
@@ -1262,6 +1331,7 @@ class TimelineEventResponse(BaseModel):
 
 class PreventionTimelineResponse(BaseModel):
     """Response for prevention timeline endpoint."""
+
     incident_id: str
     tenant_id: str
     timeline: list[TimelineEventResponse]
@@ -1286,19 +1356,22 @@ async def get_prevention_timeline(
 
     Viewing this timeline with a prevention event proves Gate 3.
     """
-    from app.db import get_async_session
     from sqlalchemy import text
+
+    from app.db import get_async_session
 
     timeline_events = []
 
     async with get_async_session() as session:
         # Get incident info
         incident_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT id, tenant_id, title, severity, created_at
                 FROM incidents
                 WHERE id = :incident_id
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         )
         incident = incident_result.fetchone()
@@ -1310,78 +1383,93 @@ async def get_prevention_timeline(
             raise HTTPException(status_code=403, detail="Access denied")
 
         # Add incident created event
-        timeline_events.append(TimelineEventResponse(
-            type="incident_created",
-            timestamp=incident.created_at.isoformat() if incident.created_at else datetime.now(timezone.utc).isoformat(),
-            icon="🚨",
-            headline="Incident detected",
-            description=incident.title or "Incident occurred",
-            details={"severity": incident.severity, "id": incident.id},
-        ))
+        timeline_events.append(
+            TimelineEventResponse(
+                type="incident_created",
+                timestamp=incident.created_at.isoformat()
+                if incident.created_at
+                else datetime.now(timezone.utc).isoformat(),
+                icon="🚨",
+                headline="Incident detected",
+                description=incident.title or "Incident occurred",
+                details={"severity": incident.severity, "id": incident.id},
+            )
+        )
 
         # Get loop events for this incident
         events_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT stage, details, confidence_band, created_at
                 FROM loop_events
                 WHERE incident_id = :incident_id
                 ORDER BY created_at ASC
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         )
         loop_events = events_result.fetchall()
 
         for event in loop_events:
             if event.stage == "pattern_matched":
-                timeline_events.append(TimelineEventResponse(
-                    type="pattern_matched",
-                    timestamp=event.created_at.isoformat(),
-                    icon="🔍",
-                    headline="Pattern identified",
-                    description=f"Matched with confidence: {event.confidence_band or 'unknown'}",
-                    details=event.details if isinstance(event.details, dict) else {},
-                ))
+                timeline_events.append(
+                    TimelineEventResponse(
+                        type="pattern_matched",
+                        timestamp=event.created_at.isoformat(),
+                        icon="🔍",
+                        headline="Pattern identified",
+                        description=f"Matched with confidence: {event.confidence_band or 'unknown'}",
+                        details=event.details if isinstance(event.details, dict) else {},
+                    )
+                )
             elif event.stage == "policy_generated":
-                timeline_events.append(TimelineEventResponse(
-                    type="policy_born",
-                    timestamp=event.created_at.isoformat(),
-                    icon="📋",
-                    headline="Policy born from failure",
-                    description="New policy created to prevent recurrence",
-                    details=event.details if isinstance(event.details, dict) else {},
-                ))
+                timeline_events.append(
+                    TimelineEventResponse(
+                        type="policy_born",
+                        timestamp=event.created_at.isoformat(),
+                        icon="📋",
+                        headline="Policy born from failure",
+                        description="New policy created to prevent recurrence",
+                        details=event.details if isinstance(event.details, dict) else {},
+                    )
+                )
 
         # Get prevention records where this incident was the ORIGINAL
         prevention_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT id, blocked_incident_id, policy_id, pattern_id,
                        signature_match_confidence, created_at
                 FROM prevention_records
                 WHERE original_incident_id = :incident_id
                 ORDER BY created_at ASC
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         )
         preventions = prevention_result.fetchall()
 
         for prev in preventions:
-            timeline_events.append(TimelineEventResponse(
-                type="prevention",
-                timestamp=prev.created_at.isoformat(),
-                icon="🛡️",
-                headline="PREVENTION: Similar incident BLOCKED",
-                description=f"Policy prevented recurrence with {prev.signature_match_confidence:.0%} confidence",
-                details={
-                    "blocked_incident": prev.blocked_incident_id,
-                    "policy": prev.policy_id,
-                    "pattern": prev.pattern_id,
-                },
-                is_milestone=True,
-            ))
+            timeline_events.append(
+                TimelineEventResponse(
+                    type="prevention",
+                    timestamp=prev.created_at.isoformat(),
+                    icon="🛡️",
+                    headline="PREVENTION: Similar incident BLOCKED",
+                    description=f"Policy prevented recurrence with {prev.signature_match_confidence:.0%} confidence",
+                    details={
+                        "blocked_incident": prev.blocked_incident_id,
+                        "policy": prev.policy_id,
+                        "pattern": prev.pattern_id,
+                    },
+                    is_milestone=True,
+                )
+            )
 
         # Get regret events for policies born from this incident
         regret_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT re.id, re.policy_id, re.regret_type, re.description,
                        re.severity, re.was_auto_rolled_back, re.created_at
                 FROM regret_events re
@@ -1392,35 +1480,40 @@ async def get_prevention_timeline(
                     AND stage = 'policy_generated'
                 )
                 ORDER BY re.created_at ASC
-            """),
+            """
+            ),
             {"incident_id": incident_id},
         )
         regrets = regret_result.fetchall()
 
         for regret in regrets:
-            timeline_events.append(TimelineEventResponse(
-                type="regret",
-                timestamp=regret.created_at.isoformat(),
-                icon="⚠️",
-                headline="Policy caused harm (regret)",
-                description=regret.description or f"Regret type: {regret.regret_type}",
-                details={
-                    "regret_type": regret.regret_type,
-                    "severity": regret.severity,
-                    "auto_rolled_back": regret.was_auto_rolled_back,
-                },
-            ))
+            timeline_events.append(
+                TimelineEventResponse(
+                    type="regret",
+                    timestamp=regret.created_at.isoformat(),
+                    icon="⚠️",
+                    headline="Policy caused harm (regret)",
+                    description=regret.description or f"Regret type: {regret.regret_type}",
+                    details={
+                        "regret_type": regret.regret_type,
+                        "severity": regret.severity,
+                        "auto_rolled_back": regret.was_auto_rolled_back,
+                    },
+                )
+            )
 
             if regret.was_auto_rolled_back:
-                timeline_events.append(TimelineEventResponse(
-                    type="rollback",
-                    timestamp=regret.created_at.isoformat(),
-                    icon="↩️",
-                    headline="Policy auto-demoted",
-                    description="System self-corrected by demoting harmful policy",
-                    details={"policy": regret.policy_id},
-                    is_milestone=True,
-                ))
+                timeline_events.append(
+                    TimelineEventResponse(
+                        type="rollback",
+                        timestamp=regret.created_at.isoformat(),
+                        icon="↩️",
+                        headline="Policy auto-demoted",
+                        description="System self-corrected by demoting harmful policy",
+                        details={"policy": regret.policy_id},
+                        is_milestone=True,
+                    )
+                )
 
     # Sort by timestamp
     sorted_events = sorted(timeline_events, key=lambda e: e.timestamp)
@@ -1437,15 +1530,9 @@ async def get_prevention_timeline(
             "The system learned, protected, and self-corrected."
         )
     elif has_prevention:
-        narrative = (
-            "This incident proves learning: "
-            "a policy born from failure successfully prevented a recurrence."
-        )
+        narrative = "This incident proves learning: " "a policy born from failure successfully prevented a recurrence."
     elif has_rollback:
-        narrative = (
-            "This incident shows self-correction: "
-            "a policy that caused harm was automatically demoted."
-        )
+        narrative = "This incident shows self-correction: " "a policy that caused harm was automatically demoted."
     else:
         narrative = "This incident is part of the feedback loop."
 

@@ -216,6 +216,126 @@ jobs:
           echo ""
           echo "OK: All migrations committed"
 
+  # M26: SQL Misuse Guard - blocks session.exec(text()) antipattern
+  sql-misuse-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: M26 SQL Misuse Guard
+        run: |
+          echo "======================================"
+          echo "M26 SQL Misuse Guard"
+          echo "======================================"
+          echo "INVARIANT: session.exec() with text() is FORBIDDEN"
+          echo "           Use session.execute() for raw SQL"
+          echo ""
+
+          BACKEND_DIR="backend/app"
+          VIOLATIONS=""
+
+          # Find all Python files that might have the violation
+          for file in $(find "$BACKEND_DIR" -name "*.py" -type f); do
+            # Check if file uses both .exec( and text(
+            if grep -l "\.exec(" "$file" > /dev/null 2>&1 && grep -l "text(" "$file" > /dev/null 2>&1; then
+              # Get line numbers of exec calls
+              while IFS=: read -r linenum content; do
+                # Get context (this line + next 5)
+                end=$((linenum + 5))
+                context=$(sed -n "${linenum},${end}p" "$file")
+
+                # Check if text( appears in context and it's exec not execute
+                if echo "$context" | grep -q "text(" && echo "$content" | grep -q "\.exec(" && ! echo "$content" | grep -q "\.execute("; then
+                  VIOLATIONS="${VIOLATIONS}${file}:${linenum}\n"
+                fi
+              done < <(grep -n "\.exec(" "$file")
+            fi
+          done
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::session.exec() used with text() detected!"
+            echo ""
+            echo "Violations found:"
+            echo -e "$VIOLATIONS"
+            echo ""
+            echo "FIX: Change session.exec(text(...), params) to session.execute(text(...), params)"
+            echo ""
+            echo "SQLModel .exec() is for ORM queries only."
+            echo "Raw SQL with text() requires .execute()"
+            exit 1
+          fi
+
+          echo "✅ PASS: No session.exec(text()) misuse detected"
+
+  # M26: Environment Misuse Guard - blocks direct os.environ.get() for secrets
+  env-misuse-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: M26 Environment Misuse Guard
+        run: |
+          echo "======================================"
+          echo "M26 Environment Misuse Guard"
+          echo "======================================"
+          echo "INVARIANT: Secret access must go through app.config.secrets.Secrets"
+          echo ""
+
+          BACKEND_DIR="backend/app"
+          BASELINE_COUNT=33  # Known violations as of M26 freeze (2025-12-23)
+
+          # Patterns that indicate secret access
+          SECRET_PATTERNS=(
+            'os\.environ\.get\s*\(\s*["'"'"'].*KEY'
+            'os\.environ\.get\s*\(\s*["'"'"'].*SECRET'
+            'os\.environ\.get\s*\(\s*["'"'"'].*TOKEN'
+            'os\.environ\.get\s*\(\s*["'"'"'].*PASSWORD'
+            'os\.environ\.get\s*\(\s*["'"'"']DATABASE_URL'
+            'os\.environ\.get\s*\(\s*["'"'"']REDIS_URL'
+          )
+
+          # Files allowed to use os.environ for secrets
+          ALLOWED_FILES=("config/secrets.py" "tests/" "__pycache__")
+
+          VIOLATION_COUNT=0
+
+          for pattern in "${SECRET_PATTERNS[@]}"; do
+            while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                file=$(echo "$line" | cut -d: -f1)
+                is_allowed=false
+                for allowed in "${ALLOWED_FILES[@]}"; do
+                  if [[ "$file" == *"$allowed"* ]]; then
+                    is_allowed=true
+                    break
+                  fi
+                done
+                if [ "$is_allowed" = false ]; then
+                  VIOLATION_COUNT=$((VIOLATION_COUNT + 1))
+                fi
+              fi
+            done < <(grep -rn -E "$pattern" "$BACKEND_DIR" 2>/dev/null || true)
+          done
+
+          echo "Violations found: $VIOLATION_COUNT"
+          echo "Baseline (M26 freeze): $BASELINE_COUNT"
+
+          if [ $VIOLATION_COUNT -gt $BASELINE_COUNT ]; then
+            DELTA=$((VIOLATION_COUNT - BASELINE_COUNT))
+            echo "::error::$DELTA NEW environment variable misuse violations introduced!"
+            echo ""
+            echo "FIX: Use app.config.secrets.Secrets instead of os.environ.get()"
+            echo "  from app.config.secrets import Secrets"
+            echo "  key = Secrets.openai_api_key()"
+            exit 1
+          elif [ $VIOLATION_COUNT -lt $BASELINE_COUNT ]; then
+            echo "✅ PROGRESS: $((BASELINE_COUNT - VIOLATION_COUNT)) violations fixed!"
+          else
+            echo "⚠️ WARN: $BASELINE_COUNT legacy violations remain (tracked debt)"
+          fi
+
+          echo "✅ PASS: No NEW environment misuse violations"
+
   # Secret scanning - validate no new secrets introduced
   secrets-scan:
     runs-on: ubuntu-latest

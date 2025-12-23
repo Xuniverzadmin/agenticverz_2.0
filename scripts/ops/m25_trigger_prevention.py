@@ -21,7 +21,6 @@ If prevention fails, that's valid data.
 
 import os
 import sys
-from datetime import datetime, timezone
 from uuid import uuid4
 
 
@@ -45,7 +44,8 @@ def main():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cur:
             # Get the active policy
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     pr.id AS policy_id,
                     pr.source_pattern_id,
@@ -59,18 +59,19 @@ def main():
                 WHERE pr.mode = 'active'
                 AND pr.is_active = TRUE
                 LIMIT 1
-            """)
+            """
+            )
             policy = cur.fetchone()
 
             if not policy:
                 print("ERROR: No active policy found")
                 sys.exit(1)
 
-            policy_id = policy['policy_id']
-            pattern_id = policy['source_pattern_id']
-            tenant_id = policy['tenant_id']
-            signature = policy['signature']
-            activated_at = policy['activated_at']
+            policy_id = policy["policy_id"]
+            pattern_id = policy["source_pattern_id"]
+            tenant_id = policy["tenant_id"]
+            signature = policy["signature"]
+            activated_at = policy["activated_at"]
 
             print(f"Active Policy:  {policy_id}")
             print(f"Pattern ID:     {pattern_id}")
@@ -83,7 +84,7 @@ def main():
             request_id = f"req_{uuid4().hex[:16]}"
             incident_id_blocked = f"inc_{uuid4().hex[:16]}"
 
-            print(f"\nTriggering similar request...")
+            print("\nTriggering similar request...")
             print(f"Request ID:     {request_id}")
             print(f"Would-be Incident: {incident_id_blocked}")
 
@@ -95,6 +96,7 @@ def main():
 
             # Check: Does the signature match?
             import json
+
             if isinstance(signature, str):
                 sig = json.loads(signature)
             else:
@@ -102,9 +104,9 @@ def main():
 
             error_type = sig.get("error_type", "unknown")
 
-            print(f"\nPolicy Check:")
+            print("\nPolicy Check:")
             print(f"  Error Type:   {error_type}")
-            print(f"  Policy Mode:  active")
+            print("  Policy Mode:  active")
 
             # The prevention logic:
             # 1. Same pattern signature: YES (we're using the same error_type)
@@ -118,28 +120,31 @@ def main():
             original_incident_id = f"inc_original_{uuid4().hex[:8]}"
 
             # Write prevention record
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO prevention_records
                 (id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
                  tenant_id, outcome, signature_match_confidence, is_simulated)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, FALSE)
                 RETURNING id
-            """, (
-                prevention_id,
-                policy_id,
-                pattern_id,
-                original_incident_id,
-                incident_id_blocked,
-                tenant_id,
-                'blocked',
-                0.90,  # High confidence match
-            ))
+            """,
+                (
+                    prevention_id,
+                    policy_id,
+                    pattern_id,
+                    original_incident_id,
+                    incident_id_blocked,
+                    tenant_id,
+                    "blocked",
+                    0.90,  # High confidence match
+                ),
+            )
 
             conn.commit()
 
-            print(f"\n✅ PREVENTION RECORDED")
+            print("\n✅ PREVENTION RECORDED")
             print(f"Prevention ID:  {prevention_id}")
-            print(f"is_simulated:   FALSE (real prevention)")
+            print("is_simulated:   FALSE (real prevention)")
 
             # Verify the 6 conditions from PIN-136
             print("\n" + "=" * 60)
@@ -154,7 +159,8 @@ def main():
             print("=" * 60)
 
             # Now query the prevention record for output
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     pr.id,
                     pr.blocked_incident_id,
@@ -167,7 +173,9 @@ def main():
                     pr.created_at
                 FROM prevention_records pr
                 WHERE pr.id = %s
-            """, (prevention_id,))
+            """,
+                (prevention_id,),
+            )
             record = cur.fetchone()
 
             print("\n" + "=" * 60)
@@ -188,6 +196,7 @@ def main():
         conn.rollback()
         print(f"ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
     finally:

@@ -170,8 +170,8 @@ class PriorityNode(ASTNode):
 class ConditionBlockNode(ASTNode):
     """When/then condition block."""
 
-    condition: ExprNode = None
-    action: "ActionBlockNode" = None
+    condition: Optional[ExprNode] = None
+    action: Optional["ActionBlockNode"] = None
 
     def accept(self, visitor: "ASTVisitor") -> Any:
         return visitor.visit_condition_block(self)
@@ -208,8 +208,8 @@ class BinaryOpNode(ExprNode):
     """Binary operation (and, or, ==, !=, etc.)."""
 
     op: str = ""
-    left: ExprNode = None
-    right: ExprNode = None
+    left: Optional[ExprNode] = None
+    right: Optional[ExprNode] = None
 
     def accept(self, visitor: "ASTVisitor") -> Any:
         return visitor.visit_binary_op(self)
@@ -220,7 +220,7 @@ class UnaryOpNode(ExprNode):
     """Unary operation (not)."""
 
     op: str = ""
-    operand: ExprNode = None
+    operand: Optional[ExprNode] = None
 
     def accept(self, visitor: "ASTVisitor") -> Any:
         return visitor.visit_unary_op(self)
@@ -257,7 +257,7 @@ class LiteralNode(ValueNode):
 class FuncCallNode(ExprNode):
     """Function call node."""
 
-    callee: ExprNode = None
+    callee: Optional[ExprNode] = None
     args: List[ExprNode] = field(default_factory=list)
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -268,7 +268,7 @@ class FuncCallNode(ExprNode):
 class AttrAccessNode(ExprNode):
     """Attribute access node (obj.attr)."""
 
-    obj: ExprNode = None
+    obj: Optional[ExprNode] = None
     attr: str = ""
 
     def accept(self, visitor: "ASTVisitor") -> Any:
@@ -276,7 +276,85 @@ class AttrAccessNode(ExprNode):
 
 
 # Type alias for visitor (forward reference resolved in visitors.py)
-class ASTVisitor:
-    """Forward reference for AST visitor."""
+class ASTVisitor(ABC):
+    """
+    Abstract base class for AST visitors.
 
-    pass
+    Concrete implementations must define all visit_* methods.
+    This enables the visitor pattern for AST traversal.
+    """
+
+    @abstractmethod
+    def visit_program(self, node: "ProgramNode") -> Any:
+        """Visit program node."""
+        pass
+
+    @abstractmethod
+    def visit_policy_decl(self, node: "PolicyDeclNode") -> Any:
+        """Visit policy declaration."""
+        pass
+
+    @abstractmethod
+    def visit_rule_decl(self, node: "RuleDeclNode") -> Any:
+        """Visit rule declaration."""
+        pass
+
+    @abstractmethod
+    def visit_import(self, node: "ImportNode") -> Any:
+        """Visit import statement."""
+        pass
+
+    @abstractmethod
+    def visit_rule_ref(self, node: "RuleRefNode") -> Any:
+        """Visit rule reference."""
+        pass
+
+    @abstractmethod
+    def visit_priority(self, node: "PriorityNode") -> Any:
+        """Visit priority node."""
+        pass
+
+    @abstractmethod
+    def visit_condition_block(self, node: "ConditionBlockNode") -> Any:
+        """Visit condition block."""
+        pass
+
+    @abstractmethod
+    def visit_action_block(self, node: "ActionBlockNode") -> Any:
+        """Visit action block."""
+        pass
+
+    @abstractmethod
+    def visit_route_target(self, node: "RouteTargetNode") -> Any:
+        """Visit route target."""
+        pass
+
+    @abstractmethod
+    def visit_binary_op(self, node: "BinaryOpNode") -> Any:
+        """Visit binary operation."""
+        pass
+
+    @abstractmethod
+    def visit_unary_op(self, node: "UnaryOpNode") -> Any:
+        """Visit unary operation."""
+        pass
+
+    @abstractmethod
+    def visit_ident(self, node: "IdentNode") -> Any:
+        """Visit identifier."""
+        pass
+
+    @abstractmethod
+    def visit_literal(self, node: "LiteralNode") -> Any:
+        """Visit literal value."""
+        pass
+
+    @abstractmethod
+    def visit_func_call(self, node: "FuncCallNode") -> Any:
+        """Visit function call."""
+        pass
+
+    @abstractmethod
+    def visit_attr_access(self, node: "AttrAccessNode") -> Any:
+        """Visit attribute access."""
+        pass

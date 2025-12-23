@@ -13,40 +13,39 @@ Tests cover:
 - Narrative artifact generation
 """
 
-import pytest
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
 import hashlib
 import json
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
-# Import the integration module
-from app.integrations.events import (
-    LoopStage,
-    LoopFailureState,
-    ConfidenceBand,
-    PolicyMode,
-    HumanCheckpointType,
-    LoopEvent,
-    PatternMatchResult,
-    RecoverySuggestion,
-    PolicyRule,
-    RoutingAdjustment,
-    HumanCheckpoint,
-    LoopStatus,
-)
-from app.integrations.dispatcher import IntegrationDispatcher, DispatcherConfig
+import pytest
+
 from app.integrations.bridges import (
     IncidentToCatalogBridge,
     PatternToRecoveryBridge,
     RecoveryToPolicyBridge,
-    PolicyToRoutingBridge,
-    LoopStatusBridge,
 )
+from app.integrations.dispatcher import DispatcherConfig, IntegrationDispatcher
 
+# Import the integration module
+from app.integrations.events import (
+    ConfidenceBand,
+    HumanCheckpoint,
+    HumanCheckpointType,
+    LoopEvent,
+    LoopFailureState,
+    LoopStage,
+    LoopStatus,
+    PatternMatchResult,
+    PolicyMode,
+    PolicyRule,
+    RoutingAdjustment,
+)
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def dispatcher_config():
@@ -88,6 +87,7 @@ def mock_redis():
 # ============================================================================
 # Test Confidence Bands
 # ============================================================================
+
 
 class TestConfidenceBands:
     """Tests for confidence band classification."""
@@ -146,6 +146,7 @@ class TestConfidenceBands:
 # ============================================================================
 # Test Policy Shadow Mode
 # ============================================================================
+
 
 class TestPolicyShadowMode:
     """Tests for policy shadow mode and N-confirmation activation."""
@@ -227,6 +228,7 @@ class TestPolicyShadowMode:
 # Test CARE Routing Guardrails
 # ============================================================================
 
+
 class TestRoutingGuardrails:
     """Tests for CARE routing guardrails."""
 
@@ -287,6 +289,7 @@ class TestRoutingGuardrails:
 # Test Loop Failure States
 # ============================================================================
 
+
 class TestLoopFailureStates:
     """Tests for loop failure state handling."""
 
@@ -339,6 +342,7 @@ class TestLoopFailureStates:
 # ============================================================================
 # Test Human Checkpoints
 # ============================================================================
+
 
 class TestHumanCheckpoints:
     """Tests for human checkpoint handling."""
@@ -398,6 +402,7 @@ class TestHumanCheckpoints:
 # ============================================================================
 # Test Loop Status and Narrative
 # ============================================================================
+
 
 class TestLoopStatusAndNarrative:
     """Tests for loop status tracking and narrative generation."""
@@ -464,6 +469,7 @@ class TestLoopStatusAndNarrative:
 # ============================================================================
 # Test Bridge Integration
 # ============================================================================
+
 
 class TestBridgeIntegration:
     """Tests for bridge integration between pillars."""
@@ -535,6 +541,7 @@ class TestBridgeIntegration:
 # Test Signature Hashing
 # ============================================================================
 
+
 class TestSignatureHashing:
     """Tests for pattern signature hashing."""
 
@@ -579,6 +586,7 @@ class TestSignatureHashing:
 # Test Full Loop Flow
 # ============================================================================
 
+
 class TestFullLoopFlow:
     """Integration tests for complete loop flow."""
 
@@ -599,7 +607,7 @@ class TestFullLoopFlow:
         }
 
         # Mock strong pattern match
-        with patch.object(dispatcher, '_match_pattern') as mock_match:
+        with patch.object(dispatcher, "_match_pattern") as mock_match:
             mock_match.return_value = PatternMatchResult(
                 incident_id="inc_001",
                 pattern_id="pat_001",
@@ -627,7 +635,7 @@ class TestFullLoopFlow:
             "error_code": "UNKNOWN",
         }
 
-        with patch.object(dispatcher, '_match_pattern') as mock_match:
+        with patch.object(dispatcher, "_match_pattern") as mock_match:
             mock_match.return_value = PatternMatchResult(
                 incident_id="inc_001",
                 pattern_id="pat_001",
@@ -638,7 +646,10 @@ class TestFullLoopFlow:
             result = await dispatcher.process_incident(incident)
 
             # Weak match should create checkpoint
-            assert len(result.pending_checkpoints) > 0 or result.failure_state == LoopFailureState.RECOVERY_NEEDS_CONFIRMATION
+            assert (
+                len(result.pending_checkpoints) > 0
+                or result.failure_state == LoopFailureState.RECOVERY_NEEDS_CONFIRMATION
+            )
 
 
 if __name__ == "__main__":

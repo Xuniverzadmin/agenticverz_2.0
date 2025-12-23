@@ -140,7 +140,7 @@ class WorkerPool:
         logger.info("worker_pool_stopped", extra={"graceful": True})
 
 
-def _signal_handler(signum, frame):
+def _signal_handler(signum, _frame):
     """Handle SIGTERM/SIGINT for graceful shutdown."""
     global _pool_instance
     sig_name = signal.Signals(signum).name

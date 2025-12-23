@@ -201,6 +201,17 @@ def validate_route_order(app: FastAPI) -> list:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan - start background tasks and initialize services."""
+    # M26: Validate required secrets at startup - FAIL FAST
+    from .config.secrets import validate_required_secrets, SecretValidationError
+    try:
+        # Only hard-fail on DATABASE_URL and REDIS_URL
+        # Billing secrets (OpenAI) warn but don't crash
+        validate_required_secrets(include_billing=False, hard_fail=True)
+        logger.info("startup_secrets_validated")
+    except SecretValidationError as e:
+        logger.critical(f"STARTUP ABORTED - Missing required secrets: {e}")
+        raise
+
     # M7: Check if memory features are enabled
     memory_context_injection = os.getenv("MEMORY_CONTEXT_INJECTION", "false").lower() == "true"
     memory_post_update = os.getenv("MEMORY_POST_UPDATE", "false").lower() == "true"
@@ -308,6 +319,7 @@ from .api.agents import router as agents_router  # M12 Multi-Agent System
 from .api.costsim import router as costsim_router
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
 from .api.failures import router as failures_router
+from .api.integration import router as integration_router  # M25 Pillar Integration Loop
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
@@ -330,6 +342,9 @@ from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, in
 # M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
 from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
 from .api.workers import router as workers_router  # Business Builder Worker v0.2
+
+# M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
+from .api.cost_intelligence import router as cost_intelligence_router
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -357,6 +372,8 @@ app.include_router(guard_router)  # /guard/* - Customer Console (trust + control
 app.include_router(operator_router)  # /operator/* - Operator Console (truth + oversight)
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
+app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop
+app.include_router(cost_intelligence_router)  # /cost/* - M26 Cost Intelligence
 
 # CORS middleware
 app.add_middleware(

@@ -20,23 +20,22 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 from .events import (
-    LOOP_MECHANICS_VERSION,
     LOOP_MECHANICS_FROZEN_AT,
-    LoopStage,
-    LoopFailureState,
-    LoopEvent,
+    LOOP_MECHANICS_VERSION,
     ConfidenceBand,
     ConfidenceCalculator,
-    ensure_json_serializable,
-    PatternMatchResult,
-    RecoverySuggestion,
-    PolicyRule,
-    PolicyMode,
-    RoutingAdjustment,
+    LoopEvent,
+    LoopFailureState,
+    LoopStage,
     LoopStatus,
+    PatternMatchResult,
+    PolicyMode,
+    PolicyRule,
+    RecoverySuggestion,
+    RoutingAdjustment,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,6 +44,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # FROZEN MECHANICS CHECK
 # =============================================================================
+
 
 def _check_frozen() -> None:
     """Log that frozen mechanics are in use."""
@@ -69,6 +69,7 @@ class PolicyActivationAudit:
     - Blame tracking
     - Trust verification
     """
+
     policy_id: str
     source_pattern_id: str
     source_recovery_id: str
@@ -122,8 +123,10 @@ async def record_policy_activation(
 
     async with db_factory() as session:
         from sqlalchemy import text
+
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO policy_activation_audit
                 (policy_id, source_pattern_id, source_recovery_id,
                  confidence_at_activation, confidence_version, approval_path,
@@ -135,7 +138,8 @@ async def record_policy_activation(
                     confidence_at_activation = :confidence,
                     approval_path = :approval_path,
                     activated_at = :activated_at
-            """),
+            """
+            ),
             {
                 "policy_id": audit.policy_id,
                 "pattern_id": audit.source_pattern_id,
@@ -151,8 +155,7 @@ async def record_policy_activation(
         await session.commit()
 
     logger.info(
-        f"Policy activation audit recorded: {policy_id} "
-        f"(confidence={confidence:.2f}, path={approval_path})"
+        f"Policy activation audit recorded: {policy_id} " f"(confidence={confidence:.2f}, path={approval_path})"
     )
 
     return audit
@@ -225,9 +228,7 @@ class IncidentToCatalogBridge(BaseBridge):
             signature_hash = self._hash_signature(signature)
 
             # Find matching patterns
-            match_result = await self._find_matching_pattern(
-                signature, signature_hash, incident_id, event.tenant_id
-            )
+            match_result = await self._find_matching_pattern(signature, signature_hash, incident_id, event.tenant_id)
 
             # Update event with result (serialize for JSON)
             event.details["match_result"] = match_result.to_dict()
@@ -295,13 +296,15 @@ class IncidentToCatalogBridge(BaseBridge):
 
                 # First try exact hash match
                 result = await session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id, signature, occurrence_count
                         FROM failure_patterns
                         WHERE signature_hash = :hash
                         AND (tenant_id = :tenant_id OR tenant_id IS NULL)
                         LIMIT 1
-                    """),
+                    """
+                    ),
                     {"hash": signature_hash, "tenant_id": tenant_id},
                 )
                 exact_match = result.fetchone()
@@ -320,14 +323,16 @@ class IncidentToCatalogBridge(BaseBridge):
 
                 # Try fuzzy matching on signature components (without pg_trgm)
                 fuzzy_result = await session.execute(
-                    text("""
+                    text(
+                        """
                         SELECT id, signature, occurrence_count
                         FROM failure_patterns
                         WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)
                         AND signature->>'error_type' = :error_type
                         ORDER BY occurrence_count DESC
                         LIMIT 5
-                    """),
+                    """
+                    ),
                     {
                         "tenant_id": tenant_id,
                         "error_type": signature.get("error_type", ""),
@@ -355,9 +360,7 @@ class IncidentToCatalogBridge(BaseBridge):
                         )
 
                 # No good match - create new pattern
-                pattern_id = await self._create_pattern(
-                    session, signature, signature_hash, incident_id, tenant_id
-                )
+                pattern_id = await self._create_pattern(session, signature, signature_hash, incident_id, tenant_id)
 
                 return PatternMatchResult.from_match(
                     incident_id=incident_id,
@@ -372,9 +375,7 @@ class IncidentToCatalogBridge(BaseBridge):
             logger.error(f"Pattern matching failed: {e}")
             return PatternMatchResult.no_match(incident_id, signature_hash)
 
-    def _calculate_fuzzy_confidence(
-        self, query_sig: dict, stored_sig: dict
-    ) -> float:
+    def _calculate_fuzzy_confidence(self, query_sig: dict, stored_sig: dict) -> float:
         """Calculate fuzzy match confidence between signatures."""
         if isinstance(stored_sig, str):
             stored_sig = json.loads(stored_sig)
@@ -402,13 +403,16 @@ class IncidentToCatalogBridge(BaseBridge):
     async def _increment_pattern_count(self, session, pattern_id: str) -> None:
         """Increment pattern occurrence count."""
         from sqlalchemy import text
+
         await session.execute(
-            text("""
+            text(
+                """
                 UPDATE failure_patterns
                 SET occurrence_count = occurrence_count + 1,
                     last_occurrence_at = NOW()
                 WHERE id = :id
-            """),
+            """
+            ),
             {"id": pattern_id},
         )
         await session.commit()
@@ -422,8 +426,9 @@ class IncidentToCatalogBridge(BaseBridge):
         tenant_id: str,
     ) -> str:
         """Create new failure pattern."""
-        from sqlalchemy import text
         from uuid import uuid4
+
+        from sqlalchemy import text
 
         pattern_id = f"pat_{uuid4().hex[:16]}"
 
@@ -432,11 +437,13 @@ class IncidentToCatalogBridge(BaseBridge):
         pattern_type = "policy_violation" if "policy" in error_type or "block" in error_type else "error"
 
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO failure_patterns
                 (id, tenant_id, pattern_type, signature, signature_hash, first_incident_id, occurrence_count, created_at)
                 VALUES (:id, :tenant_id, :pattern_type, CAST(:signature AS jsonb), :hash, :incident_id, 1, NOW())
-            """),
+            """
+            ),
             {
                 "id": pattern_id,
                 "tenant_id": tenant_id,
@@ -506,13 +513,9 @@ class PatternToRecoveryBridge(BaseBridge):
 
             # Generate or instantiate recovery
             if pattern.get("recovery_template"):
-                suggestion = await self._instantiate_template(
-                    pattern, event.incident_id, confidence_band
-                )
+                suggestion = await self._instantiate_template(pattern, event.incident_id, confidence_band)
             else:
-                suggestion = await self._generate_recovery(
-                    pattern, event.incident_id, confidence_band
-                )
+                suggestion = await self._generate_recovery(pattern, event.incident_id, confidence_band)
 
             # Apply auto-apply rules
             if suggestion.auto_applicable and pattern.get("auto_apply_recovery"):
@@ -546,6 +549,7 @@ class PatternToRecoveryBridge(BaseBridge):
         """Load pattern from database."""
         async with self.db_factory() as session:
             from sqlalchemy import text
+
             result = await session.execute(
                 text("SELECT * FROM failure_patterns WHERE id = :id"),
                 {"id": pattern_id},
@@ -603,9 +607,7 @@ class PatternToRecoveryBridge(BaseBridge):
             "resource_exhausted": ("rate_limit", {"window_seconds": 300, "max_requests": 5}),
         }
 
-        action_type, action_params = recovery_map.get(
-            error_type, ("escalate", {"reason": "unknown_error"})
-        )
+        action_type, action_params = recovery_map.get(error_type, ("escalate", {"reason": "unknown_error"}))
 
         # FROZEN: Use centralized ConfidenceCalculator
         occurrence_count = pattern.get("occurrence_count", 1)
@@ -637,18 +639,14 @@ class PatternToRecoveryBridge(BaseBridge):
             requires_confirmation=requires_confirmation,
         )
 
-    async def _apply_recovery(
-        self, suggestion: RecoverySuggestion
-    ) -> RecoverySuggestion:
+    async def _apply_recovery(self, suggestion: RecoverySuggestion) -> RecoverySuggestion:
         """Apply recovery immediately."""
         suggestion.status = "applied"
         await self._persist_recovery(suggestion)
         logger.info(f"Auto-applied recovery {suggestion.recovery_id}")
         return suggestion
 
-    async def _queue_for_review(
-        self, suggestion: RecoverySuggestion
-    ) -> RecoverySuggestion:
+    async def _queue_for_review(self, suggestion: RecoverySuggestion) -> RecoverySuggestion:
         """Queue recovery for human review."""
         suggestion.status = "pending"
         await self._persist_recovery(suggestion)
@@ -658,6 +656,7 @@ class PatternToRecoveryBridge(BaseBridge):
     async def _persist_recovery(self, suggestion: RecoverySuggestion) -> None:
         """Persist recovery suggestion to database."""
         import uuid
+
         async with self.db_factory() as session:
             from sqlalchemy import text
 
@@ -666,21 +665,25 @@ class PatternToRecoveryBridge(BaseBridge):
 
             # Use proper schema: recovery_candidates requires failure_match_id, suggestion, etc.
             await session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO recovery_candidates
                     (failure_match_id, suggestion, confidence, source_incident_id, source_pattern_id,
                      suggestion_type, confidence_band, requires_confirmation, occurrence_count,
                      last_occurrence_at, created_at, updated_at)
                     VALUES (:failure_match_id, :suggestion, :confidence, :incident_id, :pattern_id,
                             :type, :confidence_band, :requires_conf, 1, NOW(), NOW(), NOW())
-                """),
+                """
+                ),
                 {
                     "failure_match_id": str(failure_match_id),
-                    "suggestion": json.dumps({
-                        "action_type": suggestion.action_type,
-                        "action_params": suggestion.action_params,
-                        "status": suggestion.status,
-                    }),
+                    "suggestion": json.dumps(
+                        {
+                            "action_type": suggestion.action_type,
+                            "action_params": suggestion.action_params,
+                            "status": suggestion.status,
+                        }
+                    ),
                     "confidence": suggestion.confidence,
                     "incident_id": suggestion.incident_id,
                     "pattern_id": suggestion.pattern_id,
@@ -732,7 +735,9 @@ class RecoveryToPolicyBridge(BaseBridge):
                 return event
 
             # Check recovery status (handle both dict and object)
-            recovery_status = recovery.get("status") if isinstance(recovery, dict) else getattr(recovery, 'status', None)
+            recovery_status = (
+                recovery.get("status") if isinstance(recovery, dict) else getattr(recovery, "status", None)
+            )
             if recovery_status and recovery_status not in ("applied", "pending"):
                 event.failure_state = LoopFailureState.POLICY_LOW_CONFIDENCE
                 event.details["policy_skipped"] = f"Recovery status is {recovery_status}"
@@ -753,18 +758,22 @@ class RecoveryToPolicyBridge(BaseBridge):
                 return event
 
             # Generate policy
-            recovery_obj = recovery if isinstance(recovery, RecoverySuggestion) else RecoverySuggestion(
-                recovery_id=recovery.get("recovery_id", "unknown"),
-                incident_id=event.incident_id,
-                pattern_id=pattern_id,
-                suggestion_type=recovery.get("suggestion_type", "generated"),
-                confidence=recovery.get("confidence", 0.5),
-                confidence_band=ConfidenceBand.from_confidence(recovery.get("confidence", 0.5)),
-                action_type=recovery.get("action_type", "escalate"),
-                action_params=recovery.get("action_params", {}),
-                status=recovery.get("status", "applied"),
-                auto_applicable=False,
-                requires_confirmation=0,
+            recovery_obj = (
+                recovery
+                if isinstance(recovery, RecoverySuggestion)
+                else RecoverySuggestion(
+                    recovery_id=recovery.get("recovery_id", "unknown"),
+                    incident_id=event.incident_id,
+                    pattern_id=pattern_id,
+                    suggestion_type=recovery.get("suggestion_type", "generated"),
+                    confidence=recovery.get("confidence", 0.5),
+                    confidence_band=ConfidenceBand.from_confidence(recovery.get("confidence", 0.5)),
+                    action_type=recovery.get("action_type", "escalate"),
+                    action_params=recovery.get("action_params", {}),
+                    status=recovery.get("status", "applied"),
+                    auto_applicable=False,
+                    requires_confirmation=0,
+                )
             )
 
             policy = self._generate_policy(pattern, recovery_obj)
@@ -796,6 +805,7 @@ class RecoveryToPolicyBridge(BaseBridge):
         """Load pattern from database."""
         async with self.db_factory() as session:
             from sqlalchemy import text
+
             result = await session.execute(
                 text("SELECT * FROM failure_patterns WHERE id = :id"),
                 {"id": pattern_id},
@@ -805,9 +815,7 @@ class RecoveryToPolicyBridge(BaseBridge):
                 return dict(row._mapping)
         return None
 
-    def _generate_policy(
-        self, pattern: dict, recovery: RecoverySuggestion
-    ) -> PolicyRule:
+    def _generate_policy(self, pattern: dict, recovery: RecoverySuggestion) -> PolicyRule:
         """Generate prevention policy from pattern and recovery."""
         signature = pattern.get("signature", {})
         if isinstance(signature, str):
@@ -833,7 +841,7 @@ class RecoveryToPolicyBridge(BaseBridge):
         return PolicyRule.create(
             name=f"Prevention: {error_type}",
             description=f"Auto-generated policy to prevent {error_type} errors. "
-                       f"Created from pattern {pattern['id']} with {pattern.get('occurrence_count', 0)} occurrences.",
+            f"Created from pattern {pattern['id']} with {pattern.get('occurrence_count', 0)} occurrences.",
             category="operational",
             condition=condition,
             action=policy_action,
@@ -854,7 +862,8 @@ class RecoveryToPolicyBridge(BaseBridge):
             actions_json = json.dumps({"type": policy.action, "params": {}})
 
             await session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO policy_rules
                     (id, tenant_id, name, description, rule_type, conditions, actions,
                      source_type, source_pattern_id, source_recovery_id,
@@ -869,7 +878,8 @@ class RecoveryToPolicyBridge(BaseBridge):
                             :confirmations_required, :confirmations_received,
                             0, 0, 0, NOW(), NOW())
                     ON CONFLICT (id) DO UPDATE SET mode = :mode, is_active = :is_active, updated_at = NOW()
-                """),
+                """
+                ),
                 {
                     "id": policy.policy_id,
                     "tenant_id": tenant_id,
@@ -931,21 +941,25 @@ class PolicyToRoutingBridge(BaseBridge):
                 return event
 
             # Get policy object
-            policy_obj = policy if isinstance(policy, PolicyRule) else PolicyRule(
-                policy_id=policy.get("policy_id", "unknown"),
-                name=policy.get("name", ""),
-                description=policy.get("description", ""),
-                category=policy.get("category", "operational"),
-                condition=policy.get("condition", ""),
-                action=policy.get("action", "warn"),
-                scope_type=policy.get("scope_type", "tenant"),
-                scope_id=policy.get("scope_id"),
-                source_pattern_id=policy.get("source_pattern_id", ""),
-                source_recovery_id=policy.get("source_recovery_id", ""),
-                confidence=policy.get("confidence", 0.5),
-                confidence_band=ConfidenceBand.from_confidence(policy.get("confidence", 0.5)),
-                mode=PolicyMode(policy.get("mode", "shadow")),
-                confirmations_required=3,
+            policy_obj = (
+                policy
+                if isinstance(policy, PolicyRule)
+                else PolicyRule(
+                    policy_id=policy.get("policy_id", "unknown"),
+                    name=policy.get("name", ""),
+                    description=policy.get("description", ""),
+                    category=policy.get("category", "operational"),
+                    condition=policy.get("condition", ""),
+                    action=policy.get("action", "warn"),
+                    scope_type=policy.get("scope_type", "tenant"),
+                    scope_id=policy.get("scope_id"),
+                    source_pattern_id=policy.get("source_pattern_id", ""),
+                    source_recovery_id=policy.get("source_recovery_id", ""),
+                    confidence=policy.get("confidence", 0.5),
+                    confidence_band=ConfidenceBand.from_confidence(policy.get("confidence", 0.5)),
+                    mode=PolicyMode(policy.get("mode", "shadow")),
+                    confirmations_required=3,
+                )
             )
 
             # Only adjust for active policies (not shadow mode)
@@ -954,9 +968,7 @@ class PolicyToRoutingBridge(BaseBridge):
                 return event
 
             # Identify affected agents
-            affected_agents = await self._identify_affected_agents(
-                policy_obj, event.tenant_id
-            )
+            affected_agents = await self._identify_affected_agents(policy_obj, event.tenant_id)
 
             if not affected_agents:
                 event.details["routing_skipped"] = "No agents affected"
@@ -965,9 +977,7 @@ class PolicyToRoutingBridge(BaseBridge):
             # Create adjustments with guardrails
             adjustments = []
             for agent_id in affected_agents:
-                adjustment = await self._create_adjustment(
-                    agent_id, policy_obj, event.tenant_id
-                )
+                adjustment = await self._create_adjustment(agent_id, policy_obj, event.tenant_id)
                 if adjustment:
                     adjustments.append(adjustment)
 
@@ -978,12 +988,12 @@ class PolicyToRoutingBridge(BaseBridge):
 
             # Serialize adjustments for JSON
             serialized_adjustments = [adj.to_dict() for adj in adjustments]
-            event.details["adjustment"] = serialized_adjustments[0] if len(serialized_adjustments) == 1 else serialized_adjustments
+            event.details["adjustment"] = (
+                serialized_adjustments[0] if len(serialized_adjustments) == 1 else serialized_adjustments
+            )
             event.details["adjustments_count"] = len(adjustments)
 
-            logger.info(
-                f"Created {len(adjustments)} routing adjustments for policy {policy_obj.policy_id}"
-            )
+            logger.info(f"Created {len(adjustments)} routing adjustments for policy {policy_obj.policy_id}")
 
             return event
 
@@ -993,22 +1003,22 @@ class PolicyToRoutingBridge(BaseBridge):
             event.details["error"] = str(e)
             return event
 
-    async def _identify_affected_agents(
-        self, policy: PolicyRule, tenant_id: str
-    ) -> list[str]:
+    async def _identify_affected_agents(self, policy: PolicyRule, tenant_id: str) -> list[str]:
         """Identify agents affected by this policy."""
         async with self.db_factory() as session:
             from sqlalchemy import text
 
             # Find agents that match the policy scope
             result = await session.execute(
-                text("""
+                text(
+                    """
                     SELECT DISTINCT agent_id
                     FROM routing_decisions
                     WHERE tenant_id = :tenant_id
                     AND created_at > NOW() - INTERVAL '7 days'
                     LIMIT 10
-                """),
+                """
+                ),
                 {"tenant_id": tenant_id},
             )
             return [row.agent_id for row in result.fetchall()]
@@ -1035,17 +1045,12 @@ class PolicyToRoutingBridge(BaseBridge):
         desired_magnitude = action_magnitudes.get(policy.action, -0.1)
 
         # Apply max delta guardrail
-        clamped_magnitude = max(
-            -self.max_delta,
-            min(self.max_delta, desired_magnitude)
-        )
+        clamped_magnitude = max(-self.max_delta, min(self.max_delta, desired_magnitude))
 
         # Check if total would exceed bounds
         new_total = total_adjustment + clamped_magnitude
         if new_total < -0.8:  # Don't completely disable an agent
-            logger.warning(
-                f"Guardrail blocked: adjustment for {agent_id} would exceed -80%"
-            )
+            logger.warning(f"Guardrail blocked: adjustment for {agent_id} would exceed -80%")
             return None
 
         adjustment = RoutingAdjustment.create(
@@ -1065,19 +1070,20 @@ class PolicyToRoutingBridge(BaseBridge):
 
         return adjustment
 
-    async def _get_active_adjustments(
-        self, agent_id: str
-    ) -> list[RoutingAdjustment]:
+    async def _get_active_adjustments(self, agent_id: str) -> list[RoutingAdjustment]:
         """Get active adjustments for an agent."""
         async with self.db_factory() as session:
             from sqlalchemy import text
+
             result = await session.execute(
-                text("""
+                text(
+                    """
                     SELECT * FROM routing_policy_adjustments
                     WHERE agent_id = :agent_id
                     AND is_active = TRUE
                     AND (expires_at IS NULL OR expires_at > NOW())
-                """),
+                """
+                ),
                 {"agent_id": agent_id},
             )
             rows = result.fetchall()
@@ -1101,8 +1107,10 @@ class PolicyToRoutingBridge(BaseBridge):
         """Get current KPI for an agent (success rate)."""
         async with self.db_factory() as session:
             from sqlalchemy import text
+
             result = await session.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         COALESCE(
                             SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END)::float /
@@ -1112,7 +1120,8 @@ class PolicyToRoutingBridge(BaseBridge):
                     FROM routing_decisions
                     WHERE agent_id = :agent_id
                     AND created_at > NOW() - INTERVAL '24 hours'
-                """),
+                """
+                ),
                 {"agent_id": agent_id},
             )
             row = result.fetchone()
@@ -1122,14 +1131,17 @@ class PolicyToRoutingBridge(BaseBridge):
         """Persist routing adjustment to database."""
         async with self.db_factory() as session:
             from sqlalchemy import text
+
             await session.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO routing_policy_adjustments
                     (id, agent_id, capability, adjustment_type, magnitude, reason,
                      source_policy_id, created_at, expires_at, is_active)
                     VALUES (:id, :agent_id, :capability, :type, :magnitude, :reason,
                             :policy_id, :created_at, :expires_at, :is_active)
-                """),
+                """
+                ),
                 {
                     "id": adjustment.adjustment_id,
                     "agent_id": adjustment.agent_id,
@@ -1190,8 +1202,7 @@ class LoopStatusBridge(BaseBridge):
             event.details["narrative"] = narrative
 
             logger.info(
-                f"Loop complete for incident {event.incident_id}: "
-                f"{loop_status.completion_pct:.0f}% complete"
+                f"Loop complete for incident {event.incident_id}: " f"{loop_status.completion_pct:.0f}% complete"
             )
 
             return event
@@ -1208,11 +1219,13 @@ class LoopStatusBridge(BaseBridge):
 
             # Get all events for this incident
             result = await session.execute(
-                text("""
+                text(
+                    """
                     SELECT * FROM loop_events
                     WHERE incident_id = :incident_id
                     ORDER BY created_at ASC
-                """),
+                """
+                ),
                 {"incident_id": event.incident_id},
             )
             events = result.fetchall()
@@ -1251,11 +1264,13 @@ class LoopStatusBridge(BaseBridge):
         channel = f"loop:{tenant_id}:{incident_id}"
         await self.redis.publish(
             channel,
-            json.dumps({
-                "type": "loop_complete",
-                "incident_id": incident_id,
-                "data": data,
-            }),
+            json.dumps(
+                {
+                    "type": "loop_complete",
+                    "incident_id": incident_id,
+                    "data": data,
+                }
+            ),
         )
 
 

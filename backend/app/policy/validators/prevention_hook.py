@@ -53,7 +53,7 @@ class PreventionContext:
     output_tokens: int
 
     # Metadata
-    timestamp: datetime = None
+    timestamp: Optional[datetime] = None
 
     def __post_init__(self):
         if self.timestamp is None:
@@ -75,7 +75,7 @@ class PreventionResult:
     actual_behavior: Optional[str]
 
     # Metadata
-    evaluation_id: str = None
+    evaluation_id: Optional[str] = None
     evaluation_ms: int = 0
 
     def __post_init__(self):

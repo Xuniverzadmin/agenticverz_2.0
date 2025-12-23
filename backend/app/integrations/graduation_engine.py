@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Optional, NamedTuple
+from typing import NamedTuple, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # GRADUATION THRESHOLDS (Configurable, not hardcoded)
 # =============================================================================
 
+
 @dataclass
 class GraduationThresholds:
     """
@@ -36,38 +37,41 @@ class GraduationThresholds:
 
     These can be tightened as the system matures.
     """
+
     # Gate 1: Prevention Proof
-    min_preventions: int = 1              # At least 1 prevention
-    prevention_rate_min: float = 0.5      # At least 50% prevention rate
-    prevention_window_days: int = 30      # Look back 30 days
+    min_preventions: int = 1  # At least 1 prevention
+    prevention_rate_min: float = 0.5  # At least 50% prevention rate
+    prevention_window_days: int = 30  # Look back 30 days
 
     # Gate 2: Regret Rollback
-    min_auto_demotions: int = 1           # At least 1 auto-demotion observed
-    max_regret_rate: float = 0.3          # Regret rate must be < 30%
-    regret_window_days: int = 30          # Look back 30 days
+    min_auto_demotions: int = 1  # At least 1 auto-demotion observed
+    max_regret_rate: float = 0.3  # Regret rate must be < 30%
+    regret_window_days: int = 30  # Look back 30 days
 
     # Gate 3: Console Proof
-    min_timeline_views: int = 1           # At least 1 timeline with prevention viewed
-    timeline_window_days: int = 30        # Look back 30 days
+    min_timeline_views: int = 1  # At least 1 timeline with prevention viewed
+    timeline_window_days: int = 30  # Look back 30 days
 
     # Downgrade triggers (evidence regression)
     downgrade_if_prevention_rate_below: float = 0.3  # Downgrade if rate drops below 30%
-    downgrade_if_regret_rate_above: float = 0.5      # Downgrade if regret exceeds 50%
-    downgrade_if_no_prevention_days: int = 14        # Downgrade if no prevention in 14 days
+    downgrade_if_regret_rate_above: float = 0.5  # Downgrade if regret exceeds 50%
+    downgrade_if_no_prevention_days: int = 14  # Downgrade if no prevention in 14 days
 
 
 # =============================================================================
 # GRADUATION EVIDENCE (Pure data from database)
 # =============================================================================
 
+
 class GateEvidence(NamedTuple):
     """Evidence for a single gate - computed from database."""
+
     name: str
     passed: bool
-    score: float        # 0.0 to 1.0, how well we're doing
-    evidence: dict      # Raw evidence
+    score: float  # 0.0 to 1.0, how well we're doing
+    evidence: dict  # Raw evidence
     last_evaluated: datetime
-    degraded: bool      # True if recently passed but now failing
+    degraded: bool  # True if recently passed but now failing
 
 
 @dataclass
@@ -77,6 +81,7 @@ class GraduationEvidence:
 
     This is a SNAPSHOT of database state - graduation is derived from this.
     """
+
     # Gate 1: Prevention
     total_preventions: int = 0
     total_prevention_attempts: int = 0
@@ -113,7 +118,8 @@ class GraduationEvidence:
 
         # Gate 1: Prevention evidence (exclude simulated)
         prevention_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) FILTER (WHERE outcome = 'prevented') as prevented,
                     COUNT(*) as total,
@@ -123,14 +129,16 @@ class GraduationEvidence:
                 AND (
                     id NOT LIKE 'prev_sim_%' OR id IS NULL
                 )
-            """),
-            {"window_start": window_start}
+            """
+            ),
+            {"window_start": window_start},
         )
         prev_row = prevention_result.fetchone()
 
         # Gate 2: Regret evidence (exclude simulated)
         regret_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) as total_events,
                     COUNT(*) FILTER (WHERE was_auto_rolled_back = true) as demotions,
@@ -140,14 +148,16 @@ class GraduationEvidence:
                 AND (
                     id NOT LIKE 'regret_sim_%' OR id IS NULL
                 )
-            """),
-            {"window_start": window_start}
+            """
+            ),
+            {"window_start": window_start},
         )
         regret_row = regret_result.fetchone()
 
         # Gate 3: Timeline views (real user views only)
         timeline_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) as views_with_prevention,
                     MAX(viewed_at) as last_view
@@ -155,24 +165,19 @@ class GraduationEvidence:
                 WHERE viewed_at >= :window_start
                 AND has_prevention = true
                 AND is_simulated = false
-            """),
-            {"window_start": window_start}
+            """
+            ),
+            {"window_start": window_start},
         )
         timeline_row = timeline_result.fetchone()
 
         # Compute rates
         total_prevention_attempts = prev_row.total if prev_row else 0
         total_preventions = prev_row.prevented if prev_row else 0
-        prevention_rate = (
-            total_preventions / total_prevention_attempts
-            if total_prevention_attempts > 0 else 0.0
-        )
+        prevention_rate = total_preventions / total_prevention_attempts if total_prevention_attempts > 0 else 0.0
 
         total_policy_evaluations = await cls._get_total_policy_evaluations(session, window_start)
-        regret_rate = (
-            (regret_row.total_events or 0) / total_policy_evaluations
-            if total_policy_evaluations > 0 else 0.0
-        )
+        regret_rate = (regret_row.total_events or 0) / total_policy_evaluations if total_policy_evaluations > 0 else 0.0
 
         return cls(
             total_preventions=total_preventions,
@@ -201,46 +206,54 @@ class GraduationEvidence:
 
         # Check if policy_evaluations table exists first (to avoid aborting transaction)
         table_check = await session.execute(
-            text("""
+            text(
+                """
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables
                     WHERE table_name = 'policy_evaluations'
                 )
-            """)
+            """
+            )
         )
         has_policy_evaluations = table_check.scalar()
 
         if has_policy_evaluations:
             result = await session.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) as total
                     FROM policy_evaluations
                     WHERE created_at >= :window_start
-                """),
-                {"window_start": window_start}
+                """
+                ),
+                {"window_start": window_start},
             )
             row = result.fetchone()
             return row.total if row else 0
 
         # Fall back to policy_rules count
         table_check2 = await session.execute(
-            text("""
+            text(
+                """
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables
                     WHERE table_name = 'policy_rules'
                 )
-            """)
+            """
+            )
         )
         has_policy_rules = table_check2.scalar()
 
         if has_policy_rules:
             result = await session.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) as total
                     FROM policy_rules
                     WHERE created_at >= :window_start
-                """),
-                {"window_start": window_start}
+                """
+                ),
+                {"window_start": window_start},
             )
             row = result.fetchone()
             return row.total if row else 0
@@ -253,13 +266,15 @@ class GraduationEvidence:
 # GRADUATION STATE (Derived, not declared)
 # =============================================================================
 
+
 class GraduationLevel(str, Enum):
     """Graduation levels - derived from evidence."""
-    ALPHA = "alpha"           # Loop-enabled, not loop-proven
-    BETA = "beta"             # Gate 1 passed (prevention proven)
-    CANDIDATE = "candidate"   # Gates 1+2 passed (self-correction proven)
-    COMPLETE = "complete"     # All gates passed (fully proven)
-    DEGRADED = "degraded"     # Was graduated, but evidence regressed
+
+    ALPHA = "alpha"  # Loop-enabled, not loop-proven
+    BETA = "beta"  # Gate 1 passed (prevention proven)
+    CANDIDATE = "candidate"  # Gates 1+2 passed (self-correction proven)
+    COMPLETE = "complete"  # All gates passed (fully proven)
+    DEGRADED = "degraded"  # Was graduated, but evidence regressed
 
 
 @dataclass
@@ -269,6 +284,7 @@ class ComputedGraduationStatus:
 
     This is DERIVED - never set manually.
     """
+
     level: GraduationLevel
     gates: dict[str, GateEvidence]
     thresholds: GraduationThresholds
@@ -320,13 +336,16 @@ class ComputedGraduationStatus:
                 "from_level": self.degraded_from.value if self.degraded_from else None,
                 "at": self.degraded_at.isoformat() if self.degraded_at else None,
                 "reason": self.degradation_reason,
-            } if self.is_degraded else None,
+            }
+            if self.is_degraded
+            else None,
         }
 
 
 # =============================================================================
 # GRADUATION ENGINE (Pure function over evidence)
 # =============================================================================
+
 
 class GraduationEngine:
     """
@@ -579,6 +598,7 @@ class GraduationEngine:
 # CAPABILITY GATES (Graduation unlocks features)
 # =============================================================================
 
+
 @dataclass
 class CapabilityGates:
     """
@@ -655,6 +675,7 @@ class CapabilityGates:
 # SIMULATION ISOLATION (Keep demo separate from real)
 # =============================================================================
 
+
 @dataclass
 class SimulationState:
     """
@@ -662,6 +683,7 @@ class SimulationState:
 
     Simulations are for demos only. They never affect real graduation.
     """
+
     simulated_gate1: bool = False
     simulated_gate2: bool = False
     simulated_gate3: bool = False
@@ -689,6 +711,7 @@ class SimulationState:
 # PERIODIC RE-EVALUATION
 # =============================================================================
 
+
 async def evaluate_graduation_status(
     session,
     engine: Optional[GraduationEngine] = None,
@@ -714,8 +737,7 @@ async def evaluate_graduation_status(
     # Log degradation
     if status.is_degraded:
         logger.warning(
-            f"M25 graduation DEGRADED: {status.degraded_from} -> DEGRADED. "
-            f"Reason: {status.degradation_reason}"
+            f"M25 graduation DEGRADED: {status.degraded_from} -> DEGRADED. " f"Reason: {status.degradation_reason}"
         )
 
     return status
@@ -731,7 +753,8 @@ async def persist_graduation_status(session, status: ComputedGraduationStatus) -
     from sqlalchemy import text
 
     await session.execute(
-        text("""
+        text(
+            """
             INSERT INTO graduation_history (
                 level, gates_json, computed_at,
                 is_degraded, degraded_from, degradation_reason
@@ -739,7 +762,8 @@ async def persist_graduation_status(session, status: ComputedGraduationStatus) -
                 :level, :gates, :computed_at,
                 :is_degraded, :degraded_from, :reason
             )
-        """),
+        """
+        ),
         {
             "level": status.level.value,
             "gates": status.to_api_response()["gates"],
@@ -747,6 +771,6 @@ async def persist_graduation_status(session, status: ComputedGraduationStatus) -
             "is_degraded": status.is_degraded,
             "degraded_from": status.degraded_from.value if status.degraded_from else None,
             "reason": status.degradation_reason,
-        }
+        },
     )
     await session.commit()

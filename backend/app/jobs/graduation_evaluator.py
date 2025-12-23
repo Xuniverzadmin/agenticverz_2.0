@@ -20,7 +20,6 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +30,13 @@ async def evaluate_graduation_status() -> dict:
 
     Returns the computed status with degradation info if applicable.
     """
-    from app.db import get_async_session
     from sqlalchemy import text
 
+    from app.db import get_async_session
     from app.integrations.graduation_engine import (
+        CapabilityGates,
         GraduationEngine,
         GraduationEvidence,
-        CapabilityGates,
     )
 
     async with get_async_session() as session:
@@ -55,25 +54,24 @@ async def evaluate_graduation_status() -> dict:
 
         # Get previous status for degradation detection
         prev_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT level, is_degraded
                 FROM graduation_history
                 ORDER BY computed_at DESC
                 LIMIT 1
-            """)
+            """
+            )
         )
         prev_row = prev_result.fetchone()
 
         # Check if degradation just occurred
-        degradation_just_occurred = (
-            prev_row
-            and not prev_row.is_degraded
-            and status.is_degraded
-        )
+        degradation_just_occurred = prev_row and not prev_row.is_degraded and status.is_degraded
 
         # Store in graduation_history
         await session.execute(
-            text("""
+            text(
+                """
                 INSERT INTO graduation_history (
                     level, gates_json, computed_at, is_degraded,
                     degraded_from, degradation_reason, evidence_snapshot
@@ -81,34 +79,40 @@ async def evaluate_graduation_status() -> dict:
                     :level, :gates_json, NOW(), :is_degraded,
                     :degraded_from, :degradation_reason, :evidence_snapshot
                 )
-            """),
+            """
+            ),
             {
                 "level": status.level.value,
-                "gates_json": json.dumps({
-                    name: {
-                        "passed": gate.passed,
-                        "score": gate.score,
-                        "degraded": gate.degraded,
+                "gates_json": json.dumps(
+                    {
+                        name: {
+                            "passed": gate.passed,
+                            "score": gate.score,
+                            "degraded": gate.degraded,
+                        }
+                        for name, gate in status.gates.items()
                     }
-                    for name, gate in status.gates.items()
-                }),
+                ),
                 "is_degraded": status.is_degraded,
                 "degraded_from": status.degraded_from.value if status.degraded_from else None,
                 "degradation_reason": status.degradation_reason,
-                "evidence_snapshot": json.dumps({
-                    "prevention_count": evidence.prevention_count,
-                    "regret_count": evidence.regret_count,
-                    "demotion_count": evidence.demotion_count,
-                    "timeline_view_count": evidence.timeline_view_count,
-                    "prevention_rate": evidence.prevention_rate,
-                    "regret_rate": evidence.regret_rate,
-                }),
+                "evidence_snapshot": json.dumps(
+                    {
+                        "prevention_count": evidence.prevention_count,
+                        "regret_count": evidence.regret_count,
+                        "demotion_count": evidence.demotion_count,
+                        "timeline_view_count": evidence.timeline_view_count,
+                        "prevention_rate": evidence.prevention_rate,
+                        "regret_rate": evidence.regret_rate,
+                    }
+                ),
             },
         )
 
         # Update m25_graduation_status with derived values
         await session.execute(
-            text("""
+            text(
+                """
                 UPDATE m25_graduation_status
                 SET is_derived = true,
                     last_evidence_eval = NOW(),
@@ -121,7 +125,8 @@ async def evaluate_graduation_status() -> dict:
                     degradation_reason = :degradation_reason,
                     last_checked = NOW()
                 WHERE id = 1
-            """),
+            """
+            ),
             {
                 "status_label": status.status_label,
                 "is_graduated": status.is_graduated,
@@ -142,13 +147,15 @@ async def evaluate_graduation_status() -> dict:
 
         for capability, is_unlocked in capabilities.items():
             await session.execute(
-                text("""
+                text(
+                    """
                     UPDATE capability_lockouts
                     SET is_unlocked = :is_unlocked,
                         unlocked_at = CASE WHEN :is_unlocked AND NOT is_unlocked THEN NOW() ELSE unlocked_at END,
                         last_checked = NOW()
                     WHERE capability = :capability
-                """),
+                """
+                ),
                 {
                     "capability": capability,
                     "is_unlocked": is_unlocked,
@@ -190,10 +197,7 @@ async def run_periodic_evaluation(interval_seconds: int = 900):
             result = await evaluate_graduation_status()
 
             if result.get("status") == "evaluated":
-                logger.info(
-                    f"Graduation evaluated: {result['level']} "
-                    f"({result['gates_passed']}/3 gates)"
-                )
+                logger.info(f"Graduation evaluated: {result['level']} " f"({result['gates_passed']}/3 gates)")
 
                 if result.get("degradation_just_occurred"):
                     # Could send alert here (Slack, PagerDuty, etc.)

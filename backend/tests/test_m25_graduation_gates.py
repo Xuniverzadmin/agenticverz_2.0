@@ -12,31 +12,31 @@ Three gates must pass for M25 to graduate from ALPHA to COMPLETE:
 "A system that demonstrably improves itself"
 """
 
-import pytest
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app.integrations.learning_proof import (
+    AdaptiveConfidenceSystem,
+    CheckpointConfig,
+    # Checkpoints
+    CheckpointPriority,
+    GlobalRegretTracker,
+    # Graduation
+    M25GraduationStatus,
+    # Adaptive
+    PatternCalibration,
+    PolicyRegretTracker,
     # Gate 1
     PreventionOutcome,
     PreventionRecord,
+    PreventionTimeline,
     PreventionTracker,
+    PrioritizedCheckpoint,
+    RegretEvent,
     # Gate 2
     RegretType,
-    RegretEvent,
-    PolicyRegretTracker,
-    GlobalRegretTracker,
-    # Adaptive
-    PatternCalibration,
-    AdaptiveConfidenceSystem,
-    # Checkpoints
-    CheckpointPriority,
-    CheckpointConfig,
-    PrioritizedCheckpoint,
-    # Graduation
-    M25GraduationStatus,
-    PreventionTimeline,
 )
-
 
 # =============================================================================
 # GATE 1: PREVENTION PROOF TESTS

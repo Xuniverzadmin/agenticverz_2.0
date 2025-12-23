@@ -487,7 +487,7 @@ def main():
     # Handle graceful shutdown
     processor = OutboxProcessor()
 
-    def shutdown_handler(signum, frame):
+    def shutdown_handler(_signum, _frame):
         logger.info("Shutdown signal received...")
         processor._running = False
 

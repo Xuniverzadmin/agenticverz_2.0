@@ -26,14 +26,12 @@ Environment:
 
 import argparse
 import asyncio
-import json
 import os
 import sys
-from datetime import datetime, timezone
 from uuid import uuid4
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../backend"))
 
 
 SIMULATION_WARNING = """
@@ -72,7 +70,7 @@ async def get_graduation_status(session) -> dict:
         "gate2_passed": row.gate2_passed,
         "gate3_passed": row.gate3_passed,
         "is_graduated": row.is_graduated,
-        "is_derived": getattr(row, 'is_derived', False),
+        "is_derived": getattr(row, "is_derived", False),
     }
 
 
@@ -82,35 +80,41 @@ async def get_simulation_counts(session) -> dict:
 
     # Prevention records
     prev_result = await session.execute(
-        text("""
+        text(
+            """
             SELECT
                 COUNT(*) FILTER (WHERE is_simulated = true) as simulated,
                 COUNT(*) FILTER (WHERE is_simulated = false OR is_simulated IS NULL) as real
             FROM prevention_records
-        """)
+        """
+        )
     )
     prev_row = prev_result.fetchone()
 
     # Regret events
     regret_result = await session.execute(
-        text("""
+        text(
+            """
             SELECT
                 COUNT(*) FILTER (WHERE is_simulated = true) as simulated,
                 COUNT(*) FILTER (WHERE is_simulated = false OR is_simulated IS NULL) as real
             FROM regret_events
-        """)
+        """
+        )
     )
     regret_row = regret_result.fetchone()
 
     # Timeline views
     try:
         tv_result = await session.execute(
-            text("""
+            text(
+                """
                 SELECT
                     COUNT(*) FILTER (WHERE is_simulated = true) as simulated,
                     COUNT(*) FILTER (WHERE is_simulated = false) as real
                 FROM timeline_views
-            """)
+            """
+            )
         )
         tv_row = tv_result.fetchone()
         timeline_simulated = tv_row.simulated or 0
@@ -120,8 +124,14 @@ async def get_simulation_counts(session) -> dict:
         timeline_real = 0
 
     return {
-        "prevention": {"simulated": prev_row.simulated or 0, "real": prev_row.real or 0},
-        "regret": {"simulated": regret_row.simulated or 0, "real": regret_row.real or 0},
+        "prevention": {
+            "simulated": prev_row.simulated or 0,
+            "real": prev_row.real or 0,
+        },
+        "regret": {
+            "simulated": regret_row.simulated or 0,
+            "real": regret_row.real or 0,
+        },
         "timeline": {"simulated": timeline_simulated, "real": timeline_real},
     }
 
@@ -150,7 +160,8 @@ async def simulate_gate1_prevention(session) -> dict:
 
     # Insert prevention record WITH is_simulated=true
     await session.execute(
-        text("""
+        text(
+            """
             INSERT INTO prevention_records (
                 id, policy_id, pattern_id, original_incident_id,
                 blocked_incident_id, tenant_id, outcome,
@@ -162,7 +173,8 @@ async def simulate_gate1_prevention(session) -> dict:
                 :confidence, 7200,
                 true, NOW()
             )
-        """),
+        """
+        ),
         {
             "id": record_id,
             "policy_id": policy_id,
@@ -204,11 +216,12 @@ async def simulate_gate2_regret(session) -> dict:
 
     print(f"  Creating SIMULATED regret event: {regret_id}")
     print(f"  Harmful policy: {policy_id}")
-    print(f"  Severity: 8 (high)")
+    print("  Severity: 8 (high)")
 
     # Insert regret event WITH is_simulated=true
     await session.execute(
-        text("""
+        text(
+            """
             INSERT INTO regret_events (
                 id, policy_id, tenant_id, regret_type,
                 description, severity, affected_calls, affected_users,
@@ -220,7 +233,8 @@ async def simulate_gate2_regret(session) -> dict:
                 8, 150, 25, 1800, true,
                 true, NOW()
             )
-        """),
+        """
+        ),
         {
             "id": regret_id,
             "policy_id": policy_id,
@@ -230,7 +244,8 @@ async def simulate_gate2_regret(session) -> dict:
 
     # Insert policy regret summary (marked as simulated demotion)
     await session.execute(
-        text("""
+        text(
+            """
             INSERT INTO policy_regret_summary (
                 policy_id, regret_score, regret_event_count,
                 demoted_at, demoted_reason, last_updated
@@ -245,7 +260,8 @@ async def simulate_gate2_regret(session) -> dict:
                 demoted_at = NOW(),
                 demoted_reason = 'SIMULATED demotion - does not count toward graduation',
                 last_updated = NOW()
-        """),
+        """
+        ),
         {"policy_id": policy_id},
     )
 
@@ -282,7 +298,8 @@ async def simulate_gate3_timeline(session) -> dict:
 
     # Insert into timeline_views WITH is_simulated=true
     await session.execute(
-        text("""
+        text(
+            """
             INSERT INTO timeline_views (
                 id, incident_id, tenant_id, user_id,
                 has_prevention, has_rollback,
@@ -292,7 +309,8 @@ async def simulate_gate3_timeline(session) -> dict:
                 true, false,
                 true, :session_id, NOW()
             )
-        """),
+        """
+        ),
         {
             "id": view_id,
             "incident_id": incident_id,
@@ -361,12 +379,20 @@ async def run_graduation_engine(session) -> dict:
 
 async def main():
     parser = argparse.ArgumentParser(description="M25 Gate Passage Demo (HARDENED)")
-    parser.add_argument("--gate", type=int, choices=[1, 2, 3], help="Gate number to simulate")
+    parser.add_argument(
+        "--gate", type=int, choices=[1, 2, 3], help="Gate number to simulate"
+    )
     parser.add_argument("--all", action="store_true", help="Simulate all gates")
-    parser.add_argument("--status", action="store_true", help="Show current graduation status")
+    parser.add_argument(
+        "--status", action="store_true", help="Show current graduation status"
+    )
     parser.add_argument("--reset", action="store_true", help="Reset graduation status")
-    parser.add_argument("--evaluate", action="store_true", help="Run graduation engine (real status)")
-    parser.add_argument("--counts", action="store_true", help="Show simulated vs real counts")
+    parser.add_argument(
+        "--evaluate", action="store_true", help="Run graduation engine (real status)"
+    )
+    parser.add_argument(
+        "--counts", action="store_true", help="Show simulated vs real counts"
+    )
     args = parser.parse_args()
 
     # Check for DATABASE_URL
@@ -391,11 +417,19 @@ async def main():
             print("\n=== M25 Graduation Status ===\n")
             status = await get_graduation_status(session)
             print(f"Status: {status['status']}")
-            print(f"Gate 1 (Prevention Proof): {'PASSED' if status['gate1_passed'] else 'pending'}")
-            print(f"Gate 2 (Regret Rollback): {'PASSED' if status['gate2_passed'] else 'pending'}")
-            print(f"Gate 3 (Console Timeline): {'PASSED' if status['gate3_passed'] else 'pending'}")
+            print(
+                f"Gate 1 (Prevention Proof): {'PASSED' if status['gate1_passed'] else 'pending'}"
+            )
+            print(
+                f"Gate 2 (Regret Rollback): {'PASSED' if status['gate2_passed'] else 'pending'}"
+            )
+            print(
+                f"Gate 3 (Console Timeline): {'PASSED' if status['gate3_passed'] else 'pending'}"
+            )
             print(f"Is Graduated: {'YES' if status['is_graduated'] else 'NO'}")
-            print(f"Is Derived: {'YES (computed from evidence)' if status['is_derived'] else 'NO (legacy mode)'}")
+            print(
+                f"Is Derived: {'YES (computed from evidence)' if status['is_derived'] else 'NO (legacy mode)'}"
+            )
             return
 
         if args.counts:
@@ -417,15 +451,15 @@ async def main():
                 print(f"Is Graduated: {'YES' if result['is_graduated'] else 'NO'}")
                 print(f"Is Degraded: {'YES' if result['is_degraded'] else 'NO'}")
                 print("\nGates (from REAL evidence only):")
-                for name, gate in result['gates'].items():
-                    status_str = "PASSED" if gate['passed'] else "pending"
+                for name, gate in result["gates"].items():
+                    status_str = "PASSED" if gate["passed"] else "pending"
                     print(f"  {name}: {status_str} (score: {gate['score']:.2f})")
                 print("\nCapabilities:")
-                for cap, unlocked in result['capabilities'].items():
+                for cap, unlocked in result["capabilities"].items():
                     status_str = "UNLOCKED" if unlocked else "BLOCKED"
                     print(f"  {cap}: {status_str}")
                 print("\nEvidence (REAL records only):")
-                for key, value in result['evidence'].items():
+                for key, value in result["evidence"].items():
                     print(f"  {key}: {value}")
             except Exception as e:
                 print(f"Error running graduation engine: {e}")
@@ -434,9 +468,11 @@ async def main():
 
         if args.reset:
             from sqlalchemy import text
+
             print("\n=== Resetting M25 Graduation Status ===\n")
             await session.execute(
-                text("""
+                text(
+                    """
                     UPDATE m25_graduation_status
                     SET gate1_passed = false,
                         gate1_passed_at = NULL,
@@ -454,7 +490,8 @@ async def main():
                         last_evidence_eval = NULL,
                         last_checked = NOW()
                     WHERE id = 1
-                """)
+                """
+                )
             )
             await session.commit()
             print("Graduation status reset to M25-ALPHA (0/3 gates)")
@@ -483,19 +520,23 @@ async def main():
                 result = await simulate_gate3_timeline(session)
 
             print(f"  Result: {result['message']}")
-            print(f"  Counts toward graduation: {'YES' if result.get('counts_toward_graduation', False) else 'NO'}")
+            print(
+                f"  Counts toward graduation: {'YES' if result.get('counts_toward_graduation', False) else 'NO'}"
+            )
             print()
 
         # Show counts
         print("=== Record Counts ===\n")
         counts = await get_simulation_counts(session)
         for category, data in counts.items():
-            print(f"{category.title()}: {data['simulated']} simulated, {data['real']} real")
+            print(
+                f"{category.title()}: {data['simulated']} simulated, {data['real']} real"
+            )
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("To see REAL graduation status: --evaluate")
         print("To see stored status: --status")
-        print("="*60)
+        print("=" * 60)
 
     await engine.dispose()
 

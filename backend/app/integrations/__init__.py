@@ -12,48 +12,48 @@ logger = logging.getLogger(__name__)
 # Singleton dispatcher instance
 _dispatcher: Optional["IntegrationDispatcher"] = None
 
-from .events import (
-    LoopStage,
-    LoopFailureState,
-    ConfidenceBand,
-    PolicyMode,
-    HumanCheckpointType,
-    LoopEvent,
-    PatternMatchResult,
-    RecoverySuggestion,
-    PolicyRule,
-    RoutingAdjustment,
-    LoopStatus,
-    HumanCheckpoint,
-)
-from .dispatcher import IntegrationDispatcher
 from .bridges import (
     IncidentToCatalogBridge,
-    PatternToRecoveryBridge,
-    RecoveryToPolicyBridge,
-    PolicyToRoutingBridge,
     LoopStatusBridge,
+    PatternToRecoveryBridge,
+    PolicyToRoutingBridge,
+    RecoveryToPolicyBridge,
+)
+from .dispatcher import IntegrationDispatcher
+from .events import (
+    ConfidenceBand,
+    HumanCheckpoint,
+    HumanCheckpointType,
+    LoopEvent,
+    LoopFailureState,
+    LoopStage,
+    LoopStatus,
+    PatternMatchResult,
+    PolicyMode,
+    PolicyRule,
+    RecoverySuggestion,
+    RoutingAdjustment,
 )
 from .learning_proof import (
+    AdaptiveConfidenceSystem,
+    CheckpointConfig,
+    # Checkpoint Prioritization
+    CheckpointPriority,
+    GlobalRegretTracker,
+    # Graduation
+    M25GraduationStatus,
+    # Adaptive Confidence
+    PatternCalibration,
+    PolicyRegretTracker,
     # Gate 1: Prevention Proof
     PreventionOutcome,
     PreventionRecord,
+    PreventionTimeline,
     PreventionTracker,
+    PrioritizedCheckpoint,
+    RegretEvent,
     # Gate 2: Regret Rollback
     RegretType,
-    RegretEvent,
-    PolicyRegretTracker,
-    GlobalRegretTracker,
-    # Adaptive Confidence
-    PatternCalibration,
-    AdaptiveConfidenceSystem,
-    # Checkpoint Prioritization
-    CheckpointPriority,
-    CheckpointConfig,
-    PrioritizedCheckpoint,
-    # Graduation
-    M25GraduationStatus,
-    PreventionTimeline,
 )
 
 __all__ = [
@@ -117,7 +117,9 @@ def get_dispatcher() -> IntegrationDispatcher:
         return _dispatcher
 
     import os
+
     import redis.asyncio as redis
+
     from app.db import get_async_session
 
     # Initialize Redis client
@@ -189,8 +191,7 @@ async def trigger_integration_loop(
     result = await dispatcher.dispatch(initial_event)
 
     logger.info(
-        f"M25 loop completed for incident {incident_id}: "
-        f"stage={result.stage.value}, success={result.is_success}"
+        f"M25 loop completed for incident {incident_id}: " f"stage={result.stage.value}, success={result.is_success}"
     )
 
     return result
