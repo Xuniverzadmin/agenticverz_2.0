@@ -3,14 +3,14 @@
   "description": "Runtime feature flags for staged rollout. All flags default to false for safety.",
   "flags": {
     "failure_catalog_runtime_integration": {
-      "enabled": true,
+      "enabled": false,
       "description": "Wire FailureCatalog to errors.classify_exception for enriched recovery suggestions",
       "requires_m4_signoff": true,
       "added": "2025-12-03",
       "owner": "platform"
     },
     "cost_simulator_runtime_integration": {
-      "enabled": true,
+      "enabled": false,
       "description": "Wire CostSimulator to runtime.simulate() for pre-execution cost checks",
       "requires_m4_signoff": true,
       "added": "2025-12-03",
