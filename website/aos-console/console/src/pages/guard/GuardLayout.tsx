@@ -23,7 +23,9 @@ import { healthMonitor } from '../../lib/healthCheck';
 import { useAuthStore } from '../../stores/authStore';
 
 // Navigation items matching target IA (with Account & Support)
+// M28: 'home' is now the primary landing - calm status board
 const NAV_ITEMS = [
+  { id: 'home', label: 'Home', icon: '🏠', description: 'Status overview' },
   { id: 'overview', label: 'Overview', icon: '🛡️', description: 'Control plane & status' },
   { id: 'live', label: 'Live Activity', icon: '📡', description: 'Real-time event stream' },
   { id: 'incidents', label: 'Incidents', icon: '📋', description: 'Search & investigate' },

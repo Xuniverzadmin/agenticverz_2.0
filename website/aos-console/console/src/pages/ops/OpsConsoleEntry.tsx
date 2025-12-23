@@ -1,6 +1,10 @@
 /**
  * Ops Console Entry Point
  *
+ * M28: Two views for founders:
+ * - Pulse: 10-second situation awareness (default landing)
+ * - Console: Full detailed dashboard
+ *
  * Standalone entry for the Founder Ops Console.
  * Handles API key authentication independently from the main AOS console.
  *
@@ -14,7 +18,21 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import FounderOpsConsole from './FounderOpsConsole';
+import { FounderPulsePage } from './FounderPulsePage';
+
+// Create query client for Pulse page
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5000,
+      retry: 2,
+    },
+  },
+});
+
+type OpsView = 'pulse' | 'console';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://agenticverz.com';
 const STORAGE_KEY = 'ops-console-api-key';
@@ -26,6 +44,7 @@ export default function OpsConsoleEntry() {
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeView, setActiveView] = useState<OpsView>('pulse');
 
   // Check for API key from URL or localStorage on mount
   useEffect(() => {
@@ -150,6 +169,66 @@ export default function OpsConsoleEntry() {
     );
   }
 
-  // Render the Ops Console (FounderOpsConsole handles its own layout)
-  return <FounderOpsConsole />;
+  // Render the Ops Console with view tabs
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="min-h-screen bg-gray-950 flex flex-col">
+        {/* View Tabs Header */}
+        <div className="bg-gray-900 border-b border-gray-800 px-6 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <span className="text-white text-sm font-bold">F</span>
+              </div>
+              <span className="text-white font-semibold">Founder Ops</span>
+            </div>
+
+            {/* View Tabs */}
+            <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
+              <button
+                onClick={() => setActiveView('pulse')}
+                className={`
+                  px-4 py-1.5 rounded-md text-sm font-medium transition-colors
+                  ${activeView === 'pulse'
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-gray-400 hover:text-white'
+                  }
+                `}
+              >
+                Pulse
+              </button>
+              <button
+                onClick={() => setActiveView('console')}
+                className={`
+                  px-4 py-1.5 rounded-md text-sm font-medium transition-colors
+                  ${activeView === 'console'
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-gray-400 hover:text-white'
+                  }
+                `}
+              >
+                Console
+              </button>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="text-gray-400 hover:text-white text-sm transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+
+        {/* View Content */}
+        <div className="flex-1 overflow-auto">
+          {activeView === 'pulse' ? (
+            <FounderPulsePage />
+          ) : (
+            <FounderOpsConsole />
+          )}
+        </div>
+      </div>
+    </QueryClientProvider>
+  );
 }

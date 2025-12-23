@@ -33,6 +33,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { GuardLayout, type NavItemId } from './GuardLayout';
+import { CustomerHomePage } from './CustomerHomePage';
 import { GuardDashboard } from './GuardDashboard';
 import { LiveActivityPage } from './LiveActivityPage';
 import { IncidentsPage } from './incidents/IncidentsPage';
@@ -75,7 +76,7 @@ export default function GuardConsoleEntry() {
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState('');
   const [isApiKeyAuthenticated, setIsApiKeyAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<NavItemId>('overview');
+  const [activeTab, setActiveTab] = useState<NavItemId>('home');
   const [authMode, setAuthMode] = useState<'oauth' | 'apikey' | null>(null);
 
   // Check authentication on mount
@@ -291,6 +292,8 @@ export default function GuardConsoleEntry() {
   // Render active page
   const renderPage = () => {
     switch (activeTab) {
+      case 'home':
+        return <CustomerHomePage onNavigate={setActiveTab} />;
       case 'overview':
         return <GuardDashboard onLogout={handleLogout} />;
       case 'live':
@@ -308,7 +311,7 @@ export default function GuardConsoleEntry() {
       case 'support':
         return <SupportPage />;
       default:
-        return <GuardDashboard onLogout={handleLogout} />;
+        return <CustomerHomePage onNavigate={setActiveTab} />;
     }
   };
 
