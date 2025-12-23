@@ -1,0 +1,20 @@
+# /etc/systemd/system/aos-cost-snapshot-daily.timer
+# Timer for daily cost snapshot + baseline computation
+#
+# Runs at 00:30 UTC daily (after hourly snapshot at 00:05)
+
+[Unit]
+Description=Run AOS Cost Snapshot + Baselines daily at 00:30 UTC
+
+[Timer]
+# Run at 00:30 UTC every day
+OnCalendar=*-*-* 00:30:00 UTC
+# Add 2 minute jitter
+RandomizedDelaySec=120
+# Run immediately if we missed a scheduled run
+Persistent=true
+# Accuracy (allow 1 minute window)
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

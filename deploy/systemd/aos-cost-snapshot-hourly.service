@@ -1,0 +1,41 @@
+# /etc/systemd/system/aos-cost-snapshot-hourly.service
+# AOS Cost Snapshot - Hourly Job
+#
+# Computes hourly cost snapshots for all active tenants.
+# Part of M27 Cost Loop infrastructure.
+#
+# Install: sudo cp deploy/systemd/aos-cost-snapshot-hourly.* /etc/systemd/system/
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable --now aos-cost-snapshot-hourly.timer
+
+[Unit]
+Description=AOS Cost Snapshot - Hourly
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/agenticverz2.0
+
+# Load database URL from .env
+EnvironmentFile=/root/agenticverz2.0/.env
+Environment=PYTHONPATH=/root/agenticverz2.0/backend
+
+# Run hourly snapshot job
+ExecStart=/usr/bin/python3 /root/agenticverz2.0/scripts/ops/cost_snapshot_job.py hourly
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aos-cost-snapshot-hourly
+
+# Timeouts (snapshots can take a few minutes)
+TimeoutStartSec=600
+TimeoutStopSec=60
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

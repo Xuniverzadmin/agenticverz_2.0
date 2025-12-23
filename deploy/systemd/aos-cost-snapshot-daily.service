@@ -1,0 +1,42 @@
+# /etc/systemd/system/aos-cost-snapshot-daily.service
+# AOS Cost Snapshot - Daily Job + Baseline Computation
+#
+# Computes daily cost snapshots AND updates rolling baselines for all active tenants.
+# Baselines are used for anomaly detection thresholds.
+# Part of M27 Cost Loop infrastructure.
+#
+# Install: sudo cp deploy/systemd/aos-cost-snapshot-daily.* /etc/systemd/system/
+# Enable:  sudo systemctl daemon-reload && sudo systemctl enable --now aos-cost-snapshot-daily.timer
+
+[Unit]
+Description=AOS Cost Snapshot - Daily + Baselines
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/agenticverz2.0
+
+# Load database URL from .env
+EnvironmentFile=/root/agenticverz2.0/.env
+Environment=PYTHONPATH=/root/agenticverz2.0/backend
+
+# Run daily snapshot + baseline job
+ExecStart=/usr/bin/python3 /root/agenticverz2.0/scripts/ops/cost_snapshot_job.py daily
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aos-cost-snapshot-daily
+
+# Timeouts (daily jobs with baselines can take longer)
+TimeoutStartSec=900
+TimeoutStopSec=60
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

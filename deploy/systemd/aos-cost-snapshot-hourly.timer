@@ -1,0 +1,20 @@
+# /etc/systemd/system/aos-cost-snapshot-hourly.timer
+# Timer for hourly cost snapshot computation
+#
+# Runs at :05 past every hour (gives time for cost records to settle)
+
+[Unit]
+Description=Run AOS Cost Snapshot hourly at :05
+
+[Timer]
+# Run at 5 minutes past every hour
+OnCalendar=*-*-* *:05:00
+# Add 1 minute jitter
+RandomizedDelaySec=60
+# Run immediately if we missed a scheduled run
+Persistent=true
+# Accuracy (allow 30 second window)
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
