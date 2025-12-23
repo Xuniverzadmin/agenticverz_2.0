@@ -1,3 +1,20 @@
+/**
+ * AOS Console Routes
+ *
+ * M28 Route Migration Plan (PIN-147):
+ *
+ * TARGET ARCHITECTURE:
+ * - console.agenticverz.com → CUSTOMER routes (guard/*, billing, keys)
+ * - fops.agenticverz.com    → FOUNDER routes (ops/*, traces, workers, sba)
+ *
+ * CURRENT STATE:
+ * - Single domain with path-based routing
+ * - /guard/* → Customer Console (GuardConsoleEntry)
+ * - /ops/*   → Founder Console (OpsConsoleEntry)
+ *
+ * See: docs/M28_ROUTE_OWNERSHIP.md for authoritative route ownership
+ */
+
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -5,37 +22,43 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { OnboardingRoute } from './OnboardingRoute';
 import { Spinner } from '@/components/common';
 
-// Lazy load pages
+// =============================================================================
+// CUSTOMER PAGES (Target: console.agenticverz.com)
+// =============================================================================
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
+const CreditsPage = lazy(() => import('@/pages/credits/CreditsPage'));
+
+// =============================================================================
+// FOUNDER PAGES (Target: fops.agenticverz.com)
+// =============================================================================
 const TracesPage = lazy(() => import('@/pages/traces/TracesPage'));
 const RecoveryPage = lazy(() => import('@/pages/recovery/RecoveryPage'));
-const CreditsPage = lazy(() => import('@/pages/credits/CreditsPage'));
 const SBAInspectorPage = lazy(() => import('@/pages/sba/SBAInspectorPage'));
 const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome'));
 const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExecutionConsole'));
-const FounderOpsConsolePage = lazy(() => import('@/pages/ops/FounderOpsConsole'));
 
 // M28 DELETION (PIN-145): Removed SDK/demo/duplicate pages
-// - DashboardPage: shell route, merged into /guard
-// - SkillsPage: SDK concept, not customer value
-// - JobSimulatorPage, JobRunnerPage: simulation tools → SDK/CLI
-// - FailuresPage: duplicates /ops/incidents/patterns
-// - BlackboardPage: legacy naming → /memory
-// - MetricsPage: Grafana mirror, not product
+// - DashboardPage, SkillsPage, JobSimulatorPage, FailuresPage, BlackboardPage, MetricsPage
 
-// M25 Integration Loop pages
+// M25 Integration Loop (FOUNDER)
 const IntegrationDashboard = lazy(() => import('@/pages/integration/IntegrationDashboard'));
 const LoopStatusPage = lazy(() => import('@/pages/integration/LoopStatusPage'));
 
-// Onboarding pages
+// =============================================================================
+// ONBOARDING PAGES (Shared - pre-console assignment)
+// =============================================================================
 const ConnectPage = lazy(() => import('@/pages/onboarding/ConnectPage'));
 const SafetyPage = lazy(() => import('@/pages/onboarding/SafetyPage'));
 const AlertsPage = lazy(() => import('@/pages/onboarding/AlertsPage'));
 const VerifyPage = lazy(() => import('@/pages/onboarding/VerifyPage'));
 const CompletePage = lazy(() => import('@/pages/onboarding/CompletePage'));
 
-// Standalone console entry points (handle their own auth)
+// =============================================================================
+// CONSOLE ENTRY POINTS (Standalone - handle their own auth)
+// =============================================================================
+// CUSTOMER: /guard/* → console.agenticverz.com (future)
 const GuardConsoleEntry = lazy(() => import('@/pages/guard/GuardConsoleEntry'));
+// FOUNDER: /ops/* → fops.agenticverz.com (future)
 const OpsConsoleEntry = lazy(() => import('@/pages/ops/OpsConsoleEntry'));
 
 function LoadingFallback() {
@@ -95,13 +118,21 @@ export function AppRoutes() {
           }
         />
 
-        {/* Standalone console entry points (handle their own auth) */}
+        {/* =================================================================
+         * CUSTOMER CONSOLE (Target: console.agenticverz.com)
+         * Owner: CUSTOMER | See: docs/M28_ROUTE_OWNERSHIP.md
+         * ================================================================= */}
         <Route path="/guard" element={<GuardConsoleEntry />} />
         <Route path="/guard/*" element={<GuardConsoleEntry />} />
+
+        {/* =================================================================
+         * FOUNDER OPS CONSOLE (Target: fops.agenticverz.com)
+         * Owner: FOUNDER | See: docs/M28_ROUTE_OWNERSHIP.md
+         * ================================================================= */}
         <Route path="/ops" element={<OpsConsoleEntry />} />
         <Route path="/ops/*" element={<OpsConsoleEntry />} />
 
-        {/* Protected routes (main AOS console) - M28 streamlined */}
+        {/* Protected routes (FOUNDER pages still in transition) */}
         <Route
           path="/"
           element={
@@ -110,38 +141,39 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          {/* M28: Root redirects to /guard (unified console) */}
+          {/* M28: Root redirects to /guard (Customer Console) */}
           <Route index element={<Navigate to="/guard" replace />} />
 
-          {/* Execution - kept essential routes only */}
+          {/* =========================================================
+           * FOUNDER ROUTES (Target: fops.agenticverz.com)
+           * These routes will migrate to the founder domain
+           * ========================================================= */}
+
+          {/* Execution (FOUNDER) */}
           <Route path="traces" element={<TracesPage />} />
           <Route path="traces/:runId" element={<TracesPage />} />
           <Route path="workers" element={<WorkerStudioHomePage />} />
           <Route path="workers/console" element={<WorkerExecutionConsolePage />} />
 
-          {/* Reliability */}
+          {/* Reliability (FOUNDER) */}
           <Route path="recovery" element={<RecoveryPage />} />
 
-          {/* M25 Integration Loop */}
+          {/* M25 Integration Loop (FOUNDER) */}
           <Route path="integration" element={<IntegrationDashboard />} />
           <Route path="integration/loop/:incidentId" element={<LoopStatusPage />} />
 
-          {/* Governance */}
+          {/* Governance (FOUNDER) */}
           <Route path="sba" element={<SBAInspectorPage />} />
 
-          {/* System */}
+          {/* =========================================================
+           * CUSTOMER ROUTES (Target: console.agenticverz.com)
+           * ========================================================= */}
+
+          {/* Billing (CUSTOMER) */}
           <Route path="credits" element={<CreditsPage />} />
 
-          {/* M28 DELETION (PIN-145): Removed routes
-           * /dashboard - merged into /guard
-           * /skills - SDK concept
-           * /simulation - SDK/CLI tool
-           * /replay - SDK/CLI tool
-           * /failures - duplicates /ops/incidents/patterns
-           * /memory - legacy naming
-           * /metrics - Grafana mirror
-           * /workers/history - duplication
-           * Legacy redirects (/agents, /blackboard, /jobs/*, /messaging) - dead weight
+          {/* M28 DELETION (PIN-145): Routes permanently removed
+           * See docs/M28_ROUTE_OWNERSHIP.md for DELETE list
            */}
         </Route>
 
