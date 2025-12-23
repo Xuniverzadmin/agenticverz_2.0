@@ -7,20 +7,21 @@ import { Spinner } from '@/components/common';
 
 // Lazy load pages
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
-const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
-const SkillsPage = lazy(() => import('@/pages/skills/SkillsPage'));
-const JobSimulatorPage = lazy(() => import('@/pages/jobs/JobSimulatorPage'));
-const JobRunnerPage = lazy(() => import('@/pages/jobs/JobRunnerPage'));
 const TracesPage = lazy(() => import('@/pages/traces/TracesPage'));
-const FailuresPage = lazy(() => import('@/pages/failures/FailuresPage'));
 const RecoveryPage = lazy(() => import('@/pages/recovery/RecoveryPage'));
-const BlackboardPage = lazy(() => import('@/pages/blackboard/BlackboardPage'));
 const CreditsPage = lazy(() => import('@/pages/credits/CreditsPage'));
-const MetricsPage = lazy(() => import('@/pages/metrics/MetricsPage'));
 const SBAInspectorPage = lazy(() => import('@/pages/sba/SBAInspectorPage'));
 const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome'));
 const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExecutionConsole'));
 const FounderOpsConsolePage = lazy(() => import('@/pages/ops/FounderOpsConsole'));
+
+// M28 DELETION (PIN-145): Removed SDK/demo/duplicate pages
+// - DashboardPage: shell route, merged into /guard
+// - SkillsPage: SDK concept, not customer value
+// - JobSimulatorPage, JobRunnerPage: simulation tools → SDK/CLI
+// - FailuresPage: duplicates /ops/incidents/patterns
+// - BlackboardPage: legacy naming → /memory
+// - MetricsPage: Grafana mirror, not product
 
 // M25 Integration Loop pages
 const IntegrationDashboard = lazy(() => import('@/pages/integration/IntegrationDashboard'));
@@ -100,7 +101,7 @@ export function AppRoutes() {
         <Route path="/ops" element={<OpsConsoleEntry />} />
         <Route path="/ops/*" element={<OpsConsoleEntry />} />
 
-        {/* Protected routes (main AOS console) */}
+        {/* Protected routes (main AOS console) - M28 streamlined */}
         <Route
           path="/"
           element={
@@ -109,48 +110,43 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="skills" element={<SkillsPage />} />
+          {/* M28: Root redirects to /guard (unified console) */}
+          <Route index element={<Navigate to="/guard" replace />} />
 
-          {/* Execution */}
-          <Route path="simulation" element={<JobSimulatorPage />} />
+          {/* Execution - kept essential routes only */}
           <Route path="traces" element={<TracesPage />} />
           <Route path="traces/:runId" element={<TracesPage />} />
-          <Route path="replay" element={<JobRunnerPage />} />
           <Route path="workers" element={<WorkerStudioHomePage />} />
           <Route path="workers/console" element={<WorkerExecutionConsolePage />} />
-          <Route path="workers/history" element={<WorkerStudioHomePage />} />
 
           {/* Reliability */}
-          <Route path="failures" element={<FailuresPage />} />
           <Route path="recovery" element={<RecoveryPage />} />
 
           {/* M25 Integration Loop */}
           <Route path="integration" element={<IntegrationDashboard />} />
           <Route path="integration/loop/:incidentId" element={<LoopStatusPage />} />
 
-          {/* Data */}
-          <Route path="memory" element={<BlackboardPage />} />
-
           {/* Governance */}
           <Route path="sba" element={<SBAInspectorPage />} />
 
-          {/* Note: /ops is now a standalone console entry - see public routes above */}
-
           {/* System */}
           <Route path="credits" element={<CreditsPage />} />
-          <Route path="metrics" element={<MetricsPage />} />
 
-          {/* Legacy redirects */}
-          <Route path="agents" element={<Navigate to="/skills" replace />} />
-          <Route path="blackboard" element={<Navigate to="/memory" replace />} />
-          <Route path="jobs/*" element={<Navigate to="/simulation" replace />} />
-          <Route path="messaging" element={<Navigate to="/dashboard" replace />} />
+          {/* M28 DELETION (PIN-145): Removed routes
+           * /dashboard - merged into /guard
+           * /skills - SDK concept
+           * /simulation - SDK/CLI tool
+           * /replay - SDK/CLI tool
+           * /failures - duplicates /ops/incidents/patterns
+           * /memory - legacy naming
+           * /metrics - Grafana mirror
+           * /workers/history - duplication
+           * Legacy redirects (/agents, /blackboard, /jobs/*, /messaging) - dead weight
+           */}
         </Route>
 
-        {/* Catch all - redirect to dashboard */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Catch all - redirect to /guard (unified console) */}
+        <Route path="*" element={<Navigate to="/guard" replace />} />
       </Routes>
     </Suspense>
   );

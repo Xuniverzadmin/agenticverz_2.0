@@ -11,15 +11,15 @@ Endpoints:
 - GET /v1/incidents/{id} - Get incident detail
 - POST /v1/replay/{call_id} - Replay a call
 - GET /v1/calls/{call_id} - Get call detail
-- POST /v1/demo/simulate-incident - Demo simulation
+
+M28: Demo endpoint /v1/demo/simulate-incident removed (PIN-145)
 """
 
 import json
 import uuid
 
 # NOTE: Removed 'import random' - Demo endpoint uses deterministic values
-from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -29,14 +29,11 @@ from sqlmodel import Session
 from app.db import get_session
 from app.models.killswitch import (
     DefaultGuardrail,
-    DemoSimulationRequest,
-    DemoSimulationResult,
+    # M28: DemoSimulationRequest, DemoSimulationResult removed (PIN-145)
     GuardrailSummary,
     Incident,
     IncidentDetail,
     IncidentEvent,
-    IncidentSeverity,
-    IncidentStatus,
     IncidentSummary,
     KillSwitchAction,
     KillSwitchState,
@@ -566,161 +563,7 @@ async def get_call(
 
 
 # =============================================================================
-# Demo Simulation
+# M28 DELETION: Demo Simulation endpoint removed (PIN-145)
+# /v1/demo/simulate-incident was a sales demo tool, not a product feature
+# Reason: Demo artifacts violate evidence integrity and confuse customers
 # =============================================================================
-# DEMO ENDPOINT (Conversion Weapon)
-# =============================================================================
-# SAFETY GUARANTEES:
-# 1. Demo tenant IDs must start with "demo-" prefix
-# 2. Demo incidents are clearly marked [DEMO] in title
-# 3. No mutation of real tenant/billing state
-# 4. Deterministic (no random values)
-# 5. Returns before/after deltas for clear value demonstration
-
-DEMO_TENANT_PREFIX = "demo-"
-DEMO_CALLS_AFFECTED = 25  # Deterministic, not random
-
-
-@router.post("/demo/simulate-incident", response_model=DemoSimulationResult)
-async def simulate_incident(
-    request: DemoSimulationRequest = None,
-    tenant_id: str = Query(default="demo-tenant", description="Tenant ID for simulation (must start with 'demo-')"),
-    session: Session = Depends(get_session),
-):
-    """
-    🎬 DEMO: Make value undeniable - simulate an incident.
-
-    ⚠️ SAFETY: This endpoint is for demonstrations only.
-    - Tenant ID must start with 'demo-'
-    - Creates demo incidents (marked [DEMO])
-    - Does NOT affect real billing or tenant state
-    - Returns clear before/after comparison
-
-    Scenarios:
-    - budget_breach: Runaway cost spike → auto-freeze
-    - failure_spike: Error rate > 50% → auto-freeze
-    - rate_limit: Traffic spike → throttle
-
-    Use this in sales calls to show the "screenshot moment".
-    """
-    # === SAFETY CHECK: Only demo tenants ===
-    if not tenant_id.startswith(DEMO_TENANT_PREFIX):
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Demo safety violation",
-                "message": f"Tenant ID must start with '{DEMO_TENANT_PREFIX}' for demo simulations",
-                "hint": f"Try tenant_id='{DEMO_TENANT_PREFIX}your-company'",
-            },
-        )
-
-    if request is None:
-        request = DemoSimulationRequest(scenario="budget_breach")
-
-    scenario = request.scenario
-    incident_id = f"demo-{uuid.uuid4()}"  # Clearly marked demo ID
-    now = utc_now()
-
-    # === Build timeline with BEFORE/AFTER deltas ===
-    if scenario == "budget_breach":
-        before = {"cost_cents": 50, "requests": 10, "status": "normal"}
-        after = {"cost_cents": 4500, "requests": 35, "status": "frozen"}
-        without_killswitch = {"cost_cents": 19500, "requests": 100}
-
-        timeline = [
-            {"t": -5, "event": "📊 Normal traffic", "cost_cents": 50, "status": "✅ OK"},
-            {"t": -4, "event": "📈 Cost spike detected", "cost_cents": 500, "status": "⚠️ Warning"},
-            {"t": -3, "event": "🔥 10 requests at $2 each", "cost_cents": 2500, "status": "⚠️ Warning"},
-            {"t": -2, "event": "🚨 Budget threshold crossed ($20)", "cost_cents": 4500, "status": "🔴 Critical"},
-            {"t": -1, "event": "🛑 TRAFFIC STOPPED (auto-freeze)", "action": "freeze", "status": "⛔ Frozen"},
-            {"t": 0, "event": "✅ No further cost incurred", "saved_cents": 15000, "status": "🛡️ Protected"},
-        ]
-        cost_saved_cents = 15000  # $150 saved
-        action = "freeze"
-        message = "💰 INCIDENT PREVENTED: Without KillSwitch, this runaway would have cost $195. You saved $150."
-
-    elif scenario == "failure_spike":
-        before = {"error_rate": 0.02, "retries": 0, "status": "normal"}
-        after = {"error_rate": 0.52, "retries": 0, "status": "frozen"}
-        without_killswitch = {"error_rate": 0.52, "retries": 200, "retry_cost_cents": 4500}
-
-        timeline = [
-            {"t": -5, "event": "✅ Normal operations", "error_rate": 0.02, "status": "✅ OK"},
-            {"t": -4, "event": "📈 Errors increasing", "error_rate": 0.15, "status": "⚠️ Warning"},
-            {"t": -3, "event": "🔥 OpenAI rate limiting", "error_rate": 0.45, "status": "⚠️ Warning"},
-            {"t": -2, "event": "🚨 Error threshold crossed (50%)", "error_rate": 0.52, "status": "🔴 Critical"},
-            {"t": -1, "event": "🛑 TRAFFIC STOPPED (auto-freeze)", "action": "freeze", "status": "⛔ Frozen"},
-            {"t": 0, "event": "✅ Retry storm prevented", "retries_blocked": 200, "status": "🛡️ Protected"},
-        ]
-        cost_saved_cents = 4500  # $45 saved from retry storm
-        action = "freeze"
-        message = "🔥 INCIDENT PREVENTED: Retry storm would have burned $45 in failed attempts. Auto-freeze stopped the bleeding."
-
-    elif scenario == "rate_limit":
-        before = {"rpm": 30, "throttled": 0, "status": "normal"}
-        after = {"rpm": 100, "throttled": 50, "status": "throttled"}
-        without_killswitch = {"rpm": 150, "429_errors": 50, "user_impact": "degraded"}
-
-        timeline = [
-            {"t": -5, "event": "✅ Normal traffic", "rpm": 30, "status": "✅ OK"},
-            {"t": -4, "event": "📈 Traffic spike", "rpm": 80, "status": "⚠️ Warning"},
-            {"t": -3, "event": "⚠️ Rate limit threshold (100 RPM)", "rpm": 95, "status": "⚠️ Warning"},
-            {"t": -2, "event": "🚦 Throttling engaged", "rpm": 100, "status": "🟡 Throttled"},
-            {"t": -1, "event": "📥 Excess requests queued", "queued": 50, "status": "🟡 Throttled"},
-            {"t": 0, "event": "✅ Traffic normalized", "rpm": 60, "status": "🛡️ Protected"},
-        ]
-        cost_saved_cents = 0  # No cost savings, but prevented 429s
-        action = "throttle"
-        message = "🚦 INCIDENT PREVENTED: Without throttling, 50 requests would have hit OpenAI's rate limits and gotten 429s."
-
-    else:
-        raise HTTPException(
-            status_code=400, detail=f"Unknown scenario: {scenario}. Use: budget_breach, failure_spike, rate_limit"
-        )
-
-    # === Create DEMO incident in DB (clearly marked) ===
-    incident = Incident(
-        id=incident_id,
-        tenant_id=tenant_id,
-        title=f"🎬 [DEMO] {scenario.replace('_', ' ').title()} Simulation",
-        severity=IncidentSeverity.HIGH.value if scenario != "rate_limit" else IncidentSeverity.MEDIUM.value,
-        status=IncidentStatus.RESOLVED.value,
-        trigger_type=scenario,
-        trigger_value=f"[DEMO] Simulated {scenario}",
-        calls_affected=DEMO_CALLS_AFFECTED,  # Deterministic
-        cost_delta_cents=Decimal(str(cost_saved_cents / 100)),  # Convert to dollars
-        auto_action=action,
-        started_at=now - timedelta(minutes=5),
-        ended_at=now,
-        duration_seconds=300,
-    )
-    session.add(incident)
-
-    # Add timeline events (all deterministic)
-    for event in timeline:
-        evt = IncidentEvent(
-            id=f"demo-evt-{uuid.uuid4()}",
-            incident_id=incident_id,
-            event_type=event.get("action", "observation"),
-            description=event.get("event", ""),
-        )
-        evt.set_data(event)
-        session.add(evt)
-
-    session.commit()
-
-    # === Return with clear DEMO marker and before/after deltas ===
-    return DemoSimulationResult(
-        incident_id=incident_id,
-        scenario=scenario,
-        timeline=timeline,
-        cost_saved_cents=cost_saved_cents,
-        action_taken=action,
-        message=message,
-        # NEW: Before/after deltas for clear value demonstration
-        is_demo=True,
-        demo_warning="⚠️ This is a DEMO simulation. No real billing or tenant state was affected.",
-        before=before,
-        after=after,
-        without_killswitch=without_killswitch,
-    )

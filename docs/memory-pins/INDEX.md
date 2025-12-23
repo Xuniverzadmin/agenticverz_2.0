@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-23 (M25-M27 Git Commits + CI Fix)
+**Last Updated:** 2025-12-23 (M28 Deletion Execution - PIN-145)
 
 ---
 
@@ -166,6 +166,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-142](PIN-142-secrets-env-contract.md) | **Secrets & Environment Contract** | Infrastructure / Security | **✅ COMPLETE** | 2025-12-23 |
 | [PIN-143](PIN-143-m27-real-cost-enforcement-proof.md) | **M27 Real Cost Enforcement Proof** | Milestone / M27 Cost Loop | **✅ COMPLETE** | 2025-12-23 |
 | [PIN-144](PIN-144-m271-cost-snapshot-barrier.md) | **M27.1 Cost Snapshot Barrier** | Infrastructure / Cost Enforcement | **✅ COMPLETE** | 2025-12-23 |
+| [PIN-145](PIN-145-m28-deletion-execution-report.md) | **M28 Deletion Execution Report** | Architecture / Cleanup | **✅ COMPLETE** | 2025-12-23 |
 
 ---
 
@@ -935,6 +936,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-23 | **PIN-145 M28 Deletion Execution Report** - Executed M28 Exact Deletion Checklist. 17 routes deleted: 3 demo endpoints, 2 backend API files (failures.py, operator.py), 7 frontend page directories, legacy redirects. Forbidden words eliminated from routes: demo, simulation, jobs, metrics, operator, skills, failures, dashboard. Root "/" now redirects to "/guard" (unified console). |
 | 2025-12-23 | **M25-M27 Git Commits + CI Fix** - Committed all M25-M27 milestone work (6 commits, ~13K insertions). Commits: (1) `6b5a58e` feat(m25): Integration Loop, Graduation Engine & Prevention Contract (34 files), (2) `9c6cf9f` feat(m26): Cost Intelligence - Anomaly Detection & Prevention (9 files, 3425 insertions), (3) `aa3589e` feat(m27): Cost Loop - Bridges, Safety Rails & Snapshot Barrier (16 files, 5548 insertions), (4) `8cba2ab` docs: Memory PINs 130, 131, 138, 142 (6 files), (5) `e0fcdba` chore: M25-M27 refinements and CI improvements (47 files), (6) `4378391` fix(ci): Set M4-gated feature flags to default false. Fixed `failure_catalog_runtime_integration` and `cost_simulator_runtime_integration` flags in `feature_flags.json` that were causing M4 Workflow CI failures. |
 | 2025-12-23 | **M27 Systemd Timers** - Wired `aos-cost-snapshot-hourly` (:05 every hour) and `aos-cost-snapshot-daily` (00:30 UTC). Scripts: `cost_snapshot_job.py`. Infrastructure ready for customers. |
 | 2025-12-23 | **🎉 M27 COMPLETE** - Full cost loop with snapshot barrier. PIN-143 + PIN-144 now ✅ COMPLETE. Components: (1) Real OpenAI spend tested ($0.09), (2) M26 anomaly detection working, (3) C1-C5 bridges all passing, (4) M27.1 Cost Snapshot Barrier deployed (migration 047, 4 new tables), (5) Safety rails enforced. THE INVARIANT: "Money can now shut AI up automatically. Not alerts. Not dashboards. Enforcement." |

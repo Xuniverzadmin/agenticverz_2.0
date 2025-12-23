@@ -202,7 +202,8 @@ def validate_route_order(app: FastAPI) -> list:
 async def lifespan(app: FastAPI):
     """Manage application lifespan - start background tasks and initialize services."""
     # M26: Validate required secrets at startup - FAIL FAST
-    from .config.secrets import validate_required_secrets, SecretValidationError
+    from .config.secrets import SecretValidationError, validate_required_secrets
+
     try:
         # Only hard-fail on DATABASE_URL and REDIS_URL
         # Billing secrets (OpenAI) warn but don't crash
@@ -316,17 +317,22 @@ app = FastAPI(
 
 # Include API routers
 from .api.agents import router as agents_router  # M12 Multi-Agent System
+
+# M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
+from .api.cost_intelligence import router as cost_intelligence_router
 from .api.costsim import router as costsim_router
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
-from .api.failures import router as failures_router
-from .api.integration import router as integration_router  # M25 Pillar Integration Loop
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
 from .api.health import router as health_router
+
+# M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
+from .api.integration import router as integration_router  # M25 Pillar Integration Loop
 from .api.memory_pins import router as memory_pins_router
 from .api.onboarding import router as onboarding_router  # M24 Customer Onboarding
-from .api.operator import router as operator_router  # Operator Console (/operator/*)
+
+# M28: operator_router removed (PIN-145) - redundant with /ops/*
 from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
 from .api.policy import router as policy_router
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
@@ -343,9 +349,6 @@ from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, in
 from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
 from .api.workers import router as workers_router  # Business Builder Worker v0.2
 
-# M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
-from .api.cost_intelligence import router as cost_intelligence_router
-
 app.include_router(health_router)
 app.include_router(policy_router)
 app.include_router(runtime_router)
@@ -354,7 +357,7 @@ app.include_router(costsim_router)
 app.include_router(memory_pins_router)
 app.include_router(rbac_router)
 app.include_router(traces_router, prefix="/api/v1")
-app.include_router(failures_router)
+# M28: failures_router removed (PIN-145)
 app.include_router(recovery_router)  # M10 Recovery Suggestion Engine
 app.include_router(recovery_ingest_router)  # M10 Recovery Ingest (idempotent)
 app.include_router(agents_router)  # M12 Multi-Agent System
@@ -369,7 +372,7 @@ app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v
 
 # M22.1 UI Console - Dual-console architecture
 app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
-app.include_router(operator_router)  # /operator/* - Operator Console (truth + oversight)
+# M28: operator_router removed (PIN-145) - merged into /ops/*
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
 app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop
