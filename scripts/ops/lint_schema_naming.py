@@ -56,11 +56,13 @@ class SchemaLinter:
         if match:
             column_name = match.group(1)
             if not column_name.endswith("_id"):
-                self.errors.append((
-                    str(path),
-                    line_num,
-                    f"Foreign key '{column_name}' should end with '_id'"
-                ))
+                self.errors.append(
+                    (
+                        str(path),
+                        line_num,
+                        f"Foreign key '{column_name}' should end with '_id'",
+                    )
+                )
 
     def _check_timestamp(self, path: Path, line_num: int, line: str) -> None:
         """Check that timestamps end with _at."""
@@ -71,11 +73,13 @@ class SchemaLinter:
             if column_name in ("date", "created", "updated"):
                 return
             if not column_name.endswith("_at") and not column_name == "date":
-                self.warnings.append((
-                    str(path),
-                    line_num,
-                    f"Timestamp '{column_name}' should end with '_at' (e.g., '{column_name}_at')"
-                ))
+                self.warnings.append(
+                    (
+                        str(path),
+                        line_num,
+                        f"Timestamp '{column_name}' should end with '_at' (e.g., '{column_name}_at')",
+                    )
+                )
 
     def _check_boolean(self, path: Path, line_num: int, line: str) -> None:
         """Check that booleans start with is_ or has_."""
@@ -83,11 +87,13 @@ class SchemaLinter:
         if match:
             column_name = match.group(1)
             if not (column_name.startswith("is_") or column_name.startswith("has_")):
-                self.warnings.append((
-                    str(path),
-                    line_num,
-                    f"Boolean '{column_name}' should start with 'is_' or 'has_' (e.g., 'is_{column_name}')"
-                ))
+                self.warnings.append(
+                    (
+                        str(path),
+                        line_num,
+                        f"Boolean '{column_name}' should start with 'is_' or 'has_' (e.g., 'is_{column_name}')",
+                    )
+                )
 
     def _check_conflicts(self, path: Path, content: str) -> None:
         """Check for conflicting naming patterns."""
@@ -96,12 +102,14 @@ class SchemaLinter:
             matches_b = re.findall(pattern_b, content, re.IGNORECASE)
 
             if matches_a and matches_b:
-                self.errors.append((
-                    str(path),
-                    0,
-                    f"Conflicting patterns found: {matches_a} vs {matches_b}. "
-                    f"Use consistent naming (prefer prefix pattern)."
-                ))
+                self.errors.append(
+                    (
+                        str(path),
+                        0,
+                        f"Conflicting patterns found: {matches_a} vs {matches_b}. "
+                        f"Use consistent naming (prefer prefix pattern).",
+                    )
+                )
 
     def report(self) -> int:
         """Print report and return exit code."""

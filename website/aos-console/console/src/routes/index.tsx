@@ -22,6 +22,10 @@ const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome
 const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExecutionConsole'));
 const FounderOpsConsolePage = lazy(() => import('@/pages/ops/FounderOpsConsole'));
 
+// M25 Integration Loop pages
+const IntegrationDashboard = lazy(() => import('@/pages/integration/IntegrationDashboard'));
+const LoopStatusPage = lazy(() => import('@/pages/integration/LoopStatusPage'));
+
 // Onboarding pages
 const ConnectPage = lazy(() => import('@/pages/onboarding/ConnectPage'));
 const SafetyPage = lazy(() => import('@/pages/onboarding/SafetyPage'));
@@ -121,6 +125,10 @@ export function AppRoutes() {
           {/* Reliability */}
           <Route path="failures" element={<FailuresPage />} />
           <Route path="recovery" element={<RecoveryPage />} />
+
+          {/* M25 Integration Loop */}
+          <Route path="integration" element={<IntegrationDashboard />} />
+          <Route path="integration/loop/:incidentId" element={<LoopStatusPage />} />
 
           {/* Data */}
           <Route path="memory" element={<BlackboardPage />} />

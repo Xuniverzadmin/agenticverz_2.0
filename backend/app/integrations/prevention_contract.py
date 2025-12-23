@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger("nova.integrations.prevention_contract")
 
@@ -51,6 +51,7 @@ class PreventionCandidate:
 
     Must pass all contract checks before writing to prevention_records.
     """
+
     policy_id: str
     pattern_id: str
     tenant_id: str
@@ -80,43 +81,38 @@ def validate_prevention_candidate(candidate: PreventionCandidate) -> None:
     # Rule 1: Policy must be ACTIVE
     if candidate.policy_mode != "active":
         raise PreventionContractViolation(
-            rule="POLICY_MODE",
-            details=f"Policy mode is '{candidate.policy_mode}', must be 'active'"
+            rule="POLICY_MODE", details=f"Policy mode is '{candidate.policy_mode}', must be 'active'"
         )
 
     # Rule 2: No incident created (blocked before INSERT)
     if candidate.incident_created:
         raise PreventionContractViolation(
-            rule="INCIDENT_CREATED",
-            details="Cannot write prevention record if incident was created"
+            rule="INCIDENT_CREATED", details="Cannot write prevention record if incident was created"
         )
 
     # Rule 3: Signature match confidence threshold
     if candidate.signature_match_confidence < 0.6:
         raise PreventionContractViolation(
             rule="SIGNATURE_CONFIDENCE",
-            details=f"Confidence {candidate.signature_match_confidence:.2f} below minimum 0.6"
+            details=f"Confidence {candidate.signature_match_confidence:.2f} below minimum 0.6",
         )
 
     # Rule 4: Tenant ID must be present
     if not candidate.tenant_id:
         raise PreventionContractViolation(
-            rule="TENANT_REQUIRED",
-            details="tenant_id is required for prevention records"
+            rule="TENANT_REQUIRED", details="tenant_id is required for prevention records"
         )
 
     # Rule 5: Pattern ID must be present
     if not candidate.pattern_id:
         raise PreventionContractViolation(
-            rule="PATTERN_REQUIRED",
-            details="pattern_id is required for prevention records"
+            rule="PATTERN_REQUIRED", details="pattern_id is required for prevention records"
         )
 
     # Rule 6: Policy ID must be present
     if not candidate.policy_id:
         raise PreventionContractViolation(
-            rule="POLICY_REQUIRED",
-            details="policy_id is required for prevention records"
+            rule="POLICY_REQUIRED", details="policy_id is required for prevention records"
         )
 
     logger.info(
@@ -134,8 +130,7 @@ def assert_prevention_immutable(record_id: str, existing_record: dict[str, Any])
     This should be called before any UPDATE attempt.
     """
     raise PreventionContractViolation(
-        rule="IMMUTABLE",
-        details=f"Prevention record {record_id} cannot be modified (append-only)"
+        rule="IMMUTABLE", details=f"Prevention record {record_id} cannot be modified (append-only)"
     )
 
 
@@ -146,8 +141,7 @@ def assert_no_deletion(record_id: str) -> None:
     Prevention records are append-only and immutable.
     """
     raise PreventionContractViolation(
-        rule="NO_DELETE",
-        details=f"Prevention record {record_id} cannot be deleted (non-repudiable)"
+        rule="NO_DELETE", details=f"Prevention record {record_id} cannot be deleted (non-repudiable)"
     )
 
 
@@ -183,9 +177,7 @@ def validate_prevention_for_graduation(
             policy_activated_at = policy_activated_at.replace(tzinfo=timezone.utc)
 
         if created_at < policy_activated_at:
-            logger.debug(
-                f"Prevention {prevention_record.get('id')} created before policy activation - excluded"
-            )
+            logger.debug(f"Prevention {prevention_record.get('id')} created before policy activation - excluded")
             return False
 
     logger.info(f"Prevention {prevention_record.get('id')} validated for graduation")

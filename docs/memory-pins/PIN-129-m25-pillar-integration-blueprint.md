@@ -1,6 +1,6 @@
 # PIN-129: M25 Pillar Integration Blueprint
 
-**Status:** SPECIFICATION
+**Status:** M25-ALPHA (Loop-Enabled, Not Loop-Proven)
 **Category:** Milestone / Architecture / Integration
 **Created:** 2025-12-22
 **Duration:** 2 weeks
@@ -1086,8 +1086,509 @@ If integration causes issues:
 
 ---
 
+## 2025-12-23: Enhanced Implementation
+
+Based on comprehensive review, the following improvements were implemented:
+
+### 1. Confidence Bands (Instead of Binary 80% Threshold)
+
+Replaced the optimistic 80% binary threshold with graduated confidence bands:
+
+```python
+class ConfidenceBand(str, Enum):
+    STRONG = "strong"     # > 0.85 - Auto-proceed, high trust
+    WEAK = "weak"         # 0.60 - 0.85 - Proceed with confirmation
+    NOVEL = "novel"       # < 0.60 - New pattern, needs cataloging
+```
+
+**Rationale:** Real-world pattern matching rarely achieves 80%+. The graduated approach allows appropriate handling at each confidence level.
+
+### 2. Policy Shadow Mode with N-Confirmation Activation
+
+Policies now progress through stages before enforcement:
+
+```python
+class PolicyMode(str, Enum):
+    SHADOW = "shadow"     # Observe only, no enforcement
+    PENDING = "pending"   # Awaiting confirmations
+    ACTIVE = "active"     # Enforcing
+    DISABLED = "disabled" # Manually disabled
+```
+
+- Auto-generated policies start in SHADOW mode
+- Require N confirmations (default: 3) before activation
+- Track `shadow_evaluations` and `shadow_would_block` for visibility
+- Track `regret_count` when policies cause incidents
+
+### 3. CARE Routing Guardrails
+
+Added safety limits to prevent runaway routing changes:
+
+```python
+@dataclass
+class RoutingAdjustment:
+    max_delta: float = 0.2          # Never adjust more than 20%
+    decay_days: int = 7             # Decay over 7 days
+    rollback_threshold: float = 0.1 # Rollback if KPI drops 10%
+    kpi_baseline: float = None      # Starting KPI value
+    kpi_current: float = None       # Current KPI value
+```
+
+### 4. Loop Failure States
+
+Explicit failure states for all unhappy paths:
+
+```python
+class LoopFailureState(str, Enum):
+    MATCH_FAILED = "match_failed"
+    MATCH_LOW_CONFIDENCE = "match_low_confidence"
+    RECOVERY_REJECTED = "recovery_rejected"
+    RECOVERY_NEEDS_CONFIRMATION = "recovery_needs_confirmation"
+    POLICY_LOW_CONFIDENCE = "policy_low_confidence"
+    POLICY_SHADOW_MODE = "policy_shadow_mode"
+    POLICY_REJECTED = "policy_rejected"
+    ROUTING_GUARDRAIL_BLOCKED = "routing_guardrail_blocked"
+    ROUTING_KPI_REGRESSION = "routing_kpi_regression"
+    HUMAN_CHECKPOINT_PENDING = "human_checkpoint_pending"
+    HUMAN_CHECKPOINT_REJECTED = "human_checkpoint_rejected"
+```
+
+### 5. Human Checkpoint Controls
+
+Explicit intervention points for human oversight:
+
+```python
+class HumanCheckpointType(str, Enum):
+    APPROVE_POLICY = "approve_policy"
+    APPROVE_RECOVERY = "approve_recovery"
+    SIMULATE_ROUTING = "simulate_routing"
+    REVERT_LOOP = "revert_loop"
+    OVERRIDE_GUARDRAIL = "override_guardrail"
+```
+
+### 6. Narrative Artifacts
+
+Loop completion generates storytelling artifacts for the console:
+
+```python
+def to_console_display(self) -> dict:
+    return {
+        "what_happened": "...",
+        "what_we_learned": "...",
+        "what_we_changed": "...",
+        "confidence_summary": "...",
+        "human_decisions": [...],
+        "timeline": [...]
+    }
+```
+
+---
+
+## Implementation Status (Updated 2025-12-23)
+
+### Phase 1: Infrastructure ✅ COMPLETE
+
+| Task | Status | Files |
+|------|--------|-------|
+| Migration 042_m25_integration_loop | ✅ | `backend/alembic/versions/042_m25_integration_loop.py` |
+| Event types with enhancements | ✅ | `backend/app/integrations/events.py` |
+| IntegrationDispatcher | ✅ | `backend/app/integrations/dispatcher.py` |
+| All 5 bridges | ✅ | `backend/app/integrations/bridges.py` |
+| Integration API router | ✅ | `backend/app/api/integration.py` |
+
+### Phase 2-3: Bridges ✅ COMPLETE
+
+| Bridge | Status | Key Features |
+|--------|--------|--------------|
+| Incident → Catalog | ✅ | Signature hashing, fuzzy matching, confidence bands |
+| Pattern → Recovery | ✅ | Template instantiation, heuristic generation |
+| Recovery → Policy | ✅ | Shadow mode, N-confirmation |
+| Policy → Routing | ✅ | Guardrails (max_delta, decay, rollback) |
+| Loop → Console | ✅ | Narrative artifacts, timeline |
+
+### Phase 4: Console UI ✅ COMPLETE
+
+| Component | Status | Files |
+|-----------|--------|-------|
+| Integration API client | ✅ | `website/aos-console/console/src/api/integration.ts` |
+| LoopStatusPage | ✅ | `website/aos-console/console/src/pages/integration/LoopStatusPage.tsx` |
+| IntegrationDashboard | ✅ | `website/aos-console/console/src/pages/integration/IntegrationDashboard.tsx` |
+| Routes configured | ✅ | `website/aos-console/console/src/routes/index.tsx` |
+
+### Phase 5: Testing ✅ COMPLETE
+
+| Test Suite | Status | Coverage |
+|------------|--------|----------|
+| Confidence bands | ✅ | 5 tests |
+| Policy shadow mode | ✅ | 5 tests |
+| Routing guardrails | ✅ | 4 tests |
+| Loop failure states | ✅ | 4 tests |
+| Human checkpoints | ✅ | 3 tests |
+| Signature hashing | ✅ | 2 tests |
+| Full loop flow | ✅ | 2 tests |
+
+---
+
+## Updated Success Criteria
+
+| Metric | Original Target | Revised Target | Rationale |
+|--------|-----------------|----------------|-----------|
+| Pattern match accuracy | > 80% | > 60% (strong+weak) | More realistic threshold |
+| Loop completion rate | > 95% | > 85% | Accounts for human checkpoints |
+| Policy activation rate | N/A | > 70% after shadow | New metric for shadow mode |
+| Guardrail effectiveness | N/A | < 5% KPI regression | New metric for routing safety |
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2025-12-22 | Created PIN-129 M25 Pillar Integration Blueprint |
+| 2025-12-23 | Enhanced with confidence bands, shadow mode, guardrails, failure states, checkpoints |
+| 2025-12-23 | Implemented all bridges and API endpoints |
+| 2025-12-23 | Created console UI (Dashboard + LoopStatus) |
+| 2025-12-23 | Added comprehensive test suite (25+ tests) |
+| 2025-12-23 | Added M25 Graduation Gates (prevention proof, regret rollback, timeline) |
+| 2025-12-23 | Status changed to M25-ALPHA (loop-enabled, not loop-proven) |
+
+---
+
+## M25 Graduation Gates
+
+**Current Status:** M25-ALPHA (0/3 gates)
+
+M25 graduates from ALPHA to COMPLETE when all three gates pass:
+
+### Gate 1: Prevention Proof
+
+**Requirement:** At least one policy must prevent one incident recurrence.
+
+```
+Incident A (original) → Pattern → Policy Born → Incident B (blocked by policy)
+```
+
+Evidence tracked in `prevention_records` table:
+- `original_incident_id` - The incident that created the policy
+- `blocked_incident_id` - The incident that was prevented
+- `signature_match_confidence` - How similar was the blocked incident?
+
+**Gate Status:** Not yet passed (waiting for prevention evidence)
+
+### Gate 2: Regret Rollback
+
+**Requirement:** At least one policy must be auto-demoted due to causing harm.
+
+```
+Policy Active → Causes False Positive → Regret Recorded → Auto-Demoted
+```
+
+Evidence tracked in `regret_events` and `policy_regret_summary`:
+- `regret_score` - Weighted severity score
+- `demoted_at` / `demoted_reason` - When and why demoted
+
+**Gate Status:** Not yet passed (waiting for regret evidence)
+
+### Gate 3: Console Timeline
+
+**Requirement:** User must SEE the learning in the console.
+
+Timeline must visibly show:
+1. Incident A detected
+2. Policy born from failure
+3. Incident B PREVENTED
+
+**Gate Status:** Not yet passed (waiting for console proof)
+
+---
+
+## Learning Proof System
+
+New module: `backend/app/integrations/learning_proof.py`
+
+### Key Components
+
+```python
+# Gate 1
+PreventionRecord    # Evidence of prevention
+PreventionTracker   # Accumulates prevention evidence
+
+# Gate 2
+RegretEvent         # Single harm event
+PolicyRegretTracker # Per-policy regret tracking (auto-demotes)
+GlobalRegretTracker # System-wide regret tracking
+
+# Adaptive Confidence (Beyond static thresholds)
+PatternCalibration      # Per-pattern outcome tracking
+AdaptiveConfidenceSystem # Replaces cargo-cult 0.85 with empirical thresholds
+
+# Checkpoint Prioritization
+CheckpointConfig        # Per-tenant configuration
+PrioritizedCheckpoint   # Checkpoints with priority/expiry
+
+# Graduation
+M25GraduationStatus     # Tracks all 3 gates
+PreventionTimeline      # Console-ready visualization
+```
+
+### Migration Added
+
+`043_m25_learning_proof.py` adds:
+- `prevention_records` - Track preventions
+- `regret_events` - Track harm
+- `policy_regret_summary` - Aggregated regret
+- `pattern_calibrations` - Adaptive thresholds
+- `checkpoint_configs` - Per-tenant config
+- `m25_graduation_status` - Gate tracking
+
+---
+
+## Honest Assessment
+
+### What M25 IS
+
+A **safely governed feedback loop** that:
+- Matches incidents to known patterns (with confidence bands)
+- Suggests recoveries (with confirmation requirements)
+- Generates policies (in shadow mode first)
+- Adjusts routing (with guardrails)
+- Allows human intervention (with priority)
+
+### What M25 IS NOT (Yet)
+
+A **proven learning system**. Until the graduation gates pass:
+- No evidence policies actually prevent recurrence
+- No evidence the system self-corrects when policies cause harm
+- No visible proof in the console for users
+
+### Recommended Positioning
+
+> **M25 = Closed-loop capability unlocked**
+> **M25.1+ = Evidence that the loop works**
+
+---
+
+## Path to Graduation
+
+### Step 1: Natural Gate Passage
+
+Wait for real-world events:
+1. An incident occurs
+2. Pattern matched, recovery suggested, policy created
+3. Same pattern recurs, policy blocks it → **Gate 1 passes**
+4. A policy causes false positive, gets demoted → **Gate 2 passes**
+5. User views prevention in console → **Gate 3 passes**
+
+### Step 2: Simulated Gate Passage
+
+For faster validation:
+
+```python
+# Simulate Gate 1
+prevention_tracker.record_prevention(PreventionRecord.create_prevention(...))
+
+# Simulate Gate 2
+for _ in range(3):
+    regret_tracker.record_regret(policy_id, RegretEvent(...))
+
+# Simulate Gate 3
+graduation_status.console_proof_incidents.append("inc_001")
+```
+
+### Step 3: Dashboard Monitoring
+
+API endpoint: `GET /integration/graduation`
+
+Returns:
+```json
+{
+  "status": "M25-ALPHA (1/3 gates)",
+  "gates": {
+    "gate1_prevention": {"passed": true, "evidence": {...}},
+    "gate2_rollback": {"passed": false, "evidence": {...}},
+    "gate3_console": {"passed": false, "evidence": {...}}
+  },
+  "next_action": "Wait for or simulate a policy causing regret"
+}
+```
+
+---
+
+## Difference: Loop-Enabled vs Loop-Proven
+
+| Aspect | Loop-Enabled (Current) | Loop-Proven (Target) |
+|--------|------------------------|----------------------|
+| Plumbing | ✅ Complete | ✅ Complete |
+| Safety rails | ✅ Implemented | ✅ Implemented |
+| Prevention evidence | ⬜ Not yet | ✅ Recorded |
+| Self-correction evidence | ⬜ Not yet | ✅ Recorded |
+| User visibility | ⬜ Timeline empty | ✅ Timeline shows learning |
+| Marketing claim | "Can safely improve" | "Demonstrably improves" |
+
+---
+
+## Files Added (Learning Proof)
+
+| File | Purpose |
+|------|---------|
+| `backend/app/integrations/learning_proof.py` | Prevention, regret, adaptive confidence, checkpoints, graduation |
+| `backend/alembic/versions/043_m25_learning_proof.py` | Database tables for learning proof |
+| `backend/tests/test_m25_graduation_gates.py` | Acceptance tests for graduation gates (32 tests) |
+
+---
+
+## Graduation API Endpoints
+
+Added to `backend/app/api/integration.py`:
+
+### GET /integration/graduation
+
+Returns current graduation status:
+
+```json
+{
+  "status": "M25-ALPHA (1/3 gates)",
+  "is_graduated": false,
+  "gates": {
+    "gate1_prevention": {
+      "name": "Prevention Proof",
+      "description": "Policy prevented at least one incident recurrence",
+      "passed": true,
+      "evidence": {"total_preventions": 1, "prevented_count": 1}
+    },
+    "gate2_rollback": {...},
+    "gate3_console": {...}
+  },
+  "next_action": "Wait for or simulate a policy causing regret",
+  "prevention_stats": {"total": 1, "rate": "100.0%"},
+  "regret_stats": {"total_events": 0, "auto_demotions": 0}
+}
+```
+
+### POST /integration/graduation/simulate/prevention
+
+Fast-track Gate 1 for demo/testing:
+
+```json
+{
+  "policy_id": "pol_xxx",
+  "pattern_id": "pat_xxx",
+  "original_incident_id": "inc_xxx",
+  "confidence": 0.92
+}
+```
+
+### POST /integration/graduation/simulate/regret
+
+Fast-track Gate 2 for demo/testing:
+
+```json
+{
+  "policy_id": "pol_xxx",
+  "regret_type": "false_positive",
+  "severity": 7,
+  "description": "Policy blocked legitimate requests"
+}
+```
+
+### POST /integration/graduation/simulate/timeline-view
+
+Fast-track Gate 3 for demo/testing:
+
+```
+?incident_id=inc_xxx
+```
+
+### GET /integration/timeline/{incident_id}
+
+Get prevention timeline for an incident (Gate 3 UI):
+
+```json
+{
+  "incident_id": "inc_xxx",
+  "timeline": [
+    {"type": "incident_created", "timestamp": "...", "icon": "🚨", "headline": "Incident detected", ...},
+    {"type": "policy_born", "timestamp": "...", "icon": "📋", "headline": "Policy born from failure", ...},
+    {"type": "prevention", "timestamp": "...", "icon": "🛡️", "headline": "PREVENTION: Similar incident BLOCKED", "is_milestone": true, ...}
+  ],
+  "summary": {"event_count": 3, "has_prevention": true, "is_learning_proof": true},
+  "narrative": "This incident proves learning: a policy born from failure successfully prevented a recurrence."
+}
+```
+
+---
+
+## Console UI Updates
+
+### Graduation Widget
+
+Added `GraduationWidget` component to `IntegrationDashboard.tsx`:
+
+- Shows M25 graduation status badge in header
+- Displays all 3 gates with pass/pending status
+- Shows prevention and regret statistics
+- Updates automatically via React Query
+
+### Integration API Client
+
+Extended `website/aos-console/console/src/api/integration.ts` with:
+
+```typescript
+// Graduation API functions
+getGraduationStatus(): Promise<GraduationStatus>
+getPreventionTimeline(incidentId: string): Promise<PreventionTimeline>
+simulatePrevention(request: SimulatePreventionRequest): Promise<{gate1_passed: boolean}>
+simulateRegret(request: SimulateRegretRequest): Promise<{gate2_passed: boolean}>
+simulateTimelineView(incidentId: string): Promise<{gate3_passed: boolean}>
+```
+
+---
+
+## Demo Script
+
+Added `scripts/ops/m25_gate_passage_demo.py`:
+
+```bash
+# Show current status
+python scripts/ops/m25_gate_passage_demo.py --status
+
+# Simulate individual gates
+python scripts/ops/m25_gate_passage_demo.py --gate 1  # Prevention
+python scripts/ops/m25_gate_passage_demo.py --gate 2  # Regret
+python scripts/ops/m25_gate_passage_demo.py --gate 3  # Timeline
+
+# Simulate all gates (full graduation)
+python scripts/ops/m25_gate_passage_demo.py --all
+
+# Reset graduation status
+python scripts/ops/m25_gate_passage_demo.py --reset
+```
+
+---
+
+## Test Results
+
+```
+backend/tests/test_m25_graduation_gates.py
+├── TestGate1PreventionProof (5 tests) ✅
+├── TestGate2RegretRollback (6 tests) ✅
+├── TestAdaptiveConfidence (5 tests) ✅
+├── TestCheckpointPrioritization (6 tests) ✅
+├── TestM25Graduation (6 tests) ✅
+└── TestPreventionTimeline (4 tests) ✅
+
+Total: 32 tests, all passed in 0.22s
+```
+
+---
+
+## Changelog (Continued)
+
+| Date | Change |
+|------|--------|
+| 2025-12-23 | Added graduation API endpoints (GET/POST /integration/graduation/*) |
+| 2025-12-23 | Added prevention timeline endpoint (GET /integration/timeline/{incident_id}) |
+| 2025-12-23 | Added GraduationWidget to IntegrationDashboard |
+| 2025-12-23 | Extended integration.ts API client with graduation functions |
+| 2025-12-23 | Created m25_gate_passage_demo.py simulation script |
+| 2025-12-23 | All 32 graduation gate tests passing |

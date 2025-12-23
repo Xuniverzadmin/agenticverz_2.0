@@ -22,13 +22,11 @@ GRADUATION_RULES_VERSION = "1.0.0"
 
 from __future__ import annotations
 
-import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal, Optional
-
 
 # =============================================================================
 # FROZEN MECHANICS - DO NOT MODIFY WITHOUT APPROVAL
@@ -139,7 +137,7 @@ def ensure_json_serializable(obj: Any, path: str = "root") -> Any:
         return {k: ensure_json_serializable(v, f"{path}.{k}") for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [ensure_json_serializable(v, f"{path}[{i}]") for i, v in enumerate(obj)]
-    if hasattr(obj, 'to_dict'):
+    if hasattr(obj, "to_dict"):
         return obj.to_dict()
 
     # Non-serializable object detected
@@ -162,9 +160,10 @@ class ConfidenceBand(str, Enum):
     - WEAK_MATCH: Medium confidence (0.6-0.85) - Requires review
     - NOVEL: Low confidence (<0.6) - New pattern, needs investigation
     """
+
     STRONG_MATCH = "strong_match"  # > 0.85 - Auto-apply safe
-    WEAK_MATCH = "weak_match"      # 0.6 - 0.85 - Requires review
-    NOVEL = "novel"                # < 0.6 - New pattern
+    WEAK_MATCH = "weak_match"  # 0.6 - 0.85 - Requires review
+    NOVEL = "novel"  # < 0.6 - New pattern
 
     @classmethod
     def from_confidence(cls, confidence: float) -> "ConfidenceBand":
@@ -194,6 +193,7 @@ class ConfidenceBand(str, Enum):
 
 class LoopStage(str, Enum):
     """Stages in the integration feedback loop."""
+
     INCIDENT_CREATED = "incident_created"
     PATTERN_MATCHED = "pattern_matched"
     RECOVERY_SUGGESTED = "recovery_suggested"
@@ -209,18 +209,19 @@ class LoopFailureState(str, Enum):
     Critical for debugging and trust - the unhappy path matters more
     than the happy path.
     """
-    MATCH_FAILED = "match_failed"                    # Pattern matching failed
-    MATCH_LOW_CONFIDENCE = "match_low_confidence"    # Match confidence too low
-    RECOVERY_REJECTED = "recovery_rejected"          # Recovery was rejected
+
+    MATCH_FAILED = "match_failed"  # Pattern matching failed
+    MATCH_LOW_CONFIDENCE = "match_low_confidence"  # Match confidence too low
+    RECOVERY_REJECTED = "recovery_rejected"  # Recovery was rejected
     RECOVERY_NOT_APPLICABLE = "recovery_not_applicable"  # No recovery available
     POLICY_LOW_CONFIDENCE = "policy_low_confidence"  # Policy confidence too low
-    POLICY_REJECTED = "policy_rejected"              # Policy was rejected
-    POLICY_SHADOW_MODE = "policy_shadow_mode"        # Policy in shadow mode
+    POLICY_REJECTED = "policy_rejected"  # Policy was rejected
+    POLICY_SHADOW_MODE = "policy_shadow_mode"  # Policy in shadow mode
     ROUTING_ADJUSTMENT_SKIPPED = "routing_adjustment_skipped"  # Adjustment skipped
-    ROUTING_GUARDRAIL_BLOCKED = "routing_guardrail_blocked"    # Guardrail prevented change
-    HUMAN_CHECKPOINT_PENDING = "human_checkpoint_pending"      # Waiting for human
-    TIMEOUT = "timeout"                              # Loop timed out
-    ERROR = "error"                                  # Unexpected error
+    ROUTING_GUARDRAIL_BLOCKED = "routing_guardrail_blocked"  # Guardrail prevented change
+    HUMAN_CHECKPOINT_PENDING = "human_checkpoint_pending"  # Waiting for human
+    TIMEOUT = "timeout"  # Loop timed out
+    ERROR = "error"  # Unexpected error
 
 
 class PolicyMode(str, Enum):
@@ -229,14 +230,16 @@ class PolicyMode(str, Enum):
 
     Shadow mode allows observation without enforcement.
     """
-    SHADOW = "shadow"       # Observe only, no enforcement
-    PENDING = "pending"     # Waiting for confirmations
-    ACTIVE = "active"       # Fully enforced
-    DISABLED = "disabled"   # Turned off
+
+    SHADOW = "shadow"  # Observe only, no enforcement
+    PENDING = "pending"  # Waiting for confirmations
+    ACTIVE = "active"  # Fully enforced
+    DISABLED = "disabled"  # Turned off
 
 
 class HumanCheckpointType(str, Enum):
     """Types of human intervention points."""
+
     APPROVE_POLICY = "approve_policy"
     APPROVE_RECOVERY = "approve_recovery"
     SIMULATE_ROUTING = "simulate_routing"
@@ -256,6 +259,7 @@ class LoopEvent:
 
     All events flow through the dispatcher and are persisted for durability.
     """
+
     event_id: str
     incident_id: str
     tenant_id: str
@@ -330,6 +334,7 @@ class PatternMatchResult:
 
     Enhanced with confidence bands instead of binary matching.
     """
+
     incident_id: str
     pattern_id: Optional[str]
     confidence: float
@@ -402,6 +407,7 @@ class RecoverySuggestion:
 
     Enhanced with template vs generated distinction and confidence scoring.
     """
+
     recovery_id: str
     incident_id: str
     pattern_id: str
@@ -498,6 +504,7 @@ class PolicyRule:
     - Confirmation requirements
     - Policy regret tracking
     """
+
     policy_id: str
     name: str
     description: str
@@ -624,6 +631,7 @@ class RoutingAdjustment:
     - Decay window
     - Rollback on KPI regression
     """
+
     adjustment_id: str
     agent_id: str
     capability: Optional[str]
@@ -633,7 +641,7 @@ class RoutingAdjustment:
     source_policy_id: str
     # Guardrails
     max_delta: float = 0.2  # Never adjust more than 20% at once
-    decay_days: int = 7     # Adjustment decays over 7 days
+    decay_days: int = 7  # Adjustment decays over 7 days
     rollback_threshold: float = 0.1  # Rollback if KPI drops 10%
     # State
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -660,9 +668,11 @@ class RoutingAdjustment:
         # Enforce max delta guardrail
         clamped_magnitude = max(-max_delta, min(max_delta, magnitude))
 
-        expires_at = datetime.now(timezone.utc).replace(
-            day=datetime.now(timezone.utc).day + decay_days
-        ) if decay_days > 0 else None
+        expires_at = (
+            datetime.now(timezone.utc).replace(day=datetime.now(timezone.utc).day + decay_days)
+            if decay_days > 0
+            else None
+        )
 
         return cls(
             adjustment_id=f"adj_{uuid.uuid4().hex[:16]}",
@@ -753,6 +763,7 @@ class HumanCheckpoint:
 
     Supports: approve, simulate, revert actions.
     """
+
     checkpoint_id: str
     checkpoint_type: HumanCheckpointType
     incident_id: str
@@ -816,6 +827,7 @@ class LoopStatus:
 
     Used for console display and debugging.
     """
+
     loop_id: str
     incident_id: str
     tenant_id: str
@@ -866,12 +878,14 @@ class LoopStatus:
             else:
                 status = "○"
 
-            stages_display.append({
-                "key": stage_key,
-                "label": label,
-                "icon": icon,
-                "status": status,
-            })
+            stages_display.append(
+                {
+                    "key": stage_key,
+                    "label": label,
+                    "icon": icon,
+                    "status": status,
+                }
+            )
 
         return {
             "loop_id": self.loop_id,

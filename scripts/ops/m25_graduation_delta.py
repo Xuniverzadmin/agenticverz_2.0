@@ -42,7 +42,8 @@ def main():
             print("=" * 60)
 
             # Get the active policy
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     pr.id AS policy_id,
                     pr.source_pattern_id,
@@ -55,52 +56,64 @@ def main():
                 WHERE pr.mode = 'active'
                 AND pr.is_active = TRUE
                 LIMIT 1
-            """)
+            """
+            )
             policy = cur.fetchone()
 
             if not policy:
                 print("ERROR: No active policy found")
                 sys.exit(1)
 
-            policy_id = policy['policy_id']
-            pattern_id = policy['source_pattern_id']
-            tenant_id = policy['tenant_id']
-            activated_at = policy['activated_at']
+            policy_id = policy["policy_id"]
+            pattern_id = policy["source_pattern_id"]
+            tenant_id = policy["tenant_id"]
+            activated_at = policy["activated_at"]
 
             print(f"\nPolicy:       {policy_id}")
             print(f"Pattern:      {pattern_id}")
             print(f"Activated:    {activated_at}")
-            print(f"Confidence:   {policy['confidence_at_activation']} ({policy['confidence_version']})")
+            print(
+                f"Confidence:   {policy['confidence_at_activation']} ({policy['confidence_version']})"
+            )
 
             # Gate 1: Prevention count (non-simulated, after activation)
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*) as count
                 FROM prevention_records
                 WHERE policy_id = %s
                 AND is_simulated = FALSE
                 AND created_at > %s
-            """, (policy_id, activated_at))
+            """,
+                (policy_id, activated_at),
+            )
             gate1_result = cur.fetchone()
-            gate1_count = gate1_result['count']
+            gate1_count = gate1_result["count"]
 
             # Gate 2: Regret count (should be 0)
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT regret_count
                 FROM policy_rules
                 WHERE id = %s
-            """, (policy_id,))
+            """,
+                (policy_id,),
+            )
             gate2_result = cur.fetchone()
-            regret_count = gate2_result['regret_count'] or 0
+            regret_count = gate2_result["regret_count"] or 0
 
             # Gate 3: Timeline views (non-simulated views for this tenant)
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*) as count
                 FROM timeline_views
                 WHERE tenant_id = %s
                 AND is_simulated = FALSE
-            """, (tenant_id,))
+            """,
+                (tenant_id,),
+            )
             gate3_result = cur.fetchone()
-            timeline_views = gate3_result['count']
+            timeline_views = gate3_result["count"]
 
             print("\n" + "=" * 60)
             print("GRADUATION GATES STATUS")
@@ -109,25 +122,25 @@ def main():
             # Gate 1: Prevention
             gate1_pass = gate1_count >= 1
             gate1_status = "✅ PASS" if gate1_pass else "❌ FAIL"
-            print(f"\nGate 1 (Prevention):")
+            print("\nGate 1 (Prevention):")
             print(f"  Real preventions after activation: {gate1_count}")
-            print(f"  Required: >= 1")
+            print("  Required: >= 1")
             print(f"  Status: {gate1_status}")
 
             # Gate 2: Rollback
             gate2_pass = regret_count == 0
             gate2_status = "✅ PASS" if gate2_pass else "❌ FAIL"
-            print(f"\nGate 2 (Rollback/Regret):")
+            print("\nGate 2 (Rollback/Regret):")
             print(f"  Regret count: {regret_count}")
-            print(f"  Required: 0")
+            print("  Required: 0")
             print(f"  Status: {gate2_status}")
 
             # Gate 3: Timeline
             gate3_pass = timeline_views >= 1
             gate3_status = "✅ PASS" if gate3_pass else "⏳ PENDING"
-            print(f"\nGate 3 (Timeline Views):")
+            print("\nGate 3 (Timeline Views):")
             print(f"  Real user timeline views: {timeline_views}")
-            print(f"  Required: >= 1")
+            print("  Required: >= 1")
             print(f"  Status: {gate3_status}")
 
             # Calculate overall graduation status
@@ -152,29 +165,45 @@ def main():
             print(f"Status: {status}")
 
             # Record graduation delta in history
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO graduation_history
                 (level, gates_json, computed_at, evidence_snapshot)
                 VALUES (%s, %s, %s, %s)
-            """, (
-                status,
-                Json({
-                    "gate1_prevention": {"count": gate1_count, "passed": gate1_pass},
-                    "gate2_rollback": {"regret_count": regret_count, "passed": gate2_pass},
-                    "gate3_timeline": {"views": timeline_views, "passed": gate3_pass},
-                }),
-                datetime.now(timezone.utc),
-                Json({
-                    "policy_id": policy_id,
-                    "pattern_id": pattern_id,
-                    "tenant_id": tenant_id,
-                    "gates_passed": gates_passed,
-                    "evaluation_type": "m25_graduation_delta",
-                }),
-            ))
+            """,
+                (
+                    status,
+                    Json(
+                        {
+                            "gate1_prevention": {
+                                "count": gate1_count,
+                                "passed": gate1_pass,
+                            },
+                            "gate2_rollback": {
+                                "regret_count": regret_count,
+                                "passed": gate2_pass,
+                            },
+                            "gate3_timeline": {
+                                "views": timeline_views,
+                                "passed": gate3_pass,
+                            },
+                        }
+                    ),
+                    datetime.now(timezone.utc),
+                    Json(
+                        {
+                            "policy_id": policy_id,
+                            "pattern_id": pattern_id,
+                            "tenant_id": tenant_id,
+                            "gates_passed": gates_passed,
+                            "evaluation_type": "m25_graduation_delta",
+                        }
+                    ),
+                ),
+            )
             conn.commit()
 
-            print(f"\nGraduation delta recorded in graduation_history")
+            print("\nGraduation delta recorded in graduation_history")
 
             # Expected outcome check
             print("\n" + "=" * 60)
@@ -191,7 +220,9 @@ def main():
                 if gate2_pass:
                     print("✅ CORRECT: Gate 2 (Rollback) safe - no regrets recorded")
                 if not gate3_pass:
-                    print("✅ CORRECT: Gate 3 (Timeline) pending - awaits real user view")
+                    print(
+                        "✅ CORRECT: Gate 3 (Timeline) pending - awaits real user view"
+                    )
             else:
                 print("❌ Gate 1 did not move - prevention may have failed")
 
@@ -201,6 +232,7 @@ def main():
         conn.rollback()
         print(f"ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
     finally:
