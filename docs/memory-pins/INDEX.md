@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-23 (PIN-140 M25 Complete - Rollback Safe)
+**Last Updated:** 2025-12-23 (M27 COMPLETE - Cost Loop + Snapshot Barrier)
 
 ---
 
@@ -162,6 +162,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-138](PIN-138-m28-console-structure-audit.md) | **M28 Console Structure Audit** | M28 Planning / Architecture Audit | **✅ COMPLETE** | 2025-12-23 |
 | [PIN-139](PIN-139-m27-cost-loop-integration.md) | **M27 Cost Loop Integration** | Milestone / Cost Intelligence | **✅ COMPLETE** | 2025-12-23 |
 | [PIN-140](PIN-140-m25-complete-rollback-safe.md) | **M25 Complete - Rollback Safe** | Milestone / Graduation / Final Status | **✅ COMPLETE (ROLLBACK_SAFE)** | 2025-12-23 |
+| [PIN-141](PIN-141-m26-cost-intelligence.md) | **M26 Cost Intelligence** | Milestone / Cost Attribution | **✅ COMPLETE** | 2025-12-23 |
+| [PIN-142](PIN-142-secrets-env-contract.md) | **Secrets & Environment Contract** | Infrastructure / Security | **✅ COMPLETE** | 2025-12-23 |
+| [PIN-143](PIN-143-m27-real-cost-enforcement-proof.md) | **M27 Real Cost Enforcement Proof** | Milestone / M27 Cost Loop | **✅ COMPLETE** | 2025-12-23 |
+| [PIN-144](PIN-144-m271-cost-snapshot-barrier.md) | **M27.1 Cost Snapshot Barrier** | Infrastructure / Cost Enforcement | **✅ COMPLETE** | 2025-12-23 |
 
 ---
 
@@ -500,7 +504,11 @@ When extending these components, update the relevant PIN rather than creating al
 | M21 | Tenant, Auth & Billing Layer | ✅ **COMPLETE** (PIN-089) |
 | M22 | KillSwitch MVP - OpenAI Proxy + Safety | ✅ **COMPLETE** (PIN-096) |
 | M22.1 | UI Console (Guard + Operator) | ✅ **GA-READY** (PIN-098) |
-| **M23** | **AI Incident Console - Production** | **🚀 ACTIVE** (PIN-100) |
+| M23 | AI Incident Console - Production | ✅ **COMPLETE** (PIN-100) |
+| M25 | Pillar Integration | ✅ **COMPLETE (ROLLBACK_SAFE)** (PIN-140) |
+| M26 | Cost Intelligence | ✅ **COMPLETE** (PIN-141) |
+| **M27** | **Cost Loop + Snapshot Barrier** | **✅ COMPLETE** (PIN-143/144) |
+| **M28** | **Unified Console** | **📋 NEXT** (PIN-132) |
 
 **M23 Objectives (PIN-100):**
 1. Complete search & discovery (user_id tracking, search UI)
@@ -927,6 +935,19 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-23 | **M27 Systemd Timers** - Wired `aos-cost-snapshot-hourly` (:05 every hour) and `aos-cost-snapshot-daily` (00:30 UTC). Scripts: `cost_snapshot_job.py`. Infrastructure ready for customers. |
+| 2025-12-23 | **🎉 M27 COMPLETE** - Full cost loop with snapshot barrier. PIN-143 + PIN-144 now ✅ COMPLETE. Components: (1) Real OpenAI spend tested ($0.09), (2) M26 anomaly detection working, (3) C1-C5 bridges all passing, (4) M27.1 Cost Snapshot Barrier deployed (migration 047, 4 new tables), (5) Safety rails enforced. THE INVARIANT: "Money can now shut AI up automatically. Not alerts. Not dashboards. Enforcement." |
+| 2025-12-23 | **PIN-144 M27.1 Cost Snapshot Barrier** - Created via memory_trail. |
+| 2025-12-23 | **PIN-143 M27 Real Cost Enforcement Proof** - Updated: Updates |
+| 2025-12-23 | **PIN-143 M27 Real Cost Enforcement Proof** - Created via memory_trail. |
+| 2025-12-23 | **PIN-139 M27 Cost Loop Integration** - Updated: Updates |
+| 2025-12-23 | **PIN-141 M26 Cost Intelligence** - Updated: Updates |
+| 2025-12-23 | **PIN-142 Secrets & Environment Contract** - Updated: Updates |
+| 2025-12-23 | **PIN-141 M26 Cost Intelligence** - Updated: Updates |
+| 2025-12-23 | **PIN-142 Secrets & Environment Contract** - Centralized secret management with fail-fast validation. Created `app/config/secrets.py` (typed accessors), startup validation in `lifespan()`, script fail-fast pattern. Response to env var propagation issue in M26 real cost tests. |
+| 2025-12-23 | **PIN-141 M26 Cost Intelligence** - Updated: Environment Hygiene layers added (5th & 6th prevention). M26 status: FROZEN. |
+| 2025-12-23 | **PIN-141 M26 Cost Intelligence** - Updated: Updates |
+| 2025-12-23 | **PIN-141 M26 Cost Intelligence** - Created via memory_trail. |
 | 2025-12-23 | **PIN-140 M25 Complete - Rollback Safe** - M25 GRADUATION COMPLETE with ROLLBACK_SAFE status (2/3 gates). Core invariant proven: "Every incident can become a prevention, without manual runtime intervention." Gate 1: Prevention ✅ (real prevention record written). Gate 2: Rollback ✅ (pattern 015 confirmed, tested in isolation). Gate 3: Timeline ⏳ (UI-dependent). Hygiene completed: (1) PIN-140 status declaration, (2) M25_FROZEN headers in events.py/m25_graduation_delta.py, (3) /evidence/m25/ canonical artifacts, (4) Demo endpoint deprecation guards (DEMO_ENDPOINTS_ENABLED), (5) Schema naming conventions + lint_schema_naming.py linter, (6) prevention_contract.py enforcement module. Non-goals documented. M26 handoff contract established. FROZEN: GRADUATION_RULES_VERSION=1.0.0, PREVENTION_CONTRACT_VERSION=1.0.0. |
 | 2025-12-23 | **PIN-139 M27 Cost Loop Integration COMPLETE** - Full implementation of M27 cost-specific bridges (C1-C5) in `backend/app/integrations/cost_bridges.py` (~970 lines). Components: (1) CostAnomaly model with severity classification (200%→LOW, 300%→MEDIUM, 500%→HIGH, 500%+→CRITICAL), (2) C1:CostLoopBridge - anomaly→incident for HIGH/CRITICAL only, (3) C2:CostPatternMatcher - 5 predefined patterns (user_spike, feature_spike, budget_breach, model_cost_anomaly, user_hourly_spike), (4) C3:CostRecoveryGenerator - recovery strategies by anomaly type (rate_limit, notify, optimize_prompts, model_downgrade, enforce_hard_limit, escalate), (5) C4:CostPolicyGenerator - policy templates with category-based confirmations (safety:3, routing:2, operational:1), (6) C5:CostRoutingAdjuster - CARE routing adjustments with decay. Added CostEstimationProbe for pre-execution cost estimation and CostLoopOrchestrator for full loop processing. THE INVARIANT: Every cost anomaly enters the loop; every loop completion reduces future cost risk. |
 | 2025-12-23 | **PIN-138 M28 Console Structure Audit** - Comprehensive audit of all console routes (guard, operator, ops) with 4 deliverables: (1) Current State Map - 60+ routes mapped to Founder/Customer/Delete, (2) DELETE LIST - 9 items (demo endpoints, legacy redirects, job triggers exposed to UI), (3) REHOME/MERGE LIST - /fops/* (Founder) and /console/* (Customer) separation, (4) Gap Check - 8 founder questions and 4 customer questions not currently supported. Audit supports M28 Console Rebuild with clear separation: Founder Ops Console (internal control plane) vs Customer Console (product surface). Constraints: M25 frozen mechanics, read-only over enforcement paths. |

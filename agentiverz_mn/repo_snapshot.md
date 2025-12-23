@@ -1,7 +1,7 @@
 # Repository Snapshot
 
-**Date:** 2025-12-20
-**Milestone:** M22 COMPLETE (KillSwitch MVP) + Demo Ready
+**Date:** 2025-12-23
+**Milestone:** M27 COMPLETE (Cost Loop with Real Enforcement)
 **CI Checker:** v5.1 (Secrets Baseline Validation)
 
 ---
@@ -25,11 +25,59 @@
 | M19: Policy Constitutional | ✅ COMPLETE | PIN-078 |
 | M20: Policy Compiler & Runtime | ✅ COMPLETE | PIN-084 |
 | M21: Tenant Auth Billing | ✅ COMPLETE | PIN-079 |
-| **M22: KillSwitch MVP** | ✅ **COMPLETE** | PIN-096 |
+| M22: KillSwitch MVP | ✅ COMPLETE | PIN-096 |
+| M23: AI Incident Console | ✅ COMPLETE | PIN-100 |
+| M24: Ops Console Phase 2 | ✅ COMPLETE | PIN-105/111 |
+| M25: Rollback Safe Release | ✅ COMPLETE | PIN-140 |
+| M26: Cost Intelligence | ✅ COMPLETE | PIN-141 |
+| **M27: Cost Loop Enforcement** | ✅ **COMPLETE** | PIN-143 |
 
 ---
 
-## Latest Session (2025-12-20)
+## Latest Session (2025-12-23)
+
+### M27 Cost Loop - Real Enforcement Proven (PIN-143) ✅
+
+**THE INVARIANT PROVEN:**
+> Money can now shut AI up automatically. Not alerts. Not dashboards. **Enforcement.**
+
+| Test | Result |
+|------|--------|
+| Real OpenAI Spend | $0.09 (3 test runs) |
+| Model | gpt-4o-mini |
+| All 5 Bridges (C1-C5) | ✅ WORKING |
+
+**C1-C5 Bridge Chain:**
+| Bridge | Function | Output |
+|--------|----------|--------|
+| C1: CostLoopBridge | Anomaly → Incident | `inc_fb706f4fcbed4e52` |
+| C2: CostPatternMatcher | Incident → Pattern | `pat_cost_user_daily_spike` (0.90 conf) |
+| C3: CostRecoveryGenerator | Pattern → Suggestions | 3 actions (rate_limit, notify, review) |
+| C4: CostPolicyGenerator | Suggestion → Policy | `pol_c4dd0337d6044bf9` (notify_user) |
+| C5: CostRoutingAdjuster | Policy → Routing | `adj_6b8e77c291144255` (metadata_only) |
+
+**Policy Templates Added:**
+- `notify_user` → action: notify (operational)
+- `review_usage` → action: flag_review (operational)
+- `escalate_to_admin` → action: escalate (safety, -0.3 confidence penalty)
+
+**Safety Rails:**
+| Config | Value |
+|--------|-------|
+| max_policies_per_day | 3 |
+| max_recoveries_per_day | 5 |
+| max_routing_per_day | 10 |
+| action_cooldown_minutes | 30 |
+
+**Files:**
+- `scripts/ops/m27_real_cost_test.py` - Production test script
+- `backend/app/integrations/cost_bridges.py` - C1-C5 bridges
+- `backend/app/integrations/cost_safety_rails.py` - Safety rails
+- `backend/tests/test_m27_cost_loop.py` - 21 unit tests ✅
+
+---
+
+## Previous Session (2025-12-20)
 
 ### Prevention System v1.1 (PIN-097) ✅ UPDATED
 
@@ -344,16 +392,17 @@ Established formal naming evolution from legacy milestone identifiers (M0-M19) t
 
 | Metric | Value |
 |--------|-------|
-| Memory PINs | 106 |
-| Migrations | 37 |
-| Milestones Complete | 22/22 |
+| Memory PINs | 143 |
+| Migrations | 40+ |
+| Milestones Complete | 27/27 |
 | CI Jobs Passing | 15/15 |
-| MN-OS Subsystems | 22 |
+| MN-OS Subsystems | 27 |
 | Test Reports | 4 (TR-001 to TR-004) |
-| M22 Tests | 26/26 passing |
+| M27 Tests | 21/21 passing |
 | Demo Ready | YES (Happy + Adversarial passing) |
 | External Services | 6/8 validated |
 | KillSwitch MVP | ✅ Drop-in OpenAI replacement |
+| Cost Loop | ✅ Real enforcement ($0.09 spend proven) |
 | Landing Page | https://agenticverz.com/build |
 | Prevention System | v1.1 (5 pattern detectors) |
 | CI Checker | v5.1 (secrets validation) |
@@ -466,4 +515,4 @@ docker compose ps
 
 ---
 
-*Last updated: 2025-12-20 (Prevention System v1.1 - API wiring fix, secrets baseline, CI v5.1)*
+*Last updated: 2025-12-23 (M27 Cost Loop - Real enforcement proven with $0.09 OpenAI spend, all C1-C5 bridges working)*
