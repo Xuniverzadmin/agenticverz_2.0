@@ -8,10 +8,10 @@ These tests enforce the prevention mechanisms that stop M26-type failures.
 import pytest
 from fastapi.testclient import TestClient
 
-
 # =============================================================================
 # Prevention Mechanism #3: Route Inventory Test
 # =============================================================================
+
 
 class TestRouteInventory:
     """
@@ -57,15 +57,12 @@ class TestRouteInventory:
 
     def test_no_orphan_api_modules(self):
         """Verify no API modules exist without being registered."""
-        import os
         from pathlib import Path
+
         from app.main import app
 
         api_dir = Path(__file__).parent.parent / "app" / "api"
-        api_modules = [
-            f.stem for f in api_dir.glob("*.py")
-            if f.stem not in ["__init__", "__pycache__"]
-        ]
+        api_modules = [f.stem for f in api_dir.glob("*.py") if f.stem not in ["__init__", "__pycache__"]]
 
         # Get registered router prefixes
         registered_prefixes = set()
@@ -90,6 +87,7 @@ class TestRouteInventory:
 # Prevention Mechanism #4: Loop Contract Assertion
 # =============================================================================
 
+
 class TestLoopContract:
     """
     INVARIANT: A HIGH cost anomaly must create an incident in M25.
@@ -106,9 +104,8 @@ class TestLoopContract:
     @pytest.mark.asyncio
     async def test_high_anomaly_creates_incident(self, session):
         """HIGH cost anomaly must trigger incident creation."""
-        from app.db import CostAnomaly, utc_now
-        from app.services.cost_anomaly_detector import run_anomaly_detection_with_m25
-        from unittest.mock import MagicMock, AsyncMock
+
+        from app.db import CostAnomaly
 
         # Create a HIGH severity anomaly directly
         anomaly = CostAnomaly(
@@ -153,6 +150,7 @@ class TestLoopContract:
 # Prevention Mechanism #5: No Silent Failure Test
 # =============================================================================
 
+
 class TestNoSilentFailure:
     """
     INVARIANT: Any failure in cost attribution, anomaly detection, or loop dispatch must:
@@ -163,8 +161,9 @@ class TestNoSilentFailure:
 
     def test_cost_record_invalid_model_fails_loudly(self):
         """Recording cost with invalid data must raise, not silently ignore."""
-        from app.api.cost_intelligence import RecordCostRequest
         from pydantic import ValidationError
+
+        from app.api.cost_intelligence import RecordCostRequest
 
         # Missing required field should raise
         with pytest.raises(ValidationError):
@@ -177,8 +176,9 @@ class TestNoSilentFailure:
 
     def test_anomaly_detector_handles_db_error(self):
         """Anomaly detector must not silently fail on DB errors."""
-        from app.services.cost_anomaly_detector import CostAnomalyDetector
         from unittest.mock import MagicMock
+
+        from app.services.cost_anomaly_detector import CostAnomalyDetector
 
         # Mock session that raises
         mock_session = MagicMock()
@@ -195,7 +195,6 @@ class TestNoSilentFailure:
     def test_cost_endpoints_return_proper_errors(self):
         """Cost endpoints must return proper HTTP errors, not 500."""
         from app.main import app
-        from fastapi.testclient import TestClient
 
         client = TestClient(app)
 
@@ -208,12 +207,14 @@ class TestNoSilentFailure:
 # Schema Parity Test
 # =============================================================================
 
+
 class TestSchemaParity:
     """Test the schema parity mechanism itself."""
 
     def test_schema_parity_check_exists(self):
         """Schema parity module must exist."""
-        from app.utils.schema_parity import check_schema_parity, check_m26_cost_tables
+        from app.utils.schema_parity import check_m26_cost_tables, check_schema_parity
+
         assert callable(check_schema_parity)
         assert callable(check_m26_cost_tables)
 

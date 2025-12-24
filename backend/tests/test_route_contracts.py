@@ -326,13 +326,10 @@ class TestOpsAPIHygiene:
 
             # Check if response_model is set
             if route.response_model is None:
-                missing_response_model.append(
-                    f"{route.methods} {route.path} -> handler: {route.endpoint.__name__}"
-                )
+                missing_response_model.append(f"{route.methods} {route.path} -> handler: {route.endpoint.__name__}")
 
-        assert len(missing_response_model) == 0, (
-            f"Ops endpoints missing response_model:\n"
-            + "\n".join(f"  - {r}" for r in missing_response_model)
+        assert len(missing_response_model) == 0, "Ops endpoints missing response_model:\n" + "\n".join(
+            f"  - {r}" for r in missing_response_model
         )
 
     def test_ops_job_endpoints_use_literal_status(self):
@@ -373,8 +370,7 @@ class TestOpsAPIHygiene:
 
         assert events_route is not None, "Route /ops/events not found"
         assert events_route.response_model is OpsEventListResponse, (
-            f"/ops/events must use response_model=OpsEventListResponse, "
-            f"got {events_route.response_model}"
+            f"/ops/events must use response_model=OpsEventListResponse, " f"got {events_route.response_model}"
         )
 
     def test_ops_job_endpoints_have_correct_response_model(self):
@@ -396,13 +392,10 @@ class TestOpsAPIHygiene:
             if not hasattr(route, "response_model") or route.response_model is None:
                 job_routes_without_model.append(route.path)
             elif route.response_model is not OpsJobResult:
-                job_routes_without_model.append(
-                    f"{route.path} (has {route.response_model}, expected OpsJobResult)"
-                )
+                job_routes_without_model.append(f"{route.path} (has {route.response_model}, expected OpsJobResult)")
 
-        assert len(job_routes_without_model) == 0, (
-            f"Job endpoints with incorrect response_model:\n"
-            + "\n".join(f"  - {r}" for r in job_routes_without_model)
+        assert len(job_routes_without_model) == 0, "Job endpoints with incorrect response_model:\n" + "\n".join(
+            f"  - {r}" for r in job_routes_without_model
         )
 
 
@@ -439,8 +432,8 @@ class TestRouteSanity:
             if not hasattr(route, "endpoint") or route.endpoint is None:
                 broken_routes.append(route.path)
 
-        assert len(broken_routes) == 0, (
-            f"Routes with missing endpoints:\n" + "\n".join(f"  - {r}" for r in broken_routes)
+        assert len(broken_routes) == 0, "Routes with missing endpoints:\n" + "\n".join(
+            f"  - {r}" for r in broken_routes
         )
 
     def test_all_routes_are_callable(self):
@@ -460,9 +453,8 @@ class TestRouteSanity:
             if route.endpoint is not None and not callable(route.endpoint):
                 non_callable_routes.append(f"{route.path} -> {type(route.endpoint)}")
 
-        assert len(non_callable_routes) == 0, (
-            f"Routes with non-callable endpoints:\n"
-            + "\n".join(f"  - {r}" for r in non_callable_routes)
+        assert len(non_callable_routes) == 0, "Routes with non-callable endpoints:\n" + "\n".join(
+            f"  - {r}" for r in non_callable_routes
         )
 
     def test_route_count_above_minimum(self):
@@ -475,9 +467,7 @@ class TestRouteSanity:
 
         # Count actual API routes (not OpenAPI/docs)
         api_routes = [
-            r
-            for r in app.routes
-            if hasattr(r, "path") and r.path not in ("/openapi.json", "/docs", "/redoc")
+            r for r in app.routes if hasattr(r, "path") and r.path not in ("/openapi.json", "/docs", "/redoc")
         ]
 
         # We expect at least 50 routes in a healthy app
@@ -542,8 +532,8 @@ class TestRegistryIntegrity:
             if not skill.get("version"):
                 skills_without_version.append(skill.get("name", "unknown"))
 
-        assert len(skills_without_version) == 0, (
-            f"Skills missing version:\n" + "\n".join(f"  - {s}" for s in skills_without_version)
+        assert len(skills_without_version) == 0, "Skills missing version:\n" + "\n".join(
+            f"  - {s}" for s in skills_without_version
         )
 
     def test_all_skills_instantiable(self):
@@ -569,9 +559,8 @@ class TestRegistryIntegrity:
             except Exception as e:
                 instantiation_failures.append(f"{name}: {type(e).__name__}: {e}")
 
-        assert len(instantiation_failures) == 0, (
-            f"Skills that failed instantiation:\n"
-            + "\n".join(f"  - {f}" for f in instantiation_failures)
+        assert len(instantiation_failures) == 0, "Skills that failed instantiation:\n" + "\n".join(
+            f"  - {f}" for f in instantiation_failures
         )
 
     def test_all_skills_have_execute_method(self):
@@ -588,9 +577,8 @@ class TestRegistryIntegrity:
             if not hasattr(entry.cls, "execute"):
                 skills_without_execute.append(name)
 
-        assert len(skills_without_execute) == 0, (
-            f"Skills missing execute method:\n"
-            + "\n".join(f"  - {s}" for s in skills_without_execute)
+        assert len(skills_without_execute) == 0, "Skills missing execute method:\n" + "\n".join(
+            f"  - {s}" for s in skills_without_execute
         )
 
 
@@ -668,9 +656,8 @@ class TestOpsAPIContractSnapshot:
 
         # Check for missing endpoints
         missing = snapshot_endpoints - current_endpoints
-        assert len(missing) == 0, (
-            f"Endpoints removed from API (breaks consumers):\n"
-            + "\n".join(f"  - {e}" for e in sorted(missing))
+        assert len(missing) == 0, "Endpoints removed from API (breaks consumers):\n" + "\n".join(
+            f"  - {e}" for e in sorted(missing)
         )
 
         # Check for new endpoints (informational, not blocking)
@@ -715,11 +702,8 @@ class TestOpsAPIContractSnapshot:
             current_model = schema_ref.split("/")[-1] if schema_ref else "untyped"
 
             if current_model == "untyped" and contract["response_model"] != "untyped":
-                regressions.append(
-                    f"{endpoint}: was {contract['response_model']}, now untyped"
-                )
+                regressions.append(f"{endpoint}: was {contract['response_model']}, now untyped")
 
-        assert len(regressions) == 0, (
-            f"Endpoints regressed to untyped (breaks consumers):\n"
-            + "\n".join(f"  - {r}" for r in regressions)
+        assert len(regressions) == 0, "Endpoints regressed to untyped (breaks consumers):\n" + "\n".join(
+            f"  - {r}" for r in regressions
         )

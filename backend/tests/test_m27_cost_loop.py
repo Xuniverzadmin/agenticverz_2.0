@@ -12,20 +12,20 @@ THE INVARIANT:
     Every loop completion reduces future cost risk.
 """
 
-import pytest
-from datetime import datetime, timezone
 
+import pytest
 
 # =============================================================================
 # UNIT TESTS: Cost Anomaly Model
 # =============================================================================
+
 
 class TestCostAnomaly:
     """Test CostAnomaly creation and severity classification."""
 
     def test_severity_classification_low(self):
         """Deviation < 200% should be LOW."""
-        from app.integrations.cost_bridges import CostAnomaly, AnomalyType, AnomalySeverity
+        from app.integrations.cost_bridges import AnomalySeverity, AnomalyType, CostAnomaly
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -41,7 +41,7 @@ class TestCostAnomaly:
 
     def test_severity_classification_medium(self):
         """Deviation 200-300% should be MEDIUM."""
-        from app.integrations.cost_bridges import CostAnomaly, AnomalyType, AnomalySeverity
+        from app.integrations.cost_bridges import AnomalySeverity, AnomalyType, CostAnomaly
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -67,7 +67,7 @@ class TestCostAnomaly:
 
     def test_severity_classification_high(self):
         """Deviation 300-500% should be HIGH."""
-        from app.integrations.cost_bridges import CostAnomaly, AnomalyType, AnomalySeverity
+        from app.integrations.cost_bridges import AnomalySeverity, AnomalyType, CostAnomaly
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -82,7 +82,7 @@ class TestCostAnomaly:
 
     def test_severity_classification_critical(self):
         """Deviation >= 500% should be CRITICAL."""
-        from app.integrations.cost_bridges import CostAnomaly, AnomalyType, AnomalySeverity
+        from app.integrations.cost_bridges import AnomalySeverity, AnomalyType, CostAnomaly
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -97,7 +97,7 @@ class TestCostAnomaly:
 
     def test_to_dict_serialization(self):
         """Anomaly should serialize to dict."""
-        from app.integrations.cost_bridges import CostAnomaly, AnomalyType
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -119,15 +119,14 @@ class TestCostAnomaly:
 # UNIT TESTS: Cost Pattern Matcher (C2)
 # =============================================================================
 
+
 class TestCostPatternMatcher:
     """Test pattern matching logic."""
 
     @pytest.mark.asyncio
     async def test_match_user_daily_spike(self):
         """User spike should match user_daily_spike pattern."""
-        from app.integrations.cost_bridges import (
-            CostAnomaly, AnomalyType, CostPatternMatcher
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostPatternMatcher
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -149,9 +148,7 @@ class TestCostPatternMatcher:
     @pytest.mark.asyncio
     async def test_match_feature_spike(self):
         """Feature spike should match feature_cost_explosion pattern."""
-        from app.integrations.cost_bridges import (
-            CostAnomaly, AnomalyType, CostPatternMatcher
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostPatternMatcher
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -172,15 +169,14 @@ class TestCostPatternMatcher:
 # UNIT TESTS: Cost Recovery Generator (C3)
 # =============================================================================
 
+
 class TestCostRecoveryGenerator:
     """Test recovery suggestion generation."""
 
     @pytest.mark.asyncio
     async def test_user_spike_recoveries(self):
         """User spike should generate rate limiting suggestions."""
-        from app.integrations.cost_bridges import (
-            CostAnomaly, AnomalyType, CostRecoveryGenerator, CostPatternMatcher
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostPatternMatcher, CostRecoveryGenerator
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -204,9 +200,7 @@ class TestCostRecoveryGenerator:
     @pytest.mark.asyncio
     async def test_budget_exceeded_recoveries(self):
         """Budget exceeded should generate hard limit suggestions."""
-        from app.integrations.cost_bridges import (
-            CostAnomaly, AnomalyType, CostRecoveryGenerator, CostPatternMatcher
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostPatternMatcher, CostRecoveryGenerator
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -231,6 +225,7 @@ class TestCostRecoveryGenerator:
 # =============================================================================
 # UNIT TESTS: Cost Estimation Probe
 # =============================================================================
+
 
 class TestCostEstimationProbe:
     """Test pre-execution cost estimation."""
@@ -292,6 +287,7 @@ class TestCostEstimationProbe:
 # =============================================================================
 # UNIT TESTS: Safety Rails
 # =============================================================================
+
 
 class TestCostSafetyRails:
     """Test per-tenant caps and blast-radius limits."""
@@ -359,9 +355,7 @@ class TestCostSafetyRails:
 
         rails = CostSafetyRails(SafetyConfig())
 
-        can_apply, reason = await rails.can_auto_apply_routing(
-            "tenant_a", "route_block", magnitude=-1.0
-        )
+        can_apply, reason = await rails.can_auto_apply_routing("tenant_a", "route_block", magnitude=-1.0)
         assert can_apply is False
         assert "confirmation" in reason.lower()
 
@@ -385,15 +379,14 @@ class TestCostSafetyRails:
 # INTEGRATION TEST: Full Loop
 # =============================================================================
 
+
 class TestCostLoopOrchestrator:
     """Test full loop orchestration."""
 
     @pytest.mark.asyncio
     async def test_low_severity_skipped(self):
         """LOW severity anomalies should be skipped."""
-        from app.integrations.cost_bridges import (
-            CostAnomaly, AnomalyType, CostLoopOrchestrator
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostLoopOrchestrator
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -413,9 +406,7 @@ class TestCostLoopOrchestrator:
     @pytest.mark.asyncio
     async def test_high_severity_full_loop(self):
         """HIGH severity should go through full loop."""
-        from app.integrations.cost_bridges import (
-            CostAnomaly, AnomalyType, CostLoopOrchestrator
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostLoopOrchestrator
 
         anomaly = CostAnomaly.create(
             tenant_id="test_tenant",
@@ -437,9 +428,7 @@ class TestCostLoopOrchestrator:
     @pytest.mark.asyncio
     async def test_critical_severity_full_artifacts(self):
         """CRITICAL severity should produce all artifacts."""
-        from app.integrations.cost_bridges import (
-            CostAnomaly, AnomalyType, CostLoopOrchestrator
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly, CostLoopOrchestrator
 
         # Need 500%+ deviation for CRITICAL: (60000-10000)/10000*100 = 500%
         anomaly = CostAnomaly.create(
@@ -464,16 +453,15 @@ class TestCostLoopOrchestrator:
 # INTEGRATION TEST: Safe Orchestrator
 # =============================================================================
 
+
 class TestSafeCostLoopOrchestrator:
     """Test orchestrator with safety rails."""
 
     @pytest.mark.asyncio
     async def test_safety_rails_applied(self):
         """Safety rails should be applied to results."""
-        from app.integrations.cost_bridges import CostAnomaly, AnomalyType
-        from app.integrations.cost_safety_rails import (
-            SafeCostLoopOrchestrator, SafetyConfig
-        )
+        from app.integrations.cost_bridges import AnomalyType, CostAnomaly
+        from app.integrations.cost_safety_rails import SafeCostLoopOrchestrator, SafetyConfig
 
         config = SafetyConfig(
             high_actions_require_confirmation=True,
