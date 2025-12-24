@@ -12,7 +12,7 @@
 
 The codebase has 1,064 mypy type errors across 163 files. Rather than chase zero globally, we enforce **Type Safety Zones** with different strictness levels based on criticality.
 
-**Current State:** 1,026 errors (Zone A: **0** ✅, Zone B: 630, Zone C: 396)
+**Current State:** 991 errors (Zone A: **0** ✅, Zone B: ~600, Zone C: ~390)
 **Target State:** Zone A maintained at 0, no regressions in any zone
 **Strategy:** Zone-based enforcement (see "Type Safety Zones" section below)
 
@@ -767,11 +767,63 @@ These errors are **real**, but fixing them would require API redesign, control-f
 
 ## Enforcement Rules
 
+### Core Rules
+
 1. **No new errors may enter Category A or B without documentation**
 2. **Category C requires a design ticket to move**
 3. **Autofix must never target Category C**
 4. **Deleting ledger entries requires justification**
 5. **New `# type: ignore` requires comment explaining which category**
+6. **No new function may return `Any` across a module boundary** — ensures casts are explicit, async normalizers are used
+
+### Category-Specific Rules
+
+#### Category A — Require Reason Comments
+
+> Any Category A ignore **must include a one-line reason comment**.
+
+```python
+# ✅ Correct
+session.exec(select(Model))  # type: ignore[call-overload]  # SQLAlchemy exec() stub incomplete
+
+# ❌ Wrong - no explanation
+session.exec(select(Model))  # type: ignore[call-overload]
+```
+
+This prevents "drive-by ignores" hiding behind Category A.
+
+---
+
+#### Category B — Literal vs str Scope Restriction
+
+`Literal vs str` errors (B-02) are **only allowed** in:
+- logging
+- metrics
+- config plumbing
+
+**Disallowed** in:
+- domain models
+- API contracts
+- function signatures
+
+This prevents slow erosion of type meaning.
+
+---
+
+#### Category C — No `# type: ignore` Allowed
+
+> Category C errors **must not receive `# type: ignore`**.
+> They must remain visible until architecture changes.
+
+This preserves them as **design pressure**, not hidden debt.
+
+---
+
+#### Unclassified Errors
+
+> Unclassified errors may only be fixed **when touching the surrounding code for other reasons**.
+
+Do NOT rush to classify these. Let them resolve naturally as code changes.
 
 ---
 
@@ -947,3 +999,26 @@ disable_error_code = ["misc", "assignment"]
 | 2025-12-24 | **Autofix Extended** - Added SQLAlchemy, Prometheus, FastAPI, Pydantic macros |
 | 2025-12-24 | Autofix coverage: 148/1026 (14.4%) - up from 114 (11.1%) |
 | 2025-12-24 | **Never-Fix Ledger** - Canonical audit: A=250, B=149, C=256 (655 total) |
+| 2025-12-24 | Tightening rules added: reason comments (A), scope restrictions (B), no-ignore (C) |
+| 2025-12-24 | Added Rule 6: No `Any` returns across module boundaries |
+| 2025-12-24 | Applied 80 autofix fixes, 40 ruff fixes - error count now 991 |
+
+---
+
+## Quarterly Debt Review Ritual
+
+**(Optional — recommended every 2-4 weeks)**
+
+To keep the ledger alive without busywork:
+
+1. **Recount Category C** — Has anything moved to A or B?
+2. **Check for promotion** — Any autofixable patterns that emerged?
+3. **Validate baselines** — Run `python scripts/mypy_zones.py --report`
+4. **Update counts** — If categories shifted, update the ledger summary
+
+This ritual ensures:
+- Ledger stays accurate
+- New patterns get captured
+- Technical debt stays visible, not buried
+
+**Schedule:** Run after major refactors or quarterly, whichever comes first
