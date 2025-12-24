@@ -3,17 +3,18 @@
 **Status:** ACTIVE
 **Category:** Developer Tooling / Code Quality
 **Created:** 2025-12-22
-**Updated:** 2025-12-22
-**Milestone:** M25 (Technical Debt)
+**Updated:** 2025-12-24
+**Milestone:** M29 (Type Safety Zones)
 
 ---
 
 ## Summary
 
-The codebase has 572 mypy type errors across 118 files. This PIN documents the error categories, root causes, and a phased remediation plan with prevention mechanisms to avoid future type safety regressions.
+The codebase has 1,064 mypy type errors across 163 files. Rather than chase zero globally, we enforce **Type Safety Zones** with different strictness levels based on criticality.
 
-**Current State:** 572 errors in 118 files
-**Target State:** 0 blocking errors, mypy --strict on new code
+**Current State:** 1,064 errors (Zone A: 38, Zone B: 630, Zone C: 396)
+**Target State:** Zone A frozen at 38, no regressions in any zone
+**Strategy:** Zone-based enforcement (see "Type Safety Zones" section below)
 
 ---
 
@@ -330,6 +331,154 @@ Track progress against this baseline:
 
 ---
 
+---
+
+## Type Safety Zones (M29 Update)
+
+> **Strategy Shift:** Instead of chasing zero errors globally, we enforce strictness *where it matters*.
+
+### Zone Overview
+
+| Zone | Strictness | Enforcement | Baseline | Files |
+|------|------------|-------------|----------|-------|
+| **Zone A: Critical** | Strict | Pre-commit blocks | 38 | IR builder, evidence, pg_store, canonicalize |
+| **Zone B: Standard** | Moderate | CI warns | 630 | API, skills, integrations, agents |
+| **Zone C: Flexible** | Baseline only | Freeze | 400 | Metrics, workers, main.py, models |
+
+**Total:** 1,064 errors across 3 zones (as of M29, 2025-12-24)
+
+### Zone A: Critical (38 errors)
+
+Correctness-critical paths where type bugs hide. **Pre-commit blocks on ANY increase.**
+
+```
+app/policy/ir/          # Intermediate representation
+app/policy/ast/         # AST visitors
+app/workflow/engine.py  # Workflow execution
+app/workflow/canonicalize.py
+app/services/certificate.py
+app/services/evidence_report.py
+app/traces/pg_store.py
+app/utils/deterministic.py
+app/utils/canonical_json.py
+```
+
+### Zone B: Standard (630 errors)
+
+Business logic - warn on issues, don't block.
+
+```
+app/api/                # FastAPI routers
+app/skills/             # Skill implementations
+app/agents/             # SBA and agent registry
+app/services/           # Business services
+app/integrations/       # External integrations
+app/memory/             # Memory system
+app/policy/validators/  # Policy validation
+```
+
+### Zone C: Flexible (400 errors)
+
+Infrastructure glue, metrics, utilities - known debt tolerated.
+
+```
+app/workflow/           # Metrics, logging
+app/traces/             # Tracing (except pg_store)
+app/utils/              # Utilities (except deterministic)
+app/worker/             # Worker pool
+app/workers/            # Background workers
+app/main.py             # Lifecycle globals
+app/models/             # SQLModel definitions
+app/config/             # Configuration
+```
+
+---
+
+## Zone Validation Script
+
+**Location:** `backend/scripts/mypy_zones.py`
+
+```bash
+# Full zone check
+python scripts/mypy_zones.py
+
+# Zone A only (for pre-commit)
+python scripts/mypy_zones.py --zone-a
+
+# Verbose report
+python scripts/mypy_zones.py --report
+
+# Regenerate baseline
+python scripts/mypy_zones.py --generate-baseline
+```
+
+**Sample Output:**
+```
+======================================================================
+  MYPY TYPE SAFETY ZONES REPORT (PIN-121)
+======================================================================
+
+  Zone A (Critical)
+    Errors:     38 (baseline: 38)
+    Delta:       0
+    Status:   ✅ PASS
+
+  Zone B (Standard)
+    Errors:    630 (baseline: 630)
+    Delta:       0
+    Status:   ✅ PASS
+
+  Zone C (Flexible)
+    Errors:    396 (baseline: 400)
+    Delta:      -4
+    Status:   ✅ PASS
+
+----------------------------------------------------------------------
+  Total Errors: 1064
+  Overall:      ✅ PASS
+======================================================================
+```
+
+---
+
+## pyproject.toml Zone Configuration
+
+The zone configuration is embedded in `pyproject.toml`:
+
+```toml
+# Zone A: Critical - check_untyped_defs, strict_optional
+[[tool.mypy.overrides]]
+module = ["app.policy.ir.*", "app.workflow.canonicalize", ...]
+check_untyped_defs = true
+strict_optional = true
+
+# Zone B: Standard - warn_return_any, strict_optional
+[[tool.mypy.overrides]]
+module = ["app.api.*", "app.skills.*", ...]
+warn_return_any = true
+strict_optional = true
+
+# Zone C: Flexible - relaxed, baseline freeze
+[[tool.mypy.overrides]]
+module = ["app.workflow.metrics", "app.traces.traces_metrics", ...]
+warn_return_any = false
+strict_optional = false
+disable_error_code = ["misc", "assignment"]
+```
+
+---
+
+## Updated Error Baseline (M29)
+
+| Zone | Errors | Baseline | Status |
+|------|--------|----------|--------|
+| Zone A (Critical) | 38 | 38 | ✅ Frozen |
+| Zone B (Standard) | 630 | 630 | ✅ Frozen |
+| Zone C (Flexible) | 396 | 400 | ✅ Under budget |
+| **Total** | **1,064** | **1,068** | **✅ PASS** |
+
+---
+
 ## Changelog
 
 | Date | Change |
@@ -338,3 +487,7 @@ Track progress against this baseline:
 | 2025-12-22 | Added PREV-13, PREV-14, PREV-15 prevention mechanisms |
 | 2025-12-22 | **Phase 0 COMPLETE** - Fixed all P1 None bugs in policy compiler |
 | 2025-12-22 | Revised roadmap based on expert feedback (cleanup before coverage) |
+| 2025-12-24 | **M29 Update** - Introduced Type Safety Zones (A/B/C) |
+| 2025-12-24 | Added zone validation script: `scripts/mypy_zones.py` |
+| 2025-12-24 | Updated pyproject.toml with zone-based mypy overrides |
+| 2025-12-24 | New baseline: 1,064 errors (38 A + 630 B + 396 C) |

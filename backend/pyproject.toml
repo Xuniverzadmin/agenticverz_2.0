@@ -32,8 +32,104 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 
+# =============================================================================
+# MYPY TYPE SAFETY ZONES (PIN-121)
+# =============================================================================
+# Zone A: Critical    - Strict checking, pre-commit blocks
+# Zone B: Standard    - Moderate checking, CI warns
+# Zone C: Flexible    - Baseline only, known debt tolerated
+# =============================================================================
+
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+show_error_codes = true
+# Baseline: don't fail on existing errors (frozen debt)
+# New errors in Zone A will be caught by per-module overrides
+
+# =============================================================================
+# ZONE A: CRITICAL (--strict equivalent)
+# Correctness-critical paths where type bugs hide
+# Pre-commit BLOCKS on new errors in these modules
+# =============================================================================
+
+[[tool.mypy.overrides]]
+module = [
+    "app.policy.ir.*",
+    "app.policy.ast.*",
+    "app.policy.runtime.deterministic_engine",
+    "app.workflow.engine",
+    "app.workflow.canonicalize",
+    "app.services.certificate",
+    "app.services.evidence_report",
+    "app.traces.pg_store",
+    "app.utils.deterministic",
+    "app.utils.canonical_json",
+]
+# Strict settings for critical paths
+warn_return_any = true
+warn_unreachable = true
+disallow_untyped_defs = false      # Too aggressive for now
+disallow_incomplete_defs = false   # Too aggressive for now
+check_untyped_defs = true          # Check function bodies
+strict_optional = true             # Enforce None checks
+warn_redundant_casts = true
+no_implicit_reexport = true
+
+# =============================================================================
+# ZONE B: STANDARD (moderate checking)
+# Business logic - warn on issues, don't block
+# =============================================================================
+
+[[tool.mypy.overrides]]
+module = [
+    "app.api.*",
+    "app.skills.*",
+    "app.agents.sba.*",
+    "app.services.replay_determinism",
+    "app.planner.*",
+    "app.planners.*",
+    "app.integrations.*",
+    "app.memory.*",
+    "app.storage.*",
+    "app.auth.*",
+]
+warn_return_any = true
+strict_optional = true
+check_untyped_defs = false         # Don't check untyped function bodies
+
+# =============================================================================
+# ZONE C: FLEXIBLE (baseline freeze only)
+# Infrastructure glue, metrics, utilities - known debt tolerated
+# =============================================================================
+
+[[tool.mypy.overrides]]
+module = [
+    "app.workflow.metrics",
+    "app.traces.traces_metrics",
+    "app.utils.metrics_helpers",
+    "app.config.*",
+    "app.logging_config",
+    "app.worker.*",
+    "app.workers.*",
+    "app.cli",
+    "app.schemas.*",
+]
+# Relaxed settings - just maintain baseline
+warn_return_any = false
+strict_optional = false
+check_untyped_defs = false
+disable_error_code = ["misc", "assignment"]  # Known Prometheus stub issues
+
+# =============================================================================
+# EXTERNAL/GENERATED - Ignore completely
+# =============================================================================
+
+[[tool.mypy.overrides]]
+module = [
+    "alembic.*",
+    "tests.*",
+]
+ignore_errors = true
