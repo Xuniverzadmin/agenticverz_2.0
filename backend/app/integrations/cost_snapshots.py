@@ -162,9 +162,8 @@ class SnapshotAggregate:
         total_input_tokens: int,
         total_output_tokens: int,
     ) -> "SnapshotAggregate":
-        agg_id = (
-            f"agg_{hashlib.sha256(f'{snapshot_id}:{entity_type}:{entity_id or "tenant"}'.encode()).hexdigest()[:16]}"
-        )
+        entity_key = entity_id or "tenant"
+        agg_id = f"agg_{hashlib.sha256(f'{snapshot_id}:{entity_type}:{entity_key}'.encode()).hexdigest()[:16]}"
         avg_cost = total_cost_cents / request_count if request_count > 0 else None
         avg_tokens = (total_input_tokens + total_output_tokens) / request_count if request_count > 0 else None
         return cls(

@@ -1732,7 +1732,10 @@ async def get_founder_incidents(
     stmt = stmt.offset((page - 1) * page_size).limit(page_size)
     rows = session.exec(stmt).all()
 
-    # Count total
+    # Convert to response models
+    incidents_list = list(rows)
+
+    # Count total (raw SQL for aggregation - uses execute() not exec())
     count_stmt = text("SELECT COUNT(*) FROM incidents")
     total_row = session.execute(count_stmt).first()
     total = total_row[0] if total_row else 0
