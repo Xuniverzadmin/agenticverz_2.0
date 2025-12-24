@@ -12,9 +12,9 @@
 
 The codebase has 1,064 mypy type errors across 163 files. Rather than chase zero globally, we enforce **Type Safety Zones** with different strictness levels based on criticality.
 
-**Current State:** 991 errors (Zone A: **0** ✅, Zone B: ~600, Zone C: ~390)
+**Current State:** 999 errors (Zone A: **0** ✅, Zone B: ~600, Zone C: ~400)
 **Target State:** Zone A maintained at 0, no regressions in any zone
-**Strategy:** Zone-based enforcement (see "Type Safety Zones" section below)
+**Strategy:** Zone-based enforcement + Steady-State Policy (see sections below)
 
 ---
 
@@ -1002,6 +1002,9 @@ disable_error_code = ["misc", "assignment"]
 | 2025-12-24 | Tightening rules added: reason comments (A), scope restrictions (B), no-ignore (C) |
 | 2025-12-24 | Added Rule 6: No `Any` returns across module boundaries |
 | 2025-12-24 | Applied 80 autofix fixes, 40 ruff fixes - error count now 991 |
+| 2025-12-24 | **Steady-State Policy LOCKED** - 999 errors is correct target, system in maintenance mode |
+| 2025-12-24 | Added Ruff Policy section - categorized F401/F841/I001 (auto-fix), E402/ASYNC (scoped), F821 (block) |
+| 2025-12-24 | Current breakdown: arg-type(257), assignment(238), union-attr(112), call-overload(75) |
 
 ---
 
@@ -1022,3 +1025,117 @@ This ritual ensures:
 - Technical debt stays visible, not buried
 
 **Schedule:** Run after major refactors or quarterly, whichever comes first
+
+---
+
+## Steady-State Policy (2025-12-24)
+
+**Status: LOCKED** — This system is now in maintenance mode.
+
+### What the Numbers Mean
+
+**999 remaining errors is the correct target.**
+
+- ~655 are **accepted debt** by policy (Categories A + B + C)
+- ~148 were **autofixable and already handled**
+- ~196 are **unclassified** — intentionally visible
+
+> **Any new mypy error is either a regression or a documented architectural decision.**
+
+That's the win. Not "zero errors".
+
+### What NOT to Do
+
+1. ❌ Do not try to drive mypy below ~900
+2. ❌ Do not "clean up" Category C with casts
+3. ❌ Do not blanket-ignore any warnings
+4. ❌ Do not merge Ruff and mypy policies (they serve different purposes)
+
+### The Correct Workflow Loop
+
+```bash
+# Before commit
+python tools/mypy_autofix/apply.py
+ruff check --fix
+
+# CI enforces
+- No autofix diffs allowed
+- No new mypy errors without ledger entry
+- No Ruff regressions outside allowed scopes
+
+# Quarterly
+- Recount Category C
+- Promote any newly patternable errors to autofix
+- Update ledger counts only (not goals)
+```
+
+---
+
+## Ruff Policy (Parallel to Mypy)
+
+Ruff serves **different purposes** than mypy. Categorize exactly once:
+
+### 🟢 Auto-fix + Gate (Always run, fail CI on diffs)
+
+Safe, mechanical, no semantics:
+
+| Code | Description |
+|------|-------------|
+| `F401` | Unused imports |
+| `F841` | Unused locals |
+| `I001` | Import sorting |
+| `E741` | Ambiguous names |
+| `E711/E712` | Style comparisons |
+
+**Action:** Always run `ruff check --fix` and **fail CI if it produces diffs**.
+
+### 🟡 Allow with Scoped Ignores (Don't chase)
+
+Framework-driven noise:
+
+| Code | Scope |
+|------|-------|
+| `E402` | `alembic/versions/*.py` only |
+| `ASYNC230/101` | `tests/**` only |
+
+**Action:** Add per-file ignores in `pyproject.toml`:
+
+```toml
+[tool.ruff.per-file-ignores]
+"alembic/versions/*.py" = ["E402"]
+"tests/**" = ["ASYNC230", "ASYNC101"]
+```
+
+### 🔴 Never Ignore (CI must fail)
+
+These indicate **real bugs**:
+
+| Code | Description |
+|------|-------------|
+| `F821` | Undefined name |
+| `ASYNC1xx` | Blocking in prod async code |
+
+**Action:** CI fails hard. No exceptions.
+
+---
+
+## Current Error Breakdown (2025-12-24)
+
+### Mypy by Error Code
+
+| Error Code | Count | Category |
+|------------|-------|----------|
+| `arg-type` | 257 | B - Literal vs str, framework |
+| `assignment` | 238 | B - SQLModel/Pydantic patterns |
+| `union-attr` | 112 | C - Optional chaining |
+| `call-overload` | 75 | A - SQLAlchemy sessionmaker |
+| `attr-defined` | 63 | Mixed |
+| `misc` | 55 | Mixed - Await issues |
+| `index` | 49 | B - Dict access |
+| `operator` | 38 | B - None + operator |
+| `var-annotated` | 33 | C - Needs annotation |
+| `return-value` | 27 | C - Return mismatch |
+| `dict-item` | 25 | B - Dict literal |
+| Other | 27 | Various |
+
+**Total: 999 errors**
