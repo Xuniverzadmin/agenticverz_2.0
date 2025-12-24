@@ -3,7 +3,7 @@
 **Status:** READY
 **Category:** Infrastructure / Pricing / Feature Gating
 **Created:** 2025-12-24
-**Related PINs:** PIN-128, PIN-154, PIN-070, PIN-075
+**Related PINs:** PIN-128, PIN-154, PIN-156, PIN-157, PIN-070, PIN-075
 
 ---
 
@@ -17,12 +17,60 @@ M32 builds the infrastructure to support tiered pricing without locking in speci
 
 ## What This Milestone Does NOT Do
 
-- Does NOT freeze tier definitions
-- Does NOT set prices
+- Does NOT freeze tier definitions permanently
 - Does NOT integrate with Stripe (that's M33+)
-- Does NOT define feature bundles permanently
+- Does NOT lock feature bundles permanently
 
-**This milestone builds the machinery. Pricing decisions remain flexible.**
+**This milestone builds the machinery. Pricing decisions remain configurable.**
+
+---
+
+## Price Point Configuration (PIN-157 Reference)
+
+The following price anchors are **configurable defaults**, not frozen values:
+
+```python
+# app/config/pricing_anchors.py
+
+class PricingPhase(str, Enum):
+    """Current pricing phase - affects enforcement behavior."""
+    LEARNING = "learning"      # Phase A: Soft limits, maximize Currency B
+    AUTHORITY = "authority"    # Phase B: Hard limits, monetize Currency A
+
+# CONFIGURABLE: Change via environment or database
+CURRENT_PHASE = PricingPhase.LEARNING
+
+# Price anchors (reference only - Stripe handles actual billing)
+PRICE_ANCHORS = {
+    TenantTier.OBSERVE: {
+        "price_monthly_cents": 0,
+        "marketing_name": "Open Control Plane",
+        "currency_focus": "B",  # System intelligence
+    },
+    TenantTier.REACT: {
+        "price_monthly_cents": 900,  # $9/month
+        "marketing_name": "Builder",
+        "currency_focus": "B>A",  # Learning > Revenue
+    },
+    TenantTier.PREVENT: {
+        "price_monthly_cents": 19900,  # $199/month
+        "marketing_name": "Authority Explorer",
+        "currency_focus": "A+B",  # Both currencies
+    },
+    TenantTier.ASSIST: {
+        "price_monthly_cents": None,  # Custom quote
+        "marketing_name": "Scale",
+        "currency_focus": "A",  # Revenue primary
+    },
+    TenantTier.GOVERN: {
+        "price_monthly_cents": None,  # Custom quote
+        "marketing_name": "Enterprise",
+        "currency_focus": "A",  # Revenue primary
+    },
+}
+```
+
+See **PIN-157** for full numeric pricing anchor rationale.
 
 ---
 
@@ -164,48 +212,176 @@ def tier_check(tenant_tier: TenantTier, required: TenantTier) -> bool:
     return TIER_HIERARCHY[tenant_tier] >= TIER_HIERARCHY[required]
 ```
 
-### Feature Registry
+### Feature Registry (Complete Mapping)
 
 ```python
 # app/auth/feature_registry.py
 
 from app.models.tenant import TenantTier
 
-# Feature → Minimum tier mapping
-# This is the ONLY place feature gates are defined
+# ═══════════════════════════════════════════════════════════════════════════════
+# FEATURE → TIER MAPPING (Authoritative Source)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Tier       | Price    | Currency | Market Segment
+# -----------|----------|----------|----------------------------------
+# OBSERVE    | $0       | B        | Indie / OSS / Chaos corpus
+# REACT      | $9       | B > A    | Builders / Small teams
+# PREVENT    | $199     | A + B    | Startups / Pain-aware teams
+# ASSIST     | $1.5k+   | A        | Scaleups (custom quote)
+# GOVERN     | $5k+     | A        | Enterprise (custom quote)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 FEATURE_TIER_MAP = {
-    # Wrapper features (all tiers)
+    # ═══════════════════════════════════════════════════════════════════════════
+    # OBSERVE ($0) - "Open Control Plane"
+    # Currency B: Maximize chaos corpus, failure diversity, edge cases
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Proxy passthrough (core value = data capture)
     "proxy.chat_completions": TenantTier.OBSERVE,
     "proxy.embeddings": TenantTier.OBSERVE,
-    "killswitch.read": TenantTier.OBSERVE,
+    "proxy.completions": TenantTier.OBSERVE,
+
+    # Basic observability (they need to see something)
+    "dashboard.status": TenantTier.OBSERVE,
+    "dashboard.today_snapshot": TenantTier.OBSERVE,
+    "incidents.list": TenantTier.OBSERVE,
     "incidents.read": TenantTier.OBSERVE,
 
-    # Tier 1: React
+    # Basic cost tracking (awareness, not control)
+    "cost.daily_total": TenantTier.OBSERVE,
+    "cost.by_model": TenantTier.OBSERVE,
+
+    # Retention: 7 days
+    # Rate limit: None (unlimited proxy, that's the point)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # REACT ($9/month) - "Builder"
+    # Currency B > A: Higher-quality data, real workloads, survival revenue
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Reactive controls (respond to problems)
+    "killswitch.read": TenantTier.REACT,
     "killswitch.write": TenantTier.REACT,
     "alerts.configure": TenantTier.REACT,
-    "budget.caps": TenantTier.REACT,
-    "evidence.export": TenantTier.REACT,
-    "sdk.simulate.limited": TenantTier.REACT,  # Rate-limited
+    "alerts.webhook": TenantTier.REACT,
 
-    # Tier 2: Prevent
+    # Budget awareness (caps, not enforcement)
+    "budget.caps.soft": TenantTier.REACT,
+    "budget.alerts": TenantTier.REACT,
+
+    # Basic evidence (for debugging)
+    "evidence.view": TenantTier.REACT,
+    "evidence.export.json": TenantTier.REACT,
+
+    # Limited SDK access (rate-limited)
+    "sdk.simulate.limited": TenantTier.REACT,  # 100/hour
+    "sdk.query.limited": TenantTier.REACT,      # 100/hour
+    "sdk.capabilities": TenantTier.REACT,
+
+    # Cost breakdown (attribution)
+    "cost.by_feature": TenantTier.REACT,
+    "cost.by_user": TenantTier.REACT,
+    "cost.anomaly_alerts": TenantTier.REACT,
+
+    # Retention: 30 days
+    # Rate limit: 100 SDK calls/hour
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PREVENT ($199/month) - "Authority Explorer"
+    # Currency A + B: Meaningful revenue + high-stakes failure data
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Full SDK access (unlimited)
     "sdk.simulate.full": TenantTier.PREVENT,
-    "sdk.query": TenantTier.PREVENT,
+    "sdk.query.full": TenantTier.PREVENT,
+    "sdk.runtime.execute": TenantTier.PREVENT,
+
+    # Preventive controls (stop problems before they happen)
+    "budget.caps.hard": TenantTier.PREVENT,
+    "budget.enforcement": TenantTier.PREVENT,
+    "guardrails.custom": TenantTier.PREVENT,
+
+    # Strategy-bound agents
     "sba.read": TenantTier.PREVENT,
     "sba.write": TenantTier.PREVENT,
-    "shadow.routing": TenantTier.PREVENT,
+    "sba.inspector": TenantTier.PREVENT,
+
+    # Evidence pack (compliance-ready)
+    "evidence.export.pdf": TenantTier.PREVENT,
+    "evidence.certificates": TenantTier.PREVENT,
+    "evidence.decision_timeline": TenantTier.PREVENT,
+
+    # Cost projections
     "cost.projections": TenantTier.PREVENT,
+    "cost.forecasting": TenantTier.PREVENT,
 
-    # Tier 3: Assist
+    # Shadow routing (safe experimentation)
+    "routing.shadow": TenantTier.PREVENT,
+
+    # Retention: 90 days
+    # Rate limit: Unlimited SDK
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ASSIST ($1.5k-$3k/month) - "Scale" (Custom Quote)
+    # Currency A: High-margin revenue, deep governance insights
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # CARE routing (intelligent model selection)
     "care.routing": TenantTier.ASSIST,
-    "recovery.suggestions": TenantTier.ASSIST,
-    "auto.throttling": TenantTier.ASSIST,
-    "canary.enforcement": TenantTier.ASSIST,
+    "care.probes": TenantTier.ASSIST,
+    "care.learning": TenantTier.ASSIST,
 
-    # Tier 4: Govern
+    # Recovery automation
+    "recovery.suggestions": TenantTier.ASSIST,
+    "recovery.auto_apply": TenantTier.ASSIST,
+
+    # Auto-throttling (cost containment)
+    "auto.throttling": TenantTier.ASSIST,
+    "auto.model_downgrade": TenantTier.ASSIST,
+
+    # Canary deployments
+    "canary.enforcement": TenantTier.ASSIST,
+    "canary.rollback": TenantTier.ASSIST,
+
+    # Advanced analytics
+    "analytics.trends": TenantTier.ASSIST,
+    "analytics.predictions": TenantTier.ASSIST,
+
+    # Retention: 180 days
+    # Rate limit: Unlimited + priority queue
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # GOVERN ($3k-$5k+/month) - "Enterprise" (Custom Quote)
+    # Currency A: Maximum revenue, compliance edge cases
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    # Custom policies
     "policy.custom": TenantTier.GOVERN,
+    "policy.approval_chains": TenantTier.GOVERN,
+    "policy.escalation": TenantTier.GOVERN,
+
+    # Full automation
     "automation.full": TenantTier.GOVERN,
+    "automation.workflows": TenantTier.GOVERN,
+
+    # Compliance artifacts
+    "compliance.soc2": TenantTier.GOVERN,
+    "compliance.audit_logs": TenantTier.GOVERN,
+    "compliance.data_residency": TenantTier.GOVERN,
+
+    # Dedicated infrastructure
     "infra.dedicated": TenantTier.GOVERN,
-    "compliance.artifacts": TenantTier.GOVERN,
+    "infra.sla": TenantTier.GOVERN,
+    "infra.priority_support": TenantTier.GOVERN,
+
+    # Multi-tenant isolation
+    "isolation.container": TenantTier.GOVERN,
+    "isolation.encryption": TenantTier.GOVERN,
+
+    # Retention: 365 days (or custom)
+    # Rate limit: Unlimited + dedicated resources
 }
 
 
@@ -400,33 +576,106 @@ def get_feature_limit(tenant: Tenant, feature: str) -> Optional[int]:
 ```python
 # app/auth/tier_defaults.py
 
-# Default rate limits per tier (per hour)
-# These are suggestions, actual limits are on Tenant model
+# ═══════════════════════════════════════════════════════════════════════════════
+# TIER DEFAULTS (Authoritative Configuration)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# These defaults are applied when a tenant is upgraded/downgraded.
+# Individual tenants can have overrides via the Tenant model.
+#
+# Price anchors are in PIN-157. Marketing names are in PIN-156.
+# ═══════════════════════════════════════════════════════════════════════════════
+
 TIER_DEFAULTS = {
+    # ═══════════════════════════════════════════════════════════════════════════
+    # OBSERVE ($0) - "Open Control Plane"
+    # ═══════════════════════════════════════════════════════════════════════════
     TenantTier.OBSERVE: {
+        "marketing_name": "Open Control Plane",
+        "price_monthly_cents": 0,
         "retention_days": 7,
-        "simulate_limit_hourly": 0,  # Not allowed
-        "query_limit_hourly": 0,
+        "simulate_limit_hourly": 0,      # SDK not available
+        "query_limit_hourly": 0,         # SDK not available
+        "proxy_limit_hourly": None,      # Unlimited proxy (capture data)
+        "incidents_visible": 10,         # Limited history
+        "evidence_export": False,
+        "custom_alerts": False,
+        "killswitch_access": False,
     },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # REACT ($9/month) - "Builder"
+    # ═══════════════════════════════════════════════════════════════════════════
     TenantTier.REACT: {
+        "marketing_name": "Builder",
+        "price_monthly_cents": 900,
         "retention_days": 30,
-        "simulate_limit_hourly": 100,  # Limited
-        "query_limit_hourly": 100,
+        "simulate_limit_hourly": 100,    # Rate-limited SDK
+        "query_limit_hourly": 100,       # Rate-limited SDK
+        "proxy_limit_hourly": None,      # Unlimited proxy
+        "incidents_visible": 100,        # More history
+        "evidence_export": True,         # JSON only
+        "custom_alerts": True,
+        "killswitch_access": True,
     },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PREVENT ($199/month) - "Authority Explorer"
+    # ═══════════════════════════════════════════════════════════════════════════
     TenantTier.PREVENT: {
+        "marketing_name": "Authority Explorer",
+        "price_monthly_cents": 19900,
         "retention_days": 90,
-        "simulate_limit_hourly": None,  # Unlimited
-        "query_limit_hourly": None,
+        "simulate_limit_hourly": None,   # Unlimited SDK
+        "query_limit_hourly": None,      # Unlimited SDK
+        "proxy_limit_hourly": None,
+        "incidents_visible": None,       # All history (within retention)
+        "evidence_export": True,         # PDF + JSON
+        "evidence_certificates": True,
+        "sba_access": True,
+        "custom_guardrails": True,
     },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # ASSIST ($1.5k-$3k/month) - "Scale" (Custom Quote)
+    # ═══════════════════════════════════════════════════════════════════════════
     TenantTier.ASSIST: {
+        "marketing_name": "Scale",
+        "price_monthly_cents": None,     # Custom quote
         "retention_days": 180,
         "simulate_limit_hourly": None,
         "query_limit_hourly": None,
+        "proxy_limit_hourly": None,
+        "incidents_visible": None,
+        "evidence_export": True,
+        "evidence_certificates": True,
+        "sba_access": True,
+        "care_routing": True,
+        "recovery_automation": True,
+        "priority_support": True,
     },
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # GOVERN ($3k-$5k+/month) - "Enterprise" (Custom Quote)
+    # ═══════════════════════════════════════════════════════════════════════════
     TenantTier.GOVERN: {
-        "retention_days": 365,
+        "marketing_name": "Enterprise",
+        "price_monthly_cents": None,     # Custom quote
+        "retention_days": 365,           # Or custom
         "simulate_limit_hourly": None,
         "query_limit_hourly": None,
+        "proxy_limit_hourly": None,
+        "incidents_visible": None,
+        "evidence_export": True,
+        "evidence_certificates": True,
+        "sba_access": True,
+        "care_routing": True,
+        "recovery_automation": True,
+        "custom_policies": True,
+        "compliance_artifacts": True,
+        "dedicated_infra": True,
+        "priority_support": True,
+        "sla_guarantee": True,
     },
 }
 
@@ -670,4 +919,8 @@ async def update_tenant_tier(
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | Added complete feature→tier mapping (60+ features across 5 tiers) |
+| 2025-12-24 | Added price point configuration with PricingPhase enum |
+| 2025-12-24 | Added detailed tier defaults with marketing names |
+| 2025-12-24 | Added reference to PIN-157 (Numeric Pricing Anchors) |
 | 2025-12-24 | Created PIN-155 M32 Tier Infrastructure Blueprint |
