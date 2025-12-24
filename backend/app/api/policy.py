@@ -15,6 +15,10 @@ Integrates with:
 
 NOTE: Policy subsystem MUST use AsyncSession - async endpoints + M17/M19 routing.
       Do NOT import sync Session from sqlmodel. See test_m19_policy.py guardrail tests.
+
+Tier Gating (M32 - PIN-158):
+- PREVENT ($199): Policy evaluation sandbox (pre-execution decisions)
+- ASSIST ($1.5k+): Approval workflows (advanced orchestration)
 """
 
 import asyncio
@@ -22,6 +26,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, cast
@@ -33,6 +38,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.tenant_auth import TenantContext, get_tenant_context
+from app.auth.tier_gating import TenantTier, requires_feature, requires_tier
 from app.db_async import get_async_session
 
 logger = logging.getLogger("nova.api.policy")
@@ -235,7 +242,6 @@ WEBHOOK_RETRY_DELAYS = [1, 5, 15]  # seconds
 # 2. Set WEBHOOK_CURRENT_KEY_VERSION to new version
 # 3. Keep old key for grace period (WEBHOOK_KEY_GRACE_VERSIONS)
 # 4. After grace period, remove old key version
-import os
 
 WEBHOOK_CURRENT_KEY_VERSION = os.getenv("WEBHOOK_KEY_VERSION", "v1")
 WEBHOOK_KEY_VERSIONS: Dict[str, str] = {
@@ -544,10 +550,15 @@ def verify_webhook_signature(body: str, signature: str, key_version: str, secret
 
 @router.post("/eval", response_model=PolicyEvalResponse)
 async def evaluate_policy(
-    request: PolicyEvalRequest, session: AsyncSession = Depends(get_async_session)
+    request: PolicyEvalRequest,
+    session: AsyncSession = Depends(get_async_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("policy.audit")),
 ) -> PolicyEvalResponse:
     """
     Sandbox evaluation of policy for a skill execution.
+
+    **Tier: PREVENT ($199)** - Pre-execution policy evaluation. "You stop the fire."
     """
     # Rate limiting per tenant
     _check_rate_limit(request.tenant_id, "policy_eval")

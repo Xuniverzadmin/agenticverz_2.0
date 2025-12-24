@@ -13,6 +13,11 @@ Endpoints:
 - GET /v1/calls/{call_id} - Get call detail
 
 M28: Demo endpoint /v1/demo/simulate-incident removed (PIN-145)
+
+Tier Gating (M32 - PIN-158):
+- OBSERVE ($0): Read-only status, policies, incidents
+- REACT ($9): Killswitch write (freeze/unfreeze) - "You see the fire"
+- PREVENT ($199): Replay for evidence - "You stop the fire"
 """
 
 import json
@@ -26,6 +31,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, desc, select
 from sqlmodel import Session
 
+from app.auth.tenant_auth import TenantContext, get_tenant_context
+from app.auth.tier_gating import requires_feature
 from app.db import get_session
 from app.models.killswitch import (
     DefaultGuardrail,
@@ -103,9 +110,14 @@ async def freeze_tenant(
     tenant_id: str = Query(..., description="Tenant ID to freeze"),
     action: KillSwitchAction = None,
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("killswitch.write")),
 ):
     """
     Hard stop everything for a tenant.
+
+    **Tier: REACT ($9)** - Emergency response capability. "You see the fire."
+
     Immediate. No in-flight retries. Sticky until manually lifted.
     """
     if action is None:
@@ -155,9 +167,14 @@ async def freeze_key(
     key_id: str = Query(..., description="API key ID to freeze"),
     action: KillSwitchAction = None,
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("killswitch.write")),
 ):
     """
     Kill a single API key.
+
+    **Tier: REACT ($9)** - Emergency response capability. "You see the fire."
+
     Use cases: Compromised key, rogue experiment, limit damage.
     """
     if action is None:
@@ -206,9 +223,14 @@ async def freeze_key(
 async def get_killswitch_status(
     tenant_id: str = Query(..., description="Tenant ID"),
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("killswitch.read")),
 ):
     """
     Get complete kill switch status for a tenant.
+
+    **Tier: REACT ($9)** - KillSwitch visibility.
+
     Shows tenant state plus all key overrides.
     """
     # Get tenant state
@@ -260,8 +282,14 @@ async def unfreeze_tenant(
     tenant_id: str = Query(..., description="Tenant ID to unfreeze"),
     actor: str = Query(default="system", description="Who is unfreezing"),
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("killswitch.write")),
 ):
-    """Unfreeze a tenant."""
+    """
+    Unfreeze a tenant.
+
+    **Tier: REACT ($9)** - Emergency response capability.
+    """
     stmt = select(KillSwitchState).where(
         and_(
             KillSwitchState.entity_type == "tenant",
@@ -296,8 +324,14 @@ async def unfreeze_key(
     key_id: str = Query(..., description="API key ID to unfreeze"),
     actor: str = Query(default="system", description="Who is unfreezing"),
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("killswitch.write")),
 ):
-    """Unfreeze an API key."""
+    """
+    Unfreeze an API key.
+
+    **Tier: REACT ($9)** - Emergency response capability.
+    """
     stmt = select(KillSwitchState).where(
         and_(
             KillSwitchState.entity_type == "key",
@@ -335,14 +369,17 @@ async def unfreeze_key(
 @router.get("/policies/active", response_model=List[GuardrailSummary])
 async def get_active_policies(
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
 ):
     """
     Get active guardrails - "What's protecting me right now?"
 
+    **Tier: OBSERVE ($0)** - Basic visibility into protection.
+
     Returns the Default Guardrail Pack v1 (read-only).
     No editing in MVP - this is intentional for trust.
     """
-    stmt = select(DefaultGuardrail).where(DefaultGuardrail.is_enabled == True).order_by(DefaultGuardrail.priority)
+    stmt = select(DefaultGuardrail).where(DefaultGuardrail.is_enabled is True).order_by(DefaultGuardrail.priority)
     rows = session.exec(stmt).all()
 
     # Extract model instances from Row tuples
@@ -372,9 +409,13 @@ async def list_incidents(
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0),
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("incident.list")),
 ):
     """
     List incidents (auto-grouped failures).
+
+    **Tier: REACT ($9)** - Incident visibility. "You see the fire."
 
     An incident = correlated failures + retries + cost spike within time window.
     """
@@ -408,9 +449,14 @@ async def list_incidents(
 async def get_incident(
     incident_id: str,
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("incident.read")),
 ):
     """
     Get incident detail with timeline.
+
+    **Tier: REACT ($9)** - Incident visibility. "You see the fire."
+
     One-screen explanation readable by a founder at 2am.
     """
     stmt = select(Incident).where(Incident.id == incident_id)
@@ -463,18 +509,22 @@ async def replay_call(
     call_id: str,
     request: ReplayRequest = None,
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("evidence.replay")),
 ):
     """
-    🔁 REPLAY PROVES ENFORCEMENT
+    REPLAY PROVES ENFORCEMENT
+
+    **Tier: PREVENT ($199)** - Evidence and compliance verification. "You stop the fire."
 
     Language layer: This is NOT "re-execution" - it's PROOF.
     Replay demonstrates that your guardrails are working correctly.
 
     Guarantees:
-    - ✅ Same input
-    - ✅ Same policy evaluation
-    - ✅ Same routing decision
-    - ✅ Deterministic outcome
+    - Same input
+    - Same policy evaluation
+    - Same routing decision
+    - Deterministic outcome
 
     Returns comparison showing enforcement consistency.
     """
@@ -494,8 +544,8 @@ async def replay_call(
             status_code=400, detail=f"Call is not replay eligible: {original.block_reason or 'unknown'}"
         )
 
-    # Parse original request
-    original_request = json.loads(original.request_json)
+    # Parse original request (reserved for future replay implementation)
+    _original_request = json.loads(original.request_json)  # noqa: F841
 
     if request.dry_run:
         # Dry run - just validate
@@ -528,9 +578,13 @@ async def replay_call(
 async def get_call(
     call_id: str,
     session: Session = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("timeline.read")),
 ):
     """
     Get single call truth.
+
+    **Tier: REACT ($9)** - Decision timeline visibility.
 
     Includes input hash, policy decisions, cost, outcome, replay eligibility.
     """

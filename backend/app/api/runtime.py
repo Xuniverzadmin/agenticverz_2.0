@@ -15,6 +15,10 @@ Design Principles (from PIN-005):
 - Pre-execution simulation: Evaluate plans before committing
 - Self-describing skills: Skills explain their behavior and constraints
 - Resource contracts: Boundaries declared upfront
+
+Tier Gating (M32 - PIN-158):
+- OBSERVE ($0): Query, list skills, capabilities (observability)
+- PREVENT ($199): Simulate, replay (pre-execution decisions)
 """
 
 import logging
@@ -24,6 +28,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from app.auth.tenant_auth import TenantContext, get_tenant_context
+from app.auth.tier_gating import requires_feature
 from app.middleware.rate_limit import rate_limit_dependency
 
 logger = logging.getLogger("nova.api.runtime")
@@ -281,9 +287,14 @@ async def simulate_plan(
     request: SimulateRequest,
     _http_request: Request = None,
     _rate_limited: bool = Depends(rate_limit_dependency),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("sdk.simulate.full")),
 ):
     """
     Simulate a plan before execution.
+
+    **Tier: PREVENT ($199)** - Pre-execution simulation is the core "decision tier"
+    feature that lets you stop problems before they happen.
 
     Returns cost estimates, latency estimates, risk assessment, and feasibility check.
     This allows agents to evaluate plans before committing resources.
@@ -418,9 +429,15 @@ async def simulate_plan(
 
 
 @router.post("/query", response_model=QueryResponse)
-async def query_runtime(request: QueryRequest):
+async def query_runtime(
+    request: QueryRequest,
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("traces.read")),
+):
     """
     Query runtime state.
+
+    **Tier: OBSERVE ($0)** - Basic observability for all tiers.
 
     Supported query types:
     - remaining_budget_cents: Current budget status
@@ -527,9 +544,13 @@ async def query_runtime(request: QueryRequest):
 
 
 @router.get("/skills", response_model=SkillListResponse)
-async def list_available_skills():
+async def list_available_skills(
+    ctx: TenantContext = Depends(get_tenant_context),
+):
     """
     List all available skills.
+
+    **Tier: OBSERVE ($0)** - Basic capability discovery.
 
     Returns skill IDs and basic descriptors for each skill.
     """
@@ -538,7 +559,7 @@ async def list_available_skills():
     if registry:
         try:
             skills_list = registry["list"]()
-            manifest = registry["manifest"]()
+            _manifest = registry["manifest"]()  # noqa: F841 - reserved for future use
             return SkillListResponse(
                 skills=[s["name"] for s in skills_list],
                 count=len(skills_list),
@@ -569,9 +590,14 @@ async def list_available_skills():
 
 
 @router.get("/skills/{skill_id}", response_model=SkillDescriptorResponse)
-async def describe_skill(skill_id: str):
+async def describe_skill(
+    skill_id: str,
+    ctx: TenantContext = Depends(get_tenant_context),
+):
     """
     Get detailed descriptor for a skill.
+
+    **Tier: OBSERVE ($0)** - Basic capability discovery.
 
     Returns full metadata including:
     - Input/output schemas
@@ -632,9 +658,12 @@ async def describe_skill(skill_id: str):
 async def get_capabilities(
     agent_id: Optional[str] = Query(default=None, description="Agent ID"),
     tenant_id: Optional[str] = Query(default=None, description="Tenant ID"),
+    ctx: TenantContext = Depends(get_tenant_context),
 ):
     """
     Get available capabilities for an agent/tenant.
+
+    **Tier: OBSERVE ($0)** - Basic capability awareness.
 
     Returns:
     - Available skills with their current status
@@ -754,9 +783,13 @@ async def replay_run(
     run_id: str,
     request: ReplayRequest = ReplayRequest(),
     _rate_limited: bool = Depends(rate_limit_dependency),
+    ctx: TenantContext = Depends(get_tenant_context),
+    _tier: None = Depends(requires_feature("evidence.replay")),
 ):
     """
     Replay a stored plan and optionally verify determinism parity.
+
+    **Tier: PREVENT ($199)** - Replay for evidence and compliance verification.
 
     M6 Deliverable: Re-execute stored plans without re-planning.
 

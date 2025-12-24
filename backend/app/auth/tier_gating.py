@@ -48,11 +48,23 @@ class TenantTier(str, Enum):
 
     Ordered by capability level (OBSERVE < REACT < PREVENT < ASSIST < GOVERN).
     Each tier includes all capabilities of lower tiers.
+
+    Strategic semantics (from pricing strategy analysis):
+    - OBSERVE: Free tier, "Open Control Plane" - maximizes Currency B (system intelligence)
+    - REACT: "High-Signal Learning Tier" - "You see the fire" (emergency response)
+    - PREVENT: "Decision Tier" - "You stop the fire" (pre-execution authority)
+    - ASSIST/GOVERN: Revenue primary - custom quotes
+
+    Pricing principle: "Freeze the floor, stretch the ceiling"
+    - FREE stays forever ($0)
+    - REACT stays stable ($9)
+    - PREVENT may move up later ($199+)
+    - ASSIST/GOVERN elastic ($1.5k-$5k+)
     """
 
-    OBSERVE = "observe"  # $0/month - Open Control Plane
-    REACT = "react"  # $9/month - Builder
-    PREVENT = "prevent"  # $199/month - Authority Explorer
+    OBSERVE = "observe"  # $0/month - Open Control Plane (Currency B only)
+    REACT = "react"  # $9/month - High-Signal Learning ("You see the fire")
+    PREVENT = "prevent"  # $199/month - Decision Tier ("You stop the fire")
     ASSIST = "assist"  # $1.5k+/month - Scale (custom quote)
     GOVERN = "govern"  # $5k+/month - Enterprise (custom quote)
 
@@ -138,7 +150,9 @@ PRICE_ANCHORS = {
 
 FEATURE_TIER_MAP: dict[str, TenantTier] = {
     # =========================================================================
-    # OBSERVE ($0) - Proxy, Basic Observability, 7-day retention
+    # OBSERVE ($0) - "Open Control Plane"
+    # Basic observability, proxy access, 7-day retention
+    # Currency focus: B (system intelligence, no revenue target)
     # =========================================================================
     # Proxy
     "proxy.chat_completions": TenantTier.OBSERVE,
@@ -154,7 +168,10 @@ FEATURE_TIER_MAP: dict[str, TenantTier] = {
     "logs.read.7d": TenantTier.OBSERVE,
     "metrics.basic": TenantTier.OBSERVE,
     # =========================================================================
-    # REACT ($9) - KillSwitch, Alerts, 30-day retention, Limited SDK
+    # REACT ($9) - "High-Signal Learning Tier" / "You see the fire"
+    # KillSwitch (emergency response), Alerts, 30-day retention
+    # Currency focus: B>A (learning > revenue, prevent comfortable lock-in)
+    # Semantic: Users REACT to incidents, they don't PREVENT them yet
     # =========================================================================
     # KillSwitch
     "killswitch.read": TenantTier.REACT,
@@ -181,7 +198,11 @@ FEATURE_TIER_MAP: dict[str, TenantTier] = {
     # Decision Timeline (read-only)
     "timeline.read": TenantTier.REACT,
     # =========================================================================
-    # PREVENT ($199) - Full SDK, SBA, Evidence Export, 90-day retention
+    # PREVENT ($199) - "Decision Tier" / "You stop the fire"
+    # Pre-execution simulation, full SDK, evidence export, 90-day retention
+    # Currency focus: A+B (both revenue and intelligence)
+    # Semantic: This is the FIRST TIER where AOS makes decisions BEFORE execution
+    # Authority framing: "before money is spent", "before damage occurs"
     # =========================================================================
     # SDK (unlimited)
     "sdk.simulate.full": TenantTier.PREVENT,
@@ -196,6 +217,7 @@ FEATURE_TIER_MAP: dict[str, TenantTier] = {
     "evidence.export.json": TenantTier.PREVENT,
     "evidence.export.pdf": TenantTier.PREVENT,
     "evidence.certificates": TenantTier.PREVENT,
+    "evidence.replay": TenantTier.PREVENT,  # Replay for compliance verification
     # Extended Observability
     "logs.read.90d": TenantTier.PREVENT,
     "metrics.prometheus": TenantTier.PREVENT,
@@ -212,8 +234,13 @@ FEATURE_TIER_MAP: dict[str, TenantTier] = {
     # Custom Guardrails
     "guardrails.read": TenantTier.PREVENT,
     "guardrails.write": TenantTier.PREVENT,
+    # Policy Evaluation Sandbox
+    "policy.audit": TenantTier.PREVENT,  # Pre-execution policy evaluation
     # =========================================================================
-    # ASSIST ($1.5k+) - CARE Routing, Recovery Automation, 180-day retention
+    # ASSIST ($1.5k+) - "Scale" / Advanced Orchestration
+    # CARE routing, recovery automation, 180-day retention
+    # Currency focus: A (revenue primary)
+    # Elastic pricing: custom quote based on usage
     # =========================================================================
     # CARE Routing
     "care.routing": TenantTier.ASSIST,
@@ -236,7 +263,10 @@ FEATURE_TIER_MAP: dict[str, TenantTier] = {
     "api.priority_queue": TenantTier.ASSIST,
     "api.higher_rate_limits": TenantTier.ASSIST,
     # =========================================================================
-    # GOVERN ($5k+) - Custom Policies, Compliance, 365-day retention, SLA
+    # GOVERN ($5k+) - "Enterprise" / Full Governance
+    # Custom policies, compliance (SOC2/HIPAA/GDPR), 365-day retention, SLA
+    # Currency focus: A (revenue primary)
+    # Elastic pricing: custom quote, do NOT quote until readiness signals met
     # =========================================================================
     # Custom Policies
     "policy.custom": TenantTier.GOVERN,

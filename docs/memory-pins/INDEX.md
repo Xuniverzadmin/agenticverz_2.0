@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-24 (PIN-157 Numeric Pricing Anchors)
+**Last Updated:** 2025-12-24 (PIN-159 M32 Numeric Pricing Anchors & Currency Model)
 
 ---
 
@@ -179,6 +179,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-155](PIN-155-m32-tier-infrastructure-blueprint.md) | **M32 Tier Infrastructure Blueprint** | Infrastructure / Pricing / Feature Gating | **READY** | 2025-12-24 |
 | [PIN-156](PIN-156-landing-page-identity-guidelines.md) | **Landing Page Identity Guidelines** | Marketing / Positioning / Phase A | **ACTIVE** | 2025-12-24 |
 | [PIN-157](PIN-157-numeric-pricing-anchors.md) | **Numeric Pricing Anchors** | Pricing / Strategy / Phase A | **ACTIVE** | 2025-12-24 |
+| [PIN-158](PIN-158-m32-tier-gating-implementation.md) | **M32 Tier Gating Implementation** | Authentication / Tier Gating | **✅ COMPLETE** | 2025-12-24 |
+| [PIN-159](PIN-159-m32-numeric-pricing-anchors-currency-model.md) | **M32 Numeric Pricing Anchors & Currency Model** | Pricing / Strategy | **✅ COMPLETE** | 2025-12-24 |
 
 ---
 
@@ -948,6 +950,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | **PIN-159 M32 Numeric Pricing Anchors & Currency Model** - Created via memory_trail. |
+| 2025-12-24 | **PIN-158 M32 Tier Gating Implementation** - Created via memory_trail. |
 | 2025-12-24 | **PIN-157 Numeric Pricing Anchors** - Concrete price points for Phase A: $0 (OBSERVE, Currency B), $9 (REACT, Currency B>A), $199 (PREVENT, Currency A+B), $1.5k-$5k (ASSIST/GOVERN, Currency A, custom quote). Magic $9 for impulse buy, $199 signals infrastructure not tool. Phase transition criteria defined. Complete feature→tier mapping (60+ features across 5 tiers). |
 | 2025-12-24 | **PIN-155 M32 Updated** - Added complete feature→tier mapping (60+ features), price point configuration with PricingPhase enum (LEARNING/AUTHORITY), detailed tier defaults with marketing names, reference to PIN-157. |
 | 2025-12-24 | **PIN-156 Landing Page Identity Guidelines** - Positioning guidance for Phase A (Learning Acceleration Era). Core principle: "Open Control Plane (Foundational Access)" - not "Free Forever". Three traps to avoid: (1) "Free" as identity, (2) "Forever" as promise, (3) "Stability" as guarantee. Approved terminology: Open, Foundational, Authority, Builders. CTA: "Start Building" not "Sign Up Free". FAQ templates. Email templates. Social media guidelines. Protects future pricing power by avoiding identity anchoring. |
