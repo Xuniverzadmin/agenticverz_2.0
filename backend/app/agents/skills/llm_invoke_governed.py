@@ -179,7 +179,7 @@ class GovernedLLMClient:
 
         except ImportError as e:
             logger.error(f"BudgetLLM not available: {e}")
-            raise ImportError("budgetllm package not available. " "Ensure budgetllm/ is in the Python path.")
+            raise ImportError("budgetllm package not available. Ensure budgetllm/ is in the Python path.")
 
     def invoke(
         self,

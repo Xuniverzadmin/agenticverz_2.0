@@ -12,7 +12,7 @@ Provides:
 import json
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
 from sqlmodel import Session, func, select
 
@@ -283,7 +283,7 @@ class TenantService:
         # Check concurrent runs
         running_count = self.session.exec(
             select(func.count(WorkerRun.id)).where(
-                WorkerRun.tenant_id == tenant_id, WorkerRun.status.in_(["queued", "running"])
+                WorkerRun.tenant_id == tenant_id, cast(Any, WorkerRun.status).in_(["queued", "running"])
             )
         ).one()
 
@@ -525,7 +525,7 @@ class TenantService:
             stmt = stmt.where(WorkerRun.status == status)
         if worker_id:
             stmt = stmt.where(WorkerRun.worker_id == worker_id)
-        stmt = stmt.order_by(WorkerRun.created_at.desc()).offset(offset).limit(limit)
+        stmt = stmt.order_by(cast(Any, WorkerRun.created_at).desc()).offset(offset).limit(limit)
         return list(self.session.exec(stmt))
 
     # ============== Audit Logging ==============

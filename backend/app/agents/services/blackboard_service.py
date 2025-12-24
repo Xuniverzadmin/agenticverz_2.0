@@ -162,7 +162,7 @@ class BlackboardService:
             New value or None on error
         """
         try:
-            return self.redis.incrby(self._key(key), amount)
+            return int(self.redis.incrby(self._key(key), amount))
         except Exception as e:
             logger.warning(f"Blackboard increment failed: {e}")
             return None
@@ -330,7 +330,7 @@ class BlackboardService:
             if released:
                 logger.debug(f"Lock released: {key} by {holder}")
 
-            return released
+            return bool(released)
 
         except Exception as e:
             logger.warning(f"Lock release failed: {e}")
@@ -365,7 +365,7 @@ class BlackboardService:
                 end
             """
             result = self.redis.eval(script, 1, lock_key, holder, ttl)
-            return result == 1
+            return bool(result == 1)
 
         except Exception as e:
             logger.warning(f"Lock extend failed: {e}")
@@ -452,7 +452,7 @@ class BlackboardService:
     def health_check(self) -> bool:
         """Check if Redis is healthy."""
         try:
-            return self.redis.ping()
+            return bool(self.redis.ping())
         except Exception:
             return False
 

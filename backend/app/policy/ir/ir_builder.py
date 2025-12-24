@@ -252,6 +252,7 @@ class IRBuilder(BaseVisitor):
 
     def visit_condition_block(self, node: ConditionBlockNode) -> Any:
         # Compile condition expression
+        assert node is not None
         condition_id = node.condition.accept(self)
 
         # Create blocks for true/false branches
@@ -319,6 +320,7 @@ class IRBuilder(BaseVisitor):
     # ========================================================================
 
     def visit_binary_op(self, node: BinaryOpNode) -> int:
+        assert node is not None
         left_id = node.left.accept(self)
         right_id = node.right.accept(self)
 

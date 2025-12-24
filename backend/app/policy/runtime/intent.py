@@ -21,7 +21,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 class IntentType(Enum):
@@ -323,7 +323,7 @@ class IntentEmitter:
                 emitted.append(intent)
         return emitted
 
-    def register_handler(self, intent_type: IntentType, handler: callable) -> None:
+    def register_handler(self, intent_type: IntentType, handler: Callable[..., Any]) -> None:
         """
         Register a handler for an intent type.
 

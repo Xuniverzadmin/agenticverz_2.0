@@ -1,0 +1,80 @@
+name: Mypy Autofix
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/**'
+      - 'backend/tools/mypy_autofix/**'
+      - 'backend/scripts/mypy_zones.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/**'
+      - 'backend/tools/mypy_autofix/**'
+      - 'backend/scripts/mypy_zones.py'
+
+jobs:
+  mypy-autofix:
+    name: Mypy Type Safety
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install mypy pyyaml
+          pip install -e . || pip install -r requirements.txt || true
+
+      - name: Run Mypy Autofix (dry-run)
+        id: autofix
+        run: |
+          python tools/mypy_autofix/apply.py --dry-run --report
+        continue-on-error: true
+
+      - name: Check Zone A (Critical)
+        id: zone-a
+        run: |
+          python scripts/mypy_zones.py --zone-a
+        continue-on-error: false
+
+      - name: Check All Zones
+        run: |
+          python scripts/mypy_zones.py --report
+
+      - name: Verify no uncommitted fixes
+        run: |
+          # Run autofix without dry-run
+          python tools/mypy_autofix/apply.py --zone-a || true
+
+          # Check if any files changed
+          if ! git diff --exit-code; then
+            echo "::error::Mypy autofix made changes. Please run 'python tools/mypy_autofix/apply.py' locally and commit the fixes."
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Mypy Type Safety Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Zone | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.zone-a.outcome }}" == "success" ]; then
+            echo "| Zone A (Critical) | :white_check_mark: PASS |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Zone A (Critical) | :x: FAIL |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run \`python tools/mypy_autofix/apply.py --report\` locally for details." >> $GITHUB_STEP_SUMMARY

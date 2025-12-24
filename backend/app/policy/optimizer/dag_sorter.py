@@ -196,6 +196,7 @@ class DAGSorter:
             for block in func.blocks.values():
                 for instr in block.instructions:
                     if isinstance(instr, IRAction) and instr.action == ActionType.ROUTE:
+                        assert instr is not None
                         if instr.target and instr.target in self.dag.nodes:
                             # Target must exist before we can route to it
                             self.dag.add_edge(name, instr.target)

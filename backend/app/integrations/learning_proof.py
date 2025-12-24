@@ -826,8 +826,8 @@ class PreventionTimeline:
                 "The system learned, protected, and self-corrected."
             )
         elif has_prevention:
-            return "This incident proves learning: " "a policy born from failure successfully prevented a recurrence."
+            return "This incident proves learning: a policy born from failure successfully prevented a recurrence."
         elif has_rollback:
-            return "This incident shows self-correction: " "a policy that caused harm was automatically demoted."
+            return "This incident shows self-correction: a policy that caused harm was automatically demoted."
         else:
             return "This incident is part of the feedback loop."

@@ -737,7 +737,7 @@ async def evaluate_graduation_status(
     # Log degradation
     if status.is_degraded:
         logger.warning(
-            f"M25 graduation DEGRADED: {status.degraded_from} -> DEGRADED. " f"Reason: {status.degradation_reason}"
+            f"M25 graduation DEGRADED: {status.degraded_from} -> DEGRADED. Reason: {status.degradation_reason}"
         )
 
     return status

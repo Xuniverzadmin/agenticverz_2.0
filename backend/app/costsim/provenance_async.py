@@ -128,7 +128,7 @@ async def write_provenance(
         await session.commit()
         await session.refresh(record)
 
-        logger.debug(f"Provenance record created: id={record.id}, " f"variant={variant_slug}, input_hash={input_hash}")
+        logger.debug(f"Provenance record created: id={record.id}, variant={variant_slug}, input_hash={input_hash}")
 
         return record.id
 
@@ -442,7 +442,7 @@ async def backfill_v1_baseline(
                 stats["errors"] += 1
 
     logger.info(
-        f"Backfill complete: inserted={stats['inserted']}, " f"skipped={stats['skipped']}, errors={stats['errors']}"
+        f"Backfill complete: inserted={stats['inserted']}, skipped={stats['skipped']}, errors={stats['errors']}"
     )
 
     return stats

@@ -3,6 +3,7 @@ NATS adapter stub. Does not actually require a NATS server by default.
 If NATS is configured in env (NATS_URL), this adapter will attempt a connect.
 In many test/dev setups this remains a logging stub.
 """
+
 import json
 import logging
 import os

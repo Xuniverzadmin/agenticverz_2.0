@@ -281,7 +281,7 @@ class SBASchema(BaseModel):
         """Validate that the SBA version is supported."""
         if self.sba_version not in SUPPORTED_SBA_VERSIONS:
             raise ValueError(
-                f"SBA version '{self.sba_version}' is not supported. " f"Supported versions: {SUPPORTED_SBA_VERSIONS}"
+                f"SBA version '{self.sba_version}' is not supported. Supported versions: {SUPPORTED_SBA_VERSIONS}"
             )
         return self
 
@@ -293,7 +293,7 @@ class SBASchema(BaseModel):
         """Get a human-readable summary of the strategy cascade."""
         dep_count = len(self.capabilities_capacity.dependencies) + len(self.capabilities_capacity.legacy_dependencies)
         return f"""
-Strategy Cascade for {self.agent_id or 'agent'}:
+Strategy Cascade for {self.agent_id or "agent"}:
   Aspiration: {self.winning_aspiration.description[:80]}...
   Domain: {self.where_to_play.domain}
   Tasks: {len(self.how_to_win.tasks)} task(s)
@@ -348,7 +348,7 @@ class SBAVersionError(Exception):
     def __init__(self, version: str, supported: Set[str]):
         self.version = version
         self.supported = supported
-        super().__init__(f"SBA version '{version}' is not supported. " f"Supported: {supported}")
+        super().__init__(f"SBA version '{version}' is not supported. Supported: {supported}")
 
 
 def check_version_supported(version: str) -> bool:

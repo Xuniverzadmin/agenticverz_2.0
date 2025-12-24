@@ -138,7 +138,7 @@ async def ingest_failure(
         payload = request.failure_payload
         idempotency_key = request.idempotency_key
 
-        logger.info(f"Ingest request: failure_match_id={failure_match_id}, " f"idempotency_key={idempotency_key}")
+        logger.info(f"Ingest request: failure_match_id={failure_match_id}, idempotency_key={idempotency_key}")
 
         # =================================================================
         # Normalize error for candidate
@@ -220,7 +220,7 @@ async def ingest_failure(
 
             if not is_insert:
                 # This was an update (duplicate)
-                logger.info(f"Updated existing candidate: id={candidate_id}, " f"occurrence_count={occurrence_count}")
+                logger.info(f"Updated existing candidate: id={candidate_id}, occurrence_count={occurrence_count}")
                 status_label = "duplicate"
                 recovery_ingest_duplicates_total.labels(detection_method="upsert_conflict").inc()
                 return IngestResponse(
@@ -367,7 +367,7 @@ async def _enqueue_evaluation_async(
 
         if msg_id:
             enqueue_method = "redis_stream"
-            logger.info(f"Evaluation enqueued to Redis Stream: candidate_id={candidate_id}, " f"msg_id={msg_id}")
+            logger.info(f"Evaluation enqueued to Redis Stream: candidate_id={candidate_id}, msg_id={msg_id}")
             return True
         else:
             logger.warning(f"Redis Stream enqueue returned None for candidate {candidate_id}")
@@ -449,5 +449,5 @@ def _enqueue_evaluation(
             logger.warning(f"Async enqueue failed: {e}")
             # Last resort: log for polling worker
             logger.info(
-                f"Evaluation queued (polling): candidate_id={candidate_id}, " f"failure_match_id={failure_match_id}"
+                f"Evaluation queued (polling): candidate_id={candidate_id}, failure_match_id={failure_match_id}"
             )

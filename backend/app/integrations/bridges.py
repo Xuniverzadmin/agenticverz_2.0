@@ -154,9 +154,7 @@ async def record_policy_activation(
         )
         await session.commit()
 
-    logger.info(
-        f"Policy activation audit recorded: {policy_id} " f"(confidence={confidence:.2f}, path={approval_path})"
-    )
+    logger.info(f"Policy activation audit recorded: {policy_id} (confidence={confidence:.2f}, path={approval_path})")
 
     return audit
 
@@ -1201,9 +1199,7 @@ class LoopStatusBridge(BaseBridge):
             event.details["loop_status"] = loop_status.to_dict()
             event.details["narrative"] = narrative
 
-            logger.info(
-                f"Loop complete for incident {event.incident_id}: " f"{loop_status.completion_pct:.0f}% complete"
-            )
+            logger.info(f"Loop complete for incident {event.incident_id}: {loop_status.completion_pct:.0f}% complete")
 
             return event
 

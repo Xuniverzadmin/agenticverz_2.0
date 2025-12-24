@@ -197,7 +197,7 @@ async def run_periodic_evaluation(interval_seconds: int = 900):
             result = await evaluate_graduation_status()
 
             if result.get("status") == "evaluated":
-                logger.info(f"Graduation evaluated: {result['level']} " f"({result['gates_passed']}/3 gates)")
+                logger.info(f"Graduation evaluated: {result['level']} ({result['gates_passed']}/3 gates)")
 
                 if result.get("degradation_just_occurred"):
                     # Could send alert here (Slack, PagerDuty, etc.)

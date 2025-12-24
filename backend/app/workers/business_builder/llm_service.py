@@ -198,7 +198,7 @@ Be specific, data-driven, and actionable. Do not include markdown formatting - j
 
 Business/Product: {task}
 Company Name: {brand_name}
-Target Audience: {', '.join(target_audience)}
+Target Audience: {", ".join(target_audience)}
 {competitors_str}
 
 Provide realistic market analysis based on the business type described."""
@@ -277,7 +277,7 @@ Market Research Summary:
         system_prompt = f"""You are an expert copywriter. Write compelling landing page copy in JSON format.
 
 Brand tone: {tone_primary}
-Brand tagline: {tagline or 'None provided'}
+Brand tagline: {tagline or "None provided"}
 
 Your output MUST be valid JSON with this structure:
 {{

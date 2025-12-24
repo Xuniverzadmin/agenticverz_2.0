@@ -2,7 +2,7 @@
 # Provides storage interface for agent memories
 
 import logging
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Dict, List, Optional, Protocol, cast
 
 from sqlmodel import Session, desc, select
 
@@ -164,7 +164,7 @@ class PostgresMemoryStore:
             stmt = (
                 select(Memory)
                 .where(Memory.agent_id == agent_id)
-                .where(Memory.text.ilike(search_pattern))
+                .where(cast(Any, Memory.text).ilike(search_pattern))
                 .order_by(desc(Memory.created_at))
                 .limit(limit)
             )

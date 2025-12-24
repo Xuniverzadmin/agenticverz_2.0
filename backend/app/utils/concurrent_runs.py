@@ -168,7 +168,7 @@ class ConcurrentRunsLimiter:
             if client is None:
                 return 0
 
-            return client.zcard(slot_key)
+            return int(client.zcard(slot_key))
 
         except Exception:
             return 0

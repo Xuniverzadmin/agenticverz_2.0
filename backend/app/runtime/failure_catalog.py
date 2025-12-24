@@ -656,7 +656,7 @@ def persist_failure_match(
                     safe_code = error_code[:50] if error_code else "unknown"
                     _failure_match_misses.labels(error_code=safe_code).inc()
 
-            logger.debug(f"M9: Persisted failure match {record_id} " f"(matched={result.matched}, code={error_code})")
+            logger.debug(f"M9: Persisted failure match {record_id} (matched={result.matched}, code={error_code})")
 
         return record_id
 
@@ -778,7 +778,7 @@ def persist_failure_match_nonblocking(
             # Timed out - record but don't block
             if _failure_persist_dropped:
                 _failure_persist_dropped.labels(reason="timeout").inc()
-            logger.warning(f"M9: Persistence timeout for run={run_id} " f"(timeout={_PERSIST_TIMEOUT}s)")
+            logger.warning(f"M9: Persistence timeout for run={run_id} (timeout={_PERSIST_TIMEOUT}s)")
             _record_circuit_failure()
     except Exception as e:
         # Thread pool submission failed
@@ -833,7 +833,7 @@ def update_recovery_status(
                         recovery_mode=record.recovery_mode or "unknown", error_code=record.error_code
                     ).inc()
 
-            logger.debug(f"M9: Updated recovery status for {failure_match_id} " f"(succeeded={succeeded})")
+            logger.debug(f"M9: Updated recovery status for {failure_match_id} (succeeded={succeeded})")
             return True
 
     except Exception as e:

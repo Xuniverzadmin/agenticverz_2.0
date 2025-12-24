@@ -917,6 +917,7 @@ class EvidenceReportGenerator:
 
         # PEM-like Format
         story.append(Paragraph("Certificate (PEM-like Format)", self.styles["SubsectionHeader"]))
+        assert story is not None
         story.append(Paragraph(cert.pem_format, self.styles["CodeText"]))
         story.append(Spacer(1, 0.15 * inch))
 
@@ -955,10 +956,10 @@ class EvidenceReportGenerator:
         story.append(Paragraph("Prevention Simulation Result", self.styles["SubsectionHeader"]))
 
         prevention_json = f"""{{
-  "policy": "{prevention.get('policy', 'CONTENT_ACCURACY')}",
-  "action": "{prevention.get('action', 'MODIFY')}",
-  "would_prevent_incident": {str(prevention.get('would_prevent_incident', True)).lower()},
-  "safe_output": "{prevention.get('safe_output', "I don't have enough information to confirm this. Let me check.")}"
+  "policy": "{prevention.get("policy", "CONTENT_ACCURACY")}",
+  "action": "{prevention.get("action", "MODIFY")}",
+  "would_prevent_incident": {str(prevention.get("would_prevent_incident", True)).lower()},
+  "safe_output": "{prevention.get("safe_output", "I don't have enough information to confirm this. Let me check.")}"
 }}"""
 
         story.append(Paragraph(prevention_json, self.styles["CodeText"]))

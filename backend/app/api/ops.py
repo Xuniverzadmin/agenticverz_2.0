@@ -1551,11 +1551,11 @@ async def get_founder_incident_detail(
             details = json.loads(incident.action_details_json)
             if details.get("retry_ratio"):
                 derived_cause = "RETRY_LOOP"
-                evidence = f"retry/request +{details.get('retry_ratio', 0)*100:.0f}% over baseline"
+                evidence = f"retry/request +{details.get('retry_ratio', 0) * 100:.0f}% over baseline"
                 actual_value = details.get("retry_ratio")
             elif details.get("prompt_growth"):
                 derived_cause = "PROMPT_GROWTH"
-                evidence = f"prompt tokens +{details.get('prompt_growth', 0)*100:.0f}% over baseline"
+                evidence = f"prompt tokens +{details.get('prompt_growth', 0) * 100:.0f}% over baseline"
             elif details.get("feature_concentration"):
                 derived_cause = "FEATURE_SURGE"
                 evidence = f"cost concentrated in {details.get('top_feature', 'unknown')}"
@@ -2126,7 +2126,7 @@ async def get_infra_limits(
         warnings.append(
             {
                 "resource": "db_connections",
-                "message": f"Database connections at {(db_connections/db_max)*100:.1f}%",
+                "message": f"Database connections at {(db_connections / db_max) * 100:.1f}%",
                 "severity": "warning",
             }
         )

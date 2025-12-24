@@ -44,10 +44,16 @@ filterwarnings = [
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
+warn_unused_ignores = true        # GUARDRAIL: Catch stale ignores
 ignore_missing_imports = true
 show_error_codes = true
+disallow_any_unimported = false   # Don't block on missing stubs
 # Baseline: don't fail on existing errors (frozen debt)
 # New errors in Zone A will be caught by per-module overrides
+# HARD RULES:
+#   - No new `# type: ignore[union-attr]`
+#   - No blanket `ignore_errors = True`
+#   - Zone A blocks on ANY new error
 
 # =============================================================================
 # ZONE A: CRITICAL (--strict equivalent)

@@ -18,7 +18,7 @@ Integration points:
 import hashlib
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from app.policy.compiler.grammar import ActionType, PolicyCategory
 from app.policy.ir.ir_nodes import (
@@ -179,9 +179,9 @@ class DeterministicEngine:
 
     def __init__(self):
         self.intent_emitter = IntentEmitter()
-        self._builtin_functions: Dict[str, callable] = self._register_builtins()
+        self._builtin_functions: Dict[str, Callable[..., Any]] = self._register_builtins()
 
-    def _register_builtins(self) -> Dict[str, callable]:
+    def _register_builtins(self) -> Dict[str, Callable[..., Any]]:
         """Register built-in functions."""
         return {
             "contains": lambda s, sub: sub in s if s else False,
@@ -457,7 +457,7 @@ class DeterministicEngine:
             ">=": lambda l, r: l >= r,
         }
         try:
-            return ops.get(op, lambda l, r: False)(left, right)
+            return bool(ops.get(op, lambda l, r: False)(left, right))
         except Exception:
             return False
 

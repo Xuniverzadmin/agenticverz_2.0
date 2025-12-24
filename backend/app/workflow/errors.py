@@ -558,25 +558,25 @@ class WorkflowError:
     def http_status(self) -> int:
         """Get HTTP status code."""
         meta = ERROR_METADATA.get(self.code, {})
-        return meta.get("http_status", 500)
+        return int(meta.get("http_status", 500))
 
     @property
     def is_retryable(self) -> bool:
         """Check if error is retryable."""
         meta = ERROR_METADATA.get(self.code, {})
-        return meta.get("retryable", False)
+        return bool(meta.get("retryable", False))
 
     @property
     def max_retries(self) -> int:
         """Get max retry count."""
         meta = ERROR_METADATA.get(self.code, {})
-        return meta.get("max_retries", 0)
+        return int(meta.get("max_retries", 0))
 
     @property
     def backoff_base_ms(self) -> int:
         """Get base backoff in milliseconds."""
         meta = ERROR_METADATA.get(self.code, {})
-        return meta.get("backoff_base_ms", 1000)
+        return int(meta.get("backoff_base_ms", 1000))
 
     @property
     def recovery(self) -> str:

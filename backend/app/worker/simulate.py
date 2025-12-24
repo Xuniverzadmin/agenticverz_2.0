@@ -308,7 +308,7 @@ class CostSimulator:
                         skill_id=skill_id,
                         risk_type=estimate["risk_type"],
                         probability=compounded_risk,
-                        description=f"{skill_id} x{iterations} has {compounded_risk*100:.0f}% chance of {estimate['risk_type']}",
+                        description=f"{skill_id} x{iterations} has {compounded_risk * 100:.0f}% chance of {estimate['risk_type']}",
                         mitigation=self._get_mitigation(estimate["risk_type"]),
                     )
                 )
@@ -333,7 +333,7 @@ class CostSimulator:
             status = FeasibilityStatus.RISK_TOO_HIGH
             feasible = False
             warnings.append(
-                f"Cumulative risk {cumulative_risk*100:.0f}% exceeds threshold {self.risk_threshold*100:.0f}%"
+                f"Cumulative risk {cumulative_risk * 100:.0f}% exceeds threshold {self.risk_threshold * 100:.0f}%"
             )
         else:
             status = FeasibilityStatus.FEASIBLE

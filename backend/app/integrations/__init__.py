@@ -191,7 +191,7 @@ async def trigger_integration_loop(
     result = await dispatcher.dispatch(initial_event)
 
     logger.info(
-        f"M25 loop completed for incident {incident_id}: " f"stage={result.stage.value}, success={result.is_success}"
+        f"M25 loop completed for incident {incident_id}: stage={result.stage.value}, success={result.is_success}"
     )
 
     return result

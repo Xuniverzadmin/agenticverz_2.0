@@ -284,9 +284,7 @@ async def _try_auto_recover(state_id: int) -> bool:
             # Commit within transaction
             await session.flush()
 
-            logger.info(
-                f"Circuit breaker auto-recovered (locked): name={CB_NAME}, " f"old_incident_id={old_incident_id}"
-            )
+            logger.info(f"Circuit breaker auto-recovered (locked): name={CB_NAME}, old_incident_id={old_incident_id}")
 
             # Record metrics
             metrics = get_metrics()
@@ -364,7 +362,7 @@ async def _auto_recover(
         ),
     )
 
-    logger.info(f"Circuit breaker auto-recovered: name={CB_NAME}, " f"old_incident_id={old_incident_id}")
+    logger.info(f"Circuit breaker auto-recovered: name={CB_NAME}, old_incident_id={old_incident_id}")
 
 
 async def get_state() -> CircuitBreakerState:
@@ -840,7 +838,7 @@ def _build_enable_alert_payload(
             },
             "annotations": {
                 "summary": "CostSim V2 circuit breaker re-enabled",
-                "description": (f"Re-enabled by: {enabled_by}\n" f"Reason: {reason or 'Not specified'}"),
+                "description": (f"Re-enabled by: {enabled_by}\nReason: {reason or 'Not specified'}"),
             },
             "startsAt": now.isoformat(),
             "endsAt": now.isoformat(),  # Resolved immediately

@@ -479,7 +479,7 @@ def diff_contracts(old_descriptor: SkillDescriptor, new_descriptor: SkillDescrip
     new_major = SkillVersion.parse(new_descriptor.version.split("-")[0]).major
 
     if new_major > old_major:
-        diff.warnings.append(f"Major version bump from {old_major} to {new_major} - " "breaking changes expected")
+        diff.warnings.append(f"Major version bump from {old_major} to {new_major} - breaking changes expected")
 
     # Check stable_fields changes
     old_stable = set(old_descriptor.stable_fields.keys())

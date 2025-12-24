@@ -127,7 +127,7 @@ class RedisBudgetStore:
             new_total = await client.incrby(key, cost_cents)
             # Set TTL on first access
             await client.expire(key, self._ttl)
-            return new_total
+            return int(new_total)
         except Exception as e:
             logger.warning(f"Redis incrby failed: {e}, returning cost")
             return cost_cents

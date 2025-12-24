@@ -351,7 +351,7 @@ class RecoveryMatcher:
             candidate_id = result.scalar()
 
         session.commit()
-        return candidate_id
+        return int(candidate_id)
 
     def suggest(self, request: Dict[str, Any]) -> MatchResult:
         """
@@ -375,9 +375,7 @@ class RecoveryMatcher:
         error_code, error_signature = self._normalize_error(payload)
         error_message = payload.get("raw", payload.get("error_message", ""))
 
-        logger.info(
-            f"Processing recovery suggestion for failure_match_id={failure_match_id}, " f"error_code={error_code}"
-        )
+        logger.info(f"Processing recovery suggestion for failure_match_id={failure_match_id}, error_code={error_code}")
 
         # Find similar failures
         similar = self._find_similar_failures(error_code, error_signature)
@@ -436,7 +434,7 @@ class RecoveryMatcher:
             error_signature=error_signature,
         )
 
-        logger.info(f"Generated suggestion: confidence={confidence:.2f}, " f"candidate_id={candidate_id}")
+        logger.info(f"Generated suggestion: confidence={confidence:.2f}, candidate_id={candidate_id}")
 
         return result
 

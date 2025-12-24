@@ -260,7 +260,7 @@ async def ack_message(msg_id: str) -> bool:
         if result > 0:
             await clear_reclaim_attempts(msg_id)
 
-        return result > 0
+        return bool(result > 0)
     except Exception as e:
         logger.error(f"Failed to ack message {msg_id}: {e}")
         return False
@@ -494,7 +494,7 @@ async def move_to_dead_letter(
                 f"Message is in dead-letter as {dl_msg_id}, pending entry remains."
             )
 
-        logger.warning(f"Moved message {msg_id} to dead-letter stream: {reason}, " f"dl_msg_id={dl_msg_id}")
+        logger.warning(f"Moved message {msg_id} to dead-letter stream: {reason}, dl_msg_id={dl_msg_id}")
         return True
 
     except Exception as e:
@@ -582,7 +582,7 @@ async def process_stalled_with_dead_letter(
             if idle_time < required_idle_ms:
                 backoff_deferred += 1
                 logger.debug(
-                    f"Message {msg_id} deferred by backoff: " f"idle={idle_time}ms < required={required_idle_ms}ms"
+                    f"Message {msg_id} deferred by backoff: idle={idle_time}ms < required={required_idle_ms}ms"
                 )
                 continue
 
@@ -663,7 +663,7 @@ async def get_dead_letter_count() -> int:
     """Get the number of messages in the dead-letter stream."""
     try:
         redis = await get_redis()
-        return await redis.xlen(DEAD_LETTER_STREAM)
+        return int(await redis.xlen(DEAD_LETTER_STREAM))
     except Exception:
         return 0
 
@@ -805,7 +805,7 @@ async def archive_and_trim_dead_letter(
             # XDEL to remove archived entries
             deleted = await redis.xdel(DEAD_LETTER_STREAM, *archived_ids)
             results["trimmed"] = deleted
-            logger.info(f"Archived {results['archived']} DL messages, " f"trimmed {results['trimmed']} from stream")
+            logger.info(f"Archived {results['archived']} DL messages, trimmed {results['trimmed']} from stream")
 
         return results
 
@@ -837,7 +837,7 @@ async def increment_reclaim_attempts(msg_id: str) -> int:
     """
     try:
         redis = await get_redis()
-        return await redis.hincrby(RECLAIM_ATTEMPTS_KEY, msg_id, 1)
+        return int(await redis.hincrby(RECLAIM_ATTEMPTS_KEY, msg_id, 1))
     except Exception as e:
         logger.warning(f"Failed to increment reclaim attempts for {msg_id}: {e}")
         return 0
@@ -921,7 +921,7 @@ async def gc_reclaim_attempts(
         if to_clean:
             await redis.hdel(RECLAIM_ATTEMPTS_KEY, *to_clean)
             results["cleaned"] = len(to_clean)
-            logger.info(f"GC reclaim attempts: checked={results['checked']}, " f"cleaned={results['cleaned']}")
+            logger.info(f"GC reclaim attempts: checked={results['checked']}, cleaned={results['cleaned']}")
 
         return results
 
@@ -954,7 +954,7 @@ def calculate_backoff_ms(attempts: int) -> int:
         return CLAIM_IDLE_MS  # Default idle time for first reclaim
 
     backoff = RECLAIM_BASE_BACKOFF_MS * (2 ** (attempts - 1))
-    return min(backoff, RECLAIM_MAX_BACKOFF_MS)
+    return int(min(backoff, RECLAIM_MAX_BACKOFF_MS))
 
 
 # Key for tracking replayed messages (SET for deduplication)
@@ -1116,7 +1116,7 @@ async def replay_dead_letter(
                 None,  # new_msg_id not known yet
             )
             if already_replayed:
-                logger.info(f"Dead-letter {msg_id} replay recorded by another process " f"(race condition handled)")
+                logger.info(f"Dead-letter {msg_id} replay recorded by another process (race condition handled)")
                 return None
 
         # =================================================================

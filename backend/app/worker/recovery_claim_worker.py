@@ -347,7 +347,7 @@ class RecoveryClaimWorker:
         Runs until shutdown signal received.
         """
         logger.info(
-            f"Starting recovery claim worker: " f"batch_size={self.batch_size}, poll_interval={self.poll_interval}s"
+            f"Starting recovery claim worker: batch_size={self.batch_size}, poll_interval={self.poll_interval}s"
         )
 
         try:

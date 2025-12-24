@@ -21,7 +21,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 
 from sqlmodel import Session, and_, select
 
@@ -162,7 +162,7 @@ class IncidentAggregator:
         # Check rate limiting
         if not self._can_create_incident(session, tenant_id, now):
             logger.warning(
-                f"Incident rate limit reached for tenant {tenant_id}. " f"Dropping incident creation for {trigger_type}"
+                f"Incident rate limit reached for tenant {tenant_id}. Dropping incident creation for {trigger_type}"
             )
             # Return a synthetic "dropped" incident for tracking
             return self._get_rate_limit_incident(session, tenant_id, now), False
@@ -195,7 +195,7 @@ class IncidentAggregator:
                     Incident.started_at < window_end,
                 )
             )
-            .order_by(Incident.started_at.desc())
+            .order_by(cast(Any, Incident.started_at).desc())
             .limit(1)
         )
 
@@ -232,7 +232,7 @@ class IncidentAggregator:
                     Incident.created_at >= one_hour_ago,
                 )
             )
-            .order_by(Incident.created_at.desc())
+            .order_by(cast(Any, Incident.created_at).desc())
             .limit(1)
         )
 
@@ -315,7 +315,7 @@ class IncidentAggregator:
             data={"trigger_value": trigger_value, **(metadata or {})},
         )
 
-        logger.info(f"Created incident {incident.id} for tenant {key.tenant_id}: " f"{key.trigger_type} - {title}")
+        logger.info(f"Created incident {incident.id} for tenant {key.tenant_id}: {key.trigger_type} - {title}")
 
         # Safe: session is DI-managed and stays open for caller
         return incident

@@ -102,7 +102,7 @@ def is_v2_disabled_sync(timeout: float = 5.0) -> bool:
         try:
             loop = asyncio.get_running_loop()
             # We're in a running loop - use thread pool
-            return _run_async_in_thread(is_v2_disabled(), timeout)
+            return bool(_run_async_in_thread(is_v2_disabled(), timeout))
         except RuntimeError:
             # No running loop - safe to use asyncio.run()
             return asyncio.run(is_v2_disabled())

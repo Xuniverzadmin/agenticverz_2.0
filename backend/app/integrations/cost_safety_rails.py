@@ -21,8 +21,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import datetime, timezone
+from typing import Any
 
 logger = logging.getLogger("nova.integrations.cost_safety")
 
@@ -30,6 +30,7 @@ logger = logging.getLogger("nova.integrations.cost_safety")
 # =============================================================================
 # SAFETY CONFIGURATION
 # =============================================================================
+
 
 @dataclass
 class SafetyConfig:
@@ -92,6 +93,7 @@ class SafetyConfig:
 # =============================================================================
 # SAFETY RAIL TRACKER
 # =============================================================================
+
 
 class CostSafetyRails:
     """
@@ -165,7 +167,10 @@ class CostSafetyRails:
 
         # Check blast radius
         if affected_count > self.config.max_users_affected_per_action:
-            return False, f"Blast radius exceeded ({affected_count} > {self.config.max_users_affected_per_action} users)"
+            return (
+                False,
+                f"Blast radius exceeded ({affected_count} > {self.config.max_users_affected_per_action} users)",
+            )
 
         return True, "Allowed"
 
@@ -183,7 +188,10 @@ class CostSafetyRails:
         # Check daily cap
         count = await self._get_action_count(tenant_id, "routing")
         if count >= self.config.max_routing_adjustments_per_tenant_per_day:
-            return False, f"Daily routing cap reached ({count}/{self.config.max_routing_adjustments_per_tenant_per_day})"
+            return (
+                False,
+                f"Daily routing cap reached ({count}/{self.config.max_routing_adjustments_per_tenant_per_day})",
+            )
 
         # Block permanent blocks
         if adjustment_type == "route_block" and magnitude <= -1.0:
@@ -251,12 +259,21 @@ class CostSafetyRails:
             },
             "current": self._action_counts.get(tenant_id, {}),
             "remaining": {
-                "policies": max(0, self.config.max_auto_policies_per_tenant_per_day -
-                               self._action_counts.get(tenant_id, {}).get("policy", 0)),
-                "recoveries": max(0, self.config.max_auto_recoveries_per_tenant_per_day -
-                                 self._action_counts.get(tenant_id, {}).get("recovery", 0)),
-                "routing": max(0, self.config.max_routing_adjustments_per_tenant_per_day -
-                              self._action_counts.get(tenant_id, {}).get("routing", 0)),
+                "policies": max(
+                    0,
+                    self.config.max_auto_policies_per_tenant_per_day
+                    - self._action_counts.get(tenant_id, {}).get("policy", 0),
+                ),
+                "recoveries": max(
+                    0,
+                    self.config.max_auto_recoveries_per_tenant_per_day
+                    - self._action_counts.get(tenant_id, {}).get("recovery", 0),
+                ),
+                "routing": max(
+                    0,
+                    self.config.max_routing_adjustments_per_tenant_per_day
+                    - self._action_counts.get(tenant_id, {}).get("routing", 0),
+                ),
             },
         }
 
@@ -264,6 +281,7 @@ class CostSafetyRails:
 # =============================================================================
 # SAFE ORCHESTRATOR WRAPPER
 # =============================================================================
+
 
 class SafeCostLoopOrchestrator:
     """

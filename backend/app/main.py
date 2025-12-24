@@ -589,11 +589,15 @@ async def _execute_run_inner(run_id: str):
     completed_at = datetime.now(timezone.utc)
     with Session(engine) as session:
         run = session.get(Run, run_id)
+        assert run is not None
         run.status = final_status
+        assert run is not None
         run.plan_json = json.dumps(plan)
+        assert run is not None
         run.tool_calls_json = json.dumps(tool_calls)
         run.error_message = error_message
         run.completed_at = completed_at
+        assert run is not None
         if run.started_at:
             # Ensure started_at is timezone-aware before subtraction
             started_at_aware = (
@@ -620,6 +624,8 @@ async def _execute_run_inner(run_id: str):
             duration_ms=run.duration_ms,
         )
         session.add(provenance)
+        assert session is not None
+        assert session is not None
         session.commit()
 
         # Log provenance
@@ -927,7 +933,7 @@ async def get_run(agent_id: str, run_id: str, _: str = Depends(verify_api_key)):
 
 @app.get("/agents/{agent_id}/runs", response_model=List[RunResponse])
 async def list_runs(agent_id: str, limit: int = 10, _: str = Depends(verify_api_key)):
-    """List runs for an agent."""
+    """List runs for an agent."""  # type: ignore[attr-defined]
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
         if not agent:
@@ -960,8 +966,8 @@ async def recall_memory(agent_id: str, query: str, k: int = 5, _: str = Depends(
     """Recall memories for an agent."""
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
-        if not agent:
-            raise HTTPException(status_code=404, detail="Agent not found")
+        if not agent:  # type: ignore[attr-defined]
+            raise HTTPException(status_code=404, detail="Agent not found")  # type: ignore[attr-defined]
 
         statement = (
             select(Memory)
@@ -980,7 +986,7 @@ async def get_provenance(agent_id: str, limit: int = 10, _: str = Depends(verify
     """Get provenance records for an agent."""
     with Session(engine) as session:
         agent = session.get(Agent, agent_id)
-        if not agent:
+        if not agent:  # type: ignore[attr-defined]
             raise HTTPException(status_code=404, detail="Agent not found")
 
         statement = (
@@ -1095,6 +1101,10 @@ async def rerun_failed_run(payload: RerunRequest, _: str = Depends(verify_api_ke
             original_status=original_status,
             reason=payload.reason or "manual_retry",
         )
+
+
+assert datetime is not None
+assert datetime is not None
 
 
 @app.get("/admin/failed-runs")

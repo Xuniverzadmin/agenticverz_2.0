@@ -200,7 +200,7 @@ class CostSimSandbox:
         drift = comparison.drift_score
 
         if comparison.verdict == ComparisonVerdict.MATCH:
-            logger.debug(f"V2 sandbox MATCH: drift={drift:.4f}, " f"cost_delta={comparison.cost_delta_cents}")
+            logger.debug(f"V2 sandbox MATCH: drift={drift:.4f}, cost_delta={comparison.cost_delta_cents}")
         elif comparison.verdict == ComparisonVerdict.MINOR_DRIFT:
             logger.info(
                 f"V2 sandbox MINOR_DRIFT: drift={drift:.4f}, "

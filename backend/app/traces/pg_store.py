@@ -494,7 +494,7 @@ class PostgresTraceStore:
             else:
                 result = await conn.execute("DELETE FROM aos_traces WHERE trace_id = $1", trace_id)
 
-            return result != "DELETE 0"
+            return bool(result != "DELETE 0")
 
     async def get_trace_count(self, tenant_id: str | None = None) -> int:
         """Get total trace count."""

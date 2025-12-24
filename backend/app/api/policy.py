@@ -24,7 +24,7 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from uuid import uuid4
 
 import httpx
@@ -368,7 +368,7 @@ async def _simulate_cost(skill_id: str, tenant_id: str, payload: Dict[str, Any])
 
         sim = CostSimulator()
         result = await sim.simulate(skill_id=skill_id, tenant_id=tenant_id, payload=payload)
-        return result.estimated_cost_cents
+        return int(result.estimated_cost_cents)
     except ImportError:
         pass
     except Exception as e:
@@ -942,7 +942,7 @@ async def list_approval_requests(
     if tenant_id:
         stmt = stmt.where(ApprovalRequestModel.tenant_id == tenant_id)
 
-    stmt = stmt.order_by(ApprovalRequestModel.created_at.desc())
+    stmt = stmt.order_by(cast(Any, ApprovalRequestModel.created_at).desc())
     stmt = stmt.offset(offset).limit(limit)
 
     result = await session.execute(stmt)

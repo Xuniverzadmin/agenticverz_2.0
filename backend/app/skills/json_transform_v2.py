@@ -239,17 +239,17 @@ def _op_filter(data: Any, params: Dict[str, Any]) -> tuple[Any, Optional[str]]:
         item_value = item.get(field_name)
 
         if operator == "eq":
-            return item_value == value
+            return bool(item_value == value)
         elif operator == "ne":
-            return item_value != value
+            return bool(item_value != value)
         elif operator == "gt":
-            return item_value > value
+            return bool(item_value > value)
         elif operator == "gte":
-            return item_value >= value
+            return bool(item_value >= value)
         elif operator == "lt":
-            return item_value < value
+            return bool(item_value < value)
         elif operator == "lte":
-            return item_value <= value
+            return bool(item_value <= value)
         elif operator == "contains":
             return isinstance(item_value, str) and value in item_value
         elif operator == "startswith":

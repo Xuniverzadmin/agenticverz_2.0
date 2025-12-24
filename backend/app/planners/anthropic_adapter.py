@@ -255,7 +255,7 @@ You MUST output a valid JSON object with this exact structure:
         # Build the plan structure conforming to Plan schema
         steps = []
         for i, step in enumerate(parsed.get("steps", [])):
-            step_id = step.get("step_id", f"s{i+1}")
+            step_id = step.get("step_id", f"s{i + 1}")
             steps.append(
                 {
                     "step_id": str(step_id),

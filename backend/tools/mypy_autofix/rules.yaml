@@ -1,0 +1,256 @@
+# Mypy Autofix Rules
+# Maps error codes to fix strategies
+#
+# Each rule specifies:
+#   fix: macro function name
+#   mode: optional mode parameter
+#   auto: whether to auto-apply (default: true)
+#   zones: which zones this applies to (default: all)
+#   patterns: optional patterns to match in error message
+
+# =============================================================================
+# CRITICAL ERRORS (always fix)
+# =============================================================================
+
+union-attr:
+  description: "Item X of Optional has no attribute Y"
+  fix: guard_optional
+  mode: assert
+  auto: true
+  zones: [A, B, C]
+  # FastAPI Depends special case
+  fastapi:
+    patterns:
+      - "Depends("
+    fix: fastapi_dep_guard
+
+no-any-return:
+  description: "Returning Any from function declared to return X"
+  fix: return_cast
+  auto: true
+  zones: [A, B]
+  variants:
+    bool: bool_wrap
+    int: int_wrap
+    float: float_wrap
+  # Async special case
+  async:
+    patterns:
+      - "await "
+      - "Coroutine"
+      - "Awaitable"
+    fix: async_return_cast
+
+arg-type:
+  description: "Argument X has incompatible type"
+  fix: cast_expr
+  auto: false  # Requires manual review
+  zones: [A]
+
+# =============================================================================
+# TYPE ANNOTATION ERRORS
+# =============================================================================
+
+var-annotated:
+  description: "Need type annotation for X"
+  fix: list_annotation
+  auto: true
+  zones: [A, B]
+  variants:
+    list: list_annotation
+    dict: dict_annotation
+
+assignment:
+  description: "Incompatible types in assignment"
+  fix: cast_expr
+  auto: false  # Requires manual review
+  zones: [A]
+
+# =============================================================================
+# CALLABLE ERRORS
+# =============================================================================
+
+valid-type:
+  description: "Function builtins.callable is not valid as a type"
+  fix: callable_fix
+  auto: true
+  zones: [A, B, C]
+
+# =============================================================================
+# SQLALCHEMY ERRORS (attr-defined false positives)
+# =============================================================================
+
+attr-defined:
+  description: "X has no attribute Y"
+  auto: false  # Default: manual review
+  zones: [A, B]
+  # SQLAlchemy special cases
+  sqlalchemy:
+    patterns:
+      - ".desc("
+      - ".desc()"
+      - ".asc("
+      - ".asc()"
+      - ".ilike("
+      - ".like("
+      - ".in_("
+      - ".notin_("
+      - ".between("
+      - ".is_("
+      - ".isnot("
+      - ".contains("
+      - ".startswith("
+      - ".endswith("
+    fix: sa_expr
+    auto: true
+  # Pydantic special cases
+  pydantic:
+    patterns:
+      - ".dict("
+      - ".parse_obj("
+      - ".model_dump("
+    fix: pydantic_dict_cast
+    auto: true
+  # Module export issues
+  export:
+    patterns:
+      - "does not explicitly export"
+    fix: add_all_export
+    auto: false
+
+# =============================================================================
+# PROMETHEUS ERRORS (stub limitations)
+# =============================================================================
+
+misc:
+  description: "Miscellaneous errors"
+  auto: false
+  zones: [B, C]
+  # Callable false positives
+  callable:
+    patterns:
+      - "callable"
+      - "callable?"
+    fix: callable_fix
+    auto: true
+  # Prometheus stub issues
+  prometheus:
+    patterns:
+      - "Counter"
+      - "Histogram"
+      - "Gauge"
+      - "Summary"
+      - "prometheus"
+    fix: prom_metric
+    auto: true
+    zones: [B, C]
+
+# =============================================================================
+# IGNORED ERRORS (known limitations)
+# =============================================================================
+
+# SQLModel table=True keyword - mypy limitation
+call-arg:
+  description: "Unexpected keyword argument 'table'"
+  fix: ignore
+  pattern: "table"
+  zones: [C]
+
+# SQLAlchemy .desc() on datetime (handled by attr-defined now)
+operator:
+  description: "Unsupported operand types"
+  fix: ignore
+  pattern: "desc"
+  zones: [C]
+
+# Prometheus stubs - import errors
+import-untyped:
+  description: "Library stubs not installed"
+  fix: ignore
+  patterns:
+    - "prometheus"
+    - "prometheus_client"
+  zones: [B, C]
+
+# =============================================================================
+# ZONE CONFIGURATION
+# =============================================================================
+
+zones:
+  A:
+    name: Critical
+    description: "Correctness-critical paths where type bugs hide"
+    enforcement: block
+    auto_fix: true
+    baseline: 0
+    paths:
+      - app/policy/ir/
+      - app/policy/ast/
+      - app/policy/runtime/deterministic_engine.py
+      - app/workflow/engine.py
+      - app/workflow/canonicalize.py
+      - app/services/certificate.py
+      - app/services/evidence_report.py
+      - app/traces/pg_store.py
+      - app/utils/deterministic.py
+      - app/utils/canonical_json.py
+
+  B:
+    name: Standard
+    description: "Business logic - warn on issues, don't block"
+    enforcement: warn
+    auto_fix: true
+    baseline: 630
+    paths:
+      - app/api/
+      - app/skills/
+      - app/agents/
+      - app/services/
+      - app/planner/
+      - app/planners/
+      - app/integrations/
+      - app/memory/
+      - app/storage/
+      - app/auth/
+      - app/policy/validators/
+      - app/policy/optimizer/
+
+  C:
+    name: Flexible
+    description: "Infrastructure glue, metrics, utilities - known debt tolerated"
+    enforcement: none
+    auto_fix: false
+    baseline: 400
+    paths:
+      - app/workflow/
+      - app/traces/
+      - app/utils/
+      - app/config/
+      - app/logging_config.py
+      - app/worker/
+      - app/workers/
+      - app/cli.py
+      - app/schemas/
+      - app/main.py
+      - app/models/
+      - app/routing/
+      - app/policy/
+      - app/budgetllm/
+      - app/costsim/
+      - app/db.py
+      - app/runtime/
+      - app/tasks/
+      - app/database/
+
+# =============================================================================
+# IMPORT REQUIREMENTS
+# These imports are auto-added when fixes require them
+# =============================================================================
+
+required_imports:
+  cast:
+    module: typing
+    names: [Any, cast]
+  callable:
+    module: typing
+    names: [Any, Callable]

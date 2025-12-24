@@ -22,12 +22,9 @@ from enum import Enum
 from typing import Any, Optional
 
 from app.integrations.events import (
-    ConfidenceBand,
-    ConfidenceCalculator,
     LoopEvent,
     LoopStage,
     PatternMatchResult,
-    PolicyMode,
     PolicyRule,
     RecoverySuggestion,
     RoutingAdjustment,
@@ -44,10 +41,11 @@ logger = logging.getLogger("nova.integrations.cost")
 
 class AnomalyType(str, Enum):
     """Types of cost anomalies."""
+
     USER_SPIKE = "user_spike"
     FEATURE_SPIKE = "feature_spike"
     TENANT_SPIKE = "tenant_spike"  # Added for snapshot-based detection
-    MODEL_SPIKE = "model_spike"    # Added for snapshot-based detection
+    MODEL_SPIKE = "model_spike"  # Added for snapshot-based detection
     BUDGET_WARNING = "budget_warning"
     BUDGET_EXCEEDED = "budget_exceeded"
     UNUSUAL_MODEL = "unusual_model"
@@ -56,10 +54,11 @@ class AnomalyType(str, Enum):
 
 class AnomalySeverity(str, Enum):
     """Severity levels for cost anomalies."""
-    LOW = "low"           # Information only
-    MEDIUM = "medium"     # Worth watching
-    HIGH = "high"         # Requires attention
-    CRITICAL = "critical" # Immediate action needed
+
+    LOW = "low"  # Information only
+    MEDIUM = "medium"  # Worth watching
+    HIGH = "high"  # Requires attention
+    CRITICAL = "critical"  # Immediate action needed
 
 
 @dataclass
@@ -69,6 +68,7 @@ class CostAnomaly:
 
     This is the input to the M27 Cost Loop.
     """
+
     id: str
     tenant_id: str
     anomaly_type: AnomalyType
@@ -96,7 +96,8 @@ class CostAnomaly:
         """Factory method for creating cost anomalies."""
         deviation_pct = (
             (current_value_cents - expected_value_cents) / expected_value_cents * 100
-            if expected_value_cents > 0 else 0.0
+            if expected_value_cents > 0
+            else 0.0
         )
 
         # Determine severity based on deviation
@@ -111,10 +112,10 @@ class CostAnomaly:
 
         # Generate message
         messages = {
-            AnomalyType.USER_SPIKE: f"User {entity_id} spent ${current_value_cents/100:.2f} ({deviation_pct:.0f}% above average)",
-            AnomalyType.FEATURE_SPIKE: f"Feature {entity_id} cost ${current_value_cents/100:.2f} ({deviation_pct:.0f}% increase)",
+            AnomalyType.USER_SPIKE: f"User {entity_id} spent ${current_value_cents / 100:.2f} ({deviation_pct:.0f}% above average)",
+            AnomalyType.FEATURE_SPIKE: f"Feature {entity_id} cost ${current_value_cents / 100:.2f} ({deviation_pct:.0f}% increase)",
             AnomalyType.BUDGET_WARNING: f"Budget at {deviation_pct:.0f}% - approaching limit",
-            AnomalyType.BUDGET_EXCEEDED: f"Budget exceeded by ${(current_value_cents - expected_value_cents)/100:.2f}",
+            AnomalyType.BUDGET_EXCEEDED: f"Budget exceeded by ${(current_value_cents - expected_value_cents) / 100:.2f}",
             AnomalyType.UNUSUAL_MODEL: f"Model {entity_id} usage {deviation_pct:.0f}% above normal",
             AnomalyType.RATE_ANOMALY: f"Unusual request rate: {deviation_pct:.0f}% above baseline",
         }
@@ -191,17 +192,19 @@ class CostLoopBridge:
                 incident_id=incident_id,
                 tenant_id=anomaly.tenant_id,
                 stage=LoopStage.INCIDENT_CREATED,
-                details=ensure_json_serializable({
-                    "source": "cost_anomaly",
-                    "anomaly_id": anomaly.id,
-                    "anomaly_type": anomaly.anomaly_type.value,
-                    "severity": anomaly.severity.value,
-                    "entity_type": anomaly.entity_type,
-                    "entity_id": anomaly.entity_id,
-                    "deviation_pct": anomaly.deviation_pct,
-                    "current_value_cents": anomaly.current_value_cents,
-                    "expected_value_cents": anomaly.expected_value_cents,
-                }),
+                details=ensure_json_serializable(
+                    {
+                        "source": "cost_anomaly",
+                        "anomaly_id": anomaly.id,
+                        "anomaly_type": anomaly.anomaly_type.value,
+                        "severity": anomaly.severity.value,
+                        "entity_type": anomaly.entity_type,
+                        "entity_id": anomaly.entity_id,
+                        "deviation_pct": anomaly.deviation_pct,
+                        "current_value_cents": anomaly.current_value_cents,
+                        "expected_value_cents": anomaly.expected_value_cents,
+                    }
+                ),
             )
             await self.dispatcher.dispatch(event)
 
@@ -239,45 +242,45 @@ class CostPatternMatcher:
             "entity_type": "user",
             "anomaly_type": "user_spike",
             "min_deviation_pct": 200,
-            "description": "Single user daily spend spike > 200%"
+            "description": "Single user daily spend spike > 200%",
         },
         "user_hourly_spike": {
             "entity_type": "user",
             "anomaly_type": "user_spike",
             "min_deviation_pct": 500,
             "time_window": "hourly",
-            "description": "Single user hourly spend spike > 500%"
+            "description": "Single user hourly spend spike > 500%",
         },
         "feature_cost_explosion": {
             "entity_type": "feature",
             "anomaly_type": "feature_spike",
             "min_deviation_pct": 300,
-            "description": "Feature cost increase > 300%"
+            "description": "Feature cost increase > 300%",
         },
         "tenant_daily_spike": {
             "entity_type": "tenant",
             "anomaly_type": "tenant_spike",
             "min_deviation_pct": 200,
-            "description": "Tenant-level daily spend spike > 200%"
+            "description": "Tenant-level daily spend spike > 200%",
         },
         "model_daily_spike": {
             "entity_type": "model",
             "anomaly_type": "model_spike",
             "min_deviation_pct": 200,
-            "description": "Model usage cost spike > 200%"
+            "description": "Model usage cost spike > 200%",
         },
         "budget_breach": {
             "entity_type": "tenant",
             "anomaly_type": "budget_exceeded",
             "min_deviation_pct": 100,
-            "description": "Tenant budget exceeded"
+            "description": "Tenant budget exceeded",
         },
         "model_cost_anomaly": {
             "entity_type": "model",
             "anomaly_type": "unusual_model",
             "min_deviation_pct": 200,
-            "description": "Unusual expensive model usage"
-        }
+            "description": "Unusual expensive model usage",
+        },
     }
 
     def __init__(self, db_session=None):
@@ -344,6 +347,7 @@ class CostPatternMatcher:
         """Create hash of signature for matching."""
         import hashlib
         import json
+
         sig_str = json.dumps(signature, sort_keys=True)
         return hashlib.sha256(sig_str.encode()).hexdigest()[:16]
 
@@ -352,11 +356,11 @@ class CostPatternMatcher:
         if pct >= 500:
             return "extreme"  # 500%+
         elif pct >= 300:
-            return "high"     # 300-500%
+            return "high"  # 300-500%
         elif pct >= 200:
-            return "medium"   # 200-300%
+            return "medium"  # 200-300%
         else:
-            return "low"      # <200%
+            return "low"  # <200%
 
     def _find_predefined_match(self, anomaly: CostAnomaly) -> Optional[str]:
         """Find matching pre-defined pattern."""
@@ -409,22 +413,22 @@ class CostRecoveryGenerator:
                 "description": "Apply rate limit to user",
                 "confidence": 0.9,
                 "auto_apply": False,
-                "params": {"requests_per_hour": 50, "duration_hours": 24}
+                "params": {"requests_per_hour": 50, "duration_hours": 24},
             },
             {
                 "action": "notify_user",
                 "description": "Send cost alert notification to user",
                 "confidence": 0.95,
                 "auto_apply": True,
-                "params": {"template": "cost_spike_alert"}
+                "params": {"template": "cost_spike_alert"},
             },
             {
                 "action": "review_usage",
                 "description": "Flag for usage review",
                 "confidence": 0.85,
                 "auto_apply": True,
-                "params": {}
-            }
+                "params": {},
+            },
         ],
         "feature_spike": [
             {
@@ -432,22 +436,22 @@ class CostRecoveryGenerator:
                 "description": "Reduce prompt size for this feature",
                 "confidence": 0.7,
                 "auto_apply": False,
-                "params": {"max_prompt_tokens": 2000, "max_output_tokens": 1000}
+                "params": {"max_prompt_tokens": 2000, "max_output_tokens": 1000},
             },
             {
                 "action": "enable_caching",
                 "description": "Enable response caching for feature",
                 "confidence": 0.8,
                 "auto_apply": False,
-                "params": {"cache_ttl_seconds": 3600}
+                "params": {"cache_ttl_seconds": 3600},
             },
             {
                 "action": "model_downgrade",
                 "description": "Route to cheaper model",
                 "confidence": 0.75,
                 "auto_apply": False,
-                "params": {"target_model": "gpt-4o-mini", "fallback_threshold_cents": 50}
-            }
+                "params": {"target_model": "gpt-4o-mini", "fallback_threshold_cents": 50},
+            },
         ],
         "budget_exceeded": [
             {
@@ -455,22 +459,22 @@ class CostRecoveryGenerator:
                 "description": "Block requests exceeding budget",
                 "confidence": 0.95,
                 "auto_apply": False,
-                "params": {}
+                "params": {},
             },
             {
                 "action": "escalate_to_admin",
                 "description": "Escalate to account admin",
                 "confidence": 0.99,
                 "auto_apply": True,
-                "params": {"notification_channels": ["email"]}
+                "params": {"notification_channels": ["email"]},
             },
             {
                 "action": "temporary_throttle",
                 "description": "Throttle all requests by 50%",
                 "confidence": 0.85,
                 "auto_apply": False,
-                "params": {"throttle_pct": 50, "duration_hours": 4}
-            }
+                "params": {"throttle_pct": 50, "duration_hours": 4},
+            },
         ],
         "unusual_model": [
             {
@@ -478,15 +482,15 @@ class CostRecoveryGenerator:
                 "description": "Route to cost-optimized model",
                 "confidence": 0.85,
                 "auto_apply": False,
-                "params": {"target_model": "gpt-4o-mini", "quality_threshold": 0.9}
+                "params": {"target_model": "gpt-4o-mini", "quality_threshold": 0.9},
             },
             {
                 "action": "review_routing_rules",
                 "description": "Flag routing configuration for review",
                 "confidence": 0.9,
                 "auto_apply": True,
-                "params": {}
-            }
+                "params": {},
+            },
         ],
         "budget_warning": [
             {
@@ -494,7 +498,7 @@ class CostRecoveryGenerator:
                 "description": "Send budget warning to admin",
                 "confidence": 0.95,
                 "auto_apply": True,
-                "params": {"template": "budget_warning"}
+                "params": {"template": "budget_warning"},
             }
         ],
         "rate_anomaly": [
@@ -503,7 +507,7 @@ class CostRecoveryGenerator:
                 "description": "Apply temporary rate limit",
                 "confidence": 0.85,
                 "auto_apply": False,
-                "params": {"requests_per_minute": 10, "duration_minutes": 60}
+                "params": {"requests_per_minute": 10, "duration_minutes": 60},
             }
         ],
         "tenant_spike": [
@@ -512,22 +516,22 @@ class CostRecoveryGenerator:
                 "description": "Send tenant cost spike alert to admin",
                 "confidence": 0.95,
                 "auto_apply": True,
-                "params": {"template": "tenant_cost_spike"}
+                "params": {"template": "tenant_cost_spike"},
             },
             {
                 "action": "review_usage",
                 "description": "Flag tenant for usage review",
                 "confidence": 0.85,
                 "auto_apply": True,
-                "params": {}
+                "params": {},
             },
             {
                 "action": "escalate_to_admin",
                 "description": "Escalate to account admin",
                 "confidence": 0.90,
                 "auto_apply": False,
-                "params": {"notification_channels": ["email", "slack"]}
-            }
+                "params": {"notification_channels": ["email", "slack"]},
+            },
         ],
         "model_spike": [
             {
@@ -535,16 +539,16 @@ class CostRecoveryGenerator:
                 "description": "Review model usage patterns",
                 "confidence": 0.85,
                 "auto_apply": True,
-                "params": {}
+                "params": {},
             },
             {
                 "action": "route_to_cheaper",
                 "description": "Route to more cost-effective model",
                 "confidence": 0.80,
                 "auto_apply": False,
-                "params": {"target_model": "gpt-4o-mini"}
-            }
-        ]
+                "params": {"target_model": "gpt-4o-mini"},
+            },
+        ],
     }
 
     def __init__(self, db_session=None):
@@ -558,10 +562,7 @@ class CostRecoveryGenerator:
     ) -> list[RecoverySuggestion]:
         """Generate recovery suggestions for cost incident."""
 
-        strategies = self.RECOVERY_STRATEGIES.get(
-            anomaly.anomaly_type.value,
-            []
-        )
+        strategies = self.RECOVERY_STRATEGIES.get(anomaly.anomaly_type.value, [])
 
         suggestions = []
         for strategy in strategies:
@@ -588,9 +589,7 @@ class CostRecoveryGenerator:
 
             # Override auto_applicable based on strategy definition
             suggestion.auto_applicable = (
-                strategy["auto_apply"]
-                and adjusted_confidence >= 0.9
-                and requires_confirmation == 0
+                strategy["auto_apply"] and adjusted_confidence >= 0.9 and requires_confirmation == 0
             )
 
             suggestions.append(suggestion)
@@ -623,77 +622,77 @@ class CostPolicyGenerator:
             "category": "operational",
             "condition_template": "user.id == '{entity_id}' AND user.requests_today > {requests_per_hour}",
             "action": "rate_limit",
-            "description_template": "Rate limit user {entity_id} to {requests_per_hour} requests/hour"
+            "description_template": "Rate limit user {entity_id} to {requests_per_hour} requests/hour",
         },
         "notify_user": {
             "category": "operational",
             "condition_template": "user.id == '{entity_id}' AND user.cost_anomaly_detected == true",
             "action": "notify",
             "action_params": {"channel": "email", "template": "cost_spike_alert"},
-            "description_template": "Notify user {entity_id} about cost spike"
+            "description_template": "Notify user {entity_id} about cost spike",
         },
         "review_usage": {
             "category": "operational",
             "condition_template": "user.id == '{entity_id}' AND user.needs_usage_review == true",
             "action": "flag_review",
             "action_params": {"review_type": "cost_usage"},
-            "description_template": "Flag user {entity_id} for usage review"
+            "description_template": "Flag user {entity_id} for usage review",
         },
         "model_downgrade": {
             "category": "routing",
             "condition_template": "request.estimated_cost_cents > {fallback_threshold_cents}",
             "action": "route_to_model",
             "action_params": {"model": "gpt-4o-mini"},
-            "description_template": "Route to gpt-4o-mini when cost > ${threshold}"
+            "description_template": "Route to gpt-4o-mini when cost > ${threshold}",
         },
         "enforce_hard_limit": {
             "category": "safety",
             "condition_template": "tenant.daily_spend_cents >= tenant.daily_budget_cents",
             "action": "block",
-            "description_template": "Block requests when daily budget exceeded"
+            "description_template": "Block requests when daily budget exceeded",
         },
         "temporary_throttle": {
             "category": "operational",
             "condition_template": "tenant.id == '{tenant_id}' AND NOW() < '{expires_at}'",
             "action": "throttle",
             "action_params": {"rate": 50},
-            "description_template": "Throttle tenant {tenant_id} by {throttle_pct}%"
+            "description_template": "Throttle tenant {tenant_id} by {throttle_pct}%",
         },
         "optimize_prompts": {
             "category": "operational",
             "condition_template": "feature_tag == '{feature_tag}'",
             "action": "limit_tokens",
             "action_params": {"max_prompt": 2000, "max_output": 1000},
-            "description_template": "Limit tokens for feature {feature_tag}"
+            "description_template": "Limit tokens for feature {feature_tag}",
         },
         "escalate_to_admin": {
             "category": "safety",
             "condition_template": "tenant.id == '{tenant_id}' AND incident.severity IN ('high', 'critical')",
             "action": "escalate",
             "action_params": {"channel": "slack", "priority": "high"},
-            "description_template": "Escalate cost incident to admin for tenant {tenant_id}"
+            "description_template": "Escalate cost incident to admin for tenant {tenant_id}",
         },
         "notify_admin": {
             "category": "operational",
             "condition_template": "tenant.id == '{tenant_id}' AND tenant.cost_anomaly_detected == true",
             "action": "notify",
             "action_params": {"channel": "email", "template": "tenant_cost_spike", "recipients": ["admin"]},
-            "description_template": "Notify admin about cost spike for tenant {tenant_id}"
+            "description_template": "Notify admin about cost spike for tenant {tenant_id}",
         },
         "review_model_usage": {
             "category": "operational",
             "condition_template": "model.id == '{model_id}' AND model.needs_usage_review == true",
             "action": "flag_review",
             "action_params": {"review_type": "model_cost"},
-            "description_template": "Flag model {model_id} for usage review"
+            "description_template": "Flag model {model_id} for usage review",
         },
         "route_to_cheaper": {
             "category": "routing",
             "condition_template": "request.model == '{current_model}'",
             "action": "route_to_model",
             "action_params": {"model": "gpt-4o-mini"},
-            "description_template": "Route from {current_model} to gpt-4o-mini"
-        }
+            "description_template": "Route from {current_model} to gpt-4o-mini",
+        },
     }
 
     def __init__(self, db_session=None):
@@ -720,9 +719,9 @@ class CostPolicyGenerator:
             "threshold": recovery.action_params.get("fallback_threshold_cents", 0) / 100,
             "feature_tag": anomaly.metadata.get("feature_tag", "unknown"),
             "throttle_pct": recovery.action_params.get("throttle_pct", 50),
-            "expires_at": (datetime.now(timezone.utc) + timedelta(
-                hours=recovery.action_params.get("duration_hours", 24)
-            )).isoformat()
+            "expires_at": (
+                datetime.now(timezone.utc) + timedelta(hours=recovery.action_params.get("duration_hours", 24))
+            ).isoformat(),
         }
 
         # Generate condition string
@@ -736,9 +735,9 @@ class CostPolicyGenerator:
 
         # Calculate confirmations based on category
         confirmations = {
-            "safety": 3,     # Safety policies need more review
-            "routing": 2,    # Routing changes need review
-            "operational": 1  # Operational changes need minimal review
+            "safety": 3,  # Safety policies need more review
+            "routing": 2,  # Routing changes need review
+            "operational": 1,  # Operational changes need minimal review
         }
 
         policy = PolicyRule.create(
@@ -756,8 +755,7 @@ class CostPolicyGenerator:
         )
 
         logger.info(
-            f"Generated cost policy: {policy.policy_id} "
-            f"(category: {policy.category}, mode: {policy.mode.value})"
+            f"Generated cost policy: {policy.policy_id} (category: {policy.category}, mode: {policy.mode.value})"
         )
 
         return policy
@@ -864,7 +862,7 @@ class CostRoutingAdjuster:
             reason=f"Cost policy: Budget block ({policy.description})",
             source_policy_id=policy.policy_id,
             max_delta=1.0,  # Allow full block for safety
-            decay_days=0,   # No decay for budget blocks
+            decay_days=0,  # No decay for budget blocks
         )
 
     def _create_token_limit_adjustment(self, policy: PolicyRule) -> RoutingAdjustment:
@@ -981,7 +979,7 @@ class CostEstimationProbe:
             return {
                 "status": "blocked",
                 "estimated_cost_cents": cost_cents,
-                "reason": f"Request would exceed budget (${cost_cents/100:.2f})",
+                "reason": f"Request would exceed budget (${cost_cents / 100:.2f})",
                 "suggested_model": None,
             }
 
@@ -992,7 +990,7 @@ class CostEstimationProbe:
                 return {
                     "status": "reroute",
                     "estimated_cost_cents": cost_cents,
-                    "reason": f"Routing to {cheaper['model']} to save ${(cost_cents - cheaper['cost'])/100:.2f}",
+                    "reason": f"Routing to {cheaper['model']} to save ${(cost_cents - cheaper['cost']) / 100:.2f}",
                     "suggested_model": cheaper["model"],
                     "optimized_cost_cents": cheaper["cost"],
                 }
@@ -1012,10 +1010,7 @@ class CostEstimationProbe:
     ) -> int:
         """Calculate cost in cents."""
         costs = self.MODEL_COSTS.get(model, {"input": 1.0, "output": 5.0})
-        return int(
-            (prompt_tokens / 1000 * costs["input"]) +
-            (output_tokens / 1000 * costs["output"])
-        )
+        return int((prompt_tokens / 1000 * costs["input"]) + (output_tokens / 1000 * costs["output"]))
 
     def _find_cheaper_model(
         self,

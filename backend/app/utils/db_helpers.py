@@ -23,6 +23,7 @@ Usage:
     for row in results:
         model = extract_model(row, 'id')
 """
+
 from typing import Any, List, Optional, TypeVar
 
 T = TypeVar("T")
@@ -285,6 +286,7 @@ def model_to_dict(model: Any, include: Optional[list] = None, exclude: Optional[
                 value = getattr(model, key, None)
                 # Handle datetime serialization
                 if hasattr(value, "isoformat"):
+                    assert value is not None
                     value = value.isoformat()
                 result[key] = value
             except Exception:

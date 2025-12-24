@@ -14,6 +14,7 @@ Detection Types:
 - BUDGET_WARNING: Projected overrun (warn threshold)
 - BUDGET_EXCEEDED: Hard stop (budget exhausted)
 """
+
 from __future__ import annotations
 
 import logging
@@ -838,7 +839,7 @@ class CostAnomalyDetector:
                 },
             )
             self.session.commit()
-            return new_count
+            return int(new_count)
         else:
             # New drift tracking
             drift_id = f"dt_{uuid.uuid4().hex[:16]}"
@@ -1187,8 +1188,7 @@ async def run_anomaly_detection_with_m25(
                 )
 
                 logger.info(
-                    f"Escalated cost anomaly {cost_anomaly.id} to M25 loop: "
-                    f"incident={loop_result.get('incident_id')}"
+                    f"Escalated cost anomaly {cost_anomaly.id} to M25 loop: incident={loop_result.get('incident_id')}"
                 )
 
         except ImportError as e:

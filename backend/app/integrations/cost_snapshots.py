@@ -24,6 +24,7 @@ Usage:
   detector = CostAnomalyDetector(session)
   anomalies = await detector.evaluate_from_snapshot(snapshot.id)
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -33,7 +34,6 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Enums and Constants
 # =============================================================================
+
 
 class SnapshotType(str, Enum):
     HOURLY = "hourly"
@@ -64,10 +65,10 @@ class EntityType(str, Enum):
 
 # Severity thresholds (deviation from baseline)
 SEVERITY_THRESHOLDS = {
-    "low": 200,      # 2x baseline
-    "medium": 300,   # 3x baseline
-    "high": 400,     # 4x baseline (this is what triggers M27 loop)
-    "critical": 500, # 5x baseline
+    "low": 200,  # 2x baseline
+    "medium": 300,  # 3x baseline
+    "high": 400,  # 4x baseline (this is what triggers M27 loop)
+    "critical": 500,  # 5x baseline
 }
 
 
@@ -75,9 +76,11 @@ SEVERITY_THRESHOLDS = {
 # Data Classes
 # =============================================================================
 
+
 @dataclass
 class CostSnapshot:
     """Point-in-time cost snapshot definition."""
+
     id: str
     tenant_id: str
     snapshot_type: SnapshotType
@@ -114,7 +117,9 @@ class CostSnapshot:
         return {
             "id": self.id,
             "tenant_id": self.tenant_id,
-            "snapshot_type": self.snapshot_type.value if isinstance(self.snapshot_type, SnapshotType) else self.snapshot_type,
+            "snapshot_type": self.snapshot_type.value
+            if isinstance(self.snapshot_type, SnapshotType)
+            else self.snapshot_type,
             "period_start": self.period_start.isoformat(),
             "period_end": self.period_end.isoformat(),
             "status": self.status.value if isinstance(self.status, SnapshotStatus) else self.status,
@@ -128,6 +133,7 @@ class CostSnapshot:
 @dataclass
 class SnapshotAggregate:
     """Aggregated cost data for an entity within a snapshot."""
+
     id: str
     snapshot_id: str
     tenant_id: str
@@ -156,7 +162,9 @@ class SnapshotAggregate:
         total_input_tokens: int,
         total_output_tokens: int,
     ) -> "SnapshotAggregate":
-        agg_id = f"agg_{hashlib.sha256(f'{snapshot_id}:{entity_type}:{entity_id or "tenant"}'.encode()).hexdigest()[:16]}"
+        agg_id = (
+            f"agg_{hashlib.sha256(f'{snapshot_id}:{entity_type}:{entity_id or "tenant"}'.encode()).hexdigest()[:16]}"
+        )
         avg_cost = total_cost_cents / request_count if request_count > 0 else None
         avg_tokens = (total_input_tokens + total_output_tokens) / request_count if request_count > 0 else None
         return cls(
@@ -177,6 +185,7 @@ class SnapshotAggregate:
 @dataclass
 class SnapshotBaseline:
     """Rolling baseline for an entity (used for anomaly threshold)."""
+
     id: str
     tenant_id: str
     entity_type: EntityType
@@ -232,6 +241,7 @@ class SnapshotBaseline:
 @dataclass
 class AnomalyEvaluation:
     """Audit record for an anomaly evaluation."""
+
     id: str
     tenant_id: str
     snapshot_id: str | None
@@ -251,6 +261,7 @@ class AnomalyEvaluation:
 # =============================================================================
 # Snapshot Computer
 # =============================================================================
+
 
 class SnapshotComputer:
     """Computes cost snapshots from raw cost_records.
@@ -331,6 +342,7 @@ class SnapshotComputer:
     ) -> CostSnapshot:
         """Internal snapshot computation."""
         import time
+
         start_time = time.time()
 
         # Create snapshot record
@@ -366,8 +378,7 @@ class SnapshotComputer:
                     agg.baseline_7d_avg_cents = baseline.avg_daily_cost_cents
                     if baseline.avg_daily_cost_cents > 0:
                         agg.deviation_from_7d_pct = (
-                            (agg.total_cost_cents - baseline.avg_daily_cost_cents)
-                            / baseline.avg_daily_cost_cents
+                            (agg.total_cost_cents - baseline.avg_daily_cost_cents) / baseline.avg_daily_cost_cents
                         ) * 100
 
                 # Insert aggregate
@@ -382,10 +393,7 @@ class SnapshotComputer:
 
             await self._update_snapshot(snapshot)
 
-            logger.info(
-                f"Snapshot complete: {snapshot.id} "
-                f"({snapshot.records_processed} records, {elapsed_ms}ms)"
-            )
+            logger.info(f"Snapshot complete: {snapshot.id} ({snapshot.records_processed} records, {elapsed_ms}ms)")
 
         except Exception as e:
             snapshot.status = SnapshotStatus.FAILED
@@ -419,25 +427,27 @@ class SnapshotComputer:
               AND created_at < :period_end
         """
         result = await self.session.execute(
-            __import__('sqlalchemy').text(tenant_query),
+            __import__("sqlalchemy").text(tenant_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
                 "period_end": period_end,
-            }
+            },
         )
         row = result.fetchone()
         if row and row.request_count > 0:
-            aggregates.append(SnapshotAggregate.create(
-                snapshot_id=snapshot_id,
-                tenant_id=tenant_id,
-                entity_type=EntityType.TENANT,
-                entity_id=None,
-                total_cost_cents=float(row.total_cost),
-                request_count=int(row.request_count),
-                total_input_tokens=int(row.input_tokens),
-                total_output_tokens=int(row.output_tokens),
-            ))
+            aggregates.append(
+                SnapshotAggregate.create(
+                    snapshot_id=snapshot_id,
+                    tenant_id=tenant_id,
+                    entity_type=EntityType.TENANT,
+                    entity_id=None,
+                    total_cost_cents=float(row.total_cost),
+                    request_count=int(row.request_count),
+                    total_input_tokens=int(row.input_tokens),
+                    total_output_tokens=int(row.output_tokens),
+                )
+            )
 
         # 2. User-level aggregates
         user_query = """
@@ -455,24 +465,26 @@ class SnapshotComputer:
             GROUP BY user_id
         """
         result = await self.session.execute(
-            __import__('sqlalchemy').text(user_query),
+            __import__("sqlalchemy").text(user_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
                 "period_end": period_end,
-            }
+            },
         )
         for row in result.fetchall():
-            aggregates.append(SnapshotAggregate.create(
-                snapshot_id=snapshot_id,
-                tenant_id=tenant_id,
-                entity_type=EntityType.USER,
-                entity_id=row.user_id,
-                total_cost_cents=float(row.total_cost),
-                request_count=int(row.request_count),
-                total_input_tokens=int(row.input_tokens),
-                total_output_tokens=int(row.output_tokens),
-            ))
+            aggregates.append(
+                SnapshotAggregate.create(
+                    snapshot_id=snapshot_id,
+                    tenant_id=tenant_id,
+                    entity_type=EntityType.USER,
+                    entity_id=row.user_id,
+                    total_cost_cents=float(row.total_cost),
+                    request_count=int(row.request_count),
+                    total_input_tokens=int(row.input_tokens),
+                    total_output_tokens=int(row.output_tokens),
+                )
+            )
 
         # 3. Feature-level aggregates
         feature_query = """
@@ -490,24 +502,26 @@ class SnapshotComputer:
             GROUP BY feature_tag
         """
         result = await self.session.execute(
-            __import__('sqlalchemy').text(feature_query),
+            __import__("sqlalchemy").text(feature_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
                 "period_end": period_end,
-            }
+            },
         )
         for row in result.fetchall():
-            aggregates.append(SnapshotAggregate.create(
-                snapshot_id=snapshot_id,
-                tenant_id=tenant_id,
-                entity_type=EntityType.FEATURE,
-                entity_id=row.feature_tag,
-                total_cost_cents=float(row.total_cost),
-                request_count=int(row.request_count),
-                total_input_tokens=int(row.input_tokens),
-                total_output_tokens=int(row.output_tokens),
-            ))
+            aggregates.append(
+                SnapshotAggregate.create(
+                    snapshot_id=snapshot_id,
+                    tenant_id=tenant_id,
+                    entity_type=EntityType.FEATURE,
+                    entity_id=row.feature_tag,
+                    total_cost_cents=float(row.total_cost),
+                    request_count=int(row.request_count),
+                    total_input_tokens=int(row.input_tokens),
+                    total_output_tokens=int(row.output_tokens),
+                )
+            )
 
         # 4. Model-level aggregates
         model_query = """
@@ -524,24 +538,26 @@ class SnapshotComputer:
             GROUP BY model
         """
         result = await self.session.execute(
-            __import__('sqlalchemy').text(model_query),
+            __import__("sqlalchemy").text(model_query),
             {
                 "tenant_id": tenant_id,
                 "period_start": period_start,
                 "period_end": period_end,
-            }
+            },
         )
         for row in result.fetchall():
-            aggregates.append(SnapshotAggregate.create(
-                snapshot_id=snapshot_id,
-                tenant_id=tenant_id,
-                entity_type=EntityType.MODEL,
-                entity_id=row.model,
-                total_cost_cents=float(row.total_cost),
-                request_count=int(row.request_count),
-                total_input_tokens=int(row.input_tokens),
-                total_output_tokens=int(row.output_tokens),
-            ))
+            aggregates.append(
+                SnapshotAggregate.create(
+                    snapshot_id=snapshot_id,
+                    tenant_id=tenant_id,
+                    entity_type=EntityType.MODEL,
+                    entity_id=row.model,
+                    total_cost_cents=float(row.total_cost),
+                    request_count=int(row.request_count),
+                    total_input_tokens=int(row.input_tokens),
+                    total_output_tokens=int(row.output_tokens),
+                )
+            )
 
         return aggregates
 
@@ -564,13 +580,13 @@ class SnapshotComputer:
             LIMIT 1
         """
         result = await self.session.execute(
-            __import__('sqlalchemy').text(query),
+            __import__("sqlalchemy").text(query),
             {
                 "tenant_id": tenant_id,
                 "entity_type": entity_type.value if isinstance(entity_type, EntityType) else entity_type,
                 "entity_id": entity_id,
                 "window_days": window_days,
-            }
+            },
         )
         row = result.fetchone()
         if row:
@@ -607,7 +623,7 @@ class SnapshotComputer:
             DO UPDATE SET status = :status, version = cost_snapshots.version + 1
         """
         await self.session.execute(
-            __import__('sqlalchemy').text(query),
+            __import__("sqlalchemy").text(query),
             {
                 "id": snapshot.id,
                 "tenant_id": snapshot.tenant_id,
@@ -617,7 +633,7 @@ class SnapshotComputer:
                 "status": snapshot.status.value,
                 "version": snapshot.version,
                 "created_at": snapshot.created_at,
-            }
+            },
         )
         await self.session.commit()
 
@@ -633,7 +649,7 @@ class SnapshotComputer:
             WHERE id = :id
         """
         await self.session.execute(
-            __import__('sqlalchemy').text(query),
+            __import__("sqlalchemy").text(query),
             {
                 "id": snapshot.id,
                 "status": snapshot.status.value,
@@ -641,7 +657,7 @@ class SnapshotComputer:
                 "computation_ms": snapshot.computation_ms,
                 "completed_at": snapshot.completed_at,
                 "error_message": snapshot.error_message,
-            }
+            },
         )
         await self.session.commit()
 
@@ -669,7 +685,7 @@ class SnapshotComputer:
                 deviation_from_7d_pct = :deviation_from_7d_pct
         """
         await self.session.execute(
-            __import__('sqlalchemy').text(query),
+            __import__("sqlalchemy").text(query),
             {
                 "id": agg.id,
                 "snapshot_id": agg.snapshot_id,
@@ -687,7 +703,7 @@ class SnapshotComputer:
                 "deviation_from_7d_pct": agg.deviation_from_7d_pct,
                 "deviation_from_30d_pct": agg.deviation_from_30d_pct,
                 "created_at": datetime.now(timezone.utc),
-            }
+            },
         )
         await self.session.commit()
 
@@ -695,6 +711,7 @@ class SnapshotComputer:
 # =============================================================================
 # Baseline Computer
 # =============================================================================
+
 
 class BaselineComputer:
     """Computes rolling baselines from historical snapshots.
@@ -738,12 +755,9 @@ class BaselineComputer:
             GROUP BY csa.entity_type, csa.entity_id
         """
         # Note: Can't use :window_days in interval directly, need to format
-        formatted_query = query.replace(':window_days days', f'{window_days} days')
+        formatted_query = query.replace(":window_days days", f"{window_days} days")
 
-        result = await self.session.execute(
-            __import__('sqlalchemy').text(formatted_query),
-            {"tenant_id": tenant_id}
-        )
+        result = await self.session.execute(__import__("sqlalchemy").text(formatted_query), {"tenant_id": tenant_id})
 
         for row in result.fetchall():
             baseline = SnapshotBaseline.create(
@@ -770,25 +784,28 @@ class BaselineComputer:
         """Insert baseline, marking old ones as not current."""
         # Mark existing baselines as not current
         await self.session.execute(
-            __import__('sqlalchemy').text("""
+            __import__("sqlalchemy").text(
+                """
                 UPDATE cost_snapshot_baselines SET is_current = false
                 WHERE tenant_id = :tenant_id
                   AND entity_type = :entity_type
                   AND (entity_id = :entity_id OR (entity_id IS NULL AND :entity_id IS NULL))
                   AND window_days = :window_days
                   AND is_current = true
-            """),
+            """
+            ),
             {
                 "tenant_id": baseline.tenant_id,
                 "entity_type": baseline.entity_type.value,
                 "entity_id": baseline.entity_id,
                 "window_days": baseline.window_days,
-            }
+            },
         )
 
         # Insert new baseline
         await self.session.execute(
-            __import__('sqlalchemy').text("""
+            __import__("sqlalchemy").text(
+                """
                 INSERT INTO cost_snapshot_baselines (
                     id, tenant_id, entity_type, entity_id,
                     avg_daily_cost_cents, stddev_daily_cost_cents,
@@ -802,7 +819,8 @@ class BaselineComputer:
                     :window_days, :samples_count, :computed_at, :valid_until,
                     :is_current, :last_snapshot_id
                 )
-            """),
+            """
+            ),
             {
                 "id": baseline.id,
                 "tenant_id": baseline.tenant_id,
@@ -819,7 +837,7 @@ class BaselineComputer:
                 "valid_until": baseline.valid_until,
                 "is_current": baseline.is_current,
                 "last_snapshot_id": baseline.last_snapshot_id,
-            }
+            },
         )
         await self.session.commit()
 
@@ -827,6 +845,7 @@ class BaselineComputer:
 # =============================================================================
 # Snapshot-Based Anomaly Detector
 # =============================================================================
+
 
 class SnapshotAnomalyDetector:
     """Detects anomalies from complete snapshots only.
@@ -872,10 +891,7 @@ class SnapshotAnomalyDetector:
               AND baseline_7d_avg_cents IS NOT NULL
               AND baseline_7d_avg_cents > 0
         """
-        result = await self.session.execute(
-            __import__('sqlalchemy').text(query),
-            {"snapshot_id": snapshot_id}
-        )
+        result = await self.session.execute(__import__("sqlalchemy").text(query), {"snapshot_id": snapshot_id})
 
         for row in result.fetchall():
             deviation = row.deviation_from_7d_pct or 0
@@ -892,7 +908,9 @@ class SnapshotAnomalyDetector:
                 else:
                     severity = "low"
 
-            eval_id = f"eval_{hashlib.sha256(f'{snapshot_id}:{row.entity_type}:{row.entity_id}'.encode()).hexdigest()[:16]}"
+            eval_id = (
+                f"eval_{hashlib.sha256(f'{snapshot_id}:{row.entity_type}:{row.entity_id}'.encode()).hexdigest()[:16]}"
+            )
             evaluation = AnomalyEvaluation(
                 id=eval_id,
                 tenant_id=row.tenant_id,
@@ -922,10 +940,7 @@ class SnapshotAnomalyDetector:
     async def _get_snapshot(self, snapshot_id: str) -> CostSnapshot | None:
         """Get snapshot by ID."""
         query = "SELECT * FROM cost_snapshots WHERE id = :id"
-        result = await self.session.execute(
-            __import__('sqlalchemy').text(query),
-            {"id": snapshot_id}
-        )
+        result = await self.session.execute(__import__("sqlalchemy").text(query), {"id": snapshot_id})
         row = result.fetchone()
         if row:
             return CostSnapshot(
@@ -956,7 +971,7 @@ class SnapshotAnomalyDetector:
             )
         """
         await self.session.execute(
-            __import__('sqlalchemy').text(query),
+            __import__("sqlalchemy").text(query),
             {
                 "id": evaluation.id,
                 "tenant_id": evaluation.tenant_id,
@@ -972,7 +987,7 @@ class SnapshotAnomalyDetector:
                 "anomaly_id": evaluation.anomaly_id,
                 "evaluation_reason": evaluation.evaluation_reason,
                 "evaluated_at": evaluation.evaluated_at,
-            }
+            },
         )
         await self.session.commit()
 
@@ -1005,7 +1020,7 @@ class SnapshotAnomalyDetector:
             )
         """
         await self.session.execute(
-            __import__('sqlalchemy').text(query),
+            __import__("sqlalchemy").text(query),
             {
                 "id": anomaly_id,
                 "tenant_id": evaluation.tenant_id,
@@ -1020,7 +1035,7 @@ class SnapshotAnomalyDetector:
                 "message": f"Cost spike detected from snapshot {snapshot.id}: {evaluation.deviation_pct:.1f}% above 7-day baseline",
                 "snapshot_id": snapshot.id,
                 "detected_at": evaluation.evaluated_at,
-            }
+            },
         )
         await self.session.commit()
 
@@ -1031,6 +1046,7 @@ class SnapshotAnomalyDetector:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 async def run_hourly_snapshot_job(session: AsyncSession, tenant_ids: list[str]) -> dict:
     """Run hourly snapshot job for multiple tenants.
@@ -1067,27 +1083,33 @@ async def run_daily_snapshot_and_baseline_job(session: AsyncSession, tenant_ids:
     for tenant_id in tenant_ids:
         # 1. Compute daily snapshot
         snapshot = await snapshot_computer.compute_daily_snapshot(tenant_id)
-        results["snapshots"].append({
-            "tenant_id": tenant_id,
-            "snapshot_id": snapshot.id,
-            "status": snapshot.status.value,
-        })
+        results["snapshots"].append(
+            {
+                "tenant_id": tenant_id,
+                "snapshot_id": snapshot.id,
+                "status": snapshot.status.value,
+            }
+        )
 
         if snapshot.status == SnapshotStatus.COMPLETE:
             # 2. Compute baselines
             baselines = await baseline_computer.compute_baselines(tenant_id)
-            results["baselines"].append({
-                "tenant_id": tenant_id,
-                "count": len(baselines),
-            })
+            results["baselines"].append(
+                {
+                    "tenant_id": tenant_id,
+                    "count": len(baselines),
+                }
+            )
 
             # 3. Evaluate for anomalies
             evaluations = await detector.evaluate_snapshot(snapshot.id)
             triggered = [e for e in evaluations if e.triggered]
-            results["anomalies"].append({
-                "tenant_id": tenant_id,
-                "evaluated": len(evaluations),
-                "triggered": len(triggered),
-            })
+            results["anomalies"].append(
+                {
+                    "tenant_id": tenant_id,
+                    "evaluated": len(evaluations),
+                    "triggered": len(triggered),
+                }
+            )
 
     return results

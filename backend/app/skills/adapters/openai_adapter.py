@@ -198,7 +198,7 @@ class OpenAIAdapter:
 
                 self._client = OpenAI(api_key=self._api_key)
             except ImportError:
-                raise ImportError("openai package not installed. " "Install with: pip install openai")
+                raise ImportError("openai package not installed. Install with: pip install openai")
         return self._client
 
     def _map_api_error(self, error: Exception) -> Tuple[str, str, bool]:

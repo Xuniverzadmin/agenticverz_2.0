@@ -53,15 +53,15 @@ class UXStage:
                 <a href="#pricing">Pricing</a>
                 <a href="#contact">Contact</a>
             </div>
-            <button class="cta-button">{hero.get('cta', 'Get Started')}</button>
+            <button class="cta-button">{hero.get("cta", "Get Started")}</button>
         </nav>
     </header>
 
     <main>
         <section class="hero">
-            <h1>{hero.get('headline', brand_name)}</h1>
-            <p class="subhead">{hero.get('subhead', '')}</p>
-            <button class="cta-button cta-large">{hero.get('cta', 'Get Started')}</button>
+            <h1>{hero.get("headline", brand_name)}</h1>
+            <p class="subhead">{hero.get("subhead", "")}</p>
+            <button class="cta-button cta-large">{hero.get("cta", "Get Started")}</button>
         </section>
 
         <section id="features" class="features">

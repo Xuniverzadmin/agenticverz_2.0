@@ -185,8 +185,7 @@ class IntegrationDispatcher:
         idempotency_key = f"{event.incident_id}:{event.stage.value}"
         if idempotency_key in self._processed_events:
             logger.warning(
-                f"Idempotency blocked: {idempotency_key} already processed. "
-                f"Duplicate event {event.event_id} ignored."
+                f"Idempotency blocked: {idempotency_key} already processed. Duplicate event {event.event_id} ignored."
             )
             # Return existing loop status if available
             existing_status = await self._load_loop_status(event.incident_id)
@@ -351,7 +350,7 @@ class IntegrationDispatcher:
                 tenant_id=event.tenant_id,
                 stage=event.stage,
                 target_id=event.details.get("pattern_id", event.event_id),
-                description=("Novel pattern detected (low confidence). " "Review before creating new failure pattern."),
+                description=("Novel pattern detected (low confidence). Review before creating new failure pattern."),
             )
 
         return None
@@ -765,9 +764,7 @@ class IntegrationDispatcher:
         if not loop_status:
             raise ValueError(f"No loop found for incident {incident_id}")
 
-        logger.warning(
-            f"Reverting loop {loop_status.loop_id} for incident {incident_id} " f"by user {user_id}: {reason}"
-        )
+        logger.warning(f"Reverting loop {loop_status.loop_id} for incident {incident_id} by user {user_id}: {reason}")
 
         # Revert each applied change
         if loop_status.routing_adjustment:

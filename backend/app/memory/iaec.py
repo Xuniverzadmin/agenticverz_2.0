@@ -509,9 +509,7 @@ class TemporalMediator:
         path = self._find_canonical_path(from_key, to_key)
         if path is None:
             IAEC_TEMPORAL_MISMATCHES.inc()
-            logger.warning(
-                f"TemporalMediator: No transform path from {from_key} " f"to {to_key} - MIXING MAY BE UNSAFE"
-            )
+            logger.warning(f"TemporalMediator: No transform path from {from_key} to {to_key} - MIXING MAY BE UNSAFE")
             return embedding, False
 
         # Apply transforms along path
@@ -2290,14 +2288,14 @@ async def check_instruction_query_match(
     )
 
     if deep_score > DEEP_MISMATCH_THRESHOLD:
-        confidence_str = f"{corrective_action.confidence:.1%}" if corrective_action else f"{1-deep_score:.1%}"
+        confidence_str = f"{corrective_action.confidence:.1%}" if corrective_action else f"{1 - deep_score:.1%}"
         warning.message = (
             f"Embedding analysis suggests query is a '{suggested}' task but instruction is '{instruction}'. "
             f"Consider using instruction='{suggested}' for better results. (confidence: {confidence_str})"
         )
     elif kw_score > MISMATCH_THRESHOLD:
         warning.message = (
-            f"Keyword analysis suggests mismatch. " f"Consider using instruction='{suggested}' for better results."
+            f"Keyword analysis suggests mismatch. Consider using instruction='{suggested}' for better results."
         )
     else:
         warning.message = "Instruction and query appear compatible."

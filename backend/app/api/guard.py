@@ -21,7 +21,7 @@ Endpoints:
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -1473,7 +1473,7 @@ async def search_incidents(
 
     if request.query:
         # Search in title
-        stmt = stmt.where(Incident.title.ilike(f"%{request.query}%"))
+        stmt = stmt.where(cast(Any, Incident.title).ilike(f"%{request.query}%"))
 
     if request.policy_status:
         if request.policy_status == "failed":
@@ -1503,7 +1503,7 @@ async def search_incidents(
     if request.time_to:
         count_stmt = count_stmt.where(Incident.started_at <= request.time_to)
     if request.query:
-        count_stmt = count_stmt.where(Incident.title.ilike(f"%{request.query}%"))
+        count_stmt = count_stmt.where(cast(Any, Incident.title).ilike(f"%{request.query}%"))
 
     row = session.exec(count_stmt).first()
     total = row[0] if row else 0

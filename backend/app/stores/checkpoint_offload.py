@@ -116,9 +116,7 @@ def _verify_upload_integrity(r2_client, bucket: str, key: str, expected_sha256: 
         if actual_sha256 == expected_sha256:
             return True
 
-        logger.error(
-            f"Integrity mismatch for {key}: expected {expected_sha256[:16]}..., " f"got {actual_sha256[:16]}..."
-        )
+        logger.error(f"Integrity mismatch for {key}: expected {expected_sha256[:16]}..., got {actual_sha256[:16]}...")
         return False
 
     except Exception as e:

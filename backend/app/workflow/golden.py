@@ -340,6 +340,7 @@ class GoldenRecorder:
         with open(filepath, "rb") as f:
             data = f.read()
 
+        assert hmac is not None
         sig = hmac.new(self.secret.encode(), data, hashlib.sha256).hexdigest()
 
         # Atomic write pattern: write to unique temp, then rename

@@ -82,7 +82,7 @@ def _compute_backoff_ms(attempt: int, base_ms: int, seed: int) -> int:
     """
     exponential = base_ms * (2**attempt)
     jitter = _deterministic_jitter(seed, attempt, base_ms)
-    return exponential + jitter
+    return int(exponential + jitter)
 
 
 def _canonical_json(obj: Any) -> str:

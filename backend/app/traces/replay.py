@@ -291,7 +291,7 @@ class RedisIdempotencyStore(IdempotencyStore):
         client = await self._get_client()
         full_key = self._make_key(key, tenant_id)
         result = await client.delete(full_key)
-        return result > 0
+        return bool(result > 0)
 
 
 # Singleton enforcer

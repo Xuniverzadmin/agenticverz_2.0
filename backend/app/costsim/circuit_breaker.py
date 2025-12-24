@@ -46,7 +46,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import httpx
 from sqlmodel import Session, select
@@ -314,7 +314,7 @@ class CircuitBreaker:
             reason="Auto-recovered after TTL expired",
         )
 
-        logger.info(f"Circuit breaker auto-recovered: name={self.name}, " f"old_incident_id={old_incident_id}")
+        logger.info(f"Circuit breaker auto-recovered: name={self.name}, old_incident_id={old_incident_id}")
 
     def is_open(self) -> bool:
         """
@@ -735,7 +735,7 @@ class CircuitBreaker:
             if not include_resolved:
                 statement = statement.where(CostSimCBIncident.resolved == False)
 
-            statement = statement.order_by(CostSimCBIncident.timestamp.desc()).limit(limit)
+            statement = statement.order_by(cast(Any, CostSimCBIncident.timestamp).desc()).limit(limit)
 
             result = session.exec(statement)
             incidents = []
@@ -825,7 +825,7 @@ class CircuitBreaker:
                 },
                 "annotations": {
                     "summary": "CostSim V2 circuit breaker re-enabled",
-                    "description": (f"Re-enabled by: {enabled_by}\n" f"Reason: {reason or 'Not specified'}"),
+                    "description": (f"Re-enabled by: {enabled_by}\nReason: {reason or 'Not specified'}"),
                 },
                 "startsAt": now.isoformat(),
                 "endsAt": now.isoformat(),  # Resolved immediately

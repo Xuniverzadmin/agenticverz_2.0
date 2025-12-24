@@ -7,13 +7,12 @@ Every anomaly must trigger an action, not a chart.
 
 This is not reporting. This is CONTROL.
 """
+
 from __future__ import annotations
 
-import json
 import logging
-import uuid
-from datetime import datetime, timedelta, timezone, date
-from typing import Any, Optional, List
+from datetime import datetime, timedelta
+from typing import Any, List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -21,11 +20,10 @@ from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.db import (
-    FeatureTag,
-    CostRecord,
     CostAnomaly,
     CostBudget,
-    CostDailyAggregate,
+    CostRecord,
+    FeatureTag,
     get_session,
     utc_now,
 )
@@ -34,6 +32,7 @@ from app.db import (
 def get_tenant_id(tenant_id: str = Query(..., description="Tenant ID")) -> str:
     """Extract tenant_id from query parameter."""
     return tenant_id
+
 
 logger = logging.getLogger("nova.cost_intelligence")
 
@@ -47,6 +46,7 @@ router = APIRouter(prefix="/cost", tags=["Cost Intelligence"])
 
 class FeatureTagCreate(BaseModel):
     """Create a new feature tag."""
+
     tag: str = Field(..., description="Feature namespace (e.g., 'customer_support.chat')")
     display_name: str = Field(..., description="Human-readable name")
     description: Optional[str] = None
@@ -55,6 +55,7 @@ class FeatureTagCreate(BaseModel):
 
 class FeatureTagResponse(BaseModel):
     """Feature tag response."""
+
     id: str
     tenant_id: str
     tag: str
@@ -68,6 +69,7 @@ class FeatureTagResponse(BaseModel):
 
 class FeatureTagUpdate(BaseModel):
     """Update a feature tag."""
+
     display_name: Optional[str] = None
     description: Optional[str] = None
     budget_cents: Optional[int] = None
@@ -76,6 +78,7 @@ class FeatureTagUpdate(BaseModel):
 
 class CostRecordCreate(BaseModel):
     """Record a cost entry."""
+
     user_id: Optional[str] = None
     feature_tag: Optional[str] = None
     request_id: Optional[str] = None
@@ -89,6 +92,7 @@ class CostRecordCreate(BaseModel):
 
 class CostSummary(BaseModel):
     """Cost summary for a period."""
+
     tenant_id: str
     period_start: datetime
     period_end: datetime
@@ -103,6 +107,7 @@ class CostSummary(BaseModel):
 
 class CostByFeature(BaseModel):
     """Cost breakdown by feature."""
+
     feature_tag: str
     display_name: Optional[str]
     total_cost_cents: float
@@ -114,6 +119,7 @@ class CostByFeature(BaseModel):
 
 class CostByUser(BaseModel):
     """Cost breakdown by user."""
+
     user_id: str
     total_cost_cents: float
     request_count: int
@@ -124,6 +130,7 @@ class CostByUser(BaseModel):
 
 class CostByModel(BaseModel):
     """Cost breakdown by model."""
+
     model: str
     total_cost_cents: float
     total_input_tokens: int
@@ -134,6 +141,7 @@ class CostByModel(BaseModel):
 
 class CostProjection(BaseModel):
     """Cost projection for upcoming period."""
+
     tenant_id: str
     lookback_days: int
     forecast_days: int
@@ -147,6 +155,7 @@ class CostProjection(BaseModel):
 
 class CostAnomalyResponse(BaseModel):
     """Cost anomaly response."""
+
     id: str
     tenant_id: str
     anomaly_type: str
@@ -165,6 +174,7 @@ class CostAnomalyResponse(BaseModel):
 
 class CostDashboard(BaseModel):
     """Complete cost dashboard data."""
+
     summary: CostSummary
     by_feature: List[CostByFeature]
     by_user: List[CostByUser]
@@ -175,6 +185,7 @@ class CostDashboard(BaseModel):
 
 class BudgetCreate(BaseModel):
     """Create or update a budget."""
+
     budget_type: str = Field(..., description="'tenant', 'feature', or 'user'")
     entity_id: Optional[str] = Field(None, description="Feature tag or user ID")
     daily_limit_cents: Optional[int] = Field(None, ge=0)
@@ -185,6 +196,7 @@ class BudgetCreate(BaseModel):
 
 class BudgetResponse(BaseModel):
     """Budget response."""
+
     id: str
     tenant_id: str
     budget_type: str
@@ -224,16 +236,12 @@ async def create_feature_tag(
     ).first()
 
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Feature tag '{data.tag}' already exists for this tenant"
-        )
+        raise HTTPException(status_code=409, detail=f"Feature tag '{data.tag}' already exists for this tenant")
 
     # Validate tag format (namespace.action)
     if "." not in data.tag:
         raise HTTPException(
-            status_code=400,
-            detail="Feature tag must be in namespace.action format (e.g., 'customer_support.chat')"
+            status_code=400, detail="Feature tag must be in namespace.action format (e.g., 'customer_support.chat')"
         )
 
     feature_tag = FeatureTag(
@@ -476,17 +484,23 @@ async def get_costs_by_feature(
 ) -> List[CostByFeature]:
     """Get cost breakdown by feature tag."""
     now = utc_now()
-    period_start = now - timedelta(hours=24) if period == "24h" else \
-                   now - timedelta(days=7) if period == "7d" else \
-                   now - timedelta(days=30)
+    period_start = (
+        now - timedelta(hours=24)
+        if period == "24h"
+        else now - timedelta(days=7)
+        if period == "7d"
+        else now - timedelta(days=30)
+    )
 
     # Get total for percentage calculation
     total_result = session.execute(
-        text("""
+        text(
+            """
             SELECT COALESCE(SUM(cost_cents), 0) as total
             FROM cost_records
             WHERE tenant_id = :tenant_id AND created_at >= :period_start
-        """).bindparams(tenant_id=tenant_id, period_start=period_start)
+        """
+        ).bindparams(tenant_id=tenant_id, period_start=period_start)
     ).first()
     total_cost = total_result[0] if total_result else 0
 
@@ -501,17 +515,23 @@ async def get_costs_by_user(
 ) -> List[CostByUser]:
     """Get cost breakdown by user with anomaly detection."""
     now = utc_now()
-    period_start = now - timedelta(hours=24) if period == "24h" else \
-                   now - timedelta(days=7) if period == "7d" else \
-                   now - timedelta(days=30)
+    period_start = (
+        now - timedelta(hours=24)
+        if period == "24h"
+        else now - timedelta(days=7)
+        if period == "7d"
+        else now - timedelta(days=30)
+    )
 
     # Get total for percentage calculation
     total_result = session.execute(
-        text("""
+        text(
+            """
             SELECT COALESCE(SUM(cost_cents), 0) as total
             FROM cost_records
             WHERE tenant_id = :tenant_id AND created_at >= :period_start
-        """).bindparams(tenant_id=tenant_id, period_start=period_start)
+        """
+        ).bindparams(tenant_id=tenant_id, period_start=period_start)
     ).first()
     total_cost = total_result[0] if total_result else 0
 
@@ -526,16 +546,22 @@ async def get_costs_by_model(
 ) -> List[CostByModel]:
     """Get cost breakdown by model."""
     now = utc_now()
-    period_start = now - timedelta(hours=24) if period == "24h" else \
-                   now - timedelta(days=7) if period == "7d" else \
-                   now - timedelta(days=30)
+    period_start = (
+        now - timedelta(hours=24)
+        if period == "24h"
+        else now - timedelta(days=7)
+        if period == "7d"
+        else now - timedelta(days=30)
+    )
 
     total_result = session.execute(
-        text("""
+        text(
+            """
             SELECT COALESCE(SUM(cost_cents), 0) as total
             FROM cost_records
             WHERE tenant_id = :tenant_id AND created_at >= :period_start
-        """).bindparams(tenant_id=tenant_id, period_start=period_start)
+        """
+        ).bindparams(tenant_id=tenant_id, period_start=period_start)
     ).first()
     total_cost = total_result[0] if total_result else 0
 
@@ -577,16 +603,10 @@ async def create_or_update_budget(
 ) -> BudgetResponse:
     """Create or update a budget."""
     if data.budget_type not in ("tenant", "feature", "user"):
-        raise HTTPException(
-            status_code=400,
-            detail="budget_type must be 'tenant', 'feature', or 'user'"
-        )
+        raise HTTPException(status_code=400, detail="budget_type must be 'tenant', 'feature', or 'user'")
 
     if data.budget_type in ("feature", "user") and not data.entity_id:
-        raise HTTPException(
-            status_code=400,
-            detail=f"entity_id required for {data.budget_type} budget"
-        )
+        raise HTTPException(status_code=400, detail=f"entity_id required for {data.budget_type} budget")
 
     # Find existing or create
     existing = session.exec(
@@ -652,22 +672,22 @@ async def list_budgets(
 
     result = []
     for budget in budgets:
-        current_spend = await _get_current_spend(
-            session, tenant_id, budget.budget_type, budget.entity_id
+        current_spend = await _get_current_spend(session, tenant_id, budget.budget_type, budget.entity_id)
+        result.append(
+            BudgetResponse(
+                id=budget.id,
+                tenant_id=budget.tenant_id,
+                budget_type=budget.budget_type,
+                entity_id=budget.entity_id,
+                daily_limit_cents=budget.daily_limit_cents,
+                monthly_limit_cents=budget.monthly_limit_cents,
+                warn_threshold_pct=budget.warn_threshold_pct,
+                hard_limit_enabled=budget.hard_limit_enabled,
+                is_active=budget.is_active,
+                current_daily_spend_cents=current_spend.get("daily"),
+                current_monthly_spend_cents=current_spend.get("monthly"),
+            )
         )
-        result.append(BudgetResponse(
-            id=budget.id,
-            tenant_id=budget.tenant_id,
-            budget_type=budget.budget_type,
-            entity_id=budget.entity_id,
-            daily_limit_cents=budget.daily_limit_cents,
-            monthly_limit_cents=budget.monthly_limit_cents,
-            warn_threshold_pct=budget.warn_threshold_pct,
-            hard_limit_enabled=budget.hard_limit_enabled,
-            is_active=budget.is_active,
-            current_daily_spend_cents=current_spend.get("daily"),
-            current_monthly_spend_cents=current_spend.get("monthly"),
-        ))
 
     return result
 
@@ -686,7 +706,8 @@ async def _get_cost_summary(
 ) -> CostSummary:
     """Get cost summary for a period."""
     result = session.execute(
-        text("""
+        text(
+            """
             SELECT
                 COALESCE(SUM(cost_cents), 0) as total_cost,
                 COALESCE(SUM(input_tokens), 0) as total_input,
@@ -696,8 +717,9 @@ async def _get_cost_summary(
             WHERE tenant_id = :tenant_id
               AND created_at >= :period_start
               AND created_at <= :period_end
-        """),
-        {"tenant_id": tenant_id, "period_start": period_start, "period_end": period_end}
+        """
+        ),
+        {"tenant_id": tenant_id, "period_start": period_start, "period_end": period_end},
     ).first()
 
     total_cost = result[0] if result else 0
@@ -747,7 +769,8 @@ async def _get_costs_by_feature(
 ) -> List[CostByFeature]:
     """Get costs grouped by feature tag."""
     results = session.execute(
-        text("""
+        text(
+            """
             SELECT
                 COALESCE(cr.feature_tag, 'unclassified') as feature_tag,
                 ft.display_name,
@@ -759,8 +782,9 @@ async def _get_costs_by_feature(
             WHERE cr.tenant_id = :tenant_id AND cr.created_at >= :period_start
             GROUP BY cr.feature_tag, ft.display_name, ft.budget_cents
             ORDER BY total_cost DESC
-        """),
-        {"tenant_id": tenant_id, "period_start": period_start}
+        """
+        ),
+        {"tenant_id": tenant_id, "period_start": period_start},
     ).all()
 
     return [
@@ -786,7 +810,8 @@ async def _get_costs_by_user(
     """Get costs grouped by user with anomaly detection."""
     # Get current period costs by user
     results = session.execute(
-        text("""
+        text(
+            """
             SELECT
                 COALESCE(user_id, 'anonymous') as user_id,
                 COALESCE(SUM(cost_cents), 0) as total_cost,
@@ -795,8 +820,9 @@ async def _get_costs_by_user(
             WHERE tenant_id = :tenant_id AND created_at >= :period_start
             GROUP BY user_id
             ORDER BY total_cost DESC
-        """),
-        {"tenant_id": tenant_id, "period_start": period_start}
+        """
+        ),
+        {"tenant_id": tenant_id, "period_start": period_start},
     ).all()
 
     # Calculate average to detect anomalies (user spending > 2x average)
@@ -826,7 +852,8 @@ async def _get_costs_by_model(
 ) -> List[CostByModel]:
     """Get costs grouped by model."""
     results = session.execute(
-        text("""
+        text(
+            """
             SELECT
                 model,
                 COALESCE(SUM(cost_cents), 0) as total_cost,
@@ -837,8 +864,9 @@ async def _get_costs_by_model(
             WHERE tenant_id = :tenant_id AND created_at >= :period_start
             GROUP BY model
             ORDER BY total_cost DESC
-        """),
-        {"tenant_id": tenant_id, "period_start": period_start}
+        """
+        ),
+        {"tenant_id": tenant_id, "period_start": period_start},
     ).all()
 
     return [
@@ -871,7 +899,7 @@ async def _get_recent_anomalies(
     if not include_resolved:
         query = query.where(CostAnomaly.resolved == False)
 
-    anomalies = session.exec(query.order_by(CostAnomaly.detected_at.desc())).all()
+    anomalies = session.exec(query.order_by(cast(Any, CostAnomaly.detected_at).desc())).all()
 
     return [
         CostAnomalyResponse(
@@ -905,7 +933,8 @@ async def _get_cost_projection(
 
     # Get daily costs for the lookback period
     results = session.execute(
-        text("""
+        text(
+            """
             SELECT
                 DATE(created_at) as day,
                 COALESCE(SUM(cost_cents), 0) as daily_cost
@@ -913,8 +942,9 @@ async def _get_cost_projection(
             WHERE tenant_id = :tenant_id AND created_at >= :lookback_start
             GROUP BY DATE(created_at)
             ORDER BY day
-        """),
-        {"tenant_id": tenant_id, "lookback_start": lookback_start}
+        """
+        ),
+        {"tenant_id": tenant_id, "lookback_start": lookback_start},
     ).all()
 
     if not results:
@@ -968,12 +998,14 @@ async def _get_cost_projection(
         # Get current month spend
         month_start = utc_now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         month_spend = session.execute(
-            text("""
+            text(
+                """
                 SELECT COALESCE(SUM(cost_cents), 0)
                 FROM cost_records
                 WHERE tenant_id = :tenant_id AND created_at >= :month_start
-            """),
-            {"tenant_id": tenant_id, "month_start": month_start}
+            """
+            ),
+            {"tenant_id": tenant_id, "month_start": month_start},
         ).first()
 
         remaining = budget.monthly_limit_cents - (month_spend[0] if month_spend else 0)
@@ -1014,22 +1046,26 @@ async def _get_current_spend(
 
     # Daily spend
     daily_result = session.execute(
-        text(f"""
+        text(
+            f"""
             SELECT COALESCE(SUM(cost_cents), 0)
             FROM cost_records
             WHERE {where_clause} AND created_at >= :today_start
-        """),
-        params
+        """
+        ),
+        params,
     ).first()
 
     # Monthly spend
     monthly_result = session.execute(
-        text(f"""
+        text(
+            f"""
             SELECT COALESCE(SUM(cost_cents), 0)
             FROM cost_records
             WHERE {where_clause} AND created_at >= :month_start
-        """),
-        params
+        """
+        ),
+        params,
     ).first()
 
     return {
@@ -1045,14 +1081,13 @@ async def _get_current_spend(
 
 class AnomalyDetectionRequest(BaseModel):
     """Request to trigger anomaly detection."""
-    escalate_to_m25: bool = Field(
-        True,
-        description="Whether to escalate HIGH/CRITICAL anomalies to M25 incident loop"
-    )
+
+    escalate_to_m25: bool = Field(True, description="Whether to escalate HIGH/CRITICAL anomalies to M25 incident loop")
 
 
 class AnomalyDetectionResponse(BaseModel):
     """Response from anomaly detection."""
+
     detected_count: int
     escalated_count: int
     anomalies: List[CostAnomalyResponse]
@@ -1089,6 +1124,7 @@ async def trigger_anomaly_detection(
         dispatcher = None
         try:
             from app.integrations.dispatcher import get_dispatcher
+
             dispatcher = get_dispatcher()
         except Exception:
             logger.warning("M25 dispatcher not available - anomalies will not be escalated")
@@ -1124,8 +1160,7 @@ async def trigger_anomaly_detection(
     ]
 
     logger.info(
-        f"Anomaly detection for tenant {tenant_id}: "
-        f"detected={len(detected)}, escalated_to_m25={len(escalated)}"
+        f"Anomaly detection for tenant {tenant_id}: detected={len(detected)}, escalated_to_m25={len(escalated)}"
     )
 
     return AnomalyDetectionResponse(

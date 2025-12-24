@@ -210,7 +210,7 @@ class EmbeddingCache:
 
             key = compute_cache_key(text, model)
             result = await redis.delete(key)
-            return result > 0
+            return bool(result > 0)
 
         except Exception as e:
             logger.warning(f"Cache invalidate error: {e}")

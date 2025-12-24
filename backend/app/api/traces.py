@@ -674,7 +674,7 @@ async def bulk_report_mismatches(
 
     # Fetch all mismatches
     async with db_async.get_session() as session:
-        placeholders = ",".join([f"${i+1}" for i in range(len(mismatch_ids))])
+        placeholders = ",".join([f"${i + 1}" for i in range(len(mismatch_ids))])
         result = await session.execute(
             f"""
             SELECT id, trace_id, step_index, reason, expected_hash, actual_hash, details
@@ -861,8 +861,8 @@ async def report_mismatch(
 **Tenant:** {user.tenant_id}
 
 ### Details
-- Expected Hash: `{payload.expected_hash or 'N/A'}`
-- Actual Hash: `{payload.actual_hash or 'N/A'}`
+- Expected Hash: `{payload.expected_hash or "N/A"}`
+- Actual Hash: `{payload.actual_hash or "N/A"}`
 
 ### Additional Details
 ```json

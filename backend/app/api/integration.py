@@ -577,6 +577,7 @@ async def get_integration_stats(
         )
         checkpoints = checkpoint_result.fetchone()
 
+    assert loops is not None
     total = loops.total or 0
     complete = loops.complete or 0
 
@@ -1530,9 +1531,9 @@ async def get_prevention_timeline(
             "The system learned, protected, and self-corrected."
         )
     elif has_prevention:
-        narrative = "This incident proves learning: " "a policy born from failure successfully prevented a recurrence."
+        narrative = "This incident proves learning: a policy born from failure successfully prevented a recurrence."
     elif has_rollback:
-        narrative = "This incident shows self-correction: " "a policy that caused harm was automatically demoted."
+        narrative = "This incident shows self-correction: a policy that caused harm was automatically demoted."
     else:
         narrative = "This incident is part of the feedback loop."
 

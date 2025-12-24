@@ -117,8 +117,7 @@ class SuggestionAction(Base):
         Index("idx_sa_active", "is_active"),
         Index("idx_sa_priority", "priority"),
         CheckConstraint(
-            "action_type IN ('retry', 'fallback', 'escalate', 'notify', "
-            "'reconfigure', 'rollback', 'manual', 'skip')",
+            "action_type IN ('retry', 'fallback', 'escalate', 'notify', 'reconfigure', 'rollback', 'manual', 'skip')",
             name="ck_sa_action_type",
         ),
         CheckConstraint("success_rate >= 0 AND success_rate <= 1", name="ck_sa_success_rate"),

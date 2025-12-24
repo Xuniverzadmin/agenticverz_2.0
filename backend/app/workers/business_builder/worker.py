@@ -1120,9 +1120,9 @@ class BusinessBuilderWorker:
     <header><h1>{brand.company_name}</h1></header>
     <main>
         <section class="hero">
-            <h2>{hero.get('headline', brand.value_proposition)}</h2>
-            <p>{hero.get('subhead', '')}</p>
-            <button>{hero.get('cta_text', 'Get Started')}</button>
+            <h2>{hero.get("headline", brand.value_proposition)}</h2>
+            <p>{hero.get("subhead", "")}</p>
+            <button>{hero.get("cta_text", "Get Started")}</button>
         </section>
     </main>
 </body>
@@ -1278,7 +1278,7 @@ class BusinessBuilderWorker:
         # Drift formula: errors have more weight than warnings
         drift_score = min(1.0, (error_count * 0.2) + (warning_count * 0.1))
 
-        logger.info(f"Content policy validation: {len(violations)} violations, " f"drift_score={drift_score:.2f}")
+        logger.info(f"Content policy validation: {len(violations)} violations, drift_score={drift_score:.2f}")
 
         return violations, corrections, drift_score
 
@@ -1346,12 +1346,12 @@ class BusinessBuilderWorker:
     --primary-color: {primary};
 }}
 body {{
-    font-family: {brand.visual.font_body or 'Inter'}, sans-serif;
+    font-family: {brand.visual.font_body or "Inter"}, sans-serif;
     margin: 0;
     padding: 0;
 }}
 h1, h2 {{
-    font-family: {brand.visual.font_heading or 'Inter'}, sans-serif;
+    font-family: {brand.visual.font_heading or "Inter"}, sans-serif;
 }}
 button {{
     background: var(--primary-color);

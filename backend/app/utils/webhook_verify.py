@@ -153,11 +153,11 @@ class WebhookVerifier:
             computed = self._compute_signature(body, key)
             if hmac.compare_digest(computed, provided_sig):
                 if version != key_version and key_version:
-                    logger.info(f"Signature verified with grace version {version} " f"(header specified {key_version})")
+                    logger.info(f"Signature verified with grace version {version} (header specified {key_version})")
                 return True
 
         logger.warning(
-            f"Signature verification failed. " f"Tried versions: {unique_versions}, header version: {key_version}"
+            f"Signature verification failed. Tried versions: {unique_versions}, header version: {key_version}"
         )
         return False
 

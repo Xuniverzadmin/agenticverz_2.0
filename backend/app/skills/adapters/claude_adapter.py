@@ -103,7 +103,7 @@ class ClaudeAdapter:
 
                 self._client = anthropic.Anthropic(api_key=self._api_key)
             except ImportError:
-                raise ImportError("anthropic package not installed. " "Install with: pip install anthropic")
+                raise ImportError("anthropic package not installed. Install with: pip install anthropic")
         return self._client
 
     def _map_api_error(self, error: Exception) -> Tuple[str, str, bool]:

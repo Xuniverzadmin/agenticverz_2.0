@@ -4,6 +4,7 @@ Designed to be launched as a separate process: `python -m app.worker.pool`
 
 Supports graceful shutdown via SIGTERM/SIGINT - waits for running tasks to complete.
 """
+
 import logging
 import os
 import signal
@@ -12,7 +13,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional, cast
 
 from sqlmodel import Session, select
 
@@ -86,9 +87,9 @@ class WorkerPool:
             # Select queued or retry runs where next_attempt_at is NULL or <= now
             statement = (
                 select(Run)
-                .where(Run.status.in_(["queued", "retry"]))
+                .where(cast(Any, Run.status).in_(["queued", "retry"]))
                 .where((Run.next_attempt_at == None) | (Run.next_attempt_at <= datetime.now(timezone.utc)))
-                .order_by(Run.created_at.asc())
+                .order_by(cast(Any, Run.created_at).asc())
                 .limit(MAX_BATCH)
             )
             runs = session.exec(statement).all()

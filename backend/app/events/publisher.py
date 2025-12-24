@@ -2,6 +2,7 @@
 Publisher interface for events. Uses pluggable adapters (nats_adapter).
 If no adapter is configured, falls back to logging publisher.
 """
+
 import logging
 import os
 from typing import Any, Dict

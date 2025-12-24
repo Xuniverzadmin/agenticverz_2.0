@@ -48,7 +48,7 @@ class TenantContext:
 
     def has_permission(self, permission: str) -> bool:
         """Check if tenant has a specific permission."""
-        return self.permissions.get(permission, False)
+        return bool(self.permissions.get(permission, False))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for logging/serialization."""
@@ -148,7 +148,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             )
             set_tenant_context(context)
 
-            logger.debug(f"Tenant context set: tenant_id={tenant_id}, " f"user_id={user_id}, request_id={request_id}")
+            logger.debug(f"Tenant context set: tenant_id={tenant_id}, user_id={user_id}, request_id={request_id}")
 
         try:
             # Store request_id in request state for logging
@@ -216,9 +216,7 @@ def ensure_tenant_access(entity_tenant_id: Optional[str], action: str = "access"
 
     # Check tenant match
     if entity_tenant_id != context.tenant_id:
-        logger.warning(
-            f"Tenant access denied: context={context.tenant_id}, " f"entity={entity_tenant_id}, action={action}"
-        )
+        logger.warning(f"Tenant access denied: context={context.tenant_id}, entity={entity_tenant_id}, action={action}")
         raise HTTPException(status_code=403, detail=f"Access denied: cannot {action} resource from another tenant")
 
 

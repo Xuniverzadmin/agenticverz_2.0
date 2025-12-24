@@ -363,7 +363,7 @@ class CostSimV2Adapter:
         elif not risk_acceptable:
             status = V2SimulationStatus.ERROR
             feasible = False
-            warnings.append(f"Risk too high: {cumulative_risk*100:.1f}% > {self.risk_threshold*100:.1f}%")
+            warnings.append(f"Risk too high: {cumulative_risk * 100:.1f}% > {self.risk_threshold * 100:.1f}%")
         else:
             status = V2SimulationStatus.SUCCESS
             feasible = True

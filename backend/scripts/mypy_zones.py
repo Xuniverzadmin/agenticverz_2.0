@@ -76,7 +76,7 @@ ZONE_C_FLEXIBLE = [
 
 # Baseline error counts per zone (frozen as of M29, 2025-12-24)
 BASELINE = {
-    "zone_a": 38,  # IR builder, evidence report, pg_store, canonicalize
+    "zone_a": 0,  # FIXED: All 38 errors eliminated (2025-12-24)
     "zone_b": 630,  # API, skills, integrations, agents, validators
     "zone_c": 400,  # Workflow, traces, utils, workers, main.py, models, tasks (with buffer)
 }

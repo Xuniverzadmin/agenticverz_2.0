@@ -96,7 +96,7 @@ class Secrets:
         """PostgreSQL connection string. REQUIRED."""
         val = os.environ.get("DATABASE_URL")
         if not val:
-            raise SecretMissingError("DATABASE_URL is required. " "Set it in .env or environment.")
+            raise SecretMissingError("DATABASE_URL is required. Set it in .env or environment.")
         return val
 
     @staticmethod
@@ -104,7 +104,7 @@ class Secrets:
         """Redis connection string. REQUIRED for queue operations."""
         val = os.environ.get("REDIS_URL")
         if not val:
-            raise SecretMissingError("REDIS_URL is required. " "Set it in .env or environment.")
+            raise SecretMissingError("REDIS_URL is required. Set it in .env or environment.")
         return val
 
     @staticmethod
@@ -113,7 +113,7 @@ class Secrets:
         val = os.environ.get("AOS_API_KEY")
         if not val:
             raise SecretMissingError(
-                "AOS_API_KEY is required. " 'Generate with: python -c "import secrets; print(secrets.token_hex(32))"'
+                'AOS_API_KEY is required. Generate with: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         return val
 
@@ -127,7 +127,7 @@ class Secrets:
         val = os.environ.get("OPENAI_API_KEY")
         if not val:
             raise SecretMissingError(
-                "OPENAI_API_KEY is required for LLM operations. " "Get one at https://platform.openai.com/api-keys"
+                "OPENAI_API_KEY is required for LLM operations. Get one at https://platform.openai.com/api-keys"
             )
         return val
 
@@ -142,7 +142,7 @@ class Secrets:
         val = os.environ.get("ANTHROPIC_API_KEY")
         if not val:
             raise SecretMissingError(
-                "ANTHROPIC_API_KEY is required for Claude operations. " "Get one at https://console.anthropic.com/"
+                "ANTHROPIC_API_KEY is required for Claude operations. Get one at https://console.anthropic.com/"
             )
         return val
 
@@ -156,9 +156,7 @@ class Secrets:
         """Voyage AI API key for embeddings."""
         val = os.environ.get("VOYAGE_API_KEY")
         if not val:
-            raise SecretMissingError(
-                "VOYAGE_API_KEY is required for embeddings. " "Get one at https://www.voyageai.com/"
-            )
+            raise SecretMissingError("VOYAGE_API_KEY is required for embeddings. Get one at https://www.voyageai.com/")
         return val
 
     @staticmethod

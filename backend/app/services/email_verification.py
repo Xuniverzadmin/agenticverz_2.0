@@ -241,6 +241,7 @@ If you didn't request this code, you can safely ignore this email.
                 message="Code expired or not found. Please request a new code.",
             )
 
+        assert stored is not None
         stored_email, stored_otp = stored.split(":", 1)
 
         # Verify

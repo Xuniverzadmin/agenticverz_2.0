@@ -287,7 +287,7 @@ async def collect_m10_metrics(session=None) -> dict:
         "collection_time_ms": round(elapsed * 1000, 2),
     }
 
-    logger.info(f"M10 metrics collected in {elapsed*1000:.1f}ms")
+    logger.info(f"M10 metrics collected in {elapsed * 1000:.1f}ms")
 
     return result
 

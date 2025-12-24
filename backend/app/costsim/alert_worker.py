@@ -148,13 +148,13 @@ class AlertWorker:
 
                     if alert.attempts >= alert.max_attempts:
                         alert.status = "failed"
-                        logger.error(f"Alert failed (max attempts): id={alert.id}, " f"attempts={alert.attempts}")
+                        logger.error(f"Alert failed (max attempts): id={alert.id}, attempts={alert.attempts}")
                     else:
                         # Exponential backoff: 2^attempts seconds, capped
                         backoff = min(2**alert.attempts, self.max_backoff)
                         alert.next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=backoff)
                         logger.warning(
-                            f"Alert retry scheduled: id={alert.id}, " f"attempt={alert.attempts}, backoff={backoff}s"
+                            f"Alert retry scheduled: id={alert.id}, attempt={alert.attempts}, backoff={backoff}s"
                         )
 
             await session.commit()
@@ -200,7 +200,7 @@ class AlertWorker:
 
         except httpx.HTTPStatusError as e:
             alert.last_error = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
-            logger.warning(f"Alert HTTP error: id={alert.id}, " f"status={e.response.status_code}")
+            logger.warning(f"Alert HTTP error: id={alert.id}, status={e.response.status_code}")
             get_metrics().record_alert_send_failure(
                 alert_type=alert.alert_type or "unknown",
                 error_type=f"http_{e.response.status_code}",
@@ -333,7 +333,9 @@ async def enqueue_alert(
             incident_id=incident_id,
             status="pending",
         )
+        assert session is not None
         session.add(alert)
+        assert session is not None
         await session.commit()
         await session.refresh(alert)
 
@@ -341,6 +343,7 @@ async def enqueue_alert(
         return alert.id
 
     except Exception as e:
+        assert logger is not None
         logger.error(f"Failed to enqueue alert: {e}")
         if own_session:
             await session.rollback()

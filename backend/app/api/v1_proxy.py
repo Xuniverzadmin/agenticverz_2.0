@@ -30,7 +30,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -1033,7 +1033,7 @@ async def proxy_status(
         latency_query = (
             select(ProxyCall.latency_ms)
             .where(*base_filter, ProxyCall.created_at >= now - timedelta(hours=1))
-            .order_by(ProxyCall.created_at.desc())
+            .order_by(cast(Any, ProxyCall.created_at).desc())
             .limit(1000)
         )
 
@@ -1057,7 +1057,9 @@ async def proxy_status(
     last_incident = None
     try:
         incident_filter = [Incident.tenant_id == tenant_id] if tenant_id else []
-        incident_query = select(Incident).where(*incident_filter).order_by(Incident.created_at.desc()).limit(1)
+        incident_query = (
+            select(Incident).where(*incident_filter).order_by(cast(Any, Incident.created_at).desc()).limit(1)
+        )
         row = session.exec(incident_query).first()
         last = row[0] if row else None
         if last:

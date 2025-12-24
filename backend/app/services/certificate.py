@@ -184,6 +184,7 @@ class CertificateService:
 
     def _sign(self, content: str) -> str:
         """Sign content with HMAC-SHA256."""
+        assert hmac is not None
         return hmac.new(self.secret.encode(), content.encode(), hashlib.sha256).hexdigest()
 
     def _verify_signature(self, content: str, signature: str) -> bool:

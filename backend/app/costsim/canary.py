@@ -157,7 +157,7 @@ class CanaryRunner:
                 timeout_seconds=self.config.leader_lock_timeout,
             ) as is_leader:
                 if not is_leader:
-                    logger.info(f"Skipping canary run: another instance holds leader lock, " f"run_id={run_id}")
+                    logger.info(f"Skipping canary run: another instance holds leader lock, run_id={run_id}")
                     return CanaryReport(
                         run_id=run_id,
                         timestamp=start_time,
@@ -305,7 +305,7 @@ class CanaryRunner:
             if incident:
                 logger.error(f"Circuit breaker tripped by canary: {incident.id}")
 
-        logger.info(f"Canary run complete: run_id={run_id}, " f"passed={passed}, samples={len(samples)}")
+        logger.info(f"Canary run complete: run_id={run_id}, passed={passed}, samples={len(samples)}")
 
         return report
 

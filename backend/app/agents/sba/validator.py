@@ -239,7 +239,7 @@ class SBAValidator:
         # 6. Check for empty tests (warning, not error for retrofitted agents)
         if not sba.how_to_win.tests:
             warnings.append(
-                "No tests defined in how_to_win.tests. " "Recommended to add validation tests for production agents."
+                "No tests defined in how_to_win.tests. Recommended to add validation tests for production agents."
             )
 
         # 7. Check allowed_tools against registry
@@ -256,7 +256,7 @@ class SBAValidator:
 
         # 9. Version deprecation warning
         if check_version_deprecated(sba.sba_version):
-            warnings.append(f"SBA version '{sba.sba_version}' is deprecated. " "Consider upgrading to a newer version.")
+            warnings.append(f"SBA version '{sba.sba_version}' is deprecated. Consider upgrading to a newer version.")
 
         return SBAValidationResult(
             valid=len(errors) == 0,
@@ -387,7 +387,7 @@ class SBAValidator:
         # 5. Warn if boundaries not defined
         if not sba.where_to_play.boundaries:
             warnings.append(
-                "No boundaries defined in where_to_play.boundaries. " "Consider defining what the agent should NOT do."
+                "No boundaries defined in where_to_play.boundaries. Consider defining what the agent should NOT do."
             )
 
         return errors, warnings

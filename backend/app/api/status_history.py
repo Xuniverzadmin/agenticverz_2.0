@@ -25,7 +25,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
@@ -213,7 +213,7 @@ async def query_status_history(
     total = session.exec(count_query).one()
 
     # Apply pagination and ordering
-    query = query.order_by(StatusHistory.created_at.desc()).offset(offset).limit(limit)
+    query = query.order_by(cast(Any, StatusHistory.created_at).desc()).offset(offset).limit(limit)
 
     results = session.exec(query).all()
 
@@ -259,7 +259,7 @@ async def get_entity_history(
         select(StatusHistory)
         .where(StatusHistory.entity_type == entity_type)
         .where(StatusHistory.entity_id == entity_id)
-        .order_by(StatusHistory.created_at.asc())
+        .order_by(cast(Any, StatusHistory.created_at).asc())
         .limit(limit)
     )
 
@@ -322,7 +322,7 @@ async def create_export(
     if request.end_time:
         query = query.where(StatusHistory.created_at <= request.end_time)
 
-    query = query.order_by(StatusHistory.created_at.asc())
+    query = query.order_by(cast(Any, StatusHistory.created_at).asc())
 
     results = session.exec(query).all()
 
