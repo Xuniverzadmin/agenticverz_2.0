@@ -1,9 +1,9 @@
-# PIN-128: Master Plan - M25 to M31
+# PIN-128: Master Plan - M25 to M32
 
 **Status:** STRATEGIC
 **Category:** Planning / Architecture / Roadmap
 **Created:** 2025-12-22
-**Related PINs:** PIN-123, PIN-124, PIN-095, PIN-033, PIN-154
+**Related PINs:** PIN-123, PIN-124, PIN-095, PIN-033, PIN-154, PIN-155
 
 ---
 
@@ -294,21 +294,23 @@ Only after all pillars are integrated:
 | M29 | Quality Evidence Pack | 3 weeks | M28 | P2 (conditional) |
 | M30 | Trust Badge | 1 week | M28-M29 | P2 (conditional) |
 | M31 | Key Safety Contract | 2 weeks | M22, M26/27 | P1 (trust foundation) |
+| M32 | Tier Infrastructure | 1.5 weeks | M8, M29 | P1 (monetization plumbing) |
 
 **Total (P0 only):** 6 weeks
-**Total (P0+P1):** 9.5 weeks
-**Total (all):** 13.5 weeks
+**Total (P0+P1):** 11 weeks
+**Total (all):** 15 weeks
 
 ---
 
 ## Decision Framework
 
-### Build Now (M25-M28, M31)
+### Build Now (M25-M28, M31, M32)
 - Pillar Integration - core value proposition
 - Cost Intelligence - 60% exists, universal pain
 - Cost → Loop - completes feedback cycle
 - Unified Console - marketable as "one product"
 - Key Safety Contract - trust foundation for proxy customers
+- Tier Infrastructure - monetization plumbing (gates, meters, limits)
 
 ### Build If Asked (M29-M30)
 - Quality Evidence Pack - only if 3+ customers ask "Is our AI accurate?"
@@ -352,6 +354,7 @@ M28: Unify the console → one product, four views
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | Added M32 Tier Infrastructure to roadmap (P1, 1.5 weeks, monetization plumbing) |
 | 2025-12-24 | Added M31 Key Safety Contract to roadmap (P1, 2 weeks, trust foundation) |
 | 2025-12-24 | M29 renamed: "Quality Score" → "Quality Evidence Pack" per expert review |
 | 2025-12-22 | Created PIN-128 with M25-M30 master plan |

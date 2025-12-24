@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-24 (PIN-154 M31 Key Safety Contract Blueprint)
+**Last Updated:** 2025-12-24 (PIN-155 M32 Tier Infrastructure Blueprint)
 
 ---
 
@@ -149,7 +149,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-125](PIN-125-sdk-parity-ci-fix-prevention.md) | **SDK Cross-Language Parity - CI Fix & Prevention** | Infrastructure / CI / SDK | **✅ COMPLETE** | 2025-12-22 |
 | [PIN-126](PIN-126-test-infrastructure-prevention-blueprint.md) | **Test Infrastructure & Prevention Blueprint** | Testing / Prevention / Code Quality | **✅ COMPLETE** | 2025-12-22 |
 | [PIN-127](PIN-127-replay-determinism-proof.md) | **Replay Determinism Proof** | Core Infrastructure / Determinism | **✅ COMPLETE** | 2025-12-22 |
-| [PIN-128](PIN-128-master-plan-m25-m31.md) | **Master Plan M25-M31** | Planning / Architecture / Roadmap | **🎯 STRATEGIC** | 2025-12-24 |
+| [PIN-128](PIN-128-master-plan-m25-m32.md) | **Master Plan M25-M32** | Planning / Architecture / Roadmap | **🎯 STRATEGIC** | 2025-12-24 |
 | [PIN-129](PIN-129-m25-pillar-integration-blueprint.md) | **M25 Pillar Integration Blueprint** | Milestone / Architecture / Integration | **📋 SPECIFICATION** | 2025-12-22 |
 | [PIN-130](PIN-130-m26-cost-intelligence-blueprint.md) | **M26 Cost Intelligence Blueprint** | Milestone / Cost Management / Dashboard | **📋 SPECIFICATION** | 2025-12-22 |
 | [PIN-131](PIN-131-m27-cost-loop-integration-blueprint.md) | **M27 Cost Loop Integration Blueprint** | Milestone / Cost Management / Integration | **📋 SPECIFICATION** | 2025-12-22 |
@@ -176,6 +176,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-152](PIN-152-m29-category-6---founder-action-paths-backend.md) | **M29 Category 6 - Founder Action Paths Backend** | M29 Transition / Founder Actions | **✅ COMPLETE** | 2025-12-24 |
 | [PIN-153](PIN-153-m29-category-7---redirect-expiry-cleanup.md) | **M29 Category 7 - Redirect Expiry & Cleanup** | M29 Transition / Route Cleanup | **✅ COMPLETE** | 2025-12-24 |
 | [PIN-154](PIN-154-m31-key-safety-contract-blueprint.md) | **M31 Key Safety Contract Blueprint** | Security / Trust / Customer Experience | **READY** | 2025-12-24 |
+| [PIN-155](PIN-155-m32-tier-infrastructure-blueprint.md) | **M32 Tier Infrastructure Blueprint** | Infrastructure / Pricing / Feature Gating | **READY** | 2025-12-24 |
 
 ---
 
@@ -945,6 +946,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | **PIN-155 M32 Tier Infrastructure Blueprint** - Monetization plumbing without freezing pricing. 6 deliverables: TenantTier enum (OBSERVE/REACT/PREVENT/ASSIST/GOVERN), `@requires_tier` decorator, Feature registry, UsageMeter model, Rate limiting per tier, Retention enforcement. Principle: "Build the gates first, decide what goes through them later." Enables tiered pricing without locking in specific tiers or prices. |
 | 2025-12-24 | **PIN-154 M31 Key Safety Contract Blueprint** - Trust model for API key handling. 6 deliverables: Key Safety Contract (customer-facing), Security UX Flows, Breach Response Playbook, X-AOS-Key-Fingerprint header, Key health warnings, Envelope encryption (P2). Core principle: "You don't have to trust us with a powerful key." 95% infrastructure already exists (hash-only storage, KillSwitch, forensic evidence, audit trail). Gap is documentation and UX. |
 | 2025-12-24 | **PIN-121 Mypy Technical Debt - Type Safety Remediation Plan** - Updated: Updates |
 | 2025-12-24 | **PIN-121 Mypy Technical Debt - Type Safety Remediation Plan** - Updated: Updates |
