@@ -10,7 +10,9 @@
 
 ## Overview
 
-This PIN documents the categorical next steps for transitioning from M28 (Unified Console) to M29 (Quality Score). All 8 categories must be executed in order, with Category 1 (STABILISE) being **MANDATORY FIRST**.
+This PIN documents the categorical next steps for transitioning from M28 (Unified Console) to M29 (Quality Evidence Pack). All 8 categories must be executed in order, with Category 1 (STABILISE) being **MANDATORY FIRST**.
+
+> **Note (2025-12-24):** M29 was renamed from "Quality Score" to "Quality Evidence Pack" - see PIN-133 for rationale. M29 remains **CONDITIONAL** (frozen until customer demand triggers).
 
 ---
 
@@ -491,7 +493,7 @@ All 8 categories must show checkmarks before M29 work begins.
 - [PIN-145](PIN-145-m28-deletion-execution-report.md) - M28 Deletion Execution
 - [PIN-146](PIN-146-m28-unified-console-ui.md) - M28 Unified Console UI
 - [PIN-147](PIN-147-m28-route-migration-plan.md) - M28 Route Migration Plan
-- [PIN-133](PIN-133-m29-quality-score-blueprint.md) - M29 Quality Score Blueprint
+- [PIN-133](PIN-133-m29-quality-score-blueprint.md) - M29 Quality Evidence Pack Blueprint (renamed 2025-12-24)
 
 ---
 
@@ -499,6 +501,7 @@ All 8 categories must show checkmarks before M29 work begins.
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | M29 renamed: "Quality Score" → "Quality Evidence Pack" per expert review (PIN-133) |
 | 2025-12-23 | Category 3 FULL SPEC COMPLETE - 16 DTOs frozen (8 guard, 8 ops), DATA_CONTRACT_FREEZE.md created, 18 CI tests, contract version 1.0.0 |
 | 2025-12-23 | Category 2 FULL SPEC COMPLETE - Separate tokens (console/fops), separate cookies, separate middleware, MFA enforcement, audit logging, 12 CI tests pass |
 | 2025-12-23 | Category 3 COMPLETE - Data contract frozen at 047_m27_snapshots, single linear history |

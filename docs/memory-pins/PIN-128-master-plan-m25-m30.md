@@ -31,7 +31,7 @@
 |-----------|--------|------------------------|
 | Cost Intelligence Dashboard | 1 week | Yes (M13 backend) |
 | Pillar Integration (wiring) | 2 weeks | Partial |
-| Quality Score | 3 weeks | Partial (M11 LLM skills) |
+| Quality Evidence Pack | 3 weeks | Partial (M11 LLM skills) |
 | Trust Badge | 1 week | Needs all pillars |
 
 ---
@@ -60,7 +60,7 @@ RIGHT:  Wire A+B → Discover gaps → Build C to fill gaps → Wire C
 1. **Three pillars already exist** - Incident, Self-Healing, Governance are built but isolated
 2. **Integration reveals real gaps** - You'll discover what's actually missing, not hypothetical
 3. **Cost View is 60% done** - It's mostly a dashboard exercise, not new backend
-4. **Quality Score is speculative** - Don't build until customers ask for it
+4. **Quality Evidence Pack is speculative** - Don't build until customers ask for it
 
 ---
 
@@ -224,15 +224,15 @@ Rebrand as unified system, not separate products:
 
 ---
 
-### Phase 5: Quality Score (M29) - CONDITIONAL
+### Phase 5: Quality Evidence Pack (M29) - CONDITIONAL
 
-**M29: Quality Score (Only If Customers Demand)**
+**M29: Quality Evidence Pack (Only If Customers Demand)**
 
 Don't build until you hear "Is our AI accurate?" from 3+ customers.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  AI QUALITY SCORE                            Last 7 Days       │
+│  QUALITY EVIDENCE PACK                       Last 7 Days       │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  Overall Quality: 94.2%        ▲ +1.3% from last week          │
@@ -291,7 +291,7 @@ Only after all pillars are integrated:
 | M26 | Cost Intelligence | 1.5 weeks | M13, M25 | P0 |
 | M27 | Cost → Loop | 1 week | M25, M26 | P0 |
 | M28 | Unified Console | 1.5 weeks | M25-M27 | P1 |
-| M29 | Quality Score | 3 weeks | M28 | P2 (conditional) |
+| M29 | Quality Evidence Pack | 3 weeks | M28 | P2 (conditional) |
 | M30 | Trust Badge | 1 week | M28-M29 | P2 (conditional) |
 
 **Total (P0 only):** 6 weeks
@@ -309,7 +309,7 @@ Only after all pillars are integrated:
 - Unified Console - marketable as "one product"
 
 ### Build If Asked (M29-M30)
-- Quality Score - only if 3+ customers ask "Is our AI accurate?"
+- Quality Evidence Pack - only if 3+ customers ask "Is our AI accurate?"
 - Trust Badge - only for enterprise deals requiring certification
 
 ### Never Build (Until Revenue)
@@ -336,7 +336,7 @@ M28: Unify the console → one product, four views
 **Why:**
 1. Integration reveals what's actually missing (not hypothetical)
 2. Cost View is mostly dashboard (backend exists)
-3. Quality Score is speculative (wait for demand)
+3. Quality Evidence Pack is speculative (wait for demand)
 4. Ship faster (6 weeks to complete core vs 12 weeks building first)
 
 **The Invariant:**
@@ -350,4 +350,5 @@ M28: Unify the console → one product, four views
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | M29 renamed: "Quality Score" → "Quality Evidence Pack" per expert review |
 | 2025-12-22 | Created PIN-128 with M25-M30 master plan |

@@ -3,7 +3,7 @@
 **Status:** SPECIFICATION
 **Category:** Milestone / Enterprise / Trust & Compliance
 **Created:** 2025-12-22
-**Related PINs:** PIN-128 (Master Plan), PIN-133 (M29 Quality Score), PIN-132 (M28 Unified Console)
+**Related PINs:** PIN-128 (Master Plan), PIN-133 (M29 Quality Evidence Pack), PIN-132 (M28 Unified Console)
 
 ---
 
@@ -20,7 +20,7 @@ M30 adds **Customer-Facing Trust Badges** - embeddable widgets and verification 
 
 **Duration:** 1 week
 **Risk:** LOW (aggregation of existing data)
-**Dependencies:** M28 Unified Console, M29 Quality Score (optional), M22-M27 pillars
+**Dependencies:** M28 Unified Console, M29 Quality Evidence Pack (optional), M22-M27 pillars
 
 ---
 
@@ -1500,7 +1500,7 @@ async def get_badge(tenant_id: str):
 ## Related Documentation
 
 - PIN-128: Master Plan M25-M30
-- PIN-133: M29 Quality Score Blueprint
+- PIN-133: M29 Quality Evidence Pack Blueprint
 - PIN-132: M28 Unified Console Blueprint
 - M23: Certificate Service (existing infrastructure)
 - M26: Cost Intelligence (cost metrics)
@@ -1512,4 +1512,5 @@ async def get_badge(tenant_id: str):
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | Updated M29 references: "Quality Score" → "Quality Evidence Pack" |
 | 2025-12-22 | Created PIN-134 M30 Trust Badge Blueprint |

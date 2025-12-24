@@ -1,15 +1,19 @@
-# PIN-133: M29 Quality Score Blueprint
+# PIN-133: M29 Quality Evidence Pack Blueprint
 
-**Status:** SPECIFICATION
+**Status:** SPECIFICATION (FROZEN - Build only when customer demand triggers)
 **Category:** Milestone / Quality Assurance / AI Observability
 **Created:** 2025-12-22
+**Renamed:** 2025-12-24 (Quality Score → Quality Evidence Pack)
 **Related PINs:** PIN-128 (Master Plan), PIN-132 (M28 Unified Console), PIN-131 (M27 Cost Loop)
 
 ---
 
 ## Executive Summary
 
-M29 adds **AI Quality Intelligence** to the Control Center - measuring accuracy, relevance, and safety of AI outputs. This is a **CONDITIONAL** milestone: only implement if 3+ customers ask "Is our AI accurate?"
+M29 adds the **Quality Evidence Pack** to the Control Center - a structured collection of accuracy, relevance, and safety metrics for AI outputs. This is a **CONDITIONAL** milestone: only implement if 3+ customers ask "Is our AI accurate?" or require compliance evidence.
+
+> **Why "Evidence Pack" not "Score"?**
+> A single "quality score" implies false precision. What customers actually need is an *evidence packet*: multiple signals (user feedback, LLM evaluation, safety checks) bundled together to support audit, compliance, or debugging. The name reflects the true value: defensible evidence, not a magic number.
 
 **Key Deliverables:**
 1. User Feedback API (thumbs up/down, ratings, comments)
@@ -1190,4 +1194,6 @@ Self-consistency check (3 regenerations):
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | RENAMED: "Quality Score" → "Quality Evidence Pack" per expert review - reflects true value (evidence bundle, not magic number) |
+| 2025-12-24 | STATUS: Confirmed FROZEN - only build when 3+ customers request or compliance requires |
 | 2025-12-22 | Created PIN-133 M29 Quality Score Blueprint |
