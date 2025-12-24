@@ -217,7 +217,8 @@ class SnapshotBaseline:
         last_snapshot_id: str | None = None,
     ) -> "SnapshotBaseline":
         now = datetime.now(timezone.utc)
-        baseline_id = f"base_{hashlib.sha256(f'{tenant_id}:{entity_type}:{entity_id or "tenant"}:{window_days}:{now.date().isoformat()}'.encode()).hexdigest()[:16]}"
+        entity_key = entity_id or "tenant"
+        baseline_id = f"base_{hashlib.sha256(f'{tenant_id}:{entity_type}:{entity_key}:{window_days}:{now.date().isoformat()}'.encode()).hexdigest()[:16]}"
         return cls(
             id=baseline_id,
             tenant_id=tenant_id,
