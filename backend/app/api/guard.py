@@ -28,6 +28,21 @@ from pydantic import BaseModel
 from sqlalchemy import and_, desc, func, select
 from sqlmodel import Session
 
+# Category 2 Auth: Domain-separated authentication for Customer Console
+# Uses verify_console_token which enforces:
+# - aud = "console" (strict)
+# - org_id exists
+# - role in [OWNER, ADMIN, DEV, VIEWER]
+# - All rejections logged to audit
+from app.auth.console_auth import CustomerToken, verify_console_token
+
+# M29 Category 5: Customer Incident Narrative DTOs (calm vocabulary)
+from app.contracts.guard import (
+    CustomerIncidentActionDTO,
+    CustomerIncidentImpactDTO,
+    CustomerIncidentNarrativeDTO,
+    CustomerIncidentResolutionDTO,
+)
 from app.db import get_session
 from app.models.killswitch import (
     DefaultGuardrail,
@@ -70,7 +85,11 @@ from app.utils.guard_cache import get_guard_cache
 # Guard Console requires tenant_id and returns only that tenant's data.
 # This is enforced by all endpoints requiring tenant_id parameter.
 
-router = APIRouter(prefix="/guard", tags=["Guard Console"])
+router = APIRouter(
+    prefix="/guard",
+    tags=["Guard Console"],
+    dependencies=[Depends(verify_console_token)],  # Category 2: Strict console auth (aud=console)
+)
 
 
 # =============================================================================
@@ -648,6 +667,228 @@ async def resolve_incident(
     session.commit()
 
     return {"status": "resolved"}
+
+
+# =============================================================================
+# M29 Category 5: Customer Incident Narrative (Calm Vocabulary)
+# =============================================================================
+
+
+@router.get("/incidents/{incident_id}/narrative", response_model=CustomerIncidentNarrativeDTO)
+async def get_customer_incident_narrative(
+    incident_id: str,
+    token: CustomerToken = Depends(verify_console_token),
+    session: Session = Depends(get_session),
+) -> CustomerIncidentNarrativeDTO:
+    """
+    GET /guard/incidents/{id}/narrative
+
+    Customer Incident Narrative - Calm, reassuring summary.
+
+    M29 Category 5: Incident Console Contrast
+
+    Answers:
+    - What happened? (plain language)
+    - Did it affect me? (yes/no/some)
+    - Is it fixed? (status + message)
+    - Do I need to act? (only if necessary)
+
+    IMPORTANT: Uses CALM vocabulary only.
+    - No internal terminology (policy names, thresholds)
+    - No cross-tenant data
+    - No raw metrics that could cause panic
+    """
+    stmt = select(Incident).where(Incident.id == incident_id)
+    row = session.exec(stmt).first()
+    incident = row[0] if row else None
+
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    # Generate plain language title (no internal terms)
+    plain_title = _generate_plain_title(incident)
+
+    # Generate calm summary (no internal terms)
+    summary = _generate_calm_summary(incident)
+
+    # Build impact assessment with calm vocabulary
+    impact = _build_customer_impact(incident)
+
+    # Build resolution status with reassuring message
+    resolution = _build_customer_resolution(incident)
+
+    # Build customer actions (only if necessary)
+    actions = _build_customer_actions(incident)
+
+    # Cost summary link for cost-related incidents
+    cost_summary_link = None
+    if incident.trigger_type in ["cost_spike", "budget_breach"]:
+        cost_summary_link = "/guard/costs/summary"
+
+    return CustomerIncidentNarrativeDTO(
+        incident_id=incident.id,
+        title=plain_title,
+        summary=summary,
+        impact=impact,
+        resolution=resolution,
+        customer_actions=actions,
+        started_at=(incident.started_at or incident.created_at).isoformat(),
+        ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
+        cost_summary_link=cost_summary_link,
+    )
+
+
+def _generate_plain_title(incident: Incident) -> str:
+    """Generate plain language title - no internal terminology."""
+    trigger_to_title = {
+        "cost_spike": "Unusual usage pattern detected",
+        "budget_breach": "Usage limit approached",
+        "rate_limit": "Request rate adjusted",
+        "failure_spike": "Service protection activated",
+        "policy_block": "Request filtered for safety",
+        "safety": "Content safety check activated",
+    }
+    base_title = trigger_to_title.get(incident.trigger_type, "System protection activated")
+
+    if incident.status == "resolved" or incident.status == "auto_resolved":
+        return f"{base_title} and resolved"
+    return base_title
+
+
+def _generate_calm_summary(incident: Incident) -> str:
+    """Generate calm, reassuring summary - no internal terms."""
+    trigger_to_summary = {
+        "cost_spike": "We detected unusual AI usage that caused higher costs for a short period. Our systems automatically protected your account.",
+        "budget_breach": "Your usage approached the configured limit. Our systems took protective action to prevent unexpected charges.",
+        "rate_limit": "We noticed a high volume of requests and temporarily adjusted the rate to ensure service stability.",
+        "failure_spike": "We detected some temporary issues and activated protective measures to maintain service quality.",
+        "policy_block": "Our safety systems filtered some requests to protect your account and ensure compliance.",
+        "safety": "Our content safety systems activated to protect your account. This is a normal protective measure.",
+    }
+    summary = trigger_to_summary.get(
+        incident.trigger_type,
+        "Our protection systems activated to safeguard your account. This is a normal protective measure.",
+    )
+
+    if incident.status in ["resolved", "auto_resolved"]:
+        summary += " The situation has been resolved."
+    elif incident.status == "acknowledged":
+        summary += " Our team is monitoring the situation."
+
+    return summary
+
+
+def _build_customer_impact(incident: Incident) -> CustomerIncidentImpactDTO:
+    """Build impact assessment with calm vocabulary."""
+    # Determine if requests were affected
+    requests_affected = "no"
+    if incident.calls_affected and incident.calls_affected > 0:
+        requests_affected = "some" if incident.calls_affected < 100 else "yes"
+
+    # Service interrupted? Based on severity
+    service_interrupted = "no"
+    if incident.severity == "critical":
+        service_interrupted = "briefly"
+
+    # Cost impact - use calm language
+    cost_impact = "none"
+    cost_message = None
+    if incident.cost_delta_cents:
+        delta = float(incident.cost_delta_cents)
+        if delta < 100:
+            cost_impact = "minimal"
+            cost_message = "Negligible cost impact"
+        elif delta < 1000:
+            cost_impact = "higher_than_usual"
+            cost_message = "Higher than usual for a short period"
+        else:
+            cost_impact = "significant"
+            cost_message = "We've taken steps to prevent this from recurring"
+
+    return CustomerIncidentImpactDTO(
+        requests_affected=requests_affected,
+        service_interrupted=service_interrupted,
+        data_exposed="no",  # Always no - we never expose data
+        cost_impact=cost_impact,
+        cost_impact_message=cost_message,
+    )
+
+
+def _build_customer_resolution(incident: Incident) -> CustomerIncidentResolutionDTO:
+    """Build resolution status with reassuring message."""
+    status_map = {
+        "open": "investigating",
+        "acknowledged": "mitigating",
+        "resolved": "resolved",
+        "auto_resolved": "resolved",
+    }
+    status = status_map.get(incident.status, "monitoring")
+
+    # Generate reassuring message
+    if status == "resolved":
+        if incident.ended_at:
+            time_str = incident.ended_at.strftime("%H:%M UTC")
+            message = f"The issue was automatically mitigated at {time_str}."
+        else:
+            message = "The issue has been resolved. No further action is required."
+    elif status == "mitigating":
+        message = "Our team is actively working on this. We'll update you when it's resolved."
+    elif status == "investigating":
+        message = "We're looking into this and will take action if needed."
+    else:
+        message = "We're monitoring the situation. No action is required from you at this time."
+
+    return CustomerIncidentResolutionDTO(
+        status=status,
+        status_message=message,
+        resolved_at=incident.ended_at.isoformat() if incident.ended_at else None,
+        requires_action=False,  # Generally, customers don't need to act
+    )
+
+
+def _build_customer_actions(incident: Incident) -> list:
+    """Build customer actions - only if necessary."""
+    actions = []
+
+    # Most incidents don't require customer action
+    if incident.status in ["resolved", "auto_resolved"]:
+        actions.append(
+            CustomerIncidentActionDTO(
+                action_type="none",
+                description="No action is required from you.",
+                urgency="optional",
+                link=None,
+            )
+        )
+    elif incident.trigger_type == "budget_breach":
+        actions.append(
+            CustomerIncidentActionDTO(
+                action_type="review_usage",
+                description="You may want to review your usage settings.",
+                urgency="optional",
+                link="/guard/settings",
+            )
+        )
+    elif incident.trigger_type == "rate_limit":
+        actions.append(
+            CustomerIncidentActionDTO(
+                action_type="adjust_limits",
+                description="Consider adjusting your rate limits if needed.",
+                urgency="optional",
+                link="/guard/settings",
+            )
+        )
+    else:
+        actions.append(
+            CustomerIncidentActionDTO(
+                action_type="none",
+                description="No action is required from you at this time.",
+                urgency="optional",
+                link=None,
+            )
+        )
+
+    return actions
 
 
 # =============================================================================

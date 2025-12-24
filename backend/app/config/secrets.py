@@ -26,22 +26,23 @@ Usage:
     validate_required_secrets()  # Called at app startup
 """
 
-import os
 import logging
-from typing import Optional, List, Tuple
-from functools import lru_cache
+import os
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger("nova.secrets")
 
 
 class SecretMissingError(Exception):
     """Raised when a required secret is not configured."""
+
     pass
 
 
 class SecretValidationError(Exception):
     """Raised when secrets validation fails at startup."""
+
     pass
 
 
@@ -58,10 +59,14 @@ def _load_dotenv_if_exists() -> None:
         ]
 
         for env_path in env_paths:
-            if env_path.exists():
-                load_dotenv(env_path)
-                logger.debug(f"Loaded environment from {env_path}")
-                return
+            try:
+                if env_path.exists():
+                    load_dotenv(env_path)
+                    logger.debug(f"Loaded environment from {env_path}")
+                    return
+            except PermissionError:
+                # Path exists but not accessible (e.g., running in container)
+                continue
 
     except ImportError:
         pass  # python-dotenv not installed, rely on environment
@@ -91,10 +96,7 @@ class Secrets:
         """PostgreSQL connection string. REQUIRED."""
         val = os.environ.get("DATABASE_URL")
         if not val:
-            raise SecretMissingError(
-                "DATABASE_URL is required. "
-                "Set it in .env or environment."
-            )
+            raise SecretMissingError("DATABASE_URL is required. " "Set it in .env or environment.")
         return val
 
     @staticmethod
@@ -102,10 +104,7 @@ class Secrets:
         """Redis connection string. REQUIRED for queue operations."""
         val = os.environ.get("REDIS_URL")
         if not val:
-            raise SecretMissingError(
-                "REDIS_URL is required. "
-                "Set it in .env or environment."
-            )
+            raise SecretMissingError("REDIS_URL is required. " "Set it in .env or environment.")
         return val
 
     @staticmethod
@@ -114,8 +113,7 @@ class Secrets:
         val = os.environ.get("AOS_API_KEY")
         if not val:
             raise SecretMissingError(
-                "AOS_API_KEY is required. "
-                "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
+                "AOS_API_KEY is required. " 'Generate with: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         return val
 
@@ -129,8 +127,7 @@ class Secrets:
         val = os.environ.get("OPENAI_API_KEY")
         if not val:
             raise SecretMissingError(
-                "OPENAI_API_KEY is required for LLM operations. "
-                "Get one at https://platform.openai.com/api-keys"
+                "OPENAI_API_KEY is required for LLM operations. " "Get one at https://platform.openai.com/api-keys"
             )
         return val
 
@@ -145,8 +142,7 @@ class Secrets:
         val = os.environ.get("ANTHROPIC_API_KEY")
         if not val:
             raise SecretMissingError(
-                "ANTHROPIC_API_KEY is required for Claude operations. "
-                "Get one at https://console.anthropic.com/"
+                "ANTHROPIC_API_KEY is required for Claude operations. " "Get one at https://console.anthropic.com/"
             )
         return val
 
@@ -161,8 +157,7 @@ class Secrets:
         val = os.environ.get("VOYAGE_API_KEY")
         if not val:
             raise SecretMissingError(
-                "VOYAGE_API_KEY is required for embeddings. "
-                "Get one at https://www.voyageai.com/"
+                "VOYAGE_API_KEY is required for embeddings. " "Get one at https://www.voyageai.com/"
             )
         return val
 
@@ -180,9 +175,7 @@ class Secrets:
         """HashiCorp Vault token for secrets management."""
         val = os.environ.get("VAULT_TOKEN") or os.environ.get("VAULT_ROOT_TOKEN")
         if not val:
-            raise SecretMissingError(
-                "VAULT_TOKEN or VAULT_ROOT_TOKEN is required for Vault access."
-            )
+            raise SecretMissingError("VAULT_TOKEN or VAULT_ROOT_TOKEN is required for Vault access.")
         return val
 
     @staticmethod
@@ -214,10 +207,7 @@ class Secrets:
     @staticmethod
     def has_r2() -> bool:
         """Check if R2 is configured."""
-        return bool(
-            os.environ.get("R2_ACCESS_KEY_ID") and
-            os.environ.get("R2_SECRET_ACCESS_KEY")
-        )
+        return bool(os.environ.get("R2_ACCESS_KEY_ID") and os.environ.get("R2_SECRET_ACCESS_KEY"))
 
     @staticmethod
     def slack_webhook_url() -> Optional[str]:
@@ -272,10 +262,7 @@ class Secrets:
     @staticmethod
     def has_google_oauth() -> bool:
         """Check if Google OAuth is configured."""
-        return bool(
-            os.environ.get("GOOGLE_CLIENT_ID") and
-            os.environ.get("GOOGLE_CLIENT_SECRET")
-        )
+        return bool(os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"))
 
     @staticmethod
     def azure_client_id() -> str:
@@ -296,10 +283,7 @@ class Secrets:
     @staticmethod
     def has_azure_ad() -> bool:
         """Check if Azure AD is configured."""
-        return bool(
-            os.environ.get("AZURE_CLIENT_ID") and
-            os.environ.get("AZURE_TENANT_ID")
-        )
+        return bool(os.environ.get("AZURE_CLIENT_ID") and os.environ.get("AZURE_TENANT_ID"))
 
     # =========================================================================
     # OPTIONAL SECRETS WITH DEFAULTS
@@ -344,10 +328,7 @@ WARN_IF_MISSING = [
 ]
 
 
-def validate_required_secrets(
-    include_billing: bool = True,
-    hard_fail: bool = True
-) -> Tuple[bool, List[str]]:
+def validate_required_secrets(include_billing: bool = True, hard_fail: bool = True) -> Tuple[bool, List[str]]:
     """
     Validate that all required secrets are present.
 
@@ -408,10 +389,10 @@ def get_secret_status() -> dict:
     Never returns actual values.
     """
     all_secrets = (
-        REQUIRED_FOR_STARTUP +
-        REQUIRED_FOR_BILLING +
-        WARN_IF_MISSING +
-        [
+        REQUIRED_FOR_STARTUP
+        + REQUIRED_FOR_BILLING
+        + WARN_IF_MISSING
+        + [
             ("R2_ACCESS_KEY_ID", "Cloudflare R2"),
             ("SLACK_WEBHOOK_URL", "Slack notifications"),
             ("POSTHOG_API_KEY", "PostHog analytics"),

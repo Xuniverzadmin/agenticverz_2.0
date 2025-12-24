@@ -16,8 +16,10 @@
  * - Max 3 lines of recent activity (reassurance, not noise)
  */
 
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { guardApi } from '../../api/guard';
+import { logger } from '../../lib/consoleLogger';
 import type { NavItemId } from './GuardLayout';
 
 // Simple relative time formatter (no date-fns dependency)
@@ -92,6 +94,11 @@ export function CustomerHomePage({
 }: {
   onNavigate?: (tab: NavItemId) => void;
 }) {
+  useEffect(() => {
+    logger.componentMount('CustomerHomePage');
+    return () => logger.componentUnmount('CustomerHomePage');
+  }, []);
+
   // Fetch home data
   const { data: homeData, isLoading } = useQuery<HomeData>({
     queryKey: ['guard', 'home'],

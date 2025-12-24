@@ -5,8 +5,9 @@
  * The operator's view into the self-improving feedback system.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { logger } from '../../lib/consoleLogger';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -29,6 +30,12 @@ const CONFIDENCE_CONFIG: Record<ConfidenceBand, { label: string; color: string }
 export function IntegrationDashboard() {
   const queryClient = useQueryClient();
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<HumanCheckpoint | null>(null);
+
+  // Component logging
+  useEffect(() => {
+    logger.componentMount('IntegrationDashboard');
+    return () => logger.componentUnmount('IntegrationDashboard');
+  }, []);
 
   // Fetch stats
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -58,6 +65,9 @@ export function IntegrationDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integration'] });
       setSelectedCheckpoint(null);
+    },
+    onError: (error) => {
+      logger.error('INTEGRATION', 'Failed to resolve checkpoint', error);
     },
   });
 

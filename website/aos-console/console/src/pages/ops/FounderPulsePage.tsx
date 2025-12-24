@@ -17,7 +17,9 @@
  * - Audit trail visible (what did the system do?)
  */
 
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { logger } from '../../lib/consoleLogger';
 
 // Simple relative time formatter (no date-fns dependency)
 function formatRelativeTime(date: Date): string {
@@ -222,6 +224,11 @@ async function fetchPulseData(): Promise<PulseData> {
 }
 
 export function FounderPulsePage() {
+  useEffect(() => {
+    logger.componentMount('FounderPulsePage');
+    return () => logger.componentUnmount('FounderPulsePage');
+  }, []);
+
   const { data, isLoading } = useQuery<PulseData>({
     queryKey: ['ops', 'pulse'],
     queryFn: fetchPulseData,

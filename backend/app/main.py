@@ -317,11 +317,18 @@ app = FastAPI(
 
 # Include API routers
 from .api.agents import router as agents_router  # M12 Multi-Agent System
+from .api.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
 
 # M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
 from .api.cost_intelligence import router as cost_intelligence_router
+
+# M29 Category 4: Cost Intelligence Completion
+from .api.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
 from .api.costsim import router as costsim_router
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
+
+# M29 Category 6: Founder Action Paths
+from .api.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
@@ -329,6 +336,9 @@ from .api.health import router as health_router
 
 # M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
 from .api.integration import router as integration_router  # M25 Pillar Integration Loop
+
+# M29 Category 7: Legacy Route Handlers (410 Gone)
+from .api.legacy_routes import router as legacy_routes_router  # 410 Gone for deprecated paths
 from .api.memory_pins import router as memory_pins_router
 from .api.onboarding import router as onboarding_router  # M24 Customer Onboarding
 
@@ -377,6 +387,14 @@ app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
 app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop
 app.include_router(cost_intelligence_router)  # /cost/* - M26 Cost Intelligence
+
+# M29 Category 4: Cost Intelligence Completion - Domain-separated cost visibility
+app.include_router(cost_ops_router)  # /ops/cost/* - Founder cost overview (FOPS auth)
+app.include_router(cost_guard_router)  # /guard/costs/* - Customer cost summary (Console auth)
+# M29 Category 6: Founder Action Paths
+app.include_router(founder_actions_router)  # /ops/actions/* - Freeze, throttle, override (FOPS auth)
+# M29 Category 7: Legacy Route Handlers (410 Gone for deprecated paths)
+app.include_router(legacy_routes_router)  # /dashboard, /operator/*, /demo/*, /simulation/*
 
 # CORS middleware
 app.add_middleware(

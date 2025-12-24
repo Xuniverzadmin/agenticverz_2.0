@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-23 (M28 Route Migration Plan - PIN-147)
+**Last Updated:** 2025-12-24 (PIN-153 M29 Category 7 - Redirect Expiry & Cleanup - COMPLETE)
 
 ---
 
@@ -169,6 +169,12 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-145](PIN-145-m28-deletion-execution-report.md) | **M28 Deletion Execution Report** | Architecture / Cleanup | **✅ COMPLETE** | 2025-12-23 |
 | [PIN-146](PIN-146-m28-unified-console-ui.md) | **M28 Unified Console UI** | Frontend / Console | **✅ COMPLETE** | 2025-12-23 |
 | [PIN-147](PIN-147-m28-route-migration-plan.md) | **M28 Route Migration Plan** | Architecture / Routing | **EXECUTING** | 2025-12-23 |
+| [PIN-148](PIN-148-m29-categorical-next-steps.md) | **M29 Categorical Next Steps** | Milestone / Planning / Transition | **EXECUTING** | 2025-12-23 |
+| [PIN-149](PIN-149-category2-auth-boundary-full-spec.md) | **Category 2 Auth Boundary - Full Spec** | Security / Authentication | **✅ COMPLETE** | 2025-12-23 |
+| [PIN-150](PIN-150-category3-data-contract-freeze-full-spec.md) | **Category 3 Data Contract Freeze - Full Spec** | API / Contracts | **✅ COMPLETE** | 2025-12-23 |
+| [PIN-151](PIN-151-m29-category-4---cost-intelligence-completion.md) | **M29 Categories 4-6 - Cost Intelligence + Founder Actions** | M29 Transition / Cost Intelligence | **✅ Cat 4-5 + Cat 6 Backend COMPLETE** | 2025-12-24 |
+| [PIN-152](PIN-152-m29-category-6---founder-action-paths-backend.md) | **M29 Category 6 - Founder Action Paths Backend** | M29 Transition / Founder Actions | **✅ COMPLETE** | 2025-12-24 |
+| [PIN-153](PIN-153-m29-category-7---redirect-expiry-cleanup.md) | **M29 Category 7 - Redirect Expiry & Cleanup** | M29 Transition / Route Cleanup | **✅ COMPLETE** | 2025-12-24 |
 
 ---
 
@@ -938,6 +944,24 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | **PIN-153 M29 Category 7 - Redirect Expiry & Cleanup** - 410 Gone for legacy paths (/dashboard, /operator/*, /demo/*, /simulation/*). 40 CI guardrail tests. No redirects, just 410 with migration guidance. |
+| 2025-12-24 | **PIN-152 M29 Category 6 - Founder Action Paths Backend** - Updated: Category 6 Status |
+| 2025-12-24 | **PIN-152 M29 Category 6 - Founder Action Paths Backend** - Updated: Implementation Enhancements |
+| 2025-12-24 | **PIN-152 M29 Category 6 - Founder Action Paths Backend** - Updated: Category 6 Completion Package |
+| 2025-12-24 | **PIN-152 M29 Category 6 - Founder Action Paths Backend** - Updated: API Integration Tests |
+| 2025-12-24 | **PIN-152 M29 Category 6 - Founder Action Paths Backend** - Created via memory_trail. |
+| 2025-12-24 | **PIN-151 M29 Categories 4-6 - Cost Intelligence + Incident Contrast + Founder Actions** - Updated: Updates |
+| 2025-12-24 | **PIN-151 M29 Category 6 - Founder Action Paths (SPEC READY)** - Power enters the system. Exactly 4 actions: FREEZE_TENANT, THROTTLE_TENANT, FREEZE_API_KEY, OVERRIDE_INCIDENT. 5 core invariants: no action from Pulse, every action requires context, every action reversible (unless destructive), every action logged with actor+reason, customers never trigger. Strict navigation: actions only on `/fops/customers/{id}`, `/fops/incidents/{id}`. Mandatory 4-step flow: Context→Reason→Confirm→Result. Immutable audit records. Customer visibility: calm outcomes only, never show founder identity or action names. Safety rails: rate-limited, no chaining, MFA required. 8 exit criteria checkboxes. Next: Design UX flows, Define backend APIs, Write audit schema+tests. |
+| 2025-12-24 | **PIN-151 M29 Category 5.1 - Absence Tests (Contrast IRREVERSIBLE)** - 34 absence tests make founder/customer separation permanent. ForbiddenKnowledge registry with 9 categories (100+ forbidden terms): Quantitative Internals, Severity Semantics, Root Cause Mechanics, Policy Internals, Infrastructure Actors, Cross-Tenant Data, Founder Lifecycle, Blast Radius, Recurrence. Test classes: TestFieldNameAbsence (8), TestLiteralValueAbsence (7), TestSourceCodeAbsence (3), TestStructuralAbsence (5), TestCrossDomainIsolation (3), TestComprehensiveForbiddenScan (2), TestAPIEndpointAbsence (4), TestRegressionPrevention (2). Category 5 total: 56 tests. If forbidden field appears in customer DTO, test fails. THE INVARIANT: Impossibility, not correctness. |
+| 2025-12-24 | **PIN-151 M29 Category 5 - Incident Console Contrast** - One incident ID, two narratives, zero contradictions. Founder view: `GET /ops/incidents/{id}` with FounderIncidentDetailDTO (header, timeline, root_cause, blast_radius, recurrence_risk). Customer view: `GET /guard/incidents/{id}/narrative` with CustomerIncidentNarrativeDTO (calm vocabulary: summary, impact, resolution, customer_actions). 12 new DTOs. 22 contrast tests enforce no internal terminology leaks to customer. |
+| 2025-12-24 | **PIN-151 M29 Category 4.2 - Customer Cost Drilldown** - Added `GET /ops/cost/customers/{id}` endpoint for deep-dive cost analysis. New DTOs: `FounderCustomerCostDrilldownDTO`, `CostDailyBreakdownDTO`, `CostByFeatureDTO`, `CostByUserDTO`, `CostByModelDTO`, `CustomerAnomalyHistoryDTO`. Provides: spend summary, baseline comparison, budget status, daily breakdown, cost attribution (feature/user/model), largest driver identification, anomaly history, trend analysis. 44 tests (11 new). |
+| 2025-12-24 | **PIN-151 M29 Category 4 - Anomaly Rules Alignment (Phase 2)** - Aligned thresholds: absolute spike 1.4x (was 2x) + 2 consecutive intervals, sustained drift 1.25x for 3 days. Severity bands: LOW 15-25%, MEDIUM 25-40%, HIGH >40% (no CRITICAL). Added derived_cause (RETRY_LOOP, PROMPT_GROWTH, FEATURE_SURGE, TRAFFIC_GROWTH, UNKNOWN) and breach_count fields. Migration 048 applied. 33 tests (8 new). |
+| 2025-12-24 | **PIN-151 M29 Category 4 - Cost Intelligence Completion** - Created via memory_trail. |
+| 2025-12-23 | **PIN-150 Category 3 Data Contract Freeze FULL SPEC** - Created contracts module (1.0.0) with 16 DTOs: 8 Guard (GuardStatusDTO, TodaySnapshotDTO, IncidentSummaryDTO, etc.) + 8 Ops (SystemPulseDTO, CustomerSegmentDTO, IncidentPatternDTO, etc.). Created DATA_CONTRACT_FREEZE.md documenting all contracts. 18 CI tests enforce namespace separation, vocabulary separation, and absence constraints. |
+| 2025-12-23 | **PIN-149 Category 2 Auth Boundary FULL SPEC** - Implemented complete auth separation: CustomerToken (aud=console) vs FounderToken (aud=fops, mfa=true). Separate cookies (aos_console_session vs aos_fops_session). Separate middleware (verify_console_token vs verify_fops_token). Structured audit logging (AUTH_DOMAIN_REJECT events). 6 manual abuse tests + 12 CI tests pass. |
+| 2025-12-23 | **PIN-148 Category 3 Data Contract Freeze COMPLETE** - Verified schema freeze: 48 migrations, latest `047_m27_snapshots`, single linear history, no branches, DB in sync with codebase. |
+| 2025-12-23 | **PIN-148 Category 2 Auth Boundary COMPLETE** - Fixed critical security gap: backend `/ops/*` and `/guard/*` endpoints had no auth, allowing frontend bypass. Created `auth_helpers.py` with `verify_console_api_key`, added router-level auth to ops.py and guard.py. Fixed secrets.py PermissionError for container compatibility. |
+| 2025-12-23 | **PIN-148 M29 Categorical Next Steps** - 8-category transition plan from M28 to M29. Category 1 (STABILISE) COMPLETE: UI hygiene at 20 warnings (budget 35). Categories 2-8 defined: Auth Boundary, Data Contract, Cost Intelligence, Incident Contrast, Founder Actions, Redirect Cleanup, GTM Readiness. |
 | 2025-12-23 | **PIN-147 M28 Route Migration Plan** - Created authoritative route ownership lockfile (M28_ROUTE_OWNERSHIP.md) defining CUSTOMER/FOUNDER/DELETE persona ownership. Updated frontend routes with clear ownership comments. Phases 0-2 complete (preconditions + deletion). Phases 3-7 executing (domain migration). Target: console.agenticverz.com (Customer) + fops.agenticverz.com (Founder). |
 | 2025-12-23 | **PIN-146 M28 Unified Console UI** - Implemented Customer Home (calm status board with PROTECTED/ATTENTION NEEDED/ACTION REQUIRED states) and Founder Pulse (command cockpit with STABLE/ELEVATED/DEGRADED/CRITICAL states). Customer Home is now the default landing for /guard. Founder Pulse is the default for /ops with Pulse/Console tab switcher. |
 | 2025-12-23 | **PIN-145 M28 Deletion Execution Report** - Executed M28 Exact Deletion Checklist. 17 routes deleted: 3 demo endpoints, 2 backend API files (failures.py, operator.py), 7 frontend page directories, legacy redirects. Forbidden words eliminated from routes: demo, simulation, jobs, metrics, operator, skills, failures, dashboard. Root "/" now redirects to "/guard" (unified console). |

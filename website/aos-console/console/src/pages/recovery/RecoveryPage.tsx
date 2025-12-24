@@ -1,13 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Check, X, Zap, Activity } from 'lucide-react';
 import { Card, CardHeader, CardBody, Spinner, StatusBadge, Button } from '@/components/common';
 import { getCandidates, getRecoveryStats, approveCandidate, deleteCandidate, type RecoveryCandidate } from '@/api/recovery';
 import { cn } from '@/lib/utils';
+import { logger } from '../../lib/consoleLogger';
 
 export default function RecoveryPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    logger.componentMount('RecoveryPage');
+    return () => logger.componentUnmount('RecoveryPage');
+  }, []);
 
   const { data: candidates, isLoading, refetch } = useQuery({
     queryKey: ['recovery-candidates', statusFilter],
@@ -28,6 +34,9 @@ export default function RecoveryPage() {
       queryClient.invalidateQueries({ queryKey: ['recovery-stats'] });
       queryClient.invalidateQueries({ queryKey: ['failures'] });
     },
+    onError: (error) => {
+      logger.error('RECOVERY', 'Failed to approve candidate', error);
+    },
   });
 
   const rejectMutation = useMutation({
@@ -35,6 +44,9 @@ export default function RecoveryPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recovery-candidates'] });
       queryClient.invalidateQueries({ queryKey: ['recovery-stats'] });
+    },
+    onError: (error) => {
+      logger.error('RECOVERY', 'Failed to reject candidate', error);
     },
   });
 

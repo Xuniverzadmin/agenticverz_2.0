@@ -14,12 +14,13 @@
  * - Contact support to modify
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
 import { Spinner } from '../../../components/common/Spinner';
 import { guardApi } from '../../../api/guard';
+import { logger } from '../../../lib/consoleLogger';
 
 interface GuardrailConfig {
   id: string;
@@ -53,6 +54,11 @@ const PLAN_CONFIG = {
 };
 
 export function SettingsPage() {
+  useEffect(() => {
+    logger.componentMount('SettingsPage');
+    return () => logger.componentUnmount('SettingsPage');
+  }, []);
+
   const { data: settings, isLoading } = useQuery({
     queryKey: ['guard', 'settings'],
     queryFn: guardApi.getSettings,

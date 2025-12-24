@@ -23,6 +23,7 @@
 import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/authStore';
+import { logger } from '../../lib/consoleLogger';
 import { GuardLayout, NavItemId } from './GuardLayout';
 import { GuardDashboard } from './GuardDashboard';
 import { LiveActivityPage } from './LiveActivityPage';
@@ -53,6 +54,11 @@ export function GuardConsoleApp() {
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<NavItemId>('overview');
+
+  useEffect(() => {
+    logger.componentMount('GuardConsoleApp');
+    return () => logger.componentUnmount('GuardConsoleApp');
+  }, []);
 
   // Check for stored credentials on mount
   useEffect(() => {

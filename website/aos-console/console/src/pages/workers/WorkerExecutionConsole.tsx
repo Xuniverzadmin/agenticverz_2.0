@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { logger } from '../../lib/consoleLogger';
 
 // === DEBUG LOGGING ===
 const DEBUG = true;
@@ -127,6 +128,11 @@ export function WorkerExecutionConsole() {
   const [showBrandEditor, setShowBrandEditor] = useState(false);
 
   log('INIT', `Component mount - runId: ${runId}, replayId: ${replayId}`);
+
+  useEffect(() => {
+    logger.componentMount('WorkerExecutionConsole');
+    return () => logger.componentUnmount('WorkerExecutionConsole');
+  }, []);
 
   // Track if run completed to ignore SSE close errors
   const runCompletedRef = useRef(false);

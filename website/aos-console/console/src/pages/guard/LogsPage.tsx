@@ -10,9 +10,10 @@
  * Complement to Live Activity - this is the archive.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { guardApi } from '../../api/guard';
+import { logger } from '../../lib/consoleLogger';
 
 interface LogEntry {
   id: string;
@@ -105,6 +106,11 @@ export function LogsPage() {
     search: '',
     timeRange: '1h' as '1h' | '6h' | '24h' | '7d',
   });
+
+  useEffect(() => {
+    logger.componentMount('LogsPage');
+    return () => logger.componentUnmount('LogsPage');
+  }, []);
 
   // Filter logs
   const filteredLogs = logs.filter(log => {

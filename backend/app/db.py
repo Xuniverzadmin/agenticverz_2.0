@@ -1,10 +1,10 @@
 import os
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import AsyncGenerator, Optional
 
-from sqlalchemy import Column, JSON
+from sqlalchemy import JSON, Column
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Field, Session, SQLModel, create_engine
@@ -36,7 +36,9 @@ engine = create_engine(
 
 # Async engine for async endpoints (M25 integration loop)
 # Convert postgresql:// to postgresql+asyncpg://
-ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://").replace("?sslmode=require", "?ssl=require")
+ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://").replace(
+    "?sslmode=require", "?ssl=require"
+)
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
     echo=False,
@@ -910,6 +912,7 @@ class FeatureTag(SQLModel, table=True):
 
     No tag → request defaulted to 'unclassified' (and flagged).
     """
+
     __tablename__ = "feature_tags"
 
     id: str = Field(default_factory=lambda: f"ft_{uuid.uuid4().hex[:16]}", primary_key=True)
@@ -930,6 +933,7 @@ class CostRecord(SQLModel, table=True):
     Design rule: Raw writes fast, reads aggregated.
     Never dashboard off raw rows.
     """
+
     __tablename__ = "cost_records"
 
     id: str = Field(default_factory=lambda: f"cr_{uuid.uuid4().hex[:16]}", primary_key=True)
@@ -958,6 +962,7 @@ class CostAnomaly(SQLModel, table=True):
 
     Anything more early = noise.
     """
+
     __tablename__ = "cost_anomalies"
 
     id: str = Field(default_factory=lambda: f"ca_{uuid.uuid4().hex[:16]}", primary_key=True)
@@ -977,12 +982,62 @@ class CostAnomaly(SQLModel, table=True):
     resolved_at: Optional[datetime] = None
     metadata_json: Optional[dict] = Field(default=None, sa_column=Column("metadata", JSON, nullable=True))
     detected_at: datetime = Field(default_factory=utc_now)
+    # M29: Added for anomaly rules alignment
+    derived_cause: Optional[str] = None  # RETRY_LOOP, PROMPT_GROWTH, FEATURE_SURGE, TRAFFIC_GROWTH, UNKNOWN
+    breach_count: int = 1  # How many consecutive intervals breached
+
+
+class CostBreachHistory(SQLModel, table=True):
+    """
+    M29: Track breach history for consecutive interval logic.
+
+    Absolute spike rule: 1.4x threshold + 2 consecutive daily intervals
+    One record per entity per day per breach_type.
+    """
+
+    __tablename__ = "cost_breach_history"
+
+    id: str = Field(default_factory=lambda: f"bh_{uuid.uuid4().hex[:16]}", primary_key=True)
+    tenant_id: str = Field(index=True)
+    entity_type: str  # user, feature, tenant, model
+    entity_id: Optional[str] = None
+    breach_type: str  # ABSOLUTE_SPIKE, SUSTAINED_DRIFT
+    breach_date: date
+    deviation_pct: float
+    current_value_cents: float
+    baseline_value_cents: float
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class CostDriftTracking(SQLModel, table=True):
+    """
+    M29: Track sustained drift for early-warning detection.
+
+    Sustained drift rule: 7d rolling avg > baseline_7d * 1.25 for >= 3 days.
+    """
+
+    __tablename__ = "cost_drift_tracking"
+
+    id: str = Field(default_factory=lambda: f"dt_{uuid.uuid4().hex[:16]}", primary_key=True)
+    tenant_id: str = Field(index=True)
+    entity_type: str  # user, feature, tenant
+    entity_id: Optional[str] = None
+    rolling_7d_avg_cents: float
+    baseline_7d_avg_cents: float
+    drift_pct: float
+    drift_days_count: int = 1
+    first_drift_date: date
+    last_check_date: date
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class CostBudget(SQLModel, table=True):
     """
     Per-tenant and per-feature budget limits.
     """
+
     __tablename__ = "cost_budgets"
 
     id: str = Field(default_factory=lambda: f"cb_{uuid.uuid4().hex[:16]}", primary_key=True)
@@ -1004,6 +1059,7 @@ class CostDailyAggregate(SQLModel, table=True):
 
     Never dashboard off raw rows.
     """
+
     __tablename__ = "cost_daily_aggregates"
 
     id: str = Field(default_factory=lambda: f"cda_{uuid.uuid4().hex[:16]}", primary_key=True)

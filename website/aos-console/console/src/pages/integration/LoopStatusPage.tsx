@@ -16,6 +16,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { logger } from '../../lib/consoleLogger';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
@@ -75,6 +76,12 @@ export function LoopStatusPage() {
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<HumanCheckpoint | null>(null);
   const [showNarrative, setShowNarrative] = useState(false);
 
+  // Component logging
+  useEffect(() => {
+    logger.componentMount('LoopStatusPage');
+    return () => logger.componentUnmount('LoopStatusPage');
+  }, []);
+
   // Fetch loop status
   const { data: loopStatus, isLoading, error } = useQuery({
     queryKey: ['integration', 'loop', incidentId],
@@ -114,6 +121,9 @@ export function LoopStatusPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integration', 'loop', incidentId] });
     },
+    onError: (error) => {
+      logger.error('INTEGRATION', 'Failed to retry stage', error);
+    },
   });
 
   // Revert mutation
@@ -121,6 +131,9 @@ export function LoopStatusPage() {
     mutationFn: (toStage: LoopStage) => integrationApi.revertLoop(incidentId!, toStage),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integration', 'loop', incidentId] });
+    },
+    onError: (error) => {
+      logger.error('INTEGRATION', 'Failed to revert loop', error);
     },
   });
 
@@ -131,6 +144,9 @@ export function LoopStatusPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integration'] });
       setSelectedCheckpoint(null);
+    },
+    onError: (error) => {
+      logger.error('INTEGRATION', 'Failed to resolve checkpoint', error);
     },
   });
 

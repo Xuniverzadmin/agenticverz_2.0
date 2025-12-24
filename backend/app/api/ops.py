@@ -63,7 +63,30 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlmodel import Session
 
+# Category 2 Auth: Domain-separated authentication for Founder Ops Console
+# Uses verify_fops_token which enforces:
+# - aud = "fops" (strict - NOT "console")
+# - role in [FOUNDER, OPERATOR]
+# - mfa = true (MANDATORY)
+# - All rejections logged to audit
+# NO SHARED LOGIC with console auth
+from app.auth.console_auth import FounderToken, verify_fops_token
+
+# M29 Category 5: Incident Console Contrast - Founder Incident DTOs
+from app.contracts.ops import (
+    FounderBlastRadiusDTO,
+    FounderDecisionTimelineEventDTO,
+    FounderIncidentDetailDTO,
+    FounderIncidentHeaderDTO,
+    FounderIncidentListDTO,
+    FounderIncidentListItemDTO,
+    FounderRecurrenceRiskDTO,
+    FounderRootCauseDTO,
+)
 from app.db import get_session
+
+# Incident model for database queries
+from app.models.killswitch import Incident, IncidentEvent
 
 # Redis caching for ops endpoints (optional - degrades gracefully)
 try:
@@ -259,7 +282,11 @@ FOUNDER_PLAYBOOKS = {
 # Router - Operator-only access (requires ops auth)
 # =============================================================================
 
-router = APIRouter(prefix="/ops", tags=["Ops Console"])
+router = APIRouter(
+    prefix="/ops",
+    tags=["Ops Console"],
+    dependencies=[Depends(verify_fops_token)],  # Category 2: Strict fops auth (aud=fops, mfa=true)
+)
 
 
 # =============================================================================
@@ -1398,6 +1425,392 @@ async def get_incident_patterns(
             continue
 
     return patterns
+
+
+# =============================================================================
+# Module 3.1: Founder Incident Detail (M29 Category 5)
+# =============================================================================
+
+
+@router.get("/incidents/{incident_id}", response_model=FounderIncidentDetailDTO)
+async def get_founder_incident_detail(
+    incident_id: str,
+    token: FounderToken = Depends(verify_fops_token),
+    session: Session = Depends(get_session),
+) -> FounderIncidentDetailDTO:
+    """
+    GET /ops/incidents/{incident_id}
+
+    Founder Incident Detail - Full causality and impact analysis.
+
+    M29 Category 5: Incident Console Contrast
+
+    Answers:
+    - What failed?
+    - Why?
+    - What system allowed it?
+    - Is it recurring?
+    - What do we do next?
+
+    Contains internal terminology, thresholds, and raw metrics.
+    NEVER expose to Customer Console.
+    """
+    from sqlmodel import select
+
+    # Get incident
+    stmt = select(Incident).where(Incident.id == incident_id)
+    result = session.exec(stmt).first()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    incident = result[0] if isinstance(result, tuple) else result
+
+    # Get tenant name
+    tenant_name = None
+    try:
+        tenant_result = session.execute(
+            text("SELECT name FROM tenants WHERE id = :tenant_id"), {"tenant_id": incident.tenant_id}
+        ).first()
+        if tenant_result:
+            tenant_name = tenant_result[0]
+    except Exception:
+        pass
+
+    # Map status to lifecycle state
+    status_to_state = {
+        "open": "DETECTED",
+        "acknowledged": "TRIAGED",
+        "resolved": "RESOLVED",
+        "auto_resolved": "MITIGATED",
+    }
+    current_state = status_to_state.get(incident.status, "DETECTED")
+
+    # Map trigger_type to incident_type
+    trigger_to_type = {
+        "cost_spike": "COST",
+        "budget_breach": "COST",
+        "rate_limit": "RATE_LIMIT",
+        "failure_spike": "RELIABILITY",
+        "policy_block": "POLICY",
+        "safety": "SAFETY",
+    }
+    incident_type = trigger_to_type.get(incident.trigger_type, "POLICY")
+
+    # Build header
+    header = FounderIncidentHeaderDTO(
+        incident_id=incident.id,
+        incident_type=incident_type,
+        severity=incident.severity,
+        tenant_id=incident.tenant_id,
+        tenant_name=tenant_name,
+        current_state=current_state,
+        first_detected=(incident.started_at or incident.created_at).isoformat(),
+        last_updated=incident.updated_at.isoformat(),
+    )
+
+    # Get timeline events
+    event_stmt = (
+        select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
+    )
+    event_rows = session.exec(event_stmt).all()
+
+    timeline = []
+    for row in event_rows:
+        event = row[0] if isinstance(row, tuple) else row
+        # Map event_type to founder timeline event type
+        event_type_map = {
+            "detection": "DETECTION_SIGNAL",
+            "escalation": "ESCALATION",
+            "action": "RECOVERY_ACTION",
+            "resolution": "RESOLUTION",
+            "policy_evaluated": "POLICY_EVALUATION",
+            "cost_anomaly": "COST_ANOMALY",
+        }
+        mapped_type = event_type_map.get(event.event_type, "DETECTION_SIGNAL")
+
+        timeline.append(
+            FounderDecisionTimelineEventDTO(
+                timestamp=event.created_at.isoformat(),
+                event_type=mapped_type,
+                description=event.description,
+                data=event.get_data() if hasattr(event, "get_data") else None,
+            )
+        )
+
+    # Build root cause - derive from trigger type and action details
+    derived_cause = "UNKNOWN"
+    evidence = f"Triggered by {incident.trigger_type}"
+    confidence = "medium"
+    baseline_value = None
+    actual_value = None
+    threshold_breached = None
+
+    if incident.action_details_json:
+        try:
+            details = json.loads(incident.action_details_json)
+            if details.get("retry_ratio"):
+                derived_cause = "RETRY_LOOP"
+                evidence = f"retry/request +{details.get('retry_ratio', 0)*100:.0f}% over baseline"
+                actual_value = details.get("retry_ratio")
+            elif details.get("prompt_growth"):
+                derived_cause = "PROMPT_GROWTH"
+                evidence = f"prompt tokens +{details.get('prompt_growth', 0)*100:.0f}% over baseline"
+            elif details.get("feature_concentration"):
+                derived_cause = "FEATURE_SURGE"
+                evidence = f"cost concentrated in {details.get('top_feature', 'unknown')}"
+            baseline_value = details.get("baseline_value")
+            actual_value = actual_value or details.get("actual_value")
+            threshold_breached = details.get("threshold")
+        except Exception:
+            pass
+
+    if incident.trigger_type == "rate_limit":
+        derived_cause = "RATE_LIMIT_BREACH"
+        confidence = "high"
+    elif incident.trigger_type == "budget_breach":
+        derived_cause = "BUDGET_EXCEEDED"
+        confidence = "high"
+    elif incident.trigger_type == "policy_block":
+        derived_cause = "POLICY_VIOLATION"
+        confidence = "high"
+
+    root_cause = FounderRootCauseDTO(
+        derived_cause=derived_cause,
+        evidence=evidence,
+        confidence=confidence,
+        baseline_value=baseline_value,
+        actual_value=actual_value,
+        threshold_breached=threshold_breached,
+    )
+
+    # Build blast radius
+    cost_impact_pct = 0.0
+    if incident.cost_delta_cents:
+        # Estimate daily baseline (rough)
+        cost_impact_pct = float(incident.cost_delta_cents) / 100.0  # Simplified
+
+    blast_radius = FounderBlastRadiusDTO(
+        requests_affected=incident.calls_affected or 0,
+        requests_blocked=0,  # Would need to calculate from events
+        cost_impact_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
+        cost_impact_pct=cost_impact_pct,
+        duration_seconds=incident.duration_seconds or 0,
+        customer_visible_degradation=incident.severity in ["critical", "high"],
+        users_affected=0,  # Would need to calculate from related calls
+        features_affected=[],  # Would need to extract from related calls
+    )
+
+    # Check for recurrence
+    h7d_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    h30d_ago = datetime.now(timezone.utc) - timedelta(days=30)
+
+    similar_7d = 0
+    similar_30d = 0
+    same_tenant = False
+    same_feature = False
+    same_cause = False
+
+    try:
+        # Count similar incidents (same trigger_type)
+        stmt = text(
+            """
+            SELECT
+                COUNT(*) FILTER (WHERE created_at > :h7d_ago) as cnt_7d,
+                COUNT(*) FILTER (WHERE created_at > :h30d_ago) as cnt_30d,
+                COUNT(*) FILTER (WHERE tenant_id = :tenant_id AND created_at > :h7d_ago) as same_tenant_7d
+            FROM incidents
+            WHERE trigger_type = :trigger_type
+              AND id != :incident_id
+        """
+        )
+        row = session.execute(
+            stmt,
+            {
+                "h7d_ago": h7d_ago,
+                "h30d_ago": h30d_ago,
+                "tenant_id": incident.tenant_id,
+                "trigger_type": incident.trigger_type,
+                "incident_id": incident_id,
+            },
+        ).first()
+
+        if row:
+            similar_7d = row[0] or 0
+            similar_30d = row[1] or 0
+            same_tenant = (row[2] or 0) > 0
+    except Exception:
+        pass
+
+    risk_level = "low"
+    if similar_7d >= 3 or same_tenant:
+        risk_level = "high"
+    elif similar_7d >= 1:
+        risk_level = "medium"
+
+    suggested_prevention = None
+    if derived_cause == "RETRY_LOOP":
+        suggested_prevention = "Review retry logic and implement exponential backoff"
+    elif derived_cause == "PROMPT_GROWTH":
+        suggested_prevention = "Audit prompt templates for token efficiency"
+    elif derived_cause == "FEATURE_SURGE":
+        suggested_prevention = "Investigate feature usage patterns and consider rate limiting"
+
+    recurrence_risk = FounderRecurrenceRiskDTO(
+        similar_incidents_7d=similar_7d,
+        similar_incidents_30d=similar_30d,
+        same_tenant_recurrence=same_tenant,
+        same_feature_recurrence=same_feature,
+        same_root_cause_recurrence=similar_7d > 0,
+        risk_level=risk_level,
+        suggested_prevention=suggested_prevention,
+    )
+
+    # Get linked call IDs
+    linked_calls = incident.get_related_call_ids() if hasattr(incident, "get_related_call_ids") else []
+
+    # Build recommended next steps
+    next_steps = []
+    if risk_level == "high":
+        next_steps.append("Investigate root cause immediately")
+        next_steps.append("Review tenant's recent API usage")
+    if incident.status == "open":
+        next_steps.append("Acknowledge and assign to team member")
+    if derived_cause != "UNKNOWN":
+        next_steps.append(f"Address {derived_cause} pattern")
+
+    return FounderIncidentDetailDTO(
+        header=header,
+        timeline=timeline,
+        root_cause=root_cause,
+        blast_radius=blast_radius,
+        recurrence_risk=recurrence_risk,
+        related_cost_anomaly_id=None,  # Would link from cost_anomalies table
+        related_killswitch_id=incident.killswitch_id,
+        linked_call_ids=linked_calls[:10],  # Limit to first 10
+        action_taken=incident.auto_action,
+        action_details=json.loads(incident.action_details_json) if incident.action_details_json else None,
+        recommended_next_steps=next_steps,
+    )
+
+
+@router.get("/incidents", response_model=FounderIncidentListDTO)
+async def get_founder_incidents(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    severity: Optional[str] = Query(default=None),
+    state: Optional[str] = Query(default=None),
+    token: FounderToken = Depends(verify_fops_token),
+    session: Session = Depends(get_session),
+) -> FounderIncidentListDTO:
+    """
+    GET /ops/incidents
+
+    Founder Incident List - All incidents with summary stats.
+
+    M29 Category 5: Incident Console Contrast
+    """
+    from sqlalchemy import desc
+    from sqlmodel import select
+
+    # Build query
+    stmt = select(Incident).order_by(desc(Incident.created_at))
+
+    if severity:
+        stmt = stmt.where(Incident.severity == severity)
+    if state:
+        status_map = {
+            "DETECTED": "open",
+            "TRIAGED": "acknowledged",
+            "RESOLVED": "resolved",
+            "MITIGATED": "auto_resolved",
+        }
+        if state in status_map:
+            stmt = stmt.where(Incident.status == status_map[state])
+
+    # Pagination
+    stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+    rows = session.exec(stmt).all()
+
+    # Count total
+    count_stmt = text("SELECT COUNT(*) FROM incidents")
+    total_row = session.execute(count_stmt).first()
+    total = total_row[0] if total_row else 0
+
+    # Count active, critical, high
+    counts_stmt = text(
+        """
+        SELECT
+            COUNT(*) FILTER (WHERE status != 'resolved') as active,
+            COUNT(*) FILTER (WHERE severity = 'critical') as critical,
+            COUNT(*) FILTER (WHERE severity = 'high') as high
+        FROM incidents
+    """
+    )
+    counts_row = session.execute(counts_stmt).first()
+    active_count = counts_row[0] if counts_row else 0
+    critical_count = counts_row[1] if counts_row else 0
+    high_count = counts_row[2] if counts_row else 0
+
+    # Map to DTOs
+    items = []
+    for row in rows:
+        incident = row[0] if isinstance(row, tuple) else row
+
+        # Get tenant name
+        tenant_name = None
+        try:
+            tenant_result = session.execute(
+                text("SELECT name FROM tenants WHERE id = :tenant_id"), {"tenant_id": incident.tenant_id}
+            ).first()
+            if tenant_result:
+                tenant_name = tenant_result[0]
+        except Exception:
+            pass
+
+        # Map types
+        trigger_to_type = {
+            "cost_spike": "COST",
+            "budget_breach": "COST",
+            "rate_limit": "RATE_LIMIT",
+            "failure_spike": "RELIABILITY",
+            "policy_block": "POLICY",
+            "safety": "SAFETY",
+        }
+        status_to_state = {
+            "open": "DETECTED",
+            "acknowledged": "TRIAGED",
+            "resolved": "RESOLVED",
+            "auto_resolved": "MITIGATED",
+        }
+
+        items.append(
+            FounderIncidentListItemDTO(
+                incident_id=incident.id,
+                incident_type=trigger_to_type.get(incident.trigger_type, "POLICY"),
+                severity=incident.severity,
+                current_state=status_to_state.get(incident.status, "DETECTED"),
+                tenant_id=incident.tenant_id,
+                tenant_name=tenant_name,
+                title=incident.title,
+                root_cause=None,  # Would derive from action_details
+                requests_affected=incident.calls_affected or 0,
+                cost_impact_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
+                first_detected=(incident.started_at or incident.created_at).isoformat(),
+                duration_seconds=incident.duration_seconds,
+                is_recurring=False,  # Would need to check recurrence
+            )
+        )
+
+    return FounderIncidentListDTO(
+        incidents=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        active_count=active_count,
+        critical_count=critical_count,
+        high_count=high_count,
+    )
 
 
 # =============================================================================

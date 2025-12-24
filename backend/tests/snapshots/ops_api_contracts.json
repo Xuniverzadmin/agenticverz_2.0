@@ -1,8 +1,32 @@
 {
-  "version": "1.0.0",
-  "description": "Ops API Contract Snapshot - PIN-121 Prevention Blueprint",
-  "endpoint_count": 13,
+  "version": "1.1.0",
+  "description": "Ops API Contract Snapshot - M29 Categories 4-7 Updated",
+  "endpoint_count": 28,
   "contracts": {
+    "GET /ops/actions/audit": {
+      "response_model": "FounderActionListDTO",
+      "operation_id": "get_audit_trail_ops_actions_audit_get"
+    },
+    "GET /ops/actions/audit/{action_id}": {
+      "response_model": "FounderAuditRecordDTO",
+      "operation_id": "get_audit_record_ops_actions_audit__action_id__get"
+    },
+    "GET /ops/cost/anomalies": {
+      "response_model": "FounderCostAnomalyListDTO",
+      "operation_id": "get_cost_anomalies_ops_cost_anomalies_get"
+    },
+    "GET /ops/cost/customers/{tenant_id}": {
+      "response_model": "FounderCustomerCostDrilldownDTO",
+      "operation_id": "get_customer_cost_drilldown_ops_cost_customers__tenant_id__get"
+    },
+    "GET /ops/cost/overview": {
+      "response_model": "FounderCostOverviewDTO",
+      "operation_id": "get_cost_overview_ops_cost_overview_get"
+    },
+    "GET /ops/cost/tenants": {
+      "response_model": "FounderCostTenantListDTO",
+      "operation_id": "get_cost_tenants_ops_cost_tenants_get"
+    },
     "GET /ops/customers": {
       "response_model": "untyped",
       "operation_id": "get_customer_segments_ops_customers_get"
@@ -19,9 +43,17 @@
       "response_model": "OpsEventListResponse",
       "operation_id": "get_event_stream_ops_events_get"
     },
+    "GET /ops/incidents": {
+      "response_model": "FounderIncidentListDTO",
+      "operation_id": "get_founder_incidents_ops_incidents_get"
+    },
     "GET /ops/incidents/patterns": {
       "response_model": "untyped",
       "operation_id": "get_incident_patterns_ops_incidents_patterns_get"
+    },
+    "GET /ops/incidents/{incident_id}": {
+      "response_model": "FounderIncidentDetailDTO",
+      "operation_id": "get_founder_incident_detail_ops_incidents__incident_id__get"
     },
     "GET /ops/infra": {
       "response_model": "InfraLimits",
@@ -46,6 +78,34 @@
     "GET /ops/stickiness": {
       "response_model": "untyped",
       "operation_id": "get_stickiness_by_feature_ops_stickiness_get"
+    },
+    "POST /ops/actions/freeze-api-key": {
+      "response_model": "FounderActionResponseDTO",
+      "operation_id": "freeze_api_key_ops_actions_freeze_api_key_post"
+    },
+    "POST /ops/actions/freeze-tenant": {
+      "response_model": "FounderActionResponseDTO",
+      "operation_id": "freeze_tenant_ops_actions_freeze_tenant_post"
+    },
+    "POST /ops/actions/override-incident": {
+      "response_model": "FounderActionResponseDTO",
+      "operation_id": "override_incident_ops_actions_override_incident_post"
+    },
+    "POST /ops/actions/throttle-tenant": {
+      "response_model": "FounderActionResponseDTO",
+      "operation_id": "throttle_tenant_ops_actions_throttle_tenant_post"
+    },
+    "POST /ops/actions/unfreeze-api-key": {
+      "response_model": "FounderActionResponseDTO",
+      "operation_id": "unfreeze_api_key_ops_actions_unfreeze_api_key_post"
+    },
+    "POST /ops/actions/unfreeze-tenant": {
+      "response_model": "FounderActionResponseDTO",
+      "operation_id": "unfreeze_tenant_ops_actions_unfreeze_tenant_post"
+    },
+    "POST /ops/actions/unthrottle-tenant": {
+      "response_model": "FounderActionResponseDTO",
+      "operation_id": "unthrottle_tenant_ops_actions_unthrottle_tenant_post"
     },
     "POST /ops/jobs/compute-stickiness": {
       "response_model": "OpsJobResult",

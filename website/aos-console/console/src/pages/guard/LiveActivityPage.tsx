@@ -13,6 +13,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { guardApi } from '../../api/guard';
+import { logger } from '../../lib/consoleLogger';
 
 // Event types matching backend
 type EventType =
@@ -70,6 +71,11 @@ export function LiveActivityPage() {
 
   const eventListRef = useRef<HTMLDivElement>(null);
   const eventIdCounter = useRef(0);
+
+  useEffect(() => {
+    logger.componentMount('LiveActivityPage');
+    return () => logger.componentUnmount('LiveActivityPage');
+  }, []);
 
   // Simulate live events for demo (in production, use SSE/WebSocket)
   const { data: snapshot } = useQuery({

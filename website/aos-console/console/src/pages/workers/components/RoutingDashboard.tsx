@@ -1,8 +1,10 @@
 // RoutingDashboard Component - Left Bottom Pane
 // Shows CARE routing decisions, agent selection, and strategy graph
 
+import { useEffect } from 'react';
 import { Network, Zap, TrendingUp, Shield } from 'lucide-react';
 import type { RoutingDecisionEvent, DriftEvent } from '@/types/worker';
+import { logger } from '../../../lib/consoleLogger';
 import clsx from 'clsx';
 
 interface RoutingDashboardProps {
@@ -50,6 +52,11 @@ export function RoutingDashboard({
   driftEvents,
   artifacts,
 }: RoutingDashboardProps) {
+  useEffect(() => {
+    logger.componentMount('RoutingDashboard');
+    return () => logger.componentUnmount('RoutingDashboard');
+  }, []);
+
   const latestDecisions = routingDecisions.slice(-4);
   const avgComplexity =
     routingDecisions.length > 0

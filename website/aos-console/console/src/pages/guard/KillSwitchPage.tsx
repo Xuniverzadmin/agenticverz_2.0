@@ -98,6 +98,9 @@ export function KillSwitchPage() {
       setShowActivateModal(false);
       setActivationReason('');
     },
+    onError: (error) => {
+      logger.error('KILLSWITCH', 'Failed to activate kill switch', error);
+    },
   });
 
   const deactivateMutation = useMutation({
@@ -105,6 +108,9 @@ export function KillSwitchPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guard'] });
       setShowDeactivateModal(false);
+    },
+    onError: (error) => {
+      logger.error('KILLSWITCH', 'Failed to deactivate kill switch', error);
     },
   });
 

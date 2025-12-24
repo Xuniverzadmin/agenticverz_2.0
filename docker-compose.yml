@@ -38,6 +38,11 @@ services:
       AOS_API_KEY: ${AOS_API_KEY}
       # Operator Console Auth (M22 GA Lock)
       AOS_OPERATOR_TOKEN: ${AOS_OPERATOR_TOKEN:-}
+      # Category 2 Auth: Separate Console/FOPS authentication
+      AOS_FOPS_KEY: ${AOS_FOPS_KEY:-}
+      AOS_JWT_SECRET: ${AOS_JWT_SECRET:-}
+      CONSOLE_JWT_SECRET: ${CONSOLE_JWT_SECRET:-${AOS_JWT_SECRET:-}}
+      FOPS_JWT_SECRET: ${FOPS_JWT_SECRET:-${AOS_JWT_SECRET:-}}
       # Clerk Auth (M8)
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       CLERK_ISSUER_URL: ${CLERK_ISSUER_URL:-}

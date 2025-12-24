@@ -437,3 +437,68 @@ class AuditLog(SQLModel, table=True):
 
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
+
+
+# ============== FOUNDER ACTIONS (M29 Category 6) ==============
+
+
+class FounderAction(SQLModel, table=True):
+    """
+    Immutable record of founder actions on tenants/keys/incidents.
+
+    M29 Category 6: Founder Action Paths
+
+    Invariants:
+    - Every action MUST have an audit record (no audit → API fails)
+    - Actions are immutable (only reversed_at/reversed_by can be updated)
+    - OVERRIDE_INCIDENT is not reversible
+    - FREEZE_TENANT and THROTTLE_TENANT are mutually exclusive
+    """
+
+    __tablename__ = "founder_actions"
+
+    # Primary key
+    id: str = Field(default_factory=generate_uuid, primary_key=True)
+
+    # Action type
+    action_type: str = Field(
+        max_length=50,
+        description="FREEZE_TENANT, THROTTLE_TENANT, FREEZE_API_KEY, OVERRIDE_INCIDENT, UNFREEZE_TENANT, UNTHROTTLE_TENANT, UNFREEZE_API_KEY",
+    )
+
+    # Target
+    target_type: str = Field(max_length=20, description="TENANT, API_KEY, INCIDENT")
+    target_id: str = Field(max_length=100, description="ID of target")
+    target_name: Optional[str] = Field(
+        default=None, max_length=200, description="Display name of target at time of action"
+    )
+
+    # Reason (required for audit)
+    reason_code: str = Field(
+        max_length=50, description="COST_ANOMALY, POLICY_VIOLATION, RETRY_LOOP, ABUSE_SUSPECTED, FALSE_POSITIVE, OTHER"
+    )
+    reason_note: Optional[str] = Field(default=None, max_length=500, description="Optional free-text explanation")
+
+    # Source incident (if action was triggered from incident view)
+    source_incident_id: Optional[str] = Field(
+        default=None, max_length=100, description="Incident ID that triggered this action"
+    )
+
+    # Founder who took action (required)
+    founder_id: str = Field(max_length=100, description="ID of founder")
+    founder_email: str = Field(max_length=200, description="Email of founder")
+    mfa_verified: bool = Field(default=False, description="Whether MFA was verified")
+
+    # Timestamps
+    applied_at: datetime = Field(default_factory=utc_now, description="When action was applied")
+    reversed_at: Optional[datetime] = Field(default=None, description="When action was reversed (null if still active)")
+    reversed_by_action_id: Optional[str] = Field(default=None, max_length=100, description="ID of the reversal action")
+
+    # Status tracking
+    is_active: bool = Field(default=True, description="Whether action is currently in effect")
+    is_reversible: bool = Field(default=True, description="Whether action can be reversed (OVERRIDE_INCIDENT = False)")
+
+    @property
+    def is_reversal(self) -> bool:
+        """Check if this action is a reversal action."""
+        return self.action_type in ("UNFREEZE_TENANT", "UNTHROTTLE_TENANT", "UNFREEZE_API_KEY")
