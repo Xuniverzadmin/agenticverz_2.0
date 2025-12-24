@@ -1,9 +1,9 @@
-# PIN-128: Master Plan - M25 to M30
+# PIN-128: Master Plan - M25 to M31
 
 **Status:** STRATEGIC
 **Category:** Planning / Architecture / Roadmap
 **Created:** 2025-12-22
-**Related PINs:** PIN-123, PIN-124, PIN-095, PIN-033
+**Related PINs:** PIN-123, PIN-124, PIN-095, PIN-033, PIN-154
 
 ---
 
@@ -293,20 +293,22 @@ Only after all pillars are integrated:
 | M28 | Unified Console | 1.5 weeks | M25-M27 | P1 |
 | M29 | Quality Evidence Pack | 3 weeks | M28 | P2 (conditional) |
 | M30 | Trust Badge | 1 week | M28-M29 | P2 (conditional) |
+| M31 | Key Safety Contract | 2 weeks | M22, M26/27 | P1 (trust foundation) |
 
 **Total (P0 only):** 6 weeks
-**Total (P0+P1):** 7.5 weeks
-**Total (all):** 11.5 weeks
+**Total (P0+P1):** 9.5 weeks
+**Total (all):** 13.5 weeks
 
 ---
 
 ## Decision Framework
 
-### Build Now (M25-M28)
+### Build Now (M25-M28, M31)
 - Pillar Integration - core value proposition
 - Cost Intelligence - 60% exists, universal pain
 - Cost → Loop - completes feedback cycle
 - Unified Console - marketable as "one product"
+- Key Safety Contract - trust foundation for proxy customers
 
 ### Build If Asked (M29-M30)
 - Quality Evidence Pack - only if 3+ customers ask "Is our AI accurate?"
@@ -350,5 +352,6 @@ M28: Unify the console → one product, four views
 
 | Date | Change |
 |------|--------|
+| 2025-12-24 | Added M31 Key Safety Contract to roadmap (P1, 2 weeks, trust foundation) |
 | 2025-12-24 | M29 renamed: "Quality Score" → "Quality Evidence Pack" per expert review |
 | 2025-12-22 | Created PIN-128 with M25-M30 master plan |
