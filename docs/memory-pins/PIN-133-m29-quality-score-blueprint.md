@@ -15,6 +15,8 @@ M29 adds the **Quality Evidence Pack** to the Control Center - a structured coll
 > **Why "Evidence Pack" not "Score"?**
 > A single "quality score" implies false precision. What customers actually need is an *evidence packet*: multiple signals (user feedback, LLM evaluation, safety checks) bundled together to support audit, compliance, or debugging. The name reflects the true value: defensible evidence, not a magic number.
 
+> **⚠️ This feature MUST NOT be marketed as accuracy certification or performance guarantee.**
+
 **Key Deliverables:**
 1. User Feedback API (thumbs up/down, ratings, comments)
 2. LLM-as-Judge Evaluation System
