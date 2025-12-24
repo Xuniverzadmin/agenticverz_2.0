@@ -7,14 +7,19 @@ Provides:
 - Quota enforcement before request processing
 - Usage tracking after request completion
 - Rate limiting per key/tenant
+- TenantTier integration (M32)
 """
 
 import hashlib
 import logging
-from typing import Optional, Tuple
+import os
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from sqlmodel import Session, select
+
+if TYPE_CHECKING:
+    from .tier_gating import TenantTier
 
 logger = logging.getLogger("nova.auth.tenant")
 
@@ -73,6 +78,29 @@ class TenantContext:
         if not self.allowed_workers:
             return True  # Empty = all allowed
         return worker_id in self.allowed_workers
+
+    @property
+    def tier(self) -> "TenantTier":
+        """
+        Get the tenant's tier from their plan.
+
+        Resolves legacy plan names (free, pro, enterprise) and new tier names
+        (observe, react, prevent, assist, govern) to TenantTier enum.
+        """
+        from .tier_gating import resolve_tier
+
+        return resolve_tier(self.plan)
+
+    def has_feature(self, feature: str) -> bool:
+        """
+        Check if tenant has access to a feature based on their tier.
+
+        Uses CURRENT_PHASE to determine soft/hard gating.
+        """
+        from .tier_gating import check_tier_access
+
+        result = check_tier_access(feature, self.tier)
+        return result.allowed
 
     def to_dict(self) -> dict:
         """Convert to dictionary for logging/serialization."""
@@ -336,8 +364,6 @@ async def require_worker_access(worker_id: str):
 
 
 # ============== Optional: Legacy Fallback ==============
-
-import os
 
 _LEGACY_API_KEY = os.getenv("AOS_API_KEY", "")
 _USE_LEGACY_AUTH = os.getenv("AOS_USE_LEGACY_AUTH", "false").lower() == "true"

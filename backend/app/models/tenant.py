@@ -6,15 +6,19 @@ Provides:
 - Tenant memberships with roles
 - API key generation and validation
 - Subscription/billing support
+- TenantTier integration (M32)
 """
 
 import hashlib
 import secrets
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field, SQLModel
+
+if TYPE_CHECKING:
+    from ..auth.tier_gating import TenantTier
 
 
 def utc_now() -> datetime:
@@ -84,6 +88,49 @@ class Tenant(SQLModel, table=True):
         self.runs_this_month += 1
         self.tokens_this_month += tokens
         self.updated_at = utc_now()
+
+    @property
+    def tier(self) -> "TenantTier":
+        """
+        Get the tenant's tier from their plan.
+
+        Resolves legacy plan names (free, pro, enterprise) and new tier names
+        (observe, react, prevent, assist, govern) to TenantTier enum.
+        """
+        from ..auth.tier_gating import resolve_tier
+
+        return resolve_tier(self.plan)
+
+    @property
+    def tier_marketing_name(self) -> str:
+        """Get the marketing name for the tenant's tier."""
+        from ..auth.tier_gating import PRICE_ANCHORS
+
+        return PRICE_ANCHORS.get(self.tier, {}).get("marketing_name", self.plan)
+
+    @property
+    def retention_days(self) -> int:
+        """Get log retention days based on tier."""
+        from ..auth.tier_gating import PRICE_ANCHORS
+
+        return PRICE_ANCHORS.get(self.tier, {}).get("retention_days", 7)
+
+    def has_feature(self, feature: str) -> bool:
+        """
+        Check if tenant has access to a feature based on their tier.
+
+        Uses CURRENT_PHASE to determine soft/hard gating.
+        """
+        from ..auth.tier_gating import check_tier_access
+
+        result = check_tier_access(feature, self.tier)
+        return result.allowed
+
+    def get_available_features(self) -> list[str]:
+        """Get list of all features available to this tenant."""
+        from ..auth.tier_gating import get_tier_features
+
+        return get_tier_features(self.tier)
 
 
 # Plan quotas reference
