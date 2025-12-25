@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-25 (PIN-171 Phase 4B/4C Causal Binding & Customer Visibility)
+**Last Updated:** 2025-12-25 (PIN-172 Phase 5A Budget Enforcement)
 
 ---
 
@@ -193,6 +193,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-169](PIN-169-m7-m28-rbac-integration-plan.md) | **M7-M28 RBAC Integration Plan** | Architecture / Auth / Security | **🔍 SHADOW AUDIT ACTIVE** | 2025-12-25 |
 | [PIN-170](PIN-170-system-contract-governance-framework.md) | **System Contract Governance Framework** | Architecture / Governance | **🏗️ ACTIVE** | 2025-12-25 |
 | [PIN-171](PIN-171-phase-4b-4c-causal-binding-customer-visibility.md) | **Phase 4B/4C Causal Binding & Customer Visibility** | Contracts / Implementation | **✅ COMPLETE** | 2025-12-25 |
+| [PIN-172](PIN-172-phase-5a-budget-enforcement.md) | **Phase 5A Budget Enforcement** | Contracts / Behavioral Changes | **🏗️ IN PROGRESS** | 2025-12-25 |
 
 ---
 
@@ -962,6 +963,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-25 | **PIN-172 Phase 5A Budget Enforcement** - Started Phase 5A (first behavioral change). Step 1 complete: choke point identified (runner.py step execution loop). Critical correction: budget mode must come from PRE-RUN, not ENV var. Steps 2-6 pending. |
 | 2025-12-25 | **PIN-171 Phase 4B/4C Causal Binding & Customer Visibility** - Completed causal binding (request_id→run_id), customer PRE-RUN declaration, acknowledgement gate, and outcome reconciliation. Addresses PIN-167 visibility gaps. |
 | 2025-12-25 | **PIN-170 System Contract Governance Framework** - Created via memory_trail. |
 | 2025-12-25 | **PIN-169 SHADOW AUDIT VERIFIED** - Rebuilt containers, confirmed logging working (shadow_audit_allowed, shadow_audit_would_block). Observation period: 2025-12-25 15:36 UTC → 2025-12-27 15:36 UTC. 202 auth tests passing. Next: check rollout gates after 24-48h. |
