@@ -29,6 +29,9 @@ from prometheus_client import Counter, Gauge, Histogram
 
 logger = logging.getLogger("nova.memory.service")
 
+# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
+from app.contracts.decisions import emit_memory_decision
+
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -65,7 +68,9 @@ MEMORY_CONTEXT_INJECTION_FAILURES = Counter(
 
 MEMORY_DRIFT_DETECTED = Counter("drift_detected_total", "Memory drift detection events", ["tenant_id", "severity"])
 
-MEMORY_DRIFT_SCORE = Gauge("drift_score_current", "Current memory drift score", ["workflow_id"])
+# Import DRIFT_SCORE from drift_detector to avoid duplicate registration
+# The metric "drift_score_current" is already registered there
+from app.memory.drift_detector import DRIFT_SCORE as MEMORY_DRIFT_SCORE
 
 
 # =============================================================================
@@ -173,6 +178,18 @@ class MemoryService:
                         MEMORY_OPS.labels(operation="get", status="success", cache="hit").inc()
                         MEMORY_LATENCY.labels(operation="get").observe(time.time() - start_time)
                         self._audit("get", tenant_id, key, agent_id, cache_hit=True, success=True)
+
+                        # Phase 4B: Emit memory decision record
+                        emit_memory_decision(
+                            run_id=None,  # Memory queries happen before run assignment
+                            queried=True,
+                            matched=True,
+                            injected=True,  # Cache hit implies injection
+                            sources=["cache"],
+                            reason=f"Cache hit for {tenant_id}:{key}",
+                            tenant_id=tenant_id,
+                        )
+
                         return result
                     else:
                         MEMORY_CACHE_MISSES.labels(tenant_id=tenant_id).inc()
@@ -204,6 +221,18 @@ class MemoryService:
                     MEMORY_OPS.labels(operation="get", status="not_found", cache="miss").inc()
                     MEMORY_LATENCY.labels(operation="get").observe(time.time() - start_time)
                     self._audit("get", tenant_id, key, agent_id, cache_hit=False, success=True)
+
+                    # Phase 4B: Emit memory decision record - not found
+                    emit_memory_decision(
+                        run_id=None,
+                        queried=True,
+                        matched=False,
+                        injected=False,
+                        sources=None,
+                        reason=f"No match for {tenant_id}:{key}",
+                        tenant_id=tenant_id,
+                    )
+
                     return MemoryResult(
                         success=True, entry=None, cache_hit=False, latency_ms=(time.time() - start_time) * 1000
                     )
@@ -230,6 +259,17 @@ class MemoryService:
                 MEMORY_OPS.labels(operation="get", status="success", cache="miss").inc()
                 MEMORY_LATENCY.labels(operation="get").observe(time.time() - start_time)
                 self._audit("get", tenant_id, key, agent_id, cache_hit=False, success=True)
+
+                # Phase 4B: Emit memory decision record - DB hit
+                emit_memory_decision(
+                    run_id=None,
+                    queried=True,
+                    matched=True,
+                    injected=True,  # DB hit implies injection
+                    sources=["database"],
+                    reason=f"DB hit for {tenant_id}:{key}",
+                    tenant_id=tenant_id,
+                )
 
                 return MemoryResult(
                     success=True, entry=entry, cache_hit=False, latency_ms=(time.time() - start_time) * 1000

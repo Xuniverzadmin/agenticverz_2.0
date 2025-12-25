@@ -34,6 +34,7 @@ from .utils.concurrent_runs import ConcurrentRunsLimiter
 from .utils.idempotency import check_idempotency
 from .utils.input_sanitizer import sanitize_goal
 from .utils.rate_limiter import RateLimiter
+from .contracts.decisions import backfill_run_id_for_request
 
 # Initialize utilities
 rate_limiter = RateLimiter()
@@ -213,12 +214,46 @@ async def lifespan(app: FastAPI):
         logger.critical(f"STARTUP ABORTED - Missing required secrets: {e}")
         raise
 
-    # M7: Check if memory features are enabled
+    # =========================================================================
+    # SYSTEM MODE DECLARATIONS (Objective-1: Variable Truth Mapping)
+    # =========================================================================
+
+    # Event Publisher Mode
+    event_publisher = os.getenv("EVENT_PUBLISHER", "logging").lower()
+    logger.info(f"[BOOT] EVENT_PUBLISHER={event_publisher}")
+
+    # Initialize event publisher at startup to fail-fast
+    try:
+        from .events.publisher import get_publisher
+        publisher = get_publisher()  # This will raise if misconfigured
+    except Exception as e:
+        logger.critical(f"[BOOT] EventPublisher initialization FAILED: {e}")
+        raise
+
+    # Tenant Mode (M21)
+    tenant_mode = os.getenv("TENANT_MODE", "single").lower()
+    if tenant_mode not in ("single", "multi"):
+        raise RuntimeError(f"Invalid TENANT_MODE={tenant_mode}. Valid: single, multi")
+    logger.info(f"[BOOT] TENANT_MODE={tenant_mode} (M21 router {'enabled' if tenant_mode == 'multi' else 'disabled'})")
+
+    # CARE Scope (M17)
+    care_scope = os.getenv("CARE_SCOPE", "worker_only").lower()
+    if care_scope not in ("worker_only", "api_and_worker"):
+        raise RuntimeError(f"Invalid CARE_SCOPE={care_scope}. Valid: worker_only, api_and_worker")
+    logger.info(f"[BOOT] CARE_SCOPE={care_scope} (routing {'API+Worker' if care_scope == 'api_and_worker' else 'Worker only'})")
+
+    # =========================================================================
+    # M7: Memory Features
+    # =========================================================================
     memory_context_injection = os.getenv("MEMORY_CONTEXT_INJECTION", "false").lower() == "true"
     memory_post_update = os.getenv("MEMORY_POST_UPDATE", "false").lower() == "true"
     drift_detection_enabled = os.getenv("DRIFT_DETECTION_ENABLED", "false").lower() == "true"
     memory_fail_open_override = os.getenv("MEMORY_FAIL_OPEN_OVERRIDE", "false").lower() == "true"
     memory_features_enabled = memory_context_injection or memory_post_update or drift_detection_enabled
+    logger.info(
+        f"[BOOT] MEMORY_CONTEXT_INJECTION={memory_context_injection}, "
+        f"MEMORY_POST_UPDATE={memory_post_update}, DRIFT_DETECTION_ENABLED={drift_detection_enabled}"
+    )
 
     # Initialize M7 services - FAIL-FAST if memory features are enabled but modules unavailable
     try:
@@ -344,6 +379,8 @@ from .api.onboarding import router as onboarding_router  # M24 Customer Onboardi
 
 # M28: operator_router removed (PIN-145) - redundant with /ops/*
 from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
+from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
+from .api.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
 from .api.policy import router as policy_router
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
 from .api.rbac_api import router as rbac_router
@@ -384,6 +421,8 @@ app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v
 app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
 # M28: operator_router removed (PIN-145) - merged into /ops/*
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
+app.include_router(founder_timeline_router)  # Phase 4C-1 Founder Timeline (decision records)
+app.include_router(customer_visibility_router)  # Phase 4C-2 Customer Visibility (predictability)
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
 app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop
 app.include_router(cost_intelligence_router)  # /cost/* - M26 Cost Intelligence
@@ -789,6 +828,10 @@ async def post_goal(
     # Get tenant_id from request state (set by TenancyMiddleware)
     tenant_id = getattr(request.state, "tenant_id", None)
 
+    # Phase 4B Extension: Generate request_id for causal binding
+    # This ID links pre-run decisions (budget, policy) to the eventual run
+    request_id = str(uuid.uuid4())[:16]
+
     # 1. Idempotency check
     if payload.idempotency_key:
         result = check_idempotency(payload.idempotency_key, tenant_id, agent_id)
@@ -847,8 +890,9 @@ async def post_goal(
         raise HTTPException(status_code=429, detail="Agent has too many concurrent runs. Try again later.")
 
     # 5. Budget pre-check with full enforcement
+    # Pass request_id for causal binding (Phase 4B extension)
     estimated_cost = int(os.getenv("DEFAULT_EST_COST_CENTS", "50"))
-    budget_result = enforce_budget(agent_id, estimated_cost)
+    budget_result = enforce_budget(agent_id, estimated_cost, request_id=request_id)
     if not budget_result.allowed:
         # Release concurrency slot since we're rejecting
         concurrent_limiter.release(concurrency_key, slot_token)
@@ -885,6 +929,10 @@ async def post_goal(
         session.refresh(run)
 
         run_id = run.id
+
+    # Phase 4B Extension: Backfill run_id for pre-run decisions
+    # This binds budget/policy decisions made before run creation
+    backfill_run_id_for_request(request_id, run_id)
 
     logger.info(
         "run_queued",

@@ -43,6 +43,9 @@ from .models import (
 )
 from .probes import get_capability_prober
 
+# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
+from app.contracts.decisions import emit_routing_decision
+
 
 class RateLimiter:
     """
@@ -1355,6 +1358,27 @@ class CAREEngine:
 
         # Persist to audit table (non-blocking)
         await self._persist_decision(decision, request)
+
+        # Phase 4B: Emit decision record (DECISION_RECORD_CONTRACT v0.2)
+        # Rule: Emit records where decisions already happen. No logic changes.
+        # Note: request_id is first-class for causal binding. run_id will be backfilled.
+        emit_routing_decision(
+            run_id=None,  # CARE routes before run creation
+            routed=decision.routed,
+            selected_agent=decision.selected_agent_id,
+            eligible_agents=decision.eligible_agents,
+            rejection_reason=decision.error if not decision.routed else None,
+            tenant_id=request.tenant_id,
+            request_id=decision.request_id,  # First-class causal key
+            details={
+                "confidence_score": decision.confidence_score,
+                "confidence_blocked": decision.confidence_blocked,
+                "confidence_enforced_fallback": decision.confidence_enforced_fallback,
+                "degraded": decision.degraded,
+                "fallback_agents": decision.fallback_agents,
+                "stage_latencies": decision.stage_latencies,
+            },
+        )
 
         return decision
 

@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-24 (PIN-159 M32 Numeric Pricing Anchors & Currency Model)
+**Last Updated:** 2025-12-25 (PIN-171 Phase 4B/4C Causal Binding & Customer Visibility)
 
 ---
 
@@ -181,6 +181,18 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-157](PIN-157-numeric-pricing-anchors.md) | **Numeric Pricing Anchors** | Pricing / Strategy / Phase A | **ACTIVE** | 2025-12-24 |
 | [PIN-158](PIN-158-m32-tier-gating-implementation.md) | **M32 Tier Gating Implementation** | Authentication / Tier Gating | **✅ COMPLETE** | 2025-12-24 |
 | [PIN-159](PIN-159-m32-numeric-pricing-anchors-currency-model.md) | **M32 Numeric Pricing Anchors & Currency Model** | Pricing / Strategy | **✅ COMPLETE** | 2025-12-24 |
+| [PIN-160](PIN-160-m0-m27-utilization-audit-disposition.md) | **M0-M27 Utilization Audit & Disposition** | Architecture / Milestone Audit | **ACTIVE** | 2025-12-24 |
+| [PIN-161](PIN-161-p2fc-partial-to-full-consume.md) | **P2FC — Partial to Full Consume** | Architecture / Milestone Promotion | **✅ COMPLETE** | 2025-12-24 |
+| [PIN-162](PIN-162-p2fc-4-scoped-execution-gate.md) | **P2FC-4 Scoped Execution Gate** | Architecture / Recovery / Safety | **✅ COMPLETE** | 2025-12-24 |
+| [PIN-163](PIN-163-m0-m28-utilization-report.md) | **M0-M28 Utilization Report - Four Pillar Analysis** | Architecture / Audit / Verification | **✅ COMPLETE** | 2025-12-25 |
+| [PIN-164](PIN-164-system-mental-model-pillar-interactions.md) | **System Mental Model - Pillar Interactions** | Architecture / Mental Model / System Design | **📚 REFERENCE** | 2025-12-25 |
+| [PIN-165](PIN-165-pillar-definition-reconciliation.md) | **Pillar Definition Reconciliation** | Architecture / Mental Model / Reconciliation | **📚 REFERENCE** | 2025-12-25 |
+| [PIN-166](PIN-166-m10-validation-auth-fix.md) | **M10 Services Health & Fixes** | Bug Fix / Authentication / Observability / Operations | **✅ COMPLETE** | 2025-12-25 |
+| [PIN-167](PIN-167-final-review-tasks-1.md) | **Final Review Tasks - Phase 1** | Operations / Final Review / Gap Remediation | **🧪 READY FOR HUMAN TESTING** | 2025-12-25 |
+| [PIN-168](PIN-168-m0-m28-human-test-scenarios.md) | **M0-M28 Human Test Scenarios** | Testing / Human Validation / M0-M28 Coverage | **READY FOR EXECUTION** | 2025-12-25 |
+| [PIN-169](PIN-169-m7-m28-rbac-integration-plan.md) | **M7-M28 RBAC Integration Plan** | Architecture / Auth / Security | **🔍 SHADOW AUDIT ACTIVE** | 2025-12-25 |
+| [PIN-170](PIN-170-system-contract-governance-framework.md) | **System Contract Governance Framework** | Architecture / Governance | **🏗️ ACTIVE** | 2025-12-25 |
+| [PIN-171](PIN-171-phase-4b-4c-causal-binding-customer-visibility.md) | **Phase 4B/4C Causal Binding & Customer Visibility** | Contracts / Implementation | **✅ COMPLETE** | 2025-12-25 |
 
 ---
 
@@ -950,6 +962,16 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-25 | **PIN-171 Phase 4B/4C Causal Binding & Customer Visibility** - Completed causal binding (request_id→run_id), customer PRE-RUN declaration, acknowledgement gate, and outcome reconciliation. Addresses PIN-167 visibility gaps. |
+| 2025-12-25 | **PIN-170 System Contract Governance Framework** - Created via memory_trail. |
+| 2025-12-25 | **PIN-169 SHADOW AUDIT VERIFIED** - Rebuilt containers, confirmed logging working (shadow_audit_allowed, shadow_audit_would_block). Observation period: 2025-12-25 15:36 UTC → 2025-12-27 15:36 UTC. 202 auth tests passing. Next: check rollout gates after 24-48h. |
+| 2025-12-25 | **PIN-169 SHADOW AUDIT WIRED** - Phase 3 complete: (1) Shadow audit wired into middleware dispatch(), (2) ShadowAuditAggregator for "who would be blocked" queries, (3) Machine role locked down (read-only memory_pin, explicit denials for killswitch/tenant/rbac), (4) 202 tests passing, (5) Rollout gates ready for 48h observation period before Phase 4 enforcement. |
+| 2025-12-25 | **PIN-169 M7-M28 RBAC Integration Plan (REVISED)** - Hardened based on security review: (1) One-way role mapping (M7 canonical), (2) X-AOS-Key = identity not auth, (3) Founder isolation guards, (4) 14 resources, (5) Phase 2.5 key reclassification, (6) Shadow audit before enforcement, (7) Clean break for Phase 4. Strategic verdict: platform maturity inflection point. |
+| 2025-12-25 | **PIN-168 M0-M28 Human Test Scenarios** - 16 additional test scenarios covering M0-M28 gaps. Priority P0-P3. Covers Multi-Skill, RBAC, Circuit Breaker, Checkpoint, Integration Loop, Event Streaming, Killswitch, Tenant Isolation, Cost Anomaly, Memory TTL, Agent Health, Trace Retrieval. |
+| 2025-12-25 | **PIN-167 Objective-4 Ready** - Human Test Script added with 6 scenarios, exit criteria, observation template. Awaiting human tester. |
+| 2025-12-25 | **PIN-167 Final Review Tasks Phase 2** - Redis adapter implemented, TENANT_MODE/CARE_SCOPE declared, all acceptance tests pass. Obj 1-4 complete. |
+| 2025-12-25 | **PIN-166 M10 Services Health & Fixes** - Fixed auth, SQL syntax, reduced timer frequencies (2x/day). |
+| 2025-12-25 | **PIN-165 Pillar Definition Reconciliation** - Product vs Infrastructure pillar view reconciliation. |
 | 2025-12-24 | **PIN-159 M32 Numeric Pricing Anchors & Currency Model** - Created via memory_trail. |
 | 2025-12-24 | **PIN-158 M32 Tier Gating Implementation** - Created via memory_trail. |
 | 2025-12-24 | **PIN-157 Numeric Pricing Anchors** - Concrete price points for Phase A: $0 (OBSERVE, Currency B), $9 (REACT, Currency B>A), $199 (PREVENT, Currency A+B), $1.5k-$5k (ASSIST/GOVERN, Currency A, custom quote). Magic $9 for impulse buy, $199 signals infrastructure not tool. Phase transition criteria defined. Complete feature→tier mapping (60+ features across 5 tiers). |

@@ -15,6 +15,9 @@ from ..db import Agent, engine
 
 logger = logging.getLogger("nova.utils.budget_tracker")
 
+# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
+from app.contracts.decisions import emit_budget_decision
+
 # Alert threshold percentage (default 80%)
 BUDGET_ALERT_THRESHOLD = float(os.getenv("BUDGET_ALERT_THRESHOLD", "0.8"))
 
@@ -154,6 +157,7 @@ class BudgetTracker:
         estimated_cost_cents: int,
         model: Optional[str] = None,
         run_id: Optional[str] = None,
+        request_id: Optional[str] = None,
     ) -> BudgetCheckResult:
         """Full budget enforcement with all protection layers.
 
@@ -162,6 +166,7 @@ class BudgetTracker:
             estimated_cost_cents: Estimated cost of the operation
             model: Optional model name for per-model limits
             run_id: Optional run ID for per-run tracking
+            request_id: Optional request ID for causal binding (Phase 4B extension)
 
         Returns:
             BudgetCheckResult with detailed breach information
@@ -175,6 +180,18 @@ class BudgetTracker:
                     "estimated_cost": estimated_cost_cents,
                     "limit": PER_RUN_MAX_CENTS,
                 },
+            )
+            # Phase 4B: Emit budget decision record - blocked (per-run)
+            emit_budget_decision(
+                run_id=run_id,
+                budget_requested=estimated_cost_cents,
+                budget_available=PER_RUN_MAX_CENTS,
+                enforcement="hard",
+                simulation_feasible=False,
+                proceeded=False,
+                reason=f"Per-run limit exceeded: {estimated_cost_cents}c > {PER_RUN_MAX_CENTS}c",
+                tenant_id="default",
+                request_id=request_id,  # Causal binding key
             )
             return BudgetCheckResult(
                 allowed=False,
@@ -249,6 +266,18 @@ class BudgetTracker:
             return BudgetCheckResult(allowed=True)  # No budget configured
 
         if status.is_exhausted:
+            # Phase 4B: Emit budget decision record - blocked (exhausted)
+            emit_budget_decision(
+                run_id=run_id,
+                budget_requested=estimated_cost_cents,
+                budget_available=0,
+                enforcement="hard",
+                simulation_feasible=False,
+                proceeded=False,
+                reason="Budget exhausted",
+                tenant_id="default",
+                request_id=request_id,  # Causal binding key
+            )
             return BudgetCheckResult(
                 allowed=False,
                 reason="Budget exhausted",
@@ -276,6 +305,19 @@ class BudgetTracker:
                     "remaining_cents": status.remaining_cents,
                 },
             )
+
+        # Phase 4B: Emit budget decision record - allowed
+        emit_budget_decision(
+            run_id=run_id,
+            budget_requested=estimated_cost_cents,
+            budget_available=status.remaining_cents if status else estimated_cost_cents,
+            enforcement="soft",
+            simulation_feasible=True,
+            proceeded=True,
+            reason="Budget check passed all limits",
+            tenant_id="default",
+            request_id=request_id,  # Causal binding key
+        )
 
         return BudgetCheckResult(allowed=True)
 
@@ -455,10 +497,15 @@ def enforce_budget(
     estimated_cost_cents: int,
     model: Optional[str] = None,
     run_id: Optional[str] = None,
+    request_id: Optional[str] = None,
 ) -> BudgetCheckResult:
     """Full budget enforcement with all protection layers.
 
     This is the main entry point for Phase 5 budget protection.
     Checks: per-run, per-model, per-day, and total budget limits.
+
+    Phase 4B Extension: request_id for causal binding of pre-run decisions.
     """
-    return get_budget_tracker().enforce_budget(agent_id, estimated_cost_cents, model, run_id)
+    return get_budget_tracker().enforce_budget(
+        agent_id, estimated_cost_cents, model, run_id, request_id
+    )

@@ -47,6 +47,9 @@ from app.policy.models import (
 
 logger = logging.getLogger("nova.policy.engine")
 
+# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
+from app.contracts.decisions import emit_policy_decision
+
 
 # =============================================================================
 # Configuration
@@ -255,6 +258,28 @@ class PolicyEngine:
                 "evaluation_ms": evaluation_ms,
             },
         )
+
+        # Phase 4B: Emit policy decision record (DECISION_RECORD_CONTRACT v0.2)
+        # Rule: Emit records where decisions already happen. No logic changes.
+        if not dry_run:
+            # Determine severity from violations (highest severity wins)
+            severity = "info"
+            if violations:
+                max_sev = max(v.severity for v in violations)
+                if max_sev >= 0.5:
+                    severity = "error"
+                elif max_sev >= 0.3:
+                    severity = "warning"
+
+            emit_policy_decision(
+                run_id=None,  # Policy evaluated before run assignment
+                policy_id=f"evaluation:{request.request_id}",
+                evaluated=True,
+                violated=decision == PolicyDecision.BLOCK,
+                severity=severity,
+                reason=decision_reason,
+                tenant_id=request.tenant_id or "default",
+            )
 
         return result
 

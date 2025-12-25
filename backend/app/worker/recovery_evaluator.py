@@ -25,6 +25,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("nova.worker.recovery_evaluator")
 
+# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
+from app.contracts.decisions import emit_recovery_decision
+
 # Configuration
 EVALUATOR_ENABLED = os.getenv("RECOVERY_EVALUATOR_ENABLED", "true").lower() == "true"
 AUTO_EXECUTE = os.getenv("RECOVERY_AUTO_EXECUTE", "false").lower() == "true"
@@ -292,6 +295,18 @@ class RecoveryEvaluator:
             except Exception:
                 pass
 
+            # Phase 4B: Emit recovery decision record (DECISION_RECORD_CONTRACT v0.2)
+            # Rule: Emit records where decisions already happen. No logic changes.
+            emit_recovery_decision(
+                run_id=event.run_id,
+                evaluated=True,
+                triggered=auto_executed,
+                action=suggested_action,
+                candidates_count=1 if candidate_id else 0,
+                reason=f"Confidence: {combined_confidence:.2f}, action: {suggested_action or 'none'}",
+                tenant_id=event.tenant_id or "default",
+            )
+
             return EvaluationOutcome(
                 failure_match_id=event.failure_match_id,
                 candidate_id=candidate_id,
@@ -305,6 +320,17 @@ class RecoveryEvaluator:
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             logger.error(f"Evaluation error: {e}", exc_info=True)
+
+            # Phase 4B: Emit recovery decision record for error case
+            emit_recovery_decision(
+                run_id=event.run_id,
+                evaluated=False,
+                triggered=False,
+                action=None,
+                candidates_count=0,
+                reason=f"Evaluation error: {str(e)}",
+                tenant_id=event.tenant_id or "default",
+            )
 
             return EvaluationOutcome(
                 failure_match_id=event.failure_match_id,
