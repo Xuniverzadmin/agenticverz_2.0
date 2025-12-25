@@ -1,7 +1,10 @@
 # System Contracts Index
 
 **Created:** 2025-12-25
-**Status:** PHASE 4C-1 IN PROGRESS - Founder consumption
+**Status:** FROZEN - `contracts-stable-v1` (2025-12-25)
+
+> **LOCK NOTICE:** All contracts are frozen as of Phase 4 completion.
+> Phase 5 implementation must not modify contracts without explicit delta proposal.
 
 ---
 

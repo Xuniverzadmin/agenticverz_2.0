@@ -1,9 +1,12 @@
 # DECISION RECORD CONTRACT
 
-**Version:** 0.2 (amended)
+> **FROZEN:** This contract is locked as of `contracts-stable-v1` (2025-12-25).
+> No modifications without delta proposal and founder review.
+
+**Version:** 0.2
 **Created:** 2025-12-25
 **Amended:** 2025-12-25
-**Status:** EVOLVED - Two deltas incorporated from M0-M27 classification
+**Status:** FROZEN - Phase 4 complete (includes decision_source/trigger deltas)
 
 ---
 

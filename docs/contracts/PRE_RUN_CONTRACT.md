@@ -1,8 +1,11 @@
 # PRE-RUN CONTRACT
 
-**Version:** 0.1 (skeletal)
+> **FROZEN:** This contract is locked as of `contracts-stable-v1` (2025-12-25).
+> No modifications without delta proposal and founder review.
+
+**Version:** 0.1
 **Created:** 2025-12-25
-**Status:** DRAFT - Obligation definition only
+**Status:** FROZEN - Phase 4 complete
 
 ---
 
