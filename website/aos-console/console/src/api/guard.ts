@@ -227,6 +227,16 @@ export interface DemoSeedResponse {
   };
 }
 
+// M16: Strategy Health for Guard Console widget
+export interface StrategyHealth {
+  total_agents: number;
+  healthy_count: number;
+  approaching_bounds_count: number;
+  exceeded_count: number;
+  status: 'healthy' | 'approaching' | 'exceeded' | 'no_agents' | 'unknown' | 'error';
+  last_evaluated_at: string | null;
+}
+
 // ============== API FUNCTIONS ==============
 
 export const guardApi = {
@@ -405,6 +415,28 @@ export const guardApi = {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
+  },
+
+  // ============== M16 STRATEGY HEALTH ==============
+
+  // Get aggregated strategy health for widget
+  getStrategyHealth: async (): Promise<StrategyHealth> => {
+    try {
+      const response = await apiClient.get('/api/v1/sba/health', {
+        headers: { 'X-Tenant-ID': getTenantId() }
+      });
+      return response.data;
+    } catch {
+      // Return safe fallback if SBA not available
+      return {
+        total_agents: 0,
+        healthy_count: 0,
+        approaching_bounds_count: 0,
+        exceeded_count: 0,
+        status: 'unknown',
+        last_evaluated_at: null,
+      };
+    }
   },
 };
 

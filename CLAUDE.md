@@ -1,6 +1,70 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-22
+**Last Updated:** 2025-12-25
+
+---
+
+## SYSTEM CONTRACTS (GOVERNANCE FRAMEWORK)
+
+**Status:** PHASE 3 COMPLETE - Contracts locked, M0-M27 classified
+
+### Contract-First Development
+
+All future work must align to these four contracts:
+
+| Order | Contract | Question |
+|-------|----------|----------|
+| 1 | PRE-RUN | What must the system declare before execution starts? |
+| 2 | CONSTRAINT | What constraints apply, and how are they enforced? |
+| 3 | DECISION | What decisions must be surfaced when the system chooses a path? |
+| 4 | OUTCOME | How do we reconcile what happened with what was promised? |
+
+### Contract Gate Rule (MANDATORY)
+
+Before any new scenario or feature:
+
+```
+1. Which contract does this exercise?
+2. Which obligation does it test?
+3. Is this a new obligation or an existing one?
+```
+
+If these cannot be answered, the work is rejected.
+
+### No Code Without Contract
+
+> **No code, no UI, no refactor is allowed unless you can name the contract obligation it satisfies.**
+
+### Contract Files
+
+| File | Purpose |
+|------|---------|
+| `docs/contracts/INDEX.md` | Contract index and status |
+| `docs/contracts/PRE_RUN_CONTRACT.md` | Intent declarations |
+| `docs/contracts/CONSTRAINT_DECLARATION_CONTRACT.md` | Constraint enforcement |
+| `docs/contracts/DECISION_RECORD_CONTRACT.md` | Decision surfacing |
+| `docs/contracts/OUTCOME_RECONCILIATION_CONTRACT.md` | Outcome verification |
+| `docs/contracts/COVERAGE_MATRIX.md` | Ledger-to-contract mapping |
+| `docs/contracts/M0_M27_CLASSIFICATION.md` | Milestone classification |
+| `docs/contracts/OBLIGATION_DELTAS.md` | Proposed contract evolutions |
+
+### Phase Status
+
+| Phase | Status |
+|-------|--------|
+| Phase 1: Scenario Extraction | COMPLETE (13 entries) |
+| Phase 2: Contract Drafting | COMPLETE (4 contracts) |
+| Phase 3: M0-M27 Mapping | COMPLETE (27 milestones, 2 deltas) |
+| Phase 4: Implementation | READY |
+
+### Key Metrics
+
+- 93% of M0-M27 collapsed into existing obligations
+- 2 new obligations identified (decision_source, decision_trigger)
+- 13 consecutive milestones without new obligation (stabilized)
+
+**Reference:** `docs/contracts/INDEX.md`
+**Ledger:** `docs/SYSTEM_TRUTH_LEDGER.md` (13 entries)
 
 ---
 
@@ -55,28 +119,25 @@ Then read in order:
 
 ## Current Phase
 
-**M7 Complete → M8 Next**
+**M0-M28 Complete → Contract Governance Active**
 
 ### Milestone Status
 
 | Milestone | Status |
 |-----------|--------|
-| M0-M7 | ✅ COMPLETE |
-| M8: Demo + SDK + Auth | ⏳ NEXT |
-| M9: Failure Persistence | Pending |
-| M10: Recovery Engine | Pending |
-| M11: Skill Expansion | Pending |
-| M12: Beta Rollout | Pending |
-| M13: Console UI | Pending |
-| M14+: Self-Improving | Future |
+| M0-M28 | ✅ COMPLETE (94% utilization score) |
+| Contract Framework | ✅ COMPLETE (Phase 1-3) |
+| Phase 4: Implementation | ⏳ READY |
 
-### M8 Priorities (in order)
+### Contract-Driven Development
 
-1. **Auth Integration** - Wire real auth provider (BLOCKING)
-2. **SDK Packaging** - PyPI + npm publish
-3. **Demo Productionization** - Screencasts, examples
+All future work follows the contract framework:
+1. Identify which contract the work exercises
+2. Verify obligation coverage
+3. Propose delta if new obligation needed
+4. Implement only after contract alignment
 
-See `agentiverz_mn/` for detailed checklists.
+See `docs/contracts/INDEX.md` for contract status.
 
 ---
 
@@ -116,7 +177,8 @@ See `agentiverz_mn/` for detailed checklists.
 │   ├── python/              # Python SDK (10/10 tests, needs packaging)
 │   └── js/                  # JS SDK (needs types, machine-native methods)
 ├── docs/
-│   ├── memory-pins/         # 112+ PINs (project memory)
+│   ├── memory-pins/         # 168+ PINs (project memory)
+│   ├── contracts/           # System contracts (governance framework)
 │   ├── test_reports/        # Test reports + REGISTER.md
 │   └── API_WORKFLOW_GUIDE.md
 ├── scripts/
@@ -205,12 +267,12 @@ RBAC_ENFORCE=true
 
 | PIN | Topic | Status |
 |-----|-------|--------|
-| PIN-033 | M8-M14 Machine-Native Realignment | ACTIVE (current roadmap) |
-| PIN-032 | M7 RBAC Enablement | ENFORCED |
-| PIN-009 | External Rollout (Auth Blocker) | BLOCKING M8 |
+| PIN-170 | System Contract Governance Framework | ACTIVE (Phase 1-3 complete) |
+| PIN-167 | Final Review Tasks Phase 1 | COMPLETE (6 scenarios, visibility gaps) |
+| PIN-163 | M0-M28 Utilization Report | REFERENCE (94% score) |
+| PIN-122 | Master Milestone Compendium M0-M21 | REFERENCE |
 | PIN-005 | Machine-Native Architecture | PRIMARY (vision) |
 | PIN-120 | Test Suite Stabilization & Prevention | COMPLETE (PREV-1 to PREV-12) |
-| PIN-121 | Mypy Technical Debt Remediation | ACTIVE (baseline 572 errors) |
 | PIN-125 | SDK Cross-Language Parity | COMPLETE (PREV-16 to PREV-19) |
 
 ---

@@ -19,10 +19,11 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { guardApi, IncidentSearchRequest, IncidentSearchResult, DecisionTimelineResponse } from '../../../api/guard';
+import { guardApi, IncidentSearchRequest, IncidentSearchResult, DecisionTimelineResponse, ReplayResult } from '../../../api/guard';
 import { IncidentSearchBar } from './IncidentSearchBar';
 import { IncidentFilters } from './IncidentFilters';
 import { DecisionTimeline } from './DecisionTimeline';
+import { ReplayResultsModal } from '../../../components/ReplayResultsModal';
 import { logger } from '../../../lib/consoleLogger';
 
 // Legacy incident type (for backwards compatibility)
@@ -65,6 +66,7 @@ export function IncidentsPage() {
     offset: 0,
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [replayResult, setReplayResult] = useState<ReplayResult | null>(null);
 
   // Log page mount
   useEffect(() => {
@@ -111,6 +113,18 @@ export function IncidentsPage() {
     },
     onError: (error) => {
       logger.error('INCIDENTS', 'Failed to seed demo incident', error);
+    },
+  });
+
+  // M4: Replay mutation
+  const replayMutation = useMutation({
+    mutationFn: (callId: string) => guardApi.replayCall(callId),
+    onSuccess: (result) => {
+      logger.info('INCIDENTS', 'Replay completed', { match_level: result.match_level });
+      setReplayResult(result);
+    },
+    onError: (error) => {
+      logger.error('INCIDENTS', 'Replay failed', error);
     },
   });
 
@@ -283,7 +297,9 @@ export function IncidentsPage() {
                 <DecisionTimeline
                   timeline={timeline}
                   onReplay={() => {
-                    window.location.href = `/guard/replay?call_id=${timeline.call_id || timeline.incident_id}`;
+                    const callId = timeline.call_id || timeline.incident_id;
+                    logger.userEvent('click', 'replay_button', { call_id: callId });
+                    replayMutation.mutate(callId);
                   }}
                   onExport={async () => {
                     try {
@@ -305,6 +321,16 @@ export function IncidentsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* M4: Replay Evidence Modal (P2FC-3) */}
+      {replayResult && (
+        <ReplayResultsModal
+          result={replayResult}
+          incidentId={selectedIncident || undefined}
+          incidentTitle={timeline?.root_cause_badge || undefined}
+          onClose={() => setReplayResult(null)}
+        />
       )}
     </div>
   );

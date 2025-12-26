@@ -1,14 +1,16 @@
 /**
  * Guard Console Entry Point
  *
+ * Phase 5E-4: Customer Essentials
+ *
  * ⚠️ IMPORTANT: This is the PRODUCTION entry point loaded via lazy loading.
  * When adding new pages:
- * 1. Add import here (NOT just in GuardConsoleApp.tsx)
+ * 1. Add import here
  * 2. Add case in renderPage() switch
  * 3. Update NAV_ITEMS in GuardLayout.tsx
  *
- * Standalone entry for the AI Incident Console (Guard Console).
- * Implements full 8-phase customer console with unified navigation.
+ * Standalone entry for the Customer Console (Guard Console).
+ * Scoped strictly to outcomes, limits, and keys.
  *
  * Access: https://agenticverz.com/console/guard
  *
@@ -17,15 +19,22 @@
  * - Fallback: API key via URL query param or login form
  * - Stored in localStorage for session persistence
  *
- * Navigation (must match GuardLayout.tsx NAV_ITEMS):
- * - Overview: Control plane & status (Phase 1)
- * - Live Activity: Real-time event stream (Phase 4)
- * - Incidents: Search & investigate (Phase 2-3)
- * - Kill Switch: Emergency controls + blast radius (Phase 5)
- * - Logs: Event history (Phase 4)
- * - Settings: Configuration (Phase 8)
+ * Navigation (Phase 5E-4 - Customer Essentials):
+ * - Home: Status overview (calm status board)
+ * - Runs: Run history & outcomes
+ * - Limits: Budget & rate limits
+ * - Incidents: Search & investigate
+ * - Keys: API key management
+ * - Settings: Configuration
  * - Account: Organization & team
  * - Support: Help & feedback
+ *
+ * NOT exposed to customers (Founder-only):
+ * - Kill-switches
+ * - Decision timelines
+ * - Recovery classes
+ * - CARE internals
+ * - Raw traces
  */
 
 import { useState, useEffect } from 'react';
@@ -34,11 +43,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { GuardLayout, type NavItemId } from './GuardLayout';
 import { CustomerHomePage } from './CustomerHomePage';
-import { GuardDashboard } from './GuardDashboard';
-import { LiveActivityPage } from './LiveActivityPage';
+import { CustomerRunsPage } from './CustomerRunsPage';
+import { CustomerLimitsPage } from './CustomerLimitsPage';
+import { CustomerKeysPage } from './CustomerKeysPage';
 import { IncidentsPage } from './incidents/IncidentsPage';
-import { KillSwitchPage } from './KillSwitchPage';
-import { LogsPage } from './LogsPage';
 import { GuardSettingsPage } from './GuardSettingsPage';
 import { AccountPage } from './AccountPage';
 import { SupportPage } from './SupportPage';
@@ -160,7 +168,7 @@ export default function GuardConsoleEntry() {
       setApiKey('');
       setIsApiKeyAuthenticated(false);
       setAuthMode(null);
-      setActiveTab('overview');
+      setActiveTab('home');
       localStorage.removeItem(STORAGE_KEY);
     }
   };
@@ -290,20 +298,19 @@ export default function GuardConsoleEntry() {
   }
 
   // Render active page
+  // Phase 5E-4: Customer Essentials - scoped to outcomes, limits, and keys
   const renderPage = () => {
     switch (activeTab) {
       case 'home':
         return <CustomerHomePage onNavigate={setActiveTab} />;
-      case 'overview':
-        return <GuardDashboard onLogout={handleLogout} />;
-      case 'live':
-        return <LiveActivityPage />;
+      case 'runs':
+        return <CustomerRunsPage />;
+      case 'limits':
+        return <CustomerLimitsPage />;
       case 'incidents':
         return <IncidentsPage />;
-      case 'killswitch':
-        return <KillSwitchPage />;
-      case 'logs':
-        return <LogsPage />;
+      case 'keys':
+        return <CustomerKeysPage />;
       case 'settings':
         return <GuardSettingsPage />;
       case 'account':

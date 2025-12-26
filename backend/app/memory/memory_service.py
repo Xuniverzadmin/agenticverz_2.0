@@ -70,7 +70,6 @@ MEMORY_DRIFT_DETECTED = Counter("drift_detected_total", "Memory drift detection 
 
 # Import DRIFT_SCORE from drift_detector to avoid duplicate registration
 # The metric "drift_score_current" is already registered there
-from app.memory.drift_detector import DRIFT_SCORE as MEMORY_DRIFT_SCORE
 
 
 # =============================================================================

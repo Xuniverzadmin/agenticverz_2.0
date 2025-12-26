@@ -106,7 +106,7 @@ def generate_synthetic_events(count: int, dry_run: bool = False) -> dict:
                                 :aggregate_type,
                                 :aggregate_id,
                                 :event_type,
-                                :payload::jsonb
+                                CAST(:payload AS jsonb)
                             )
                         """
                         ),

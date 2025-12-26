@@ -301,6 +301,21 @@ async def get_tenant_context(
     finally:
         session.close()
 
+    # If DB validation fails, try legacy fallback
+    if error and _USE_LEGACY_AUTH and _LEGACY_API_KEY and api_key == _LEGACY_API_KEY:
+        # Create a synthetic context for legacy key
+        context = TenantContext(
+            tenant_id="legacy",
+            tenant_slug="legacy",
+            tenant_name="Legacy API Key",
+            plan="enterprise",  # Legacy keys get full access
+            api_key_id="legacy",
+            api_key_name="Environment API Key",
+            permissions=["*"],  # Full access
+        )
+        request.state.tenant_context = context
+        return context
+
     if error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

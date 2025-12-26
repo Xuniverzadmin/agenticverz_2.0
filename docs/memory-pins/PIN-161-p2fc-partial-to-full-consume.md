@@ -1,6 +1,6 @@
 # PIN-161: P2FC — Partial to Full Consume
 
-**Status:** EXECUTING
+**Status:** COMPLETE (M7 deferred to M28)
 **Created:** 2025-12-24
 **Category:** Architecture / Milestone Promotion
 **Milestone:** Post-M32 Consolidation
@@ -381,4 +381,138 @@ All 5 milestones are FULLY CONSUMED when:
 
 ## Commits
 
-- (pending)
+### M8 SDK (P2FC-1) - COMPLETE 2025-12-24
+
+- Added `aos init` command to CLI (`sdk/python/aos_sdk/cli.py`)
+- Enhanced `aos health` with install verification checklist
+- Rewrote README with pillar value props (Python + JS)
+- **Exit codes**: `aos health` exits non-zero on ANY failure (CI-friendly)
+  - 3/3 checks → exit 0
+  - <3 checks → exit 1
+- Files changed:
+  - `sdk/python/aos_sdk/cli.py` - init command, health verification
+  - `sdk/python/README.md` - pillar framing, quick start
+  - `sdk/js/aos-sdk/README.md` - pillar framing, determinism docs
+
+### M16 SBA UI (P2FC-2) - COMPLETE 2025-12-24
+
+- Added `GET /api/v1/sba/health` endpoint (aggregated strategy health)
+- Created `StrategyHealthWidget.tsx` (read-only, click → SBA Inspector)
+- Embedded widget in `GuardDashboard.tsx` below protection status
+- Classification: healthy (>= 0.6), approaching (0.3-0.6), exceeded (< 0.3)
+- Files changed:
+  - `backend/app/api/agents.py` - /sba/health endpoint
+  - `website/aos-console/console/src/api/guard.ts` - getStrategyHealth()
+  - `website/aos-console/console/src/components/StrategyHealthWidget.tsx` - new
+  - `website/aos-console/console/src/pages/guard/GuardDashboard.tsx` - widget embed
+- **Verified**: `curl http://localhost:8000/api/v1/sba/health` returns correct structure
+
+### M4 Golden Replay (P2FC-3) - COMPLETE 2025-12-24
+
+- Created `ReplayResultsModal.tsx` (comparison table, verdict display)
+- Updated `IncidentsPage.tsx` to call replay API and show modal
+- Backend `/guard/replay/{call_id}` already existed (M23)
+- Frontend API `guardApi.replayCall()` already existed
+- Wiring: Replay button → API call → Modal display
+- **Evidence-Grade Enhancement (2025-12-24):**
+  - Renamed modal title: "Replay Results" → "Replay Evidence"
+  - Added Determinism badge (✓ for exact/logical match)
+  - Added Trace ID and Timestamp metadata section
+  - Added immutability notice: "This replay is immutable and evidence-grade"
+  - Linked to related PINs in component docstring
+- Files changed:
+  - `website/aos-console/console/src/components/ReplayResultsModal.tsx` - evidence-grade framing
+  - `website/aos-console/console/src/pages/guard/incidents/IncidentsPage.tsx` - replay mutation, modal, incidentId prop
+
+#### Memory Pin Mapping (P2FC-3)
+
+| Memory Pin | Description | Status After P2FC-3 |
+|------------|-------------|---------------------|
+| PIN-125 | Deterministic replay parity | ✅ Required for evidence |
+| PIN-127 | Replay determinism invariant | ✅ Enforced |
+| PIN-131 | Evidence Pack framing | 🔄 Replay now part of Evidence |
+| PIN-148 | Incident → Evidence linkage | ✅ Replay linked |
+
+#### New Invariant (P2FC-3)
+
+> "An incident is incomplete without at least one deterministic replay evidence artifact."
+
+### M6 Scoped Execution (P2FC-4) - COMPLETE 2025-12-24
+
+**Initial Implementation (Pre-Test Script):**
+- Created `scoped_execution.py` service with:
+  - `ScopedExecutionContext` class for pre-execution testing
+  - `RiskClass` enum (LOW/MEDIUM/HIGH/CRITICAL)
+  - `ExecutionScope` enum (DRY_RUN/AGENT_SUBSET/REQUEST_SAMPLE/BUDGET_FRACTION)
+  - `@requires_scoped_execution` decorator for risk gating
+- Added `/api/v1/recovery/candidates/{id}/scope-test` endpoint
+
+**P2FC-4 Enhancement (Post-Test Script, 2025-12-24):**
+
+Implemented full scope-gated execution per test script requirements:
+
+1. **BoundExecutionScope Model:**
+   - `scope_id`: Unique identifier
+   - `incident_id`: Incident binding (scope is incident-specific)
+   - `allowed_actions`: List of permitted actions
+   - `max_cost_usd`: Cost ceiling
+   - `max_attempts`: Execution limit (default: 1)
+   - `expires_at`: Time-bound expiry
+   - `intent`: Why this action is allowed
+   - `status`: active/exhausted/expired/revoked
+
+2. **Scope Store (Thread-Safe):**
+   - In-memory store with incident indexing
+   - Automatic expiry tracking
+   - Revocation support
+
+3. **New API Endpoints:**
+   - `POST /api/v1/recovery/scope` - Create bound scope (Gate Step)
+   - `POST /api/v1/recovery/execute` - Execute with scope (FAILS without scope)
+   - `GET /api/v1/recovery/scopes/{incident_id}` - List scopes
+   - `DELETE /api/v1/recovery/scopes/{scope_id}` - Revoke scope
+
+4. **Exception Hierarchy:**
+   - `ScopedExecutionRequired` - No scope provided
+   - `ScopeNotFound` - Invalid scope_id
+   - `ScopeExhausted` - Attempts consumed
+   - `ScopeExpired` - TTL exceeded
+   - `ScopeActionMismatch` - Action not in allowed_actions
+   - `ScopeIncidentMismatch` - Wrong incident
+
+5. **Files Changed:**
+   - `backend/app/services/scoped_execution.py` - Full scope gating
+   - `backend/app/api/recovery.py` - New endpoints
+
+#### Test Script Compliance (P2FC-4)
+
+| Step | Test | Status |
+|------|------|--------|
+| A1 | Execute without scope → 400 | ✅ |
+| A2 | Create scope → scope_id | ✅ |
+| A3 | Execute with scope → success | ✅ |
+| A4 | Reuse scope → exhausted | ✅ |
+| A5 | Different action → action_outside_scope | ✅ |
+
+#### Memory Pin Mapping (P2FC-4)
+
+| Memory Pin | Meaning | Status |
+|------------|---------|--------|
+| PIN-148 | Incident lifecycle | ✅ Required |
+| PIN-161 | Evidence completeness | ✅ Replay feeds scope |
+| PIN-172 | Scoped execution invariant | ✅ Enforced |
+| PIN-M6-P2FC | Recovery gated by scope | ✅ Promoted |
+
+#### New Invariant (P2FC-4)
+
+> "A recovery action without a valid execution scope is invalid by definition."
+
+#### Kill Criteria Verification
+
+| Criterion | Status |
+|-----------|--------|
+| Recovery executes without scope | ❌ Blocked |
+| Scope auto-created without intent | ❌ Blocked |
+| Scope reused across incidents | ❌ Blocked |
+| Cost exceeds scope silently | ❌ Tracked |
+| Scope hidden from user | ❌ Visible via API |

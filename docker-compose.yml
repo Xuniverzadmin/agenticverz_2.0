@@ -36,6 +36,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL:-redis://localhost:6379/0}
       AOS_API_KEY: ${AOS_API_KEY}
+      AOS_USE_LEGACY_AUTH: ${AOS_USE_LEGACY_AUTH:-false}
       # Operator Console Auth (M22 GA Lock)
       AOS_OPERATOR_TOKEN: ${AOS_OPERATOR_TOKEN:-}
       # Category 2 Auth: Separate Console/FOPS authentication
@@ -72,6 +73,15 @@ services:
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
       EMBEDDING_DAILY_QUOTA: ${EMBEDDING_DAILY_QUOTA:-10000}
+      # Memory Features (M7/M10)
+      MEMORY_CONTEXT_INJECTION: ${MEMORY_CONTEXT_INJECTION:-false}
+      MEMORY_POST_UPDATE: ${MEMORY_POST_UPDATE:-false}
+      DRIFT_DETECTION_ENABLED: ${DRIFT_DETECTION_ENABLED:-false}
+      # Event Publisher (M10)
+      EVENT_PUBLISHER: ${EVENT_PUBLISHER:-logging}
+      # System Mode Declarations (Objective-1)
+      TENANT_MODE: ${TENANT_MODE:-single}
+      CARE_SCOPE: ${CARE_SCOPE:-worker_only}
       # Trace Storage (M8)
       USE_POSTGRES_TRACES: "true"
       # GitHub Integration (M8 - Mismatch Issue Automation)
@@ -115,7 +125,11 @@ services:
       WORKER_CONCURRENCY: "4"
       WORKER_POLL_INTERVAL: "2.0"
       RUN_MAX_ATTEMPTS: "5"
-      EVENT_PUBLISHER: logging
+      # Event Publisher (same as backend)
+      EVENT_PUBLISHER: ${EVENT_PUBLISHER:-logging}
+      # System Mode Declarations (same as backend)
+      TENANT_MODE: ${TENANT_MODE:-single}
+      CARE_SCOPE: ${CARE_SCOPE:-worker_only}
       # LLM Planner Configuration
       PLANNER_BACKEND: anthropic
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}

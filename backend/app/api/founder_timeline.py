@@ -17,7 +17,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -108,7 +108,8 @@ def fetch_run_data(run_id: str) -> Optional[Dict[str, Any]]:
         engine = create_engine(db_url)
         with engine.connect() as conn:
             result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id,
                         agent_id,
@@ -127,7 +128,8 @@ def fetch_run_data(run_id: str) -> Optional[Dict[str, Any]]:
                         duration_ms
                     FROM runs
                     WHERE id = :run_id
-                """),
+                """
+                ),
                 {"run_id": run_id},
             )
 
@@ -176,7 +178,8 @@ def fetch_decision_records(run_id: str) -> List[Dict[str, Any]]:
         engine = create_engine(db_url)
         with engine.connect() as conn:
             result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         decision_id,
                         decision_type,
@@ -195,28 +198,31 @@ def fetch_decision_records(run_id: str) -> List[Dict[str, Any]]:
                     FROM contracts.decision_records
                     WHERE run_id = :run_id
                     ORDER BY decided_at ASC
-                """),
+                """
+                ),
                 {"run_id": run_id},
             )
 
             records = []
             for row in result:
-                records.append({
-                    "decision_id": row.decision_id,
-                    "decision_type": row.decision_type,
-                    "decision_source": row.decision_source,
-                    "decision_trigger": row.decision_trigger,
-                    "decision_inputs": row.decision_inputs or {},
-                    "decision_outcome": row.decision_outcome,
-                    "decision_reason": row.decision_reason,
-                    "run_id": row.run_id,
-                    "workflow_id": row.workflow_id,
-                    "tenant_id": row.tenant_id,
-                    "request_id": row.request_id,
-                    "causal_role": row.causal_role,
-                    "decided_at": row.decided_at,
-                    "details": row.details or {},
-                })
+                records.append(
+                    {
+                        "decision_id": row.decision_id,
+                        "decision_type": row.decision_type,
+                        "decision_source": row.decision_source,
+                        "decision_trigger": row.decision_trigger,
+                        "decision_inputs": row.decision_inputs or {},
+                        "decision_outcome": row.decision_outcome,
+                        "decision_reason": row.decision_reason,
+                        "run_id": row.run_id,
+                        "workflow_id": row.workflow_id,
+                        "tenant_id": row.tenant_id,
+                        "request_id": row.request_id,
+                        "causal_role": row.causal_role,
+                        "decided_at": row.decided_at,
+                        "details": row.details or {},
+                    }
+                )
 
         engine.dispose()
         return records
@@ -259,7 +265,8 @@ def fetch_all_decision_records(
             where_sql = " AND ".join(where_clauses)
 
             result = conn.execute(
-                text(f"""
+                text(
+                    f"""
                     SELECT
                         decision_id,
                         decision_type,
@@ -279,28 +286,31 @@ def fetch_all_decision_records(
                     WHERE {where_sql}
                     ORDER BY decided_at DESC
                     LIMIT :limit OFFSET :offset
-                """),
+                """
+                ),
                 params,
             )
 
             records = []
             for row in result:
-                records.append({
-                    "decision_id": row.decision_id,
-                    "decision_type": row.decision_type,
-                    "decision_source": row.decision_source,
-                    "decision_trigger": row.decision_trigger,
-                    "decision_inputs": row.decision_inputs or {},
-                    "decision_outcome": row.decision_outcome,
-                    "decision_reason": row.decision_reason,
-                    "run_id": row.run_id,
-                    "workflow_id": row.workflow_id,
-                    "tenant_id": row.tenant_id,
-                    "request_id": row.request_id,
-                    "causal_role": row.causal_role,
-                    "decided_at": row.decided_at,
-                    "details": row.details or {},
-                })
+                records.append(
+                    {
+                        "decision_id": row.decision_id,
+                        "decision_type": row.decision_type,
+                        "decision_source": row.decision_source,
+                        "decision_trigger": row.decision_trigger,
+                        "decision_inputs": row.decision_inputs or {},
+                        "decision_outcome": row.decision_outcome,
+                        "decision_reason": row.decision_reason,
+                        "run_id": row.run_id,
+                        "workflow_id": row.workflow_id,
+                        "tenant_id": row.tenant_id,
+                        "request_id": row.request_id,
+                        "causal_role": row.causal_role,
+                        "decided_at": row.decided_at,
+                        "details": row.details or {},
+                    }
+                )
 
         engine.dispose()
         return records
@@ -346,20 +356,24 @@ async def get_run_timeline(run_id: str) -> RunTimeline:
             "parent_run_id": run_data["parent_run_id"],
             "declared_at": run_data["created_at"],
         }
-        entries.append(TimelineEntry(
-            entry_type="pre_run",
-            timestamp=run_data["created_at"],
-            record=pre_run_snapshot,
-        ))
+        entries.append(
+            TimelineEntry(
+                entry_type="pre_run",
+                timestamp=run_data["created_at"],
+                record=pre_run_snapshot,
+            )
+        )
 
     # 3. DECISION RECORDS (middle entries, chronological)
     decision_records = fetch_decision_records(run_id)
     for record in decision_records:
-        entries.append(TimelineEntry(
-            entry_type="decision",
-            timestamp=record["decided_at"],
-            record=record,
-        ))
+        entries.append(
+            TimelineEntry(
+                entry_type="decision",
+                timestamp=record["decided_at"],
+                record=record,
+            )
+        )
 
     # 4. OUTCOME RECORD (last entry)
     if run_data and run_data["completed_at"]:
@@ -372,11 +386,13 @@ async def get_run_timeline(run_id: str) -> RunTimeline:
             "completed_at": run_data["completed_at"],
             "duration_ms": run_data["duration_ms"],
         }
-        entries.append(TimelineEntry(
-            entry_type="outcome",
-            timestamp=run_data["completed_at"],
-            record=outcome_record,
-        ))
+        entries.append(
+            TimelineEntry(
+                entry_type="outcome",
+                timestamp=run_data["completed_at"],
+                record=outcome_record,
+            )
+        )
     elif run_data:
         # Run not yet complete - show placeholder
         outcome_record = {
@@ -391,11 +407,13 @@ async def get_run_timeline(run_id: str) -> RunTimeline:
         }
         # Use started_at or created_at as timestamp for pending outcome
         outcome_ts = run_data["started_at"] or run_data["created_at"]
-        entries.append(TimelineEntry(
-            entry_type="outcome",
-            timestamp=outcome_ts,
-            record=outcome_record,
-        ))
+        entries.append(
+            TimelineEntry(
+                entry_type="outcome",
+                timestamp=outcome_ts,
+                record=outcome_record,
+            )
+        )
 
     return RunTimeline(
         run_id=run_id,
@@ -443,7 +461,8 @@ async def get_decision_record(decision_id: str) -> DecisionRecordView:
         engine = create_engine(db_url)
         with engine.connect() as conn:
             result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         decision_id,
                         decision_type,
@@ -461,7 +480,8 @@ async def get_decision_record(decision_id: str) -> DecisionRecordView:
                         details
                     FROM contracts.decision_records
                     WHERE decision_id = :decision_id
-                """),
+                """
+                ),
                 {"decision_id": decision_id},
             )
 

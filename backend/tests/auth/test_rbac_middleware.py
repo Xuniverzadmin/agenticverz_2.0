@@ -144,12 +144,19 @@ class TestPolicyMapping:
         assert policy.action == "reload"
 
     def test_unprotected_path(self):
-        """Test that unprotected paths return None."""
+        """Test that public paths return None."""
         policy = get_policy_for_path("/health", "GET")
         assert policy is None
 
-        policy = get_policy_for_path("/api/v1/agents", "GET")
+        policy = get_policy_for_path("/metrics", "GET")
         assert policy is None
+
+    def test_agents_are_protected(self):
+        """Test that agents path is protected (not None)."""
+        policy = get_policy_for_path("/api/v1/agents", "GET")
+        assert policy is not None
+        assert policy.resource == "agent"
+        assert policy.action == "read"
 
 
 class TestEnforcement:
@@ -168,13 +175,19 @@ class TestEnforcement:
         assert "admin" in decision.roles
 
     def test_enforce_allowed_machine(self, monkeypatch):
-        """Test that machine token allows memory_pin write."""
+        """Test that machine token allows runtime:simulate (core machine use case).
+
+        PIN-169: Machine role is now strictly scoped.
+        - NO memory_pin write (that's console action)
+        - YES runtime:simulate (core machine use case)
+        """
         monkeypatch.setenv("MACHINE_SECRET_TOKEN", "test-token")
         import app.auth.rbac_middleware as rbac_mod
 
         rbac_mod.MACHINE_SECRET_TOKEN = "test-token"
 
-        policy = PolicyObject(resource="memory_pin", action="write")
+        # Machine's core use case is runtime:simulate
+        policy = PolicyObject(resource="runtime", action="simulate")
 
         request = MagicMock(spec=Request)
         request.headers = MagicMock()
@@ -219,12 +232,27 @@ class TestRBACMatrix:
         assert "reload" in perms.get("prometheus", [])
 
     def test_machine_limited_perms(self):
-        """Test that machine role has limited permissions."""
+        """Test that machine role has strictly limited permissions.
+
+        PIN-169: Machine role is locked down:
+        - memory_pin: READ ONLY (no write)
+        - killswitch: DENIED (human-only)
+        - tenant/rbac: DENIED (admin-only)
+        - runtime: simulate, query, capabilities (core use case)
+        """
         perms = RBAC_MATRIX.get("machine", {})
+        # Memory pins - READ ONLY
         assert "read" in perms.get("memory_pin", [])
-        assert "write" in perms.get("memory_pin", [])
+        assert "write" not in perms.get("memory_pin", [])  # DENIED for machine
         assert "delete" not in perms.get("memory_pin", [])
         assert "admin" not in perms.get("memory_pin", [])
+        # Killswitch - DENIED completely
+        assert perms.get("killswitch", []) == []
+        # Tenant/RBAC - DENIED completely
+        assert perms.get("tenant", []) == []
+        assert perms.get("rbac", []) == []
+        # Runtime - core machine use case
+        assert "simulate" in perms.get("runtime", [])
 
     def test_readonly_only_reads(self):
         """Test that readonly role only has read access."""
@@ -285,18 +313,41 @@ class TestMiddlewareIntegration:
         assert response.status_code == 200
 
     def test_protected_path_allowed_with_machine_token(self, client, monkeypatch):
-        """Test that machine token works."""
+        """Test that machine token works for READ operations.
+
+        PIN-169: Machine role is strictly scoped.
+        - POST /api/v1/memory/pins (write) is DENIED for machine
+        - GET /api/v1/memory/pins/{key} (read) is ALLOWED for machine
+        """
         monkeypatch.setenv("MACHINE_SECRET_TOKEN", "test-machine-token")
         import app.auth.rbac_middleware as rbac_mod
 
         rbac_mod.MACHINE_SECRET_TOKEN = "test-machine-token"
 
+        # Machine can READ memory pins
+        response = client.get(
+            "/api/v1/memory/pins/test-key",
+            headers={"X-Machine-Token": "test-machine-token"},
+        )
+        assert response.status_code == 200
+
+    def test_machine_denied_memory_pin_write(self, client, monkeypatch):
+        """Test that machine token is DENIED for write operations.
+
+        PIN-169: Machine role cannot write memory pins (console action).
+        """
+        monkeypatch.setenv("MACHINE_SECRET_TOKEN", "test-machine-token")
+        import app.auth.rbac_middleware as rbac_mod
+
+        rbac_mod.MACHINE_SECRET_TOKEN = "test-machine-token"
+
+        # Machine cannot WRITE memory pins
         response = client.post(
             "/api/v1/memory/pins",
             json={"tenant_id": "t1", "key": "k", "value": {}},
             headers={"X-Machine-Token": "test-machine-token"},
         )
-        assert response.status_code == 200
+        assert response.status_code == 403  # Forbidden
 
 
 class TestMiddlewareDisabled:

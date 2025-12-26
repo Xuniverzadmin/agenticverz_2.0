@@ -2,6 +2,17 @@
 
 The official JavaScript/TypeScript SDK for AOS (Agentic Operating System) - the most predictable, reliable, deterministic SDK for building machine-native agents.
 
+## Why AOS?
+
+Building production agents is hard. AOS solves four problems that matter:
+
+| Pillar | Problem | AOS Solution |
+|--------|---------|--------------|
+| **Cost** | LLM calls drain budgets unexpectedly | Pre-execution simulation, budget caps, cost alerts |
+| **Incident** | Agents fail silently or cryptically | Structured failure catalog, replay verification, evidence trails |
+| **Self-Heal** | Manual intervention for every failure | Recovery engine, circuit breakers, scoped execution |
+| **Governance** | No control over what agents do | Strategy bounds, policy enforcement, RBAC |
+
 ## Installation
 
 ```bash
@@ -19,7 +30,7 @@ import { AOSClient } from '@agenticverz/aos-sdk';
 
 // Initialize client
 const client = new AOSClient({
-  apiKey: 'your-api-key',
+  apiKey: process.env.AOS_API_KEY,
   baseUrl: 'http://localhost:8000'
 });
 
@@ -28,7 +39,7 @@ const caps = await client.getCapabilities();
 console.log(`Budget remaining: ${caps.budget_remaining_cents}c`);
 console.log(`Available skills: ${caps.skills_available.join(', ')}`);
 
-// Simulate before executing
+// Simulate before executing (Cost pillar: know your costs upfront)
 const result = await client.simulate([
   { skill: 'http_call', params: { url: 'https://api.example.com' } },
   { skill: 'llm_invoke', params: { prompt: 'Summarize the response' } }
@@ -51,6 +62,30 @@ AOS is designed for agents to operate efficiently, not humans to babysit:
 - **Failure as data** - Navigable, not opaque
 - **Pre-execution simulation** - Know before you run
 
+## Determinism Support
+
+AOS guarantees reproducible agent behavior:
+
+```typescript
+import { RuntimeContext, Trace, diffTraces } from '@agenticverz/aos-sdk';
+
+// Create deterministic context
+const ctx = new RuntimeContext({ seed: 42 });
+
+// Execute with trace capture
+const result = await client.simulate(plan, 1000, { seed: 42 });
+
+// Save trace for replay verification (Incident pillar: evidence trail)
+const trace = Trace.fromResult(result, ctx);
+await trace.save('execution.trace.json');
+
+// Later: verify execution was deterministic
+const original = await Trace.load('execution.trace.json');
+const replay = await Trace.load('replay.trace.json');
+const diff = diffTraces(original, replay);
+console.assert(diff.match, `Non-deterministic: ${diff.summary}`);
+```
+
 ## API Reference
 
 ### AOSClient
@@ -66,7 +101,7 @@ const client = new AOSClient({
 ### Machine-Native APIs
 
 ```typescript
-// Simulate a plan before execution
+// Simulate a plan before execution (Cost pillar)
 const result = await client.simulate(plan, budgetCents);
 
 // Query runtime state
@@ -77,7 +112,7 @@ const attempts = await client.query('what_did_i_try_already', {}, undefined, run
 const { skills } = await client.listSkills();
 const skill = await client.describeSkill('http_call');
 
-// Get capabilities
+// Get capabilities (Governance pillar: know your bounds)
 const caps = await client.getCapabilities();
 ```
 

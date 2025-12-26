@@ -251,33 +251,33 @@ export function CustomerHomePage({
       </h2>
       <div className="grid grid-cols-3 gap-4">
         <button
-          onClick={() => onNavigate?.('incidents')}
+          onClick={() => onNavigate?.('runs')}
           className="bg-navy-surface border border-navy-border hover:border-accent-info/50 rounded-xl p-6 text-left transition-colors group"
         >
-          <span className="text-2xl mb-3 block">📋</span>
+          <span className="text-2xl mb-3 block">🚀</span>
           <span className="font-medium text-white group-hover:text-accent-info transition-colors">
-            View Incidents
+            View Runs
           </span>
           <p className="text-sm text-slate-400 mt-1">
-            Review blocked requests
+            Run history & outcomes
           </p>
         </button>
 
         <button
-          onClick={() => onNavigate?.('settings')}
+          onClick={() => onNavigate?.('limits')}
           className="bg-navy-surface border border-navy-border hover:border-accent-info/50 rounded-xl p-6 text-left transition-colors group"
         >
-          <span className="text-2xl mb-3 block">💰</span>
+          <span className="text-2xl mb-3 block">📊</span>
           <span className="font-medium text-white group-hover:text-accent-info transition-colors">
-            View Cost
+            Limits & Usage
           </span>
           <p className="text-sm text-slate-400 mt-1">
-            AI usage & spending
+            Budget & rate limits
           </p>
         </button>
 
         <button
-          onClick={() => onNavigate?.('settings')}
+          onClick={() => onNavigate?.('keys')}
           className="bg-navy-surface border border-navy-border hover:border-accent-info/50 rounded-xl p-6 text-left transition-colors group"
         >
           <span className="text-2xl mb-3 block">🔑</span>

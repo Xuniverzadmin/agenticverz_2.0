@@ -2,8 +2,9 @@
 AOS CLI - Command-line interface for the AOS SDK.
 
 Usage:
+    aos init                 Initialize AOS in current directory
     aos version              Show version
-    aos health               Check server health
+    aos health               Check SDK installation and server health
     aos capabilities         Show runtime capabilities
     aos skills               List available skills
     aos skill <id>           Describe a skill
@@ -23,19 +24,106 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 
 from . import __version__
 from .client import AOSClient, AOSError
 from .runtime import RuntimeContext
 from .trace import Trace, create_trace_from_context, diff_traces, hash_data
 
+# Config directory and files
+AOS_DIR = ".aos"
+CONFIG_FILE = "config.json"
+EXAMPLE_FILE = "example.json"
+
+
+def get_aos_dir() -> Path:
+    """Get the .aos directory path."""
+    return Path.cwd() / AOS_DIR
+
+
+def load_config() -> dict:
+    """Load config from .aos/config.json if it exists."""
+    config_path = get_aos_dir() / CONFIG_FILE
+    if config_path.exists():
+        with open(config_path) as f:
+            return json.load(f)
+    return {}
+
 
 def get_client() -> AOSClient:
-    """Create a client from environment variables."""
+    """Create a client from config or environment variables."""
+    config = load_config()
     return AOSClient(
-        api_key=os.getenv("AOS_API_KEY"),
-        base_url=os.getenv("AOS_BASE_URL", "http://127.0.0.1:8000"),
+        api_key=config.get("api_key") or os.getenv("AOS_API_KEY"),
+        base_url=config.get("base_url") or os.getenv("AOS_BASE_URL", "http://127.0.0.1:8000"),
     )
+
+
+def cmd_init(args):
+    """Initialize AOS in current directory."""
+    aos_dir = get_aos_dir()
+
+    # Check if already initialized
+    if aos_dir.exists() and not args.force:
+        print(f"AOS already initialized in {aos_dir}")
+        print("Use --force to reinitialize")
+        sys.exit(1)
+
+    # Create .aos directory
+    aos_dir.mkdir(exist_ok=True)
+
+    # Determine API key
+    api_key = args.api_key or os.getenv("AOS_API_KEY") or ""
+    base_url = args.base_url or os.getenv("AOS_BASE_URL", "http://127.0.0.1:8000")
+
+    # Write config
+    config = {
+        "api_key": api_key,
+        "base_url": base_url,
+        "determinism": {"default_seed": 42, "trace_dir": ".aos/traces"},
+    }
+    config_path = aos_dir / CONFIG_FILE
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+
+    # Write example simulate payload
+    example = {
+        "_comment": "Example plan for aos simulate",
+        "plan": [
+            {"skill": "http_call", "params": {"url": "https://api.example.com/data"}},
+            {"skill": "llm_invoke", "params": {"prompt": "Summarize the response"}},
+        ],
+        "budget_cents": 1000,
+    }
+    example_path = aos_dir / EXAMPLE_FILE
+    with open(example_path, "w") as f:
+        json.dump(example, f, indent=2)
+
+    # Create traces directory
+    (aos_dir / "traces").mkdir(exist_ok=True)
+
+    # Print success
+    print("✔ AOS initialized")
+    print()
+    print(f"  Created: {aos_dir}/")
+    print(f"    ├── {CONFIG_FILE}    # API key and settings")
+    print(f"    ├── {EXAMPLE_FILE}   # Example simulate payload")
+    print("    └── traces/          # Saved execution traces")
+    print()
+
+    if not api_key:
+        print("⚠ No API key set. Add your key:")
+        print(f"  Edit {config_path} or set AOS_API_KEY environment variable")
+        print()
+
+    print("Next steps:")
+    print("  1. aos health              # Verify connection")
+    print("  2. aos simulate '[...]'    # Run your first simulation")
+    print()
+    print("Example:")
+    example_json = json.dumps(example["plan"])
+    print(f"  aos simulate '{example_json}'")
 
 
 def cmd_version(args):
@@ -44,14 +132,55 @@ def cmd_version(args):
 
 
 def cmd_health(args):
-    """Check server health."""
+    """Check SDK installation and server health."""
+    checks_passed = 0
+    checks_total = 3
+
+    # Check 1: SDK installed
+    print("Checking AOS SDK installation...")
+    print(f"  ✔ SDK Version: aos-sdk {__version__}")
+    checks_passed += 1
+
+    # Check 2: Configuration
+    aos_dir = get_aos_dir()
+    if aos_dir.exists():
+        config = load_config()
+        if config.get("api_key"):
+            print(f"  ✔ Config: {aos_dir}/config.json (API key set)")
+        else:
+            print(f"  ⚠ Config: {aos_dir}/config.json (API key not set)")
+        checks_passed += 1
+    else:
+        print("  ⚠ Config: Not initialized (run 'aos init' first)")
+
+    # Check 3: Server health
+    print()
+    print("Checking AOS server health...")
     client = get_client()
     try:
         resp = client._request("GET", "/health")
-        print(json.dumps(resp, indent=2))
+        status = resp.get("status", "unknown")
+        if status == "healthy":
+            print(f"  ✔ Server: {client.base_url} (healthy)")
+            checks_passed += 1
+        else:
+            print(f"  ⚠ Server: {client.base_url} (status: {status})")
     except AOSError as e:
-        print(f"Health check failed: {e}", file=sys.stderr)
-        sys.exit(1)
+        print(f"  ✗ Server: {client.base_url} (unreachable)")
+        print(f"    Error: {e}")
+
+    # Summary
+    print()
+    if checks_passed == checks_total:
+        print(f"✔ All checks passed ({checks_passed}/{checks_total})")
+        sys.exit(0)
+    else:
+        print(f"✗ {checks_passed}/{checks_total} checks passed")
+        if not aos_dir.exists():
+            print()
+            print("To initialize AOS in this directory:")
+            print("  aos init --api-key=YOUR_API_KEY")
+        sys.exit(1)  # Non-zero on ANY failure (CI-friendly)
 
 
 def cmd_capabilities(args):
@@ -272,6 +401,14 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
+    # init - project initialization
+    init_parser = subparsers.add_parser("init", help="Initialize AOS in current directory")
+    init_parser.add_argument("--api-key", type=str, default=None, help="API key for AOS server")
+    init_parser.add_argument("--base-url", type=str, default=None, help="Base URL for AOS server")
+    init_parser.add_argument(
+        "--force", action="store_true", help="Reinitialize even if already initialized"
+    )
+
     # version
     subparsers.add_parser("version", help="Show version")
 
@@ -337,7 +474,9 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "version":
+    if args.command == "init":
+        cmd_init(args)
+    elif args.command == "version":
         cmd_version(args)
     elif args.command == "health":
         cmd_health(args)

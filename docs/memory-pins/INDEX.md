@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-25 (PIN-172 Phase 5A Budget Enforcement)
+**Last Updated:** 2025-12-26 (PIN-184 Founder-Led Beta Criteria - 🎯 ACTIVE)
 
 ---
 
@@ -193,7 +193,19 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-169](PIN-169-m7-m28-rbac-integration-plan.md) | **M7-M28 RBAC Integration Plan** | Architecture / Auth / Security | **🔍 SHADOW AUDIT ACTIVE** | 2025-12-25 |
 | [PIN-170](PIN-170-system-contract-governance-framework.md) | **System Contract Governance Framework** | Architecture / Governance | **🏗️ ACTIVE** | 2025-12-25 |
 | [PIN-171](PIN-171-phase-4b-4c-causal-binding-customer-visibility.md) | **Phase 4B/4C Causal Binding & Customer Visibility** | Contracts / Implementation | **✅ COMPLETE** | 2025-12-25 |
-| [PIN-172](PIN-172-phase-5a-budget-enforcement.md) | **Phase 5A Budget Enforcement** | Contracts / Behavioral Changes | **🏗️ IN PROGRESS** | 2025-12-25 |
+| [PIN-172](PIN-172-phase-5a-budget-enforcement.md) | **Phase 5A Budget Enforcement** | Contracts / Behavioral Changes | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-173](PIN-173-phase-5b-policy-pre-check-matrix.md) | **Phase 5B Policy Pre-Check Matrix** | Contracts / Behavioral Changes | **COMPLETE** | 2025-12-26 |
+| [PIN-174](PIN-174-phase-5c-recovery-automation-matrix.md) | **Phase 5C Recovery Automation Matrix** | Contracts / Behavioral Changes | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-175](PIN-175-session-phase5b-phase5c-complete.md) | **Phase 5B & Phase 5C Complete** | Milestone / Behavioral Changes | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-176](PIN-176-phase-5d-care-optimization-matrix.md) | **Phase 5D CARE Optimization Matrix** | Contracts / Behavioral Changes | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-177](PIN-177-phase-5e-visibility-surfacing-matrix.md) | **Phase 5E Visibility & Surfacing Matrix** | Operations / Visibility Audit | **🎯 ACTIVE** | 2025-12-26 |
+| [PIN-178](PIN-178-phase-5e-h-human-test-eligibility.md) | **Phase 5E-H Human Test Eligibility Gate** | Operations / Human Testing | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-179](PIN-179-phase-5e-1-founder-timeline-ui.md) | **Phase 5E-1 Founder Decision Timeline UI** | Frontend / Founder Console | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-180](PIN-180-phase-5e-2-killswitch-ui.md) | **Phase 5E-2 Kill-Switch UI Toggle** | Frontend / Founder Console | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-181](PIN-181-phase-5e-3-navigation-linking.md) | **Phase 5E-3 Navigation Linking** | Frontend / Navigation | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-182](PIN-182-phase-5e-4-customer-essentials.md) | **Phase 5E-4 Customer Essentials** | Frontend / Customer Console | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-183](PIN-183-runtime-v1-feature-freeze.md) | **Runtime v1 Feature Freeze** | Architecture / Runtime | **🔒 LOCKED** | 2025-12-26 |
+| [PIN-184](PIN-184-founder-led-beta-criteria.md) | **Founder-Led Beta Criteria** | Operations / Beta / Exit Criteria | **🎯 ACTIVE** | 2025-12-26 |
 
 ---
 
@@ -963,6 +975,12 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-26 | **PIN-183 Runtime v1 Feature Freeze LOCKED** - AgenticVerz Runtime v1 declared FEATURE FROZEN. Two-axis architecture: Plane (Founder Ops vs Customer Experience) × Stage (Preflight vs Production). Domains: preflight-fops (system truth), fops (operate), preflight-console (INTERNAL ONLY - verify UX before exposure, like TestFlight), console (customers). Key correction: preflight-console is NOT customer-facing - it's for founders/dev/QA to verify exactly what customers will see. Same UI code, different data sources (ENV-level switch). No `if (preflight)` in components. Next: Founder-led beta (3-7 users, real workloads). |
+| 2025-12-26 | **PIN-182 Phase 5E-4 Customer Essentials COMPLETE** - Implemented customer-scoped pages for Guard Console. Removed KillSwitch from customer navigation (Founder-only). Created: CustomerRunsPage (run history & outcomes), CustomerLimitsPage (budget, rate limits, warnings), CustomerKeysPage (create, rotate, revoke - show once). Updated GuardLayout, GuardConsoleEntry, GuardConsoleApp, CustomerHomePage. Three-plane architecture achieved: Founder/PrefOps (Ops Console), Founder/Control (/founder/*), Customer (Guard Console). Build verified: 118.56 kB. Stop condition met: "Customer can see run outcomes, manage limits awareness, and handle API keys without seeing internal machinery." Phase 5E COMPLETE. |
+| 2025-12-26 | **PIN-181 Phase 5E-3 Navigation Linking COMPLETE** - Linked Founder Console UIs into navigation structure. Sidebar: Added "Founder" section (emerald) with Timeline/Controls. OpsConsoleEntry: Added header links. Cleaned up stale routes (Dashboard, Skills, etc). Navigation is now coherent: Ops Console → Timeline → Controls → Guard Console. Stop condition met: "Founder can navigate without knowing URLs." Next: Phase 5E-4 Customer Essentials. |
+| 2025-12-26 | **PIN-180 Phase 5E-2 Kill-Switch UI Toggle COMPLETE** - Founder Controls page for freeze/unfreeze operations. Files: `api/killswitch.ts` (API client), `pages/founder/FounderControlsPage.tsx` (UI). Route: `/console/founder/controls`. Features: Tenant list with freeze state, freeze/unfreeze with confirmation dialogs, active guardrails display, recent incidents. RBAC: killswitch:read/activate/reset. Stop condition met: "A founder can freeze or unfreeze any tenant/key without CLI access." Next: Phase 5E-3 Link Existing UIs in Navigation. |
+| 2025-12-26 | **PIN-179 Phase 5E-1 Founder Decision Timeline UI COMPLETE** - Created read-only, verbatim decision record viewer. Files: `api/timeline.ts` (API client), `pages/founder/FounderTimelinePage.tsx` (UI). Route: `/console/founder/timeline`. Features: Run timeline view (PRE-RUN→DECISION→OUTCOME), all decisions list with type filter, pagination, auto-refresh. Backend already existed (Phase 4C-1). Stop condition met: "A founder can reconstruct any run end-to-end without logs or explanation." Next: Phase 5E-2 Kill-Switch UI Toggle. |
+| 2025-12-26 | **PIN-178 Phase 5E-H COMPLETE** - All 6 P0 scenarios executed with real Anthropic API + real Neon DB. Results: 6/6 PASS. P0-1 surfacing fix applied ("halt" → "step_halted; remaining steps continue"). System confirmed HUMAN-TEST ELIGIBLE. Next: Phase 5E-1 Founder Decision Timeline UI. |
 | 2025-12-25 | **PIN-172 Phase 5A Budget Enforcement** - Started Phase 5A (first behavioral change). Step 1 complete: choke point identified (runner.py step execution loop). Critical correction: budget mode must come from PRE-RUN, not ENV var. Steps 2-6 pending. |
 | 2025-12-25 | **PIN-171 Phase 4B/4C Causal Binding & Customer Visibility** - Completed causal binding (request_id→run_id), customer PRE-RUN declaration, acknowledgement gate, and outcome reconciliation. Addresses PIN-167 visibility gaps. |
 | 2025-12-25 | **PIN-170 System Contract Governance Framework** - Created via memory_trail. |

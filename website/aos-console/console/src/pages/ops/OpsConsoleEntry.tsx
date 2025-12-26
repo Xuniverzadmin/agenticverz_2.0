@@ -17,8 +17,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Clock, Power } from 'lucide-react';
 import FounderOpsConsole from './FounderOpsConsole';
 import { FounderPulsePage } from './FounderPulsePage';
 
@@ -209,6 +210,24 @@ export default function OpsConsoleEntry() {
               >
                 Console
               </button>
+            </div>
+
+            {/* Founder Pages (Phase 5E) */}
+            <div className="flex items-center gap-3 border-l border-gray-700 pl-4 ml-2">
+              <Link
+                to="/founder/timeline"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+              >
+                <Clock className="w-4 h-4" />
+                Timeline
+              </Link>
+              <Link
+                to="/founder/controls"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+              >
+                <Power className="w-4 h-4" />
+                Controls
+              </Link>
             </div>
           </div>
 

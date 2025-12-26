@@ -14,6 +14,7 @@ from sqlmodel import Session, select
 
 from .auth import verify_api_key
 from .auth.rbac_middleware import RBACMiddleware
+from .contracts.decisions import backfill_run_id_for_request
 from .db import Agent, Memory, Provenance, Run, engine, init_db
 from .logging_config import log_provenance, log_request, setup_logging
 from .metrics import (
@@ -34,7 +35,6 @@ from .utils.concurrent_runs import ConcurrentRunsLimiter
 from .utils.idempotency import check_idempotency
 from .utils.input_sanitizer import sanitize_goal
 from .utils.rate_limiter import RateLimiter
-from .contracts.decisions import backfill_run_id_for_request
 
 # Initialize utilities
 rate_limiter = RateLimiter()
@@ -225,6 +225,7 @@ async def lifespan(app: FastAPI):
     # Initialize event publisher at startup to fail-fast
     try:
         from .events.publisher import get_publisher
+
         publisher = get_publisher()  # This will raise if misconfigured
     except Exception as e:
         logger.critical(f"[BOOT] EventPublisher initialization FAILED: {e}")
@@ -240,7 +241,9 @@ async def lifespan(app: FastAPI):
     care_scope = os.getenv("CARE_SCOPE", "worker_only").lower()
     if care_scope not in ("worker_only", "api_and_worker"):
         raise RuntimeError(f"Invalid CARE_SCOPE={care_scope}. Valid: worker_only, api_and_worker")
-    logger.info(f"[BOOT] CARE_SCOPE={care_scope} (routing {'API+Worker' if care_scope == 'api_and_worker' else 'Worker only'})")
+    logger.info(
+        f"[BOOT] CARE_SCOPE={care_scope} (routing {'API+Worker' if care_scope == 'api_and_worker' else 'Worker only'})"
+    )
 
     # =========================================================================
     # M7: Memory Features
@@ -360,10 +363,12 @@ from .api.cost_intelligence import router as cost_intelligence_router
 # M29 Category 4: Cost Intelligence Completion
 from .api.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
 from .api.costsim import router as costsim_router
+from .api.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
 
 # M29 Category 6: Founder Action Paths
 from .api.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
+from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
@@ -379,8 +384,6 @@ from .api.onboarding import router as onboarding_router  # M24 Customer Onboardi
 
 # M28: operator_router removed (PIN-145) - redundant with /ops/*
 from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
-from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
-from .api.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
 from .api.policy import router as policy_router
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
 from .api.rbac_api import router as rbac_router

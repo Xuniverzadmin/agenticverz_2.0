@@ -839,7 +839,7 @@ class ValidationSuite:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
                     "http://localhost:8000/api/v1/runtime/capabilities",
-                    headers={"X-API-Key": api_key},
+                    headers={"X-AOS-Key": api_key},  # Fixed: was X-API-Key
                 ) as resp:
                     status_code = resp.status
                     body = await resp.json()

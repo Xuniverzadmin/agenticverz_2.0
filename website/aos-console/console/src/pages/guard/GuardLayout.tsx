@@ -24,13 +24,13 @@ import { useAuthStore } from '../../stores/authStore';
 
 // Navigation items matching target IA (with Account & Support)
 // M28: 'home' is now the primary landing - calm status board
+// Phase 5E-4: Customer Essentials - NO kill-switch exposed to customers
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: '🏠', description: 'Status overview' },
-  { id: 'overview', label: 'Overview', icon: '🛡️', description: 'Control plane & status' },
-  { id: 'live', label: 'Live Activity', icon: '📡', description: 'Real-time event stream' },
+  { id: 'runs', label: 'Runs', icon: '🚀', description: 'Run history & outcomes' },
+  { id: 'limits', label: 'Limits & Usage', icon: '📊', description: 'Budget & rate limits' },
   { id: 'incidents', label: 'Incidents', icon: '📋', description: 'Search & investigate' },
-  { id: 'killswitch', label: 'Kill Switch', icon: '🚨', description: 'Emergency controls' },
-  { id: 'logs', label: 'Logs', icon: '📜', description: 'Event history' },
+  { id: 'keys', label: 'API Keys', icon: '🔑', description: 'Manage access keys' },
   { id: 'settings', label: 'Settings', icon: '⚙️', description: 'Configuration' },
   { id: 'account', label: 'Account', icon: '👤', description: 'Organization & team' },
   { id: 'support', label: 'Support', icon: '💬', description: 'Help & feedback' },

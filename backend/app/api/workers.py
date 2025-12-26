@@ -28,6 +28,10 @@ from pydantic import BaseModel, Field
 
 from ..auth import verify_api_key
 
+# Phase 5B: Policy Pre-Check Integration
+from ..contracts.decisions import emit_policy_precheck_decision
+from ..policy.engine import PolicyEngine
+
 logger = logging.getLogger("nova.api.workers")
 
 router = APIRouter(prefix="/api/v1/workers/business-builder", tags=["Workers"])
@@ -94,6 +98,23 @@ class WorkerRunRequest(BaseModel):
     strict_mode: bool = Field(default=False, description="If true, any policy violation stops execution")
     depth: str = Field(default="auto", description="Research depth: auto, shallow, deep")
     async_mode: bool = Field(default=False, description="If true, returns immediately with run_id to poll")
+    # Phase 5B: Policy pre-check posture
+    policy_posture: str = Field(
+        default="advisory",
+        description="Policy pre-check mode: 'strict' (block on violation) or 'advisory' (warn only)",
+    )
+    tenant_id: Optional[str] = Field(default="default", description="Tenant ID for policy evaluation")
+
+
+class PolicyStatusModel(BaseModel):
+    """Phase 5B: Policy pre-check status for PRE-RUN declaration."""
+
+    posture: str = "advisory"  # strict or advisory
+    checked: bool = False
+    passed: bool = True
+    violations: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    service_available: bool = True
 
 
 class WorkerRunResponse(BaseModel):
@@ -101,7 +122,7 @@ class WorkerRunResponse(BaseModel):
 
     run_id: str
     success: bool
-    status: str  # queued, running, completed, failed
+    status: str  # queued, running, completed, failed, blocked
     artifacts: Optional[Dict[str, Any]] = None
     replay_token: Optional[Dict[str, Any]] = None
     cost_report: Optional[Dict[str, Any]] = None
@@ -114,6 +135,8 @@ class WorkerRunResponse(BaseModel):
     total_tokens_used: int = 0
     total_latency_ms: float = 0.0
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # Phase 5B: Policy pre-check status
+    policy_status: Optional[PolicyStatusModel] = None
 
 
 class ReplayRequest(BaseModel):
@@ -438,6 +461,7 @@ async def run_worker(
     - M19/M20: Policy governance
     """
     run_id = str(uuid.uuid4())
+    request_id = run_id  # Use run_id as request_id for causal binding
 
     logger.info(
         "worker_run_requested",
@@ -446,8 +470,87 @@ async def run_worker(
             "task": request.task[:100],
             "has_brand": request.brand is not None,
             "async_mode": request.async_mode,
+            "policy_posture": request.policy_posture,
         },
     )
+
+    # =========================================================================
+    # Phase 5B: Policy Pre-Check
+    # =========================================================================
+    # Perform pre-check BEFORE run creation. Emit decision IFF strict mode
+    # and (failed OR unavailable).
+    policy_status = PolicyStatusModel(
+        posture=request.policy_posture,
+        checked=True,
+    )
+
+    try:
+        policy_engine = PolicyEngine()
+        pre_check_result = await policy_engine.pre_check(
+            request_id=request_id,
+            agent_id="business-builder",
+            goal=request.task,
+            tenant_id=request.tenant_id or "default",
+        )
+
+        policy_status.passed = pre_check_result["passed"]
+        policy_status.service_available = pre_check_result["service_available"]
+        policy_status.violations = pre_check_result.get("violations", [])
+
+        # If not passed, put violations in warnings (advisory) or block (strict)
+        if not pre_check_result["passed"]:
+            policy_status.warnings = pre_check_result.get("violations", [])
+
+        logger.info(
+            "policy_precheck_completed",
+            extra={
+                "request_id": request_id,
+                "posture": request.policy_posture,
+                "passed": policy_status.passed,
+                "service_available": policy_status.service_available,
+                "violations_count": len(policy_status.violations),
+            },
+        )
+
+    except Exception as e:
+        logger.warning(f"Policy pre-check failed: {e}")
+        policy_status.service_available = False
+        policy_status.passed = False
+
+    # Emit decision IFF strict mode AND (failed OR unavailable)
+    # This follows the frozen emission rule from PIN-173
+    emit_policy_precheck_decision(
+        request_id=request_id,
+        posture=request.policy_posture,
+        passed=policy_status.passed,
+        service_available=policy_status.service_available,
+        violations=policy_status.violations,
+        tenant_id=request.tenant_id or "default",
+    )
+
+    # Block run if strict mode and pre-check failed or service unavailable
+    if request.policy_posture == "strict" and (not policy_status.passed or not policy_status.service_available):
+        logger.warning(
+            "run_blocked_by_policy_precheck",
+            extra={
+                "request_id": request_id,
+                "passed": policy_status.passed,
+                "service_available": policy_status.service_available,
+            },
+        )
+        # Return blocked response - NO run created
+        return WorkerRunResponse(
+            run_id=run_id,
+            success=False,
+            status="blocked",
+            error="Policy pre-check failed (strict mode)"
+            if policy_status.passed is False
+            else "Policy service unavailable (strict mode)",
+            policy_status=policy_status,
+        )
+    # =========================================================================
+    # End Phase 5B Pre-Check
+    # =========================================================================
 
     if request.async_mode:
         # Queue for background execution
@@ -466,6 +569,7 @@ async def run_worker(
             run_id=run_id,
             success=False,  # Not yet complete
             status="queued",
+            policy_status=policy_status,  # Phase 5B: Include pre-check result
         )
 
     # Synchronous execution
@@ -502,6 +606,7 @@ async def run_worker(
             error=result.error,
             total_tokens_used=result.total_tokens_used,
             total_latency_ms=result.total_latency_ms,
+            policy_status=policy_status,  # Phase 5B: Include pre-check result
         )
 
         # Store the run

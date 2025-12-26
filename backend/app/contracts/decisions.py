@@ -31,15 +31,21 @@ logger = logging.getLogger("nova.contracts.decisions")
 
 class DecisionType(str, Enum):
     """Types of decisions that must be recorded."""
+
     ROUTING = "routing"
     RECOVERY = "recovery"
     MEMORY = "memory"
     POLICY = "policy"
     BUDGET = "budget"
+    BUDGET_ENFORCEMENT = "budget_enforcement"  # Phase 5A: Hard budget halted execution
+    POLICY_PRE_CHECK = "policy_pre_check"  # Phase 5B: Pre-execution policy check
+    RECOVERY_EVALUATION = "recovery_evaluation"  # Phase 5C: Post-failure recovery evaluation
+    CARE_ROUTING_OPTIMIZED = "care_routing_optimized"  # Phase 5D: Optimization changed routing
 
 
 class DecisionSource(str, Enum):
     """Who originated the decision authority."""
+
     HUMAN = "human"
     SYSTEM = "system"
     HYBRID = "hybrid"
@@ -47,6 +53,7 @@ class DecisionSource(str, Enum):
 
 class DecisionTrigger(str, Enum):
     """Why the decision occurred."""
+
     EXPLICIT = "explicit"
     AUTONOMOUS = "autonomous"
     REACTIVE = "reactive"
@@ -54,18 +61,31 @@ class DecisionTrigger(str, Enum):
 
 class DecisionOutcome(str, Enum):
     """Result of the decision."""
-    SELECTED = "selected"      # Positive selection made
-    REJECTED = "rejected"      # All options rejected
-    SKIPPED = "skipped"        # Decision point bypassed
-    BLOCKED = "blocked"        # Decision blocked by constraint
-    NONE = "none"              # No decision needed
+
+    SELECTED = "selected"  # Positive selection made
+    REJECTED = "rejected"  # All options rejected
+    SKIPPED = "skipped"  # Decision point bypassed
+    BLOCKED = "blocked"  # Decision blocked by constraint
+    NONE = "none"  # No decision needed
+    EXECUTION_HALTED = "execution_halted"  # Phase 5A: Hard budget halted execution
+    POLICY_BLOCKED = "policy_blocked"  # Phase 5B: Pre-check failed (strict mode)
+    POLICY_UNAVAILABLE = "policy_unavailable"  # Phase 5B: Policy service down (strict mode)
+    # NOTE: No POLICY_ALLOWED - success is not a decision, it's the default path
+    # Phase 5C: Recovery outcomes
+    RECOVERY_APPLIED = "recovery_applied"  # R1: Safe auto-recovery executed
+    RECOVERY_SUGGESTED = "recovery_suggested"  # R2: Risky, human approval needed
+    RECOVERY_SKIPPED = "recovery_skipped"  # R3: Forbidden or not applicable
+    # Phase 5D: CARE optimization outcomes
+    BASELINE_SELECTED = "baseline_selected"  # Optimization agreed with baseline
+    OPTIMIZED_SELECTED = "optimized_selected"  # Optimization changed selection
 
 
 class CausalRole(str, Enum):
     """When in the lifecycle this decision occurred."""
-    PRE_RUN = "pre_run"        # Before run exists (routing, policy pre-check)
-    IN_RUN = "in_run"          # During run execution
-    POST_RUN = "post_run"      # After run completion (reconciliation)
+
+    PRE_RUN = "pre_run"  # Before run exists (routing, policy pre-check)
+    IN_RUN = "in_run"  # During run execution
+    POST_RUN = "post_run"  # After run completion (reconciliation)
 
 
 # =============================================================================
@@ -80,6 +100,7 @@ class DecisionRecord(BaseModel):
     Every decision (routing, recovery, memory, policy, budget) emits one of these.
     Append-only. No business logic.
     """
+
     # Identity
     decision_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:16])
 
@@ -162,7 +183,8 @@ class DecisionRecordService:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO contracts.decision_records (
                             decision_id, decision_type, decision_source, decision_trigger,
                             decision_inputs, decision_outcome, decision_reason,
@@ -174,7 +196,8 @@ class DecisionRecordService:
                             :run_id, :workflow_id, :tenant_id, :request_id, :causal_role,
                             :decided_at, :details
                         )
-                    """),
+                    """
+                    ),
                     {
                         "decision_id": record.decision_id,
                         "decision_type": record.decision_type.value,
@@ -196,7 +219,7 @@ class DecisionRecordService:
             engine.dispose()
 
             logger.debug(
-                f"decision_record_emitted",
+                "decision_record_emitted",
                 extra={
                     "decision_id": record.decision_id,
                     "decision_type": record.decision_type.value,
@@ -216,6 +239,7 @@ class DecisionRecordService:
     def emit_sync(self, record: DecisionRecord) -> bool:
         """Synchronous version of emit for non-async contexts."""
         import asyncio
+
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
@@ -235,7 +259,8 @@ class DecisionRecordService:
             engine = create_engine(self._db_url)
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO contracts.decision_records (
                             decision_id, decision_type, decision_source, decision_trigger,
                             decision_inputs, decision_outcome, decision_reason,
@@ -247,7 +272,8 @@ class DecisionRecordService:
                             :run_id, :workflow_id, :tenant_id, :request_id, :causal_role,
                             :decided_at, :details
                         )
-                    """),
+                    """
+                    ),
                     {
                         "decision_id": record.decision_id,
                         "decision_type": record.decision_type.value,
@@ -319,8 +345,10 @@ def emit_routing_decision(
             "agents_count": len(eligible_agents),
         },
         decision_outcome=(
-            DecisionOutcome.SELECTED if routed and selected_agent
-            else DecisionOutcome.REJECTED if not routed and rejection_reason
+            DecisionOutcome.SELECTED
+            if routed and selected_agent
+            else DecisionOutcome.REJECTED
+            if not routed and rejection_reason
             else DecisionOutcome.NONE
         ),
         decision_reason=rejection_reason if not routed else f"Selected {selected_agent}",
@@ -541,6 +569,367 @@ def emit_budget_decision(
     return record
 
 
+def _check_budget_enforcement_exists(run_id: str) -> bool:
+    """
+    Check if a budget_enforcement decision already exists for this run.
+
+    Idempotency guard: prevents double emission on retry/restart.
+    """
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return False  # Can't check, allow emission
+
+    try:
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    """
+                    SELECT 1 FROM contracts.decision_records
+                    WHERE run_id = :run_id
+                      AND decision_type = :decision_type
+                    LIMIT 1
+                """
+                ),
+                {
+                    "run_id": run_id,
+                    "decision_type": DecisionType.BUDGET_ENFORCEMENT.value,
+                },
+            )
+            exists = result.fetchone() is not None
+        engine.dispose()
+        return exists
+    except Exception as e:
+        logger.warning(f"Failed to check budget_enforcement existence: {e}")
+        return False  # On error, allow emission (fail-open for observability)
+
+
+def emit_budget_enforcement_decision(
+    run_id: str,
+    budget_limit_cents: int,
+    budget_consumed_cents: int,
+    step_cost_cents: int,
+    completed_steps: int,
+    total_steps: int,
+    tenant_id: str = "default",
+) -> Optional[DecisionRecord]:
+    """
+    Emit a budget enforcement decision record when hard limit halts execution.
+
+    Phase 5A: This is the ONLY decision type for hard budget halts.
+    Called immediately when execution is halted due to hard budget limit.
+
+    IDEMPOTENT: If already emitted for this run_id, returns None.
+
+    Contract alignment:
+    - decision_type: budget_enforcement
+    - decision_source: system
+    - decision_trigger: reactive
+    - decision_outcome: execution_halted
+    """
+    # Idempotency guard: check if already emitted for this run
+    if _check_budget_enforcement_exists(run_id):
+        logger.debug(
+            "budget_enforcement_already_emitted",
+            extra={"run_id": run_id},
+        )
+        return None
+
+    record = DecisionRecord(
+        decision_type=DecisionType.BUDGET_ENFORCEMENT,
+        decision_source=DecisionSource.SYSTEM,
+        decision_trigger=DecisionTrigger.REACTIVE,
+        decision_inputs={
+            "budget_limit_cents": budget_limit_cents,
+            "budget_consumed_cents": budget_consumed_cents,
+            "step_cost_cents": step_cost_cents,
+            "completed_steps": completed_steps,
+            "total_steps": total_steps,
+        },
+        decision_outcome=DecisionOutcome.EXECUTION_HALTED,
+        decision_reason=f"Hard budget limit reached: {budget_consumed_cents}c consumed >= {budget_limit_cents}c limit",
+        run_id=run_id,
+        tenant_id=tenant_id,
+        causal_role=CausalRole.IN_RUN,
+        details={
+            "enforcement_mode": "hard",
+            "halt_point": f"after_step_{completed_steps}",
+            "remaining_steps": total_steps - completed_steps,
+        },
+    )
+
+    get_decision_service().emit_sync(record)
+    return record
+
+
+# =============================================================================
+# Phase 5B: Policy Pre-Check Decision Emission
+# =============================================================================
+
+
+def _check_policy_precheck_exists(request_id: str, outcome: str) -> bool:
+    """
+    Check if a policy_pre_check decision already exists for this request+outcome.
+
+    Idempotency guard: prevents double emission on retry/restart.
+    """
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return False  # Can't check, allow emission
+
+    try:
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    """
+                    SELECT 1 FROM contracts.decision_records
+                    WHERE request_id = :request_id
+                      AND decision_type = :decision_type
+                      AND decision_outcome = :outcome
+                    LIMIT 1
+                """
+                ),
+                {
+                    "request_id": request_id,
+                    "decision_type": DecisionType.POLICY_PRE_CHECK.value,
+                    "outcome": outcome,
+                },
+            )
+            exists = result.fetchone() is not None
+        engine.dispose()
+        return exists
+    except Exception as e:
+        logger.warning(f"Failed to check policy_pre_check existence: {e}")
+        return False  # On error, allow emission (fail-open for observability)
+
+
+def emit_policy_precheck_decision(
+    request_id: str,
+    posture: str,
+    passed: bool,
+    service_available: bool,
+    violations: Optional[list] = None,
+    tenant_id: str = "default",
+) -> Optional[DecisionRecord]:
+    """
+    Emit a policy pre-check decision record.
+
+    Phase 5B: Pre-execution policy check.
+
+    EMISSION RULE (FROZEN):
+      - EMIT IFF (posture == strict AND (failed OR unavailable))
+      - DO NOT EMIT if passed or posture == advisory
+
+    Contract alignment:
+    - decision_type: policy_pre_check
+    - decision_source: system
+    - decision_trigger: explicit (pre-check is proactive)
+    - causal_role: pre_run (always - run doesn't exist yet)
+    - run_id: None (run not created on block)
+
+    IDEMPOTENT: If already emitted for this request_id+outcome, returns None.
+    """
+    # Rule: Advisory mode NEVER emits decisions
+    if posture != "strict":
+        logger.debug(
+            "policy_precheck_no_emit_advisory",
+            extra={"request_id": request_id, "posture": posture},
+        )
+        return None
+
+    # Rule: Success does NOT emit decisions
+    if passed and service_available:
+        logger.debug(
+            "policy_precheck_no_emit_success",
+            extra={"request_id": request_id},
+        )
+        return None
+
+    # Determine outcome
+    if not service_available:
+        outcome = DecisionOutcome.POLICY_UNAVAILABLE
+        reason = "Policy service unavailable (strict mode blocks execution)"
+    else:
+        outcome = DecisionOutcome.POLICY_BLOCKED
+        reason = f"Policy pre-check failed: {', '.join(violations or ['Unknown violation'])}"
+
+    # Idempotency guard
+    if _check_policy_precheck_exists(request_id, outcome.value):
+        logger.debug(
+            "policy_precheck_already_emitted",
+            extra={"request_id": request_id, "outcome": outcome.value},
+        )
+        return None
+
+    record = DecisionRecord(
+        decision_type=DecisionType.POLICY_PRE_CHECK,
+        decision_source=DecisionSource.SYSTEM,
+        decision_trigger=DecisionTrigger.EXPLICIT,  # Pre-check is proactive, not reactive
+        decision_inputs={
+            "posture": posture,
+            "violations": violations or [],
+            "service_available": service_available,
+        },
+        decision_outcome=outcome,
+        decision_reason=reason,
+        run_id=None,  # Run not created on block
+        tenant_id=tenant_id,
+        request_id=request_id,
+        causal_role=CausalRole.PRE_RUN,  # Always pre-run
+        details={
+            "posture": posture,
+            "blocked": True,
+            "passed": passed,
+            "service_available": service_available,
+        },
+    )
+
+    get_decision_service().emit_sync(record)
+
+    logger.info(
+        "policy_precheck_decision_emitted",
+        extra={
+            "request_id": request_id,
+            "decision_id": record.decision_id,
+            "outcome": outcome.value,
+            "posture": posture,
+        },
+    )
+
+    return record
+
+
+# =============================================================================
+# Phase 5C: Recovery Evaluation Decision Emission
+# =============================================================================
+
+
+def _check_recovery_evaluation_exists(run_id: str, failure_type: str) -> bool:
+    """
+    Check if a recovery_evaluation decision already exists for this run+failure.
+
+    Idempotency guard: prevents double emission on retry/restart.
+    """
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return False  # Can't check, allow emission
+
+    try:
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    """
+                    SELECT 1 FROM contracts.decision_records
+                    WHERE run_id = :run_id
+                      AND decision_type = :decision_type
+                      AND decision_inputs::text LIKE :failure_pattern
+                    LIMIT 1
+                """
+                ),
+                {
+                    "run_id": run_id,
+                    "decision_type": DecisionType.RECOVERY_EVALUATION.value,
+                    "failure_pattern": f'%"failure_type": "{failure_type}"%',
+                },
+            )
+            exists = result.fetchone() is not None
+        engine.dispose()
+        return exists
+    except Exception as e:
+        logger.warning(f"Failed to check recovery_evaluation existence: {e}")
+        return False  # On error, allow emission (fail-open for observability)
+
+
+def emit_recovery_evaluation_decision(
+    run_id: str,
+    request_id: str,
+    recovery_class: str,  # R1, R2, R3
+    recovery_action: Optional[str],
+    failure_type: str,
+    failure_context: Optional[Dict[str, Any]] = None,
+    tenant_id: str = "default",
+) -> Optional[DecisionRecord]:
+    """
+    Emit a recovery evaluation decision record.
+
+    Phase 5C: Post-failure recovery evaluation.
+
+    EMISSION RULE (FROZEN per PIN-174):
+      - ALWAYS emit exactly one RECOVERY_EVALUATION decision after any:
+        - execution_halted
+        - execution_failed
+
+      Outcome mapping:
+        - R1 and applied → recovery_applied
+        - R2 and suggested → recovery_suggested
+        - R3 or no applicable recovery → recovery_skipped
+
+    Contract alignment:
+    - decision_type: recovery_evaluation
+    - decision_source: system
+    - decision_trigger: reactive (recovery is always reactive to failure)
+    - causal_role: post_run (always - recovery evaluates after failure)
+
+    IDEMPOTENT: If already emitted for this run_id+failure_type, returns None.
+    """
+    # Idempotency guard
+    if _check_recovery_evaluation_exists(run_id, failure_type):
+        logger.debug(
+            "recovery_evaluation_already_emitted",
+            extra={"run_id": run_id, "failure_type": failure_type},
+        )
+        return None
+
+    # Map recovery_class to outcome
+    if recovery_class == "R1":
+        outcome = DecisionOutcome.RECOVERY_APPLIED
+        reason = f"R1: Auto-recovery applied - {recovery_action}"
+    elif recovery_class == "R2":
+        outcome = DecisionOutcome.RECOVERY_SUGGESTED
+        reason = f"R2: Recovery suggested (requires approval) - {recovery_action}"
+    else:  # R3 or unknown
+        outcome = DecisionOutcome.RECOVERY_SKIPPED
+        reason = f"R3: Recovery skipped - {failure_type}"
+
+    record = DecisionRecord(
+        decision_type=DecisionType.RECOVERY_EVALUATION,
+        decision_source=DecisionSource.SYSTEM,
+        decision_trigger=DecisionTrigger.REACTIVE,  # Recovery is always reactive
+        decision_inputs={
+            "recovery_class": recovery_class,
+            "recovery_action": recovery_action,
+            "failure_type": failure_type,
+        },
+        decision_outcome=outcome,
+        decision_reason=reason,
+        run_id=run_id,
+        tenant_id=tenant_id,
+        request_id=request_id,
+        causal_role=CausalRole.POST_RUN,  # Always post-failure
+        details={
+            "failure_context": failure_context or {},
+            "recovery_bounded": recovery_class == "R1",
+            "requires_approval": recovery_class == "R2",
+        },
+    )
+
+    get_decision_service().emit_sync(record)
+
+    logger.info(
+        "recovery_evaluation_decision_emitted",
+        extra={
+            "run_id": run_id,
+            "decision_id": record.decision_id,
+            "outcome": outcome.value,
+            "recovery_class": recovery_class,
+        },
+    )
+
+    return record
+
+
 # =============================================================================
 # Causal Binding: Backfill run_id for Pre-Run Decisions
 # =============================================================================
@@ -567,13 +956,15 @@ def backfill_run_id_for_request(request_id: str, run_id: str) -> int:
         engine = create_engine(db_url)
         with engine.connect() as conn:
             result = conn.execute(
-                text("""
+                text(
+                    """
                     UPDATE contracts.decision_records
                     SET run_id = :run_id
                     WHERE request_id = :request_id
                       AND run_id IS NULL
                       AND causal_role = 'pre_run'
-                """),
+                """
+                ),
                 {"request_id": request_id, "run_id": run_id},
             )
             conn.commit()
@@ -582,7 +973,7 @@ def backfill_run_id_for_request(request_id: str, run_id: str) -> int:
 
         if updated > 0:
             logger.debug(
-                f"backfill_run_id_completed",
+                "backfill_run_id_completed",
                 extra={
                     "request_id": request_id,
                     "run_id": run_id,
@@ -597,3 +988,276 @@ def backfill_run_id_for_request(request_id: str, run_id: str) -> int:
     except Exception as e:
         logger.warning(f"Unexpected error backfilling run_id: {e}")
         return 0
+
+
+# =============================================================================
+# Phase 5D: CARE Optimization - Signal Isolation & Decision Emission
+# =============================================================================
+
+# Allowed signals (PIN-176 frozen list)
+CARE_ALLOWED_SIGNALS = frozenset(
+    [
+        "latency_p50",
+        "latency_p95",
+        "cost_per_run",
+        "success_rate",  # Binary execution success only
+        "recovery_occurred",  # Boolean only
+        "agent_availability",
+        "context_size_bucket",
+    ]
+)
+
+# Forbidden signals (PIN-176 frozen list)
+CARE_FORBIDDEN_SIGNALS = frozenset(
+    [
+        "policy_outcome",
+        "budget_halt_reason",
+        "recovery_class",
+        "customer_content",
+        "safety_events",
+        "founder_overrides",
+        "failure_details",
+        "user_feedback",
+    ]
+)
+
+# Kill-switch state (runtime toggle)
+_care_optimization_kill_switch = False
+
+# Confidence threshold for optimization selection
+CARE_CONFIDENCE_THRESHOLD = 0.50
+
+
+class CARESignalAccessError(Exception):
+    """Raised when attempting to access a forbidden CARE signal."""
+
+    pass
+
+
+def check_signal_access(signal_name: str) -> bool:
+    """
+    Check if a signal is allowed for CARE optimization.
+
+    Phase 5D: Hard guard on signal access.
+
+    Raises:
+        CARESignalAccessError: If signal is forbidden
+
+    Returns:
+        True if signal is allowed
+    """
+    if signal_name in CARE_FORBIDDEN_SIGNALS:
+        raise CARESignalAccessError(f"Forbidden signal access: '{signal_name}' is not allowed for CARE optimization")
+
+    if signal_name not in CARE_ALLOWED_SIGNALS:
+        raise CARESignalAccessError(f"Unknown signal: '{signal_name}' is not in the allowed signal list")
+
+    return True
+
+
+def activate_care_kill_switch() -> bool:
+    """
+    Activate the CARE optimization kill-switch.
+
+    When activated:
+    - Forces baseline selection
+    - Prevents decision emission
+    - Takes effect within 1 request cycle
+
+    Returns:
+        True on successful activation
+    """
+    global _care_optimization_kill_switch
+    _care_optimization_kill_switch = True
+    logger.warning("care_kill_switch_activated")
+    return True
+
+
+def deactivate_care_kill_switch() -> bool:
+    """
+    Deactivate the CARE optimization kill-switch.
+
+    Returns:
+        True on successful deactivation
+    """
+    global _care_optimization_kill_switch
+    _care_optimization_kill_switch = False
+    logger.info("care_kill_switch_deactivated")
+    return True
+
+
+def is_care_kill_switch_active() -> bool:
+    """Check if CARE kill-switch is currently active."""
+    return _care_optimization_kill_switch
+
+
+def _check_care_optimization_exists(request_id: str) -> bool:
+    """
+    Check if a care_routing_optimized decision already exists for this request.
+
+    Idempotency guard: prevents double emission.
+    """
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return False
+
+    try:
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    """
+                    SELECT 1 FROM contracts.decision_records
+                    WHERE request_id = :request_id
+                      AND decision_type = :decision_type
+                    LIMIT 1
+                """
+                ),
+                {
+                    "request_id": request_id,
+                    "decision_type": DecisionType.CARE_ROUTING_OPTIMIZED.value,
+                },
+            )
+            exists = result.fetchone() is not None
+        engine.dispose()
+        return exists
+    except Exception as e:
+        logger.warning(f"Failed to check care_routing_optimized existence: {e}")
+        return False
+
+
+def emit_care_optimization_decision(
+    request_id: str,
+    baseline_agent: str,
+    optimized_agent: str,
+    confidence_score: float,
+    signals_used: list,
+    optimization_enabled: bool = True,
+    shadow_mode: bool = False,
+    tenant_id: str = "default",
+) -> Optional[DecisionRecord]:
+    """
+    Emit a CARE routing optimization decision record.
+
+    Phase 5D: Optimization-driven routing decision.
+
+    EMISSION RULE (FROZEN per PIN-176):
+      - EMIT CARE_ROUTING_OPTIMIZED decision IF AND ONLY IF:
+        - optimization_enabled = true
+        - AND NOT shadow_mode
+        - AND optimized_agent != baseline_agent
+
+      - DO NOT EMIT if:
+        - optimization_disabled
+        - shadow_mode (log only, no decision record)
+        - baseline == optimized (silence allowed)
+        - kill_switch active
+
+    Contract alignment:
+    - decision_type: care_routing_optimized
+    - decision_source: system
+    - decision_trigger: autonomous (learning-driven)
+    - causal_role: pre_run (always - before run exists)
+
+    IDEMPOTENT: If already emitted for this request_id, returns None.
+    """
+    # Kill-switch check - forces baseline, no emission
+    if is_care_kill_switch_active():
+        logger.debug(
+            "care_optimization_kill_switch_active",
+            extra={"request_id": request_id},
+        )
+        return None
+
+    # Optimization disabled - no emission
+    if not optimization_enabled:
+        logger.debug(
+            "care_optimization_disabled",
+            extra={"request_id": request_id},
+        )
+        return None
+
+    # Shadow mode - log only, no decision record
+    if shadow_mode:
+        logger.info(
+            "care_optimization_shadow_comparison",
+            extra={
+                "request_id": request_id,
+                "baseline_agent": baseline_agent,
+                "optimized_agent": optimized_agent,
+                "diverged": baseline_agent != optimized_agent,
+                "confidence_score": confidence_score,
+            },
+        )
+        return None
+
+    # Low confidence - use baseline (conservative)
+    if confidence_score < CARE_CONFIDENCE_THRESHOLD:
+        logger.debug(
+            "care_optimization_low_confidence",
+            extra={
+                "request_id": request_id,
+                "confidence_score": confidence_score,
+                "threshold": CARE_CONFIDENCE_THRESHOLD,
+            },
+        )
+        return None
+
+    # No divergence - silence is correct
+    if baseline_agent == optimized_agent:
+        logger.debug(
+            "care_optimization_no_divergence",
+            extra={"request_id": request_id, "agent": baseline_agent},
+        )
+        return None
+
+    # Idempotency guard
+    if _check_care_optimization_exists(request_id):
+        logger.debug(
+            "care_optimization_already_emitted",
+            extra={"request_id": request_id},
+        )
+        return None
+
+    # Validate signals used are all allowed
+    for signal in signals_used:
+        check_signal_access(signal)  # Raises on forbidden
+
+    record = DecisionRecord(
+        decision_type=DecisionType.CARE_ROUTING_OPTIMIZED,
+        decision_source=DecisionSource.SYSTEM,
+        decision_trigger=DecisionTrigger.AUTONOMOUS,  # Learning-driven
+        decision_inputs={
+            "baseline_agent": baseline_agent,
+            "optimized_agent": optimized_agent,
+            "confidence_score": confidence_score,
+            "signals_used": signals_used,
+        },
+        decision_outcome=DecisionOutcome.OPTIMIZED_SELECTED,
+        decision_reason=f"Optimization selected {optimized_agent} over baseline {baseline_agent}",
+        run_id=None,  # Pre-run decision
+        tenant_id=tenant_id,
+        request_id=request_id,
+        causal_role=CausalRole.PRE_RUN,  # Always pre-run
+        details={
+            "baseline_agent": baseline_agent,
+            "optimized_agent": optimized_agent,
+            "confidence_score": confidence_score,
+            "signals_used": signals_used,
+        },
+    )
+
+    get_decision_service().emit_sync(record)
+
+    logger.info(
+        "care_optimization_decision_emitted",
+        extra={
+            "request_id": request_id,
+            "decision_id": record.decision_id,
+            "baseline_agent": baseline_agent,
+            "optimized_agent": optimized_agent,
+            "confidence_score": confidence_score,
+        },
+    )
+
+    return record

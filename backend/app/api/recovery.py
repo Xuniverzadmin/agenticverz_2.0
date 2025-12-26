@@ -808,3 +808,385 @@ async def evaluate_rules(
     except Exception as e:
         logger.error(f"Rule evaluation error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to evaluate rules: {str(e)}")
+
+
+# =============================================================================
+# M6: Scoped Execution Endpoints
+# =============================================================================
+
+
+class ScopeTestRequest(BaseModel):
+    """Request to test a recovery action in scoped execution."""
+
+    action_name: str = Field(..., description="Name of the recovery action")
+    action_type: str = Field(
+        ...,
+        description="Type of action: retry, fallback, circuit_break, scale",
+        example="retry",
+    )
+    risk_class: str = Field(
+        ...,
+        description="Risk classification: low, medium, high, critical",
+        example="medium",
+    )
+    parameters: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Action-specific parameters",
+    )
+    scope_type: str = Field(
+        "dry_run",
+        description="Scope type: dry_run, agent_subset, request_sample, budget_fraction",
+    )
+    scope_fraction: float = Field(
+        0.1,
+        description="Fraction of traffic to test (0.01-1.0)",
+        ge=0.01,
+        le=1.0,
+    )
+
+
+class ScopeTestResponse(BaseModel):
+    """Response from scoped execution test."""
+
+    success: bool
+    cost_delta_cents: int
+    failure_count: int
+    policy_violations: List[str]
+    execution_hash: str
+    duration_ms: int
+    scope_coverage: float
+    samples_tested: int
+    risk_class: str
+    scope_type: str
+    details: Dict[str, Any]
+
+
+@router.post("/candidates/{candidate_id}/scope-test", response_model=ScopeTestResponse)
+async def test_recovery_scope(
+    candidate_id: int = Path(..., description="Recovery candidate ID"),
+    request: ScopeTestRequest = ...,
+):
+    """
+    M6: Test a recovery action in scoped execution before global rollout.
+
+    This endpoint:
+    1. Validates the recovery action against risk policies
+    2. Executes in a scoped context (subset of traffic/agents)
+    3. Returns cost/failure/policy deltas for review
+
+    Risk Gating:
+    - LOW risk: No scoped execution required
+    - MEDIUM risk: Scoped execution recommended
+    - HIGH/CRITICAL risk: Scoped execution mandatory
+
+    Scope Types:
+    - dry_run: Validate without execution (default)
+    - agent_subset: Run on a subset of agents
+    - request_sample: Run on a sample of requests
+    - budget_fraction: Run within a budget fraction
+    """
+    from app.services.scoped_execution import test_recovery_scope as do_scope_test
+
+    try:
+        result = await do_scope_test(
+            action_id=str(candidate_id),
+            action_name=request.action_name,
+            action_type=request.action_type,
+            risk_class=request.risk_class,
+            parameters=request.parameters,
+            scope_type=request.scope_type,
+            scope_fraction=request.scope_fraction,
+        )
+
+        return ScopeTestResponse(**result)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Scope test failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Scope test failed: {str(e)}")
+
+
+# =============================================================================
+# P2FC-4: Scope-Gated Recovery Execution
+# =============================================================================
+
+
+class CreateScopeRequest(BaseModel):
+    """Request to create a bound execution scope."""
+
+    incident_id: str = Field(..., description="Incident ID to bind scope to")
+    action: str = Field(..., description="Recovery action to allow", example="retry_agent")
+    intent: Optional[str] = Field(None, description="Why this action is allowed")
+    max_cost_usd: float = Field(0.50, description="Maximum cost in USD", ge=0, le=100)
+    max_attempts: int = Field(1, description="Maximum execution attempts", ge=1, le=10)
+    ttl_seconds: int = Field(300, description="Scope validity duration in seconds", ge=60, le=3600)
+    target_agents: Optional[List[str]] = Field(None, description="Target agent IDs")
+
+
+class CreateScopeResponse(BaseModel):
+    """Response with created execution scope."""
+
+    scope_id: str
+    incident_id: str
+    allowed_actions: List[str]
+    max_cost_usd: float
+    max_attempts: int
+    expires_at: str
+    intent: str
+    status: str
+    attempts_remaining: int
+
+
+class ExecuteRequest(BaseModel):
+    """Request to execute a recovery action."""
+
+    incident_id: str = Field(..., description="Incident ID")
+    action: str = Field(..., description="Recovery action to execute", example="retry_agent")
+    scope_id: Optional[str] = Field(None, description="Scope ID (REQUIRED for execution)")
+    parameters: Optional[Dict[str, Any]] = Field(None, description="Action parameters")
+
+
+class ExecuteResponse(BaseModel):
+    """Response from recovery execution."""
+
+    success: bool
+    scope_id: str
+    action: str
+    incident_id: str
+    attempt_number: int
+    scope_status: str
+    attempts_remaining: int
+    cost_used_usd: float
+    executed_at: str
+
+
+class ScopeListResponse(BaseModel):
+    """Response listing scopes for an incident."""
+
+    incident_id: str
+    scopes: List[Dict[str, Any]]
+    total: int
+
+
+@router.post("/scope", response_model=CreateScopeResponse, status_code=201)
+async def create_scope(request: CreateScopeRequest):
+    """
+    P2FC-4: Create a bound execution scope for recovery action.
+
+    This is the GATE STEP. Before any recovery action can execute,
+    a scope must be created that binds:
+    - Incident (scope is incident-specific)
+    - Allowed actions (only listed actions can execute)
+    - Cost ceiling (max spend before scope exhaustion)
+    - Attempt limit (max execution attempts)
+    - Expiry time (scope automatically expires)
+    - Intent (why this action is allowed)
+
+    INVARIANT: "A recovery action without a valid execution scope is invalid by definition."
+    """
+    from app.services.scoped_execution import create_recovery_scope
+
+    try:
+        result = await create_recovery_scope(
+            incident_id=request.incident_id,
+            action=request.action,
+            intent=request.intent or f"Recovery for incident {request.incident_id}",
+            max_cost_usd=request.max_cost_usd,
+            max_attempts=request.max_attempts,
+            ttl_seconds=request.ttl_seconds,
+            target_agents=request.target_agents,
+            created_by="api",
+        )
+
+        logger.info(
+            f"P2FC-4: Created scope {result['scope_id']} for incident {request.incident_id}, "
+            f"action={request.action}, max_attempts={request.max_attempts}"
+        )
+
+        return CreateScopeResponse(
+            scope_id=result["scope_id"],
+            incident_id=result["incident_id"],
+            allowed_actions=result["allowed_actions"],
+            max_cost_usd=result["max_cost_usd"],
+            max_attempts=result["max_attempts"],
+            expires_at=result["expires_at"],
+            intent=result["intent"],
+            status=result["status"],
+            attempts_remaining=result["attempts_remaining"],
+        )
+
+    except Exception as e:
+        logger.error(f"Create scope failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create scope: {str(e)}")
+
+
+@router.post("/execute", response_model=ExecuteResponse)
+async def execute_recovery(request: ExecuteRequest):
+    """
+    P2FC-4: Execute a recovery action (REQUIRES valid scope).
+
+    This endpoint enforces the M6 invariant:
+    > "No recovery action may execute without an explicit, bounded execution
+    >  scope derived from incident context."
+
+    If scope_id is not provided → 400 error (scoped execution required)
+    If scope is exhausted → 400 error (scope exhausted)
+    If scope is expired → 400 error (scope expired)
+    If action doesn't match scope → 403 error (action outside scope)
+
+    Only with a valid, active scope can execution proceed.
+    """
+    from app.services.scoped_execution import (
+        ScopeActionMismatch,
+        ScopedExecutionRequired,
+        ScopeExhausted,
+        ScopeExpired,
+        ScopeIncidentMismatch,
+        ScopeNotFound,
+        execute_with_scope,
+        validate_scope_required,
+    )
+
+    try:
+        # CRITICAL: If no scope_id provided, FAIL immediately
+        if not request.scope_id:
+            await validate_scope_required(request.incident_id, request.action)
+
+        # Execute within scope
+        result = await execute_with_scope(
+            scope_id=request.scope_id,
+            action=request.action,
+            incident_id=request.incident_id,
+            parameters=request.parameters,
+        )
+
+        logger.info(
+            f"P2FC-4: Executed action '{request.action}' within scope {request.scope_id}, "
+            f"attempt={result['attempt_number']}, status={result['scope_status']}"
+        )
+
+        return ExecuteResponse(**result)
+
+    except ScopedExecutionRequired as e:
+        logger.warning(f"P2FC-4: Execution rejected - scoped execution required: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "scoped_execution_required",
+                "message": str(e),
+                "action": request.action,
+                "incident_id": request.incident_id,
+            },
+        )
+
+    except ScopeNotFound as e:
+        logger.warning(f"P2FC-4: Execution rejected - scope not found: {e}")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "scope_not_found",
+                "message": str(e),
+                "scope_id": request.scope_id,
+            },
+        )
+
+    except ScopeExhausted as e:
+        logger.warning(f"P2FC-4: Execution rejected - scope exhausted: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "scope_exhausted",
+                "message": str(e),
+                "scope_id": request.scope_id,
+            },
+        )
+
+    except ScopeExpired as e:
+        logger.warning(f"P2FC-4: Execution rejected - scope expired: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "scope_expired",
+                "message": str(e),
+                "scope_id": request.scope_id,
+            },
+        )
+
+    except ScopeActionMismatch as e:
+        logger.warning(f"P2FC-4: Execution rejected - action outside scope: {e}")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "action_outside_scope",
+                "message": str(e),
+                "scope_id": request.scope_id,
+                "action": request.action,
+            },
+        )
+
+    except ScopeIncidentMismatch as e:
+        logger.warning(f"P2FC-4: Execution rejected - incident mismatch: {e}")
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "incident_mismatch",
+                "message": str(e),
+                "scope_id": request.scope_id,
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"Execute recovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Execution failed: {str(e)}")
+
+
+@router.get("/scopes/{incident_id}", response_model=ScopeListResponse)
+async def list_scopes(incident_id: str = Path(..., description="Incident ID")):
+    """
+    List all execution scopes for an incident.
+
+    Shows scope status (active, exhausted, expired, revoked) for visibility.
+    """
+    from app.services.scoped_execution import get_scope_store
+
+    try:
+        store = get_scope_store()
+        scopes = store.get_scopes_for_incident(incident_id)
+
+        return ScopeListResponse(
+            incident_id=incident_id,
+            scopes=[s.to_dict() for s in scopes],
+            total=len(scopes),
+        )
+
+    except Exception as e:
+        logger.error(f"List scopes failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list scopes: {str(e)}")
+
+
+@router.delete("/scopes/{scope_id}")
+async def revoke_scope(scope_id: str = Path(..., description="Scope ID to revoke")):
+    """
+    Revoke an execution scope (admin action).
+
+    Revoked scopes cannot be used for execution.
+    """
+    from app.services.scoped_execution import get_scope_store
+
+    try:
+        store = get_scope_store()
+        success = store.revoke_scope(scope_id)
+
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Scope {scope_id} not found")
+
+        logger.info(f"P2FC-4: Revoked scope {scope_id}")
+
+        return {"status": "revoked", "scope_id": scope_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Revoke scope failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to revoke scope: {str(e)}")

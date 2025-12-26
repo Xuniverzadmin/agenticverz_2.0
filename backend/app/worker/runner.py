@@ -8,12 +8,15 @@ import json
 import logging
 import os
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlmodel import Session
 
-from ..db import Memory, Provenance, Run, engine
+# Phase 5A: Budget enforcement decision emission
+from ..contracts.decisions import emit_budget_enforcement_decision
+from ..db import Agent, Memory, Provenance, Run, engine
 from ..events import get_publisher
 from ..metrics import (
     nova_runs_failed_total,
@@ -32,6 +35,81 @@ from ..utils.plan_inspector import validate_plan
 logger = logging.getLogger("nova.worker.runner")
 
 MAX_ATTEMPTS = int(os.getenv("RUN_MAX_ATTEMPTS", "5"))
+
+
+# =============================================================================
+# Phase 5A: Budget Context for Hard Budget Enforcement
+# =============================================================================
+
+
+@dataclass
+class BudgetContext:
+    """
+    Immutable budget context loaded from PRE-RUN (Agent configuration).
+
+    This is read-only during run execution. The runner enforces; it does not decide.
+    """
+
+    mode: str  # "hard" or "soft"
+    limit_cents: int  # Total budget limit in cents
+    consumed_cents: int  # Already spent before this run
+    hard_limit: bool  # Whether to halt on budget exhaustion
+
+    @property
+    def remaining_cents(self) -> int:
+        """Remaining budget in cents."""
+        return max(0, self.limit_cents - self.consumed_cents)
+
+    def would_exceed(self, additional_cents: int) -> bool:
+        """Check if additional spending would exceed budget (for hard mode)."""
+        if not self.hard_limit:
+            return False
+        return (self.consumed_cents + additional_cents) > self.limit_cents
+
+
+def _load_budget_context(agent_id: str) -> BudgetContext:
+    """
+    Load budget context from Agent configuration.
+
+    This is the PRE-RUN snapshot. It's immutable for the duration of the run.
+    Default to soft mode if agent not found or no budget configured.
+    """
+    with Session(engine) as session:
+        agent = session.get(Agent, agent_id)
+        if not agent:
+            logger.warning("budget_context_agent_not_found", extra={"agent_id": agent_id})
+            return BudgetContext(
+                mode="soft",
+                limit_cents=0,
+                consumed_cents=0,
+                hard_limit=False,
+            )
+
+        # Get budget configuration from agent
+        budget_cents = agent.budget_cents or 0
+        spent_cents = agent.spent_cents or 0
+
+        # Determine if hard limit is enabled
+        # Check capabilities_json for hard_limit setting
+        hard_limit = True  # Default to hard limit per BudgetConfig schema
+        if agent.capabilities_json:
+            try:
+                caps = json.loads(agent.capabilities_json)
+                # Look for budget config in capabilities
+                budget_config = caps.get("budget", {})
+                hard_limit = budget_config.get("hard_limit", True)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        mode = "hard" if hard_limit and budget_cents > 0 else "soft"
+
+        return BudgetContext(
+            mode=mode,
+            limit_cents=budget_cents,
+            consumed_cents=spent_cents,
+            hard_limit=hard_limit and budget_cents > 0,
+        )
+
 
 # Anthropic pricing (as of 2024) - cents per 1M tokens
 # Claude Sonnet 4: $3/1M input, $15/1M output
@@ -155,6 +233,22 @@ class RunRunner:
         nova_runs_total.labels(status="started", planner=planner_name).inc()
 
         logger.info("run_execution_start", extra={"run_id": self.run_id, "agent_id": run.agent_id, "goal": run.goal})
+
+        # Phase 5A: Load budget context from PRE-RUN (Agent configuration)
+        # This is immutable for the duration of the run
+        budget_context = _load_budget_context(run.agent_id)
+        run_consumed_cents = 0  # Track costs accumulated during THIS run
+
+        logger.debug(
+            "budget_context_loaded",
+            extra={
+                "run_id": self.run_id,
+                "mode": budget_context.mode,
+                "limit_cents": budget_context.limit_cents,
+                "consumed_cents": budget_context.consumed_cents,
+                "hard_limit": budget_context.hard_limit,
+            },
+        )
 
         try:
             # Parse plan
@@ -419,6 +513,115 @@ class RunRunner:
                     )
                     session.add(memory)
                     session.commit()
+
+                # =============================================================
+                # Phase 5A: Hard Budget Enforcement (THE CHOKE POINT)
+                # This is BETWEEN steps - never mid-step.
+                # =============================================================
+
+                # 1. Extract step cost from side_effects
+                step_cost_cents = 0
+                if result:
+                    side_effects = result.get("side_effects", {})
+                    step_cost_cents = side_effects.get("cost_cents", 0)
+
+                # 2. Track run consumed and deduct from agent budget
+                if step_cost_cents > 0:
+                    run_consumed_cents += step_cost_cents
+                    deduct_budget(run.agent_id, step_cost_cents)
+
+                    logger.debug(
+                        "step_cost_tracked",
+                        extra={
+                            "run_id": self.run_id,
+                            "step_id": step_id,
+                            "step_cost_cents": step_cost_cents,
+                            "run_consumed_cents": run_consumed_cents,
+                        },
+                    )
+
+                # 3. Check hard budget enforcement
+                # Total consumed = initial consumed + this run's consumed
+                total_consumed = budget_context.consumed_cents + run_consumed_cents
+
+                if budget_context.hard_limit and total_consumed >= budget_context.limit_cents:
+                    # HARD BUDGET HALT - Deterministic, clean, immediate
+                    completed_steps = len(tool_calls)
+                    total_steps = len(steps)
+
+                    logger.warning(
+                        "hard_budget_halt",
+                        extra={
+                            "run_id": self.run_id,
+                            "budget_limit_cents": budget_context.limit_cents,
+                            "total_consumed_cents": total_consumed,
+                            "run_consumed_cents": run_consumed_cents,
+                            "completed_steps": completed_steps,
+                            "total_steps": total_steps,
+                        },
+                    )
+
+                    # 4. Emit decision record (exactly once)
+                    emit_budget_enforcement_decision(
+                        run_id=self.run_id,
+                        budget_limit_cents=budget_context.limit_cents,
+                        budget_consumed_cents=total_consumed,
+                        step_cost_cents=step_cost_cents,
+                        completed_steps=completed_steps,
+                        total_steps=total_steps,
+                        tenant_id=run.tenant_id or "default",
+                    )
+
+                    # 5. Update run with halted status and partial results
+                    duration_ms = (time.time() - start_time) * 1000
+                    completed_at = datetime.now(timezone.utc)
+
+                    self._update_run(
+                        status="halted",
+                        attempts=run.attempts,
+                        completed_at=completed_at,
+                        plan_json=json.dumps(plan),
+                        tool_calls_json=json.dumps(tool_calls),
+                        duration_ms=duration_ms,
+                        error_message=f"Hard budget limit reached: {total_consumed}c consumed >= {budget_context.limit_cents}c limit",
+                    )
+
+                    # 6. Create provenance record for outcome reconciliation
+                    with Session(engine) as session:
+                        provenance = Provenance(
+                            run_id=self.run_id,
+                            agent_id=run.agent_id,
+                            goal=run.goal,
+                            status="halted",  # New status for partial completion
+                            plan_json=json.dumps(plan),
+                            tool_calls_json=json.dumps(tool_calls),
+                            attempts=run.attempts,
+                            started_at=run.started_at,
+                            completed_at=completed_at,
+                            duration_ms=duration_ms,
+                        )
+                        session.add(provenance)
+                        session.commit()
+
+                    # 7. Publish halted event
+                    self.publisher.publish(
+                        "run.halted",
+                        {
+                            "run_id": self.run_id,
+                            "status": "halted",
+                            "halt_reason": "hard_budget_limit",
+                            "budget_limit_cents": budget_context.limit_cents,
+                            "budget_consumed_cents": total_consumed,
+                            "completed_steps": completed_steps,
+                            "total_steps": total_steps,
+                            "duration_ms": duration_ms,
+                        },
+                    )
+
+                    nova_runs_total.labels(status="halted", planner=planner_name).inc()
+
+                    # Clean exit - no exception, no retry
+                    return
 
             # Success
             duration_ms = (time.time() - start_time) * 1000

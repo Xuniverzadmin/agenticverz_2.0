@@ -896,6 +896,86 @@ async def negotiate_sba_version(
         }
 
 
+@router.get("/sba/health")
+async def get_sba_health(
+    x_tenant_id: str = Header(default="default", alias="X-Tenant-ID"),
+):
+    """
+    M16: Get aggregated strategy health for Guard Console.
+
+    Returns simple signal-level health status for all agents.
+    Used by StrategyHealthWidget in Guard Console.
+    """
+    if not SBA_AVAILABLE:
+        return {
+            "total_agents": 0,
+            "healthy_count": 0,
+            "approaching_bounds_count": 0,
+            "exceeded_count": 0,
+            "status": "unknown",
+            "last_evaluated_at": None,
+        }
+
+    try:
+        from datetime import datetime, timezone
+
+        sba_service = get_sba_service()
+        agents = sba_service.list_agents(tenant_id=x_tenant_id, enabled_only=True)
+
+        total = len(agents)
+        healthy = 0
+        approaching = 0
+        exceeded = 0
+
+        for agent in agents:
+            sba = agent.sba or {}
+            how_to_win = sba.get("how_to_win", {})
+            fulfillment = how_to_win.get("fulfillment_metric", 0.0)
+
+            # Simple classification:
+            # - Healthy: fulfillment >= 0.6 and validated
+            # - Approaching: fulfillment 0.3-0.6 OR not validated
+            # - Exceeded: fulfillment < 0.3
+            if not agent.sba_validated:
+                approaching += 1
+            elif fulfillment >= 0.6:
+                healthy += 1
+            elif fulfillment >= 0.3:
+                approaching += 1
+            else:
+                exceeded += 1
+
+        # Overall status (worst case wins)
+        if exceeded > 0:
+            status = "exceeded"
+        elif approaching > 0:
+            status = "approaching"
+        elif total > 0:
+            status = "healthy"
+        else:
+            status = "no_agents"
+
+        return {
+            "total_agents": total,
+            "healthy_count": healthy,
+            "approaching_bounds_count": approaching,
+            "exceeded_count": exceeded,
+            "status": status,
+            "last_evaluated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"SBA health check error: {e}", exc_info=True)
+        return {
+            "total_agents": 0,
+            "healthy_count": 0,
+            "approaching_bounds_count": 0,
+            "exceeded_count": 0,
+            "status": "error",
+            "last_evaluated_at": None,
+        }
+
+
 # Parameter route MUST come after static routes
 @router.get("/sba/{agent_id}")
 async def get_agent_sba(agent_id: str):

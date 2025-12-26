@@ -455,7 +455,7 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
     # =========================================================================
     # COST (/cost, /api/v1/cost)
     # =========================================================================
-    if "/cost" in path and not "/costsim" in path:
+    if "/cost" in path and "/costsim" not in path:
         if "/simulate" in path:
             return PolicyObject(resource="cost", action="simulate")
         elif "/forecast" in path:
@@ -594,6 +594,14 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         else:
             # Default ops access
             return PolicyObject(resource="runtime", action="query")
+
+    # =========================================================================
+    # FOUNDER TIMELINE (/founder/timeline/*) - Phase 5E-1
+    # Decision records visibility for founder forensics
+    # =========================================================================
+    if path.startswith("/founder/timeline"):
+        # Read-only timeline access - maps to runtime:query
+        return PolicyObject(resource="runtime", action="query")
 
     # =========================================================================
     # CATCH-ALL: Unknown paths default to runtime:query

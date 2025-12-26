@@ -44,6 +44,12 @@ const WorkerExecutionConsolePage = lazy(() => import('@/pages/workers/WorkerExec
 const IntegrationDashboard = lazy(() => import('@/pages/integration/IntegrationDashboard'));
 const LoopStatusPage = lazy(() => import('@/pages/integration/LoopStatusPage'));
 
+// Phase 5E-1: Founder Decision Timeline (FOUNDER)
+const FounderTimelinePage = lazy(() => import('@/pages/founder/FounderTimelinePage'));
+
+// Phase 5E-2: Kill-Switch Controls (FOUNDER)
+const FounderControlsPage = lazy(() => import('@/pages/founder/FounderControlsPage'));
+
 // =============================================================================
 // ONBOARDING PAGES (Shared - pre-console assignment)
 // =============================================================================
@@ -161,6 +167,12 @@ export function AppRoutes() {
           {/* M25 Integration Loop (FOUNDER) */}
           <Route path="integration" element={<IntegrationDashboard />} />
           <Route path="integration/loop/:incidentId" element={<LoopStatusPage />} />
+
+          {/* Phase 5E-1: Founder Decision Timeline (FOUNDER) */}
+          <Route path="founder/timeline" element={<FounderTimelinePage />} />
+
+          {/* Phase 5E-2: Kill-Switch Controls (FOUNDER) */}
+          <Route path="founder/controls" element={<FounderControlsPage />} />
 
           {/* Governance (FOUNDER) */}
           <Route path="sba" element={<SBAInspectorPage />} />

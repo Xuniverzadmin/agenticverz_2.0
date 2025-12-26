@@ -1,23 +1,20 @@
 /**
- * Guard Console App - Unified Entry Point
+ * Guard Console App - Alternative Entry Point
  *
- * Complete customer-facing incident console implementing all 8 phases:
- * 1. Truthful Control Plane (Overview)
- * 2. Incident Discovery (Incidents)
- * 3. Decision Timeline (Incident Detail)
- * 4. Live Logs & Streaming (Live Activity + Logs)
- * 5. Kill Switch Effects (Kill Switch)
- * 6. Replay & Counterfactuals (via Incident Detail)
- * 7. Evidence & Compliance (Export)
- * 8. Operator Confidence Polish (UI/UX)
+ * Phase 5E-4: Customer Essentials
  *
- * Navigation structure:
- * - Overview: Control plane & status
- * - Live Activity: Real-time event stream
+ * Navigation structure (Customer-scoped):
+ * - Home: Status overview
+ * - Runs: Run history & outcomes
+ * - Limits: Budget & rate limits
  * - Incidents: Search & investigate
- * - Kill Switch: Emergency controls
- * - Logs: Event history
+ * - Keys: API key management
  * - Settings: Configuration
+ * - Account: Organization & team
+ * - Support: Help & feedback
+ *
+ * NOT exposed (Founder-only):
+ * - Kill-switches, Decision timelines, Recovery classes, CARE internals
  */
 
 import React, { useState, useEffect } from 'react';
@@ -25,11 +22,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/authStore';
 import { logger } from '../../lib/consoleLogger';
 import { GuardLayout, NavItemId } from './GuardLayout';
-import { GuardDashboard } from './GuardDashboard';
-import { LiveActivityPage } from './LiveActivityPage';
+import { CustomerHomePage } from './CustomerHomePage';
+import { CustomerRunsPage } from './CustomerRunsPage';
+import { CustomerLimitsPage } from './CustomerLimitsPage';
+import { CustomerKeysPage } from './CustomerKeysPage';
 import { IncidentsPage } from './incidents/IncidentsPage';
-import { KillSwitchPage } from './KillSwitchPage';
-import { LogsPage } from './LogsPage';
 import { GuardSettingsPage } from './GuardSettingsPage';
 import { AccountPage } from './AccountPage';
 import { SupportPage } from './SupportPage';
@@ -53,7 +50,7 @@ export function GuardConsoleApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<NavItemId>('overview');
+  const [activeTab, setActiveTab] = useState<NavItemId>('home');
 
   useEffect(() => {
     logger.componentMount('GuardConsoleApp');
@@ -96,7 +93,7 @@ export function GuardConsoleApp() {
     useAuthStore.getState().logout();
     setApiKey('');
     setIsAuthenticated(false);
-    setActiveTab('overview');
+    setActiveTab('home');
   };
 
   if (isLoading) {
@@ -112,18 +109,19 @@ export function GuardConsoleApp() {
   }
 
   // Render active page
+  // Phase 5E-4: Customer Essentials - scoped to outcomes, limits, and keys
   const renderPage = () => {
     switch (activeTab) {
-      case 'overview':
-        return <GuardDashboard onLogout={handleLogout} />;
-      case 'live':
-        return <LiveActivityPage />;
+      case 'home':
+        return <CustomerHomePage onNavigate={setActiveTab} />;
+      case 'runs':
+        return <CustomerRunsPage />;
+      case 'limits':
+        return <CustomerLimitsPage />;
       case 'incidents':
         return <IncidentsPage />;
-      case 'killswitch':
-        return <KillSwitchPage />;
-      case 'logs':
-        return <LogsPage />;
+      case 'keys':
+        return <CustomerKeysPage />;
       case 'settings':
         return <GuardSettingsPage />;
       case 'account':
@@ -131,7 +129,7 @@ export function GuardConsoleApp() {
       case 'support':
         return <SupportPage />;
       default:
-        return <GuardDashboard onLogout={handleLogout} />;
+        return <CustomerHomePage onNavigate={setActiveTab} />;
     }
   };
 

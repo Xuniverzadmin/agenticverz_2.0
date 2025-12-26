@@ -15,7 +15,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,6 +34,7 @@ router = APIRouter(prefix="/customer", tags=["customer-visibility"])
 
 class StageDeclaration(BaseModel):
     """Single stage in the execution plan."""
+
     name: str  # Skill name (human-readable)
     order: int  # Execution order (1-based)
     depends_on: List[str] = Field(default_factory=list)  # Dependencies
@@ -41,6 +42,7 @@ class StageDeclaration(BaseModel):
 
 class CostDeclaration(BaseModel):
     """Cost expectations before execution."""
+
     estimated_cents: int  # Best estimate
     minimum_cents: int  # Floor
     maximum_cents: int  # Ceiling (worst case)
@@ -49,6 +51,7 @@ class CostDeclaration(BaseModel):
 
 class BudgetDeclaration(BaseModel):
     """Budget enforcement mode."""
+
     mode: str  # "hard" | "soft"
     description: str  # Human-readable explanation
     limit_cents: Optional[int] = None  # If hard mode, the limit
@@ -56,6 +59,7 @@ class BudgetDeclaration(BaseModel):
 
 class PolicyDeclaration(BaseModel):
     """Policy posture declaration."""
+
     posture: str  # "strict" | "advisory"
     description: str  # Human-readable explanation
     active_policies: List[str] = Field(default_factory=list)  # Policy names only
@@ -63,6 +67,7 @@ class PolicyDeclaration(BaseModel):
 
 class MemoryDeclaration(BaseModel):
     """Memory mode declaration."""
+
     mode: str  # "isolated" | "shared"
     description: str  # Human-readable explanation
 
@@ -74,6 +79,7 @@ class PreRunDeclaration(BaseModel):
     This is what the customer sees BEFORE execution starts.
     Execution cannot proceed without acknowledgement.
     """
+
     # Identity
     agent_id: str
     goal: str
@@ -98,12 +104,14 @@ class PreRunDeclaration(BaseModel):
 
 class AcknowledgementRequest(BaseModel):
     """Customer acknowledgement of PRE-RUN declaration."""
+
     declaration_id: str
     acknowledged: bool = True
 
 
 class AcknowledgementResponse(BaseModel):
     """Response after acknowledgement."""
+
     declaration_id: str
     acknowledged: bool
     execution_allowed: bool
@@ -117,6 +125,7 @@ class AcknowledgementResponse(BaseModel):
 
 class OutcomeItem(BaseModel):
     """Single outcome item."""
+
     category: str  # "task" | "budget" | "policy" | "recovery"
     status: str  # "success" | "warning" | "error"
     message: str  # Human-readable explanation
@@ -129,6 +138,7 @@ class OutcomeReconciliation(BaseModel):
     This is what the customer sees AFTER execution completes.
     Decomposed results, never a single success flag.
     """
+
     run_id: str
 
     # Overall (still decomposed)
@@ -265,7 +275,8 @@ def fetch_run_outcome(run_id: str) -> Optional[Dict[str, Any]]:
         engine = create_engine(db_url)
         with engine.connect() as conn:
             result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT
                         id, agent_id, goal, status,
                         attempts, max_attempts,
@@ -273,7 +284,8 @@ def fetch_run_outcome(run_id: str) -> Optional[Dict[str, Any]]:
                         started_at, completed_at, duration_ms
                     FROM runs
                     WHERE id = :run_id
-                """),
+                """
+                ),
                 {"run_id": run_id},
             )
             row = result.fetchone()
@@ -312,35 +324,41 @@ def fetch_decision_summary(run_id: str) -> Dict[str, Any]:
         with engine.connect() as conn:
             # Count budget decisions with warnings
             budget_result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) FROM contracts.decision_records
                     WHERE run_id = :run_id
                     AND decision_type = 'budget'
                     AND decision_outcome != 'selected'
-                """),
+                """
+                ),
                 {"run_id": run_id},
             )
             budget_warnings = budget_result.scalar() or 0
 
             # Count policy decisions with warnings
             policy_result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) FROM contracts.decision_records
                     WHERE run_id = :run_id
                     AND decision_type = 'policy'
                     AND decision_outcome IN ('blocked', 'rejected')
-                """),
+                """
+                ),
                 {"run_id": run_id},
             )
             policy_warnings = policy_result.scalar() or 0
 
             # Check if recovery was attempted
             recovery_result = conn.execute(
-                text("""
+                text(
+                    """
                     SELECT COUNT(*) FROM contracts.decision_records
                     WHERE run_id = :run_id
                     AND decision_type = 'recovery'
-                """),
+                """
+                ),
                 {"run_id": run_id},
             )
             recovery_count = recovery_result.scalar() or 0
@@ -519,66 +537,84 @@ async def get_outcome_reconciliation(
 
     # 1. Task outcome
     if run_data["status"] == "completed":
-        outcomes.append(OutcomeItem(
-            category="task",
-            status="success",
-            message="Task completed successfully.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="task",
+                status="success",
+                message="Task completed successfully.",
+            )
+        )
     elif run_data["status"] == "failed":
         error_msg = run_data.get("error_message", "Unknown error")
-        outcomes.append(OutcomeItem(
-            category="task",
-            status="error",
-            message=f"Task failed: {error_msg}",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="task",
+                status="error",
+                message=f"Task failed: {error_msg}",
+            )
+        )
     else:
-        outcomes.append(OutcomeItem(
-            category="task",
-            status="warning",
-            message=f"Task is {run_data['status']}.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="task",
+                status="warning",
+                message=f"Task is {run_data['status']}.",
+            )
+        )
 
     # 2. Budget outcome
     if decision_summary["budget_warnings"] > 0:
-        outcomes.append(OutcomeItem(
-            category="budget",
-            status="warning",
-            message="Budget limits were exceeded.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="budget",
+                status="warning",
+                message="Budget limits were exceeded.",
+            )
+        )
     else:
-        outcomes.append(OutcomeItem(
-            category="budget",
-            status="success",
-            message="Budget limits were respected.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="budget",
+                status="success",
+                message="Budget limits were respected.",
+            )
+        )
 
     # 3. Policy outcome
     if decision_summary["policy_warnings"] > 0:
-        outcomes.append(OutcomeItem(
-            category="policy",
-            status="warning",
-            message=f"{decision_summary['policy_warnings']} policy warning(s) issued.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="policy",
+                status="warning",
+                message=f"{decision_summary['policy_warnings']} policy warning(s) issued.",
+            )
+        )
     else:
-        outcomes.append(OutcomeItem(
-            category="policy",
-            status="success",
-            message="No policy violations detected.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="policy",
+                status="success",
+                message="No policy violations detected.",
+            )
+        )
 
     # 4. Recovery outcome
     if decision_summary["recovery_attempted"]:
-        outcomes.append(OutcomeItem(
-            category="recovery",
-            status="warning",
-            message="Recovery actions were attempted.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="recovery",
+                status="warning",
+                message="Recovery actions were attempted.",
+            )
+        )
     else:
-        outcomes.append(OutcomeItem(
-            category="recovery",
-            status="success",
-            message="No recovery was required.",
-        ))
+        outcomes.append(
+            OutcomeItem(
+                category="recovery",
+                status="success",
+                message="No recovery was required.",
+            )
+        )
 
     # Extract cost from result if available
     cost_cents = None
@@ -586,6 +622,7 @@ async def get_outcome_reconciliation(
     if run_data.get("result"):
         try:
             import json
+
             result = json.loads(run_data["result"]) if isinstance(run_data["result"], str) else run_data["result"]
             cost_report = result.get("cost_report", {})
             cost_cents = cost_report.get("total_cost_cents")

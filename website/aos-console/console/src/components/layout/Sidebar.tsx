@@ -1,20 +1,17 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Cpu,
-  PlayCircle,
-  Database,
-  Wallet,
-  BarChart3,
   ChevronLeft,
   ChevronRight,
-  Zap,
   GitBranch,
   AlertTriangle,
   RefreshCw,
   Target,
   Factory,
   Radar,
+  Clock,
+  Power,
+  Link2,
+  Wallet,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
@@ -45,35 +42,38 @@ function NavItem({ icon: Icon, label, href, collapsed }: NavItemProps) {
   );
 }
 
-const NAV_ITEMS = [
+// =============================================================================
+// NAVIGATION STRUCTURE
+// M28: Founder routes (ops/*), Customer routes (guard/*)
+// Phase 5E: Founder control surfaces (timeline, controls)
+// =============================================================================
+
+const MAIN_NAV = [
   { icon: Radar, label: 'Ops Console', href: '/ops' },
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: Cpu, label: 'Skills', href: '/skills' },
+  { icon: Link2, label: 'Guard Console', href: '/guard' },
+];
+
+const FOUNDER_ITEMS = [
+  { icon: Clock, label: 'Timeline', href: '/founder/timeline' },
+  { icon: Power, label: 'Controls', href: '/founder/controls' },
 ];
 
 const EXECUTION_ITEMS = [
   { icon: Factory, label: 'Workers', href: '/workers' },
-  { icon: Zap, label: 'Simulation', href: '/simulation' },
   { icon: GitBranch, label: 'Traces', href: '/traces' },
-  { icon: PlayCircle, label: 'Replay', href: '/replay' },
 ];
 
 const RELIABILITY_ITEMS = [
-  { icon: AlertTriangle, label: 'Failures', href: '/failures' },
   { icon: RefreshCw, label: 'Recovery', href: '/recovery' },
+  { icon: AlertTriangle, label: 'Integration', href: '/integration' },
 ];
 
 const GOVERNANCE_ITEMS = [
   { icon: Target, label: 'SBA Inspector', href: '/sba' },
 ];
 
-const DATA_ITEMS = [
-  { icon: Database, label: 'Memory Pins', href: '/memory' },
-];
-
 const SYSTEM_ITEMS = [
   { icon: Wallet, label: 'Credits', href: '/credits' },
-  { icon: BarChart3, label: 'Metrics', href: '/metrics' },
 ];
 
 interface SidebarProps {
@@ -91,11 +91,25 @@ export function Sidebar({ collapsed }: SidebarProps) {
       )}
     >
       <nav className="flex-1 p-3 space-y-6 overflow-y-auto">
-        {/* Main Navigation */}
+        {/* Main Consoles */}
         <div className="space-y-1">
-          {NAV_ITEMS.map((item) => (
+          {MAIN_NAV.map((item) => (
             <NavItem key={item.href} {...item} collapsed={collapsed} />
           ))}
+        </div>
+
+        {/* Founder Section (Phase 5E) */}
+        <div>
+          {!collapsed && (
+            <div className="px-3 mb-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+              Founder
+            </div>
+          )}
+          <div className="space-y-1">
+            {FOUNDER_ITEMS.map((item) => (
+              <NavItem key={item.href} {...item} collapsed={collapsed} />
+            ))}
+          </div>
         </div>
 
         {/* Execution Section */}
@@ -135,20 +149,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
           )}
           <div className="space-y-1">
             {GOVERNANCE_ITEMS.map((item) => (
-              <NavItem key={item.href} {...item} collapsed={collapsed} />
-            ))}
-          </div>
-        </div>
-
-        {/* Data Section */}
-        <div>
-          {!collapsed && (
-            <div className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Data
-            </div>
-          )}
-          <div className="space-y-1">
-            {DATA_ITEMS.map((item) => (
               <NavItem key={item.href} {...item} collapsed={collapsed} />
             ))}
           </div>

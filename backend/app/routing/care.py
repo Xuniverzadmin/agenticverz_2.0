@@ -20,6 +20,9 @@ import redis.asyncio as redis_async
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
+# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
+from app.contracts.decisions import emit_routing_decision
+
 from .models import (
     CONFIDENCE_BLOCK_THRESHOLD,
     CONFIDENCE_FALLBACK_THRESHOLD,
@@ -42,9 +45,6 @@ from .models import (
     infer_success_metric,
 )
 from .probes import get_capability_prober
-
-# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
-from app.contracts.decisions import emit_routing_decision
 
 
 class RateLimiter:

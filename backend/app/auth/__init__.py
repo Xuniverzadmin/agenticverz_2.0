@@ -45,6 +45,33 @@ from .rbac import (
     require_approval_level,
 )
 
+# M7-M28 RBAC Integration (PIN-169)
+from .role_mapping import (
+    AuthContext,
+    CustomerRole,
+    FounderIsolationError,
+    FounderRole,
+    Principal,
+    PrincipalType,
+    RBACRole,
+    build_auth_context,
+    guard_founder_isolation,
+    map_console_role_string,
+    map_customer_role_to_rbac,
+    map_founder_role_to_rbac,
+    role_subsumes,
+)
+from .shadow_audit import (
+    ROLLOUT_GATES,
+    SHADOW_AUDIT_ENABLED,
+    ShadowAuditAggregator,
+    ShadowAuditEvent,
+    ShadowAuditLogger,
+    record_shadow_audit_metric,
+    shadow_aggregator,
+    shadow_audit,
+)
+
 # M21 Tenant Auth - DISABLED for beta stage
 # from .tenant_auth import (
 #     TenantContext,
@@ -83,6 +110,29 @@ __all__ = [
     "check_approver_permission",
     "require_approval_level",
     "USE_CLERK_AUTH",
+    # M7-M28 Role Mapping (PIN-169)
+    "AuthContext",
+    "CustomerRole",
+    "FounderRole",
+    "FounderIsolationError",
+    "Principal",
+    "PrincipalType",
+    "RBACRole",
+    "build_auth_context",
+    "guard_founder_isolation",
+    "map_console_role_string",
+    "map_customer_role_to_rbac",
+    "map_founder_role_to_rbac",
+    "role_subsumes",
+    # Shadow Audit (PIN-169)
+    "SHADOW_AUDIT_ENABLED",
+    "ROLLOUT_GATES",
+    "ShadowAuditEvent",
+    "ShadowAuditLogger",
+    "ShadowAuditAggregator",
+    "shadow_audit",
+    "shadow_aggregator",
+    "record_shadow_audit_metric",
     # Clerk Auth (M8+)
     "ClerkAuthProvider",
     "ClerkAuthError",

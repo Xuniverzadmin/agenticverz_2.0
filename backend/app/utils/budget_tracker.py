@@ -506,6 +506,4 @@ def enforce_budget(
 
     Phase 4B Extension: request_id for causal binding of pre-run decisions.
     """
-    return get_budget_tracker().enforce_budget(
-        agent_id, estimated_cost_cents, model, run_id, request_id
-    )
+    return get_budget_tracker().enforce_budget(agent_id, estimated_cost_cents, model, run_id, request_id)

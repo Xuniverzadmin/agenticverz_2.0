@@ -50,7 +50,6 @@ logger = logging.getLogger("nova.policy.engine")
 # Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
 from app.contracts.decisions import emit_policy_decision
 
-
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -282,6 +281,93 @@ class PolicyEngine:
             )
 
         return result
+
+    # =========================================================================
+    # Phase 5B: Pre-Check for Run Creation
+    # =========================================================================
+
+    async def pre_check(
+        self,
+        request_id: str,
+        agent_id: str,
+        goal: str,
+        tenant_id: str = "default",
+    ) -> Dict[str, Any]:
+        """
+        Pre-check policy constraints before run creation.
+
+        Phase 5B: This is a simplified check that returns one of three states:
+        - passed: Policy allows execution
+        - failed: Policy blocks execution (violations found)
+        - unavailable: Policy service is not available
+
+        This is NOT a full evaluation. It checks minimum viability only.
+        No side effects. No decision emission (that happens in caller).
+
+        Returns:
+            {
+                "passed": bool,
+                "violations": List[str],
+                "service_available": bool
+            }
+        """
+        try:
+            # Check if policies can be loaded
+            if not self._cache_loaded_at or self._is_cache_stale():
+                try:
+                    await self._load_policies()
+                except Exception as e:
+                    logger.warning(f"Policy load failed during pre_check: {e}")
+                    return {
+                        "passed": False,
+                        "violations": [],
+                        "service_available": False,
+                    }
+
+            # If no policies loaded, service is effectively unavailable
+            if not self._policies and not self._ethical_constraints and not self._safety_rules:
+                # Service available but no policies = allow
+                return {
+                    "passed": True,
+                    "violations": [],
+                    "service_available": True,
+                }
+
+            # Create a minimal evaluation request
+            from app.policy.models import ActionType, PolicyEvaluationRequest
+
+            eval_request = PolicyEvaluationRequest(
+                request_id=request_id,
+                action_type=ActionType.EXECUTE,
+                agent_id=agent_id,
+                tenant_id=tenant_id,
+                proposed_action=goal,
+            )
+
+            # Run dry evaluation (no persistence, no side effects)
+            result = await self.evaluate(eval_request, dry_run=True)
+
+            # Extract violations
+            violations = []
+            if result.violations:
+                violations = [v.description for v in result.violations]
+
+            # Determine pass/fail based on decision
+            passed = result.decision != PolicyDecision.BLOCK
+
+            return {
+                "passed": passed,
+                "violations": violations,
+                "service_available": True,
+            }
+
+        except Exception as e:
+            logger.error(f"Pre-check failed with error: {e}", exc_info=True)
+            return {
+                "passed": False,
+                "violations": [],
+                "service_available": False,
+            }
 
     # =========================================================================
     # Ethical Constraints (Non-Negotiables)
