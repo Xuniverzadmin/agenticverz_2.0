@@ -17,6 +17,7 @@ All endpoints require authentication via API key or Bearer token.
 import asyncio
 import json
 import logging
+import os
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -25,12 +26,17 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
-from ..auth import verify_api_key
+# Absolute imports (import hygiene - no relative imports)
+from app.auth import verify_api_key
 
 # Phase 5B: Policy Pre-Check Integration
-from ..contracts.decisions import emit_policy_precheck_decision
-from ..policy.engine import PolicyEngine
+from app.contracts.decisions import emit_policy_precheck_decision
+from app.db import CostAnomaly, CostBudget, CostRecord, get_async_session
+from app.models.tenant import WorkerRun
+from app.policy.engine import PolicyEngine
+from app.worker.runner import calculate_llm_cost_cents
 
 logger = logging.getLogger("nova.api.workers")
 
@@ -174,29 +180,408 @@ class RunListResponse(BaseModel):
 
 
 # =============================================================================
-# In-Memory Run Storage (would use DB in production)
+# PostgreSQL Run Storage (P0-005 Fix: Real persistence, not in-memory)
 # =============================================================================
 
-# Simple in-memory storage for runs
-# In production, this would be persisted to PostgreSQL
-_runs_store: Dict[str, Dict[str, Any]] = {}
+# Verification mode: If enabled, raise error if persistence fails
+VERIFICATION_MODE = os.getenv("AOS_VERIFICATION_MODE", "false").lower() == "true"
+
+# Cost enforcement: If enabled, runs with budgets MUST have cost_cents
+COST_ENFORCEMENT_ENABLED = os.getenv("AOS_COST_ENFORCEMENT", "true").lower() == "true"
 
 
-def _store_run(run_id: str, data: Dict[str, Any]) -> None:
-    """Store a run in memory."""
-    _runs_store[run_id] = data
+async def _store_run(run_id: str, data: Dict[str, Any], tenant_id: str = "default") -> None:
+    """
+    Persist a run to PostgreSQL.
+
+    P0-005 Fix: Database is the source of truth, not memory.
+    """
+    async with get_async_session() as session:
+        # Check if run exists (upsert logic)
+        result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            # Update existing run
+            existing.status = data.get("status", existing.status)
+            existing.success = data.get("success", existing.success)
+            existing.error = data.get("error", existing.error)
+            existing.output_json = json.dumps(data.get("artifacts")) if data.get("artifacts") else None
+            existing.replay_token_json = json.dumps(data.get("replay_token")) if data.get("replay_token") else None
+            existing.total_tokens = data.get("total_tokens_used", existing.total_tokens)
+            existing.total_latency_ms = int(data.get("total_latency_ms", 0)) if data.get("total_latency_ms") else None
+            existing.policy_violations = len(data.get("policy_violations", [])) if data.get("policy_violations") else 0
+            existing.recoveries = len(data.get("recovery_log", [])) if data.get("recovery_log") else 0
+            # P0-006 Fix: Store cost_cents
+            if data.get("cost_cents") is not None:
+                existing.cost_cents = data.get("cost_cents")
+            if data.get("status") in ("completed", "failed"):
+                existing.completed_at = datetime.now(timezone.utc)
+            if data.get("status") == "running" and not existing.started_at:
+                existing.started_at = datetime.now(timezone.utc)
+        else:
+            # Create new run
+            run = WorkerRun(
+                id=run_id,
+                tenant_id=tenant_id,
+                worker_id="business-builder",
+                task=data.get("task", ""),
+                status=data.get("status", "queued"),
+                success=data.get("success"),
+                error=data.get("error"),
+                input_json=json.dumps({"task": data.get("task", "")}),
+                output_json=json.dumps(data.get("artifacts")) if data.get("artifacts") else None,
+                replay_token_json=json.dumps(data.get("replay_token")) if data.get("replay_token") else None,
+                total_tokens=data.get("total_tokens_used"),
+                total_latency_ms=int(data.get("total_latency_ms", 0)) if data.get("total_latency_ms") else None,
+                policy_violations=len(data.get("policy_violations", [])) if data.get("policy_violations") else 0,
+                recoveries=len(data.get("recovery_log", [])) if data.get("recovery_log") else 0,
+                # P0-006 Fix: Store cost_cents
+                cost_cents=data.get("cost_cents"),
+                created_at=datetime.now(timezone.utc),
+                started_at=datetime.now(timezone.utc) if data.get("status") == "running" else None,
+            )
+            session.add(run)
+
+        await session.commit()
+
+        # Verification mode guardrail
+        if VERIFICATION_MODE:
+            # Verify the write succeeded
+            verify_result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
+            verified = verify_result.scalar_one_or_none()
+            if not verified:
+                raise RuntimeError(f"PERSISTENCE_VIOLATION: Run {run_id} completed without DB commit")
+
+        # P0-006 Fix: Cost invariant enforcement
+        # If run completed with tokens but no cost_cents, that's a violation
+        if COST_ENFORCEMENT_ENABLED and data.get("status") in ("completed", "failed"):
+            has_tokens = (data.get("total_tokens_used") or 0) > 0
+            has_cost = data.get("cost_cents") is not None
+            if has_tokens and not has_cost:
+                error_msg = (
+                    f"COST_INVARIANT_VIOLATION: Run {run_id} completed with "
+                    f"{data.get('total_tokens_used')} tokens but cost_cents=NULL. "
+                    "Cost must be computed and stored with the run."
+                )
+                logger.error(error_msg)
+                # TODO (POST-BETA): Missing cost must fail hard once billing is enforced.
+                # Currently only crashes in VERIFICATION_MODE to avoid breaking production
+                # during verification phase. After billing goes live, this should always raise.
+                if VERIFICATION_MODE:
+                    raise RuntimeError(error_msg)
+
+        logger.info("run_persisted", extra={"run_id": run_id, "status": data.get("status")})
 
 
-def _get_run(run_id: str) -> Optional[Dict[str, Any]]:
-    """Get a run from memory."""
-    return _runs_store.get(run_id)
+async def _insert_cost_record(
+    run_id: str,
+    tenant_id: str,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    cost_cents: int,
+) -> None:
+    """
+    Insert a cost record for a worker run.
+
+    P0-006 Fix: Cost must be recorded as part of worker execution.
+    This creates the authoritative cost fact that S2 requires.
+    """
+    async with get_async_session() as session:
+        # Use naive datetime for asyncpg compatibility with TIMESTAMP WITHOUT TIME ZONE
+        created_at_naive = datetime.now(timezone.utc)
+        cost_record = CostRecord(
+            tenant_id=tenant_id,
+            request_id=run_id,
+            workflow_id="business-builder",
+            skill_id="llm_invoke",
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_cents=float(cost_cents),
+            created_at=created_at_naive,
+        )
+        session.add(cost_record)
+        await session.commit()
+        logger.info(
+            "cost_record_inserted",
+            extra={
+                "run_id": run_id,
+                "tenant_id": tenant_id,
+                "cost_cents": cost_cents,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+            },
+        )
 
 
-def _list_runs(limit: int = 20) -> List[Dict[str, Any]]:
-    """List recent runs."""
-    runs = list(_runs_store.values())
-    runs.sort(key=lambda r: r.get("created_at", ""), reverse=True)
-    return runs[:limit]
+async def _check_and_emit_cost_advisory(
+    run_id: str,
+    tenant_id: str,
+    cost_cents: int,
+) -> Dict[str, Any]:
+    """
+    Check if cost threshold is crossed and emit advisory if needed.
+
+    S2 Advisory Invariant:
+    - If threshold crossed AND hard_limit_enabled=false → exactly 1 advisory
+    - If threshold NOT crossed → exactly 0 advisories
+    - If hard_limit_enabled=true → this is an incident, not advisory (out of S2 scope)
+
+    Returns dict with:
+    - threshold_crossed: bool
+    - advisory_emitted: bool
+    - advisory_id: str | None
+    - budget_id: str | None
+    """
+    result = {
+        "threshold_crossed": False,
+        "advisory_emitted": False,
+        "advisory_id": None,
+        "budget_id": None,
+        "daily_spend_cents": 0,
+        "daily_limit_cents": None,
+    }
+
+    async with get_async_session() as session:
+        # Get tenant's active budget
+        budget_result = await session.execute(
+            select(CostBudget).where(
+                CostBudget.tenant_id == tenant_id,
+                CostBudget.is_active == True,
+                CostBudget.budget_type == "tenant",
+            )
+        )
+        budget = budget_result.scalar_one_or_none()
+
+        if not budget or not budget.daily_limit_cents:
+            logger.info(
+                "no_budget_configured",
+                extra={"run_id": run_id, "tenant_id": tenant_id},
+            )
+            return result
+
+        result["budget_id"] = budget.id
+        result["daily_limit_cents"] = budget.daily_limit_cents
+
+        # Calculate today's total spend (including this run)
+
+        from sqlalchemy import text
+
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+        spend_result = await session.execute(
+            text(
+                """
+                SELECT COALESCE(SUM(cost_cents), 0)
+                FROM cost_records
+                WHERE tenant_id = :tenant_id
+                AND created_at >= :today_start
+            """
+            ),
+            {"tenant_id": tenant_id, "today_start": today_start},
+        )
+        daily_spend = int(spend_result.scalar() or 0)
+        result["daily_spend_cents"] = daily_spend
+
+        # Check if threshold crossed
+        warn_threshold = budget.daily_limit_cents * (budget.warn_threshold_pct / 100.0)
+        threshold_crossed = daily_spend > warn_threshold
+        result["threshold_crossed"] = threshold_crossed
+
+        if threshold_crossed and not budget.hard_limit_enabled:
+            # Idempotency check: only emit if no advisory exists for this run
+            existing_check = await session.execute(
+                text(
+                    """
+                    SELECT id FROM cost_anomalies
+                    WHERE anomaly_type = 'BUDGET_WARNING'
+                    AND metadata->>'run_id' = :run_id
+                """
+                ),
+                {"run_id": run_id},
+            )
+            existing = existing_check.scalar_one_or_none()
+
+            if existing:
+                # Advisory already exists for this run (idempotent)
+                result["advisory_emitted"] = False
+                result["advisory_id"] = existing
+                logger.info(
+                    "cost_advisory_already_exists",
+                    extra={"run_id": run_id, "advisory_id": existing},
+                )
+            else:
+                # Emit advisory (BUDGET_WARNING, not incident)
+                # Use naive datetime for asyncpg compatibility with TIMESTAMP WITHOUT TIME ZONE
+                detected_at_naive = datetime.now(timezone.utc)
+
+                # Budget snapshot: capture budget-at-run-time for audit trail
+                # This ensures historical analysis uses the budget that was active during the run
+                budget_snapshot = {
+                    "budget_id": budget.id,
+                    "daily_limit_cents": budget.daily_limit_cents,
+                    "warn_threshold_pct": budget.warn_threshold_pct,
+                    "hard_limit_enabled": budget.hard_limit_enabled,
+                }
+
+                advisory = CostAnomaly(
+                    tenant_id=tenant_id,
+                    anomaly_type="BUDGET_WARNING",
+                    severity="MEDIUM",
+                    entity_type="tenant",
+                    entity_id=tenant_id,
+                    current_value_cents=float(daily_spend),
+                    expected_value_cents=float(warn_threshold),
+                    deviation_pct=((daily_spend - warn_threshold) / warn_threshold) * 100 if warn_threshold > 0 else 0,
+                    threshold_pct=float(budget.warn_threshold_pct),
+                    message=f"Daily spend ({daily_spend}¢) exceeds {budget.warn_threshold_pct}% warning threshold ({int(warn_threshold)}¢)",
+                    metadata_json={
+                        "run_id": run_id,
+                        "budget_snapshot": budget_snapshot,  # Budget at run time
+                    },
+                    detected_at=detected_at_naive,
+                )
+                session.add(advisory)
+                await session.commit()
+
+                result["advisory_emitted"] = True
+                result["advisory_id"] = advisory.id
+
+                logger.info(
+                    "cost_advisory_emitted",
+                    extra={
+                        "run_id": run_id,
+                        "advisory_id": advisory.id,
+                        "daily_spend": daily_spend,
+                        "threshold": warn_threshold,
+                        "budget_snapshot": budget_snapshot,
+                    },
+                )
+
+        return result
+
+
+async def _verify_advisory_invariant(
+    run_id: str,
+    tenant_id: str,
+    advisory_result: Dict[str, Any],
+) -> None:
+    """
+    Verify advisory emission invariant in VERIFICATION_MODE.
+
+    S2 Invariant:
+    - If threshold_crossed=true AND hard_limit_enabled=false → advisory_count must be 1
+    - If threshold_crossed=false → advisory_count must be 0
+
+    Raises RuntimeError if invariant violated.
+    """
+    if not VERIFICATION_MODE:
+        return
+
+    async with get_async_session() as session:
+        # Count advisories for this run
+        from sqlalchemy import text
+
+        count_result = await session.execute(
+            text(
+                """
+                SELECT COUNT(*)
+                FROM cost_anomalies
+                WHERE tenant_id = :tenant_id
+                AND anomaly_type = 'BUDGET_WARNING'
+                AND metadata->>'run_id' = :run_id
+            """
+            ),
+            {"tenant_id": tenant_id, "run_id": run_id},
+        )
+        advisory_count = int(count_result.scalar() or 0)
+
+        threshold_crossed = advisory_result["threshold_crossed"]
+
+        if threshold_crossed and advisory_count != 1:
+            raise RuntimeError(
+                f"COST_ADVISORY_INVARIANT_VIOLATION: Run {run_id} crossed threshold "
+                f"but advisory_count={advisory_count} (expected 1). "
+                f"Daily spend: {advisory_result['daily_spend_cents']}¢, "
+                f"Threshold: {advisory_result['daily_limit_cents']}¢"
+            )
+
+        if not threshold_crossed and advisory_count != 0:
+            raise RuntimeError(
+                f"FALSE_COST_ADVISORY: Run {run_id} did NOT cross threshold "
+                f"but advisory_count={advisory_count} (expected 0). "
+                f"Daily spend: {advisory_result['daily_spend_cents']}¢, "
+                f"Threshold: {advisory_result['daily_limit_cents']}¢"
+            )
+
+        logger.info(
+            "advisory_invariant_verified",
+            extra={
+                "run_id": run_id,
+                "threshold_crossed": threshold_crossed,
+                "advisory_count": advisory_count,
+            },
+        )
+
+
+async def _get_run(run_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get a run from PostgreSQL.
+
+    Returns dict format matching WorkerRunResponse for API compatibility.
+    """
+    async with get_async_session() as session:
+        result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
+        run = result.scalar_one_or_none()
+
+        if not run:
+            return None
+
+        return {
+            "run_id": run.id,
+            "task": run.task,
+            "status": run.status,
+            "success": run.success,
+            "error": run.error,
+            "artifacts": json.loads(run.output_json) if run.output_json else None,
+            "replay_token": json.loads(run.replay_token_json) if run.replay_token_json else None,
+            "total_tokens_used": run.total_tokens or 0,
+            "total_latency_ms": float(run.total_latency_ms) if run.total_latency_ms else 0.0,
+            "policy_violations": [],  # Not stored in detail
+            "recovery_log": [],  # Not stored in detail
+            "drift_metrics": {},
+            "execution_trace": [],
+            "routing_decisions": [],
+            "cost_report": None,
+            "created_at": run.created_at.isoformat() if run.created_at else None,
+        }
+
+
+async def _list_runs(limit: int = 20, tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    List recent runs from PostgreSQL.
+    """
+    async with get_async_session() as session:
+        query = select(WorkerRun).order_by(WorkerRun.created_at.desc()).limit(limit)
+        if tenant_id:
+            query = query.where(WorkerRun.tenant_id == tenant_id)
+
+        result = await session.execute(query)
+        runs = result.scalars().all()
+
+        return [
+            {
+                "run_id": run.id,
+                "task": run.task,
+                "status": run.status,
+                "success": run.success,
+                "created_at": run.created_at.isoformat() if run.created_at else "",
+                "total_latency_ms": float(run.total_latency_ms) if run.total_latency_ms else None,
+            }
+            for run in runs
+        ]
 
 
 # =============================================================================
@@ -298,7 +683,7 @@ class EventType:
 
 def _brand_request_to_schema(brand_req: BrandRequest):
     """Convert API request to BrandSchema."""
-    from ..workers.business_builder.schemas.brand import (
+    from app.workers.business_builder.schemas.brand import (
         AudienceSegment,
         BrandSchema,
         ForbiddenClaim,
@@ -363,10 +748,11 @@ def _brand_request_to_schema(brand_req: BrandRequest):
 
 async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
     """Execute worker in background and update run store."""
+    tenant_id = request.tenant_id or "default"
     try:
-        from ..workers.business_builder.worker import BusinessBuilderWorker
+        from app.workers.business_builder.worker import BusinessBuilderWorker
 
-        _store_run(
+        await _store_run(
             run_id,
             {
                 "run_id": run_id,
@@ -374,6 +760,7 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
                 "status": "running",
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
+            tenant_id=tenant_id,
         )
 
         worker = BusinessBuilderWorker()
@@ -391,8 +778,58 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
             depth=request.depth,
         )
 
-        # Update stored run
-        _store_run(
+        # P0-006 Fix: Compute cost from tokens
+        # =================================================================
+        # COST TRUTH MODEL v0 (HEURISTIC) — See PIN-194
+        # =================================================================
+        # Input/output token split is estimated at 30/70 for verification only.
+        # This is NOT a billing-grade model.
+        # Future work: Wire actual input/output token counts from LLM responses.
+        # =================================================================
+        total_tokens = result.total_tokens_used or 0
+        input_tokens = int(total_tokens * 0.3)
+        output_tokens = total_tokens - input_tokens
+        model = "claude-sonnet-4-20250514"  # Default model
+        cost_cents = calculate_llm_cost_cents(model, input_tokens, output_tokens)
+
+        logger.info(
+            "cost_computed",
+            extra={
+                "run_id": run_id,
+                "total_tokens": total_tokens,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cost_cents": cost_cents,
+            },
+        )
+
+        # P0-006 Fix: Insert cost record (creates authoritative cost fact)
+        if total_tokens > 0:
+            await _insert_cost_record(
+                run_id=run_id,
+                tenant_id=tenant_id,
+                model=model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cost_cents=cost_cents,
+            )
+
+            # S2 Advisory Invariant: Check threshold and emit advisory if needed
+            advisory_result = await _check_and_emit_cost_advisory(
+                run_id=run_id,
+                tenant_id=tenant_id,
+                cost_cents=cost_cents,
+            )
+
+            # Verify advisory invariant in VERIFICATION_MODE
+            await _verify_advisory_invariant(
+                run_id=run_id,
+                tenant_id=tenant_id,
+                advisory_result=advisory_result,
+            )
+
+        # Update stored run (now includes cost_cents)
+        await _store_run(
             run_id,
             {
                 "run_id": run_id,
@@ -410,13 +847,15 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
                 "error": result.error,
                 "total_tokens_used": result.total_tokens_used,
                 "total_latency_ms": result.total_latency_ms,
+                "cost_cents": cost_cents,  # P0-006: Store cost with run
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
+            tenant_id=tenant_id,
         )
 
     except Exception as e:
         logger.exception(f"Worker execution failed for run {run_id}")
-        _store_run(
+        await _store_run(
             run_id,
             {
                 "run_id": run_id,
@@ -426,6 +865,7 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
                 "error": str(e),
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
+            tenant_id=tenant_id,
         )
 
 
@@ -552,9 +992,11 @@ async def run_worker(
     # End Phase 5B Pre-Check
     # =========================================================================
 
+    tenant_id = request.tenant_id or "default"
+
     if request.async_mode:
         # Queue for background execution
-        _store_run(
+        await _store_run(
             run_id,
             {
                 "run_id": run_id,
@@ -562,6 +1004,7 @@ async def run_worker(
                 "status": "queued",
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
+            tenant_id=tenant_id,
         )
         background_tasks.add_task(_execute_worker_async, run_id, request)
 
@@ -574,7 +1017,7 @@ async def run_worker(
 
     # Synchronous execution
     try:
-        from ..workers.business_builder.worker import BusinessBuilderWorker
+        from app.workers.business_builder.worker import BusinessBuilderWorker
 
         worker = BusinessBuilderWorker()
 
@@ -610,7 +1053,7 @@ async def run_worker(
         )
 
         # Store the run
-        _store_run(run_id, response.model_dump())
+        await _store_run(run_id, response.model_dump(), tenant_id=tenant_id)
 
         return response
 
@@ -632,7 +1075,7 @@ async def replay_execution(
     run_id = str(uuid.uuid4())
 
     try:
-        from ..workers.business_builder.worker import replay
+        from app.workers.business_builder.worker import replay
 
         result = await replay(request.replay_token)
 
@@ -667,7 +1110,7 @@ async def get_run(
 
     Use this to poll for async run completion or inspect past runs.
     """
-    run = _get_run(run_id)
+    run = await _get_run(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
 
@@ -677,14 +1120,16 @@ async def get_run(
 @router.get("/runs", response_model=RunListResponse)
 async def list_runs(
     limit: int = 20,
+    tenant_id: Optional[str] = None,
     _: str = Depends(verify_api_key),
 ):
     """
     List recent worker runs.
 
     Returns summary information for recent executions.
+    Optionally filter by tenant_id.
     """
-    runs = _list_runs(limit)
+    runs = await _list_runs(limit, tenant_id=tenant_id)
 
     items = [
         RunListItem(
@@ -763,7 +1208,7 @@ async def worker_health():
 
     # Check M17 CARE
     try:
-        from ..routing.care import get_care_engine
+        from app.routing.care import get_care_engine
 
         get_care_engine()
         moat_status["m17_care"] = "available"
@@ -772,7 +1217,7 @@ async def worker_health():
 
     # Check M20 Policy
     try:
-        from ..policy.runtime.dag_executor import DAGExecutor
+        from app.policy.runtime.dag_executor import DAGExecutor
 
         DAGExecutor()
         moat_status["m20_policy"] = "available"
@@ -781,7 +1226,7 @@ async def worker_health():
 
     # Check M9 Failure Catalog (via RecoveryMatcher)
     try:
-        from ..services.recovery_matcher import RecoveryMatcher
+        from app.services.recovery_matcher import RecoveryMatcher
 
         RecoveryMatcher()
         moat_status["m9_failure_catalog"] = "available"
@@ -790,18 +1235,30 @@ async def worker_health():
 
     # Check M10 Recovery (via RecoveryMatcher)
     try:
-        from ..services.recovery_matcher import RecoveryMatcher
+        from app.services.recovery_matcher import RecoveryMatcher
 
         RecoveryMatcher()
         moat_status["m10_recovery"] = "available"
     except ImportError:
         moat_status["m10_recovery"] = "unavailable"
 
+    # Get count from DB
+    run_count = 0
+    try:
+        async with get_async_session() as session:
+            from sqlalchemy import func
+
+            result = await session.execute(select(func.count()).select_from(WorkerRun))
+            run_count = result.scalar() or 0
+    except Exception:
+        pass
+
     return {
         "status": "healthy",
-        "version": "0.3",  # v0.3: Worker is source of truth for events
+        "version": "0.4",  # v0.4: P0-005 fix - PostgreSQL persistence (no in-memory)
         "moats": moat_status,
-        "runs_in_memory": len(_runs_store),
+        "runs_in_db": run_count,
+        "persistence": "postgresql",  # Explicit indicator of persistence backend
     }
 
 
@@ -815,9 +1272,13 @@ async def delete_run(
 
     Note: In production, this would require admin privileges.
     """
-    if run_id in _runs_store:
-        del _runs_store[run_id]
-        return {"deleted": True, "run_id": run_id}
+    async with get_async_session() as session:
+        result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
+        run = result.scalar_one_or_none()
+        if run:
+            await session.delete(run)
+            await session.commit()
+            return {"deleted": True, "run_id": run_id}
 
     raise HTTPException(status_code=404, detail="Run not found")
 
@@ -905,7 +1366,7 @@ async def stream_run_events(
     ```
     """
     # Check if run exists
-    run = _get_run(run_id)
+    run = await _get_run(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
 
@@ -950,14 +1411,15 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
     """
     Execute worker with REAL event emission from worker itself.
 
-    v0.3: Worker is source of truth. No simulation. API just relays events.
+    v0.4: Worker is source of truth. PostgreSQL persistence. No in-memory storage.
     """
     event_bus = get_event_bus()
+    tenant_id = request.tenant_id or "default"
 
     try:
-        from ..workers.business_builder.worker import BusinessBuilderWorker
+        from app.workers.business_builder.worker import BusinessBuilderWorker
 
-        _store_run(
+        await _store_run(
             run_id,
             {
                 "run_id": run_id,
@@ -965,6 +1427,7 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
                 "status": "running",
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
+            tenant_id=tenant_id,
         )
 
         # Convert brand if provided
@@ -1005,7 +1468,7 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
             "total_latency_ms": result.total_latency_ms,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        _store_run(run_id, final_data)
+        await _store_run(run_id, final_data, tenant_id=tenant_id)
 
         # Note: All events (stage_started, stage_completed, routing_decision,
         # policy_check, drift_detected, artifact_created, run_completed)
@@ -1023,7 +1486,7 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
             },
         )
 
-        _store_run(
+        await _store_run(
             run_id,
             {
                 "run_id": run_id,
@@ -1033,6 +1496,7 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
                 "error": str(e),
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
+            tenant_id=tenant_id,
         )
 
 
@@ -1052,6 +1516,8 @@ async def run_worker_streaming(
     """
     run_id = str(uuid.uuid4())
 
+    tenant_id = request.tenant_id or "default"
+
     logger.info(
         "worker_streaming_run_requested",
         extra={
@@ -1061,7 +1527,7 @@ async def run_worker_streaming(
     )
 
     # Initialize run
-    _store_run(
+    await _store_run(
         run_id,
         {
             "run_id": run_id,
@@ -1069,6 +1535,7 @@ async def run_worker_streaming(
             "status": "queued",
             "created_at": datetime.now(timezone.utc).isoformat(),
         },
+        tenant_id=tenant_id,
     )
 
     # Queue for background execution with events

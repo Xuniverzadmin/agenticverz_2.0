@@ -1,6 +1,9 @@
 /**
  * Incidents Page - Customer Console (Navy-First Design)
  *
+ * PIN-186 Classification: O2 (List/Overview)
+ * V-001 Fix: Modal removed, navigation to O3 detail page
+ *
  * Navy-First Design Rules Applied:
  * 1. All surfaces use navy family ONLY (no white, no gray, no colored backgrounds)
  * 2. Meaning conveyed via text color, borders, icons - never backgrounds
@@ -9,22 +12,22 @@
  * 5. Status = outline pill, not filled
  *
  * Component Map:
- * IncidentsPage
+ * IncidentsPage (O2)
  * ├── IncidentSearchBar
  * ├── IncidentFilters
- * ├── IncidentList
- * │   └── IncidentRow (left-border severity, structured layout)
- * └── Decision Inspector Modal
+ * └── IncidentList
+ *     └── IncidentRow → navigates to IncidentDetailPage (O3)
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { guardApi, IncidentSearchRequest, IncidentSearchResult, DecisionTimelineResponse, ReplayResult } from '../../../api/guard';
+import { useNavigate } from 'react-router-dom';
+import { guardApi, IncidentSearchRequest, IncidentSearchResult } from '../../../api/guard';
 import { IncidentSearchBar } from './IncidentSearchBar';
 import { IncidentFilters } from './IncidentFilters';
-import { DecisionTimeline } from './DecisionTimeline';
-import { ReplayResultsModal } from '../../../components/ReplayResultsModal';
 import { logger } from '../../../lib/consoleLogger';
+// V-001 Fix: DecisionTimeline and ReplayResultsModal removed from this page
+// They now live on IncidentDetailPage (O3) - modals must be terminal (INV-4)
 
 // Legacy incident type (for backwards compatibility)
 interface Incident {
@@ -58,15 +61,16 @@ const STATUS_CONFIG = {
 };
 
 export function IncidentsPage() {
+  // V-001 Fix: Navigation replaces modal - incidents drill to O3 detail page
+  const navigate = useNavigate();
+
   // State
-  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<IncidentSearchRequest>({
     limit: 50,
     offset: 0,
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [replayResult, setReplayResult] = useState<ReplayResult | null>(null);
 
   // Log page mount
   useEffect(() => {
@@ -97,12 +101,8 @@ export function IncidentsPage() {
     refetchInterval: 30000,
   });
 
-  // Decision timeline query
-  const { data: timeline, isLoading: timelineLoading } = useQuery({
-    queryKey: ['guard', 'incidents', selectedIncident, 'timeline'],
-    queryFn: () => guardApi.getDecisionTimeline(selectedIncident!),
-    enabled: !!selectedIncident,
-  });
+  // V-001 Fix: Timeline and replay queries moved to IncidentDetailPage (O3)
+  // This page is O2 (list) - drilling navigates to O3 (detail)
 
   // Demo seed mutation
   const seedDemoMutation = useMutation({
@@ -116,18 +116,6 @@ export function IncidentsPage() {
     },
   });
 
-  // M4: Replay mutation
-  const replayMutation = useMutation({
-    mutationFn: (callId: string) => guardApi.replayCall(callId),
-    onSuccess: (result) => {
-      logger.info('INCIDENTS', 'Replay completed', { match_level: result.match_level });
-      setReplayResult(result);
-    },
-    onError: (error) => {
-      logger.error('INCIDENTS', 'Replay failed', error);
-    },
-  });
-
   // Handlers
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -138,10 +126,11 @@ export function IncidentsPage() {
     setFilters(newFilters);
   }, []);
 
+  // V-001 Fix: Navigate to O3 detail page instead of opening modal
   const handleInspect = useCallback((incidentId: string) => {
     logger.userEvent('click', 'incident_inspect', { incident_id: incidentId });
-    setSelectedIncident(incidentId);
-  }, []);
+    navigate(`/guard/incidents/${incidentId}`);
+  }, [navigate]);
 
   // Determine which data to show
   const isLoading = hasActiveFilters ? searchLoading : basicLoading;
@@ -261,6 +250,7 @@ export function IncidentsPage() {
       )}
 
       {/* Incident List - Navy rows with left-border severity */}
+      {/* V-001 Fix: Row click navigates to O3 detail page (no modal) */}
       {!isLoading && incidentItems.length > 0 && (
         <div className="space-y-2">
           {incidentItems.map((incident) => (
@@ -273,65 +263,9 @@ export function IncidentsPage() {
         </div>
       )}
 
-      {/* Decision Inspector Modal */}
-      {selectedIncident && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="bg-navy-surface border border-navy-border rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-navy-border">
-              <h2 className="text-lg font-semibold text-white">Decision Inspector</h2>
-              <button
-                onClick={() => setSelectedIncident(null)}
-                className="text-slate-400 hover:text-white text-xl"
-              >
-                ×
-              </button>
-            </div>
-            {/* Modal Content */}
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
-              {timelineLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-2 border-accent-info border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : timeline ? (
-                <DecisionTimeline
-                  timeline={timeline}
-                  onReplay={() => {
-                    const callId = timeline.call_id || timeline.incident_id;
-                    logger.userEvent('click', 'replay_button', { call_id: callId });
-                    replayMutation.mutate(callId);
-                  }}
-                  onExport={async () => {
-                    try {
-                      await guardApi.downloadEvidenceReport(timeline.incident_id, {
-                        includeReplay: true,
-                        includePrevention: true,
-                        isDemo: true,
-                      });
-                    } catch (error) {
-                      console.error('Failed to download evidence report:', error);
-                    }
-                  }}
-                />
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  Unable to load timeline
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* M4: Replay Evidence Modal (P2FC-3) */}
-      {replayResult && (
-        <ReplayResultsModal
-          result={replayResult}
-          incidentId={selectedIncident || undefined}
-          incidentTitle={timeline?.root_cause_badge || undefined}
-          onClose={() => setReplayResult(null)}
-        />
-      )}
+      {/* V-001 Fix: Modal removed - replaced by IncidentDetailPage (O3)
+          O5 modals must be terminal (confirm-only) per INV-4
+          Decision inspection now happens on dedicated O3 page */}
     </div>
   );
 }

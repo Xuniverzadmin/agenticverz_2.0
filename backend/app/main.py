@@ -1094,6 +1094,127 @@ async def get_provenance_by_id(agent_id: str, prov_id: str, _: str = Depends(ver
 
 
 # ---------- Admin Endpoints ----------
+
+
+# PB-S1: Retry Request/Response Models (Migration 053)
+class RetryRequest(BaseModel):
+    """Request to retry a failed worker run (PB-S1 compliant)."""
+
+    run_id: str = Field(..., description="ID of the failed run to retry")
+    reason: Optional[str] = Field(default="manual_retry", description="Reason for retry")
+
+
+class RetryResponse(BaseModel):
+    """Response from retry operation (PB-S1 compliant)."""
+
+    original_run_id: str = Field(..., description="ID of the original failed run (unchanged)")
+    retry_run_id: str = Field(..., description="ID of the new retry run")
+    attempt: int = Field(..., description="Attempt number of the retry")
+    status: str = Field(..., description="Status of the retry run (queued)")
+    original_status: str = Field(..., description="Status of the original run (unchanged)")
+    reason: str
+
+
+@app.post("/admin/retry", response_model=RetryResponse)
+async def retry_failed_run(payload: RetryRequest, _: str = Depends(verify_api_key)):
+    """
+    Retry a failed worker run by creating a NEW execution (PB-S1 compliant).
+
+    This endpoint:
+    - Creates a NEW run with a new ID
+    - Sets parent_run_id to link to the original failed run
+    - Increments the attempt counter
+    - NEVER modifies the original run (immutable)
+
+    PB-S1 Guarantee: Original execution remains unchanged.
+    """
+    from sqlalchemy import select as sa_select
+
+    from .db import get_async_session
+    from .models.tenant import WorkerRun
+
+    async with get_async_session() as session:
+        # Fetch the original failed run
+        result = await session.execute(sa_select(WorkerRun).where(WorkerRun.id == payload.run_id))
+        original_run = result.scalar_one_or_none()
+
+        if not original_run:
+            raise HTTPException(status_code=404, detail="Run not found")
+
+        # Only allow retry of failed runs
+        if original_run.status != "failed":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot retry run with status '{original_run.status}'. Only 'failed' runs can be retried.",
+            )
+
+        # Calculate attempt number by walking the chain
+        attempt = original_run.attempt + 1
+
+        # Check if already retried - walk to find the latest
+        latest_run = original_run
+        retry_check = await session.execute(
+            sa_select(WorkerRun).where(WorkerRun.parent_run_id == original_run.id).order_by(WorkerRun.created_at.desc())
+        )
+        existing_retry = retry_check.scalar_one_or_none()
+        if existing_retry:
+            # There's already a retry - we should chain from the latest failed attempt
+            if existing_retry.status == "failed":
+                # Chain from the latest failed retry
+                latest_run = existing_retry
+                attempt = existing_retry.attempt + 1
+            elif existing_retry.status in ("queued", "running"):
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"A retry is already in progress (run_id={existing_retry.id}, status={existing_retry.status})",
+                )
+            elif existing_retry.status == "completed":
+                raise HTTPException(
+                    status_code=409, detail=f"Run already succeeded in retry (run_id={existing_retry.id})"
+                )
+
+        # Create NEW retry run - original run is NEVER modified
+        retry_run = WorkerRun(
+            tenant_id=original_run.tenant_id,
+            worker_id=original_run.worker_id,
+            api_key_id=original_run.api_key_id,
+            user_id=original_run.user_id,
+            task=original_run.task,
+            input_json=original_run.input_json,
+            status="queued",
+            # PB-S1: Retry linkage
+            parent_run_id=latest_run.id,
+            attempt=attempt,
+            is_retry=True,
+        )
+
+        session.add(retry_run)
+        await session.commit()
+        await session.refresh(retry_run)
+
+        logger.info(
+            "pb_s1_retry_created",
+            extra={
+                "original_run_id": original_run.id,
+                "retry_run_id": retry_run.id,
+                "attempt": attempt,
+                "reason": payload.reason,
+                "tenant_id": original_run.tenant_id,
+                "worker_id": original_run.worker_id,
+            },
+        )
+
+        return RetryResponse(
+            original_run_id=original_run.id,
+            retry_run_id=retry_run.id,
+            attempt=attempt,
+            status="queued",
+            original_status=original_run.status,
+            reason=payload.reason or "manual_retry",
+        )
+
+
+# DEPRECATED: Legacy rerun endpoint (violates PB-S1)
 class RerunRequest(BaseModel):
     run_id: str
     reason: Optional[str] = "manual_retry"
@@ -1104,54 +1225,40 @@ class RerunResponse(BaseModel):
     run_id: str
     original_status: str
     reason: str
+    warning: Optional[str] = None
 
 
-@app.post("/admin/rerun", response_model=RerunResponse)
+@app.post("/admin/rerun", response_model=RerunResponse, deprecated=True)
 async def rerun_failed_run(payload: RerunRequest, _: str = Depends(verify_api_key)):
     """
-    Re-queue a failed or completed run for retry.
-    Only allows re-running runs with status: failed, succeeded, or retry.
+    REMOVED: This endpoint has been disabled to enforce PB-S1 truth guarantees.
+
+    Use POST /admin/retry instead.
+
+    PB-S1 Invariant: Retry creates NEW execution, never mutates original.
+    This endpoint violated that invariant and has been hard-disabled.
     """
-    with Session(engine) as session:
-        run = session.get(Run, payload.run_id)
-        if not run:
-            raise HTTPException(status_code=404, detail="Run not found")
+    # PB-S1 HARD-FAIL: This endpoint is permanently disabled
+    # It previously mutated original runs, violating truth guarantees
+    logger.error(
+        "pb_s1_rerun_blocked",
+        extra={
+            "run_id": payload.run_id,
+            "reason": payload.reason,
+            "error": "Endpoint disabled - use /admin/retry",
+        },
+    )
 
-        # Only allow rerun of terminal or retry states
-        allowed_states = ["failed", "succeeded", "retry"]
-        if run.status not in allowed_states:
-            raise HTTPException(
-                status_code=400, detail=f"Cannot rerun run with status '{run.status}'. Allowed: {allowed_states}"
-            )
-
-        original_status = run.status
-
-        # Reset run to queued state
-        run.status = "queued"
-        run.started_at = None
-        run.completed_at = None
-        run.error_message = None
-        run.next_attempt_at = None
-        # Keep attempts count for audit trail
-        session.add(run)
-        session.commit()
-
-        logger.info(
-            "run_requeued",
-            extra={
-                "run_id": payload.run_id,
-                "original_status": original_status,
-                "reason": payload.reason,
-                "agent_id": run.agent_id,
-            },
-        )
-
-        return RerunResponse(
-            status="queued",
-            run_id=payload.run_id,
-            original_status=original_status,
-            reason=payload.reason or "manual_retry",
-        )
+    raise HTTPException(
+        status_code=410,  # 410 Gone - resource no longer available
+        detail={
+            "error": "endpoint_removed",
+            "message": "POST /admin/rerun has been permanently disabled (PB-S1 enforcement)",
+            "reason": "This endpoint mutated original runs, violating truth guarantees",
+            "action": "Use POST /admin/retry instead - it creates a NEW execution with parent linkage",
+            "documentation": "See PIN-199 for PB-S1 implementation details",
+        },
+    )
 
 
 assert datetime is not None

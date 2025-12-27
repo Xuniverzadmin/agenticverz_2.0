@@ -4,6 +4,13 @@ M6 Deliverable: Re-execute stored plans and verify determinism
 
 This module provides the ability to replay a previously executed run
 and verify that the runtime behavior is deterministic.
+
+FROZEN SEMANTICS (PIN-198, S6 Trace Integrity Truth):
+- emit_traces=False is the DEFAULT and must remain so
+- Replay is OBSERVATIONAL - it must not emit traces
+- Replay must not generate new IDs during verification
+- Replay must not consult wall-clock time
+See LESSONS_ENFORCED.md Invariant #14: Replay Is Observational
 """
 
 import asyncio
@@ -86,18 +93,24 @@ class ReplayEngine:
         verify_parity: bool = True,
         dry_run: bool = False,
         timeout_seconds: float = 300.0,
+        emit_traces: bool = False,
     ) -> ReplayResult:
         """
         Replay a previously executed run.
+
+        S6 IMMUTABILITY: By default, replay does NOT emit new traces (emit_traces=False).
+        This ensures that replaying a trace doesn't grow the history.
+        Replay is a read-only verification operation.
 
         Args:
             run_id: The original run ID to replay
             verify_parity: If True, compare behavior with original trace
             dry_run: If True, don't actually execute skills (just validate)
             timeout_seconds: Maximum time for replay
+            emit_traces: If True, create new traces (default False for S6 compliance)
 
         Returns:
-            ReplayResult with parity check and new trace
+            ReplayResult with parity check and optional new trace
         """
         # Get original trace
         original_trace = await self.trace_store.get_trace(run_id)
@@ -112,18 +125,19 @@ class ReplayEngine:
                 error=f"Original run {run_id} not found",
             )
 
-        # Generate new IDs for replay
+        # Generate new IDs for replay (used for tracking even if not persisted)
         new_run_id = generate_run_id()
         new_correlation_id = generate_correlation_id()
 
-        # Start new trace
-        await self.trace_store.start_trace(
-            run_id=new_run_id,
-            correlation_id=new_correlation_id,
-            tenant_id=original_trace.tenant_id,
-            agent_id=original_trace.agent_id,
-            plan=original_trace.plan,
-        )
+        # S6: Only start new trace if emit_traces is explicitly True
+        if emit_traces:
+            await self.trace_store.start_trace(
+                run_id=new_run_id,
+                correlation_id=new_correlation_id,
+                tenant_id=original_trace.tenant_id,
+                agent_id=original_trace.agent_id,
+                plan=original_trace.plan,
+            )
 
         replay_steps: list[TraceStep] = []
         divergence_point = None
@@ -157,20 +171,21 @@ class ReplayEngine:
 
                 replay_steps.append(new_step)
 
-                # Record step in trace
-                await self.trace_store.record_step(
-                    run_id=new_run_id,
-                    step_index=new_step.step_index,
-                    skill_name=new_step.skill_name,
-                    params=new_step.params,
-                    status=new_step.status,
-                    outcome_category=new_step.outcome_category,
-                    outcome_code=new_step.outcome_code,
-                    outcome_data=new_step.outcome_data,
-                    cost_cents=new_step.cost_cents,
-                    duration_ms=new_step.duration_ms,
-                    retry_count=new_step.retry_count,
-                )
+                # S6: Only record step if emit_traces is True
+                if emit_traces:
+                    await self.trace_store.record_step(
+                        run_id=new_run_id,
+                        step_index=new_step.step_index,
+                        skill_name=new_step.skill_name,
+                        params=new_step.params,
+                        status=new_step.status,
+                        outcome_category=new_step.outcome_category,
+                        outcome_code=new_step.outcome_code,
+                        outcome_data=new_step.outcome_data,
+                        cost_cents=new_step.cost_cents,
+                        duration_ms=new_step.duration_ms,
+                        retry_count=new_step.retry_count,
+                    )
 
                 # Check for early divergence (determinism check)
                 if verify_parity and not dry_run:
@@ -178,39 +193,56 @@ class ReplayEngine:
                         divergence_point = i
                         # Continue execution but note the divergence
 
-            # Complete trace
-            final_status = "completed" if all(s.status == TraceStatus.SUCCESS for s in replay_steps) else "failed"
-
-            await self.trace_store.complete_trace(
+            # Build in-memory trace for comparison (S6: no persistence by default)
+            replay_trace = TraceRecord(
                 run_id=new_run_id,
-                status=final_status,
-                metadata={
-                    "replay_of": run_id,
-                    "dry_run": dry_run,
-                    "verify_parity": verify_parity,
-                },
+                correlation_id=new_correlation_id,
+                tenant_id=original_trace.tenant_id,
+                agent_id=original_trace.agent_id,
+                plan=original_trace.plan,
+                steps=replay_steps,
+                started_at=original_trace.started_at,
+                completed_at=None,
+                status="completed" if all(s.status == TraceStatus.SUCCESS for s in replay_steps) else "failed",
+                metadata={"replay_of": run_id, "dry_run": dry_run},
+                seed=original_trace.seed,
+                frozen_timestamp=original_trace.frozen_timestamp,
+                root_hash=None,
             )
 
-            # Get complete replay trace
-            replay_trace = await self.trace_store.get_trace(new_run_id)
+            # S6: Only complete/persist trace if emit_traces is True
+            if emit_traces:
+                await self.trace_store.complete_trace(
+                    run_id=new_run_id,
+                    status=replay_trace.status,
+                    metadata={
+                        "replay_of": run_id,
+                        "dry_run": dry_run,
+                        "verify_parity": verify_parity,
+                    },
+                )
+                # Get persisted trace
+                replay_trace = await self.trace_store.get_trace(new_run_id)
 
         except asyncio.TimeoutError:
             error = "Replay timed out"
-            await self.trace_store.complete_trace(
-                run_id=new_run_id,
-                status="timeout",
-                metadata={"error": error},
-            )
-            replay_trace = await self.trace_store.get_trace(new_run_id)
+            if emit_traces:
+                await self.trace_store.complete_trace(
+                    run_id=new_run_id,
+                    status="timeout",
+                    metadata={"error": error},
+                )
+            replay_trace = None
 
         except Exception as e:
             error = str(e)
-            await self.trace_store.complete_trace(
-                run_id=new_run_id,
-                status="error",
-                metadata={"error": error},
-            )
-            replay_trace = await self.trace_store.get_trace(new_run_id)
+            if emit_traces:
+                await self.trace_store.complete_trace(
+                    run_id=new_run_id,
+                    status="error",
+                    metadata={"error": error},
+                )
+            replay_trace = None
 
         # Perform parity check if requested
         parity_check = None
@@ -273,11 +305,14 @@ async def replay_run(
     dry_run: bool = False,
     timeout_seconds: float = 300.0,
     trace_store: TraceStore | None = None,
+    emit_traces: bool = False,
 ) -> ReplayResult:
     """
     Replay a previously executed run.
 
-    Convenience function that creates a ReplayEngine and runs the replay.
+    S6 IMMUTABILITY: By default, replay does NOT emit new traces (emit_traces=False).
+    This ensures that replaying a trace doesn't grow the history.
+    Replay is a read-only verification operation.
 
     Args:
         run_id: The original run ID to replay
@@ -285,9 +320,10 @@ async def replay_run(
         dry_run: If True, don't actually execute skills
         timeout_seconds: Maximum time for replay
         trace_store: Optional trace store (uses default SQLite if not provided)
+        emit_traces: If True, create new traces (default False for S6 compliance)
 
     Returns:
-        ReplayResult with parity check and new trace
+        ReplayResult with parity check and optional trace
 
     Example:
         >>> result = await replay_run("run_abc123", verify_parity=True)
@@ -302,6 +338,7 @@ async def replay_run(
         verify_parity=verify_parity,
         dry_run=dry_run,
         timeout_seconds=timeout_seconds,
+        emit_traces=emit_traces,
     )
 
 

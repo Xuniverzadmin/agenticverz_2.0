@@ -12,7 +12,7 @@ Provides:
 import hashlib
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field, SQLModel
@@ -22,7 +22,12 @@ if TYPE_CHECKING:
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    """Return current UTC time as a naive datetime (no timezone info).
+
+    PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns require naive datetimes.
+    We use UTC everywhere, so timezone info is implicit.
+    """
+    return datetime.utcnow()
 
 
 def generate_uuid() -> str:
@@ -416,7 +421,12 @@ class WorkerConfig(SQLModel, table=True):
 
 
 class WorkerRun(SQLModel, table=True):
-    """Worker execution run with tenant isolation."""
+    """Worker execution run with tenant isolation.
+
+    IMMUTABLE after status becomes 'completed' or 'failed'.
+    Retries create NEW rows with parent_run_id linking to original.
+    PB-S1 truth guarantee enforced by DB trigger.
+    """
 
     __tablename__ = "worker_runs"
 
@@ -448,6 +458,11 @@ class WorkerRun(SQLModel, table=True):
 
     # Cost
     cost_cents: Optional[int] = None
+
+    # PB-S1: Retry Linkage (Migration 053)
+    parent_run_id: Optional[str] = Field(default=None, index=True, description="Original run ID if this is a retry")
+    attempt: int = Field(default=1, description="Attempt number (1 = original, 2+ = retry)")
+    is_retry: bool = Field(default=False, description="True if this run is a retry of a failed run")
 
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)

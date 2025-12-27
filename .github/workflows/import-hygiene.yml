@@ -1,0 +1,78 @@
+name: Import Hygiene Check
+
+# Verifies Python modules can be imported without DATABASE_URL
+# Catches import-time side effects before they reach production
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**/*.py'
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**/*.py'
+
+jobs:
+  import-hygiene:
+    name: Import Hygiene (No Side Effects)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal dependencies
+        run: |
+          pip install sqlmodel sqlalchemy fastapi pydantic
+
+      - name: Check no relative imports
+        run: |
+          cd backend
+          RELATIVE_IMPORTS=$(grep -r "from \.\." app/ --include="*.py" || true)
+          if [ -n "$RELATIVE_IMPORTS" ]; then
+            echo "::error::Found relative imports (use absolute imports from app.*):"
+            echo "$RELATIVE_IMPORTS"
+            exit 1
+          fi
+          echo "No relative imports found"
+
+      - name: Check import-time side effects
+        run: |
+          cd backend
+          # These imports must succeed WITHOUT DATABASE_URL
+          python3 -c "from app.db import get_async_session; print('db.py: OK')"
+          python3 -c "from app.api.workers import router; print('workers.py: OK')"
+          echo "All imports succeed without DATABASE_URL"
+
+      - name: Syntax check critical files
+        run: |
+          cd backend
+          python3 -m py_compile app/db.py
+          python3 -m py_compile app/api/workers.py
+          echo "Syntax check passed"
+
+      - name: Ban deprecated datetime.utcnow()
+        run: |
+          cd backend
+          # Invariant #11: datetime.utcnow() is forbidden (deprecated in Python 3.12+)
+          # Use utc_now() from app.utils.runtime instead
+          DEPRECATED_UTC=$(grep -rn "datetime\.utcnow" app/ --include="*.py" || true)
+          if [ -n "$DEPRECATED_UTC" ]; then
+            echo "::error::Found deprecated datetime.utcnow() usage (use utc_now() from app.utils.runtime):"
+            echo "$DEPRECATED_UTC"
+            exit 1
+          fi
+          DEPRECATED_UTC2=$(grep -rn "utcnow()" app/ --include="*.py" | grep -v "def utc_now" | grep -v "# Use timezone-aware" || true)
+          if [ -n "$DEPRECATED_UTC2" ]; then
+            echo "::error::Found utcnow() call (use utc_now() from app.utils.runtime):"
+            echo "$DEPRECATED_UTC2"
+            exit 1
+          fi
+          echo "No deprecated UTC datetime usage found"

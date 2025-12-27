@@ -1,0 +1,91 @@
+name: Truth Preflight Gate
+
+# BLOCKING CI JOB
+# If this fails, no scenario execution, no acceptance, no merge.
+# Converts PIN-193/PIN-194 from documents into mechanical law.
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Force run even on non-PR'
+        required: false
+        default: 'false'
+
+jobs:
+  truth-preflight:
+    name: Truth Preflight (BLOCKING)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: dummy
+        options: >-
+          --health-cmd "pg_isready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      API_BASE: http://localhost:8000
+      DATABASE_URL: ${{ secrets.NEON_DSN }}
+      AOS_API_KEY: ${{ secrets.AOS_API_KEY }}
+      VALID_TENANT: demo-tenant
+      INVALID_TENANT: __invalid_tenant__
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend
+        run: |
+          docker compose build backend
+        working-directory: ${{ github.workspace }}
+
+      - name: Start backend
+        run: |
+          docker compose up -d backend
+          echo "Waiting for backend to be ready..."
+          sleep 15
+          curl -s http://localhost:8000/health || echo "Health check failed, continuing..."
+        working-directory: ${{ github.workspace }}
+
+      - name: Run Truth Preflight (FAIL-CLOSED)
+        id: preflight
+        run: |
+          chmod +x scripts/verification/truth_preflight.sh
+          scripts/verification/truth_preflight.sh
+        working-directory: ${{ github.workspace }}
+
+      - name: Upload preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-evidence
+          path: |
+            /tmp/preflight-*.log
+          retention-days: 30
+
+      - name: Stop backend
+        if: always()
+        run: docker compose down
+        working-directory: ${{ github.workspace }}
+
+      - name: Fail if preflight failed
+        if: steps.preflight.outcome == 'failure'
+        run: |
+          echo "::error::Truth Preflight FAILED. No scenario execution allowed."
+          echo "::error::Fix all preflight checks before proceeding."
+          exit 1

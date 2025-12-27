@@ -30,6 +30,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BetaBanner } from '@/components/BetaBanner';
 import {
   getKillSwitchStatus,
   freezeTenant,
@@ -575,7 +576,10 @@ export default function FounderControlsPage() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <>
+      {/* PIN-189: Founder Beta banner - remove after subdomain deployment */}
+      <BetaBanner />
+      <div className="min-h-screen bg-gray-950">
       {/* Header */}
       <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -713,6 +717,7 @@ export default function FounderControlsPage() {
           <span>Polling every {POLL_INTERVAL_MS / 1000}s | RBAC: killswitch:read, killswitch:activate, killswitch:reset</span>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

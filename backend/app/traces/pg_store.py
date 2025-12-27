@@ -7,6 +7,13 @@ Provides:
 - RBAC-aware trace access
 - PII redaction before storage
 - Efficient indexing for query API
+
+FROZEN SEMANTICS (PIN-198, S6 Trace Integrity Truth):
+- All trace INSERTs use ON CONFLICT DO NOTHING (Invariant #15: First Truth Wins)
+- No UPDATE on aos_trace_steps (Invariant #13: Trace Ledger Semantics)
+- Only status/completed_at UPDATE allowed on aos_traces
+- DELETE requires archive-first (Invariant #13)
+See LESSONS_ENFORCED.md Invariants #13, #15
 """
 
 import json
@@ -65,22 +72,25 @@ class PostgresTraceStore:
         agent_id: str | None,
         plan: list[dict[str, Any]],
     ) -> None:
-        """Start a new trace record (for replay compatibility)."""
+        """Start a new trace record (for replay compatibility).
+
+        S6 IMMUTABILITY: Traces are append-only. If a trace already exists
+        for this run_id, the insert is ignored (idempotent).
+        """
         pool = await self._get_pool()
         now = datetime.now(timezone.utc)
         # Use run_id as base for trace_id for easier correlation
         trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith("run_") else f"trace_{run_id}"
 
         async with pool.acquire() as conn:
+            # S6: Append-only - ignore if trace already exists
             await conn.execute(
                 """
                 INSERT INTO aos_traces (
                     trace_id, run_id, correlation_id, tenant_id, agent_id,
                     root_hash, plan, trace, schema_version, status, started_at, created_at
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                ON CONFLICT (trace_id) DO UPDATE SET
-                    status = 'running',
-                    started_at = EXCLUDED.started_at
+                ON CONFLICT (trace_id) DO NOTHING
                 """,
                 trace_id,  # trace_id
                 run_id,  # run_id
@@ -110,7 +120,10 @@ class PostgresTraceStore:
         duration_ms: float,
         retry_count: int,
     ) -> None:
-        """Record a step in the trace (for replay compatibility)."""
+        """Record a step in the trace (for replay compatibility).
+
+        S6 IMMUTABILITY: Steps are append-only. Duplicate inserts are ignored.
+        """
         pool = await self._get_pool()
         now = datetime.now(timezone.utc)
 
@@ -121,6 +134,7 @@ class PostgresTraceStore:
         trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith("run_") else f"trace_{run_id}"
 
         async with pool.acquire() as conn:
+            # S6: Append-only - ignore duplicates, never update
             await conn.execute(
                 """
                 INSERT INTO aos_trace_steps (
@@ -128,11 +142,7 @@ class PostgresTraceStore:
                     status, outcome_category, outcome_code, outcome_data,
                     cost_cents, duration_ms, retry_count, replay_behavior, timestamp
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-                ON CONFLICT (trace_id, step_index) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    outcome_data = EXCLUDED.outcome_data,
-                    cost_cents = EXCLUDED.cost_cents,
-                    duration_ms = EXCLUDED.duration_ms
+                ON CONFLICT (trace_id, step_index) DO NOTHING
                 """,
                 trace_id,  # trace_id
                 step_index,  # step_index
@@ -183,6 +193,9 @@ class PostgresTraceStore:
         """
         Store a trace from SDK or simulation.
 
+        S6 IMMUTABILITY: Traces are append-only. Duplicate trace_ids are ignored.
+        If you need to store a modified trace, use a new trace_id.
+
         Args:
             trace: Complete trace object
             tenant_id: Tenant for isolation
@@ -203,6 +216,7 @@ class PostgresTraceStore:
             trace = redact_trace_data(trace)
 
         async with pool.acquire() as conn:
+            # S6: Append-only - ignore duplicates, never update trace content
             await conn.execute(
                 """
                 INSERT INTO aos_traces (
@@ -211,12 +225,7 @@ class PostgresTraceStore:
                     schema_version, plan, trace, metadata, status,
                     started_at, completed_at, stored_by
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-                ON CONFLICT (trace_id) DO UPDATE SET
-                    trace = EXCLUDED.trace,
-                    metadata = EXCLUDED.metadata,
-                    status = EXCLUDED.status,
-                    completed_at = EXCLUDED.completed_at,
-                    root_hash = EXCLUDED.root_hash
+                ON CONFLICT (trace_id) DO NOTHING
                 """,
                 trace_id,
                 run_id,
@@ -239,6 +248,7 @@ class PostgresTraceStore:
             )
 
             # Store steps separately for efficient querying
+            # S6 IMMUTABILITY: Steps are append-only. Duplicate inserts are ignored.
             steps = trace.get("steps", [])
             for step in steps:
                 await conn.execute(
@@ -250,10 +260,7 @@ class PostgresTraceStore:
                         input_hash, output_hash, rng_state_before,
                         idempotency_key, replay_behavior, timestamp
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-                    ON CONFLICT (trace_id, step_index) DO UPDATE SET
-                        status = EXCLUDED.status,
-                        outcome_data = EXCLUDED.outcome_data,
-                        output_hash = EXCLUDED.output_hash
+                    ON CONFLICT (trace_id, step_index) DO NOTHING
                     """,
                     trace_id,
                     step.get("step_index", 0),
@@ -483,7 +490,13 @@ class PostgresTraceStore:
         trace_id: str,
         tenant_id: str | None = None,
     ) -> bool:
-        """Delete trace by ID."""
+        """Delete trace by ID.
+
+        S6 IMMUTABILITY WARNING: Direct deletion is blocked by database trigger.
+        Use cleanup_old_traces() which archives first, then deletes.
+
+        This method will raise an exception if the trace hasn't been archived.
+        """
         pool = await self._get_pool()
 
         async with pool.acquire() as conn:

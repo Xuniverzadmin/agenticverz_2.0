@@ -24,6 +24,7 @@ interface UsageLimits {
   budget_used_cents: number;
   budget_period: 'daily' | 'weekly' | 'monthly';
   budget_resets_at: string;
+  budget_mode: 'enforced' | 'advisory'; // Phase 5E-5: Contract surfacing
 
   // Rate limits
   rate_limit_per_minute: number;
@@ -138,6 +139,7 @@ export function CustomerLimitsPage() {
         budget_used_cents: 3750, // $37.50 used (75%)
         budget_period: 'daily',
         budget_resets_at: tomorrow.toISOString(),
+        budget_mode: 'advisory', // Phase 5E-5: Show advisory mode by default for demo
 
         rate_limit_per_minute: 60,
         rate_current_per_minute: 12,
@@ -213,6 +215,36 @@ export function CustomerLimitsPage() {
             <div className="text-sm text-slate-400">
               Resets in {formatTimeRemaining(limits.budget_resets_at)}
             </div>
+          </div>
+
+          {/* Phase 5E-5: Budget Mode Badge - Contract Surfacing */}
+          <div className="mb-6 p-4 bg-navy-elevated rounded-lg border border-navy-border">
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Mode</div>
+            {limits.budget_mode === 'enforced' ? (
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+                <span className="text-green-400 font-bold text-lg">ENFORCED</span>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                  <span className="text-amber-400 font-bold text-lg">ADVISORY</span>
+                </div>
+                <div className="bg-amber-500/10 border border-amber-400/30 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber-400">⚠️</span>
+                    <div className="text-sm text-amber-300">
+                      <div className="font-medium mb-1">Advisory mode:</div>
+                      <div className="text-amber-400/80">
+                        Execution may exceed the configured budget.
+                        No runs will be blocked automatically.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">

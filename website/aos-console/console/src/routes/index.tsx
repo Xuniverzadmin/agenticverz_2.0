@@ -32,6 +32,7 @@ const CreditsPage = lazy(() => import('@/pages/credits/CreditsPage'));
 // FOUNDER PAGES (Target: fops.agenticverz.com)
 // =============================================================================
 const TracesPage = lazy(() => import('@/pages/traces/TracesPage'));
+const TraceDetailPage = lazy(() => import('@/pages/traces/TraceDetailPage'));
 const RecoveryPage = lazy(() => import('@/pages/recovery/RecoveryPage'));
 const SBAInspectorPage = lazy(() => import('@/pages/sba/SBAInspectorPage'));
 const WorkerStudioHomePage = lazy(() => import('@/pages/workers/WorkerStudioHome'));
@@ -157,7 +158,7 @@ export function AppRoutes() {
 
           {/* Execution (FOUNDER) */}
           <Route path="traces" element={<TracesPage />} />
-          <Route path="traces/:runId" element={<TracesPage />} />
+          <Route path="traces/:runId" element={<TraceDetailPage />} />
           <Route path="workers" element={<WorkerStudioHomePage />} />
           <Route path="workers/console" element={<WorkerExecutionConsolePage />} />
 

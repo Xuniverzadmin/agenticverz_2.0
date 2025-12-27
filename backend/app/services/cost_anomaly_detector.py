@@ -234,7 +234,7 @@ class CostAnomalyDetector:
                 f"""
                 SELECT
                     {column_name},
-                    SUM(cost_cents) / NULLIF(COUNT(DISTINCT DATE(created_at)), 0) as daily_avg
+                    COALESCE(SUM(cost_cents), 0) / NULLIF(COUNT(DISTINCT DATE(created_at)), 0) as daily_avg
                 FROM cost_records
                 WHERE tenant_id = :tenant_id
                   AND {column_name} IS NOT NULL
@@ -259,7 +259,7 @@ class CostAnomalyDetector:
                 f"""
                 SELECT
                     {column_name},
-                    SUM(cost_cents) as today_cost
+                    COALESCE(SUM(cost_cents), 0) as today_cost
                 FROM cost_records
                 WHERE tenant_id = :tenant_id
                   AND {column_name} IS NOT NULL
@@ -339,7 +339,7 @@ class CostAnomalyDetector:
         baseline_result = self.session.execute(
             text(
                 """
-                SELECT SUM(cost_cents) / NULLIF(COUNT(DISTINCT DATE(created_at)), 0)
+                SELECT COALESCE(SUM(cost_cents), 0) / NULLIF(COUNT(DISTINCT DATE(created_at)), 0)
                 FROM cost_records
                 WHERE tenant_id = :tenant_id
                   AND DATE(created_at) >= :baseline_start
@@ -972,10 +972,10 @@ class CostAnomalyDetector:
                 text(
                     """
                     SELECT
-                        SUM(cost_cents) as total,
-                        MAX(feature_cost) as max_feature
+                        COALESCE(SUM(cost_cents), 0) as total,
+                        COALESCE(MAX(feature_cost), 0) as max_feature
                     FROM (
-                        SELECT feature_tag, SUM(cost_cents) as feature_cost
+                        SELECT feature_tag, COALESCE(SUM(cost_cents), 0) as feature_cost
                         FROM cost_records
                         WHERE tenant_id = :tenant_id
                           AND created_at >= :today_start

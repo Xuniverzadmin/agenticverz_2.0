@@ -29,6 +29,7 @@ import {
   Hash,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BetaBanner } from '@/components/BetaBanner';
 import {
   listDecisionRecords,
   getRunTimeline,
@@ -37,6 +38,7 @@ import {
   type RunTimeline,
   type TimelineEntry,
 } from '@/api/timeline';
+import { truncateValue } from '@/utils/truncateValue';
 
 // =============================================================================
 // Constants
@@ -62,8 +64,9 @@ function formatTimestamp(ts: string): string {
   });
 }
 
+// V-004 Fix: Use truncateValue instead of raw JSON.stringify
 function formatJson(obj: unknown): string {
-  return JSON.stringify(obj, null, 2);
+  return truncateValue(obj, { maxChars: 200, maxDepth: 2 });
 }
 
 function getEntryTypeLabel(type: string): string {
@@ -197,6 +200,81 @@ function TimelineEntryCard({ entry, index }: TimelineEntryCardProps) {
           <RecordField label="workflow_id" value={record.workflow_id} mono />
           <RecordField label="request_id" value={record.request_id} mono />
           <RecordField label="tenant_id" value={record.tenant_id} mono />
+
+          {/* Phase 5E-5: Contract Surfacing - ROUTING details */}
+          {record.decision_type === 'routing' && record.details && (() => {
+            const details = record.details as Record<string, unknown>;
+            return (
+              <div className="mt-3 p-3 bg-blue-950/30 border border-blue-500/30 rounded">
+                <div className="text-xs text-blue-400 font-bold uppercase tracking-wide mb-2">
+                  ROUTING DETAILS
+                </div>
+                <div className="space-y-1">
+                  <RecordField label="Method" value={details.routing_method || details.method} />
+                  <RecordField label="Agents Considered" value={
+                    Array.isArray(details.agents_considered)
+                      ? (details.agents_considered as string[]).join(', ')
+                      : details.agents_considered
+                  } />
+                  <RecordField label="Agents Rejected" value={
+                    Array.isArray(details.agents_rejected)
+                      ? (details.agents_rejected as string[]).join(', ')
+                      : details.agents_rejected || 'None'
+                  } />
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Phase 5E-5: Contract Surfacing - MEMORY details */}
+          {record.decision_type === 'memory' && record.details && (() => {
+            const details = record.details as Record<string, unknown>;
+            return (
+              <div className="mt-3 p-3 bg-purple-950/30 border border-purple-500/30 rounded">
+                <div className="text-xs text-purple-400 font-bold uppercase tracking-wide mb-2">
+                  MEMORY DETAILS
+                </div>
+                <div className="space-y-1">
+                  <RecordField label="Memory Queried" value={details.memory_queried || details.pins_queried || 0} />
+                  <RecordField label="Memory Injected" value={
+                    details.memory_injected !== undefined
+                      ? (details.memory_injected ? 'Yes' : 'No')
+                      : ((details.pins_injected as number) > 0 ? 'Yes' : 'No')
+                  } />
+                  {details.pins_injected !== undefined && (
+                    <RecordField label="Pins Injected" value={details.pins_injected} />
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Phase 5E-5: Contract Surfacing - RECOVERY link */}
+          {record.decision_type === 'recovery' && (() => {
+            const details = (record.details || {}) as Record<string, unknown>;
+            return (
+              <div className="mt-3 p-3 bg-amber-950/30 border border-amber-500/30 rounded">
+                <div className="text-xs text-amber-400 font-bold uppercase tracking-wide mb-2">
+                  RECOVERY DETAILS
+                </div>
+                <div className="space-y-1">
+                  <RecordField label="Recovery Class" value={details.recovery_class} />
+                  <RecordField label="Strategy" value={details.strategy} />
+                  {details.incident_id && (
+                    <div className="mt-2">
+                      <a
+                        href={`/founder/incidents?id=${details.incident_id}`}
+                        className="text-amber-400 hover:text-amber-300 underline text-sm"
+                      >
+                        View Recovery Details →
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           <JsonBlock label="decision_inputs" data={record.decision_inputs} />
           <JsonBlock label="details" data={record.details} />
         </div>
@@ -277,6 +355,69 @@ function DecisionRecordCard({ record }: DecisionRecordCardProps) {
           <RecordField label="request_id" value={record.request_id} mono />
           <RecordField label="tenant_id" value={record.tenant_id} mono />
           <RecordField label="decided_at" value={record.decided_at} />
+
+          {/* Phase 5E-5: Contract Surfacing - ROUTING details */}
+          {record.decision_type === 'routing' && record.details && (
+            <div className="mt-3 p-3 bg-blue-950/30 border border-blue-500/30 rounded">
+              <div className="text-xs text-blue-400 font-bold uppercase tracking-wide mb-2">
+                ROUTING DETAILS
+              </div>
+              <div className="space-y-1">
+                <RecordField label="Method" value={(record.details as Record<string, unknown>).routing_method || (record.details as Record<string, unknown>).method} />
+                <RecordField label="Agents Considered" value={
+                  Array.isArray((record.details as Record<string, unknown>).agents_considered)
+                    ? ((record.details as Record<string, unknown>).agents_considered as string[]).join(', ')
+                    : (record.details as Record<string, unknown>).agents_considered
+                } />
+                <RecordField label="Agents Rejected" value={
+                  Array.isArray((record.details as Record<string, unknown>).agents_rejected)
+                    ? ((record.details as Record<string, unknown>).agents_rejected as string[]).join(', ')
+                    : (record.details as Record<string, unknown>).agents_rejected || 'None'
+                } />
+              </div>
+            </div>
+          )}
+
+          {/* Phase 5E-5: Contract Surfacing - MEMORY details */}
+          {record.decision_type === 'memory' && record.details && (
+            <div className="mt-3 p-3 bg-purple-950/30 border border-purple-500/30 rounded">
+              <div className="text-xs text-purple-400 font-bold uppercase tracking-wide mb-2">
+                MEMORY DETAILS
+              </div>
+              <div className="space-y-1">
+                <RecordField label="Memory Queried" value={(record.details as Record<string, unknown>).memory_queried || (record.details as Record<string, unknown>).pins_queried || 0} />
+                <RecordField label="Memory Injected" value={
+                  (record.details as Record<string, unknown>).memory_injected !== undefined
+                    ? ((record.details as Record<string, unknown>).memory_injected ? 'Yes' : 'No')
+                    : ((record.details as Record<string, unknown>).pins_injected as number > 0 ? 'Yes' : 'No')
+                } />
+              </div>
+            </div>
+          )}
+
+          {/* Phase 5E-5: Contract Surfacing - RECOVERY link */}
+          {record.decision_type === 'recovery' && (
+            <div className="mt-3 p-3 bg-amber-950/30 border border-amber-500/30 rounded">
+              <div className="text-xs text-amber-400 font-bold uppercase tracking-wide mb-2">
+                RECOVERY DETAILS
+              </div>
+              <div className="space-y-1">
+                <RecordField label="Recovery Class" value={(record.details as Record<string, unknown>)?.recovery_class} />
+                <RecordField label="Strategy" value={(record.details as Record<string, unknown>)?.strategy} />
+                {(record.details as Record<string, unknown>)?.incident_id && (
+                  <div className="mt-2">
+                    <a
+                      href={`/founder/incidents?id=${(record.details as Record<string, unknown>).incident_id}`}
+                      className="text-amber-400 hover:text-amber-300 underline text-sm"
+                    >
+                      View Recovery Details →
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <JsonBlock label="decision_inputs" data={record.decision_inputs} />
           <JsonBlock label="details" data={record.details} />
         </div>
@@ -529,7 +670,10 @@ export default function FounderTimelinePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <>
+      {/* PIN-189: Founder Beta banner - remove after subdomain deployment */}
+      <BetaBanner />
+      <div className="min-h-screen bg-gray-950">
       {/* Header */}
       <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -586,6 +730,7 @@ export default function FounderTimelinePage() {
           <span>Polling every {POLL_INTERVAL_MS / 1000}s</span>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -15,18 +15,28 @@ Watchpoint #1: Incident Explosion Under Load
 - During a 1000-request outage, we create 1 incident, not 1000
 - Related calls are added to the incident's related_call_ids
 - Severity auto-escalates based on affected call count
+
+ARCHITECTURE RULE (LESSONS_ENFORCED.md Invariant #10):
+- This service MUST be constructed with explicit dependency injection
+- NO lazy service resolution (get_incident_aggregator is BANNED)
+- All collaborators (clock, uuid_fn) MUST be passed via constructor
+- Verification scripts and production MUST use the same constructor pattern
 """
 
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 from sqlmodel import Session, and_, select
 
 from app.models.killswitch import Incident, IncidentEvent, IncidentSeverity, IncidentStatus
-from app.utils.deterministic import generate_uuid, utc_now
+from app.utils.runtime import generate_uuid, utc_now
+
+# Type aliases for injected dependencies
+ClockFn = Callable[[], datetime]
+UuidFn = Callable[[], str]
 
 logger = logging.getLogger(__name__)
 
@@ -114,9 +124,35 @@ class IncidentAggregator:
     2. Rate limiting incident creation per tenant
     3. Auto-escalating severity based on impact
     4. Merging calls into existing open incidents
+
+    INVARIANT #10: Explicit Dependency Injection Required
+    - clock: Function that returns current UTC datetime
+    - uuid_fn: Function that generates UUID strings
+    - These MUST be passed explicitly, not resolved lazily
     """
 
-    def __init__(self, config: Optional[IncidentAggregatorConfig] = None):
+    def __init__(
+        self,
+        clock: ClockFn,
+        uuid_fn: UuidFn,
+        config: Optional[IncidentAggregatorConfig] = None,
+    ):
+        """
+        Construct an IncidentAggregator with explicit dependencies.
+
+        Args:
+            clock: Function returning current UTC datetime (use utc_now from app.utils.runtime)
+            uuid_fn: Function generating UUID strings (use generate_uuid from app.utils.runtime)
+            config: Optional configuration override
+
+        INVARIANT: Do NOT use get_incident_aggregator(). Always construct explicitly:
+            aggregator = IncidentAggregator(
+                clock=utc_now,
+                uuid_fn=generate_uuid,
+            )
+        """
+        self.clock = clock
+        self.uuid_fn = uuid_fn
         self.config = config or IncidentAggregatorConfig()
         self._incident_cache: Dict[IncidentKey, str] = {}  # Key -> incident_id
 
@@ -137,7 +173,7 @@ class IncidentAggregator:
         Returns:
             Tuple of (Incident, is_new) where is_new indicates if incident was created
         """
-        now = utc_now()
+        now = self.clock()
         key = IncidentKey.from_event(
             tenant_id=tenant_id,
             trigger_type=trigger_type,
@@ -213,7 +249,8 @@ class IncidentAggregator:
         )
 
         result = session.exec(stmt).one()
-        count = result[0] if result else 0
+        # func.count returns an int directly, not a tuple
+        count = result if isinstance(result, int) else (result[0] if result else 0)
 
         return count < self.config.max_incidents_per_tenant_per_hour
 
@@ -247,7 +284,7 @@ class IncidentAggregator:
 
         # Create new rate-limit overflow incident
         incident = Incident(
-            id=generate_uuid(),
+            id=self.uuid_fn(),
             tenant_id=tenant_id,
             title="Incident Rate Limit Reached - Events Aggregated",
             severity=IncidentSeverity.HIGH.value,
@@ -276,7 +313,7 @@ class IncidentAggregator:
         metadata: Optional[Dict[str, Any]],
     ) -> Incident:
         """Create a new incident."""
-        now = utc_now()
+        now = self.clock()
 
         # Determine initial severity based on trigger type
         initial_severity = self._get_initial_severity(key.trigger_type)
@@ -285,7 +322,7 @@ class IncidentAggregator:
         title = self._generate_title(key.trigger_type, trigger_value)
 
         incident = Incident(
-            id=generate_uuid(),
+            id=self.uuid_fn(),
             tenant_id=key.tenant_id,
             title=title,
             severity=initial_severity,
@@ -329,7 +366,7 @@ class IncidentAggregator:
         metadata: Optional[Dict[str, Any]],
     ) -> None:
         """Add a call to an existing incident and potentially escalate."""
-        now = utc_now()
+        now = self.clock()
 
         # Add call ID if not at limit
         if call_id:
@@ -412,7 +449,7 @@ class IncidentAggregator:
     ) -> IncidentEvent:
         """Add an event to an incident's timeline."""
         event = IncidentEvent(
-            id=generate_uuid(),
+            id=self.uuid_fn(),
             incident_id=incident.id,
             event_type=event_type,
             description=description,
@@ -435,7 +472,7 @@ class IncidentAggregator:
 
         Returns number of resolved incidents.
         """
-        now = utc_now()
+        now = self.clock()
         cutoff = now - timedelta(seconds=self.config.auto_resolve_after_seconds)
 
         conditions = [Incident.status == IncidentStatus.OPEN.value, Incident.updated_at < cutoff]
@@ -476,7 +513,7 @@ class IncidentAggregator:
     ) -> Dict[str, Any]:
         """Get incident statistics for a tenant."""
         if since is None:
-            since = utc_now() - timedelta(hours=24)
+            since = self.clock() - timedelta(hours=24)
 
         from sqlalchemy import func
 
@@ -530,20 +567,40 @@ class IncidentAggregator:
         }
 
 
-# ============== SINGLETON INSTANCE ==============
+# ============== FACTORY FUNCTION (EXPLICIT DI) ==============
+#
+# INVARIANT #10: No Lazy Service Resolution
+# The get_incident_aggregator() singleton pattern is BANNED.
+# Always construct IncidentAggregator explicitly with dependencies:
+#
+#     from app.utils.runtime import generate_uuid, utc_now
+#     aggregator = IncidentAggregator(clock=utc_now, uuid_fn=generate_uuid)
+#
+# This ensures:
+# - Verification scripts and production use the same dependency graph
+# - No hidden wiring that only fails at certain execution paths
+# - All collaborators are visible and testable
+#
+# CI Guard enforces this:
+#     grep -R "get_incident_aggregator" backend && exit 1
 
-_aggregator: Optional[IncidentAggregator] = None
 
+def create_incident_aggregator(
+    config: Optional[IncidentAggregatorConfig] = None,
+) -> IncidentAggregator:
+    """
+    Create an IncidentAggregator with canonical dependencies.
 
-def get_incident_aggregator() -> IncidentAggregator:
-    """Get the singleton incident aggregator instance."""
-    global _aggregator
-    if _aggregator is None:
-        _aggregator = IncidentAggregator()
-    return _aggregator
+    This is the ONLY sanctioned way to create an aggregator.
+    Uses generate_uuid and utc_now from app.utils.runtime.
 
-
-def reset_incident_aggregator(config: Optional[IncidentAggregatorConfig] = None):
-    """Reset the aggregator (for testing)."""
-    global _aggregator
-    _aggregator = IncidentAggregator(config)
+    Usage:
+        aggregator = create_incident_aggregator()
+        # or with custom config:
+        aggregator = create_incident_aggregator(config=IncidentAggregatorConfig(...))
+    """
+    return IncidentAggregator(
+        clock=utc_now,
+        uuid_fn=generate_uuid,
+        config=config,
+    )

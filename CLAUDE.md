@@ -1,6 +1,153 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-25
+**Last Updated:** 2025-12-27
+
+---
+
+## CLAUDE BEHAVIOR ENFORCEMENT (MANDATORY - READ FIRST)
+
+**Status:** ACTIVE
+**Effective:** 2025-12-27
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`
+
+### Boot Sequence Acknowledgement (REQUIRED)
+
+Before performing ANY work, Claude must acknowledge:
+
+> "AgenticVerz boot sequence acknowledged.
+> I will comply with memory pins, lessons learned, and system contracts.
+> Current phase: [A / A.5 / B / C]"
+
+### Pre-Code Discipline (MANDATORY)
+
+Claude **must not write or modify any code** until completing:
+
+| Task | Phase | Purpose |
+|------|-------|---------|
+| 0 | Accept | Acknowledge contract explicitly |
+| 1 | PLAN | System state inventory (alembic, schema) |
+| 2 | VERIFY | Conflict & risk scan |
+| 3 | PLAN | Migration intent (if applicable) |
+| 4 | PLAN | Execution plan (what changes, what doesn't) |
+| 5 | ACT | Write code (only after 0-4 complete) |
+| 6 | VERIFY | Self-audit (MANDATORY for all code) |
+
+### SELF-AUDIT Section (REQUIRED for all code changes)
+
+```
+SELF-AUDIT
+- Did I verify current DB and migration state? YES / NO
+- Did I read memory pins and lessons learned? YES / NO
+- Did I introduce new persistence? YES / NO
+- Did I risk historical mutation? YES / NO
+- If YES to any risk → mitigation: <explain>
+```
+
+**Outputs missing SELF-AUDIT are invalid.**
+
+### Forbidden Actions (ABSOLUTE)
+
+| Action | Reason |
+|--------|--------|
+| Mutate historical executions | Violates S1, S6 |
+| Assume schema state | Causes migration forks |
+| Create migrations without checking heads | Multi-head chaos |
+| Infer missing data | Violates truth-grade |
+| Skip SELF-AUDIT | Invalidates response |
+
+### Response Validation
+
+Responses are validated by `scripts/ops/claude_response_validator.py`:
+- Code changes require SELF-AUDIT section
+- Missing sections = REJECTED response
+- BLOCKED status = valid (Claude correctly stopped)
+- Behavior rules enforced (see below)
+
+### Behavior Library (Auto-Enforced)
+
+**Reference:** `CLAUDE_BEHAVIOR_LIBRARY.md`
+
+Claude responses are validated against behavior rules derived from real incidents:
+
+| Rule ID | Name | Trigger | Required Section |
+|---------|------|---------|-----------------|
+| BL-ENV-001 | Runtime Sync | Testing endpoints | `RUNTIME SYNC CHECK` |
+| BL-DB-001 | Timestamp Semantics | datetime operations | `TIMESTAMP SEMANTICS CHECK` |
+| BL-AUTH-001 | Auth Contract | Auth errors (401/403) | `AUTH CONTRACT CHECK` |
+| BL-MIG-001 | Migration Heads | Migrations | `MIGRATION HEAD CHECK` |
+| BL-DOCKER-001 | Docker Names | Docker commands | `DOCKER NAME CHECK` |
+| BL-TEST-001 | Test Prerequisites | Running tests | `TEST PREREQUISITES CHECK` |
+
+**Example Behavior Rule Output:**
+```
+RUNTIME SYNC CHECK
+- Services enumerated: YES
+- Target service: backend
+- Rebuild command: docker compose up -d --build backend
+- Health status: healthy
+- Auth headers verified: X-AOS-Key, X-Roles
+```
+
+If a trigger is detected but the required section is missing, the response is **REJECTED**.
+
+### Quick Reference
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              AGENTICVERZ CLAUDE DISCIPLINE                  │
+├─────────────────────────────────────────────────────────────┤
+│  1. LOAD: Memory pins, Lessons, Contracts                   │
+│  2. PHASE: Identify current phase (A/A.5/B/C)               │
+│  3. P-V-A: Plan → Verify → Act (in order, no skip)          │
+│  4. FORBIDDEN: No mutation, no inference, no shortcuts      │
+│  5. SELF-AUDIT: Required for all code changes               │
+│  6. BLOCKED: Stop if conflict detected                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PHASE A.5 CLOSURE: TRUTH-GRADE SYSTEM CERTIFIED
+
+**Status:** CLOSED (Constitutional)
+**Date:** 2025-12-26
+**Reference:** `docs/PHASE_A5_CLOSURE.md`
+
+### What This Means
+
+AgenticVerz is now a **truth-grade system**:
+
+> **The system cannot lie — accidentally or intentionally — about execution, cost, policy, failure, memory, or history.**
+
+### Certified Guarantees (S1–S6)
+
+| Gate | Guarantee | Status |
+|------|-----------|--------|
+| S1 | Execution facts propagate correctly | ACCEPTED |
+| S2 | Costs are computed, persisted, never inferred | ACCEPTED |
+| S3 | Policy violations are facts, not interpretations | ACCEPTED |
+| S4 | The system tells the truth about its own failures | ACCEPTED |
+| S5 | Memory is explicit, persisted, and eligible | ACCEPTED |
+| S6 | Traces are immutable, ordered, and replay-faithful | ACCEPTED (constitutional) |
+
+### What Phase B CANNOT Do
+
+Phase B (Resilience, Recovery, Optimization) **may not**:
+
+- Rewrite history
+- "Fix" past traces
+- Infer missing facts
+- Retry failures silently
+- Trade correctness for performance
+
+> **Truth is fixed. Only behavior may change.**
+
+### Key Invariants (Mechanically Enforced)
+
+- `LESSONS_ENFORCED.md` — 15 invariants, all enforced by code or CI
+- Database triggers reject trace mutation
+- `emit_traces=False` is the replay default (cannot emit during audit)
+- `ON CONFLICT DO NOTHING` — first truth wins
 
 ---
 
@@ -86,6 +233,69 @@ Then read in order:
 1. `agentiverz_mn/repo_snapshot.md` - Current state
 2. `agentiverz_mn/milestone_plan.md` - What we're building
 3. Pick the relevant checklist for your task
+
+---
+
+## Truth Preflight (MANDATORY)
+
+Before executing or suggesting any verification scenario (S2–S6), you MUST:
+
+1. Confirm that the CI job "Truth Preflight Gate" has passed.
+2. If CI evidence is not provided, you must STOP and respond:
+   > "Truth preflight not verified. Execution blocked."
+
+You are NOT allowed to:
+- Bypass this requirement
+- Simulate results
+- Assume preflight success
+- Suggest proceeding "temporarily"
+
+### Enforcement
+
+Truth preflight is enforced mechanically by CI:
+- **CI Job:** `.github/workflows/truth-preflight.yml`
+- **Script:** `scripts/verification/truth_preflight.sh`
+- **PINs:** PIN-193 (S1), PIN-194 (S2)
+
+This instruction exists to prevent reasoning on an untrusted system.
+
+### Operating Rule
+
+> **No Truth Preflight → No Scenario → No Acceptance → No Merge**
+
+See `docs/OPERATING_RULES.md` for the full operating contract.
+
+---
+
+## Python Execution Invariant (MANDATORY)
+
+All Python commands MUST follow these rules:
+
+1. **Working Directory:** Run from `backend/`, never from repo root
+2. **Package Root:** `app/` is the root package
+3. **Imports:** Use absolute imports (`from app.db import ...`)
+4. **Environment:** `DATABASE_URL` required for execution, NOT for imports
+
+### Canonical Command Pattern
+
+```bash
+cd backend && DATABASE_URL=... python3 -m app.module
+```
+
+### If Import Fails
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `ModuleNotFoundError: No module named 'app'` | Wrong CWD | `cd backend` first |
+| `RuntimeError: DATABASE_URL...` | Missing env var | Export DATABASE_URL |
+| `ImportError: attempted relative import` | Relative import | Convert to absolute |
+
+### Enforcement
+
+- **CI Job:** `.github/workflows/import-hygiene.yml`
+- **Contract:** `backend/PYTHON_EXECUTION_CONTRACT.md`
+
+If these conditions are not met, **STOP** and fix before proceeding.
 
 ---
 

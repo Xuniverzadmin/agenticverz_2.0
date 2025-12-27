@@ -22,6 +22,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Clock, Power } from 'lucide-react';
 import FounderOpsConsole from './FounderOpsConsole';
 import { FounderPulsePage } from './FounderPulsePage';
+import { BetaBanner } from '@/components/BetaBanner';
 
 // Create query client for Pulse page
 const queryClient = new QueryClient({
@@ -173,6 +174,8 @@ export default function OpsConsoleEntry() {
   // Render the Ops Console with view tabs
   return (
     <QueryClientProvider client={queryClient}>
+      {/* PIN-189: Founder Beta banner - remove after subdomain deployment */}
+      <BetaBanner />
       <div className="min-h-screen bg-gray-950 flex flex-col">
         {/* View Tabs Header */}
         <div className="bg-gray-900 border-b border-gray-800 px-6 py-2 flex items-center justify-between">

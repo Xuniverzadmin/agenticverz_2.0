@@ -762,9 +762,15 @@ def evaluate_prevention(
 async def create_incident_from_violation(
     ctx: PreventionContext,
     result: PreventionResult,
+    session: Optional[Any] = None,
 ) -> Optional[str]:
     """
     Create an incident from prevention violation.
+
+    S3 Truth Model (PIN-195):
+    1. Persist violation fact
+    2. Create incident (only after violation persisted)
+    3. Link evidence
 
     Returns incident_id if created, None otherwise.
     """
@@ -773,33 +779,76 @@ async def create_incident_from_violation(
 
     primary = result.primary_violation
 
-    # Build incident data
-    incident_data = {
-        "tenant_id": ctx.tenant_id,
-        "call_id": ctx.call_id,
+    # Build evidence from context and violation
+    evidence = {
         "user_id": ctx.user_id,
         "model": ctx.model,
         "timestamp": ctx.timestamp.isoformat(),
-        "severity": primary.severity.value,
-        "policy": primary.policy.value,
-        "rule_id": primary.rule_id,
-        "reason": primary.reason,
-        "evidence": primary.evidence,
-        "expected_behavior": primary.expected_behavior,
-        "actual_behavior": primary.actual_behavior,
-        "user_query": ctx.user_query[:500],
-        "llm_output": ctx.llm_output[:1000],
-        "context_data": {k: str(v)[:100] for k, v in list(ctx.context_data.items())[:10]},
+        "user_query_excerpt": ctx.user_query[:500],
+        "llm_output_excerpt": ctx.llm_output[:1000],
+        "context_data_excerpt": {k: str(v)[:100] for k, v in list(ctx.context_data.items())[:10]},
         "prevention_action": result.action.value,
         "would_prevent": result.would_prevent,
         "evaluation_id": result.evaluation_id,
+        "expected_behavior": primary.expected_behavior,
+        "actual_behavior": primary.actual_behavior,
+        "violation_evidence": primary.evidence,
     }
 
-    # In production, this would write to database
-    # For now, return a mock incident ID
-    incident_id = f"inc_{result.evaluation_id[:12]}"
+    # Use the PolicyViolationService for proper S3 truth handling
+    try:
+        from app.db_async import AsyncSessionLocal
+        from app.services.policy_violation_service import (
+            PolicyViolationService,
+            ViolationFact,
+        )
 
-    return incident_id
+        # Create session if not provided
+        if session is None:
+            async with AsyncSessionLocal() as async_session:
+                return await _create_incident_with_service(async_session, ctx, primary, evidence)
+        else:
+            return await _create_incident_with_service(session, ctx, primary, evidence)
+
+    except ImportError as e:
+        # Fallback for backwards compatibility (no S3 guarantees)
+        import logging
+
+        logging.getLogger("nova.policy.prevention").warning(
+            f"PolicyViolationService not available: {e}. Using fallback."
+        )
+        return f"inc_{result.evaluation_id[:12]}"
+
+
+async def _create_incident_with_service(
+    session: Any,
+    ctx: PreventionContext,
+    primary: PolicyViolation,
+    evidence: dict,
+) -> Optional[str]:
+    """Helper to create incident using PolicyViolationService."""
+    from app.services.policy_violation_service import (
+        PolicyViolationService,
+        ViolationFact,
+    )
+
+    service = PolicyViolationService(session)
+
+    violation = ViolationFact(
+        run_id=ctx.call_id,
+        tenant_id=ctx.tenant_id,
+        policy_id=primary.policy.value,
+        policy_type=primary.policy.value,
+        violated_rule=primary.rule_id,
+        evaluated_value=f"call:{ctx.call_id}",
+        threshold_condition=primary.reason,
+        severity=primary.severity.value,
+        reason=primary.reason,
+        evidence=evidence,
+    )
+
+    result = await service.persist_violation_and_create_incident(violation)
+    return result.incident_id if result else None
 
 
 # Export all

@@ -1,7 +1,27 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-26 (PIN-184 Founder-Led Beta Criteria - 🎯 ACTIVE)
+**Last Updated:** 2025-12-27 (PIN-201 Enhanced Behavior Library System)
+
+---
+
+## Phase A.5 Status: CLOSED (Constitutional)
+
+> **AgenticVerz is now a truth-grade system.**
+> See [`PHASE_A5_CLOSURE.md`](../PHASE_A5_CLOSURE.md) for the official certification document.
+
+| Gate | Status | Checks |
+|------|--------|--------|
+| S1 — Truth Propagation | ACCEPTED | All passed |
+| S2 — Cost Advisory Truth | ACCEPTED | All passed |
+| S3 — Policy Violation Truth | ACCEPTED | All passed |
+| S4 — LLM Failure Truth | ACCEPTED | 27/27 |
+| S5 — Memory Injection Truth | ACCEPTED | 38/38 |
+| S6 — Trace Integrity Truth | ACCEPTED (constitutional) | 31/31 |
+
+**What this means:** The system cannot lie about execution, cost, policy, failure, memory, or history.
+
+**Next:** Phase B (Resilience, Recovery, Optimization) under truth-preserving constraints.
 
 ---
 
@@ -206,6 +226,23 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-182](PIN-182-phase-5e-4-customer-essentials.md) | **Phase 5E-4 Customer Essentials** | Frontend / Customer Console | **✅ COMPLETE** | 2025-12-26 |
 | [PIN-183](PIN-183-runtime-v1-feature-freeze.md) | **Runtime v1 Feature Freeze** | Architecture / Runtime | **🔒 LOCKED** | 2025-12-26 |
 | [PIN-184](PIN-184-founder-led-beta-criteria.md) | **Founder-Led Beta Criteria** | Operations / Beta / Exit Criteria | **🎯 ACTIVE** | 2025-12-26 |
+| [PIN-185](PIN-185-phase-5e-5-contract-surfacing-fixes.md) | **Phase 5E-5 Contract Surfacing Fixes** | UI / Contract Surfacing | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-186](PIN-186-page-order-drill-down-invariants.md) | **Page Order & Drill-Down Invariants** | UI / Architecture / Governance | **⚖️ LAW** | 2025-12-26 |
+| [PIN-187](PIN-187-pin186-compliance-audit.md) | **PIN-186 Compliance Audit** | UI / Audit / Governance | **✅ COMPLETE** | 2025-12-26 |
+| [PIN-188](PIN-188-founder-beta-signals-framework.md) | **Founder-Beta Signals Framework** | Governance / Beta / Signals | **🎯 ACTIVE** | 2025-12-26 |
+| [PIN-189](PIN-189-phase-a-closure-beta-launch.md) | **Phase A Closure & Beta Launch** | Governance / Milestone / Beta | **🔒 LOCKED** | 2025-12-26 |
+| [PIN-190](PIN-190-phase-b-subdomain-rollout-plan.md) | **Phase B Subdomain Rollout Plan** | Infrastructure / Migration / Governance | **📋 DESIGNED** | 2025-12-26 |
+| [PIN-191](PIN-191-claude-system-test-script.md) | **Claude System Test Script** | Testing / Verification / System Correctness | **🎯 ACTIVE** | 2025-12-26 |
+| [PIN-192](PIN-192-phase-a5-founder-verification.md) | **Phase A.5 Founder-Driven Verification** | Verification / Testing / Pre-Beta | **🎯 ACTIVE** | 2025-12-26 |
+| [PIN-193](PIN-193-acceptance-gate-truth-propagation.md) | **Acceptance Gate: Truth Propagation** | Acceptance / Gate / Non-Negotiable | **🧊 FROZEN** | 2025-12-26 |
+| [PIN-194](PIN-194-acceptance-gate-cost-signal-truth.md) | **Acceptance Gate: Cost Signal Truth** | Acceptance / Gate / Non-Negotiable | **🧊 FROZEN** | 2025-12-26 |
+| [PIN-195](PIN-195-acceptance-gate-policy-violation-truth.md) | **Acceptance Gate: Policy Violation Truth (S3)** | Acceptance / Gate / Non-Negotiable | **🧊 FROZEN** | 2025-12-26 |
+| [PIN-196](PIN-196-acceptance-gate-llm-failure-truth.md) | **Acceptance Gate: LLM Failure Truth (S4)** | Acceptance / Gate / Non-Negotiable | **✅ PASSED** | 2025-12-26 |
+| [PIN-197](PIN-197-acceptance-gate-memory-injection-truth.md) | **Acceptance Gate: Memory Injection Truth (S5)** | Acceptance / Gate / Non-Negotiable | **✅ ACCEPTED** | 2025-12-26 |
+| [PIN-198](PIN-198-acceptance-gate-trace-integrity-truth.md) | **Acceptance Gate: Trace Integrity Truth (S6)** | Acceptance / Gate / Non-Negotiable | **✅ ACCEPTED** | 2025-12-26 |
+| [PIN-199](PIN-199-pb-s1-retry-creates-new-execution---implementation.md) | **PB-S1 Retry Creates New Execution - Implementation** | Phase B / Truth Guarantee | **🧊 FROZEN** | 2025-12-27 |
+| [PIN-200](PIN-200-claude-behavior-enforcement-system.md) | **Claude Behavior Enforcement System** | Governance / Claude Discipline | **✅ COMPLETE** | 2025-12-27 |
+| [PIN-201](PIN-201-enhanced-behavior-library.md) | **Enhanced Behavior Library System** | Governance / Claude Discipline | **✅ COMPLETE** | 2025-12-27 |
 
 ---
 
@@ -975,6 +1012,25 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-27 | **PIN-199 PB-S1 Retry Creates New Execution - Implementation** - Updated: Post-Implementation Analysis |
+| 2025-12-27 | **PIN-200 Claude Behavior Enforcement System** - Created via memory_trail. |
+| 2025-12-27 | **PIN-199 PB-S1 Retry Creates New Execution - Implementation** - Created via memory_trail. |
+| 2025-12-26 | **🎉 PHASE A.5 COMPLETE - PIN-198 S6 VERIFICATION PASSED (31/31)** - Trace Integrity Truth gate complete. Trace ID: trace_3c1a0411-b65c-45, Replay Hash: c3e0c65b796619b0. All checks passed: preconditions, trace persistence, causal ordering, immutability (DB triggers enforced), replay determinism (no new traces), cross-artifact consistency, tenant isolation, restart durability, negative assertions. Pre-hardened against 5 failure patterns: (1) non-determinism OK, (2) trace gaps OK, (3) mutable traces FIXED with DB triggers, (4) orphan artifacts OK, (5) replay re-emits FIXED with emit_traces=False. System traces are immutable, causally ordered, replay-deterministic, and audit-faithful. Historical truth cannot be altered, inferred, or reconstructed inaccurately. S1-S6 all COMPLETE. |
+| 2025-12-26 | **PIN-197 S5 VERIFICATION PASSED (38/38)** - Memory Injection Truth gate complete. Memory Key: s5-test-02a0ec18, Decision ID: 6fbb8e1b-affb-43. All checks passed: preconditions, memory persistence, injection eligibility, traceability, no implicit injection, tenant isolation, failure isolation, restart durability, negative assertions. Phase A.5 may proceed to S6. |
+| 2025-12-26 | **PIN-197 Memory Injection Truth (S5) CREATED** - S5 acceptance gate frozen. PIN-196 (S4) elevated to ACCEPTED status (constitutional). Invariant #11 (UTC Time Handling) added to LESSONS_ENFORCED.md. S5 tests: memory persistence, injection eligibility, traceability, tenant isolation, failure isolation, restart durability. |
+| 2025-12-26 | **PIN-196 S4 VERIFICATION PASSED (22/22)** - LLM Failure Truth gate complete. Run ID: 6d149cb4-d1c4-421c-aa01-77db68a0ec02, Failure ID: 25924f5d-6b08-4bce-a53d-252c6fa5418f. All checks passed: failure detection, run state integrity, evidence capture, no downstream contamination, API truth propagation, restart durability. Phase A.5 may proceed to S5. |
+| 2025-12-26 | **PIN-195 Acceptance Gate — Policy Violation Truth (S3)** - Updated: Updates |
+| 2025-12-26 | **PIN-192 Phase A.5 Founder-Driven Verification ACTIVE** - Pre-beta founder verification phase. 5 test scenarios (cost, policy, incident, trace, memory). 10 acceptance criteria before inviting others. Clear transition marker from A.5 → Official Beta. Rules: fix P0 truth bugs only, no UI additions, beta banner stays ON. |
+| 2025-12-26 | **PIN-191 Claude System Test Script ACTIVE** - 10 system correctness tests to run in parallel with founder beta. Verifies data propagation across all UI surfaces. Tests: LLM timeout, token overrun, budget mode, policy violation, memory injection, retry causality, trace hash, cross-entity nav, rate limit, multi-step runs. Claude validates truth, not UX. |
+| 2025-12-26 | **PIN-190 Phase B Subdomain Rollout Plan DESIGNED** - Complete post-beta migration plan. 3 waves: Customer → Founder Ops → Preflight. 4 migration phases: Parallel → Soft redirect → Hard redirect → Cleanup. Rollback playbook included. Auth/cookie isolation per subdomain. Execute ONLY when beta exit criteria met. |
+| 2025-12-26 | **PIN-189 TOPOLOGY CORRECTION** - Fixed URL section. Four subdomains (not routes under one domain): `console.agenticverz.com`, `fops.agenticverz.com`, `preflight-console.agenticverz.com`, `preflight-fops.agenticverz.com`. Security/trust boundary preserved. |
+| 2025-12-26 | **PIN-189 Phase A Closure & Beta Launch LOCKED** - Formal Phase A closure. Rule locked: "No UI changes without scorecard signal." 6 beta test scenarios defined. Weekly synthesis template created. Beta parameters: 3-5 founders, 2-4 weeks, observer required. |
+| 2025-12-26 | **PIN-188 Founder-Beta Signals Framework ACTIVE** - Pre-declared signal framework for beta. 4 signal buckets: Comprehension, Navigation, Trust, Pull. Hard fail conditions: 2+ P0 fails in any category = stop beta. Beta stop conditions: 7 days zero P0 fails OR founders ask "what should I do?" instead of "what happened?". Companion scorecard for session tracking. |
+| 2025-12-26 | **PIN-187 Phase A COMPLETE - All violations CLOSED** - V-001 (IncidentDetailPage O3), V-002 (TraceDetailPage O3), V-003 (CanonicalBreadcrumb), V-004 (truncateValue). Zero remaining violations. Ready for beta. |
+| 2025-12-26 | **PIN-187 PIN-186 Compliance Audit - V-002 CLOSED** - TraceDetailPage O3 implemented (8.47 kB). All 7 acceptance criteria pass: page exists, links land on O3, breadcrumb resets, no inline JSON, no modal navigation, INV-3 resolved. Remaining: V-001 (IncidentsPage modal), V-003 (breadcrumb gaps), V-004 (truncation). |
+| 2025-12-26 | **PIN-186 Page Order & Drill-Down Invariants LAW** - Codified O1-O5 page order model as UI law. Max order = 5. Critical invariants: (1) One O4 per entity only, (2) Cross-entity drill lands on O3, (3) O5 = popup/modal only, (4) Breadcrumb continuity required, (5) Value truncation mandatory. PR review checklist added. Anti-patterns documented. This is normative, not descriptive - violations rejected. |
+| 2025-12-26 | **PIN-185 Phase 5E-5 Contract Surfacing Fixes COMPLETE** - UI-only amendments making contracts visible. CustomerLimitsPage: Budget Mode badge (ENFORCED/ADVISORY with warning for advisory mode). CustomerRunsPage: PRE-RUN summary (stages planned, memory injection, budget mode), CONSTRAINTS section (budget/rate/policy ✓/✗), COST comparison (estimated vs actual with delta), OUTCOME section (final state with reason). FounderTimelinePage: Routing details (method, agents considered/rejected), Memory details (queried/injected count), Recovery link (incident details). Zero runtime changes - purely surfacing existing contract data. Addresses PIN-167 visibility gaps. Build verified. |
+| 2025-12-26 | **PIN-184 Founder-Led Beta Criteria ACTIVE** - Exit criteria for founder-led beta phase. Success criteria: S1-S4 (Trust, Surfacing, Contracts, Stability). Failure criteria: F1-F4. 3-phase beta structure. |
 | 2025-12-26 | **PIN-183 Runtime v1 Feature Freeze LOCKED** - AgenticVerz Runtime v1 declared FEATURE FROZEN. Two-axis architecture: Plane (Founder Ops vs Customer Experience) × Stage (Preflight vs Production). Domains: preflight-fops (system truth), fops (operate), preflight-console (INTERNAL ONLY - verify UX before exposure, like TestFlight), console (customers). Key correction: preflight-console is NOT customer-facing - it's for founders/dev/QA to verify exactly what customers will see. Same UI code, different data sources (ENV-level switch). No `if (preflight)` in components. Next: Founder-led beta (3-7 users, real workloads). |
 | 2025-12-26 | **PIN-182 Phase 5E-4 Customer Essentials COMPLETE** - Implemented customer-scoped pages for Guard Console. Removed KillSwitch from customer navigation (Founder-only). Created: CustomerRunsPage (run history & outcomes), CustomerLimitsPage (budget, rate limits, warnings), CustomerKeysPage (create, rotate, revoke - show once). Updated GuardLayout, GuardConsoleEntry, GuardConsoleApp, CustomerHomePage. Three-plane architecture achieved: Founder/PrefOps (Ops Console), Founder/Control (/founder/*), Customer (Guard Console). Build verified: 118.56 kB. Stop condition met: "Customer can see run outcomes, manage limits awareness, and handle API keys without seeing internal machinery." Phase 5E COMPLETE. |
 | 2025-12-26 | **PIN-181 Phase 5E-3 Navigation Linking COMPLETE** - Linked Founder Console UIs into navigation structure. Sidebar: Added "Founder" section (emerald) with Timeline/Controls. OpsConsoleEntry: Added header links. Cleaned up stale routes (Dashboard, Skills, etc). Navigation is now coherent: Ops Console → Timeline → Controls → Guard Console. Stop condition met: "Founder can navigate without knowing URLs." Next: Phase 5E-4 Customer Essentials. |

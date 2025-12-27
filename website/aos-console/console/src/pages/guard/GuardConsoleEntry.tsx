@@ -38,15 +38,17 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { GuardLayout, type NavItemId } from './GuardLayout';
+import { BetaBanner } from '@/components/BetaBanner';
 import { CustomerHomePage } from './CustomerHomePage';
 import { CustomerRunsPage } from './CustomerRunsPage';
 import { CustomerLimitsPage } from './CustomerLimitsPage';
 import { CustomerKeysPage } from './CustomerKeysPage';
 import { IncidentsPage } from './incidents/IncidentsPage';
+import IncidentDetailPage from './incidents/IncidentDetailPage';
 import { GuardSettingsPage } from './GuardSettingsPage';
 import { AccountPage } from './AccountPage';
 import { SupportPage } from './SupportPage';
@@ -297,9 +299,22 @@ export default function GuardConsoleEntry() {
     );
   }
 
+  // V-001 Fix: Use location to detect incident detail route
+  const location = useLocation();
+  const isIncidentDetailRoute = location.pathname.match(/^\/guard\/incidents\/[^/]+$/);
+
   // Render active page
   // Phase 5E-4: Customer Essentials - scoped to outcomes, limits, and keys
   const renderPage = () => {
+    // V-001 Fix: Incident detail is a full O3 page, not a tab
+    if (isIncidentDetailRoute) {
+      return (
+        <Routes>
+          <Route path="incidents/:incidentId" element={<IncidentDetailPage />} />
+        </Routes>
+      );
+    }
+
     switch (activeTab) {
       case 'home':
         return <CustomerHomePage onNavigate={setActiveTab} />;
@@ -325,6 +340,8 @@ export default function GuardConsoleEntry() {
   // Render the Guard Console with unified layout
   return (
     <QueryClientProvider client={queryClient}>
+      {/* PIN-189: Founder Beta banner - remove after subdomain deployment */}
+      <BetaBanner />
       <GuardLayout
         activeTab={activeTab}
         onTabChange={setActiveTab}

@@ -1,0 +1,430 @@
+{
+  "version": 1,
+  "effective": "2025-12-27",
+  "status": "ACTIVE",
+  "library": [
+    {
+      "id": "BL-ENV-001",
+      "name": "Runtime Sync Before Test",
+      "severity": "BLOCKER",
+      "class": "environment_drift",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "curl http://"
+          },
+          {
+            "keyword": "curl localhost"
+          },
+          {
+            "keyword": "curl 127.0.0.1"
+          },
+          {
+            "keyword": "POST /admin/"
+          },
+          {
+            "keyword": "test endpoint"
+          },
+          {
+            "keyword": "testing endpoint"
+          },
+          {
+            "file_glob": "backend/app/*.py"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "RUNTIME_SYNC"
+        ],
+        "commands": [
+          "docker compose config --services",
+          "docker compose up -d --build <service>",
+          "health check == healthy"
+        ]
+      },
+      "forbid": [
+        "testing before runtime sync",
+        "assuming container is current",
+        "ignoring health check"
+      ],
+      "evidence": {
+        "required_fields": [
+          "services_enumerated",
+          "target_service",
+          "rebuild_command",
+          "health_status",
+          "auth_headers_verified"
+        ]
+      },
+      "message_on_fail": "BL-ENV-001 VIOLATION: Runtime sync missing. Rebuild target service and wait for healthy before testing.\n"
+    },
+    {
+      "id": "BL-AUTH-001",
+      "name": "Auth Contract Enumeration",
+      "severity": "BLOCKER",
+      "class": "auth_mismatch",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "/admin/"
+          },
+          {
+            "keyword": "RBAC"
+          },
+          {
+            "keyword": "verify_api_key"
+          },
+          {
+            "keyword": "X-AOS-Key"
+          },
+          {
+            "keyword": "X-Machine-Token"
+          },
+          {
+            "keyword": "401"
+          },
+          {
+            "keyword": "403"
+          },
+          {
+            "keyword": "forbidden"
+          },
+          {
+            "keyword": "unauthorized"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "AUTH_CONTRACT"
+        ],
+        "fields": [
+          "endpoint",
+          "required_headers",
+          "auth_path",
+          "rbac_policy"
+        ]
+      },
+      "forbid": [
+        "testing without knowing auth contract",
+        "guessing auth headers",
+        "assuming headers from other endpoints"
+      ],
+      "evidence": {
+        "required_fields": [
+          "endpoint",
+          "endpoint_auth",
+          "rbac_policy",
+          "required_headers",
+          "test_command"
+        ]
+      },
+      "message_on_fail": "BL-AUTH-001 VIOLATION: Auth contract not enumerated. List endpoint auth dependencies, RBAC policy, and required headers.\n"
+    },
+    {
+      "id": "BL-TIME-001",
+      "name": "Timestamp Semantics",
+      "severity": "BLOCKER",
+      "class": "timezone_mismatch",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "datetime"
+          },
+          {
+            "keyword": "utc_now"
+          },
+          {
+            "keyword": "datetime.now"
+          },
+          {
+            "keyword": "datetime.utcnow"
+          },
+          {
+            "keyword": "timezone.utc"
+          },
+          {
+            "keyword": "TIMESTAMP WITHOUT TIME ZONE"
+          },
+          {
+            "keyword": "TIMESTAMP WITH TIME ZONE"
+          },
+          {
+            "file_glob": "backend/app/models/*.py"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "TIME_SEMANTICS"
+        ],
+        "fields": [
+          "column_type",
+          "datetime_kind"
+        ]
+      },
+      "constraints": [
+        {
+          "when": "TIMESTAMP WITHOUT TIME ZONE",
+          "require": "naive_utc"
+        },
+        {
+          "when": "TIMESTAMP WITH TIME ZONE",
+          "require": "aware_utc"
+        }
+      ],
+      "forbid": [
+        "using aware datetime with WITHOUT TIME ZONE",
+        "using naive datetime with WITH TIME ZONE",
+        "mixing datetime semantics",
+        "implicit timezone assumptions"
+      ],
+      "evidence": {
+        "required_fields": [
+          "table",
+          "column_type",
+          "python_helper",
+          "alignment_verified"
+        ]
+      },
+      "message_on_fail": "BL-TIME-001 VIOLATION: Timestamp semantics mismatch. Declare column type and datetime kind. Match aware/naive to column.\n"
+    },
+    {
+      "id": "BL-DEPLOY-001",
+      "name": "Service Name Verification",
+      "severity": "ERROR",
+      "class": "service_name_mismatch",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "docker compose up"
+          },
+          {
+            "keyword": "docker compose restart"
+          },
+          {
+            "keyword": "docker compose build"
+          },
+          {
+            "keyword": "docker exec"
+          },
+          {
+            "keyword": "docker logs"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "SERVICE_ENUM"
+        ],
+        "commands": [
+          "docker compose config --services",
+          "docker ps --format '{{.Names}}'"
+        ]
+      },
+      "forbid": [
+        "assuming service name equals container name",
+        "using container name in compose commands",
+        "using service name in docker exec"
+      ],
+      "evidence": {
+        "required_fields": [
+          "compose_services",
+          "running_containers",
+          "target_service",
+          "target_container",
+          "command_uses"
+        ]
+      },
+      "message_on_fail": "BL-DEPLOY-001 VIOLATION: Service name not verified. Enumerate services before build/run.\n"
+    },
+    {
+      "id": "BL-MIG-001",
+      "name": "Migration Head Verification",
+      "severity": "BLOCKER",
+      "class": "migration_fork",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "alembic revision"
+          },
+          {
+            "keyword": "alembic upgrade"
+          },
+          {
+            "keyword": "op.add_column"
+          },
+          {
+            "keyword": "op.create_table"
+          },
+          {
+            "keyword": "op.drop"
+          },
+          {
+            "keyword": "migration"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "MIGRATION_HEAD"
+        ],
+        "commands": [
+          "alembic current",
+          "alembic heads"
+        ]
+      },
+      "forbid": [
+        "creating migration without checking heads",
+        "assuming parent revision",
+        "ignoring multiple heads warning",
+        "running upgrade with multiple heads"
+      ],
+      "evidence": {
+        "required_fields": [
+          "current",
+          "heads",
+          "single_head",
+          "parent_for_new"
+        ]
+      },
+      "message_on_fail": "BL-MIG-001 VIOLATION: Migration heads not verified. Check current state and verify single head before proceeding.\n"
+    },
+    {
+      "id": "BL-MIG-002",
+      "name": "Single Migration Head Enforcement",
+      "severity": "BLOCKER",
+      "class": "migration_fork",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "alembic revision"
+          },
+          {
+            "keyword": "alembic upgrade"
+          },
+          {
+            "keyword": "down_revision"
+          },
+          {
+            "keyword": "create migration"
+          },
+          {
+            "keyword": "new migration"
+          },
+          {
+            "file_glob": "backend/alembic/versions/*.py"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "SINGLE_HEAD_CHECK"
+        ],
+        "commands": [
+          "scripts/ops/check_migration_heads.sh",
+          "alembic heads"
+        ],
+        "assertions": [
+          "head_count == 1"
+        ]
+      },
+      "forbid": [
+        "creating migration with multiple heads",
+        "skipping revisions in down_revision",
+        "proceeding with migration fork",
+        "ignoring multiple heads"
+      ],
+      "evidence": {
+        "required_fields": [
+          "heads_output",
+          "head_count",
+          "single_head_verified",
+          "script_exit_code"
+        ]
+      },
+      "remediation": [
+        "Run: alembic merge heads -m 'merge_description'",
+        "Apply: alembic upgrade head",
+        "Verify: alembic heads (must show single head)"
+      ],
+      "allow": [
+        {
+          "when": {
+            "purpose": "merge_heads"
+          },
+          "require": [
+            {
+              "command": "alembic merge"
+            },
+            {
+              "section": "MERGE_JUSTIFICATION"
+            }
+          ]
+        }
+      ],
+      "message_on_fail": "BL-MIG-002 VIOLATION: Multiple migration heads detected! Cannot proceed with migration work until fork is resolved. Exception: merge migrations allowed with MERGE_JUSTIFICATION section.\n"
+    },
+    {
+      "id": "BL-TEST-001",
+      "name": "Test Execution Prerequisites",
+      "severity": "BLOCKER",
+      "class": "test_prerequisites",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "pytest"
+          },
+          {
+            "keyword": "python -m pytest"
+          },
+          {
+            "keyword": "python3 -m pytest"
+          },
+          {
+            "keyword": "run tests"
+          },
+          {
+            "keyword": "test suite"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "TEST_PREREQ"
+        ],
+        "commands": [
+          "psql $DATABASE_URL -c 'SELECT 1'",
+          "curl localhost:8000/health",
+          "alembic current"
+        ]
+      },
+      "forbid": [
+        "running tests with unhealthy backend",
+        "running tests with pending migrations",
+        "running tests without database access",
+        "assuming prerequisites are met"
+      ],
+      "evidence": {
+        "required_fields": [
+          "database_accessible",
+          "backend_healthy",
+          "migrations_current",
+          "required_fixtures"
+        ]
+      },
+      "message_on_fail": "BL-TEST-001 VIOLATION: Test prerequisites not verified. Complete prerequisites before running tests.\n"
+    }
+  ],
+  "section_templates": {
+    "RUNTIME_SYNC": "RUNTIME SYNC CHECK\n- Services enumerated: YES / NO\n- Target service: <name>\n- Rebuild command: <command executed>\n- Health status: healthy / unhealthy\n- Auth headers verified: <list>\n",
+    "AUTH_CONTRACT": "AUTH CONTRACT CHECK\n- Endpoint: <path>\n- Endpoint auth: <Depends(...)>\n- RBAC policy: <resource:action>\n- Required headers: <list>\n- Test command: <curl with all headers>\n",
+    "TIME_SEMANTICS": "TIMESTAMP SEMANTICS CHECK\n- Table: <name>\n- Column type: WITH TIME ZONE / WITHOUT TIME ZONE\n- Python helper: datetime.utcnow() / datetime.now(timezone.utc)\n- Alignment verified: YES / NO\n",
+    "SERVICE_ENUM": "DOCKER NAME CHECK\n- Compose services: <list>\n- Running containers: <list>\n- Target service: <name>\n- Target container: <name>\n- Command uses: SERVICE / CONTAINER (correct?)\n",
+    "MIGRATION_HEAD": "MIGRATION HEAD CHECK\n- Current: <revision>\n- Heads: <list>\n- Single head: YES / NO\n- Parent for new migration: <revision>\n",
+    "SINGLE_HEAD_CHECK": "SINGLE HEAD ENFORCEMENT CHECK\n- Script: scripts/ops/check_migration_heads.sh\n- Exit code: 0 (success) / 1 (multiple heads)\n- Heads output: <revision(s)>\n- Head count: <number>\n- Single head verified: YES / NO (BLOCKER if NO)\n",
+    "MERGE_JUSTIFICATION": "MERGE JUSTIFICATION (exception to BL-MIG-002)\n- Reason: resolving existing fork\n- Heads to merge: <list of head revisions>\n- Merge command: alembic merge <heads> -m \"<description>\"\n- Post-merge verification: alembic heads (must show single)\n",
+    "TEST_PREREQ": "TEST PREREQUISITES CHECK\n- Database accessible: YES / NO\n- Backend healthy: YES / NO\n- Migrations current: YES / NO\n- Required fixtures: <present / missing>\n"
+  }
+}

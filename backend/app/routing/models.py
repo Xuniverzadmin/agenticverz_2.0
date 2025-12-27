@@ -110,7 +110,7 @@ class CapabilityProbeResult(BaseModel):
     fix_instruction: Optional[str] = None
     fallback_available: bool = False  # True if soft dep has fallback
     cached: bool = False
-    checked_at: datetime = Field(default_factory=datetime.utcnow)
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -254,7 +254,7 @@ class RoutingDecision(BaseModel):
     stage_latencies: Dict[str, float] = Field(default_factory=dict)
 
     # Audit
-    decided_at: datetime = Field(default_factory=datetime.utcnow)
+    decided_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     decision_reason: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
@@ -359,7 +359,7 @@ class AgentPerformanceVector(BaseModel):
     # Timestamps
     last_routed_at: Optional[datetime] = None
     last_success_at: Optional[datetime] = None
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def calculate_fairness_score(self) -> float:
         """Calculate fairness score: 1/(1+recent_assignments)"""
@@ -416,7 +416,7 @@ class RoutingOutcome(BaseModel):
     # Optional error info
     error: Optional[str] = None
 
-    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # =============================================================================

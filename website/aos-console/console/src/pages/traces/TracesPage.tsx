@@ -211,8 +211,9 @@ export default function TracesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Link
-                        to={`/console/traces/${trace.run_id}`}
+                        to={`/traces/${trace.run_id}`}
                         className="text-primary-600 hover:text-primary-700"
+                        title="View Trace Detail (O3)"
                       >
                         <Eye size={16} />
                       </Link>

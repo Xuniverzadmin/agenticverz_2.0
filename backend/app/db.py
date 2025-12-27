@@ -15,45 +15,133 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable is required")
+# =============================================================================
+# Database Configuration (Lazy Initialization)
+# =============================================================================
+# IMPORT HYGIENE: No environment reads or engine creation at import time.
+# All database resources are created lazily on first use.
+# This prevents import failures and allows safe testing/linting.
 
-# Connection pool configuration for concurrent load
-# pool_size: number of persistent connections
-# max_overflow: additional connections allowed above pool_size
-# pool_timeout: seconds to wait for a connection from pool
-# pool_recycle: seconds before recycling connections (helps with stale connections)
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_size=20,
-    max_overflow=30,
-    pool_timeout=30,
-    pool_recycle=1800,
-    pool_pre_ping=True,  # Verify connections before use
-)
+_engine = None
+_async_engine = None
+_async_session_local = None
 
-# Async engine for async endpoints (M25 integration loop)
-# Convert postgresql:// to postgresql+asyncpg://
-ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://").replace(
-    "?sslmode=require", "?ssl=require"
-)
-async_engine = create_async_engine(
-    ASYNC_DATABASE_URL,
-    echo=False,
-    pool_size=10,
-    max_overflow=20,
-    pool_timeout=30,
-    pool_recycle=1800,
-)
 
-# Async session factory
-AsyncSessionLocal = sessionmaker(
-    async_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+def get_database_url() -> str:
+    """Get DATABASE_URL, raising RuntimeError only when actually needed."""
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise RuntimeError("DATABASE_URL environment variable is required")
+    return url
+
+
+def get_engine():
+    """Get or create the sync SQLAlchemy engine (lazy initialization)."""
+    global _engine
+    if _engine is None:
+        database_url = get_database_url()
+        # Connection pool configuration for concurrent load
+        _engine = create_engine(
+            database_url,
+            echo=False,
+            pool_size=20,
+            max_overflow=30,
+            pool_timeout=30,
+            pool_recycle=1800,
+            pool_pre_ping=True,  # Verify connections before use
+        )
+    return _engine
+
+
+def get_async_database_url() -> str:
+    """
+    Get async database URL for asyncpg.
+
+    CANONICAL LOCATION: This is the ONLY place async URL conversion should happen.
+    All other code must use this function or get_async_engine().
+
+    asyncpg requires:
+    - postgresql+asyncpg:// scheme
+    - ssl as connect_args, not URL parameter
+    """
+    url = get_database_url()
+
+    # Convert scheme
+    if url.startswith("postgresql+asyncpg://"):
+        async_url = url
+    elif url.startswith("postgresql://"):
+        async_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    else:
+        raise RuntimeError(f"Unsupported DATABASE_URL scheme: {url}")
+
+    # Remove sslmode from URL (will be added as connect_args)
+    # Handle both ?sslmode=require and &sslmode=require
+    if "sslmode=require" in async_url:
+        async_url = async_url.replace("?sslmode=require", "")
+        async_url = async_url.replace("&sslmode=require", "")
+        # Clean up trailing ? if no other params
+        if async_url.endswith("?"):
+            async_url = async_url[:-1]
+
+    return async_url
+
+
+def get_async_engine():
+    """
+    Get or create the async SQLAlchemy engine (lazy initialization).
+
+    CANONICAL LOCATION: This is the ONLY place async engines should be created.
+    All other code must use this function.
+    """
+    global _async_engine
+    if _async_engine is None:
+        async_url = get_async_database_url()
+        original_url = get_database_url()
+
+        # Determine if SSL is required
+        needs_ssl = "sslmode=require" in original_url
+
+        connect_args = {}
+        if needs_ssl:
+            connect_args["ssl"] = "require"
+
+        _async_engine = create_async_engine(
+            async_url,
+            echo=False,
+            pool_size=10,
+            max_overflow=20,
+            pool_timeout=30,
+            pool_recycle=1800,
+            connect_args=connect_args,
+        )
+    return _async_engine
+
+
+def get_async_session_factory():
+    """Get or create the async session factory (lazy initialization)."""
+    global _async_session_local
+    if _async_session_local is None:
+        _async_session_local = sessionmaker(
+            get_async_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+    return _async_session_local
+
+
+# For backwards compat with existing code that uses 'engine' at module level,
+# create a lazy proxy object
+class _LazyEngine:
+    """Lazy proxy for SQLAlchemy engine to avoid import-time initialization."""
+
+    def __getattr__(self, name):
+        return getattr(get_engine(), name)
+
+    def __call__(self, *args, **kwargs):
+        return get_engine()(*args, **kwargs)
+
+
+engine = _LazyEngine()
 
 
 @asynccontextmanager
@@ -65,7 +153,8 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
         async with get_async_session() as session:
             result = await session.execute(...)
     """
-    async with AsyncSessionLocal() as session:
+    session_factory = get_async_session_factory()
+    async with session_factory() as session:
         try:
             yield session
         except Exception:

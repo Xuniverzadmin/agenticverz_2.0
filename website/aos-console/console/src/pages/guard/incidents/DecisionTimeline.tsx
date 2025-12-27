@@ -25,11 +25,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DecisionTimelineResponse, TimelineEvent, PolicyEvaluation } from '../../../api/guard';
 import { logger } from '../../../lib/consoleLogger';
+import { truncateValue } from '../../../utils/truncateValue';
 
 interface DecisionTimelineProps {
   timeline: DecisionTimelineResponse;
-  onReplay?: () => void;
-  onExport?: () => void;
+  // V-001 Fix: Actions removed from timeline (now on O3 page)
+  // onReplay and onExport were violating INV-4 by putting actions in modal content
 }
 
 // Event type to icon/color mapping - calmer colors
@@ -51,7 +52,7 @@ const RESULT_CONFIG: Record<string, { color: string; darkColor: string; border: 
   BLOCKED: { color: 'text-red-600', darkColor: 'dark:text-red-400', border: 'border-red-500/40', label: 'BLOCKED', icon: '⛔' },
 };
 
-export function DecisionTimeline({ timeline, onReplay, onExport }: DecisionTimelineProps) {
+export function DecisionTimeline({ timeline }: DecisionTimelineProps) {
   const [showAllPolicies, setShowAllPolicies] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
 
@@ -115,33 +116,8 @@ export function DecisionTimeline({ timeline, onReplay, onExport }: DecisionTimel
           </span>
           <SeverityBadge severity={severity} />
         </div>
-        <div className="flex gap-2">
-          {onReplay && (
-            <button
-              onClick={() => {
-                logger.userEvent('click', 'replay_button', { incident_id: timeline.incident_id });
-                onReplay();
-              }}
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium
-                         hover:bg-blue-700 transition-colors"
-            >
-              Replay
-            </button>
-          )}
-          {onExport && (
-            <button
-              onClick={() => {
-                logger.userEvent('click', 'export_button', { incident_id: timeline.incident_id });
-                onExport();
-              }}
-              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700
-                         dark:text-gray-300 rounded-lg text-sm font-medium
-                         hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Export PDF
-            </button>
-          )}
-        </div>
+        {/* V-001 Fix: Actions removed - they now live on IncidentDetailPage (O3)
+            O5 modals must be terminal (confirm-only), no navigation or actions */}
       </div>
 
       {/* Verdict Row - Navy-First: transparent + left border only */}
@@ -516,9 +492,10 @@ function EventContent({ event }: { event: TimelineEvent }) {
       );
 
     default:
+      // V-004 Fix: Use truncateValue instead of raw JSON.stringify
       return (
         <pre className="text-xs text-slate-400 bg-transparent border border-slate-700/30 p-2 rounded overflow-x-auto max-h-24">
-          {JSON.stringify(data, null, 2)}
+          {truncateValue(data, { maxChars: 200, maxDepth: 2 })}
         </pre>
       );
   }
