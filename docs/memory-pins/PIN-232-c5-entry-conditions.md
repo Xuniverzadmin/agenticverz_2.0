@@ -429,7 +429,7 @@ C5-S1 explicitly depends on metadata persistence:
 
 This requires:
 1. Draft `C4_COORDINATION_AUDIT_SCHEMA.md`
-2. Define immutability + replay guarantees  
+2. Define immutability + replay guarantees
 3. Add single append-only `coordination_audit_records` table
 4. C4 minor re-certification (narrow scope)
 5. C5-S1 remains unchanged
@@ -449,13 +449,18 @@ This requires:
 
 | Component | Previous | Current |
 |-----------|----------|---------|
-| C5-S1 Implementation | ✅ COMPLETE | ⚠️ BLOCKED (pending C4 audit) |
-| C5-S1 Certification | ⏳ PENDING | 🔒 LOCKED (pending C4 audit) |
-| C4 Audit Persistence | N/A | 📋 DESIGN REQUIRED |
+| C5-S1 Implementation | ✅ COMPLETE | ✅ COMPLETE |
+| C5-S1 Certification | ⏳ PENDING | ✅ READY |
+| C4 Audit Persistence | N/A | ✅ COMPLETE |
 
-### Next Steps
-1. Design `C4_COORDINATION_AUDIT_SCHEMA.md`
-2. Implement `coordination_audit_records` table
-3. Wire C4 coordinator to emit audit records
-4. Narrow C4 re-certification
-5. Unlock C5-S1 certification
+### Completed Steps (2025-12-28)
+1. ✅ Designed `C4_COORDINATION_AUDIT_SCHEMA.md`
+2. ✅ Implemented `coordination_audit_records` table (migration 063)
+3. ✅ Wired C4 coordinator to emit audit records (`audit_persistence.py`)
+4. ✅ Added CI guardrails CI-C4-7/8/9 (9/9 passing)
+5. ✅ C4 re-certification complete (14/14 tests pass)
+6. ✅ C5-S1 ready for certification
+
+### Certification Statement
+> "C4 coordination audit persistence is implemented, immutable, and verified.
+> C5-S1 can now observe real coordination history for production-grade learning."

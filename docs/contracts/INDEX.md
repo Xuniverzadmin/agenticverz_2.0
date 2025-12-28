@@ -50,6 +50,7 @@
 | [C4_SYNTHETIC_STABILITY_RUNBOOK.md](C4_SYNTHETIC_STABILITY_RUNBOOK.md) | 1.0 (ACTIVE) | 1-day synthetic stability execution guide |
 | [C4_STABILITY_EVIDENCE_PACK.md](C4_STABILITY_EVIDENCE_PACK.md) | 1.1 (TEMPLATE) | Evidence pack (time-based + synthetic modes) |
 | [C4_STABILITY_EVIDENCE_PACK_20251228.md](C4_STABILITY_EVIDENCE_PACK_20251228.md) | 1.0 (ATTESTED) | Synthetic stability evidence (2025-12-28) |
+| [C4_COORDINATION_AUDIT_SCHEMA.md](C4_COORDINATION_AUDIT_SCHEMA.md) | 1.0 (DESIGN) | C4 coordination audit persistence schema |
 | [visibility_contract.yaml](visibility_contract.yaml) | 1.0 | Phase B artifacts |
 | [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) | - | 13 (validation) |
 | [M0_M27_CLASSIFICATION.md](M0_M27_CLASSIFICATION.md) | - | 27 milestones |
