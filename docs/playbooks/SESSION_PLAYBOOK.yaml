@@ -15,11 +15,16 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "1.5"
+session_playbook_version: "1.6"
 created: "2025-12-27"
 last_updated: "2025-12-28"
 
 # Changelog:
+#   1.6 - C5 design surface COMPLETE (S1 certified, S2/S3 designed).
+#         S2: Learning from Coordination Friction - DESIGN COMPLETE
+#         S3: Learning from Optimization Effectiveness - DESIGN COMPLETE
+#         Updated stages to reflect design surface completion.
+#         C5 implementation remains LOCKED (S1 only certified).
 #   1.5 - Updated system_state for C5-S1 certification complete.
 #         C1→C2→C3→C4 all CERTIFIED. C5-S1 CERTIFIED.
 #         Added C3_to_C4 and C4_to_C5_S1 phase transitions.
@@ -453,16 +458,20 @@ system_state:
     C2_PREDICTION: CERTIFIED # Prediction plane certified 2025-12-28 (sealed, O4 governance frozen)
     C3_OPTIMIZATION: CERTIFIED # Optimization safety certified 2025-12-28 (S1/S2/S3 - 69 tests)
     C4_COORDINATION: CERTIFIED # Multi-envelope coordination certified 2025-12-28 (14 tests, 83 total)
-    C5_LEARNING: ACTIVE      # Learning & Evolution - S1 CERTIFIED (27 tests, 6/6 guardrails)
-    C5_S1_ROLLBACK: CERTIFIED # Learning from Rollback Frequency certified 2025-12-28
-    C5_S2_PLUS: LOCKED       # Additional learning scenarios (explicit unlock required)
+    C5_LEARNING: ACTIVE      # Learning & Evolution - DESIGN SURFACE COMPLETE
+    C5_S1_ROLLBACK: CERTIFIED # Learning from Rollback Frequency certified 2025-12-28 (27 tests)
+    C5_S2_FRICTION: DESIGN_COMPLETE # Learning from Coordination Friction designed 2025-12-28
+    C5_S3_EFFECTIVENESS: DESIGN_COMPLETE # Learning from Optimization Effectiveness designed 2025-12-28
+    C5_IMPLEMENTATION: LOCKED # S2/S3 implementation requires explicit unlock
 
   rule:
     - No stage transition is implicit
     - Any stage unlock requires explicit human approval
     - Presence of code does not imply stage readiness
     - CERTIFIED stages remain binding invariants, not "previous locations"
+    - DESIGN_COMPLETE = design frozen, implementation LOCKED
     - C5-S1 allows advisory learning only (suggests, never decides)
+    - C5-S2/S3 designs are FROZEN - implementation requires explicit unlock
 
 # =============================================================================
 # SECTION 10: AUTHORITATIVE ENVIRONMENT (GLOBAL)
@@ -672,6 +681,44 @@ phase_transitions:
     approved_by: human
     approved_at: 2025-12-28
     certification_statement: "Learning suggests. Humans decide. Systems apply."
+
+  C5_DESIGN_SURFACE:
+    status: COMPLETE
+    completion_date: 2025-12-28
+    description: >
+      C5 design surface is complete. All three learning scenarios have
+      been designed with frozen acceptance criteria and CI guardrails.
+      Implementation remains LOCKED for S2/S3.
+    scenarios:
+      S1_ROLLBACK:
+        question: "Are bounds too aggressive?"
+        status: CERTIFIED
+        tests: 27
+        guardrails: 6/6
+      S2_FRICTION:
+        question: "Are envelopes structurally conflicting?"
+        status: DESIGN_COMPLETE
+        design_docs:
+          - C5_S2_LEARNING_SCENARIO.md
+          - C5_S2_ACCEPTANCE_CRITERIA.md
+      S3_EFFECTIVENESS:
+        question: "Did the envelope help?"
+        status: DESIGN_COMPLETE
+        design_docs:
+          - C5_S3_LEARNING_SCENARIO.md
+          - C5_S3_ACCEPTANCE_CRITERIA.md
+        key_constraint: "No thresholds, no rankings, no recommendations"
+    shared_invariants:
+      - I-C5-1: Learning suggests, humans decide
+      - I-C5-2: No learned change applies without approval
+      - I-C5-3: Learning operates on metadata, not runtime
+      - I-C5-4: All learned suggestions are versioned
+      - I-C5-5: Learning can be disabled without affecting coordination
+      - I-C5-6: Kill-switch supremacy is unchanged
+      - I-C5-7: Learned policies are replayable
+      - I-C5-8: No autonomous policy mutation
+    core_principle: "Learning suggests. Humans decide. Systems apply."
+    implementation_gate: "Explicit unlock required for S2/S3 implementation"
 
   general_rules:
     - Presence of code does not imply phase readiness

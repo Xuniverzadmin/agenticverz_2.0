@@ -18,7 +18,7 @@ Before performing ANY work, Claude's first response must be:
 
 ```
 SESSION_BOOTSTRAP_CONFIRMATION
-- playbook_version: 1.3
+- playbook_version: 1.6
 - loaded_documents:
   - CLAUDE_BOOT_CONTRACT.md
   - behavior_library.yaml
@@ -239,7 +239,9 @@ stages:
   C3_OPTIMIZATION: CERTIFIED # Optimization safety (2025-12-28)
   C4_COORDINATION: CERTIFIED # Multi-envelope coordination (2025-12-28)
   C5_S1_ROLLBACK: CERTIFIED  # Learning from rollback (2025-12-28)
-  C5_S2_PLUS: LOCKED         # Future learning scenarios
+  C5_S2_FRICTION: DESIGN_COMPLETE    # Coordination friction (2025-12-28)
+  C5_S3_EFFECTIVENESS: DESIGN_COMPLETE # Optimization effectiveness (2025-12-28)
+  C5_IMPLEMENTATION: LOCKED  # S2/S3 implementation requires unlock
 ```
 
 **Key distinction:**
