@@ -1,0 +1,229 @@
+# C2 Prediction Plane - Regression Guard
+# Blocks merge if C2 invariants are violated
+#
+# Reference: PIN-222, C2 Implementation Plan
+#
+# C2 Invariants (must ALL hold):
+#   I-C2-1: advisory MUST be TRUE (CHECK constraint)
+#   I-C2-2: No control path influence
+#   I-C2-3: No truth mutation
+#   I-C2-4: Replay blindness
+#   I-C2-5: Delete safety (predictions disposable)
+#
+# Prediction Types:
+#   C2-T1: Incident Risk
+#   C2-T2: Cost Spike
+
+name: C2 Regression Guard
+
+on:
+  push:
+    branches: [main, develop, 'feature/*']
+    paths:
+      - 'backend/alembic/versions/**'
+      - 'backend/app/predictions/**'
+      - 'backend/app/models/prediction.py'
+      - 'scripts/ci/c2_guardrails/**'
+      - 'scripts/verification/c2_regression.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/alembic/versions/**'
+      - 'backend/app/predictions/**'
+      - 'backend/app/models/prediction.py'
+      - 'scripts/ci/c2_guardrails/**'
+      - 'scripts/verification/c2_regression.py'
+  workflow_dispatch:
+
+env:
+  PYTHONPATH: backend
+
+jobs:
+  # ============================================================================
+  # C2 REGRESSION TESTS (MANDATORY)
+  # ============================================================================
+  c2-regression:
+    name: C2 Invariant Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: nova
+          POSTGRES_PASSWORD: novapass
+          POSTGRES_DB: nova_aos
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://nova:novapass@localhost:5433/nova_aos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install psycopg2-binary
+
+      - name: Wait for PostgreSQL
+        run: |
+          echo "Waiting for PostgreSQL..."
+          for i in {1..30}; do
+            if PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "SELECT 1" > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "PostgreSQL failed to become ready"
+          exit 1
+
+      - name: Run Alembic migrations
+        run: |
+          cd backend
+          alembic upgrade head
+          echo "=== Current migration state ==="
+          alembic current
+
+      - name: Verify prediction_events table exists
+        run: |
+          PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "
+            SELECT table_name FROM information_schema.tables
+            WHERE table_name = 'prediction_events'
+          " | grep -q prediction_events || {
+            echo "::error::prediction_events table not found after migrations"
+            exit 1
+          }
+          echo "prediction_events table exists"
+
+      - name: Verify CHECK constraints exist
+        run: |
+          echo "=== Checking C2 CHECK constraints ==="
+
+          # Check advisory constraint
+          PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "
+            SELECT conname FROM pg_constraint
+            WHERE conrelid = 'prediction_events'::regclass
+            AND conname = 'chk_prediction_advisory'
+          " | grep -q chk_prediction_advisory || {
+            echo "::error::chk_prediction_advisory constraint not found"
+            exit 1
+          }
+          echo "chk_prediction_advisory constraint exists"
+
+          # Check confidence range constraint
+          PGPASSWORD=novapass psql -h localhost -p 5433 -U nova -d nova_aos -c "
+            SELECT conname FROM pg_constraint
+            WHERE conrelid = 'prediction_events'::regclass
+            AND conname = 'chk_prediction_confidence_range'
+          " | grep -q chk_prediction_confidence_range || {
+            echo "::error::chk_prediction_confidence_range constraint not found"
+            exit 1
+          }
+          echo "chk_prediction_confidence_range constraint exists"
+
+      - name: Run C2 Guardrails
+        run: |
+          chmod +x scripts/ci/c2_guardrails/*.sh
+          ./scripts/ci/c2_guardrails/run_all.sh
+
+      - name: Run C2 Regression Tests
+        id: regression
+        run: |
+          echo "======================================"
+          echo "C2 PREDICTION PLANE - REGRESSION TESTS"
+          echo "======================================"
+          echo ""
+
+          cd backend
+          python3 ../scripts/verification/c2_regression.py --json > /tmp/c2_results.json 2>&1
+          EXIT_CODE=$?
+
+          # Parse results
+          PASSED=$(jq '[.[] | select(.passed == true)] | length' /tmp/c2_results.json)
+          FAILED=$(jq '[.[] | select(.passed == false)] | length' /tmp/c2_results.json)
+          TOTAL=$(jq 'length' /tmp/c2_results.json)
+
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "=== Results ==="
+          echo "Passed: $PASSED"
+          echo "Failed: $FAILED"
+          echo "Total: $TOTAL"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::C2 INVARIANT VIOLATION: $FAILED test(s) failed"
+            jq -r '.[] | select(.passed == false) | "  \(.name): \(.actual)"' /tmp/c2_results.json
+            exit 1
+          fi
+
+          echo "All C2 invariants verified"
+
+      - name: Generate C2 Summary
+        if: always()
+        run: |
+          echo "## C2 Prediction Plane - Regression Guard" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Passed | ${{ steps.regression.outputs.passed }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Failed | ${{ steps.regression.outputs.failed }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total | ${{ steps.regression.outputs.total }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.regression.outputs.failed }}" == "0" ]; then
+            echo "**C2: ALL INVARIANTS HOLD**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**C2 INVARIANT VIOLATION - MERGE BLOCKED**" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Reference: PIN-222, C2 Implementation Plan" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload regression results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c2-regression-results
+          path: /tmp/c2_results.json
+
+  # ============================================================================
+  # C2 GUARDRAILS (STATIC ANALYSIS)
+  # ============================================================================
+  c2-guardrails:
+    name: C2 Guardrails
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run C2 Guardrails
+        run: |
+          chmod +x scripts/ci/c2_guardrails/*.sh
+          ./scripts/ci/c2_guardrails/run_all.sh
+
+      - name: Generate Guardrails Summary
+        if: always()
+        run: |
+          echo "## C2 Guardrails Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Guardrail | Rule | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| GR-1 | Import Isolation | Checked |" >> $GITHUB_STEP_SUMMARY
+          echo "| GR-2 | Advisory Enforcement | Checked |" >> $GITHUB_STEP_SUMMARY
+          echo "| GR-3 | Replay Blindness | Checked |" >> $GITHUB_STEP_SUMMARY
+          echo "| GR-4 | Semantic Lint | Checked (WARNING) |" >> $GITHUB_STEP_SUMMARY
+          echo "| GR-5 | Redis Authority | Checked |" >> $GITHUB_STEP_SUMMARY

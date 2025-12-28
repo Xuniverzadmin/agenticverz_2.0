@@ -284,6 +284,7 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         "/health",
         "/metrics",  # MUST remain tenant-agnostic (see security note above)
         "/api/v1/auth/",  # Login/register endpoints
+        "/api/v1/c2/predictions/",  # C2 Prediction Plane (advisory only, no enforcement)
         "/docs",
         "/openapi.json",
         "/redoc",

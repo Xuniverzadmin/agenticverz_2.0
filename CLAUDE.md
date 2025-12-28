@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-27
+**Last Updated:** 2025-12-28
 
 ---
 
@@ -10,13 +10,42 @@
 **Effective:** 2025-12-27
 **Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`
 
-### Boot Sequence Acknowledgement (REQUIRED)
+### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001)
 
-Before performing ANY work, Claude must acknowledge:
+**Rule:** Memory decays. Contracts don't. Sessions must boot like systems, not humans.
 
-> "AgenticVerz boot sequence acknowledged.
-> I will comply with memory pins, lessons learned, and system contracts.
-> Current phase: [A / A.5 / B / C]"
+Before performing ANY work, Claude's first response must be:
+
+```
+SESSION_BOOTSTRAP_CONFIRMATION
+- playbook_version: 1.3
+- loaded_documents:
+  - CLAUDE_BOOT_CONTRACT.md
+  - behavior_library.yaml
+  - visibility_contract.yaml
+  - visibility_lifecycle.yaml
+  - discovery_ledger.yaml
+  - database_contract.yaml
+  - LESSONS_ENFORCED.md
+  - PIN-199-pb-s1-retry-immutability.md
+  - PIN-202-pb-s2-crash-recovery.md
+  - PIN-203-pb-s3-controlled-feedback-loops.md
+  - PIN-204-pb-s4-policy-evolution-with-provenance.md
+  - PIN-205-pb-s5-prediction-without-determinism-loss.md
+- visibility_lifecycle_loaded: YES
+- discovery_ledger_loaded: YES
+- database_contract_loaded: YES
+- forbidden_assumptions_acknowledged: YES
+- restrictions_acknowledged: YES
+- execution_discipline_loaded: YES
+- phase_family: C
+- current_stage: C2_PREDICTION
+```
+
+**Validation:** `scripts/ops/session_bootstrap_validator.py`
+**Playbook:** `docs/playbooks/SESSION_PLAYBOOK.yaml`
+
+No work is allowed until bootstrap is complete. Partial loading is rejected.
 
 ### Pre-Code Discipline (MANDATORY)
 
@@ -40,10 +69,17 @@ SELF-AUDIT
 - Did I read memory pins and lessons learned? YES / NO
 - Did I introduce new persistence? YES / NO
 - Did I risk historical mutation? YES / NO
+- Did I assume any architecture not explicitly declared? YES / NO
+- Did I reuse backend internals outside runtime? YES / NO
+- Did I introduce an implicit default (DB, env, routing)? YES / NO
 - If YES to any risk → mitigation: <explain>
+- If YES to last three → response is INVALID, must redesign
 ```
 
 **Outputs missing SELF-AUDIT are invalid.**
+**If last three questions are YES without mitigation → response is INVALID, must redesign.**
+
+**Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` (upgraded_self_audit section)
 
 ### Forbidden Actions (ABSOLUTE)
 
@@ -54,6 +90,25 @@ SELF-AUDIT
 | Create migrations without checking heads | Multi-head chaos |
 | Infer missing data | Violates truth-grade |
 | Skip SELF-AUDIT | Invalidates response |
+
+### Forbidden Assumptions (FA-001 to FA-006)
+
+Claude must not invent architecture. If something is not explicitly declared, it must be treated as UNKNOWN and BLOCKED.
+
+| ID | Assumption | Correct Model |
+|----|------------|---------------|
+| FA-001 | Consoles separated by API prefix | Subdomain + Auth Audience |
+| FA-002 | Localhost database fallback | DATABASE_URL must be explicit, hard fail if missing |
+| FA-003 | Importing app.db in scripts | Scripts use psycopg2 + explicit DATABASE_URL |
+| FA-004 | Inferring config from environment markers | All config explicit via environment variables |
+| FA-005 | Different consoles see different data | Same data, different visibility rules |
+| FA-006 | UI exposure without discovery | Discovery must precede visibility (DPC check) |
+
+**Enforcement:** If Claude introduces any forbidden assumption → Response is INVALID
+
+**Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` (forbidden_assumptions section)
+**Reference:** `docs/contracts/database_contract.yaml`
+**PIN:** PIN-209 (Claude Assumption Elimination)
 
 ### Response Validation
 
@@ -71,12 +126,14 @@ Claude responses are validated against behavior rules derived from real incident
 
 | Rule ID | Name | Trigger | Required Section |
 |---------|------|---------|-----------------|
+| BL-BOOT-001 | Session Bootstrap | First response | `SESSION_BOOTSTRAP_CONFIRMATION` |
 | BL-ENV-001 | Runtime Sync | Testing endpoints | `RUNTIME SYNC CHECK` |
 | BL-DB-001 | Timestamp Semantics | datetime operations | `TIMESTAMP SEMANTICS CHECK` |
 | BL-AUTH-001 | Auth Contract | Auth errors (401/403) | `AUTH CONTRACT CHECK` |
 | BL-MIG-001 | Migration Heads | Migrations | `MIGRATION HEAD CHECK` |
 | BL-DOCKER-001 | Docker Names | Docker commands | `DOCKER NAME CHECK` |
 | BL-TEST-001 | Test Prerequisites | Running tests | `TEST PREREQUISITES CHECK` |
+| BL-WEB-001 | Visibility Contract | New tables/models | `WEB_VISIBILITY_CONTRACT_CHECK` |
 
 **Example Behavior Rule Output:**
 ```
@@ -104,6 +161,174 @@ If a trigger is detected but the required section is missing, the response is **
 │  6. BLOCKED: Stop if conflict detected                      │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Execution Discipline (v1.4)
+
+**Shell Commands:**
+- No `eval` usage
+- No nested command substitution `$(...)`
+- Commands must be copy-paste safe
+- Multi-step operations must be explicit separate commands
+
+**Auth Contract (NON-NEGOTIABLE):**
+
+Environment variables are NOT credentials until explicitly mapped to HTTP headers.
+
+```
+.env file → Shell environment → HTTP header → RBAC middleware
+```
+
+Claude must bridge ALL layers explicitly. Stopping at "shell environment" is a failure.
+
+**Canonical API Call Pattern:**
+```bash
+# Step 1: Load env with export
+set -a && source /root/agenticverz2.0/.env && set +a
+
+# Step 2: Verify (preflight)
+[ -z "$AOS_API_KEY" ] && echo "Missing key" && exit 1
+
+# Step 3: Execute with EXPLICIT header
+curl -s -X POST \
+  -H "X-AOS-Key: $AOS_API_KEY" \
+  "http://localhost:8000/api/v1/endpoint"
+```
+
+**Frozen Header Format:** `X-AOS-Key: <API_KEY>`
+
+**Public Paths (no auth needed):**
+- `/health`, `/metrics`
+- `/api/v1/auth/`
+- `/api/v1/c2/predictions/`
+- `/docs`, `/openapi.json`, `/redoc`
+
+**Refusal Policy:**
+- If Claude attempts an API call without explicit `-H` header visible in command → REFUSE
+- If Claude assumes `source .env` implies auth is working → REFUSE
+- Use `docs/execution/API_CALL_TEMPLATE.md` for canonical pattern
+
+**Preflight Script:** `./scripts/preflight/check_auth_context.sh`
+
+**Credentials:**
+- Never assume credentials exist
+- Always verify auth context before API calls
+- Auth failures must be handled explicitly
+
+**Logs:**
+- Logs indicate availability, not usage
+- `redis_connected` does NOT mean C2 uses Redis
+- Presence of logs does not override guardrails
+
+---
+
+## CANONICAL GOVERNANCE (SESSION_PLAYBOOK v1.3)
+
+**Status:** ACTIVE
+**Date:** 2025-12-28
+**Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml`
+
+### System State (Always Check First)
+
+```yaml
+phase_family: C              # Era: Learning & Optimization
+current_stage: C2_PREDICTION # What's currently allowed
+
+stages:
+  C1_TELEMETRY: CERTIFIED    # Frozen invariant (2025-12-27)
+  C2_PREDICTION: ACTIVE      # Design phase (2025-12-28)
+  C3_OPTIMIZATION: LOCKED    # Future
+```
+
+**Key distinction:**
+- `phase_family` = which era (A/B/C)
+- `current_stage` = what behavior is allowed now
+- CERTIFIED = frozen invariant, not "previous location"
+- ACTIVE = current work, governed by PIN-221 semantic contract
+
+### Authoritative Environment
+
+| Environment | Role | Usage |
+|-------------|------|-------|
+| **Neon** | Authoritative truth | All certification evidence, replay, tests |
+| **Localhost** | Fallback only | Destructive testing, chaos experiments |
+
+**Rule:** Localhost evidence is never authoritative.
+
+### Testing Principles (P1-P6) — LAWS, Not Guidelines
+
+| Principle | Rule |
+|-----------|------|
+| P1 | Real scenarios against real infrastructure first |
+| P2 | Real LLMs, real databases, no simulations |
+| P3 | Full data propagation verification |
+| P4 | O-level (O1-O4) propagation verification |
+| P5 | Human semantic verification required |
+| P6 | Localhost fallback only when Neon blocked |
+
+### Infrastructure Authority Map
+
+| Component | Role | Forbidden For |
+|-----------|------|---------------|
+| **Neon Postgres** | Authoritative truth | Ephemeral signals |
+| **Upstash Redis** | Advisory cache | Truth storage, enforcement, control paths, replay |
+
+**Invariant:** Redis loss must not change system behavior.
+
+### Phase Transition (C1 → C2)
+
+```yaml
+C1_to_C2:
+  status: LOCKED
+  required_artifacts:
+    - PIN-220 (C2 Entry Conditions)
+  explicit_unlock_phrase: "C2 entry conditions approved"
+```
+
+### Anti-Drift Rules
+
+- No "temporary" bypass of principles
+- No experimental code outside phase gates
+- If a change feels "obviously fine", re-check principles
+- Redis convenience must never become Redis dependency
+
+---
+
+## PHASE C GUIDANCE (ACTIVE)
+
+**Status:** ACTIVE
+**Date:** 2025-12-27
+**Reference:** PIN-208 (Phase C Discovery Ledger), PIN-209 (Claude Assumption Elimination)
+
+### Core Principle: Phase C is for Listening, Not Acting
+
+> **Phase C is for listening, not acting.**
+> **Acting too early destroys signal.**
+
+### What This Means
+
+- **Observe First:** Discovery ledger collects signals passively
+- **Don't Enforce Yet:** DPC/PLC checks emit warnings, not blockers
+- **Preserve Signal Quality:** Acting on incomplete data destroys information
+- **Let Patterns Emerge:** Eligibility patterns become visible through observation
+
+### Phase C Enforcement Modes
+
+| System | Mode | Behavior |
+|--------|------|----------|
+| Discovery Ledger | LOAD_DETECT_PROPOSE | Observes, records, proposes |
+| DPC (Discovery Presence Check) | WARNING | Warns if artifact missing discovery entry |
+| PLC (Promotion Legitimacy Check) | WARNING | Warns if status = 'observed' |
+| DPCC | BLOCKER | Blocks code without discovery precedence |
+| CSEG | BLOCKER | Blocks scope expansion without eligibility |
+
+### Phase C → Phase D Transition
+
+Phase D will promote warnings to blockers:
+- `visibility_lifecycle: LOAD_ENFORCE`
+- `promotion_at_boundary: true`
+- Full enforcement of DPC and PLC
+
+Until then, listen and learn.
 
 ---
 

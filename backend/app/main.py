@@ -322,6 +322,30 @@ async def lifespan(app: FastAPI):
         else:
             logger.error(f"Failed to initialize M7 services: {e}")
 
+    # =========================================================================
+    # PB-S2: Orphan Run Recovery (Crash & Resume)
+    # =========================================================================
+    # Detect and mark runs that were orphaned due to previous system crash.
+    # This MUST run before accepting new requests to ensure truth-grade state.
+    try:
+        from .services.orphan_recovery import recover_orphaned_runs
+
+        recovery_result = await recover_orphaned_runs()
+        if recovery_result.get("detected", 0) > 0:
+            logger.warning(
+                "pb_s2_orphan_recovery_complete",
+                extra={
+                    "detected": recovery_result["detected"],
+                    "recovered": recovery_result["recovered"],
+                    "failed": recovery_result["failed"],
+                },
+            )
+        else:
+            logger.info("pb_s2_no_orphaned_runs")
+    except Exception as e:
+        # Recovery failure should not block startup, but must be logged
+        logger.error(f"pb_s2_orphan_recovery_error: {e}", exc_info=True)
+
     # Start queue depth updater
     task = asyncio.create_task(update_queue_depth())
     logger.info("queue_depth_updater_started")
@@ -393,6 +417,7 @@ from .api.runtime import router as runtime_router
 from .api.status_history import router as status_history_router
 from .api.traces import router as traces_router
 from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
+from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
 
 # from .api.tenants import router as tenants_router  # M21 - DISABLED: Premature for beta stage
 # M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
@@ -433,10 +458,26 @@ app.include_router(cost_intelligence_router)  # /cost/* - M26 Cost Intelligence
 # M29 Category 4: Cost Intelligence Completion - Domain-separated cost visibility
 app.include_router(cost_ops_router)  # /ops/cost/* - Founder cost overview (FOPS auth)
 app.include_router(cost_guard_router)  # /guard/costs/* - Customer cost summary (Console auth)
+
+# C2 Prediction Plane (advisory only, no control influence)
+app.include_router(c2_predictions_router)  # /api/v1/c2/predictions - C2 Prediction Plane
 # M29 Category 6: Founder Action Paths
 app.include_router(founder_actions_router)  # /ops/actions/* - Freeze, throttle, override (FOPS auth)
 # M29 Category 7: Legacy Route Handlers (410 Gone for deprecated paths)
 app.include_router(legacy_routes_router)  # /dashboard, /operator/*, /demo/*, /simulation/*
+
+# Phase B Observability APIs (READ-ONLY) - PB-S3, PB-S4, PB-S5
+from .api.feedback import router as feedback_router  # PB-S3 pattern_feedback
+from .api.policy_proposals import router as policy_proposals_router  # PB-S4 policy_proposals
+from .api.predictions import router as predictions_router  # PB-S5 prediction_events
+
+app.include_router(feedback_router)  # /api/v1/feedback - Pattern feedback (read-only)
+app.include_router(policy_proposals_router)  # /api/v1/policy-proposals - Policy proposals (read-only)
+app.include_router(predictions_router)  # /api/v1/predictions - Predictions (read-only)
+
+# Phase C Discovery Ledger (internal, founder/dev only)
+from .api.discovery import router as discovery_router
+app.include_router(discovery_router)  # /api/v1/discovery - Discovery Ledger (read-only)
 
 # CORS middleware
 app.add_middleware(

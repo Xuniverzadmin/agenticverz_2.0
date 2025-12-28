@@ -1,0 +1,781 @@
+# =============================================================================
+# SESSION PLAYBOOK BOOTSTRAP (SPB)
+# =============================================================================
+#
+# Purpose: Single source of truth for what MUST be loaded every session.
+# This is the equivalent of a DB migration head check, but for agent behavior.
+#
+# Rule: Memory decays. Contracts don't.
+#       Sessions must boot like systems, not humans.
+#
+# Enforcement: BL-BOOT-001 behavior rule
+# Validator: scripts/ops/session_bootstrap_validator.py
+#
+# Created: 2025-12-27
+# Reference: Last Mile Guarantee / Session-Level Inevitability
+# =============================================================================
+
+session_playbook_version: "1.4"
+created: "2025-12-27"
+last_updated: "2025-12-28"
+
+# Changelog:
+#   1.4 - Added auth_contract and refusal_policy to execution_discipline.
+#         Added mandatory_confirmations to on_session_restart (auth_header_format_known,
+#         api_call_template_loaded, preflight_required, public_paths_known).
+#         Created docs/execution/API_CALL_TEMPLATE.md and scripts/preflight/check_auth_context.sh.
+#         Permanently fixes env-vars-are-not-credentials failure class.
+#   1.3 - Added execution_discipline (shell commands, credentials, infra assumptions, log interpretation).
+#         Extended on_session_restart with execution rules. Prevents execution-layer drift.
+#   1.2 - Added system_state (phase status), authoritative_environment, testing_principles (P1-P6),
+#         infrastructure_authority map, phase_transitions, on_session_restart, verification_boundaries,
+#         anti_drift_rules. Prevents architectural entropy across sessions.
+#   1.1 - Added forbidden_assumptions, negative_design_rules, authority_declaration,
+#         upgraded_self_audit, database_contract.yaml to mandatory_load
+#   1.0 - Initial version with mandatory_load and phase enforcement
+
+# =============================================================================
+# MANDATORY LOAD
+# =============================================================================
+# These documents MUST be loaded and acknowledged at session start.
+# No work is allowed until all documents are confirmed loaded.
+# Order matters - load in this sequence.
+
+mandatory_load:
+  # Core Boot Contract (defines Claude's operating rules)
+  - path: CLAUDE_BOOT_CONTRACT.md
+    purpose: Boot sequence and forbidden actions
+    required: true
+
+  # Behavior Library (mechanical enforcement rules)
+  - path: docs/behavior/behavior_library.yaml
+    purpose: Behavior rules and triggers
+    required: true
+
+  # Visibility Contract (O1-O4 declarations)
+  - path: docs/contracts/visibility_contract.yaml
+    purpose: Visibility surface declarations
+    required: true
+
+  # Visibility Lifecycle (Phase C+ governance)
+  - path: docs/contracts/visibility_lifecycle.yaml
+    purpose: Visibility eligibility, contracting, promotion lifecycle
+    required: true
+    phase_activation: C  # Active enforcement starts in Phase C
+
+  # Discovery Ledger Contract (Phase C+ observational signals)
+  - path: docs/contracts/discovery_ledger.yaml
+    purpose: Discovery signal recording and promotion rules
+    required: true
+    phase_activation: C  # Active enforcement starts in Phase C
+
+  # Database Contract (prevents split-brain DB failures)
+  - path: docs/contracts/database_contract.yaml
+    purpose: Single authoritative DB per environment, no localhost fallback
+    required: true
+
+  # Lessons Enforced (invariants from past failures)
+  - path: docs/LESSONS_ENFORCED.md
+    purpose: 15 enforced invariants
+    required: true
+
+  # Phase B Frozen PINs (immutable truth guarantees)
+  - path: docs/memory-pins/PIN-199-pb-s1-retry-immutability.md
+    purpose: PB-S1 Retry creates NEW execution
+    required: true
+    phase: B
+
+  - path: docs/memory-pins/PIN-202-pb-s2-crash-recovery.md
+    purpose: PB-S2 Crashed runs never silently lost
+    required: true
+    phase: B
+
+  - path: docs/memory-pins/PIN-203-pb-s3-controlled-feedback-loops.md
+    purpose: PB-S3 Feedback observes but never mutates
+    required: true
+    phase: B
+
+  - path: docs/memory-pins/PIN-204-pb-s4-policy-evolution-with-provenance.md
+    purpose: PB-S4 Policies proposed, never auto-enforced
+    required: true
+    phase: B
+
+  - path: docs/memory-pins/PIN-205-pb-s5-prediction-without-determinism-loss.md
+    purpose: PB-S5 Predictions advise, never influence
+    required: true
+    phase: B
+
+# =============================================================================
+# FORBIDDEN ACTIONS (Before Bootstrap)
+# =============================================================================
+# These actions are BLOCKED until SESSION_BOOTSTRAP_CONFIRMATION is complete.
+
+forbidden_if_not_loaded:
+  - action: phase_testing
+    reason: Cannot test without knowing phase constraints
+
+  - action: acceptance_declaration
+    reason: Cannot declare acceptance without knowing criteria
+
+  - action: code_changes
+    reason: Cannot modify code without knowing invariants
+
+  - action: migration_creation
+    reason: Cannot create migrations without knowing schema rules
+
+  - action: api_creation
+    reason: Cannot create APIs without knowing visibility contract
+
+  - action: visibility_validation
+    reason: Cannot validate visibility without knowing discovery rules
+
+  - action: ui_exposure
+    reason: Cannot expose UI without knowing promotion rules
+
+# =============================================================================
+# BOOTSTRAP CONFIRMATION FORMAT
+# =============================================================================
+# Claude's first response MUST match this format exactly.
+# Validator rejects any response that doesn't conform.
+
+bootstrap_confirmation_format: |
+  SESSION_BOOTSTRAP_CONFIRMATION
+  - playbook_version: {version}
+  - loaded_documents:
+    - CLAUDE_BOOT_CONTRACT.md
+    - behavior_library.yaml
+    - visibility_contract.yaml
+    - visibility_lifecycle.yaml
+    - discovery_ledger.yaml
+    - database_contract.yaml
+    - LESSONS_ENFORCED.md
+    - PIN-199-pb-s1-retry-immutability.md
+    - PIN-202-pb-s2-crash-recovery.md
+    - PIN-203-pb-s3-controlled-feedback-loops.md
+    - PIN-204-pb-s4-policy-evolution-with-provenance.md
+    - PIN-205-pb-s5-prediction-without-determinism-loss.md
+  - visibility_lifecycle_loaded: YES
+  - discovery_ledger_loaded: YES
+  - database_contract_loaded: YES
+  - forbidden_assumptions_acknowledged: YES
+  - restrictions_acknowledged: YES
+  - phase_family: {family}
+  - current_stage: {stage}
+  - phase_enforcement:
+      visibility_lifecycle: {lifecycle_mode}
+      discovery_ledger: {discovery_mode}
+      dpcc: {dpcc_mode}
+      cseg: {cseg_mode}
+
+# =============================================================================
+# PHASE EXTENSIONS
+# =============================================================================
+# When new phases are added, their frozen PINs go here.
+# The playbook is the ONLY file that needs updating.
+
+phase_extensions:
+  phase_c:
+    # Phase C activates visibility lifecycle
+    documents: []
+    status: READY
+    activates:
+      - visibility_lifecycle: LOAD_DETECT_PROPOSE
+      - dpcc: BLOCKER
+      - cseg: BLOCKER
+
+  phase_d:
+    # Phase D enforces full visibility lifecycle
+    documents: []
+    status: PENDING
+    activates:
+      - visibility_lifecycle: LOAD_ENFORCE
+      - dpcc: BLOCKER
+      - cseg: BLOCKER
+      - promotion_at_boundary: true
+
+# =============================================================================
+# PHASE ENFORCEMENT TABLE
+# =============================================================================
+# This is the switch that activates DPCC/CSEG properly.
+# Validator uses current_stage to determine enforcement severity.
+
+phase_enforcement_table:
+  phase_b:
+    visibility_lifecycle: LOAD_AND_DECLARE
+    eligibility_detection: DISABLED
+    dpcc: WARNING
+    cseg: DECLARATIVE
+    description: "Phase B: Data exists, truth frozen"
+
+  phase_c:
+    visibility_lifecycle: LOAD_DETECT_PROPOSE
+    eligibility_detection: ENABLED
+    dpcc: BLOCKER
+    cseg: BLOCKER
+    description: "Phase C: Eligibility + proposals active"
+
+  phase_d:
+    visibility_lifecycle: LOAD_ENFORCE
+    eligibility_detection: ENABLED
+    dpcc: BLOCKER
+    cseg: BLOCKER
+    promotion_at_boundary: true
+    description: "Phase D+: Full enforcement"
+
+# =============================================================================
+# VALIDATION RULES
+# =============================================================================
+
+validation:
+  # First response must be bootstrap confirmation
+  first_response_must_be_bootstrap: true
+
+  # All mandatory_load documents must be listed in confirmation
+  all_documents_required: true
+
+  # Partial loading is rejected
+  partial_load_rejected: true
+
+  # Version mismatch is rejected
+  version_must_match: true
+
+# =============================================================================
+# ENFORCEMENT
+# =============================================================================
+
+enforcement:
+  behavior_rule: BL-BOOT-001
+  validator_script: scripts/ops/session_bootstrap_validator.py
+
+  on_missing_bootstrap:
+    action: BLOCK
+    message: |
+      SESSION BOOTSTRAP REQUIRED
+
+      Your first response must be SESSION_BOOTSTRAP_CONFIRMATION.
+
+      Required format:
+      SESSION_BOOTSTRAP_CONFIRMATION
+      - playbook_version: 1.0
+      - loaded_documents: [list all mandatory documents]
+      - restrictions_acknowledged: YES
+      - phase_family: [A/B/C]
+      - current_stage: [A5/B1/C1/C2/C3]
+
+      No work is allowed until bootstrap is complete.
+
+  on_partial_load:
+    action: BLOCK
+    message: |
+      INCOMPLETE BOOTSTRAP
+
+      Missing documents: {missing}
+
+      All documents in SESSION_PLAYBOOK.yaml must be loaded.
+      Partial loading is not allowed.
+
+# =============================================================================
+# FORBIDDEN ASSUMPTIONS (Critical - Prevents Architecture Invention)
+# =============================================================================
+# Claude must not invent architecture.
+# If something is not explicitly declared, it must be treated as UNKNOWN and BLOCKED.
+#
+# These assumptions have caused real failures and are now mechanically forbidden.
+
+forbidden_assumptions:
+
+  - id: FA-001
+    name: api_prefix_based_console_separation
+    description: Assuming consoles are separated by API prefix (/api/ops)
+    correct_model: Consoles are separated by SUBDOMAIN + AUTH AUDIENCE
+    reference: PIN-190, visibility_contract.yaml
+
+  - id: FA-002
+    name: localhost_database_fallback
+    description: Using localhost as default when DATABASE_URL not set
+    correct_model: DATABASE_URL must be explicitly set, hard fail if missing
+    reference: database_contract.yaml
+
+  - id: FA-003
+    name: app_db_import_outside_backend_runtime
+    description: Importing from app.db in scripts/validators
+    correct_model: Scripts use psycopg2 + explicit DATABASE_URL
+    reference: database_contract.yaml
+
+  - id: FA-004
+    name: implicit_environment_detection
+    description: Inferring database/config from environment markers
+    correct_model: All config must be explicit via environment variables
+    reference: database_contract.yaml
+
+  - id: FA-005
+    name: data_partitioned_by_console
+    description: Assuming different consoles see different data subsets
+    correct_model: Same data, different visibility rules per console
+    reference: visibility_contract.yaml
+
+  - id: FA-006
+    name: visibility_without_discovery
+    description: Exposing data to UI without discovery ledger entry
+    correct_model: Discovery must precede visibility (DPC check)
+    reference: discovery_ledger.yaml
+
+forbidden_assumptions_enforcement: |
+  If Claude introduces any forbidden assumption:
+  - Response is INVALID
+  - SELF-AUDIT must catch it before output
+  - Validator blocks execution
+
+# =============================================================================
+# NEGATIVE DESIGN RULES (What Must NEVER Happen)
+# =============================================================================
+# These encode the implicit boundaries that Claude must respect.
+# Violation of any rule invalidates the response.
+
+negative_design_rules:
+
+  - id: NDR-001
+    rule: Database must never encode visibility or console logic
+    reason: Visibility is declarative (contract), not data-driven
+    enforcement: Code review, schema audit
+
+  - id: NDR-002
+    rule: Validators must never import backend runtime modules
+    reason: Creates implicit coupling and split-brain potential
+    enforcement: Import pattern check
+
+  - id: NDR-003
+    rule: Discovery systems must never mutate execution data
+    reason: Discovery observes, execution decides
+    enforcement: DB trigger, code review
+
+  - id: NDR-004
+    rule: Consoles must never be inferred from routes
+    reason: Console topology is subdomain + auth, not URL path
+    enforcement: visibility_validator.py
+
+  - id: NDR-005
+    rule: Scripts must never have default database URLs
+    reason: Prevents split-brain where script uses wrong DB
+    enforcement: database_contract.yaml
+
+  - id: NDR-006
+    rule: Historical data must never be mutated
+    reason: Truth-grade system, immutability is constitutional
+    enforcement: DB triggers, LESSONS_ENFORCED.md
+
+# =============================================================================
+# AUTHORITY DECLARATION (Required for System-Level Changes)
+# =============================================================================
+# Claude must declare where truth comes from before coding.
+# This prevents choosing the wrong authority source.
+
+authority_declaration:
+  required_for:
+    - system_level_changes
+    - database_operations
+    - visibility_changes
+    - console_modifications
+
+  format: |
+    AUTHORITY_DECLARATION
+    - Data truth source: [Neon DB / Local DB / explicit]
+    - Access control source: [Auth audience / visibility_contract.yaml]
+    - Visibility source: [visibility_contract.yaml]
+    - Phase rules source: [SESSION_PLAYBOOK.yaml]
+    - Database contract: [database_contract.yaml]
+
+  enforcement: |
+    If authority declaration is missing for system-level change → BLOCK
+    If code contradicts declared authority → BLOCK
+
+# =============================================================================
+# UPGRADED SELF-AUDIT (Mandatory for All Code Changes)
+# =============================================================================
+# Forces Claude to self-reject before output.
+
+upgraded_self_audit:
+  required_for: all_code_changes
+
+  format: |
+    SELF-AUDIT
+    - Did I verify current DB and migration state? YES / NO
+    - Did I read memory pins and lessons learned? YES / NO
+    - Did I introduce new persistence? YES / NO
+    - Did I risk historical mutation? YES / NO
+    - Did I assume any architecture not explicitly declared? YES / NO
+    - Did I reuse backend internals outside runtime? YES / NO
+    - Did I introduce an implicit default (DB, env, routing)? YES / NO
+    - If YES to any risk → mitigation: <explain>
+    - If YES to last three → response is INVALID, must redesign
+
+  enforcement: |
+    If any "YES" without mitigation → BLOCK
+    If last three are "YES" → Response INVALID, redesign required
+
+# =============================================================================
+# TRUTH ANCHOR
+# =============================================================================
+
+truth_anchor: |
+  Memory decays. Contracts don't.
+  Sessions must boot like systems, not humans.
+
+  LLMs fail where constraints are implicit.
+  Make the implicit illegal, and the failures disappear.
+
+# =============================================================================
+# SECTION 9: PHASE FAMILY & EXECUTION STAGE
+# =============================================================================
+# Two distinct concepts:
+#   - phase_family: What kind of system are we building? (A/B/C)
+#   - current_stage: What is currently allowed to exist? (C1/C2/C3)
+#
+# Phase families are eras. Stages are sequential gates within an era.
+# C1 certified = frozen invariant, not "current location".
+
+system_state:
+  # Phase Family: Which era are we in?
+  # A = Truth & Determinism, B = Control & Resilience, C = Learning & Optimization
+  phase_family: C
+
+  # Current Stage: What behavior is currently allowed?
+  current_stage: C2_PREDICTION
+
+  # Stage Status: Each stage is a gate, not a mode
+  stages:
+    A5_CLOSURE: FROZEN       # Truth-grade certification complete (binding forever)
+    C1_TELEMETRY: CERTIFIED  # Telemetry plane certified 2025-12-27 (frozen invariant)
+    C2_PREDICTION: ACTIVE    # Prediction plane active 2025-12-28 (design phase)
+    C3_OPTIMIZATION: LOCKED  # Optimization plane not yet begun
+
+  rule:
+    - No stage transition is implicit
+    - Any stage unlock requires explicit human approval
+    - Presence of code does not imply stage readiness
+    - CERTIFIED stages remain binding invariants, not "previous locations"
+
+# =============================================================================
+# SECTION 10: AUTHORITATIVE ENVIRONMENT (GLOBAL)
+# =============================================================================
+# This is the "where is truth" section. Phase-agnostic.
+
+authoritative_environment:
+  name: neon
+  description: >
+    Neon Postgres is the single authoritative environment
+    for all certification-grade testing, verification,
+    replay guarantees, and evidence.
+  rules:
+    - All real-scenario tests must run on Neon first
+    - All certification evidence must reference Neon
+    - Localhost is never authoritative
+
+fallback_environment:
+  name: localhost
+  allowed_use:
+    - destructive testing
+    - chaos experiments
+    - cost/performance fallback when Neon blocked
+  restrictions:
+    - Evidence is supplementary only
+    - Cannot be used for certification claims
+    - Must be explicitly declared when used
+
+# =============================================================================
+# SECTION 11: CANONICAL TESTING PRINCIPLES (P1-P6)
+# =============================================================================
+# These are LAWS, not guidelines. Violation invalidates results.
+
+testing_principles:
+
+  P1_real_scenarios:
+    rule: >
+      All new phases or features must first be tested
+      using real scenarios against real infrastructure.
+    enforcement:
+      - Scenarios defined explicitly
+      - No mocks for initial verification
+
+  P2_real_execution_by_claude:
+    rule: >
+      Claude must execute tests using real LLMs,
+      real databases, and real services.
+    enforcement:
+      - No simulated responses
+      - No fabricated results
+
+  P3_full_data_propagation:
+    rule: >
+      Data propagation must be verified across all
+      relevant modules and planes.
+    enforcement:
+      - Execution → persistence → downstream consumers
+      - Absence of data must be explicitly proven if expected
+
+  P4_ui_propagation_O_levels:
+    rule: >
+      API-level propagation must be verified for
+      all applicable UI layers (O1-O4).
+    enforcement:
+      - O-level applicability declared per phase
+      - UI reachability not required for API verification
+
+  P5_human_semantic_verification:
+    rule: >
+      Final semantic verification of user-facing consoles
+      must be performed by a human.
+    enforcement:
+      - Claude cannot self-certify meaning
+      - Code-based verification allowed only if UI access blocked
+
+  P6_localhost_fallback_only:
+    rule: >
+      Localhost may be used only when Neon testing
+      is blocked by cost, performance, or risk.
+    enforcement:
+      - Fallback must be explicitly declared
+      - Localhost evidence is never authoritative
+
+# =============================================================================
+# SECTION 12: INFRASTRUCTURE AUTHORITY MAP
+# =============================================================================
+# What each infrastructure component is allowed to do.
+
+infrastructure_authority:
+
+  neon_postgres:
+    role: authoritative_truth
+    allowed_for:
+      - Truth tables (runs, traces, executions)
+      - Telemetry tables (C1)
+      - Prediction events (advisory, persisted) (C2+)
+      - Replay guarantees
+      - Memory pins
+    forbidden_for:
+      - Ephemeral-only signals (use Redis)
+
+  upstash_redis:
+    role: advisory_cache
+    allowed_for:
+      - Rolling aggregates
+      - Sliding windows
+      - Prediction acceleration
+      - UI performance caching
+    forbidden_for:
+      - Truth storage
+      - Enforcement decisions
+      - Control paths
+      - Replay
+      - Memory
+    invariant:
+      - Redis loss must not change system behavior
+      - Redis is never authoritative
+
+# =============================================================================
+# SECTION 13: PHASE TRANSITION RULES
+# =============================================================================
+# What is required to move between phases.
+
+phase_transitions:
+
+  C1_to_C2:
+    status: LOCKED
+    required_artifacts:
+      - PIN-220 (C2 Entry Conditions)
+    required_verification:
+      - Real scenario tests on Neon
+      - Propagation verification (modules + O-levels)
+      - Human semantic verification
+    explicit_unlock_phrase: "C2 entry conditions approved"
+
+  general_rules:
+    - Presence of code does not imply phase readiness
+    - Experiments are subject to the same gates
+    - Certification is a frozen boundary, not a milestone to build on casually
+
+# =============================================================================
+# SECTION 14: SESSION RESTART SAFETY
+# =============================================================================
+# What MUST happen when a session restarts.
+
+on_session_restart:
+  mandatory_steps:
+    - Read system_state.phase_family
+    - Read system_state.current_stage
+    - Read authoritative_environment
+    - Read testing_principles
+    - Read execution_discipline (including auth_contract)
+    - Read API_CALL_TEMPLATE.md for auth pattern
+    - Confirm auth context before any API calls
+    - Confirm allowed infra for current phase
+    - List allowed_actions for current phase
+    - List forbidden_actions for current phase
+
+  mandatory_confirmations:
+    - auth_header_format_known       # X-AOS-Key: <API_KEY>
+    - api_call_template_loaded       # docs/execution/API_CALL_TEMPLATE.md
+    - preflight_required             # scripts/preflight/check_auth_context.sh
+    - public_paths_known             # Know which paths don't need auth
+
+  refusal_policy:
+    if_action_violates_phase_or_principles:
+      action: refuse
+      response: >
+        This action violates the current phase or
+        canonical testing principles. Cannot proceed.
+
+    if_execution_rules_violated:
+      action: refuse
+      response: >
+        Execution violates shell/credential discipline.
+        Provide stepwise, verifiable commands instead.
+
+# =============================================================================
+# SECTION 15: HUMAN VS AUTOMATION BOUNDARY
+# =============================================================================
+# What CI can and cannot verify.
+
+verification_boundaries:
+
+  ci_can_verify:
+    - Schema constraints
+    - Forbidden imports
+    - Delete safety
+    - Invariant preservation
+    - Type checking
+    - Test execution
+
+  ci_cannot_verify:
+    - UI semantics (meaning of labels)
+    - Language implying authority vs advisory
+    - User interpretation
+    - Subjective design decisions
+
+  rule:
+    - Any user-facing semantic change requires human review
+    - CI passing does not mean phase complete
+
+# =============================================================================
+# SECTION 16: ANTI-DRIFT SAFEGUARDS
+# =============================================================================
+# Explicit rules to prevent future regression.
+
+anti_drift_rules:
+  - No "temporary" bypass of principles
+  - No experimental code outside phase gates
+  - No refactor justified solely by certification completion
+  - If a change feels "obviously fine", re-check principles
+  - Redis convenience must never become Redis dependency
+
+meta_rule: >
+  "If a future change feels 'obviously fine', it probably bypasses a principle."
+
+# =============================================================================
+# SECTION 17: EXECUTION DISCIPLINE
+# =============================================================================
+# Governs HOW commands are constructed and executed.
+# Prevents shell synthesis, credential assumptions, and log over-interpretation.
+
+execution_discipline:
+
+  shell_commands:
+    rules:
+      - No eval usage
+      - No nested command substitution
+      - No inline env extraction (e.g. $(grep ...))
+      - Commands must be copy-paste safe
+      - Multi-step operations must be explicit separate commands
+    required_structure:
+      - Explicit export commands first
+      - Then execution commands second
+      - Each step verifiable independently
+    forbidden_patterns:
+      - "$("           # nested substitution
+      - "eval"         # dynamic evaluation
+      - backslash-escaped URLs
+      - multi-line one-liners with mixed quoting
+    correct_pattern: |
+      # Step 1: load env explicitly
+      export AOS_API_KEY="xxxxxxxx"
+
+      # Step 2: verify
+      echo "$AOS_API_KEY" | wc -c
+
+      # Step 3: execute
+      curl -X POST \
+        -H "X-AOS-Key: $AOS_API_KEY" \
+        "http://localhost:8000/api/v1/endpoint"
+
+  credentials:
+    rules:
+      - Never assume credentials exist
+      - Always verify auth context before API calls
+      - Auth failures must be handled explicitly
+    required_steps:
+      - Explicit env check (verify variable is set)
+      - Explicit header construction (visible, not interpolated)
+      - Explicit auth failure handling (check response code)
+    forbidden_assumptions:
+      - "env is loaded"
+      - "headers are correct"
+      - "auth context exists"
+
+  infra_assumptions:
+    rules:
+      - Logs do not imply relevance
+      - Infra services may be present but unused
+      - Redis presence ≠ Redis usage allowed
+      - Service availability ≠ service authorization
+    invariant:
+      - Presence of logs does not override guardrails
+
+  log_interpretation:
+    rules:
+      - Logs indicate availability, not usage
+      - Connection logs do not imply feature usage
+      - Noise must be filtered, not inferred from
+    invariant:
+      - Presence of logs does not override guardrails
+      - redis_connected log does NOT mean C2 uses Redis
+
+  auth_contract:
+    description: >
+      Environment variables are NOT credentials until explicitly mapped to HTTP headers.
+      The chain is: .env → Shell env → HTTP header → RBAC middleware.
+      Claude must bridge ALL layers explicitly.
+    invariant:
+      - HTTP calls must explicitly construct auth headers
+      - Environment variables are not credentials until mapped
+      - source .env does NOT imply authentication
+      - shell context does NOT imply RBAC context
+    canonical_template: docs/execution/API_CALL_TEMPLATE.md
+    preflight_script: scripts/preflight/check_auth_context.sh
+    frozen_header_format: "X-AOS-Key: <API_KEY>"
+    public_paths:
+      - /health
+      - /metrics
+      - /api/v1/auth/
+      - /api/v1/c2/predictions/
+      - /docs
+      - /openapi.json
+      - /redoc
+
+  refusal_policy:
+    missing_auth_header:
+      trigger: API call without explicit -H header visible in command
+      action: refuse
+      message: >
+        Auth header not explicitly constructed.
+        Use canonical API_CALL_TEMPLATE.md pattern.
+        Run preflight: ./scripts/preflight/check_auth_context.sh
+    assumed_auth_context:
+      trigger: Assuming source .env implies auth is working
+      action: refuse
+      message: >
+        Environment variables are not credentials until mapped to HTTP headers.
+        Explicit header required: -H "X-AOS-Key: $AOS_API_KEY"
+
+# =============================================================================
+# END OF SESSION PLAYBOOK
+# =============================================================================
