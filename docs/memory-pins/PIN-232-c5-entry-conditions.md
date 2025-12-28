@@ -224,7 +224,7 @@ If this sentence ever becomes false, certification is invalid.
 
 ---
 
-## C5 Scenarios (Design Surface COMPLETE)
+## C5 Scenarios (Design Surface FROZEN)
 
 ### C5-S1: Learning from Rollback Frequency
 - Observe: How often do envelopes rollback?
@@ -236,13 +236,13 @@ If this sentence ever becomes false, certification is invalid.
 - Observe: Same-parameter rejections, priority oscillation, class conflicts
 - Question: "Are envelopes structurally conflicting?"
 - Output: Advisory recommendation to human
-- **Status:** ✅ DESIGN COMPLETE (2025-12-28)
+- **Status:** 🔒 FROZEN (2025-12-28)
 
 ### C5-S3: Learning from Optimization Effectiveness
 - Observe: Baseline vs envelope metrics direction
 - Question: "Did the envelope help?"
 - Output: Advisory recommendation to human (no thresholds, no rankings)
-- **Status:** ✅ DESIGN COMPLETE (2025-12-28)
+- **Status:** 🔒 FROZEN (2025-12-28)
 
 All scenarios:
 - produce *suggestions*
@@ -250,8 +250,8 @@ All scenarios:
 - require human approval
 - have no thresholds or rankings
 
-**C5 Design Surface: COMPLETE**
-**C5 Implementation: LOCKED (S1 certified, S2/S3 design only)**
+**C5 Design Surface: FROZEN (2025-12-28)**
+**C5 Implementation: LOCKED (S1 certified, S2/S3 contracts frozen)**
 
 ---
 
