@@ -224,29 +224,34 @@ If this sentence ever becomes false, certification is invalid.
 
 ---
 
-## Potential C5 Scenarios (Design Only)
-
-Only after C5 entry conditions are frozen should you consider:
+## C5 Scenarios (Design Surface COMPLETE)
 
 ### C5-S1: Learning from Rollback Frequency
 - Observe: How often do envelopes rollback?
-- Suggest: Should bounds be tighter?
+- Question: "Are bounds too aggressive?"
 - Output: Advisory recommendation to human
+- **Status:** ✅ CERTIFIED (2025-12-28)
 
-### C5-S2: Learning from Envelope Expiry Patterns
-- Observe: Do envelopes expire before effect?
-- Suggest: Should timeboxes be shorter?
+### C5-S2: Learning from Coordination Friction
+- Observe: Same-parameter rejections, priority oscillation, class conflicts
+- Question: "Are envelopes structurally conflicting?"
 - Output: Advisory recommendation to human
+- **Status:** ✅ DESIGN COMPLETE (2025-12-28)
 
-### C5-S3: Learning from Cost vs Reliability Outcomes
-- Observe: What's the cost/reliability tradeoff?
-- Suggest: Should priority weights adjust?
-- Output: Advisory recommendation to human
+### C5-S3: Learning from Optimization Effectiveness
+- Observe: Baseline vs envelope metrics direction
+- Question: "Did the envelope help?"
+- Output: Advisory recommendation to human (no thresholds, no rankings)
+- **Status:** ✅ DESIGN COMPLETE (2025-12-28)
 
-All of these would:
+All scenarios:
 - produce *suggestions*
 - never apply automatically
 - require human approval
+- have no thresholds or rankings
+
+**C5 Design Surface: COMPLETE**
+**C5 Implementation: LOCKED (S1 certified, S2/S3 design only)**
 
 ---
 
