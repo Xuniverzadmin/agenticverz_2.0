@@ -15,11 +15,15 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "1.4"
+session_playbook_version: "1.5"
 created: "2025-12-27"
 last_updated: "2025-12-28"
 
 # Changelog:
+#   1.5 - Updated system_state for C5-S1 certification complete.
+#         C1→C2→C3→C4 all CERTIFIED. C5-S1 CERTIFIED.
+#         Added C3_to_C4 and C4_to_C5_S1 phase transitions.
+#         Current stage now C5_LEARNING (S1 certified, S2+ locked).
 #   1.4 - Added auth_contract and refusal_policy to execution_discipline.
 #         Added mandatory_confirmations to on_session_restart (auth_header_format_known,
 #         api_call_template_loaded, preflight_required, public_paths_known).
@@ -440,20 +444,25 @@ system_state:
   phase_family: C
 
   # Current Stage: What behavior is currently allowed?
-  current_stage: C3_OPTIMIZATION
+  current_stage: C5_LEARNING
 
   # Stage Status: Each stage is a gate, not a mode
   stages:
     A5_CLOSURE: FROZEN       # Truth-grade certification complete (binding forever)
     C1_TELEMETRY: CERTIFIED  # Telemetry plane certified 2025-12-27 (frozen invariant)
     C2_PREDICTION: CERTIFIED # Prediction plane certified 2025-12-28 (sealed, O4 governance frozen)
-    C3_OPTIMIZATION: ACTIVE  # Optimization safety layer - S1 canary in progress (2025-12-28)
+    C3_OPTIMIZATION: CERTIFIED # Optimization safety certified 2025-12-28 (S1/S2/S3 - 69 tests)
+    C4_COORDINATION: CERTIFIED # Multi-envelope coordination certified 2025-12-28 (14 tests, 83 total)
+    C5_LEARNING: ACTIVE      # Learning & Evolution - S1 CERTIFIED (27 tests, 6/6 guardrails)
+    C5_S1_ROLLBACK: CERTIFIED # Learning from Rollback Frequency certified 2025-12-28
+    C5_S2_PLUS: LOCKED       # Additional learning scenarios (explicit unlock required)
 
   rule:
     - No stage transition is implicit
     - Any stage unlock requires explicit human approval
     - Presence of code does not imply stage readiness
     - CERTIFIED stages remain binding invariants, not "previous locations"
+    - C5-S1 allows advisory learning only (suggests, never decides)
 
 # =============================================================================
 # SECTION 10: AUTHORITATIVE ENVIRONMENT (GLOBAL)
@@ -612,6 +621,57 @@ phase_transitions:
     explicit_unlock_phrase: "C3 entry conditions approved"
     approved_by: human
     approved_at: 2025-12-28
+
+  C3_to_C4:
+    status: COMPLETE
+    completion_date: 2025-12-28
+    required_artifacts:
+      - PIN-230 (C4 Entry Conditions) ✅
+      - C4_COORDINATION_AUDIT_SCHEMA.md ✅
+    required_verification:
+      - Multi-envelope coordination tests (14 tests) ✅
+      - Priority preemption verified ✅
+      - Same-parameter rejection verified ✅
+      - Kill-switch supremacy verified ✅
+      - Audit persistence verified ✅
+    invariants:
+      - I-C4-1: Kill-switch always wins
+      - I-C4-2: Coordination is required for overlapping changes
+      - I-C4-3: Priority is immutable during decision
+      - I-C4-4: Same-parameter changes are rejected
+      - I-C4-5: All coordination decisions are audited
+      - I-C4-6: Replay produces identical decisions
+    explicit_unlock_phrase: "C4 entry conditions approved"
+    approved_by: human
+    approved_at: 2025-12-28
+
+  C4_to_C5_S1:
+    status: COMPLETE
+    completion_date: 2025-12-28
+    required_artifacts:
+      - PIN-232 (C5 Entry Conditions) ✅
+      - C5_S1_LEARNING_SCENARIO.md ✅
+      - C5_S1_ACCEPTANCE_CRITERIA.md ✅
+      - C5_S1_CI_ENFORCEMENT.md ✅
+      - C5_CI_GUARDRAILS_DESIGN.md ✅
+    required_verification:
+      - Unit tests (27/27 PASS) ✅
+      - CI guardrails (6/6 PASS) ✅
+      - Acceptance criteria (46/46 PASS) ✅
+      - C5 invariants verified (I-C5-1 to I-C5-8) ✅
+    invariants:
+      - I-C5-1: Learning suggests, humans decide
+      - I-C5-2: No learned change applies without approval
+      - I-C5-3: Learning operates on metadata, not runtime
+      - I-C5-4: All learned suggestions are versioned
+      - I-C5-5: Learning can be disabled without affecting coordination
+      - I-C5-6: Kill-switch supremacy is unchanged
+      - I-C5-7: Learned policies are replayable
+      - I-C5-8: No autonomous policy mutation
+    explicit_unlock_phrase: "C5-S1 certification approved"
+    approved_by: human
+    approved_at: 2025-12-28
+    certification_statement: "Learning suggests. Humans decide. Systems apply."
 
   general_rules:
     - Presence of code does not imply phase readiness
