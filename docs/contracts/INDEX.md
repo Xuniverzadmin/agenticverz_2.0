@@ -34,6 +34,7 @@
 | [O4_RECERTIFICATION_CHECKS.md](O4_RECERTIFICATION_CHECKS.md) | 1.0 (ACTIVE) | CI enforcement |
 | [C3_OPTIMIZATION_SAFETY_CONTRACT.md](C3_OPTIMIZATION_SAFETY_CONTRACT.md) | 1.0 (FROZEN) | C3 acceptance criteria |
 | [C3_ENVELOPE_ABSTRACTION.md](C3_ENVELOPE_ABSTRACTION.md) | 1.0 (FROZEN) | C3 envelope schema & lifecycle |
+| [C3_KILLSWITCH_ROLLBACK_MODEL.md](C3_KILLSWITCH_ROLLBACK_MODEL.md) | 1.0 (FROZEN) | C3 kill-switch & rollback |
 | [visibility_contract.yaml](visibility_contract.yaml) | 1.0 | Phase B artifacts |
 | [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) | - | 13 (validation) |
 | [M0_M27_CLASSIFICATION.md](M0_M27_CLASSIFICATION.md) | - | 27 milestones |

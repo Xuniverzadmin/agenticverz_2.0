@@ -591,14 +591,16 @@ phase_transitions:
     completion_date: 2025-12-28
 
   C2_to_C3:
-    status: LOCKED
+    status: READY  # All prerequisites met, awaiting human approval
     required_artifacts:
-      - PIN-225 (C3 Entry Conditions)
-      - C3_OPTIMIZATION_SAFETY_CONTRACT.md
+      - PIN-225 (C3 Entry Conditions) ✅
+      - C3_OPTIMIZATION_SAFETY_CONTRACT.md ✅
+      - C3_ENVELOPE_ABSTRACTION.md ✅
+      - C3_KILLSWITCH_ROLLBACK_MODEL.md ✅
     required_verification:
-      - Kill switch design agreed
-      - Optimization envelope abstraction designed
-      - Rollback model documented
+      - Kill switch design agreed ✅
+      - Optimization envelope abstraction designed ✅
+      - Rollback model documented ✅
     invariants:
       - I-C3-1: Predictions influence via declared envelopes only
       - I-C3-2: Every change is bounded (impact + time)
