@@ -391,3 +391,71 @@ C5-S1 (Learning from Rollback Frequency) has been fully implemented, tested, and
 
 ### Commit
 `a0cd6cb` - C5-S1: Learning from Rollback Frequency - FROZEN
+---
+
+## Architectural Gap Identified
+
+### Update (2025-12-28)
+
+## 2025-12-28: C4 Audit Persistence Gap Identified
+
+### Discovery
+During C5-S1 implementation verification, a structural gap was identified:
+
+> **C4 coordination is certified but its audit trail is in-memory, not persisted.**
+
+### Impact Assessment
+
+| Item | Status |
+|------|--------|
+| C4 coordination logic | ✅ Certified |
+| C4 audit observability | ⚠️ **Incomplete** |
+| C5-S1 design | ✅ Solid |
+| C5-S1 implementation | ⚠️ Premature without audit persistence |
+
+### Why This Matters
+C5-S1 explicitly depends on metadata persistence:
+- Learning observes `coordination_audit_records` (must exist)
+- Rollback frequency requires historical data (must be durable)
+- Advisory suggestions must reference real decisions (not simulated)
+
+### Current State
+- C4 coordination decisions are: enforced, deterministic, replay-safe
+- But audited only in memory/logs, not a first-class DB artifact
+- C5-S1 test harness uses simulated data (acceptable for unit tests only)
+
+### Decision
+**Proceed with Option A: Formalize C4 Coordination Audit Persistence**
+
+This requires:
+1. Draft `C4_COORDINATION_AUDIT_SCHEMA.md`
+2. Define immutability + replay guarantees  
+3. Add single append-only `coordination_audit_records` table
+4. C4 minor re-certification (narrow scope)
+5. C5-S1 remains unchanged
+
+### What This Does NOT Change
+- C4 behavior (already certified)
+- C5-S1 logic (already verified)
+- Replay determinism (already guaranteed)
+- Learning isolation (already enforced)
+
+### What This Enables
+- C5-S1 can observe *real history*, not fabricated data
+- Learning suggestions become production-legitimate
+- Evidence packs reference actual coordination decisions
+
+### Status Update
+
+| Component | Previous | Current |
+|-----------|----------|---------|
+| C5-S1 Implementation | ✅ COMPLETE | ⚠️ BLOCKED (pending C4 audit) |
+| C5-S1 Certification | ⏳ PENDING | 🔒 LOCKED (pending C4 audit) |
+| C4 Audit Persistence | N/A | 📋 DESIGN REQUIRED |
+
+### Next Steps
+1. Design `C4_COORDINATION_AUDIT_SCHEMA.md`
+2. Implement `coordination_audit_records` table
+3. Wire C4 coordinator to emit audit records
+4. Narrow C4 re-certification
+5. Unlock C5-S1 certification
