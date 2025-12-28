@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-28 (PIN-224 C2 O4 Governance Complete)
+**Last Updated:** 2025-12-28 (PIN-225 C3 Entry Conditions)
 
 ---
 
@@ -259,6 +259,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-222](PIN-222-c2-implementation-specification.md) | **C2 Implementation Specification** | Phase C / Implementation | **📋 SPEC** | 2025-12-28 |
 | [PIN-223](PIN-223-c2-t3-policy-drift-implementation-complete.md) | **C2-T3 Policy Drift Implementation Complete** | C2 Prediction Plane / Implementation | **🏗️ CERTIFIED** | 2025-12-28 |
 | [PIN-224](PIN-224-c2-o4-governance-complete.md) | **C2 O4 Governance Complete** | C2 Prediction Plane / Governance | **✅ CERTIFIED** | 2025-12-28 |
+| [PIN-225](PIN-225-c3-entry-conditions.md) | **C3 Entry Conditions** | C3 Optimization Safety / Governance | **✅ APPROVED** | 2025-12-28 |
 
 ---
 
@@ -1028,6 +1029,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-28 | **PIN-225 C3 Entry Conditions** - APPROVED. C3 Optimization Safety Layer entry conditions frozen. 6 invariants (I-C3-1 to I-C3-6). 3 test scenarios (S1: Bounded Retry, S2: Cost Smoothing, S3: Prediction Failure). C3_OPTIMIZATION_SAFETY_CONTRACT.md frozen. Kill switch and envelope designs pending. |
 | 2025-12-28 | **PIN-224 C2 O4 Governance Complete** - CERTIFIED. Complete C2 Prediction Plane (T1/T2/T3) and O4 Advisory UI governance. 5 C2 invariants enforced by CI guardrails. O4 re-certification checks (RC-1 to RC-8). Console semantics frozen. D1 language constraints. Ready for UI implementation. |
 | 2025-12-28 | **PIN-223 C2-T3 Policy Drift Implementation Complete** - Created via memory_trail. |
 | 2025-12-28 | **PIN-222 C2 Implementation Specification** - Minimal schema (prediction_events), 3 test cases (T1-T3), 5 CI guardrails (import isolation, advisory enforcement, replay blindness, semantic lint, Redis protection). Implementation order: schema+CI → T1 → O4 UI → T2/T3. |

@@ -446,8 +446,8 @@ system_state:
   stages:
     A5_CLOSURE: FROZEN       # Truth-grade certification complete (binding forever)
     C1_TELEMETRY: CERTIFIED  # Telemetry plane certified 2025-12-27 (frozen invariant)
-    C2_PREDICTION: ACTIVE    # Prediction plane active 2025-12-28 (design phase)
-    C3_OPTIMIZATION: LOCKED  # Optimization plane not yet begun
+    C2_PREDICTION: CERTIFIED # Prediction plane certified 2025-12-28 (sealed, O4 governance frozen)
+    C3_OPTIMIZATION: LOCKED  # Optimization safety layer - entry conditions defined (PIN-225)
 
   rule:
     - No stage transition is implicit
@@ -580,7 +580,7 @@ infrastructure_authority:
 phase_transitions:
 
   C1_to_C2:
-    status: LOCKED
+    status: COMPLETE
     required_artifacts:
       - PIN-220 (C2 Entry Conditions)
     required_verification:
@@ -588,6 +588,25 @@ phase_transitions:
       - Propagation verification (modules + O-levels)
       - Human semantic verification
     explicit_unlock_phrase: "C2 entry conditions approved"
+    completion_date: 2025-12-28
+
+  C2_to_C3:
+    status: LOCKED
+    required_artifacts:
+      - PIN-225 (C3 Entry Conditions)
+      - C3_OPTIMIZATION_SAFETY_CONTRACT.md
+    required_verification:
+      - Kill switch design agreed
+      - Optimization envelope abstraction designed
+      - Rollback model documented
+    invariants:
+      - I-C3-1: Predictions influence via declared envelopes only
+      - I-C3-2: Every change is bounded (impact + time)
+      - I-C3-3: All influence is reversible
+      - I-C3-4: Human override always wins
+      - I-C3-5: Replay without predictions = baseline behavior
+      - I-C3-6: Optimization failure never creates incidents
+    explicit_unlock_phrase: "C3 entry conditions approved"
 
   general_rules:
     - Presence of code does not imply phase readiness
