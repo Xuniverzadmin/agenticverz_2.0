@@ -350,3 +350,44 @@ When C5 is implemented, certification becomes invalid if:
 | Kill-switch behavior affected by learning | CRITICAL |
 | Learning rollback fails | HIGH |
 | Replay with learning produces different results | HIGH |
+---
+
+## Implementation Complete
+
+### Update (2025-12-28)
+
+## 2025-12-28: C5-S1 Implementation Complete
+
+### Summary
+C5-S1 (Learning from Rollback Frequency) has been fully implemented, tested, and frozen.
+
+### Verification Results
+- **Acceptance Criteria:** 46/46 checks PASS (100% compliant)
+- **CI Guardrails:** 6/6 PASS
+- **Unit Tests:** 27/27 PASS
+- **Migration:** Applied to Neon (062_c5_learning_suggestions)
+
+### Implementation Artifacts
+| Component | Location |
+|-----------|----------|
+| Learning Config | `backend/app/learning/config.py` |
+| Suggestions Model | `backend/app/learning/suggestions.py` |
+| Table Boundaries | `backend/app/learning/tables.py` |
+| Rollback Observer | `backend/app/learning/s1_rollback.py` |
+| Migration | `backend/alembic/versions/062_c5_learning_suggestions.py` |
+| CI Scripts | `scripts/ci/c5_guardrails/` (7 scripts) |
+| Tests | `backend/tests/learning/test_s1_rollback.py` |
+
+### Key Safety Properties Verified
+1. **Advisory Only** - All suggestions use `Literal["advisory"]`
+2. **Human Approval Gate** - Default status is `pending_review`
+3. **Metadata Boundary** - Zero imports from runtime tables
+4. **Kill-Switch Isolation** - Zero imports from killswitch/coordinator
+5. **Immutability** - DB trigger prevents mutation of core fields
+6. **Disable Flag** - `LEARNING_ENABLED=false` stops all observation
+
+### Certification Statement
+> "C5-S1 provides advisory insights derived from rollback frequency, without influencing system behavior, requiring explicit human approval for any downstream action."
+
+### Commit
+`a0cd6cb` - C5-S1: Learning from Rollback Frequency - FROZEN
