@@ -55,7 +55,8 @@ This PIN establishes the entry conditions, invariants, and test scenarios for Ph
 | C2 certified and sealed | ✅ COMPLETE (PIN-224) |
 | O4 visible to humans or explicitly deferred | ✅ COMPLETE (contracts frozen) |
 | Replay determinism proven | ✅ COMPLETE (Phase A.5) |
-| Kill switch design agreed | ⏳ PENDING (this PIN) |
+| Envelope abstraction designed | ✅ COMPLETE (C3_ENVELOPE_ABSTRACTION.md) |
+| Kill switch design agreed | ⏳ PENDING |
 
 ---
 
@@ -126,9 +127,9 @@ This is the **most important C3 test**. If this fails, C3 is invalid.
 
 ## Implementation Order (MANDATORY)
 
-1. Freeze C3 acceptance criteria and scenarios ← **THIS PIN**
-2. Design C3 optimization envelope abstraction
-3. Draft C3 kill-switch and rollback model
+1. Freeze C3 acceptance criteria and scenarios ← ✅ COMPLETE (this PIN)
+2. Design C3 optimization envelope abstraction ← ✅ COMPLETE (C3_ENVELOPE_ABSTRACTION.md)
+3. Draft C3 kill-switch and rollback model ← ⏳ NEXT
 4. Implement minimal envelope for S1
 5. CI guardrails for C3 invariants
 6. Implement S2, S3
