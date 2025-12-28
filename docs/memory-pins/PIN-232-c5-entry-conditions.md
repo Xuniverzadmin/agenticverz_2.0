@@ -275,9 +275,10 @@ All of these would:
 | C5 Entry Conditions | 🔒 FROZEN |
 | C5 Non-Goals | 🔒 FROZEN |
 | C5 Invariants | 🔒 FROZEN |
-| C5 CI Guardrails | ✅ IMPLEMENTED |
+| C5 CI Guardrails | ✅ IMPLEMENTED (6/6 PASS) |
 | C5-S1 Implementation | ✅ COMPLETE |
-| C5 Certification | ⏳ PENDING |
+| C5-S1 Certification | ✅ **CERTIFIED** (2025-12-28) |
+| C5-S2+ | 🔒 LOCKED |
 | C5 Risk | CONTAINED |
 
 ---

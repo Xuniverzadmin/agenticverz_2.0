@@ -24,6 +24,7 @@ Certification means a phase or component has been:
 | C2: Prediction Plane | [C2_CERTIFICATION_STATEMENT.md](C2_CERTIFICATION_STATEMENT.md) | 2025-12-28 | CERTIFIED |
 | C3: Optimization Safety | [C3_CERTIFICATION_STATEMENT.md](C3_CERTIFICATION_STATEMENT.md) | 2025-12-28 | CERTIFIED |
 | C4: Multi-Envelope Coordination | [C4_CERTIFICATION_STATEMENT.md](C4_CERTIFICATION_STATEMENT.md) | 2025-12-28 | CERTIFIED |
+| C5-S1: Learning from Rollback | [C5_S1_CERTIFICATION_STATEMENT.md](C5_S1_CERTIFICATION_STATEMENT.md) | 2025-12-28 | CERTIFIED |
 
 ---
 
@@ -46,6 +47,12 @@ Certification means a phase or component has been:
 | Document | Purpose |
 |----------|---------|
 | [C4_CERTIFICATION_STATEMENT.md](C4_CERTIFICATION_STATEMENT.md) | Full C4 certification (14 coordination tests, 83 total optimization tests) |
+
+### C5-S1: Learning from Rollback Frequency
+
+| Document | Purpose |
+|----------|---------|
+| [C5_S1_CERTIFICATION_STATEMENT.md](C5_S1_CERTIFICATION_STATEMENT.md) | Full C5-S1 certification (27 tests, 6/6 guardrails, 46/46 acceptance criteria) |
 
 ---
 
@@ -84,4 +91,4 @@ Re-certification requires full regression testing on authoritative environment.
 | Phase | Document | Status |
 |-------|----------|--------|
 | O4: Advisory UI | (pending) | DRAFT |
-| C5: Learning & Evolution | [PIN-232](../memory-pins/PIN-232-c5-entry-conditions.md) | 🔒 ENTRY CONDITIONS FROZEN |
+| C5-S2+: Additional Learning Scenarios | (pending) | LOCKED |
