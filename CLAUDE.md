@@ -39,7 +39,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
 - phase_family: C
-- current_stage: C2_PREDICTION
+- current_stage: C5_LEARNING
 ```
 
 **Validation:** `scripts/ops/session_bootstrap_validator.py`
@@ -231,12 +231,15 @@ curl -s -X POST \
 
 ```yaml
 phase_family: C              # Era: Learning & Optimization
-current_stage: C2_PREDICTION # What's currently allowed
+current_stage: C5_LEARNING   # What's currently allowed
 
 stages:
   C1_TELEMETRY: CERTIFIED    # Frozen invariant (2025-12-27)
-  C2_PREDICTION: ACTIVE      # Design phase (2025-12-28)
-  C3_OPTIMIZATION: LOCKED    # Future
+  C2_PREDICTION: CERTIFIED   # Prediction plane (2025-12-28)
+  C3_OPTIMIZATION: CERTIFIED # Optimization safety (2025-12-28)
+  C4_COORDINATION: CERTIFIED # Multi-envelope coordination (2025-12-28)
+  C5_S1_ROLLBACK: CERTIFIED  # Learning from rollback (2025-12-28)
+  C5_S2_PLUS: LOCKED         # Future learning scenarios
 ```
 
 **Key distinction:**
