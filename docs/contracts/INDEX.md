@@ -35,6 +35,21 @@
 | [C3_OPTIMIZATION_SAFETY_CONTRACT.md](C3_OPTIMIZATION_SAFETY_CONTRACT.md) | 1.0 (FROZEN) | C3 acceptance criteria |
 | [C3_ENVELOPE_ABSTRACTION.md](C3_ENVELOPE_ABSTRACTION.md) | 1.0 (FROZEN) | C3 envelope schema & lifecycle |
 | [C3_KILLSWITCH_ROLLBACK_MODEL.md](C3_KILLSWITCH_ROLLBACK_MODEL.md) | 1.0 (FROZEN) | C3 kill-switch & rollback |
+| [C4_ENVELOPE_COORDINATION_CONTRACT.md](C4_ENVELOPE_COORDINATION_CONTRACT.md) | 1.0 (FROZEN) | C4 multi-envelope coordination rules |
+| [C4_SYSTEM_LEARNINGS.md](C4_SYSTEM_LEARNINGS.md) | 2.0 (CERTIFIED) | Pre & post-implementation learnings |
+| [C4_CI_GUARDRAILS_DESIGN.md](C4_CI_GUARDRAILS_DESIGN.md) | 1.0 (DESIGN) | C4 CI guardrails specification |
+| [C4_S1_COORDINATION_SCENARIO.md](C4_S1_COORDINATION_SCENARIO.md) | 1.0 (DESIGN) | C4-S1 safe coexistence scenario |
+| [C4_PAPER_SIMULATION_RECORD.md](C4_PAPER_SIMULATION_RECORD.md) | 1.0 (PASSED) | C4 paper simulation (T0-T7) |
+| [C4_RECERTIFICATION_RULES.md](C4_RECERTIFICATION_RULES.md) | 1.0 (FROZEN) | C4 re-certification triggers (RC4-T1 to RC4-T8) |
+| [C5_CI_GUARDRAILS_DESIGN.md](C5_CI_GUARDRAILS_DESIGN.md) | 1.0 (DESIGN) | C5 CI guardrails specification (CI-C5-1 to CI-C5-6) |
+| [C5_S1_LEARNING_SCENARIO.md](C5_S1_LEARNING_SCENARIO.md) | 1.0 (FROZEN) | C5-S1 Learning from Rollback Frequency design |
+| [C5_S1_ACCEPTANCE_CRITERIA.md](C5_S1_ACCEPTANCE_CRITERIA.md) | 1.0 (FROZEN) | C5-S1 acceptance criteria (26 tests) |
+| [C5_S1_CI_ENFORCEMENT.md](C5_S1_CI_ENFORCEMENT.md) | 1.0 (FROZEN) | C5-S1 CI guardrails mapping |
+| [C4_OPERATIONAL_STABILITY_CRITERIA.md](C4_OPERATIONAL_STABILITY_CRITERIA.md) | 1.0 (FROZEN) | Time-based stability gate (7 days) |
+| [C4_FOUNDER_STABILITY_CRITERIA.md](C4_FOUNDER_STABILITY_CRITERIA.md) | 1.0 (FROZEN) | Synthetic stability gate (20 cycles) |
+| [C4_SYNTHETIC_STABILITY_RUNBOOK.md](C4_SYNTHETIC_STABILITY_RUNBOOK.md) | 1.0 (ACTIVE) | 1-day synthetic stability execution guide |
+| [C4_STABILITY_EVIDENCE_PACK.md](C4_STABILITY_EVIDENCE_PACK.md) | 1.1 (TEMPLATE) | Evidence pack (time-based + synthetic modes) |
+| [C4_STABILITY_EVIDENCE_PACK_20251228.md](C4_STABILITY_EVIDENCE_PACK_20251228.md) | 1.0 (ATTESTED) | Synthetic stability evidence (2025-12-28) |
 | [visibility_contract.yaml](visibility_contract.yaml) | 1.0 | Phase B artifacts |
 | [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md) | - | 13 (validation) |
 | [M0_M27_CLASSIFICATION.md](M0_M27_CLASSIFICATION.md) | - | 27 milestones |
