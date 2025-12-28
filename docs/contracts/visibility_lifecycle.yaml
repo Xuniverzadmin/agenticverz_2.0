@@ -1,0 +1,310 @@
+# =============================================================================
+# DISCOVERY LEDGER (Phase C)
+# =============================================================================
+#
+# Purpose: Passive, append-only observation log of interesting signals.
+# This is internal development tooling, NOT customer governance.
+#
+# Core Principle:
+#   Discovery Ledger records curiosity, not decisions.
+#   Decisions come later, deliberately.
+#
+# What it DOES:
+#   - Auto-detect candidate parameters / artifacts
+#   - Store why they might matter
+#   - Aggregate over time
+#   - Allow founder/dev to inspect them
+#
+# What it does NOT do:
+#   - Enforce visibility
+#   - Require approval
+#   - Trigger UI changes
+#   - Affect customer behavior
+#   - Block progress
+#
+# Created: 2025-12-27
+# Reference: Phase C Discovery Ledger design
+# Migration: 059_pc_discovery_ledger
+# =============================================================================
+
+version: "1.0"
+created: "2025-12-27"
+last_updated: "2025-12-27"
+
+# =============================================================================
+# TRUTH ANCHOR
+# =============================================================================
+
+truth_anchor: |
+  Discovery Ledger records curiosity, not decisions.
+  Decisions come later, deliberately.
+
+# =============================================================================
+# DESIGN PRINCIPLES
+# =============================================================================
+
+principles:
+  - name: Append-only
+    description: Never mutates history
+
+  - name: No coupling
+    description: No foreign keys to execution tables
+
+  - name: Cheap to write
+    description: Low overhead signal recording
+
+  - name: Cheap to ignore
+    description: No required actions
+
+  - name: Reversible
+    description: Can be dropped with zero blast radius
+
+# =============================================================================
+# DISCOVERY SIGNALS
+# =============================================================================
+#
+# Signals are patterns already implicit in your system.
+# You don't invent new data - you summarize existing behavior.
+#
+# =============================================================================
+
+signal_classes:
+
+  # ---------------------------------------------------------------------------
+  # Signal Class A: Repeated Operator Access
+  # ---------------------------------------------------------------------------
+  high_operator_access:
+    description: |
+      Humans keep looking at this. It might deserve structured visibility.
+    source:
+      - API access logs
+      - Guard / Ops console requests
+      - Founder console queries
+    trigger:
+      access_count_7d: "> 10"
+      distinct_sessions: "> 3"
+    example:
+      artifact: prediction_events
+      signal_type: high_operator_access
+      evidence:
+        count_7d: 21
+        distinct_sessions: 5
+        route: "/api/v1/predictions"
+      confidence: 0.8
+
+  # ---------------------------------------------------------------------------
+  # Signal Class B: Field Dominance
+  # ---------------------------------------------------------------------------
+  dominant_field:
+    description: |
+      This field keeps showing up — it may matter.
+    source:
+      - pattern_feedback
+      - prediction_events
+    trigger:
+      occurrences_7d: "> 20"
+    example:
+      artifact: prediction_events
+      field: confidence
+      signal_type: dominant_field
+      evidence:
+        occurrences_7d: 47
+
+  # ---------------------------------------------------------------------------
+  # Signal Class C: Frequent Join Target
+  # ---------------------------------------------------------------------------
+  frequent_join_target:
+    description: |
+      This relationship is operationally important.
+    source:
+      - SQL logs
+      - Ad-hoc analysis queries
+      - Incident/debug tooling
+    trigger:
+      join_count_7d: "> 10"
+    example:
+      artifact: worker_runs
+      field: attempt
+      signal_type: frequent_join_target
+      evidence:
+        joined_with: prediction_events
+        count_7d: 18
+
+  # ---------------------------------------------------------------------------
+  # Signal Class D: Threshold Crossings
+  # ---------------------------------------------------------------------------
+  threshold_crossing:
+    description: |
+      This signal is strong enough to warrant attention.
+    source:
+      - Predictions
+      - Cost analysis
+      - Failure likelihoods
+    trigger:
+      crossings_7d: "> 5"
+    example:
+      artifact: prediction_events
+      field: failure_probability
+      signal_type: threshold_crossing
+      evidence:
+        threshold: 0.7
+        crossings_7d: 9
+      confidence: 0.75
+
+# =============================================================================
+# SIGNAL AGGREGATION
+# =============================================================================
+#
+# Signals are aggregated, not spammed.
+# Same (artifact, field, signal_type) updates seen_count.
+#
+# =============================================================================
+
+aggregation_rules:
+  on_existing_signal:
+    - Update seen_count += 1
+    - Update last_seen_at = now()
+    - Merge evidence (append new data)
+
+  on_new_signal:
+    - Insert new row
+    - Set seen_count = 1
+    - Set first_seen_at = now()
+
+# =============================================================================
+# SIGNAL STATUS (Non-Enforcing)
+# =============================================================================
+
+status_values:
+  observed:
+    description: Just noticed, no action taken
+    is_default: true
+    enforces_visibility: false
+
+  ignored:
+    description: Human decided not interesting
+    enforces_visibility: false
+
+  promoted:
+    description: Human decided to create visibility contract manually
+    enforces_visibility: false  # Still doesn't enforce - just a marker
+    note: |
+      Promotion is manual. Human creates visibility contract separately.
+      This status just marks the signal as "acted upon".
+
+# =============================================================================
+# WHERE TO VIEW (Founder Console)
+# =============================================================================
+
+viewing:
+  location: "Founder Console → Discovery Ledger"
+  access: "founder/dev only"
+  mode: "read-only"
+  sorting:
+    - by: seen_count (descending)
+    - by: last_seen_at (descending)
+  actions_required: none
+  note: |
+    You look at it when you care, not when the system interrupts you.
+
+# =============================================================================
+# RELATIONSHIP TO DPCC / CSEG
+# =============================================================================
+#
+# Discovery Ledger is UPSTREAM of visibility.
+# DPCC / CSEG only apply AFTER manual visibility contract creation.
+#
+# Flow:
+#   Data exists
+#   → Discovery Ledger records signals
+#   → Human notices pattern (optional)
+#   → Human decides to make it visible (manual)
+#   → Visibility Contract created (manual)
+#   → DPCC / CSEG enforce propagation
+#
+# =============================================================================
+
+dpcc_cseg_relationship:
+  discovery_ledger: upstream
+  visibility_contract: opt-in, manual, later
+  dpcc_cseg: only after explicit visibility activation
+
+  flow:
+    - step: 1
+      action: Data exists
+      automated: true
+
+    - step: 2
+      action: Discovery Ledger records signals
+      automated: true
+
+    - step: 3
+      action: Human notices pattern
+      automated: false
+      required: false
+
+    - step: 4
+      action: Human creates visibility contract
+      automated: false
+      required: false
+
+    - step: 5
+      action: DPCC / CSEG enforce propagation
+      automated: true
+      precondition: visibility contract exists
+
+# =============================================================================
+# PROMOTION RULES (Non-Negotiable)
+# =============================================================================
+#
+# These rules ensure nothing becomes visible accidentally.
+# Reference: discovery_ledger.yaml promotion_rules
+#
+# =============================================================================
+
+promotion_rules:
+  rule_1:
+    statement: visibility_contract REQUIRED for any artifact shown in O1-O4
+    enforcement: visibility_validator.py
+    phase: C+
+
+  rule_2:
+    statement: discovery_ledger entry REQUIRED before contract creation
+    enforcement: visibility_validator.py (DPC check)
+    phase: C+
+
+  rule_3:
+    statement: promoted status REQUIRED before UI exposure
+    enforcement: visibility_validator.py (PLC check)
+    phase: D
+
+  truth_anchor: |
+    Nothing can become visible unless it was first discovered and logged.
+    This kills accidental exposure forever.
+
+# =============================================================================
+# PHASE C ACCEPTANCE CRITERIA
+# =============================================================================
+
+phase_c_acceptance:
+  criteria:
+    - Discovery Ledger table exists
+    - Signal extraction runs (background, non-blocking)
+    - Founder Console shows ledger
+    - No enforcement on discovery alone
+    - DPCC/CSEG unchanged (still require manual visibility contract)
+
+  explicitly_not_required:
+    - Approval workflows
+    - Automatic promotion
+    - Customer-facing changes
+    - UI for customers
+
+# =============================================================================
+# RELATED DOCUMENTS
+# =============================================================================
+
+related_documents:
+  - docs/contracts/visibility_contract.yaml
+  - docs/contracts/CONSOLE_TRUTH_MODEL.md
+  - backend/alembic/versions/059_pc_discovery_ledger.py

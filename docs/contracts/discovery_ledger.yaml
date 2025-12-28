@@ -1,0 +1,236 @@
+# =============================================================================
+# DISCOVERY LEDGER CONTRACT
+# =============================================================================
+#
+# Purpose: Record internal discovery signals indicating potential
+#          visibility-eligible artifacts or fields. No enforcement.
+#
+# Core Principle:
+#   Discovery Ledger is a notebook, not a decision engine.
+#   Decisions happen elsewhere, deliberately.
+#
+# Truth Anchor:
+#   Visibility must pass through discovery, or it does not exist.
+#   Discovery must be loaded at bootstrap, or it will be forgotten.
+#
+# Created: 2025-12-27
+# Reference: Phase C Discovery Ledger / PIN-208
+# Migration: 059_pc_discovery_ledger
+# =============================================================================
+
+version: "1.0"
+created: "2025-12-27"
+last_updated: "2025-12-27"
+
+# =============================================================================
+# DISCOVERY LEDGER DEFINITION
+# =============================================================================
+
+discovery_ledger:
+  purpose: |
+    Record internal discovery signals indicating potential
+    visibility-eligible artifacts or fields. No enforcement.
+
+  scope:
+    - internal_only
+    - development_phase
+    - non_customer_facing
+
+  signal_sources:
+    - api_access_logs
+    - operator_queries
+    - pattern_feedback
+    - prediction_events
+    - debug_queries
+
+  lifecycle:
+    states:
+      - observed    # Just noticed, no action taken
+      - ignored     # Human decided not interesting
+      - promoted    # Human decided to create visibility contract
+
+  rules:
+    - discovery_signals NEVER trigger UI exposure
+    - discovery_signals NEVER affect execution
+    - promotion requires explicit visibility contract
+
+# =============================================================================
+# SIGNAL TYPES
+# =============================================================================
+
+signal_types:
+  high_operator_access:
+    description: Humans keep looking at this
+    sources:
+      - api_access_logs
+      - console_queries
+    threshold:
+      access_count_7d: "> 10"
+      distinct_sessions: "> 3"
+
+  dominant_field:
+    description: This field keeps showing up
+    sources:
+      - pattern_feedback
+      - prediction_events
+    threshold:
+      occurrences_7d: "> 20"
+
+  frequent_join_target:
+    description: This relationship is operationally important
+    sources:
+      - sql_logs
+      - debug_queries
+    threshold:
+      join_count_7d: "> 10"
+
+  threshold_crossing:
+    description: Signal is strong enough to warrant attention
+    sources:
+      - predictions
+      - cost_analysis
+    threshold:
+      crossings_7d: "> 5"
+
+# =============================================================================
+# PROMOTION RULES (Non-Negotiable)
+# =============================================================================
+
+promotion_rules:
+  # These rules ensure nothing becomes visible accidentally
+
+  rule_1:
+    statement: visibility_contract REQUIRED for any artifact shown in O1-O4
+    enforcement: visibility_validator.py
+    phase: C+
+
+  rule_2:
+    statement: discovery_ledger entry REQUIRED before contract creation
+    enforcement: visibility_validator.py (DPC check)
+    phase: C+
+
+  rule_3:
+    statement: promoted status REQUIRED before UI exposure
+    enforcement: visibility_validator.py (PLC check)
+    phase: D
+
+  truth_anchor: |
+    Nothing can become visible unless it was first discovered and logged.
+    This kills accidental exposure forever.
+
+# =============================================================================
+# PHASE ENFORCEMENT TABLE
+# =============================================================================
+
+phase_enforcement:
+  phase_b:
+    discovery_required: false
+    visibility_allowed: manual_only
+    blocking: false
+    description: "Phase B: Discovery not required, manual visibility only"
+
+  phase_c:
+    discovery_required: true
+    visibility_allowed: false  # Observe only, no exposure yet
+    blocking: false
+    description: "Phase C: Discovery required, no UI exposure"
+
+  phase_c_plus:
+    discovery_required: true
+    visibility_allowed: true   # After explicit promotion
+    blocking: warning
+    description: "Phase C+: Discovery + promotion required for visibility"
+
+  phase_d:
+    discovery_required: true
+    visibility_allowed: true
+    blocking: true  # BLOCK if rules violated
+    description: "Phase D: Full enforcement, blocking on violations"
+
+# =============================================================================
+# VALIDATOR CHECKS
+# =============================================================================
+
+validator_checks:
+
+  # Discovery Presence Check (DPC)
+  dpc:
+    name: Discovery Presence Check
+    description: |
+      When visibility is ACTIVE for an artifact,
+      assert discovery_ledger contains >= 1 entry for that artifact.
+    trigger: artifact has O1-O4 REQUIRED
+    assertion: discovery_ledger.count(artifact) >= 1
+    severity:
+      phase_b: SKIP
+      phase_c: WARNING
+      phase_d: BLOCKER
+
+  # Promotion Legitimacy Check (PLC)
+  plc:
+    name: Promotion Legitimacy Check
+    description: |
+      If artifact appears in UI and visibility_contract is ACTIVE,
+      assert discovery_ledger.status != 'observed'.
+    trigger: artifact in UI AND visibility_contract.status == ACTIVE
+    assertion: discovery_ledger.status IN ('promoted', 'ignored')
+    severity:
+      phase_b: SKIP
+      phase_c: WARNING
+      phase_d: BLOCKER
+
+# =============================================================================
+# FOUNDER CONSOLE VIEW
+# =============================================================================
+
+founder_console_view:
+  location: "Founder Console -> Discovery Ledger"
+  access: founder_dev_only
+  mode: read_only
+  purpose: |
+    Internal signals the system observed.
+    Nothing here changes behavior unless you explicitly promote it.
+
+  features:
+    - table_view: "Artifact | Field | Signal | Seen Count"
+    - filters: "Artifact, Signal Type, Phase, Time Range"
+    - detail_drawer: "Evidence JSON, status, timestamps"
+    - actions:
+        - mark_ignored: "Prevents noise"
+        - promote_to_visibility: "Creates draft visibility contract"
+
+  design_rules:
+    - one_table
+    - no_charts
+    - no_alerts
+    - no_buttons_that_do_things_automatically
+
+# =============================================================================
+# INTEGRATION POINTS
+# =============================================================================
+
+integration:
+  session_playbook:
+    file: docs/playbooks/SESSION_PLAYBOOK.yaml
+    requirement: mandatory_load
+
+  visibility_lifecycle:
+    file: docs/contracts/visibility_lifecycle.yaml
+    requirement: promotion_rules reference
+
+  visibility_validator:
+    file: scripts/ops/visibility_validator.py
+    requirement: DPC and PLC checks
+
+  api_endpoint:
+    route: GET /api/v1/discovery
+    purpose: Founder Console data source
+
+# =============================================================================
+# TRUTH ANCHORS
+# =============================================================================
+
+truth_anchors:
+  - "Discovery Ledger is a notebook, not a decision engine."
+  - "Visibility must pass through discovery, or it does not exist."
+  - "Discovery must be loaded at bootstrap, or it will be forgotten."

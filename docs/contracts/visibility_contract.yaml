@@ -1,0 +1,481 @@
+# =============================================================================
+# VISIBILITY CONTRACT LAYER (VCL)
+# =============================================================================
+#
+# Purpose: Declare where data MUST and MUST NOT appear in the system.
+# This is truth propagation control, not UI design.
+#
+# Core Principle:
+#   Data existence ≠ Data observability
+#   Observability must be declared, scoped, and enforced.
+#
+# Enforcement: BL-WEB-001 behavior rule + validator
+#
+# Created: 2025-12-27
+# Reference: Phase B Observability Gap Fix
+# Console Truth Model: docs/contracts/CONSOLE_TRUTH_MODEL.md
+# =============================================================================
+
+version: "1.0"
+created: "2025-12-27"
+last_updated: "2025-12-27"
+
+# =============================================================================
+# VISIBILITY SURFACES (O1-O4)
+# =============================================================================
+# These are canonical and must not be renamed.
+#
+# O1: Aggregate / Counters - Summary statistics, totals, rates
+# O2: Lists / Index views - Paginated listings, search results
+# O3: Detail / Inspect views - Individual record views, full data
+# O4: Execution / Core truth - Pages that show/modify execution state
+#
+# Values: REQUIRED | OPTIONAL | FORBIDDEN
+#
+# REQUIRED:  API/UI must exist and be verified
+# OPTIONAL:  May exist, not enforced
+# FORBIDDEN: Must NOT exist (security/compliance)
+
+# =============================================================================
+# CONSOLE TOPOLOGY (AUTHORITATIVE - Reference: PIN-190, PIN-138)
+# =============================================================================
+#
+# CRITICAL: Consoles are separated by SUBDOMAIN + AUTH AUDIENCE, not API prefix.
+# Routes like /guard/* and /ops/* are shared path structures, not isolated APIs.
+#
+# =============================================================================
+
+consoles:
+
+  # ---------------------------------------------------------------------------
+  # CUSTOMER CONSOLE (Product Surface)
+  # ---------------------------------------------------------------------------
+  customer:
+    subdomain: console.agenticverz.com
+    audience: aos-customer
+    cookie_scope: console.agenticverz.com
+    csp: standard
+    purpose: |
+      Customer trust & control console.
+      Questions: "Is my AI safe?", "What happened?", "How do I stop it?"
+    routes:
+      - /guard/*           # Customer dashboard, incidents, killswitch
+      - /guard/costs/*     # Customer cost summary
+      - /customer/*        # Pre-run declarations, outcomes
+
+  # ---------------------------------------------------------------------------
+  # FOUNDER OPS CONSOLE (Internal Control Plane)
+  # ---------------------------------------------------------------------------
+  founder:
+    subdomain: fops.agenticverz.com
+    audience: aos-founder
+    cookie_scope: fops.agenticverz.com
+    csp: strict
+    rbac: required
+    purpose: |
+      Founder Ops Console (internal, hidden).
+      Questions: "Who should I call today?", "What's breaking?", "Where's the revenue risk?"
+    routes:
+      - /ops/*             # Founder intelligence dashboard
+      - /ops/cost/*        # Founder cost overview
+      - /ops/actions/*     # Freeze, throttle, override
+      - /founder/*         # Controls, timeline, decision audit
+      - /traces            # Execution traces
+      - /integration/*     # M25 Pillar integration loop
+      - /sba/*             # SBA Inspector (agent governance)
+
+  # ---------------------------------------------------------------------------
+  # PREFLIGHT CUSTOMER (Internal Mirror - Founder + Developers)
+  # ---------------------------------------------------------------------------
+  preflight-customer:
+    subdomain: preflight-console.agenticverz.com
+    audience: aos-internal
+    cookie_scope: preflight-console.agenticverz.com
+    csp: strict
+    access: internal_only  # IP/VPN restricted
+    feature_flags: enabled
+    mirrors: customer      # Inherits visibility rules from customer console
+    purpose: |
+      Mirror of customer console for internal verification.
+      Use case: Test customer UX before release.
+
+  # ---------------------------------------------------------------------------
+  # PREFLIGHT FOPS (Internal Mirror - Founder Only)
+  # ---------------------------------------------------------------------------
+  preflight-founder:
+    subdomain: preflight-fops.agenticverz.com
+    audience: aos-internal
+    cookie_scope: preflight-fops.agenticverz.com
+    csp: strict
+    access: internal_only  # Read-only enforcement
+    mirrors: founder       # Inherits visibility rules from founder console
+    purpose: |
+      Mirror of founder ops for verification (read-only).
+      Use case: Verify founder ops changes before production.
+
+# =============================================================================
+# CONSOLE SCOPE ENFORCEMENT (CSEG)
+# =============================================================================
+#
+# CRITICAL: CSEG validates by HOST + AUTH, not by route prefix.
+#
+# Phase B: DECLARATIVE only
+#   - Validator checks that visibility is declared for customer/founder
+#   - Validator does NOT perform runtime enforcement
+#   - Preflight consoles inherit from parent (not validated separately)
+#
+# Phase C: RUNTIME enforcement
+#   - Same route, different subdomain, different audience
+#   - REQUIRED → must return 200
+#   - FORBIDDEN → must return 403/404
+#
+# =============================================================================
+
+cseg_enforcement:
+  phase_b:
+    mode: declarative
+    checks:
+      - All artifacts declare customer visibility
+      - All artifacts declare founder visibility
+      - Preflight consoles inherit (not validated separately)
+
+  phase_c:
+    mode: runtime
+    method: |
+      For each artifact with FORBIDDEN console:
+      1. Issue GET to the artifact's API endpoint
+      2. Set Host header to FORBIDDEN console's subdomain
+      3. Set Authorization to FORBIDDEN console's audience
+      4. Expect 403 or 404
+      5. If 200 → VIOLATION
+
+    example: |
+      # Check that customer console cannot access pattern_feedback
+      GET /api/v1/feedback
+      Host: console.agenticverz.com
+      Authorization: Bearer <aos-customer-token>
+      → Expected: 403 (FORBIDDEN)
+
+      # Check that founder console CAN access pattern_feedback
+      GET /api/v1/feedback
+      Host: fops.agenticverz.com
+      Authorization: Bearer <aos-founder-token>
+      → Expected: 200 (REQUIRED)
+
+# =============================================================================
+# PHASE B ARTIFACTS
+# =============================================================================
+
+artifacts:
+
+  # ---------------------------------------------------------------------------
+  # PB-S3: Pattern Feedback (Controlled Feedback Loops)
+  # ---------------------------------------------------------------------------
+  pattern_feedback:
+    description: |
+      Observational feedback from PB-S3.
+      Records detected patterns (failures, cost spikes) without modifying execution.
+      Reference: PIN-203
+    table: pattern_feedback
+    phase: B
+    scenario: PB-S3
+
+    visibility:
+      O1: REQUIRED      # Stats/summary endpoint
+      O2: REQUIRED      # List with pagination
+      O3: REQUIRED      # Detail view
+      O4: FORBIDDEN     # Must NOT appear on execution pages
+
+    consoles:
+      # TWO CONSOLES: customer (console.agenticverz.com) and founder (fops.agenticverz.com)
+      # Preflight consoles inherit from their parent
+      customer: FORBIDDEN  # Customers should not see raw patterns
+      founder: REQUIRED    # Founders need to see patterns for system oversight
+
+    api_endpoints:
+      required:
+        - "GET /api/v1/feedback"
+        - "GET /api/v1/feedback/{id}"
+        - "GET /api/v1/feedback/stats/summary"
+
+    enforcement:
+      rule: BL-WEB-001
+      created: "2025-12-27"
+      verified: true
+
+  # ---------------------------------------------------------------------------
+  # PB-S4: Policy Proposals (Policy Evolution With Provenance)
+  # ---------------------------------------------------------------------------
+  policy_proposals:
+    description: |
+      Human-reviewed policy drafts from PB-S4.
+      Proposals are inert until human approval.
+      Reference: PIN-204
+    table: policy_proposals
+    phase: B
+    scenario: PB-S4
+
+    visibility:
+      O1: REQUIRED      # Stats/summary endpoint
+      O2: REQUIRED      # List with pagination
+      O3: REQUIRED      # Detail view with versions
+      O4: FORBIDDEN     # Must NOT appear on execution pages
+
+    consoles:
+      customer: FORBIDDEN  # Policy proposals are internal governance
+      founder: REQUIRED    # Founders manage and review proposals
+
+    api_endpoints:
+      required:
+        - "GET /api/v1/policy-proposals"
+        - "GET /api/v1/policy-proposals/{id}"
+        - "GET /api/v1/policy-proposals/{id}/versions"
+        - "GET /api/v1/policy-proposals/stats/summary"
+
+    enforcement:
+      rule: BL-WEB-001
+      created: "2025-12-27"
+      verified: true
+
+  # ---------------------------------------------------------------------------
+  # PB-S4: Policy Versions (append-only version history)
+  # ---------------------------------------------------------------------------
+  policy_versions:
+    description: |
+      Append-only version history for approved policies.
+      Each approval creates a new version snapshot.
+      Reference: PIN-204
+    table: policy_versions
+    phase: B
+    scenario: PB-S4
+
+    visibility:
+      O1: OPTIONAL      # May show version counts
+      O2: REQUIRED      # List versions per proposal
+      O3: REQUIRED      # Detail view of version
+      O4: FORBIDDEN     # Must NOT appear on execution pages
+
+    consoles:
+      customer: FORBIDDEN  # Policy versions are internal governance
+      founder: REQUIRED    # Founders audit version history
+
+    api_endpoints:
+      required:
+        - "GET /api/v1/policy-proposals/{id}/versions"
+
+    enforcement:
+      rule: BL-WEB-001
+      created: "2025-12-27"
+      verified: true
+
+  # ---------------------------------------------------------------------------
+  # PB-S5: Prediction Events (Prediction Without Determinism Loss)
+  # ---------------------------------------------------------------------------
+  prediction_events:
+    description: |
+      Advisory predictions from PB-S5.
+      Predictions are inert - they never influence execution.
+      Rule: Advise, don't influence.
+      Reference: PIN-205
+    table: prediction_events
+    phase: B
+    scenario: PB-S5
+
+    visibility:
+      O1: REQUIRED      # Stats/summary endpoint
+      O2: REQUIRED      # List with pagination
+      O3: REQUIRED      # Detail view with factors
+      O4: FORBIDDEN     # Must NOT appear on execution pages
+
+    consoles:
+      customer: OPTIONAL   # Customers may see relevant advisory predictions
+      founder: REQUIRED    # Founders see full prediction landscape
+
+    api_endpoints:
+      required:
+        - "GET /api/v1/predictions"
+        - "GET /api/v1/predictions/{id}"
+        - "GET /api/v1/predictions/subject/{type}/{id}"
+        - "GET /api/v1/predictions/stats/summary"
+
+    enforcement:
+      rule: BL-WEB-001
+      created: "2025-12-27"
+      verified: true
+
+# =============================================================================
+# PHASE A ARTIFACTS (Reference - Already Complete)
+# =============================================================================
+
+  # These are documented for completeness but were implemented before VCL
+
+  worker_runs:
+    description: |
+      Core execution records. Phase A truth-grade data.
+      This IS execution truth - O4 is where it belongs.
+    table: worker_runs
+    phase: A
+
+    visibility:
+      O1: REQUIRED
+      O2: REQUIRED
+      O3: REQUIRED
+      O4: REQUIRED      # This IS execution truth
+
+    consoles:
+      customer: REQUIRED   # Customers see their own runs
+      founder: REQUIRED    # Founders see all runs
+
+    api_endpoints:
+      required:
+        - "GET /api/v1/workers/{worker_id}/runs"
+        - "GET /api/v1/workers/{worker_id}/runs/{run_id}"
+
+    enforcement:
+      rule: BL-WEB-001
+      created: "2025-12-27"
+      verified: true
+
+  traces:
+    description: |
+      Immutable execution traces. Phase A truth-grade data.
+      Reference: S6 constitutional guarantee.
+    table: aos_traces
+    phase: A
+
+    visibility:
+      O1: REQUIRED
+      O2: REQUIRED
+      O3: REQUIRED
+      O4: REQUIRED      # This IS execution truth
+
+    consoles:
+      customer: FORBIDDEN  # Traces contain internal execution details
+      founder: REQUIRED    # Founders need full trace access for debugging
+
+    api_endpoints:
+      required:
+        - "GET /api/v1/traces"
+        - "GET /api/v1/traces/{run_id}"
+
+    enforcement:
+      rule: BL-WEB-001
+      created: "2025-12-27"
+      verified: true
+
+# =============================================================================
+# VALIDATION RULES
+# =============================================================================
+
+validation:
+  # When a new artifact is added, these checks run:
+
+  required_fields:
+    - description
+    - table
+    - phase
+    - visibility
+    - consoles
+    - api_endpoints
+    - enforcement
+
+  visibility_rules:
+    # If O4 is FORBIDDEN, artifact must NOT appear on execution pages
+    o4_forbidden_check: true
+
+    # If O1-O3 are REQUIRED, API endpoints must exist
+    required_api_check: true
+
+    # Console visibility must be explicit for BOTH consoles
+    # (customer and founder - preflight consoles inherit)
+    console_explicit: true
+    required_consoles:
+      - customer   # console.agenticverz.com
+      - founder    # fops.agenticverz.com
+
+  forbidden_surface_check:
+    # Verify FORBIDDEN surfaces have no exposed endpoints
+    # Phase B: Declarative (contract says FORBIDDEN)
+    # Phase C: Runtime (API returns 403/404 via subdomain+auth)
+    enabled: true
+    fail_action: BLOCK
+
+# =============================================================================
+# ENFORCEMENT
+# =============================================================================
+
+enforcement:
+  behavior_rule: BL-WEB-001
+  validator_script: scripts/ops/visibility_validator.py
+
+  on_violation:
+    action: BLOCK
+    message: |
+      VCL VIOLATION: Visibility contract not satisfied.
+      Artifact: {artifact}
+      Missing: {missing_surfaces}
+
+      Required action:
+      1. Add missing API endpoints
+      2. Update visibility_contract.yaml
+      3. Re-run visibility validator
+
+  on_new_artifact:
+    action: REQUIRE_DECLARATION
+    message: |
+      New artifact detected without visibility declaration.
+      Table: {table}
+
+      Required action:
+      1. Add entry to visibility_contract.yaml
+      2. Declare O1-O4 visibility
+      3. Declare console visibility
+      4. Implement required endpoints
+      5. Verify with visibility validator
+
+# =============================================================================
+# TRUTH ANCHOR
+# =============================================================================
+
+truth_anchor: |
+  If data exists, its visibility must be contractual — not accidental.
+
+# =============================================================================
+# PHASE C ENHANCEMENTS (PLANNED)
+# =============================================================================
+# These enhancements are informational for Phase B and become ACTIVE in Phase C.
+# =============================================================================
+
+phase_c_enhancements:
+
+  data_presence_blocker:
+    description: |
+      Upgrade data presence check from WARNING to BLOCKER.
+      If DB table has rows, corresponding API must return data.
+    phase_b: WARNING (--check-data-presence)
+    phase_c: BLOCKER (--strict-data-presence)
+    validator_flag: "--strict-data-presence"
+
+  console_runtime_enforcement:
+    description: |
+      Upgrade console scope enforcement from DECLARATIVE to RUNTIME.
+      REQUIRED consoles must expose the data at runtime.
+      FORBIDDEN consoles must NOT expose the data at runtime.
+    phase_b: DECLARATIVE (validator checks declaration exists)
+    phase_c: RUNTIME (validator checks actual exposure)
+
+  single_authoritative_db:
+    description: |
+      Enforce single authoritative database per environment.
+      Multiple DBs receiving writes causes split-brain visibility.
+    requirement: |
+      Each environment (dev, staging, prod) must have exactly one
+      writable database. Read replicas are allowed.
+    enforcement: |
+      - Phase B: Informational (detected in GAP 3 analysis)
+      - Phase C: CI check that DATABASE_URL is singular per env
+    note: |
+      GAP 3 (2025-12-27): Local + Neon DB both accessible.
+      Validator checked Neon first, then Local, both had data.
+      This caused validator data presence check to pass on worker_runs
+      (Local DB had runs) while Phase B tables (Neon only) showed gaps.

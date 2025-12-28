@@ -33,7 +33,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List
 from uuid import uuid4
 
 
@@ -93,9 +93,7 @@ def test_prediction_creation() -> TestResult:
         conn.commit()
 
         # Verify it exists
-        cur.execute(
-            "SELECT id FROM prediction_events WHERE id = %s", (prediction_id,)
-        )
+        cur.execute("SELECT id FROM prediction_events WHERE id = %s", (prediction_id,))
         row = cur.fetchone()
 
         # Cleanup
@@ -248,9 +246,7 @@ def test_delete_safety() -> TestResult:
         conn.commit()
 
         # Delete all test predictions
-        cur.execute(
-            "DELETE FROM prediction_events WHERE tenant_id = 'c2_delete_test'"
-        )
+        cur.execute("DELETE FROM prediction_events WHERE tenant_id = 'c2_delete_test'")
         deleted = cur.rowcount
         conn.commit()
 
@@ -324,9 +320,7 @@ def test_confidence_range() -> TestResult:
             conn.commit()
 
             # Cleanup if somehow it got through
-            cur.execute(
-                "DELETE FROM prediction_events WHERE id = %s", (prediction_id,)
-            )
+            cur.execute("DELETE FROM prediction_events WHERE id = %s", (prediction_id,))
             conn.commit()
             conn.close()
 
@@ -820,10 +814,12 @@ def test_policy_drift_creation() -> TestResult:
                 "workflow",
                 "drift_test_subject",
                 0.72,
-                json.dumps({
-                    "observed_pattern": "Rate limit pattern observed",
-                    "reference_policy_type": "rate_limit",
-                }),
+                json.dumps(
+                    {
+                        "observed_pattern": "Rate limit pattern observed",
+                        "reference_policy_type": "rate_limit",
+                    }
+                ),
                 json.dumps([]),
                 True,
                 now,
@@ -979,10 +975,12 @@ def test_policy_drift_delete_safety() -> TestResult:
                 "workflow",
                 "delete_test_subject",
                 0.88,
-                json.dumps({
-                    "observed_pattern": "Pattern to delete",
-                    "reference_policy_type": "budget",
-                }),
+                json.dumps(
+                    {
+                        "observed_pattern": "Pattern to delete",
+                        "reference_policy_type": "budget",
+                    }
+                ),
                 json.dumps([]),
                 True,
                 now,
@@ -1054,10 +1052,12 @@ def test_policy_drift_expiry() -> TestResult:
                 "workflow",
                 "expiry_test_subject",
                 0.65,
-                json.dumps({
-                    "observed_pattern": "Expired observation",
-                    "reference_policy_type": "safety",
-                }),
+                json.dumps(
+                    {
+                        "observed_pattern": "Expired observation",
+                        "reference_policy_type": "safety",
+                    }
+                ),
                 json.dumps([]),
                 True,
                 now - timedelta(minutes=35),

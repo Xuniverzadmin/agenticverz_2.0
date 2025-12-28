@@ -41,26 +41,20 @@ def upgrade() -> None:
         "prediction_events",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("tenant_id", sa.String(255), nullable=False, index=True),
-
         # Prediction identification
         sa.Column("prediction_type", sa.String(50), nullable=False, index=True),  # failure_likelihood, cost_overrun
         sa.Column("subject_type", sa.String(50), nullable=False),  # worker, run, tenant
         sa.Column("subject_id", sa.String(255), nullable=False),  # Reference only, NOT FK
-
         # Prediction content
         sa.Column("confidence_score", sa.Float, nullable=False),  # 0.0 - 1.0
         sa.Column("prediction_value", JSONB, nullable=False),  # Projected outcome
         sa.Column("contributing_factors", JSONB, nullable=False, default=[]),  # Features used
-
         # Validity window
         sa.Column("valid_until", sa.DateTime, nullable=True),  # Prediction expiry
-
         # Timestamps
         sa.Column("created_at", sa.DateTime, nullable=False, server_default=sa.text("NOW()")),
-
         # Advisory flag - ALWAYS TRUE (enforced by design)
         sa.Column("is_advisory", sa.Boolean, nullable=False, default=True),
-
         # Optional notes for context
         sa.Column("notes", sa.Text, nullable=True),
     )

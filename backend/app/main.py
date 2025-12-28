@@ -417,12 +417,12 @@ from .api.runtime import router as runtime_router
 from .api.status_history import router as status_history_router
 from .api.traces import router as traces_router
 from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
-from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
 
 # from .api.tenants import router as tenants_router  # M21 - DISABLED: Premature for beta stage
 # M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
 from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
 from .api.workers import router as workers_router  # Business Builder Worker v0.2
+from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
 
 app.include_router(health_router)
 app.include_router(policy_router)
@@ -477,6 +477,7 @@ app.include_router(predictions_router)  # /api/v1/predictions - Predictions (rea
 
 # Phase C Discovery Ledger (internal, founder/dev only)
 from .api.discovery import router as discovery_router
+
 app.include_router(discovery_router)  # /api/v1/discovery - Discovery Ledger (read-only)
 
 # CORS middleware

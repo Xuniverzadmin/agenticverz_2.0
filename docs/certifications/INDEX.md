@@ -22,6 +22,8 @@ Certification means a phase or component has been:
 |-------|----------|------|--------|
 | C1: Telemetry | (implicit) | 2025-12-27 | CERTIFIED |
 | C2: Prediction Plane | [C2_CERTIFICATION_STATEMENT.md](C2_CERTIFICATION_STATEMENT.md) | 2025-12-28 | CERTIFIED |
+| C3: Optimization Safety | [C3_CERTIFICATION_STATEMENT.md](C3_CERTIFICATION_STATEMENT.md) | 2025-12-28 | CERTIFIED |
+| C4: Multi-Envelope Coordination | [C4_CERTIFICATION_STATEMENT.md](C4_CERTIFICATION_STATEMENT.md) | 2025-12-28 | CERTIFIED |
 
 ---
 
@@ -33,6 +35,18 @@ Certification means a phase or component has been:
 |----------|---------|
 | [C2_CERTIFICATION_STATEMENT.md](C2_CERTIFICATION_STATEMENT.md) | Full C2 certification |
 
+### C3: Optimization Safety
+
+| Document | Purpose |
+|----------|---------|
+| [C3_CERTIFICATION_STATEMENT.md](C3_CERTIFICATION_STATEMENT.md) | Full C3 certification (69 tests, S1/S2/S3) |
+
+### C4: Multi-Envelope Coordination
+
+| Document | Purpose |
+|----------|---------|
+| [C4_CERTIFICATION_STATEMENT.md](C4_CERTIFICATION_STATEMENT.md) | Full C4 certification (14 coordination tests, 83 total optimization tests) |
+
 ---
 
 ## Related PINs
@@ -42,6 +56,11 @@ Certification means a phase or component has been:
 | PIN-221 | C2 Semantic Contract |
 | PIN-222 | C2 Implementation Plan |
 | PIN-223 | C2-T3 Completion |
+| PIN-225 | C3 Entry Conditions (CERTIFIED) |
+| PIN-226 | C3 Closure and C4 Bridge |
+| PIN-230 | C4 Entry Conditions (FROZEN) |
+| PIN-231 | C4 Certification Complete |
+| PIN-232 | C5 Entry Conditions (FROZEN) |
 
 ---
 
@@ -65,4 +84,4 @@ Re-certification requires full regression testing on authoritative environment.
 | Phase | Document | Status |
 |-------|----------|--------|
 | O4: Advisory UI | (pending) | DRAFT |
-| C3: Optimization | (pending) | LOCKED |
+| C5: Learning & Evolution | [PIN-232](../memory-pins/PIN-232-c5-entry-conditions.md) | 🔒 ENTRY CONDITIONS FROZEN |

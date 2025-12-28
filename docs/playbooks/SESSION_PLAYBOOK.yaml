@@ -440,14 +440,14 @@ system_state:
   phase_family: C
 
   # Current Stage: What behavior is currently allowed?
-  current_stage: C2_PREDICTION
+  current_stage: C3_OPTIMIZATION
 
   # Stage Status: Each stage is a gate, not a mode
   stages:
     A5_CLOSURE: FROZEN       # Truth-grade certification complete (binding forever)
     C1_TELEMETRY: CERTIFIED  # Telemetry plane certified 2025-12-27 (frozen invariant)
     C2_PREDICTION: CERTIFIED # Prediction plane certified 2025-12-28 (sealed, O4 governance frozen)
-    C3_OPTIMIZATION: LOCKED  # Optimization safety layer - entry conditions defined (PIN-225)
+    C3_OPTIMIZATION: ACTIVE  # Optimization safety layer - S1 canary in progress (2025-12-28)
 
   rule:
     - No stage transition is implicit
@@ -591,7 +591,8 @@ phase_transitions:
     completion_date: 2025-12-28
 
   C2_to_C3:
-    status: READY  # All prerequisites met, awaiting human approval
+    status: COMPLETE
+    completion_date: 2025-12-28
     required_artifacts:
       - PIN-225 (C3 Entry Conditions) ✅
       - C3_OPTIMIZATION_SAFETY_CONTRACT.md ✅
@@ -609,6 +610,8 @@ phase_transitions:
       - I-C3-5: Replay without predictions = baseline behavior
       - I-C3-6: Optimization failure never creates incidents
     explicit_unlock_phrase: "C3 entry conditions approved"
+    approved_by: human
+    approved_at: 2025-12-28
 
   general_rules:
     - Presence of code does not imply phase readiness

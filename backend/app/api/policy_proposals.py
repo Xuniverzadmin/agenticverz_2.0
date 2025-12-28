@@ -1,0 +1,318 @@
+"""
+PB-S4 Policy Proposals API (READ-ONLY)
+
+Exposes policy_proposals and policy_versions data for observability without modification.
+
+PB-S4 Contract:
+- Policies are proposed, never auto-enforced
+- Human approval is mandatory
+- Proposals have provenance to triggering feedback
+- Rejection preserved for audit trail
+
+READ_ONLY = True
+
+O1: API endpoint exists ✓
+O2: List visible with pagination ✓
+O3: Detail accessible ✓
+O4: Execution unchanged ✓ (no POST/PUT/DELETE)
+"""
+
+import logging
+from typing import Optional
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy import func, select
+
+from ..auth import verify_api_key
+from ..db import get_async_session
+from ..models.policy import PolicyProposal, PolicyVersion
+
+logger = logging.getLogger("nova.api.policy_proposals")
+
+router = APIRouter(prefix="/api/v1/policy-proposals", tags=["policy-proposals", "pb-s4", "read-only"])
+
+
+# =============================================================================
+# Response Models
+# =============================================================================
+
+
+class ProposalSummaryResponse(BaseModel):
+    """Summary of a policy proposal."""
+
+    id: str
+    tenant_id: str
+    proposal_name: str
+    proposal_type: str
+    status: str
+    rationale: str
+    created_at: Optional[str]
+    reviewed_at: Optional[str]
+    reviewed_by: Optional[str]
+    effective_from: Optional[str]
+    provenance_count: int
+
+
+class ProposalListResponse(BaseModel):
+    """Paginated list of policy proposals."""
+
+    total: int
+    limit: int
+    offset: int
+    by_status: dict
+    by_type: dict
+    items: list[ProposalSummaryResponse]
+
+
+class ProposalDetailResponse(BaseModel):
+    """Detailed policy proposal record."""
+
+    id: str
+    tenant_id: str
+    proposal_name: str
+    proposal_type: str
+    status: str
+    rationale: str
+    proposed_rule: dict
+    triggering_feedback_ids: list
+    created_at: Optional[str]
+    reviewed_at: Optional[str]
+    reviewed_by: Optional[str]
+    review_notes: Optional[str]
+    effective_from: Optional[str]
+    versions: list[dict]
+
+
+class VersionResponse(BaseModel):
+    """Policy version record."""
+
+    id: str
+    proposal_id: str
+    version: int
+    rule_snapshot: dict
+    created_at: Optional[str]
+    created_by: Optional[str]
+    change_reason: Optional[str]
+
+
+# =============================================================================
+# READ-ONLY Endpoints (No POST/PUT/DELETE)
+# =============================================================================
+
+
+@router.get("", response_model=ProposalListResponse)
+async def list_proposals(
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
+    status: Optional[str] = Query(None, description="Filter by status (draft/approved/rejected)"),
+    proposal_type: Optional[str] = Query(None, description="Filter by proposal type"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    _: str = Depends(verify_api_key),
+):
+    """
+    List policy proposals (PB-S4).
+
+    READ-ONLY: This endpoint only reads data.
+    No execution data is modified by this query.
+    """
+    async with get_async_session() as session:
+        # Build query
+        query = select(PolicyProposal).order_by(PolicyProposal.created_at.desc())
+
+        if tenant_id:
+            query = query.where(PolicyProposal.tenant_id == tenant_id)
+        if status:
+            query = query.where(PolicyProposal.status == status)
+        if proposal_type:
+            query = query.where(PolicyProposal.proposal_type == proposal_type)
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        count_result = await session.execute(count_query)
+        total = count_result.scalar() or 0
+
+        # Apply pagination
+        query = query.limit(limit).offset(offset)
+
+        result = await session.execute(query)
+        records = result.scalars().all()
+
+        # Aggregate by status and type
+        by_status: dict[str, int] = {}
+        by_type: dict[str, int] = {}
+        for r in records:
+            by_status[r.status] = by_status.get(r.status, 0) + 1
+            by_type[r.proposal_type] = by_type.get(r.proposal_type, 0) + 1
+
+        items = [
+            ProposalSummaryResponse(
+                id=str(r.id),
+                tenant_id=r.tenant_id,
+                proposal_name=r.proposal_name,
+                proposal_type=r.proposal_type,
+                status=r.status,
+                rationale=r.rationale[:200] if r.rationale else "",
+                created_at=r.created_at.isoformat() if r.created_at else None,
+                reviewed_at=r.reviewed_at.isoformat() if r.reviewed_at else None,
+                reviewed_by=r.reviewed_by,
+                effective_from=r.effective_from.isoformat() if r.effective_from else None,
+                provenance_count=len(r.triggering_feedback_ids) if r.triggering_feedback_ids else 0,
+            )
+            for r in records
+        ]
+
+        return ProposalListResponse(
+            total=total,
+            limit=limit,
+            offset=offset,
+            by_status=by_status,
+            by_type=by_type,
+            items=items,
+        )
+
+
+@router.get("/stats/summary")
+async def get_proposal_stats(
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
+    _: str = Depends(verify_api_key),
+):
+    """
+    Get policy proposal statistics (PB-S4).
+
+    READ-ONLY: This endpoint only reads aggregated data.
+    No execution data is modified by this query.
+    """
+    async with get_async_session() as session:
+        # Base query
+        query = select(PolicyProposal)
+        if tenant_id:
+            query = query.where(PolicyProposal.tenant_id == tenant_id)
+
+        result = await session.execute(query)
+        records = result.scalars().all()
+
+        # Aggregate stats
+        total = len(records)
+        by_status: dict[str, int] = {}
+        by_type: dict[str, int] = {}
+
+        for r in records:
+            by_status[r.status] = by_status.get(r.status, 0) + 1
+            by_type[r.proposal_type] = by_type.get(r.proposal_type, 0) + 1
+
+        # Approval rate
+        approved = by_status.get("approved", 0)
+        rejected = by_status.get("rejected", 0)
+        reviewed = approved + rejected
+        approval_rate = (approved / reviewed * 100) if reviewed > 0 else 0
+
+        return {
+            "total": total,
+            "by_status": by_status,
+            "by_type": by_type,
+            "reviewed": reviewed,
+            "pending": by_status.get("draft", 0),
+            "approval_rate_percent": round(approval_rate, 1),
+            "read_only": True,
+            "pb_s4_compliant": True,
+        }
+
+
+@router.get("/{proposal_id}", response_model=ProposalDetailResponse)
+async def get_proposal(
+    proposal_id: str,
+    _: str = Depends(verify_api_key),
+):
+    """
+    Get detailed policy proposal by ID (PB-S4).
+
+    READ-ONLY: This endpoint only reads data.
+    No execution data is modified by this query.
+    """
+    try:
+        proposal_uuid = UUID(proposal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid proposal ID format")
+
+    async with get_async_session() as session:
+        # Get proposal
+        result = await session.execute(select(PolicyProposal).where(PolicyProposal.id == proposal_uuid))
+        record = result.scalar_one_or_none()
+
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Proposal {proposal_id} not found")
+
+        # Get versions
+        versions_result = await session.execute(
+            select(PolicyVersion)
+            .where(PolicyVersion.proposal_id == proposal_uuid)
+            .order_by(PolicyVersion.version.desc())
+        )
+        versions = versions_result.scalars().all()
+
+        return ProposalDetailResponse(
+            id=str(record.id),
+            tenant_id=record.tenant_id,
+            proposal_name=record.proposal_name,
+            proposal_type=record.proposal_type,
+            status=record.status,
+            rationale=record.rationale,
+            proposed_rule=record.proposed_rule or {},
+            triggering_feedback_ids=record.triggering_feedback_ids or [],
+            created_at=record.created_at.isoformat() if record.created_at else None,
+            reviewed_at=record.reviewed_at.isoformat() if record.reviewed_at else None,
+            reviewed_by=record.reviewed_by,
+            review_notes=record.review_notes,
+            effective_from=record.effective_from.isoformat() if record.effective_from else None,
+            versions=[
+                {
+                    "id": str(v.id),
+                    "version": v.version,
+                    "rule_snapshot": v.rule_snapshot or {},
+                    "created_at": v.created_at.isoformat() if v.created_at else None,
+                    "created_by": v.created_by,
+                    "change_reason": v.change_reason,
+                }
+                for v in versions
+            ],
+        )
+
+
+@router.get("/{proposal_id}/versions", response_model=list[VersionResponse])
+async def list_proposal_versions(
+    proposal_id: str,
+    _: str = Depends(verify_api_key),
+):
+    """
+    List all versions of a policy proposal (PB-S4).
+
+    READ-ONLY: This endpoint only reads data.
+    Shows the evolution of a policy through approvals.
+    """
+    try:
+        proposal_uuid = UUID(proposal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid proposal ID format")
+
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(PolicyVersion)
+            .where(PolicyVersion.proposal_id == proposal_uuid)
+            .order_by(PolicyVersion.version.desc())
+        )
+        versions = result.scalars().all()
+
+        return [
+            VersionResponse(
+                id=str(v.id),
+                proposal_id=str(v.proposal_id),
+                version=v.version,
+                rule_snapshot=v.rule_snapshot or {},
+                created_at=v.created_at.isoformat() if v.created_at else None,
+                created_by=v.created_by,
+                change_reason=v.change_reason,
+            )
+            for v in versions
+        ]

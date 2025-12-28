@@ -318,6 +318,50 @@ DATABASE_URL=postgresql+asyncpg://nova:novapass@localhost:5433/nova_aos
 
 ---
 
+## Invariant #17: Acceptance Test Behavioral Gates
+
+**Date Added:** 2025-12-27
+**Incident:** PB-S2 acceptance testing wasted hours on auth thrash, DB mismatch, wrong crash target, and mid-test code fixes.
+
+### Failure Categories
+
+| Category | Symptom | Root Cause |
+|----------|---------|------------|
+| A | Trial-and-error auth headers | No AUTH_CONTRACT declared first |
+| B | FK failures, empty tables | Container used Neon, tests used local PgBouncer |
+| C | Fixed timezone bug mid-test | Code modification during acceptance |
+| D | FK on worker_registry | No readiness checklist before run creation |
+| E | Crashed wrong component | Assumed worker, actually backend |
+
+### Rules Added
+
+| Rule ID | Name | Purpose |
+|---------|------|---------|
+| BL-ACC-001 | Acceptance Immutability | No code changes during acceptance tests |
+| BL-RDY-001 | Runtime Readiness | Verify DB match, tenants, worker_registry before runs |
+| BL-EXEC-001 | Execution Topology | Identify executor/async_model before crash |
+
+### Enforcement
+
+- **Behavior Library**: `docs/behavior/behavior_library.yaml`
+- **Validator**: Responses trigger rule if keywords present without required sections
+- **Required Sections**: `ACCEPTANCE_PRECHECK`, `RUNTIME_READINESS`, `EXECUTION_TOPOLOGY`
+
+### Key Invariant
+
+> **Acceptance tests are read-only operations on the system under test.**
+> If a precondition fails, STOP and report blocker. Do not fix-to-proceed.
+
+### Correct Behavior
+
+Before PB-S2 or any acceptance scenario:
+1. Declare `ACCEPTANCE_PRECHECK` with code freeze
+2. Complete `RUNTIME_READINESS` (container DB, tenants, registry)
+3. If crash test: complete `EXECUTION_TOPOLOGY` (executor, async model, target)
+4. If ANY field is NO → STOP, report blocker, exit
+
+---
+
 ## How to Add New Invariants
 
 1. **Document the failure** - What broke, why, when

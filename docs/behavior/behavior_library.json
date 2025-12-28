@@ -4,6 +4,29 @@
   "status": "ACTIVE",
   "library": [
     {
+      "id": "BL-BOOT-001",
+      "name": "Cold-Start Confirmation",
+      "severity": "BLOCKER",
+      "class": "session_bootstrap",
+      "priority": 0,
+      "triggers": {
+        "first_response": true
+      },
+      "requires": {
+        "sections": ["COLD_START_CONFIRMATION"],
+        "fields": ["boot_contract_loaded", "behavior_rules_loaded", "lessons_enforced_loaded"]
+      },
+      "forbid": [
+        "proceeding without cold-start confirmation",
+        "skipping boot sequence",
+        "assuming constraints are loaded"
+      ],
+      "evidence": {
+        "required_fields": ["boot_contract_loaded", "behavior_rules_count", "lessons_enforced_loaded", "current_phase"]
+      },
+      "message_on_fail": "BL-BOOT-001 VIOLATION: Cold-start confirmation missing. Every session must begin with COLD_START_CONFIRMATION section proving that boot contract, behavior rules, and lessons are loaded. This is not optional. No work is valid without this proof.\n"
+    },
+    {
       "id": "BL-ENV-001",
       "name": "Runtime Sync Before Test",
       "severity": "BLOCKER",
@@ -415,6 +438,158 @@
         ]
       },
       "message_on_fail": "BL-TEST-001 VIOLATION: Test prerequisites not verified. Complete prerequisites before running tests.\n"
+    },
+    {
+      "id": "BL-ACC-001",
+      "name": "Acceptance Mode Immutability",
+      "severity": "BLOCKER",
+      "class": "acceptance_violation",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "PB-S1"
+          },
+          {
+            "keyword": "PB-S2"
+          },
+          {
+            "keyword": "acceptance"
+          },
+          {
+            "keyword": "acceptance test"
+          },
+          {
+            "keyword": "crash test"
+          },
+          {
+            "keyword": "validation scenario"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "ACCEPTANCE_PRECHECK"
+        ]
+      },
+      "forbid": [
+        "code modification during acceptance test",
+        "hotfix to proceed",
+        "migration during scenario",
+        "fixing bugs to make test pass",
+        "editing production code mid-test"
+      ],
+      "evidence": {
+        "required_fields": [
+          "scenario_name",
+          "code_freeze_declared",
+          "preconditions_verified"
+        ]
+      },
+      "message_on_fail": "BL-ACC-001 VIOLATION: Acceptance tests cannot modify code. If precondition fails, STOP and report blocker. Do not fix-to-proceed. File the blocker and exit.\n"
+    },
+    {
+      "id": "BL-RDY-001",
+      "name": "Runtime Readiness Checklist",
+      "severity": "BLOCKER",
+      "class": "environment_drift",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "PB-S1"
+          },
+          {
+            "keyword": "PB-S2"
+          },
+          {
+            "keyword": "worker run"
+          },
+          {
+            "keyword": "create run"
+          },
+          {
+            "keyword": "start run"
+          },
+          {
+            "keyword": "POST /api/v1/workers"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "RUNTIME_READINESS"
+        ],
+        "commands": [
+          "docker exec <container> env | grep DATABASE",
+          "SELECT id FROM tenants LIMIT 1",
+          "SELECT id FROM worker_registry LIMIT 1"
+        ]
+      },
+      "forbid": [
+        "assuming container uses same DB as local",
+        "inserting without checking tenant exists",
+        "inserting without checking worker_registry",
+        "blind INSERT attempts"
+      ],
+      "evidence": {
+        "required_fields": [
+          "authoritative_db",
+          "container_db_match",
+          "tenants_present",
+          "worker_registry_populated"
+        ]
+      },
+      "message_on_fail": "BL-RDY-001 VIOLATION: Runtime readiness not verified. Check container DATABASE_URL, verify tenants exist, verify worker_registry populated. Do not proceed until all fields are YES.\n"
+    },
+    {
+      "id": "BL-EXEC-001",
+      "name": "Execution Topology Awareness",
+      "severity": "BLOCKER",
+      "class": "architecture_assumption",
+      "triggers": {
+        "any_of": [
+          {
+            "keyword": "crash"
+          },
+          {
+            "keyword": "SIGKILL"
+          },
+          {
+            "keyword": "docker kill"
+          },
+          {
+            "keyword": "docker stop"
+          },
+          {
+            "keyword": "crash test"
+          },
+          {
+            "keyword": "crash scenario"
+          }
+        ]
+      },
+      "requires": {
+        "sections": [
+          "EXECUTION_TOPOLOGY"
+        ],
+        "evidence": [
+          "code_path_verified",
+          "async_model_identified"
+        ]
+      },
+      "forbid": [
+        "assuming which component executes work",
+        "crashing without verifying executor",
+        "guessing async model"
+      ],
+      "evidence": {
+        "required_fields": [
+          "executor",
+          "async_model",
+          "crash_target",
+          "verification_source"
+        ]
+      },
+      "message_on_fail": "BL-EXEC-001 VIOLATION: Execution topology not declared. Before crashing anything, identify: executor (backend/worker/external), async model (inline/background_task/queue), and crash target. Verify by reading code or docker inspect.\n"
     }
   ],
   "section_templates": {
@@ -425,6 +600,10 @@
     "MIGRATION_HEAD": "MIGRATION HEAD CHECK\n- Current: <revision>\n- Heads: <list>\n- Single head: YES / NO\n- Parent for new migration: <revision>\n",
     "SINGLE_HEAD_CHECK": "SINGLE HEAD ENFORCEMENT CHECK\n- Script: scripts/ops/check_migration_heads.sh\n- Exit code: 0 (success) / 1 (multiple heads)\n- Heads output: <revision(s)>\n- Head count: <number>\n- Single head verified: YES / NO (BLOCKER if NO)\n",
     "MERGE_JUSTIFICATION": "MERGE JUSTIFICATION (exception to BL-MIG-002)\n- Reason: resolving existing fork\n- Heads to merge: <list of head revisions>\n- Merge command: alembic merge <heads> -m \"<description>\"\n- Post-merge verification: alembic heads (must show single)\n",
-    "TEST_PREREQ": "TEST PREREQUISITES CHECK\n- Database accessible: YES / NO\n- Backend healthy: YES / NO\n- Migrations current: YES / NO\n- Required fixtures: <present / missing>\n"
+    "TEST_PREREQ": "TEST PREREQUISITES CHECK\n- Database accessible: YES / NO\n- Backend healthy: YES / NO\n- Migrations current: YES / NO\n- Required fixtures: <present / missing>\n",
+    "ACCEPTANCE_PRECHECK": "ACCEPTANCE PRECHECK (BL-ACC-001)\n- Scenario: <name>\n- Code freeze: YES (no modifications allowed during test)\n- Migrations allowed: NO (any schema change = STOP)\n- Config changes allowed: NO (any env/config edit = STOP)\n- All preconditions verified: YES / NO\n- If ANY field is not as required: STOP and report blocker\n",
+    "RUNTIME_READINESS": "RUNTIME READINESS (BL-RDY-001)\n- Authoritative DB: <host/db verified from container env>\n- Container DB match: YES / NO (container points to same DB)\n- Tenants present: YES / NO\n- Worker registry populated: YES / NO\n- Required NOT NULL fields known: YES / NO\n",
+    "EXECUTION_TOPOLOGY": "EXECUTION TOPOLOGY (BL-EXEC-001)\n- Executor: backend / worker / external\n- Async model: inline / background_task / queue\n- Crash target: <component to crash>\n- Verified by: <code path or docker inspect>\n",
+    "COLD_START_CONFIRMATION": "COLD_START_CONFIRMATION (BL-BOOT-001)\n- Boot contract loaded: YES / NO\n- Behavior rules loaded: <count> rules (list IDs)\n- Lessons enforced loaded: YES / NO\n- Current phase: A / A.5 / B / C\n- Frozen decisions: <list of frozen PINs if any>\n"
   }
 }

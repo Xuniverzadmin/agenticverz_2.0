@@ -50,6 +50,7 @@ You must actively avoid repeating documented failures, even if not explicitly re
 
 | Rule ID | Name | Trigger | Required Section |
 |---------|------|---------|-----------------|
+| **BL-BOOT-001** | **Cold-Start Confirmation** | **First response** | **`COLD_START_CONFIRMATION`** |
 | BL-ENV-001 | Runtime Sync | Testing endpoints | `RUNTIME SYNC CHECK` |
 | BL-AUTH-001 | Auth Contract | Auth errors | `AUTH CONTRACT CHECK` |
 | BL-TIME-001 | Timestamp Semantics | datetime ops | `TIMESTAMP SEMANTICS CHECK` |
@@ -57,6 +58,11 @@ You must actively avoid repeating documented failures, even if not explicitly re
 | BL-MIG-002 | Single Head Enforcement | Creating migrations | `SINGLE HEAD CHECK` |
 | BL-DEPLOY-001 | Service Names | Docker commands | `SERVICE ENUM` |
 | BL-TEST-001 | Test Prerequisites | Running tests | `TEST PREREQ` |
+| BL-ACC-001 | Acceptance Immutability | PB-S1/S2, acceptance | `ACCEPTANCE PRECHECK` |
+| BL-RDY-001 | Runtime Readiness | Worker runs, PB-S1/S2 | `RUNTIME READINESS` |
+| BL-EXEC-001 | Execution Topology | Crash tests, SIGKILL | `EXECUTION TOPOLOGY` |
+
+**BL-BOOT-001 is MANDATORY:** Every session must begin with COLD_START_CONFIRMATION proving constraints are loaded. No exceptions.
 
 **Rule:**
 Before acting, load Behavior Library v1 and comply with any triggered rules.

@@ -130,12 +130,135 @@ This is the **most important C3 test**. If this fails, C3 is invalid.
 1. Freeze C3 acceptance criteria and scenarios ← ✅ COMPLETE (this PIN)
 2. Design C3 optimization envelope abstraction ← ✅ COMPLETE (C3_ENVELOPE_ABSTRACTION.md)
 3. Draft C3 kill-switch and rollback model ← ✅ COMPLETE (C3_KILLSWITCH_ROLLBACK_MODEL.md)
-4. Implement minimal envelope for S1 ← ⏳ UNLOCKED
-5. CI guardrails for C3 invariants
-6. Implement S2, S3
-7. Certification
+4. Implement minimal envelope for S1 ← ✅ COMPLETE (2025-12-28)
+5. CI guardrails for C3 invariants ← ✅ COMPLETE (scripts/ci/c3_guardrails/)
+6. Implement S2, S3 ← ✅ COMPLETE (2025-12-28)
+7. Certification ← ✅ CERTIFIED (docs/certifications/C3_CERTIFICATION_STATEMENT.md)
 
-**No code before steps 1-3 are complete.**
+**All steps complete. C3 is CERTIFIED.**
+
+---
+
+## C3-S1 Implementation Status (2025-12-28)
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `backend/app/optimization/__init__.py` | C3 module exports |
+| `backend/app/optimization/killswitch.py` | Kill-switch implementation (K-1 to K-5) |
+| `backend/app/optimization/envelope.py` | Envelope schema and validation (V1-V5) |
+| `backend/app/optimization/manager.py` | Envelope lifecycle manager |
+| `backend/app/optimization/envelopes/s1_retry_backoff.py` | S1 canary envelope declaration |
+| `tests/optimization/test_c3_failure_scenarios.py` | 27 tests (F-1, F-2, F-3 + invariants) |
+| `scripts/ci/c3_guardrails/run_all.sh` | CI guardrails (CI-C3-1 to CI-C3-4) |
+
+### Failure Tests (CRITICAL - Run First)
+
+| Test | Status | Description |
+|------|--------|-------------|
+| F-1 | ✅ PASS | Kill-switch reverts active envelope immediately |
+| F-2 | ✅ PASS | Missing/low-confidence prediction prevents application |
+| F-3 | ✅ PASS | Prediction expiry reverts envelope to baseline |
+
+### CI Guardrails
+
+| Guard | Status | Enforcement |
+|-------|--------|-------------|
+| CI-C3-1 | ✅ PASS | No envelope without validation |
+| CI-C3-2 | ✅ PASS | V5 enforces revert policy |
+| CI-C3-3 | ✅ PASS | Kill-switch remains testable |
+| CI-C3-4 | ✅ PASS | Low confidence = baseline behavior |
+
+### Test Results (S1)
+
+```
+27 passed in 0.10s
+- TestF1_KillswitchRevertsActiveEnvelope (4 tests)
+- TestF2_MissingPredictionPreventsApplication (3 tests)
+- TestF3_StalePredictionAutoExpires (3 tests)
+- TestEnvelopeValidationRules (5 tests)
+- TestKillswitchInvariants (4 tests)
+- TestRollbackGuarantees (3 tests)
+- TestC3Invariants (5 tests)
+```
+
+---
+
+## C3-S2 Cost Smoothing Implementation (2025-12-28)
+
+### S2 Envelope Specification
+
+| Property | Value |
+|----------|-------|
+| Target | scheduler.max_concurrent_jobs |
+| Bounds | -10% max, increase FORBIDDEN |
+| Absolute Floor | 1 (never zero concurrency) |
+| Timebox | 900 seconds (15 minutes) |
+| Confidence | >= 0.75 |
+
+### S2 Validation Rules (S2-V1 to S2-V5)
+
+| Rule | Enforcement |
+|------|-------------|
+| S2-V1 | Increase forbidden (max_increase = 0) |
+| S2-V2 | Absolute floor >= 1 |
+| S2-V3 | Timebox <= 15 minutes |
+| S2-V4 | Confidence >= 0.75 |
+| S2-V5 | Must target max_concurrent_jobs |
+
+### S2 Files
+
+- `backend/app/optimization/envelopes/s2_cost_smoothing.py`
+- `tests/optimization/test_c3_s2_cost_smoothing.py` (20 tests)
+
+---
+
+## C3-S3 Failure Matrix (CRITICAL) (2025-12-28)
+
+### Failure Injection Matrix
+
+| ID | Failure | Expected Outcome | Status |
+|----|---------|------------------|--------|
+| F-S3-1 | Prediction deleted mid-envelope | Immediate revert | ✅ PASS |
+| F-S3-2 | Prediction expires early | Immediate revert | ✅ PASS |
+| F-S3-3 | Kill-switch toggled repeatedly | Idempotent, no residue | ✅ PASS |
+| F-S3-4 | System restart during envelope | Baseline restored | ✅ PASS |
+| F-S3-5 | Envelope validation corruption | Rejected, no effect | ✅ PASS |
+| F-S3-6 | Envelope store unavailable | Optimization disabled | ✅ PASS |
+| F-S3-7 | Multiple envelopes requested | Duplicates rejected | ✅ PASS |
+| F-S3-8 | Replay without predictions | Baseline behavior | ✅ PASS |
+| F-S3-9 | Replay with failures | Deterministic sequence | ✅ PASS |
+
+### S3 Files
+
+- `tests/optimization/test_c3_s3_failure_matrix.py` (22 tests)
+
+---
+
+## Final Test Results
+
+```
+69 passed in 0.19s
+
+- test_c3_failure_scenarios.py: 27 tests (S1 + invariants)
+- test_c3_s2_cost_smoothing.py: 20 tests (S2)
+- test_c3_s3_failure_matrix.py: 22 tests (S3 failure matrix)
+```
+
+---
+
+## C3 Certification
+
+**Status:** CERTIFIED
+**Date:** 2025-12-28
+**Document:** `docs/certifications/C3_CERTIFICATION_STATEMENT.md`
+
+All invariants verified:
+- I-C3-1 to I-C3-6: VERIFIED
+- K-1 to K-5: VERIFIED
+- R-1 to R-5: VERIFIED
+- V1-V5 + S2-V1 to S2-V5: ENFORCED
 
 ---
 

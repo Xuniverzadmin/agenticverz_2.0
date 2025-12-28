@@ -441,7 +441,8 @@ class WorkerRun(SQLModel, table=True):
     input_json: Optional[str] = None
 
     # Status
-    status: str = Field(default="queued", max_length=50, index=True)  # queued, running, completed, failed
+    # PB-S2: "crashed" added for orphan recovery (runs that died with system)
+    status: str = Field(default="queued", max_length=50, index=True)  # queued, running, completed, failed, crashed
     success: Optional[bool] = None
     error: Optional[str] = None
 

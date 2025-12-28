@@ -13,6 +13,88 @@ status: ACTIVE
 
 library:
   # =========================================================================
+  # BL-BOOT-001: Session Playbook Bootstrap (MANDATORY FIRST)
+  # Incident: Session resumed without loading constraints, caused regression
+  # Solution: SESSION_PLAYBOOK.yaml as single source of truth
+  # Principle: Memory decays. Contracts don't.
+  #            Sessions must boot like systems, not humans.
+  # =========================================================================
+  - id: BL-BOOT-001
+    name: Session Playbook Bootstrap
+    severity: BLOCKER
+    class: session_bootstrap
+    priority: 0  # Must be checked before all other rules
+
+    playbook:
+      source: docs/playbooks/SESSION_PLAYBOOK.yaml
+      version_field: session_playbook_version
+
+    triggers:
+      # Triggers on ANY first substantive response in a session
+      # Validator checks: if no SESSION_BOOTSTRAP_CONFIRMATION in first response → BLOCK
+      first_response: true
+
+    requires:
+      sections:
+        - SESSION_BOOTSTRAP_CONFIRMATION
+      fields:
+        - playbook_version
+        - loaded_documents
+        - restrictions_acknowledged
+        - current_phase
+      documents:
+        # These are loaded from SESSION_PLAYBOOK.yaml mandatory_load
+        - CLAUDE_BOOT_CONTRACT.md
+        - behavior_library.yaml
+        - visibility_contract.yaml
+        - LESSONS_ENFORCED.md
+        - PIN-199-pb-s1-retry-immutability.md
+        - PIN-202-pb-s2-crash-recovery.md
+        - PIN-203-pb-s3-controlled-feedback-loops.md
+        - PIN-204-pb-s4-policy-evolution-with-provenance.md
+        - PIN-205-pb-s5-prediction-without-determinism-loss.md
+
+    forbid:
+      - "proceeding without session bootstrap"
+      - "skipping playbook load"
+      - "assuming constraints are loaded"
+      - "partial document loading"
+      - "work before bootstrap confirmation"
+
+    evidence:
+      required_fields:
+        - playbook_version
+        - loaded_documents_count
+        - all_documents_loaded
+        - restrictions_acknowledged
+        - current_phase
+
+    validator:
+      script: scripts/ops/session_bootstrap_validator.py
+      playbook: docs/playbooks/SESSION_PLAYBOOK.yaml
+
+    message_on_fail: >
+      BL-BOOT-001 VIOLATION: Session bootstrap required.
+
+      Your first response must be SESSION_BOOTSTRAP_CONFIRMATION.
+
+      Required format:
+        SESSION_BOOTSTRAP_CONFIRMATION
+        - playbook_version: 1.0
+        - loaded_documents:
+          - CLAUDE_BOOT_CONTRACT.md
+          - behavior_library.yaml
+          - visibility_contract.yaml
+          - LESSONS_ENFORCED.md
+          - [all Phase B frozen PINs]
+        - restrictions_acknowledged: YES
+        - current_phase: [A/B/C]
+
+      No work is allowed until bootstrap is complete.
+      Memory decays. Contracts don't.
+      Sessions must boot like systems, not humans.
+
+  # =========================================================================
   # BL-ENV-001: Runtime Sync Before Test
   # Incident: Tested endpoint with stale container, wasted 2+ hours debugging
   # =========================================================================
@@ -335,6 +417,259 @@ library:
       BL-TEST-001 VIOLATION: Test prerequisites not verified.
       Complete prerequisites before running tests.
 
+  # =========================================================================
+  # BL-ACC-001: Acceptance Mode Immutability
+  # Incident: Fixed timezone bug mid-PB-S2, mutated scenario under test
+  # =========================================================================
+  - id: BL-ACC-001
+    name: Acceptance Mode Immutability
+    severity: BLOCKER
+    class: acceptance_violation
+
+    triggers:
+      any_of:
+        - keyword: "PB-S1"
+        - keyword: "PB-S2"
+        - keyword: "acceptance"
+        - keyword: "acceptance test"
+        - keyword: "crash test"
+        - keyword: "validation scenario"
+
+    requires:
+      sections:
+        - ACCEPTANCE_PRECHECK
+
+    forbid:
+      - "code modification during acceptance test"
+      - "hotfix to proceed"
+      - "migration during scenario"
+      - "fixing bugs to make test pass"
+      - "editing production code mid-test"
+
+    evidence:
+      required_fields:
+        - scenario_name
+        - code_freeze_declared
+        - preconditions_verified
+
+    message_on_fail: >
+      BL-ACC-001 VIOLATION: Acceptance tests cannot modify code.
+      If precondition fails, STOP and report blocker.
+      Do not fix-to-proceed. File the blocker and exit.
+
+  # =========================================================================
+  # BL-RDY-001: Runtime Readiness Checklist
+  # Incident: Mixed local DB with container's Neon DB, FK failures
+  # =========================================================================
+  - id: BL-RDY-001
+    name: Runtime Readiness Checklist
+    severity: BLOCKER
+    class: environment_drift
+
+    triggers:
+      any_of:
+        - keyword: "PB-S1"
+        - keyword: "PB-S2"
+        - keyword: "worker run"
+        - keyword: "create run"
+        - keyword: "start run"
+        - keyword: "POST /api/v1/workers"
+
+    requires:
+      sections:
+        - RUNTIME_READINESS
+      commands:
+        - "docker exec <container> env | grep DATABASE"
+        - "SELECT id FROM tenants LIMIT 1"
+        - "SELECT id FROM worker_registry LIMIT 1"
+
+    forbid:
+      - "assuming container uses same DB as local"
+      - "inserting without checking tenant exists"
+      - "inserting without checking worker_registry"
+      - "blind INSERT attempts"
+
+    evidence:
+      required_fields:
+        - authoritative_db
+        - container_db_match
+        - tenants_present
+        - worker_registry_populated
+
+    message_on_fail: >
+      BL-RDY-001 VIOLATION: Runtime readiness not verified.
+      Check container DATABASE_URL, verify tenants exist, verify worker_registry populated.
+      Do not proceed until all fields are YES.
+
+  # =========================================================================
+  # BL-EXEC-001: Execution Topology Awareness
+  # Incident: Crashed wrong component (worker instead of backend)
+  # =========================================================================
+  - id: BL-EXEC-001
+    name: Execution Topology Awareness
+    severity: BLOCKER
+    class: architecture_assumption
+
+    triggers:
+      any_of:
+        - keyword: "crash"
+        - keyword: "SIGKILL"
+        - keyword: "docker kill"
+        - keyword: "docker stop"
+        - keyword: "crash test"
+        - keyword: "crash scenario"
+
+    requires:
+      sections:
+        - EXECUTION_TOPOLOGY
+      evidence:
+        - code_path_verified
+        - async_model_identified
+
+    forbid:
+      - "assuming which component executes work"
+      - "crashing without verifying executor"
+      - "guessing async model"
+
+    evidence:
+      required_fields:
+        - executor
+        - async_model
+        - crash_target
+        - verification_source
+
+    message_on_fail: >
+      BL-EXEC-001 VIOLATION: Execution topology not declared.
+      Before crashing anything, identify: executor (backend/worker/external),
+      async model (inline/background_task/queue), and crash target.
+      Verify by reading code or docker inspect.
+
+  # =========================================================================
+  # BL-OBS-001: Observability Completeness Gate
+  # Incident: Phase B completed at DB+service layer but NOT at web layer
+  # Gap: pattern_feedback, policy_proposals, prediction_events had NO API/UI
+  # =========================================================================
+  - id: BL-OBS-001
+    name: Observability Completeness Gate
+    severity: BLOCKER
+    class: observability_gap
+
+    triggers:
+      any_of:
+        - keyword: "pattern_feedback"
+        - keyword: "policy_proposals"
+        - keyword: "prediction_events"
+        - keyword: "PB-S3"
+        - keyword: "PB-S4"
+        - keyword: "PB-S5"
+        - keyword: "scenario complete"
+        - keyword: "FROZEN"
+        - keyword: "freeze"
+
+    requires:
+      sections:
+        - WEB_PROPAGATION_CHECK
+      assertions:
+        - "O1_endpoint == YES"
+        - "O2_list_visible == YES"
+        - "O3_detail_accessible == YES"
+        - "O4_execution_unchanged == YES"
+
+    forbid:
+      - "marking scenario complete without API endpoint"
+      - "marking scenario complete without UI visibility"
+      - "freezing without O1-O4 verification"
+      - "data exists but is invisible"
+      - "truth exists but cannot be observed"
+
+    evidence:
+      required_fields:
+        - O1_endpoint
+        - O2_list_visible
+        - O3_detail_accessible
+        - O4_execution_unchanged
+        - api_urls
+        - ui_route_names
+
+    message_on_fail: >
+      BL-OBS-001 VIOLATION: Observability completeness not verified.
+      Phase B scenarios require O1-O4 propagation to web pages.
+      Data that exists but cannot be observed violates the acceptance contract.
+      Cannot mark scenario FROZEN until all O1-O4 checks pass.
+
+  # =========================================================================
+  # BL-WEB-001: Web Propagation Contract (Visibility Contract Layer)
+  # Purpose: Enforce that all data artifacts have declared visibility
+  # Reference: docs/contracts/visibility_contract.yaml
+  # Principle: Data existence ≠ Data observability
+  # =========================================================================
+  - id: BL-WEB-001
+    name: Web Propagation Contract
+    severity: BLOCKER
+    class: visibility_contract
+
+    triggers:
+      any_of:
+        - keyword: "new table"
+        - keyword: "new model"
+        - keyword: "CREATE TABLE"
+        - keyword: "op.create_table"
+        - keyword: "class.*Base"
+        - keyword: "__tablename__"
+        - keyword: "migration"
+        - keyword: "domain model"
+        - keyword: "phase artifact"
+        - keyword: "new artifact"
+
+    requires:
+      sections:
+        - WEB_VISIBILITY_CONTRACT_CHECK
+      contracts:
+        - "visibility_contract.yaml entry exists"
+      assertions:
+        - "visibility_declared == YES"
+        - "O1_through_O4_explicit == YES"
+        - "console_visibility_explicit == YES"
+        - "api_endpoints_declared == YES"
+
+    forbid:
+      - "creating table without visibility declaration"
+      - "new artifact without visibility contract entry"
+      - "data exists but visibility not declared"
+      - "implicit visibility assumptions"
+      - "O4 REQUIRED for non-execution data"
+
+    evidence:
+      required_fields:
+        - artifact_name
+        - visibility_contract_entry
+        - O1_visibility
+        - O2_visibility
+        - O3_visibility
+        - O4_visibility
+        - console_ops
+        - console_guard
+        - console_founder
+        - console_user
+        - api_endpoints
+
+    validator:
+      script: scripts/ops/visibility_validator.py
+      contract_file: docs/contracts/visibility_contract.yaml
+
+    message_on_fail: >
+      BL-WEB-001 VIOLATION: Visibility contract not satisfied.
+      New data artifact detected without visibility declaration.
+
+      Required action:
+      1. Add entry to docs/contracts/visibility_contract.yaml
+      2. Declare O1-O4 visibility (REQUIRED/OPTIONAL/FORBIDDEN)
+      3. Declare console visibility (ops/guard/founder/user)
+      4. Implement required API endpoints
+      5. Verify with visibility validator
+
+      Truth anchor: If data exists, its visibility must be contractual - not accidental.
+
 # Section templates for Claude output
 section_templates:
   RUNTIME_SYNC: |
@@ -396,3 +731,83 @@ section_templates:
     - Backend healthy: YES / NO
     - Migrations current: YES / NO
     - Required fixtures: <present / missing>
+
+  ACCEPTANCE_PRECHECK: |
+    ACCEPTANCE PRECHECK (BL-ACC-001)
+    - Scenario: <name>
+    - Code freeze: YES (no modifications allowed during test)
+    - Migrations allowed: NO (any schema change = STOP)
+    - Config changes allowed: NO (any env/config edit = STOP)
+    - All preconditions verified: YES / NO
+    - If ANY field is not as required: STOP and report blocker
+
+  RUNTIME_READINESS: |
+    RUNTIME READINESS (BL-RDY-001)
+    - Authoritative DB: <output of: docker exec <backend> env | grep DATABASE_URL>
+    - Container DB match: YES / NO (all queries use container's DATABASE_URL)
+    - DB connect proof: <output of: psql $DATABASE_URL -c "SELECT 1">
+    - Tenants present: YES / NO (query result)
+    - Worker registry populated: YES / NO (query result)
+    - Required NOT NULL fields known: YES / NO
+
+  EXECUTION_TOPOLOGY: |
+    EXECUTION TOPOLOGY (BL-EXEC-001)
+    - Executor: backend / worker / external
+    - Async model: inline / background_task / queue
+    - Crash target: <component to crash>
+    - Verified by: <code path or docker inspect>
+
+  SESSION_BOOTSTRAP_CONFIRMATION: |
+    SESSION_BOOTSTRAP_CONFIRMATION (BL-BOOT-001)
+    - playbook_version: 1.0
+    - loaded_documents:
+      - CLAUDE_BOOT_CONTRACT.md
+      - behavior_library.yaml
+      - visibility_contract.yaml
+      - LESSONS_ENFORCED.md
+      - PIN-199-pb-s1-retry-immutability.md
+      - PIN-202-pb-s2-crash-recovery.md
+      - PIN-203-pb-s3-controlled-feedback-loops.md
+      - PIN-204-pb-s4-policy-evolution-with-provenance.md
+      - PIN-205-pb-s5-prediction-without-determinism-loss.md
+    - restrictions_acknowledged: YES
+    - current_phase: A / B / C
+
+  WEB_PROPAGATION_CHECK: |
+    WEB PROPAGATION CHECK (BL-OBS-001)
+    - O1 endpoint exists: YES / NO
+    - O2 list visible: YES / NO
+    - O3 detail view accessible: YES / NO
+    - O4 execution pages unchanged: YES
+    Evidence:
+    - API URLs: <list of GET endpoints>
+    - UI route names: <list of frontend routes or "N/A - API only">
+    - Curl verification: <command to verify O1-O3>
+
+  WEB_VISIBILITY_CONTRACT_CHECK: |
+    WEB VISIBILITY CONTRACT CHECK (BL-WEB-001)
+    Artifact: <name>
+    Contract entry: docs/contracts/visibility_contract.yaml
+
+    Declared Visibility:
+    - O1 (Aggregates/Counters): REQUIRED / OPTIONAL / FORBIDDEN
+    - O2 (Lists/Index views):   REQUIRED / OPTIONAL / FORBIDDEN
+    - O3 (Detail/Inspect):      REQUIRED / OPTIONAL / FORBIDDEN
+    - O4 (Execution/Core):      REQUIRED / OPTIONAL / FORBIDDEN
+
+    Declared Consoles:
+    - ops:     REQUIRED / OPTIONAL / FORBIDDEN
+    - guard:   REQUIRED / OPTIONAL / FORBIDDEN
+    - founder: REQUIRED / OPTIONAL / FORBIDDEN
+    - user:    REQUIRED / OPTIONAL / FORBIDDEN
+
+    API Endpoints:
+    - <list of required endpoints from contract>
+
+    Verification:
+    - Contract entry exists: YES / NO
+    - REQUIRED surfaces implemented: YES / NO
+    - FORBIDDEN surfaces blocked: YES / NO
+    - All assertions pass: YES / NO
+
+    Truth anchor: If data exists, its visibility must be contractual.

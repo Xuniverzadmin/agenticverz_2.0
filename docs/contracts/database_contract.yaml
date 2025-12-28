@@ -1,0 +1,184 @@
+# =============================================================================
+# DATABASE CONTRACT
+# =============================================================================
+#
+# Purpose: Single source of truth for database access rules.
+# This kills the "localhost vs Neon" split-brain class of failures permanently.
+#
+# Core Principle:
+#   There must be exactly one authoritative write database per environment.
+#   Scripts do not choose databases. Environments choose databases.
+#
+# Truth Anchor:
+#   If a system writes insight, it must write to the same truth store as execution.
+#   Otherwise, insight is fiction.
+#
+# Created: 2025-12-27
+# Reference: Phase C Discovery Ledger split-brain fix
+# =============================================================================
+
+version: "1.0"
+created: "2025-12-27"
+last_updated: "2025-12-27"
+
+# =============================================================================
+# AUTHORITATIVE DATABASE
+# =============================================================================
+
+authoritative_database:
+  production: Neon PostgreSQL
+  staging: Neon PostgreSQL
+  local_dev: Local PostgreSQL (localhost:6432)
+
+  rule: |
+    Within one run, everything points to the same DB.
+    No mixing of databases within a single execution context.
+
+# =============================================================================
+# RESOLUTION RULES (Non-Negotiable)
+# =============================================================================
+
+resolution_rules:
+
+  rule_1:
+    statement: DATABASE_URL must be explicitly set
+    enforcement: All scripts must check for DATABASE_URL
+    violation_action: HARD FAIL (no fallback)
+
+  rule_2:
+    statement: No localhost default fallback
+    enforcement: Scripts must not have default localhost URLs
+    violation_action: BLOCK script execution
+
+  rule_3:
+    statement: Backend db imports forbidden in tooling
+    enforcement: Validators/scripts must not import from app.db
+    violation_action: BLOCK code review
+    reason: |
+      app.db is for backend runtime only.
+      Scripts must use explicit psycopg2 + DATABASE_URL.
+
+  rule_4:
+    statement: No implicit engine creation
+    enforcement: All DB connections must trace to DATABASE_URL
+    violation_action: BLOCK
+
+# =============================================================================
+# FORBIDDEN PATTERNS
+# =============================================================================
+
+forbidden_patterns:
+
+  - pattern: localhost_database_fallback
+    description: Using localhost as default when DATABASE_URL not set
+    example_violation: |
+      DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost:5432/db")
+    correct_pattern: |
+      DATABASE_URL = os.getenv("DATABASE_URL")
+      if not DATABASE_URL:
+          raise RuntimeError("DATABASE_URL must be explicitly set")
+
+  - pattern: app_db_import_in_scripts
+    description: Importing from app.db in scripts/validators
+    example_violation: |
+      from app.db import get_engine
+      engine = get_engine()
+    correct_pattern: |
+      import psycopg2
+      database_url = get_database_url()  # Script's own resolver
+      conn = psycopg2.connect(database_url)
+
+  - pattern: implicit_environment_detection
+    description: Inferring database from environment markers
+    example_violation: |
+      if os.getenv("ENV") == "prod":
+          db = NEON_URL
+      else:
+          db = LOCALHOST
+    correct_pattern: |
+      # Always use explicit DATABASE_URL
+      db = os.getenv("DATABASE_URL")
+
+  - pattern: split_write_targets
+    description: Backend writes to one DB, scripts write to another
+    example_violation: |
+      # Backend → Neon
+      # Discovery validator → localhost
+    correct_pattern: |
+      # Both backend AND scripts use same DATABASE_URL
+
+# =============================================================================
+# ENVIRONMENT TOPOLOGY
+# =============================================================================
+
+environment_topology:
+
+  local_development:
+    database: postgresql://nova:novapass@localhost:6432/nova_aos
+    all_components_use: Same URL
+    note: Backend, validators, scripts all point to local
+
+  staging:
+    database: Neon staging (set via DATABASE_URL)
+    all_components_use: Same URL
+
+  production:
+    database: Neon production (set via DATABASE_URL)
+    all_components_use: Same URL
+
+  rule: |
+    If backend uses Neon, validators use Neon.
+    If backend uses localhost, validators use localhost.
+    No mixing.
+
+# =============================================================================
+# STARTUP SANITY CHECK
+# =============================================================================
+
+startup_sanity_check:
+  query: "SELECT current_database(), inet_server_addr()"
+  purpose: |
+    Log which database is active at startup.
+    Provides instant proof during debugging.
+    Evidence in CI logs.
+
+  implementation: |
+    At script/validator startup, run:
+      SELECT current_database(), inet_server_addr()
+    Log the result once.
+
+# =============================================================================
+# VALIDATOR INTEGRATION
+# =============================================================================
+
+validator_integration:
+
+  visibility_validator:
+    file: scripts/ops/visibility_validator.py
+    requirement: |
+      Uses get_database_url() which requires explicit DATABASE_URL.
+      DPC/PLC checks use psycopg2, not app.db.
+
+  session_bootstrap_validator:
+    file: scripts/ops/session_bootstrap_validator.py
+    requirement: Must verify database_contract.yaml is loaded
+
+# =============================================================================
+# TRUTH ANCHORS
+# =============================================================================
+
+truth_anchors:
+  - "There must be exactly one authoritative write database per environment."
+  - "Scripts do not choose databases. Environments choose databases."
+  - "If a system writes insight, it must write to the same truth store as execution."
+  - "Otherwise, insight is fiction."
+
+# =============================================================================
+# RELATED DOCUMENTS
+# =============================================================================
+
+related_documents:
+  - docs/playbooks/SESSION_PLAYBOOK.yaml
+  - docs/contracts/visibility_contract.yaml
+  - scripts/ops/visibility_validator.py
+  - backend/app/db.py

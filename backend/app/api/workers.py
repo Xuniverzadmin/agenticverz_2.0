@@ -216,9 +216,9 @@ async def _store_run(run_id: str, data: Dict[str, Any], tenant_id: str = "defaul
             if data.get("cost_cents") is not None:
                 existing.cost_cents = data.get("cost_cents")
             if data.get("status") in ("completed", "failed"):
-                existing.completed_at = datetime.now(timezone.utc)
+                existing.completed_at = datetime.utcnow()  # Naive UTC for WITHOUT TIME ZONE
             if data.get("status") == "running" and not existing.started_at:
-                existing.started_at = datetime.now(timezone.utc)
+                existing.started_at = datetime.utcnow()  # Naive UTC for WITHOUT TIME ZONE
         else:
             # Create new run
             run = WorkerRun(
@@ -238,8 +238,8 @@ async def _store_run(run_id: str, data: Dict[str, Any], tenant_id: str = "defaul
                 recoveries=len(data.get("recovery_log", [])) if data.get("recovery_log") else 0,
                 # P0-006 Fix: Store cost_cents
                 cost_cents=data.get("cost_cents"),
-                created_at=datetime.now(timezone.utc),
-                started_at=datetime.now(timezone.utc) if data.get("status") == "running" else None,
+                created_at=datetime.utcnow(),  # Naive UTC for WITHOUT TIME ZONE
+                started_at=datetime.utcnow() if data.get("status") == "running" else None,  # Naive UTC
             )
             session.add(run)
 
@@ -290,7 +290,7 @@ async def _insert_cost_record(
     """
     async with get_async_session() as session:
         # Use naive datetime for asyncpg compatibility with TIMESTAMP WITHOUT TIME ZONE
-        created_at_naive = datetime.now(timezone.utc)
+        created_at_naive = datetime.utcnow()
         cost_record = CostRecord(
             tenant_id=tenant_id,
             request_id=run_id,
@@ -415,7 +415,7 @@ async def _check_and_emit_cost_advisory(
             else:
                 # Emit advisory (BUDGET_WARNING, not incident)
                 # Use naive datetime for asyncpg compatibility with TIMESTAMP WITHOUT TIME ZONE
-                detected_at_naive = datetime.now(timezone.utc)
+                detected_at_naive = datetime.utcnow()
 
                 # Budget snapshot: capture budget-at-run-time for audit trail
                 # This ensures historical analysis uses the budget that was active during the run
