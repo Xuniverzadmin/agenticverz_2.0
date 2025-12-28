@@ -45,10 +45,10 @@
 | [C5_S1_LEARNING_SCENARIO.md](C5_S1_LEARNING_SCENARIO.md) | 1.0 (FROZEN) | C5-S1 Learning from Rollback Frequency design |
 | [C5_S1_ACCEPTANCE_CRITERIA.md](C5_S1_ACCEPTANCE_CRITERIA.md) | 1.0 (FROZEN) | C5-S1 acceptance criteria (26 tests) |
 | [C5_S1_CI_ENFORCEMENT.md](C5_S1_CI_ENFORCEMENT.md) | 1.0 (FROZEN) | C5-S1 CI guardrails mapping |
-| [C5_S2_LEARNING_SCENARIO.md](C5_S2_LEARNING_SCENARIO.md) | 1.0 (DRAFT) | C5-S2 Learning from Coordination Friction design |
-| [C5_S2_ACCEPTANCE_CRITERIA.md](C5_S2_ACCEPTANCE_CRITERIA.md) | 1.0 (DRAFT) | C5-S2 acceptance criteria |
-| [C5_S3_LEARNING_SCENARIO.md](C5_S3_LEARNING_SCENARIO.md) | 1.0 (DRAFT) | C5-S3 Learning from Optimization Effectiveness design |
-| [C5_S3_ACCEPTANCE_CRITERIA.md](C5_S3_ACCEPTANCE_CRITERIA.md) | 1.0 (DRAFT) | C5-S3 acceptance criteria |
+| [C5_S2_LEARNING_SCENARIO.md](C5_S2_LEARNING_SCENARIO.md) | 1.0 (FROZEN) | C5-S2 Learning from Coordination Friction design |
+| [C5_S2_ACCEPTANCE_CRITERIA.md](C5_S2_ACCEPTANCE_CRITERIA.md) | 1.0 (FROZEN) | C5-S2 acceptance criteria |
+| [C5_S3_LEARNING_SCENARIO.md](C5_S3_LEARNING_SCENARIO.md) | 1.0 (FROZEN) | C5-S3 Learning from Optimization Effectiveness design |
+| [C5_S3_ACCEPTANCE_CRITERIA.md](C5_S3_ACCEPTANCE_CRITERIA.md) | 1.0 (FROZEN) | C5-S3 acceptance criteria |
 | [C4_OPERATIONAL_STABILITY_CRITERIA.md](C4_OPERATIONAL_STABILITY_CRITERIA.md) | 1.0 (FROZEN) | Time-based stability gate (7 days) |
 | [C4_FOUNDER_STABILITY_CRITERIA.md](C4_FOUNDER_STABILITY_CRITERIA.md) | 1.0 (FROZEN) | Synthetic stability gate (20 cycles) |
 | [C4_SYNTHETIC_STABILITY_RUNBOOK.md](C4_SYNTHETIC_STABILITY_RUNBOOK.md) | 1.0 (ACTIVE) | 1-day synthetic stability execution guide |

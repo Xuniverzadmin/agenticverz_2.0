@@ -460,8 +460,8 @@ system_state:
     C4_COORDINATION: CERTIFIED # Multi-envelope coordination certified 2025-12-28 (14 tests, 83 total)
     C5_LEARNING: ACTIVE      # Learning & Evolution - DESIGN SURFACE COMPLETE
     C5_S1_ROLLBACK: CERTIFIED # Learning from Rollback Frequency certified 2025-12-28 (27 tests)
-    C5_S2_FRICTION: DESIGN_COMPLETE # Learning from Coordination Friction designed 2025-12-28
-    C5_S3_EFFECTIVENESS: DESIGN_COMPLETE # Learning from Optimization Effectiveness designed 2025-12-28
+    C5_S2_FRICTION: FROZEN       # Learning from Coordination Friction frozen 2025-12-28
+    C5_S3_EFFECTIVENESS: FROZEN  # Learning from Optimization Effectiveness frozen 2025-12-28
     C5_IMPLEMENTATION: LOCKED # S2/S3 implementation requires explicit unlock
 
   rule:
@@ -469,9 +469,9 @@ system_state:
     - Any stage unlock requires explicit human approval
     - Presence of code does not imply stage readiness
     - CERTIFIED stages remain binding invariants, not "previous locations"
-    - DESIGN_COMPLETE = design frozen, implementation LOCKED
+    - FROZEN = design locked, implementation requires explicit unlock
     - C5-S1 allows advisory learning only (suggests, never decides)
-    - C5-S2/S3 designs are FROZEN - implementation requires explicit unlock
+    - C5-S2/S3 contracts are FROZEN - implementation requires explicit unlock
 
 # =============================================================================
 # SECTION 10: AUTHORITATIVE ENVIRONMENT (GLOBAL)
@@ -697,13 +697,15 @@ phase_transitions:
         guardrails: 6/6
       S2_FRICTION:
         question: "Are envelopes structurally conflicting?"
-        status: DESIGN_COMPLETE
+        status: FROZEN
+        frozen_date: 2025-12-28
         design_docs:
           - C5_S2_LEARNING_SCENARIO.md
           - C5_S2_ACCEPTANCE_CRITERIA.md
       S3_EFFECTIVENESS:
         question: "Did the envelope help?"
-        status: DESIGN_COMPLETE
+        status: FROZEN
+        frozen_date: 2025-12-28
         design_docs:
           - C5_S3_LEARNING_SCENARIO.md
           - C5_S3_ACCEPTANCE_CRITERIA.md

@@ -1,7 +1,7 @@
 # C5-S2: Learning from Coordination Friction
 
 **Version:** 1.0
-**Status:** DESIGN (LOCKED)
+**Status:** FROZEN (2025-12-28)
 **Phase:** C5 Learning & Evolution
 **Reference:** PIN-232, C5_CI_GUARDRAILS_DESIGN.md
 **Prerequisite:** C5-S1 CERTIFIED

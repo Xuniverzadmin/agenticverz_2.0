@@ -2,7 +2,7 @@
 
 **Learning from Coordination Friction**
 **Version:** 1.0
-**Status:** DRAFT
+**Status:** FROZEN (2025-12-28)
 **Reference:** PIN-232, C5_S2_LEARNING_SCENARIO.md
 
 ---
@@ -333,5 +333,5 @@ This acceptance criteria:
 * Enforces evidence-based suggestions
 * Keeps humans in control
 
-**Status:** DRAFT
-**Next Step:** Freeze design, then define exit conditions
+**Status:** FROZEN (2025-12-28)
+**Next Step:** Implementation LOCKED - requires explicit unlock
