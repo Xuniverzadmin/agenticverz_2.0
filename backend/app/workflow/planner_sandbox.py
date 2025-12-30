@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Sandboxed planner execution for safety
+# Callers: workflow engine
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Workflow System
+
 # Planner Sandbox (M4)
 """
 Sandbox for validating planner outputs before execution.

@@ -15,11 +15,70 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "1.6"
+session_playbook_version: "2.7"
 created: "2025-12-27"
-last_updated: "2025-12-28"
+last_updated: "2025-12-30"
 
 # Changelog:
+#   2.7 - Added Section 25: Protective Governance Mode (ENFORCED).
+#         Added PG-001 (No Unregistered Debt), PG-002 (Monotonicity Guard),
+#         PG-003 (Quarantine Ceiling), PG-004 (Baseline Ceremony).
+#         Added debt_ceilings with quantified limits.
+#         Added session_behavior with mode transition rules.
+#         Reference: docs/contracts/PROTECTIVE_GOVERNANCE_CONTRACT.md
+#   2.6 - Added Section 24: Artifact Class Contract (ENFORCED).
+#         Added ARCH-GOV-006 (Artifact Class Declaration Gate).
+#         Updated CODE-REG-002 to require artifact_class field.
+#         Updated ARTIFACT_INTENT.yaml with artifact_class section.
+#         Updated FILE_HEADER_TEMPLATE with non-executable guidance.
+#         Artifact classes: CODE, TEST, DATA, STYLE, CONFIG, DOC.
+#         UNKNOWN is now BLOCKING - never acceptable.
+#         Principle: "Nothing escapes the system. Not everything executes."
+#         Reference: PIN-248 (Codebase Inventory & Layer System).
+#   2.5 - Added Section 23: Codebase Inventory & Artifact Hygiene (ENFORCED).
+#         Added INV-001 (Inventory Update After Task) - update inventory after file operations.
+#         Added HYG-001 (Artifact Hygiene Summary) - print hygiene summary after every task.
+#         Added layer_model reference for L1-L8 classification.
+#         Added on_task_completion checklist for artifact hygiene.
+#         Reference: PIN-248 (Codebase Inventory & Layer System).
+#   2.4 - Added pre_build_guards: PRE-BUILD-001 (Intent Declaration Gate),
+#         PRE-BUILD-002 (Temporal Model Declaration Gate), PRE-BUILD-003 (Layer Confidence Gate).
+#         Added runtime_sanity_guards: RUNTIME-001 (Sync-Async Boundary Guard),
+#         RUNTIME-002 (Async Leak Detection Guard), RUNTIME-003 (Intent Completeness Guard).
+#         Added prohibition_clause for invalid temporal justifications.
+#         Intent and temporal enforcement now machine-enforced, not social rules.
+#         Reference: PIN-245 (Integration Integrity System).
+#   2.3 - Added Section 22: Architecture & Integration Governance (ENFORCED).
+#         Added ARCH-GOV-001 (Artifact Intent Gate), ARCH-GOV-002 (Layer Declaration Gate),
+#         ARCH-GOV-003 (Temporal Clarity Gate), ARCH-GOV-004 (File Header Requirement),
+#         ARCH-GOV-005 (Integration Seam Awareness).
+#         Added behavioral invariants BI-001 through BI-005.
+#         Claude now operates as Architecture Governor with mandatory pre-build gates.
+#         Reference: PIN-245 (Integration Integrity System).
+#   2.2 - Added Section 21: Product Boundary Enforcement (ENFORCED).
+#         Added BOUNDARY-001 through BOUNDARY-005 pre-build enforcement rules.
+#         Added artifact intent schema requirements.
+#         Product boundary contract now blocking.
+#         Code existence requires provenance declaration.
+#   2.1 - Added Section 20: Codebase Registry Authority (ENFORCED).
+#         Added CODE-REG-001 through CODE-REG-004 blocking rules.
+#         Added CODE-CHANGE-001 through CODE-CHANGE-003 change tracking rules.
+#         Added codebase-registry to mandatory_load.
+#         Code evolution now requires registered change records.
+#   2.0 - Added Section 19: Frontend Architecture Invariants (FROZEN).
+#         Added FRONTEND-ARCH-001: 3-layer entry point model enforcement.
+#         Added FRONTEND-INTEGRATION-001: Pre-deploy completeness check.
+#         Both rules are BLOCKING severity. Reference: PIN-235.
+#   1.9 - CRITICAL: Renamed Administration → Account in console_governance.
+#         Account is secondary navigation (top-right/footer), NOT primary sidebar.
+#         Account is NOT a domain - manages who/what/billing, not what happened.
+#   1.8 - Added Project Scope rules to console_governance (Section 18).
+#         Projects are global scope selectors, not domains.
+#         Cross-project aggregation forbidden in Customer Console.
+#   1.7 - Added Customer Console v1 Constitution enforcement.
+#         Added console_governance section (Section 18).
+#         Constitution loaded at session bootstrap.
+#         Claude role defined: auditor and mapper, not designer.
 #   1.6 - C5 design surface COMPLETE (S1 certified, S2/S3 designed).
 #         S2: Learning from Coordination Friction - DESIGN COMPLETE
 #         S3: Learning from Optimization Effectiveness - DESIGN COMPLETE
@@ -114,6 +173,27 @@ mandatory_load:
     required: true
     phase: B
 
+  # Customer Console Constitution (v1 frozen structure)
+  - path: docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+    purpose: Frozen domains, structure, and governance for Customer Console
+    required: true
+    scope: console.agenticverz.com
+    frozen: true
+    version: v1
+
+  # Codebase Registry (artifact registration and purpose tracking)
+  - path: docs/codebase-registry/schema-v1.yaml
+    purpose: Artifact registration schema (frozen v1)
+    required: true
+
+  - path: docs/codebase-registry/change-schema-v1.yaml
+    purpose: Code change registration schema (frozen v1)
+    required: true
+
+  - path: docs/codebase-registry/README.md
+    purpose: Registry scope and governance rules
+    required: true
+
 # =============================================================================
 # FORBIDDEN ACTIONS (Before Bootstrap)
 # =============================================================================
@@ -163,9 +243,14 @@ bootstrap_confirmation_format: |
     - PIN-203-pb-s3-controlled-feedback-loops.md
     - PIN-204-pb-s4-policy-evolution-with-provenance.md
     - PIN-205-pb-s5-prediction-without-determinism-loss.md
+    - CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+    - codebase-registry/schema-v1.yaml
+    - codebase-registry/change-schema-v1.yaml
   - visibility_lifecycle_loaded: YES
   - discovery_ledger_loaded: YES
   - database_contract_loaded: YES
+  - console_constitution_loaded: YES
+  - codebase_registry_loaded: YES
   - forbidden_assumptions_acknowledged: YES
   - restrictions_acknowledged: YES
   - phase_family: {family}
@@ -175,6 +260,7 @@ bootstrap_confirmation_format: |
       discovery_ledger: {discovery_mode}
       dpcc: {dpcc_mode}
       cseg: {cseg_mode}
+      code_registration: ENFORCED
 
 # =============================================================================
 # PHASE EXTENSIONS
@@ -765,6 +851,116 @@ on_session_restart:
         Provide stepwise, verifiable commands instead.
 
 # =============================================================================
+# SECTION 14.5: SESSION CONTINUATION FROM SUMMARY
+# =============================================================================
+# What MUST happen when a session is continued from a summarized context.
+#
+# CRITICAL: This closes the governance gap where "continue without asking"
+# was interpreted as permission to skip bootstrap and code governance.
+#
+# Root Cause (PIN-052 incident 2025-12-30):
+#   - Session ran out of context and was summarized
+#   - Continuation instruction said "continue without asking questions"
+#   - This conflicted with bootstrap which requires confirmation
+#   - Claude prioritized continuation over governance
+#   - Result: 4 files modified, 2 files created WITHOUT registry entries
+#
+# Fix: Explicit rules for summarized continuation that do NOT conflict
+#      with the "don't ask questions" instruction.
+
+on_session_continuation_from_summary:
+
+  trigger_phrases:
+    - "This session is being continued from a previous conversation"
+    - "conversation that ran out of context"
+    - "The conversation is summarized below"
+
+  interpretation_rule: >
+    The instruction "continue without asking the user any further questions"
+    applies to CLARIFYING questions about requirements, NOT to governance
+    confirmations. Governance acknowledgment is MANDATORY, not optional.
+
+  mandatory_acknowledgment:
+    # Claude must include this block in the FIRST response after continuation
+    format: |
+      SESSION_CONTINUATION_ACKNOWLEDGMENT
+      - governance_active: YES
+      - code_reg_rules: ACKNOWLEDGED (CODE-REG-001 to CODE-REG-004)
+      - code_change_rules: ACKNOWLEDGED (CODE-CHANGE-001 to CODE-CHANGE-003)
+      - self_audit_required: YES (for all code changes)
+      - phase_family: {current phase}
+
+    required_fields:
+      - governance_active: must be YES
+      - code_reg_rules: must be ACKNOWLEDGED
+      - code_change_rules: must be ACKNOWLEDGED
+      - self_audit_required: must be YES
+
+  pre_code_gates:
+    # These gates apply EVEN in continuation mode
+    - gate: CODE-REG-001
+      rule: New files require artifact registration
+      action: BLOCK if not registered
+
+    - gate: CODE-CHANGE-001
+      rule: Modified files require change records
+      action: BLOCK if no change record
+
+    - gate: SELF-AUDIT
+      rule: All code changes require SELF-AUDIT section
+      action: Response INVALID if missing
+
+  what_can_be_skipped:
+    # These are OK to skip in continuation (lighter than full bootstrap)
+    - Full SESSION_BOOTSTRAP_CONFIRMATION (use lighter acknowledgment)
+    - Re-reading all mandatory_load documents (context preserved in summary)
+    - Phase transition checks (phase preserved in summary)
+
+  what_cannot_be_skipped:
+    # These are NEVER skippable, even in continuation
+    - CODE-REG gates (artifact registration)
+    - CODE-CHANGE gates (change records)
+    - SELF-AUDIT on code changes
+    - ARCH-GOV gates (layer, temporal, ownership)
+    - Forbidden assumptions check
+
+  refusal_policy:
+    if_about_to_create_code_without_registration:
+      action: STOP
+      response: |
+        CODE-REG-001 VIOLATION: Cannot create file without artifact registration.
+
+        Before creating {filename}, I need to:
+        1. Create artifact intent: docs/codebase-registry/artifacts/AOS-XX-XXX-XXX-NNN.yaml
+        2. Get approval for registration
+        3. Then create the file
+
+        Proceeding with registration proposal...
+
+    if_about_to_modify_code_without_change_record:
+      action: STOP
+      response: |
+        CODE-CHANGE-001 VIOLATION: Cannot modify file without change record.
+
+        Before modifying {filename}, I need to:
+        1. Create change record: docs/codebase-registry/changes/CHANGE-YYYY-NNNN.yaml
+        2. Reference artifact ID: {artifact_id}
+        3. Then make the modification
+
+        Proceeding with change record creation...
+
+  # Reference documents for session summary generation
+  summary_requirements:
+    document: docs/system/SESSION_SUMMARY_REQUIREMENTS.md
+    purpose: Ensure session summaries preserve governance context
+    mandatory_elements:
+      - GOVERNANCE_CONTEXT_PRESERVED block
+      - PENDING_REGISTRATIONS if any
+      - PENDING_CHANGES if any
+      - INCOMPLETE_GATES if any
+      - CONTINUATION_INSTRUCTION_INTERPRETATION
+
+# =============================================================================
 # SECTION 15: HUMAN VS AUTOMATION BOUNDARY
 # =============================================================================
 # What CI can and cannot verify.
@@ -908,6 +1104,2003 @@ execution_discipline:
       message: >
         Environment variables are not credentials until mapped to HTTP headers.
         Explicit header required: -H "X-AOS-Key: $AOS_API_KEY"
+
+# =============================================================================
+# SECTION 18: CONSOLE GOVERNANCE (Customer Console v1)
+# =============================================================================
+# Frozen structure for Customer Console. Claude is auditor and mapper, not designer.
+# Reference: docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+
+console_governance:
+
+  scope: console.agenticverz.com
+  status: FROZEN
+  version: v1
+  effective_date: 2025-12-29
+
+  # Frozen Domains (MUST appear exactly as written)
+  frozen_domains:
+    - Overview
+    - Activity
+    - Incidents
+    - Policies
+    - Logs
+
+  domain_questions:
+    Overview: "Is the system okay right now?"
+    Activity: "What ran / is running?"
+    Incidents: "What went wrong?"
+    Policies: "How is behavior defined?"
+    Logs: "What is the raw truth?"
+
+  sidebar_structure:
+    core_lenses:
+      position: top
+      items:
+        - Overview
+        - Activity
+        - Incidents
+        - Policies
+        - Logs
+      rule: Primary mental model, stable over time
+
+    connectivity:
+      position: middle
+      items:
+        - Integrations
+        - API Keys
+      rule: Standard utilities only, not analytical views
+
+    account:
+      position: secondary  # Top-right dropdown or footer, NOT primary sidebar
+      is_domain: false
+      items:
+        - Projects
+        - Users
+        - Profile
+        - Billing
+        - Support
+      rules:
+        - Account is NOT a domain
+        - Account pages must NOT display executions, incidents, policies, or logs
+        - Account manages who, what, and billing - not what happened
+        - Matches: Cloudflare Account Home, GitHub Org Settings, AWS Account Settings
+
+  structural_hierarchy:
+    domain:
+      definition: Answers a fundamental user question
+      lifespan: years
+      location: sidebar only
+    subdomain:
+      definition: Represents a real system boundary
+      rule: Owns independent lifecycle, distinct permissions
+      location: tabs or sections within domain
+    topic:
+      definition: View or capability (O1 entry point)
+      rule: Safe to add without changing domain structure
+      location: page content within subdomain
+    orders:
+      O1: Summary / Snapshot
+      O2: List of instances
+      O3: Detail / Explanation
+      O4: Context / Impact
+      O5: Raw records / Proof
+      rule: Sidebar never changes with depth
+
+  jurisdiction:
+    customer_console:
+      scope: tenant_only
+      sees:
+        - Own executions
+        - Own incidents
+        - Own policies
+        - Own spend
+        - Own logs
+    exclusions:
+      - Founder Pulse (cross-tenant → Ops Console)
+      - Discovery Ledger (learning system → Ops Console)
+      - Chaos Corpus (testing → Ops Console)
+      - Cross-tenant intelligence (multi-tenant → Ops Console)
+      - Learned authority (forbidden)
+      - Auto-enforcement (forbidden)
+
+  # Project Scope Rules (v1.1.0)
+  project_scope:
+    description: >
+      All Customer Console domains, topics, and Orders (O1–O5) are evaluated
+      within a selected Project context. Project is a global scope selector.
+    rules:
+      - All Customer Console analysis must assume a selected Project context
+      - Domains, topics, and Orders are invariant across projects
+      - Project selection affects data scope only, never navigation structure
+      - Projects must not be introduced as domains or sidebar items
+      - Cross-project aggregation is forbidden in Customer Console analysis
+      - Shared resources (policies, agents) must be evaluated per-project view
+    project_selector:
+      location: global_header
+      not_in: sidebar
+    project_container:
+      managed_under: ADMIN
+      not_domain: true
+    shared_resources:
+      policies: "May be ORG-scoped (all projects) or PROJECT-scoped"
+      agents: "May be bound to multiple projects"
+      executions: "Always project-scoped"
+      incidents: "Attach to executions → always project-scoped"
+
+  claude_role:
+    allowed:
+      - Validate existence of objects and flows in codebase
+      - Report fits, gaps, partial fits, and violations
+      - Map existing code to approved domains and topics
+      - Generate drafts for human review
+      - Flag deviations explicitly
+    not_allowed:
+      - Introducing new domains
+      - Renaming frozen domains
+      - Mixing customer and founder jurisdictions
+      - Suggesting automation or learned authority
+      - Auto-applying structural changes
+      - Improving without explicit approval
+
+  governance_rules:
+    - No global automation
+    - No learned authority
+    - No cross-tenant intelligence claims
+    - No "system decided" language
+    - All actions must be explicit, scoped, attributable, auditable
+    - Logs and evidence are immutable
+
+  deviation_protocol:
+    on_deviation:
+      - Explicitly flag what deviates
+      - Clearly justify with evidence
+      - Do not apply automatically
+      - Require human approval
+    amendment_process:
+      - Proposal documented with rationale
+      - Impact assessment on existing structure
+      - Human review and approval
+      - Version increment
+      - Playbook updates
+      - Behavior rule updates
+
+  forbidden_actions:
+    - Rename frozen domains
+    - Add new domains without amendment
+    - Merge domains
+    - Mix jurisdictions
+    - Auto-apply learned patterns
+
+  failure_mode_to_avoid: |
+    "Claude-suggested improvement" that silently mutates product identity.
+
+  validation:
+    on_console_work:
+      required_check: constitution_loaded
+      failure_response: |
+        CONSOLE WORK BLOCKED
+
+        Customer Console Constitution not loaded.
+        Load docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md first.
+
+        No console work allowed until constitution is acknowledged.
+
+# =============================================================================
+# SECTION 19: FRONTEND ARCHITECTURE INVARIANTS
+# =============================================================================
+# Frozen architectural decisions for frontend products.
+# Reference: PIN-235 (Products-First Architecture Migration)
+
+frontend_architecture:
+
+  scope: website/aos-console/console
+  status: FROZEN
+  version: v1
+  effective_date: 2025-12-29
+  reference: docs/memory-pins/PIN-235-products-first-architecture-migration.md
+
+  # -----------------------------------------------------------------------------
+  # FRONTEND-ARCH-001: Frontend Architecture Invariants
+  # -----------------------------------------------------------------------------
+  # Violations are BLOCKING - no code changes allowed until compliant.
+
+  FRONTEND-ARCH-001:
+    name: Frontend Architecture Invariants
+    severity: BLOCKING
+    description: >
+      Enforces the 3-layer entry point model and products-first folder structure.
+      These decisions are frozen and must not be debated.
+
+    # Freeze Point #1: Entry Point Pattern
+    freeze_point_1:
+      name: Product Entry Pattern
+      rule: |
+        main.tsx        = runtime entry (DOM, browser)
+        AIConsoleApp.tsx = product root (providers, routing)
+      invariants:
+        - No business logic in main.tsx
+        - No DOM mounting in product code
+        - Product root handles providers, routing, layout
+        - Entry point handles BrowserRouter only (for standalone)
+
+    # Freeze Point #2: Product Folder Layout
+    freeze_point_2:
+      name: Product Folder Layout
+      rule: |
+        All Agenticverz products must follow this structure:
+        products/{product-name}/
+          main.tsx
+          app/
+          pages/
+          account/
+          integrations/
+      allowed_products:
+        - ai-console
+        - agents (future)
+        - product-builder (future)
+
+    # Freeze Point #3: Domain → Folder Mapping
+    freeze_point_3:
+      name: Domain to Folder Mapping
+      rule: |
+        Overview   → pages/overview
+        Activity   → pages/activity
+        Incidents  → pages/incidents
+        Policies   → pages/policies
+        Logs       → pages/logs
+      enforcement: No aliases. No exceptions.
+
+    # Import Pattern
+    import_pattern:
+      correct: |
+        import { guardApi } from '@/api/guard';
+        import { OverviewPage } from '@ai-console/pages/overview/OverviewPage';
+      wrong: |
+        import { guardApi } from '../../api/guard';
+        import { OverviewPage } from '../pages/overview';
+
+    # Anti-Patterns (FORBIDDEN)
+    anti_patterns:
+      - description: "Reorganize Orders (O2-O5) into folders"
+        reason: "Orders are epistemic depth, not folder structure"
+      - description: "Merge account + pages"
+        reason: "Account is secondary navigation, pages are core domains"
+      - description: "Move providers into main.tsx"
+        reason: "Providers belong in product root, not runtime entry"
+      - description: "Add a global Admin folder"
+        reason: "Admin is not a domain, it manages users/billing"
+      - description: "Rename AIConsoleApp again"
+        reason: "Name is frozen, reflects product identity"
+
+    triggers:
+      - Any change to src/products/*/main.tsx
+      - Any change to src/products/*/app/*.tsx
+      - Any new product folder creation
+      - Any page relocation or rename
+      - Any import path changes in products folder
+
+    requires:
+      step_1:
+        action: "Verify entry point separation"
+        check: "Is main.tsx runtime-only? Is product logic in app/?"
+      step_2:
+        action: "Verify folder structure"
+        check: "Does structure match freeze_point_2?"
+      step_3:
+        action: "Verify domain mapping"
+        check: "Do page folders match freeze_point_3?"
+      step_4:
+        action: "Verify import patterns"
+        check: "Are imports using @ai-console/* or @/ aliases?"
+
+    forbid:
+      - Adding business logic to main.tsx
+      - Creating non-standard product folder structures
+      - Using relative imports in products folder
+      - Renaming frozen domains
+      - Creating new folder patterns without approval
+
+    violation:
+      type: BLOCKING
+      message: "FRONTEND-ARCH-001 VIOLATION: Architecture invariant violated"
+      action: "STOP. Verify compliance with PIN-235 freeze points."
+
+  # -----------------------------------------------------------------------------
+  # FRONTEND-INTEGRATION-001: Frontend Integration Completeness Check
+  # -----------------------------------------------------------------------------
+  # Pre-deploy smoke check to prevent dead clicks and 500 errors.
+
+  FRONTEND-INTEGRATION-001:
+    name: Frontend Integration Completeness Check
+    severity: BLOCKING
+    description: >
+      Ensures all frontend changes are complete before deployment.
+      Prevents dead clicks, 500 errors, and broken routes.
+
+    triggers:
+      - Any new page added
+      - Any route change
+      - Any navigation item added
+      - Any API integration added
+      - Before any frontend deployment
+
+    pre_deploy_checklist:
+      routes:
+        - action: "Route exists in AIConsoleApp.tsx"
+          check: "New page has <Route path=... element=... />"
+        - action: "Route is accessible"
+          check: "Navigating to route renders page, not 404"
+
+      navigation:
+        - action: "Nav item links to valid route"
+          check: "Clicking nav item navigates, not dead click"
+        - action: "Active state reflects current route"
+          check: "Correct nav item highlighted when on page"
+
+      api_integration:
+        - action: "API endpoints exist"
+          check: "All fetch/axios calls hit real endpoints"
+        - action: "Error states handled"
+          check: "API errors show user-friendly message, not crash"
+        - action: "Loading states implemented"
+          check: "User sees loading indicator during fetch"
+
+      imports:
+        - action: "All imports resolve"
+          check: "npm run build succeeds with no import errors"
+        - action: "Path aliases work"
+          check: "@ai-console/* and @/* aliases resolve correctly"
+
+    requires:
+      step_1:
+        action: "Run build verification"
+        command: "cd website/aos-console/console && npm run build"
+        condition: "Build succeeds without errors"
+      step_2:
+        action: "Check route completeness"
+        check: "Every sidebar nav item has corresponding route"
+      step_3:
+        action: "Verify no dead clicks"
+        check: "All clickable elements have onClick or valid href"
+      step_4:
+        action: "Verify error handling"
+        check: "API failures render error UI, not white screen"
+
+    forbid:
+      - Deploying without successful build
+      - Adding nav items without corresponding routes
+      - Adding routes without corresponding pages
+      - Leaving TODO comments in deployed code
+      - Ignoring TypeScript errors
+
+    violation:
+      type: BLOCKING
+      message: "FRONTEND-INTEGRATION-001 VIOLATION: Integration incomplete"
+      action: "STOP. Complete pre-deploy checklist before proceeding."
+
+# =============================================================================
+# SECTION 20: CODEBASE REGISTRY AUTHORITY
+# =============================================================================
+# Governing Principle:
+#   All executable or semantically meaningful code MUST be registered in the
+#   Codebase Purpose & Authority Registry before it can be created, modified,
+#   or reasoned about. Claude must not infer purpose, ownership, or relationships
+#   where they are not explicitly registered.
+#
+# Reference: PIN-237 (Codebase Registry Survey)
+# Reference: docs/codebase-registry/
+
+codebase_registry_authority:
+
+  scope: /root/agenticverz2.0
+  status: ENFORCED
+  version: v1
+  effective_date: 2025-12-29
+
+  governing_principle: |
+    The Codebase Purpose & Authority Registry is the single source of truth
+    for why code exists, what it may do, and what it may interact with.
+    Code evolution is authority. Authority must be declared.
+
+  # ---------------------------------------------------------------------------
+  # CODE-REG-001: Registration Required for Code Existence
+  # ---------------------------------------------------------------------------
+  CODE-REG-001:
+    name: Registration Required for Code Existence
+    enforcement: BLOCKING
+    applies_to:
+      - new_code
+      - code_modification
+      - architectural_reasoning
+      - refactoring
+      - dependency_analysis
+
+    rule:
+      - Any executable or semantically significant code artifact MUST have
+        a corresponding registry entry in docs/codebase-registry/artifacts/
+      - If no registry entry exists, Claude must pause and request clarification
+
+    disallowed:
+      - Creating code without proposing a registry entry
+      - Modifying code whose registry entry is missing or unclear
+      - Reasoning about unregistered code behavior
+
+    on_violation:
+      action: BLOCK
+      message: |
+        CODE-REG-001 VIOLATION: No registry entry found for this artifact.
+
+        Before proceeding, please:
+        1. Search existing artifacts: python scripts/ops/artifact_lookup.py <name>
+        2. If not found, propose a registry entry for approval
+        3. Only proceed after registration is confirmed
+
+  # ---------------------------------------------------------------------------
+  # CODE-REG-002: Purpose and Semantic Clarity Required
+  # ---------------------------------------------------------------------------
+  CODE-REG-002:
+    name: Purpose and Semantic Clarity Required
+    enforcement: BLOCKING
+
+    rule:
+      - Each registry entry MUST clearly specify:
+          - artifact_class (CODE, TEST, DATA, STYLE, CONFIG, DOC)
+          - purpose (why this code exists)
+          - responsibility (what it does)
+          - authority_level (observe, advise, enforce, mutate)
+          - execution_surface (server, client, cli) — for executable only
+      - If any of these are unclear or missing, Claude must stop and ask
+      - UNKNOWN is never an acceptable artifact_class
+
+    forbidden:
+      - Inferring purpose from filenames alone
+      - Guessing authority based on behavior
+      - Best-practice assumptions
+      - Reasoning about code without reading its registry entry
+      - Leaving artifact_class unspecified or as UNKNOWN
+
+    on_violation:
+      action: BLOCK
+      message: |
+        CODE-REG-002 VIOLATION: Registry entry incomplete or unclear.
+
+        Required fields: artifact_class, purpose, responsibility, authority_level.
+        Artifact class must be: CODE, TEST, DATA, STYLE, CONFIG, or DOC.
+        UNKNOWN is never acceptable.
+        Please clarify missing information before proceeding.
+
+  # ---------------------------------------------------------------------------
+  # CODE-REG-003: Product and Surface Traceability
+  # ---------------------------------------------------------------------------
+  CODE-REG-003:
+    name: Product and Surface Traceability
+    enforcement: BLOCKING
+
+    rule:
+      frontend_code:
+        required:
+          - product (ai-console, product-builder, etc.)
+          - console (customer, founder, internal, external)
+          - domain and subdomain
+        scope: All code in products/ or pages/
+
+      backend_code:
+        required:
+          - owning service or worker
+          - mutation/enforcement authority (explicit)
+        scope: All code in backend/app/
+
+      scripts_and_tests:
+        required:
+          - mark console as internal or none
+          - mark product as system-wide or specific
+        scope: All code in scripts/ or tests/
+
+    failure_mode:
+      action: PAUSE_AND_ASK
+      message: |
+        CODE-REG-003: Cannot determine product/surface traceability.
+
+        Please clarify:
+        - Which product does this belong to?
+        - Which console (customer/founder/internal)?
+        - What domain/subdomain does it serve?
+
+  # ---------------------------------------------------------------------------
+  # CODE-REG-004: Pause on Unclear Relationships
+  # ---------------------------------------------------------------------------
+  CODE-REG-004:
+    name: Pause on Unclear Relationships
+    enforcement: MANDATORY
+
+    behavior:
+      trigger: |
+        When Claude cannot establish:
+        - purpose
+        - ownership
+        - product mapping
+        - UI/backend placement
+      action: STOP
+      response: |
+        Please clarify the intended purpose and placement of this code
+        so it can be registered correctly.
+
+        I cannot proceed without understanding:
+        - What does this code do? (purpose)
+        - Who owns it? (owner)
+        - Which product? (traceability)
+        - What authority level? (observe/advise/enforce/mutate)
+
+    prohibited:
+      - Proceeding with partial assumptions
+      - Creating placeholder registry entries without approval
+      - Inferring relationships from code structure alone
+
+  # ---------------------------------------------------------------------------
+  # CODE-CHANGE-001: Change Registration Required
+  # ---------------------------------------------------------------------------
+  CODE-CHANGE-001:
+    name: Change Registration Required
+    enforcement: BLOCKING
+    applies_to:
+      - code_modification
+      - refactor
+      - bugfix
+      - optimization
+      - interface_change
+      - dependency_change
+
+    rule:
+      - Any modification to existing code MUST have a corresponding
+        change record in docs/codebase-registry/changes/
+      - The change record MUST reference the registry artifact IDs
+        of all modified code
+      - Change records follow change-schema-v1.yaml
+
+    prohibited:
+      - Modifying code without a registered change_id
+      - Making multiple semantic changes under one unclear purpose
+      - Bundling unrelated changes in a single record
+
+    on_violation:
+      action: BLOCK
+      message: |
+        CODE-CHANGE-001 VIOLATION: No change record for this modification.
+
+        Before modifying code, please:
+        1. Create a change record following change-schema-v1.yaml
+        2. Specify purpose, scope, and impact
+        3. List all affected artifact_ids
+        4. Only proceed after change record is created
+
+  # ---------------------------------------------------------------------------
+  # CODE-CHANGE-002: Pause on Unregistered Code Change
+  # ---------------------------------------------------------------------------
+  CODE-CHANGE-002:
+    name: Pause on Unregistered Code Change
+    enforcement: MANDATORY
+
+    behavior:
+      trigger: Code changes detected without associated change record
+      action: STOP
+      response: |
+        Before proceeding with code changes, please register the change:
+
+        Required information:
+        - purpose: Why is this change being made?
+        - change_type: bugfix | refactor | behavior_change | etc.
+        - artifacts_modified: Which artifact IDs are affected?
+        - impact: Does this change behavior, interfaces, or data?
+
+    forbidden:
+      - Proceeding with "minor" changes without registration
+      - Auto-generating change records without user approval
+      - Assuming changes are too small to register
+
+  # ---------------------------------------------------------------------------
+  # CODE-CHANGE-003: Artifact-Change Traceability
+  # ---------------------------------------------------------------------------
+  CODE-CHANGE-003:
+    name: Artifact-Change Traceability
+    enforcement: BLOCKING
+
+    rule:
+      - Each change record MUST list all affected artifact_ids
+      - Each artifact MAY reference multiple change_ids over time
+      - Change records are immutable once created
+
+    purpose: |
+      Provides:
+      - Per-artifact evolution history
+      - Per-change blast-radius visibility
+      - Complete audit trail
+
+  # ---------------------------------------------------------------------------
+  # Registry Lookup Commands
+  # ---------------------------------------------------------------------------
+  lookup_commands:
+    search_by_name: "python scripts/ops/artifact_lookup.py <name>"
+    search_by_id: "python scripts/ops/artifact_lookup.py --id <artifact_id>"
+    filter_by_product: "python scripts/ops/artifact_lookup.py --product ai-console"
+    filter_by_type: "python scripts/ops/artifact_lookup.py --type service"
+    filter_by_authority: "python scripts/ops/artifact_lookup.py --authority mutate"
+    list_all: "python scripts/ops/artifact_lookup.py --list"
+
+  # ---------------------------------------------------------------------------
+  # Registry Locations
+  # ---------------------------------------------------------------------------
+  registry_locations:
+    artifacts: docs/codebase-registry/artifacts/
+    changes: docs/codebase-registry/changes/
+    schema: docs/codebase-registry/schema-v1.yaml
+    change_schema: docs/codebase-registry/change-schema-v1.yaml
+    survey_pin: docs/memory-pins/PIN-237-codebase-registry-survey.md
+
+# =============================================================================
+# SECTION 21: PRODUCT BOUNDARY ENFORCEMENT
+# =============================================================================
+# Pre-build enforcement framework that blocks code existence unless
+# provenance is declared. This is design-time enforcement, not runtime checks.
+#
+# Reference: docs/contracts/PRODUCT_BOUNDARY_CONTRACT.md
+# Reference: PIN-239 (Product Boundary Enforcement)
+
+product_boundary_enforcement:
+
+  scope: /root/agenticverz2.0
+  status: ENFORCED
+  version: v1
+  effective_date: 2025-12-29
+
+  prime_invariant: |
+    No code artifact may be created, modified, or reasoned about unless
+    ALL of the following are declared and accepted:
+    1. Product ownership
+    2. Invocation ownership
+    3. Boundary classification
+    4. Failure jurisdiction
+
+    If ANY are unknown → STOP and ask for clarification.
+
+  core_shift: |
+    This enforcement moves from:
+      "Verify correctness after code exists"
+    to:
+      "Block code existence unless provenance is declared."
+
+    This is a DESIGN-TIME GATE, not a runtime check.
+
+  # ---------------------------------------------------------------------------
+  # BOUNDARY-001: Artifact Registration Required Before Code
+  # ---------------------------------------------------------------------------
+  BOUNDARY-001:
+    name: Artifact Registration Required Before Code
+    enforcement: BLOCKING
+    applies_to:
+      - new_code_creation
+      - file_creation
+      - module_creation
+
+    rule:
+      - No code may be written until artifact intent is declared
+      - Intent declaration must include product, bucket, callers, failure scope
+      - If intent cannot be declared, the artifact is not understood yet
+
+    required_declaration:
+      artifact_id: AOS-XXX-YYY-ZZZ
+      type: service | api | page | worker | script | sdk
+      product: ai-console | system-wide | product-builder
+      bucket: surface | adapter | platform
+      intent:
+        purpose: <1-2 sentences, no implementation details>
+        user_promise: <what the user gets, or NONE>
+      invocation:
+        expected_callers:
+          - <module/file>
+        forbidden_callers:
+          - <module/pattern>
+      failure_scope:
+        breaks_if_removed:
+          - <product list>
+        must_not_break:
+          - <product/component list>
+      state:
+        mutates_global_state: true | false
+        mutates_tenant_state: true | false
+
+    on_violation:
+      action: BLOCK
+      message: |
+        BOUNDARY-001 VIOLATION: Cannot create code without artifact intent.
+
+        Before writing any code, you must declare:
+        1. Product ownership (ai-console / system-wide / product-builder)
+        2. Boundary bucket (surface / adapter / platform)
+        3. Expected callers (who will use this?)
+        4. Forbidden callers (who must NOT use this?)
+        5. Failure scope (what breaks if this is removed?)
+
+        Only proceed after intent is approved.
+
+  # ---------------------------------------------------------------------------
+  # BOUNDARY-002: The Three Blocking Questions
+  # ---------------------------------------------------------------------------
+  BOUNDARY-002:
+    name: Three Blocking Questions
+    enforcement: BLOCKING
+    applies_to:
+      - new_code_creation
+      - code_modification
+      - architectural_reasoning
+
+    questions:
+      Q1:
+        question: "Who calls this in production?"
+        acceptable_answers:
+          - Specific modules/files
+          - Nothing (orphan - reject or archive)
+          - Explicit list of callers
+        unacceptable_answers:
+          - "Not sure"
+          - "Later"
+          - "Probably"
+          - "We'll figure it out"
+
+      Q2:
+        question: "What breaks if AI Console is deleted?"
+        acceptable_answers:
+          - Specific products/features
+          - Nothing (platform-only)
+          - Only this feature
+        unacceptable_answers:
+          - "I don't know"
+          - "Everything"
+          - "Hard to say"
+
+      Q3:
+        question: "Who must NOT depend on this?"
+        acceptable_answers:
+          - Specific modules/patterns
+          - "Workers must not call this"
+          - "SDK must not import this"
+        unacceptable_answers:
+          - "Anyone can use it"
+          - "No restrictions"
+          - "Not sure yet"
+
+    on_violation:
+      action: BLOCK
+      message: |
+        BOUNDARY-002 VIOLATION: Cannot answer blocking questions.
+
+        All three questions MUST have acceptable answers:
+        1. Who calls this in production?
+        2. What breaks if AI Console is deleted?
+        3. Who must NOT depend on this?
+
+        Uncertain answers are BLOCKING. Clarify before proceeding.
+
+  # ---------------------------------------------------------------------------
+  # BOUNDARY-003: No Silent Assumptions
+  # ---------------------------------------------------------------------------
+  BOUNDARY-003:
+    name: No Silent Assumptions
+    enforcement: BLOCKING
+
+    forbidden_inferences:
+      - id: FI-001
+        name: product_ownership_from_filename
+        description: Inferring product ownership from filename or path
+        reason: Filenames lie. Callers don't.
+
+      - id: FI-002
+        name: future_callers
+        description: Assuming who will call this code in the future
+        reason: Speculation creates architectural debt.
+
+      - id: FI-003
+        name: intended_reuse
+        description: Assuming code will be reused elsewhere
+        reason: Intent ≠ reality.
+
+      - id: FI-004
+        name: likely_platform_use
+        description: Assuming code is "probably platform"
+        reason: Assumptions create boundary leaks.
+
+      - id: FI-005
+        name: authority_from_behavior
+        description: Inferring authority level from code behavior
+        reason: Authority must be declared, not inferred.
+
+    rule: |
+      If not explicitly stated → it is UNKNOWN.
+      Unknown is BLOCKING.
+
+    on_violation:
+      action: BLOCK
+      message: |
+        BOUNDARY-003 VIOLATION: Silent assumption detected.
+
+        The system is forbidden from inferring:
+        - Product ownership from filename
+        - Future callers
+        - Intended reuse
+        - "Likely platform use"
+        - Authority from behavior
+
+        Please explicitly declare the missing information.
+
+  # ---------------------------------------------------------------------------
+  # BOUNDARY-004: Bucket Classification Required
+  # ---------------------------------------------------------------------------
+  BOUNDARY-004:
+    name: Bucket Classification Required
+    enforcement: BLOCKING
+
+    buckets:
+      surface:
+        definition: User-facing presentation layer, product-specific
+        criteria:
+          - Only imported by product UI or product-specific routes
+          - Removal breaks ONLY this product
+          - No platform dependencies rely on it
+        examples: Pages, console routes, product layouts
+
+      adapter:
+        definition: Thin translation layer between platform and product
+        criteria:
+          - Transforms platform data into product semantics
+          - Must remain thin (< 200 LOC, no business logic)
+          - May not mutate global state
+          - Called only by product surface
+        examples: Evidence export, policy proposals, predictions
+        warning: |
+          Adapter creep is the #1 boundary violation. If an adapter:
+          - Grows > 200 LOC
+          - Adds business logic
+          - Introduces state mutation
+          → It must be SPLIT or PROMOTED to platform.
+
+      platform:
+        definition: Shared infrastructure serving multiple surfaces
+        criteria:
+          - Called by workers, SDK, or multiple products
+          - Removal affects system-wide functionality
+          - Owns truth, not presentation
+        examples: Workers, BudgetLLM, memory service, policy engine
+
+      orphan:
+        definition: Artifact with no production callers
+        rule: ILLEGAL
+        resolution: Integrate (add production caller) OR Delete
+        note: No third state. No "keeping for later."
+
+    on_violation:
+      action: BLOCK
+      message: |
+        BOUNDARY-004 VIOLATION: Bucket classification unclear.
+
+        Every artifact must be classified as:
+        - SURFACE: Product UI/routes only
+        - ADAPTER: Thin translation layer
+        - PLATFORM: Shared infrastructure
+        - ORPHAN: No callers (must be resolved)
+
+        Please specify the bucket classification.
+
+  # ---------------------------------------------------------------------------
+  # BOUNDARY-005: Invocation Ownership Rule
+  # ---------------------------------------------------------------------------
+  BOUNDARY-005:
+    name: Invocation Ownership Rule
+    enforcement: BLOCKING
+
+    principles:
+      - name: Caller Graph Determines Truth
+        rule: Labels lie. Callers don't.
+        detail: |
+          An artifact's TRUE product ownership is determined by:
+          WHO CALLS IT IN PRODUCTION (not tests)?
+
+          Not by:
+          - What label it has
+          - What directory it's in
+          - What the developer intended
+
+      - name: Non-Console Caller = Not Console-Owned
+        rule: |
+          If ANY of these call an artifact:
+          - workers/*
+          - sdk/*
+          - ops/* (founder/ops console)
+          - External API consumers
+
+          Then the artifact is NOT ai-console owned.
+
+      - name: Negative Dependency Test
+        rule: |
+          Before labeling `product: ai-console`, answer:
+          "Does anything NON-console depend on this?"
+
+          If yes → platform.
+
+    on_violation:
+      action: BLOCK
+      message: |
+        BOUNDARY-005 VIOLATION: Invocation ownership unclear.
+
+        An artifact is NOT console-owned if:
+        - Workers call it
+        - SDK imports it
+        - Other consoles depend on it
+        - External APIs use it
+
+        Please clarify the actual caller graph.
+
+  # ---------------------------------------------------------------------------
+  # Boundary Violation Types (For Incident Classification)
+  # ---------------------------------------------------------------------------
+  violation_types:
+    - id: BV-001
+      name: Mislabeled Product
+      definition: Artifact labeled ai-console but has non-console callers
+      detection: Caller graph analysis
+      resolution: Reclassify to system-wide
+
+    - id: BV-002
+      name: Adapter Creep
+      definition: Adapter exceeds thin boundary criteria
+      detection: LOC > 200, state mutation, business logic
+      resolution: Split or promote to platform
+
+    - id: BV-003
+      name: Orphan Existence
+      definition: Artifact with no production callers
+      detection: Caller graph shows tests-only or no callers
+      resolution: Integrate or delete
+
+    - id: BV-004
+      name: Dual-Surface Hazard
+      definition: Single artifact serving multiple products
+      detection: Callers from multiple product surfaces
+      resolution: Split into product-specific facades + shared core
+
+    - id: BV-005
+      name: Silent Platform Dependency
+      definition: Console artifact secretly depends on platform state
+      detection: Import analysis shows hidden platform coupling
+      resolution: Make dependency explicit or restructure
+
+  # ---------------------------------------------------------------------------
+  # Known Violations (2025-12-29 Analysis)
+  # ---------------------------------------------------------------------------
+  known_violations:
+    - artifact: recovery_matcher.py
+      current_label: ai-console
+      violation_type: BV-001
+      required_action: Reclassify to system-wide
+
+    - artifact: recovery_rule_engine.py
+      current_label: ai-console
+      violation_type: BV-001
+      required_action: Reclassify to system-wide
+
+    - artifact: event_emitter.py
+      current_label: ai-console
+      violation_type: BV-001
+      required_action: Reclassify to system-wide (founder console)
+
+    - artifact: cost_anomaly_detector.py
+      current_label: ai-console
+      violation_type: BV-001
+      required_action: Reclassify to system-wide
+
+    - artifact: pattern_detection.py
+      current_label: ai-console
+      violation_type: BV-003
+      required_action: Delete or integrate
+
+    - artifact: v1_killswitch.py
+      current_label: ai-console
+      violation_type: BV-004
+      required_action: Split or document as dual-surface
+
+  # ---------------------------------------------------------------------------
+  # Enforcement Timeline
+  # ---------------------------------------------------------------------------
+  enforcement_timeline:
+    - gate: design_time
+      when: Before code written
+      enforcer: Session playbook (this file)
+
+    - gate: pre_commit
+      when: Before merge
+      enforcer: Human review
+
+    - gate: ci
+      when: After merge
+      enforcer: Automated caller graph
+
+    - gate: periodic
+      when: Weekly
+      enforcer: Registry audit
+
+  # ---------------------------------------------------------------------------
+  # Reference Files
+  # ---------------------------------------------------------------------------
+  reference_files:
+    contract: docs/contracts/PRODUCT_BOUNDARY_CONTRACT.md
+    schema: docs/codebase-registry/artifact-intent-schema.yaml
+    lookup: scripts/ops/artifact_lookup.py
+    survey_pin: docs/memory-pins/PIN-237-codebase-registry-survey.md
+    enforcement_pin: docs/memory-pins/PIN-239-product-boundary-enforcement.md
+
+# =============================================================================
+# SECTION 22: ARCHITECTURE & INTEGRATION GOVERNANCE
+# =============================================================================
+# Claude operates as Architecture Governor with mandatory pre-build gates.
+# No code may exist unless Layer, Temporal role, and Ownership are declared.
+#
+# Reference: PIN-245 (Integration Integrity System)
+# Reference: docs/templates/ARTIFACT_INTENT.yaml
+# Reference: docs/templates/FILE_HEADER_TEMPLATE.md
+# Reference: docs/contracts/INTEGRATION_INTEGRITY_CONTRACT.md
+
+architecture_governance:
+
+  scope: /root/agenticverz2.0
+  status: ENFORCED
+  version: v1
+  effective_date: 2025-12-30
+
+  governing_principle: |
+    No code may be created, modified, or reasoned about unless
+    Layer, Temporal role, and Ownership are explicitly declared.
+
+    Claude is an Architecture Governor, not a code generator.
+    Integration correctness precedes business correctness.
+
+  claude_role: |
+    Claude operates as an Architecture Governor with three mandatory gates.
+    Any response that creates or modifies code must pass all gates.
+    Gate violations result in BLOCKED responses.
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-001: Artifact Intent Gate
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-001:
+    name: Artifact Intent Gate
+    enforcement: BLOCKING
+    applies_to:
+      - new_code_creation
+      - file_creation
+      - module_creation
+
+    rule:
+      - Before creating ANY new file, the artifact intent must be declared
+      - Use docs/templates/ARTIFACT_INTENT.yaml template
+      - If intent cannot be declared, the artifact is not understood
+
+    required_fields:
+      - artifact_id
+      - file_path
+      - layer.declared
+      - layer.confidence
+      - layer.justification
+      - temporal.trigger
+      - temporal.execution
+      - temporal.lifecycle
+      - product.owner
+      - product.slice
+      - responsibility.role
+      - dependencies.allowed_layers
+      - dependencies.forbidden_layers
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-001 VIOLATION: Artifact intent not declared.
+
+        Before creating code, fill out ARTIFACT_INTENT.yaml:
+        - Layer: Which of L1-L8?
+        - Temporal: sync/async? Triggered by what?
+        - Product: Who owns this?
+        - Dependencies: What can this import?
+
+        Template: docs/templates/ARTIFACT_INTENT.yaml
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-002: Layer Declaration Gate
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-002:
+    name: Layer Declaration Gate
+    enforcement: BLOCKING
+    applies_to:
+      - new_code_creation
+      - code_modification
+      - import_changes
+
+    rule:
+      - Every code artifact MUST have an explicit layer declaration
+      - Layer must be L1-L8 with confidence HIGH or MEDIUM
+      - LOW confidence = BLOCK (cannot proceed without clarification)
+      - Layer determines allowed imports and dependencies
+
+    layer_model:
+      L1:
+        name: Product Experience (UI)
+        allowed_imports: [L2]
+        forbidden_imports: [L3, L4, L5, L6, L7, L8]
+        notes: UI components, pages, user interactions
+
+      L2:
+        name: Product APIs (Console/Public)
+        allowed_imports: [L3, L4, L6]
+        forbidden_imports: [L1, L5, L7, L8]
+        notes: REST endpoints, API routes
+
+      L3:
+        name: Boundary Adapters (Translation)
+        allowed_imports: [L4, L6]
+        forbidden_imports: [L1, L2, L5, L7, L8]
+        notes: Thin translation layers, < 200 LOC
+
+      L4:
+        name: Domain Engines (Truth & Rules)
+        allowed_imports: [L5, L6]
+        forbidden_imports: [L1, L2, L3, L7, L8]
+        notes: Policy engine, business rules, system truth
+
+      L5:
+        name: Execution & Workers
+        allowed_imports: [L6]
+        forbidden_imports: [L1, L2, L3, L4, L7, L8]
+        notes: Background workers, job execution
+
+      L6:
+        name: Platform Substrate
+        allowed_imports: []
+        forbidden_imports: [L1, L2, L3, L4, L5, L7, L8]
+        notes: DB access, Redis, external services
+
+      L7:
+        name: Ops & Deployment
+        allowed_imports: [L6]
+        forbidden_imports: [L1, L2, L3, L4, L5, L8]
+        notes: Systemd, Docker, deployment scripts
+
+      L8:
+        name: Catalyst / Meta
+        allowed_imports: []
+        forbidden_imports: []
+        notes: CI, tests, validators, scaffolding
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-002 VIOLATION: Layer declaration missing or ambiguous.
+
+        Every file must declare its layer in the header:
+        # Layer: L{x} — {Layer Name}
+
+        If layer is unclear, STOP and ask for clarification.
+        Low confidence = BLOCKED.
+
+        Template: docs/templates/FILE_HEADER_TEMPLATE.md
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-003: Temporal Clarity Gate
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-003:
+    name: Temporal Clarity Gate
+    enforcement: BLOCKING
+    applies_to:
+      - new_code_creation
+      - code_modification
+      - function_changes
+
+    rule:
+      - Every code artifact MUST declare its temporal behavior
+      - sync vs async must be explicit, never inferred
+      - Async execution leaking into sync layers = BUILD VIOLATION
+
+    temporal_properties:
+      trigger:
+        values: [user, api, worker, scheduler, external]
+        rule: Who/what initiates this code?
+
+      execution:
+        values: [sync, async, deferred]
+        rule: How does this code run?
+
+      lifecycle:
+        values: [request, job, long-running, batch]
+        rule: How long does this code live?
+
+    async_leak_detection:
+      rule: |
+        Async code in L1-L3 that is not properly awaited = violation.
+        Worker patterns leaking into API handlers = violation.
+        Deferred execution hidden behind sync API = violation.
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-003 VIOLATION: Temporal behavior unclear.
+
+        Every file must declare temporal behavior:
+        # Temporal:
+        #   Trigger: {user|api|worker|scheduler|external}
+        #   Execution: {sync|async|deferred}
+
+        Sync vs async must be explicit. Never infer.
+        Async leaking into sync = BLOCKED.
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-004: File Header Requirement
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-004:
+    name: File Header Requirement
+    enforcement: BLOCKING
+    applies_to:
+      - new_file_creation
+      - python_files
+      - typescript_files
+      - yaml_files
+      - shell_scripts
+
+    rule:
+      - Every new file MUST begin with a structured header
+      - Header declares layer, product, temporal, role, imports
+      - Missing header = invalid file
+
+    header_template_location: docs/templates/FILE_HEADER_TEMPLATE.md
+
+    python_format: |
+      # Layer: L{x} — {Layer Name}
+      # Product: {product | system-wide}
+      # Temporal:
+      #   Trigger: {user|api|worker|scheduler|external}
+      #   Execution: {sync|async|deferred}
+      # Role: {single-line responsibility}
+      # Callers: {who calls this?}
+      # Allowed Imports: L{x}, L{y}
+      # Forbidden Imports: L{z}
+      # Reference: PIN-{xxx}
+
+    typescript_format: |
+      /**
+       * Layer: L{x} — {Layer Name}
+       * Product: {product | system-wide}
+       * Temporal:
+       *   Trigger: {user|api|worker|scheduler}
+       *   Execution: {sync|async}
+       * Role: {single-line responsibility}
+       * Callers: {who renders/uses this?}
+       * Allowed Imports: L{x}, L{y}
+       * Forbidden Imports: L{z}
+       * Reference: PIN-{xxx}
+       */
+
+    validation_rules:
+      - Layer is missing or ambiguous → INVALID
+      - Product is missing → INVALID
+      - Temporal information missing for executable code → INVALID
+      - Role is empty or "TODO" → INVALID
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-004 VIOLATION: File header missing or incomplete.
+
+        Every file must have a structured header declaring:
+        - Layer (L1-L8)
+        - Product (ai-console | system-wide | product-builder)
+        - Temporal behavior (trigger, execution)
+        - Role (single-line responsibility)
+        - Import boundaries
+
+        Template: docs/templates/FILE_HEADER_TEMPLATE.md
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-005: Integration Seam Awareness
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-005:
+    name: Integration Seam Awareness
+    enforcement: BLOCKING
+    applies_to:
+      - api_creation
+      - adapter_creation
+      - cross_layer_changes
+
+    rule:
+      - Code that crosses layer boundaries must identify the integration seam
+      - Integration seams require LIT (Layer Integration Tests)
+      - UI-facing code requires BIT (Browser Integration Tests)
+
+    integration_seams:
+      L1_L2: "Frontend to API"
+      L2_L3: "API to Adapter"
+      L3_L4: "Adapter to Domain"
+      L4_L5: "Domain to Worker"
+      L2_L6: "API to Platform"
+
+    test_requirements:
+      api_endpoint: "At least one LIT test"
+      ui_page: "Entry in page-registry.yaml + BIT coverage"
+      adapter: "LIT test for upstream seam"
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-005 VIOLATION: Integration seam not identified.
+
+        Cross-layer code must declare its integration seam:
+        - L2↔L3: API to Adapter
+        - L3↔L4: Adapter to Domain
+
+        And include appropriate tests:
+        - LIT for layer seams
+        - BIT for UI pages
+
+        Reference: PIN-245 (Integration Integrity System)
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-006: Artifact Class Declaration
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-006:
+    name: Artifact Class Declaration
+    enforcement: BLOCKING
+    applies_to:
+      - file_creation
+      - file_modification
+      - codebase_inventory
+
+    rule:
+      - Every file must have an artifact_class (CODE, TEST, DATA, STYLE, CONFIG, DOC)
+      - Artifact class determines whether file is executable or non-executable
+      - Artifact class informs layer inference for non-code files
+      - UNKNOWN is never acceptable - every file must be classified
+
+    artifact_classes:
+      executable:
+        CODE: "Executable code with imports (.py, .ts, .js, .sh, .sql)"
+        TEST: "Test files - executable but categorized separately"
+      non_executable:
+        DATA: "Static data files (.json in /data/, fixtures, catalogs)"
+        STYLE: "Stylesheets (.css, .scss)"
+        CONFIG: "Configuration files (.yaml, .ini, .toml, .cfg)"
+        DOC: "Documentation (.md, .txt, .rst)"
+
+    layer_inference_rules:
+      STYLE: "L1 (Product Experience) - frontend presentation"
+      DATA: "L4 or L6 based on path (/app/data/ → L4, else L6)"
+      CONFIG: "L7 (Ops & Deployment) - infrastructure config"
+      DOC: "L7 (Ops & Deployment) - documentation"
+      TEST: "L8 (Catalyst / Meta) - test infrastructure"
+      CODE: "From path pattern or explicit header"
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-006 VIOLATION: Artifact class not declared.
+
+        Every file must have an artifact class:
+        - CODE: Executable code with imports
+        - TEST: Test files
+        - DATA: Static data files
+        - STYLE: Stylesheets
+        - CONFIG: Configuration files
+        - DOC: Documentation
+
+        UNKNOWN is never acceptable. Classify the file before proceeding.
+
+        Reference: PIN-248 (Codebase Inventory & Layer System)
+
+  # ---------------------------------------------------------------------------
+  # Behavioral Invariants
+  # ---------------------------------------------------------------------------
+  behavioral_invariants:
+
+    - id: BI-001
+      name: No Code Without Layer
+      rule: |
+        Claude MUST NOT write code if layer is unclear.
+        If unsure, STOP and ask: "Which layer is this?"
+
+    - id: BI-002
+      name: No Async Leak
+      rule: |
+        Claude MUST NOT introduce async behavior into sync layers.
+        If async is needed, declare it explicitly.
+
+    - id: BI-003
+      name: No Silent Import
+      rule: |
+        Claude MUST NOT add imports that violate layer boundaries.
+        Check allowed_imports and forbidden_imports before adding.
+
+    - id: BI-004
+      name: Intent Before Code
+      rule: |
+        Claude MUST declare artifact intent before writing code.
+        Use ARTIFACT_INTENT.yaml template.
+
+    - id: BI-005
+      name: Header Before Body
+      rule: |
+        Claude MUST write file header before file body.
+        No code without architectural declaration.
+
+  # ---------------------------------------------------------------------------
+  # Validation Checklist (Claude must verify before proceeding)
+  # ---------------------------------------------------------------------------
+  validation_checklist:
+    - layer_explicit: "Layer declared with HIGH or MEDIUM confidence"
+    - temporal_explicit: "Trigger and execution mode declared"
+    - ownership_explicit: "Product owner declared"
+    - integration_seam_identified: "If cross-layer, seam identified"
+    - no_integration_leak: "Async does not leak into sync"
+    - file_header_complete: "Header has all required fields"
+
+  # ---------------------------------------------------------------------------
+  # PRE-BUILD GUARDS (Machine-Enforced Gates)
+  # ---------------------------------------------------------------------------
+  # These convert policy into gates. Missing or ambiguous = BLOCKED.
+
+  pre_build_guards:
+
+    - name: Intent Declaration Gate
+      id: PRE-BUILD-001
+      rule: |
+        Any new file detected must have a corresponding
+        ARTIFACT_INTENT.yaml entry.
+        Missing intent is a blocking violation.
+      applies_to:
+        - new_file_creation
+        - significant_modifications
+        - boundary_changing_refactors
+      on_violation: BLOCK_AND_QUERY
+      message: |
+        PRE-BUILD-001: Intent Declaration Required
+
+        Cannot create code without artifact intent.
+        Fill out ARTIFACT_INTENT.yaml first.
+
+        Required fields:
+        - artifact_id
+        - layer (L1-L8)
+        - temporal (trigger, execution, lifecycle)
+        - product owner
+        - dependencies
+
+    - name: Temporal Model Declaration Gate
+      id: PRE-BUILD-002
+      rule: |
+        Every artifact must explicitly declare:
+        - trigger (user, api, worker, scheduler, external)
+        - execution mode (sync, async, deferred)
+        - lifecycle (request, job, long-running, batch)
+        Temporal ambiguity is not allowed.
+      applies_to:
+        - new_file_creation
+        - code_modification
+        - function_changes
+      on_violation: BLOCK_AND_QUERY
+      message: |
+        PRE-BUILD-002: Temporal Declaration Required
+
+        Cannot proceed with ambiguous temporal behavior.
+        Inference is forbidden.
+
+        Declare explicitly:
+        - Trigger: who/what initiates this?
+        - Execution: sync | async | deferred
+        - Lifecycle: request | job | long-running | batch
+
+    - name: Layer Confidence Gate
+      id: PRE-BUILD-003
+      rule: |
+        Layer must be declared with HIGH or MEDIUM confidence.
+        LOW confidence = BLOCKED.
+        Ambiguous layer = BLOCKED.
+      applies_to:
+        - new_file_creation
+        - import_changes
+      on_violation: BLOCK_AND_QUERY
+      message: |
+        PRE-BUILD-003: Layer Confidence Insufficient
+
+        Layer declaration requires HIGH or MEDIUM confidence.
+        LOW confidence means the artifact is not understood.
+
+        Clarify layer assignment before proceeding.
+
+  # ---------------------------------------------------------------------------
+  # RUNTIME SANITY GUARDS (Violation Detection)
+  # ---------------------------------------------------------------------------
+  # These detect architectural violations at design time.
+
+  runtime_sanity_guards:
+
+    - name: Sync-Async Boundary Guard
+      id: RUNTIME-001
+      rule: |
+        Synchronous layers (L1–L3) must not directly
+        invoke asynchronous execution layers (L5).
+      severity: ERROR
+      detection:
+        - L1 importing from L5
+        - L2 importing from L5
+        - L3 importing from L5
+        - Sync function awaiting worker execution
+        - API handler blocking on long-running computation
+      on_violation:
+        action: BLOCK
+        message: |
+          RUNTIME-001: Sync-Async Boundary Violation
+
+          Synchronous layer (L1-L3) is accessing async execution layer (L5).
+          This is an architectural incident, not an implementation bug.
+
+          Resolution options:
+          1. Add an adapter layer (L3)
+          2. Change the execution model
+          3. Restructure the call hierarchy
+
+    - name: Async Leak Detection Guard
+      id: RUNTIME-002
+      rule: |
+        Async execution semantics must not leak upward.
+        L5 execution must be initiated via domain (L4) or adapter (L3) boundaries.
+      severity: ERROR
+      detection:
+        - Worker patterns in API handlers
+        - Deferred execution hidden behind sync API
+        - Background task creation in L1-L2
+      on_violation:
+        action: BLOCK
+        message: |
+          RUNTIME-002: Async Leak Detected
+
+          Async execution semantics are leaking into sync layers.
+          Execution must be initiated via domain or adapter boundaries.
+
+          This is a temporal contract violation.
+
+    - name: Intent Completeness Guard
+      id: RUNTIME-003
+      rule: |
+        Artifact intent must be complete before code exists.
+        Incomplete intent = artifact architecturally invalid.
+      severity: ERROR
+      required_fields:
+        - layer.declared
+        - layer.confidence (HIGH or MEDIUM)
+        - temporal.trigger
+        - temporal.execution
+        - temporal.lifecycle
+        - product.owner
+        - responsibility.role
+      on_violation:
+        action: BLOCK
+        message: |
+          RUNTIME-003: Incomplete Artifact Intent
+
+          Intent declaration is missing required fields.
+          An artifact without complete intent is:
+          - Architecturally invalid
+          - Non-reviewable
+          - Non-mergeable
+
+  # ---------------------------------------------------------------------------
+  # PROHIBITION CLAUSE
+  # ---------------------------------------------------------------------------
+  # Invalid justifications that must be rejected.
+
+  prohibition_clause:
+    invalid_justifications:
+      - phrase: "Temporary sync"
+        reason: Temporal violations are architectural, not temporary
+      - phrase: "Fast async"
+        reason: Speed doesn't change execution model
+      - phrase: "We'll refactor later"
+        reason: Debt accumulation is not allowed
+      - phrase: "Probably fast enough"
+        reason: Inference is forbidden
+      - phrase: "Likely async"
+        reason: Inference is forbidden
+      - phrase: "Just for now"
+        reason: Temporary violations become permanent
+      - phrase: "Quick hack"
+        reason: Architectural shortcuts create debt
+
+    enforcement: |
+      If Claude detects any invalid justification:
+      1. Reject the justification explicitly
+      2. Explain why it's invalid
+      3. Block until proper declaration is made
+
+  # ---------------------------------------------------------------------------
+  # Reference Files
+  # ---------------------------------------------------------------------------
+  reference_files:
+    # Manual (single source of truth)
+    architecture_operating_manual: docs/ARCHITECTURE_OPERATING_MANUAL.md
+
+    # Templates
+    artifact_intent_template: docs/templates/ARTIFACT_INTENT.yaml
+    file_header_template: docs/templates/FILE_HEADER_TEMPLATE.md
+
+    # Contracts
+    integration_integrity_contract: docs/contracts/INTEGRATION_INTEGRITY_CONTRACT.md
+    temporal_integrity_contract: docs/contracts/TEMPORAL_INTEGRITY_CONTRACT.md
+    integration_integrity_pin: docs/memory-pins/PIN-245-integration-integrity-system.md
+
+    # Enforcement tools
+    intent_validator: scripts/ops/intent_validator.py
+    temporal_detector: scripts/ops/temporal_detector.py
+    ci_workflow: .github/workflows/integration-integrity.yml
+
+    # Test locations
+    lit_tests: backend/tests/lit/
+    bit_tests: website/aos-console/console/tests/bit/
+
+# =============================================================================
+# SECTION 23: CODEBASE INVENTORY & ARTIFACT HYGIENE (ENFORCED)
+# =============================================================================
+# Reference: PIN-248 (Codebase Inventory & Layer System)
+# Added: 2025-12-30
+
+codebase_inventory:
+  status: ENFORCED
+  purpose: |
+    Maintain accurate layer-based inventory of all codebase artifacts.
+    Every file must be classified as either:
+    - A Layered Code Artifact (executable code with layer L1-L8)
+    - A Non-Executable Artifact (DATA, STYLE, CONFIG, DOC, TEST)
+
+    UNKNOWN files must be resolved into either a Layered Code Artifact
+    or a Non-Executable Artifact Class. Nothing escapes the system.
+
+    Inventory must be updated after every task that creates or modifies files.
+
+  # ---------------------------------------------------------------------------
+  # ARTIFACT CLASSES (CODE vs NON-EXECUTABLE)
+  # ---------------------------------------------------------------------------
+  artifact_classes:
+    executable:
+      CODE: "Executable code with imports (.py, .ts, .js, .sh)"
+      TEST: "Test files (executable but categorized separately)"
+    non_executable:
+      DATA: "Static data files (.json in /data/, etc)"
+      STYLE: "Stylesheets (.css, .scss)"
+      CONFIG: "Configuration files (.yaml, .ini, .toml)"
+      DOC: "Documentation (.md)"
+
+    classification_rule: |
+      Every artifact gets:
+      - An artifact_class (CODE, TEST, DATA, STYLE, CONFIG, DOC)
+      - A layer (L1-L8) based on class + path
+
+      Layer inference for non-executable:
+      - STYLE → L1 (Product Experience)
+      - DATA → L4/L6 (Domain/Platform based on path)
+      - DOC → L7 (Ops & Deployment)
+      - CONFIG → L7 (Ops & Deployment)
+      - TEST → L8 (Catalyst / Meta)
+
+  # ---------------------------------------------------------------------------
+  # INVENTORY UPDATE RULE (INV-001)
+  # ---------------------------------------------------------------------------
+  inventory_update_rule:
+    id: INV-001
+    name: Inventory Update After Task
+    when: After every task that creates or modifies files
+    action: |
+      1. Run inventory check: python3 /tmp/full_inventory.py --json
+      2. Verify UNKNOWN count is near zero
+      3. If new files were created without headers, flag them
+      4. Update docs/codebase-registry/CODEBASE_INVENTORY.md if counts changed
+    severity: ADVISORY
+    enforcement: |
+      Claude should proactively update inventory after file operations.
+      New files without layer headers should be flagged for classification.
+
+  # ---------------------------------------------------------------------------
+  # ARTIFACT HYGIENE PRINT RULE (HYG-001)
+  # ---------------------------------------------------------------------------
+  artifact_hygiene_rule:
+    id: HYG-001
+    name: Artifact Hygiene Summary After Task
+    when: After every task completion
+    action: |
+      Print an artifact hygiene summary as part of task completion.
+      Include:
+      - Files created (with layer classification)
+      - Files modified (with layer)
+      - UNKNOWN count (should be near zero)
+      - Any hygiene warnings
+    severity: ADVISORY
+    format: |
+      ## Artifact Hygiene Summary
+
+      | Metric | Value |
+      |--------|-------|
+      | Files Created | {count} |
+      | Files Modified | {count} |
+      | UNKNOWN Files | {count} |
+      | Headers Added | {count} |
+
+      ### Files Changed
+      - `path/to/file.py` (L4 — Domain Engine)
+      - `path/to/other.py` (L6 — Platform Substrate)
+
+  # ---------------------------------------------------------------------------
+  # CLASSIFICATION REQUIREMENTS
+  # ---------------------------------------------------------------------------
+  classification_requirements:
+    executable_code:
+      - Every new Python file must have a layer header (# Layer: Lx — Name)
+      - Every new TypeScript/TSX file must have a layer header (// Layer: Lx — Name)
+      - Files without headers are classified via path inference (MEDIUM confidence)
+      - Explicit headers earn HIGH confidence
+    non_executable:
+      - Non-executable artifacts (DATA, STYLE, CONFIG, DOC) get layer via class rule
+      - No headers required for non-executable artifacts
+      - Classification is automatic based on file extension and path
+    invariants:
+      - UNKNOWN count must equal 0 at all times
+      - Every artifact has both a class AND a layer (never unclassified)
+      - "Not everything executes, but nothing escapes the system"
+
+  # ---------------------------------------------------------------------------
+  # INVENTORY TOOLS
+  # ---------------------------------------------------------------------------
+  tools:
+    full_inventory: scripts/inventory/full_inventory.py
+    unknown_finder: scripts/inventory/find_unknown_files_v2.py
+    inventory_report: docs/codebase-registry/CODEBASE_INVENTORY.md
+    triage_log: docs/codebase-registry/UNKNOWN_TRIAGE.md
+
+  # ---------------------------------------------------------------------------
+  # LAYER MODEL REFERENCE
+  # ---------------------------------------------------------------------------
+  layer_model:
+    L1:
+      name: Product Experience
+      description: UI pages, components, hooks, types
+      allowed_imports: [L2]
+    L2:
+      name: Product APIs
+      description: REST endpoints, surface contracts
+      allowed_imports: [L3, L4, L6]
+    L3:
+      name: Boundary Adapters
+      description: LLM adapters, external integrations
+      allowed_imports: [L4, L6]
+    L4:
+      name: Domain Engines
+      description: Policy, workflow, skills, agents
+      allowed_imports: [L5, L6]
+    L5:
+      name: Execution & Workers
+      description: Jobs, tasks, runtime
+      allowed_imports: [L6]
+    L6:
+      name: Platform Substrate
+      description: DB, auth, models, utils, SDK
+      allowed_imports: []
+    L7:
+      name: Ops & Deployment
+      description: Docs, scripts, config, monitoring
+      allowed_imports: [L6]
+    L8:
+      name: Catalyst / Meta
+      description: Tests, validators, CI
+      allowed_imports: [any]
+
+  # ---------------------------------------------------------------------------
+  # TASK COMPLETION CHECKLIST
+  # ---------------------------------------------------------------------------
+  on_task_completion:
+    - step: Check if files were created or modified
+      action: List all file changes
+    - step: Verify layer classification
+      action: Ensure all new files have layer headers or path inference
+    - step: Print hygiene summary
+      action: Output artifact hygiene table
+    - step: Flag any UNKNOWN files
+      action: Warn if UNKNOWN count increased
+
+# =============================================================================
+# SECTION 24: ARTIFACT CLASS CONTRACT (ENFORCED)
+# =============================================================================
+# Reference: PIN-248 (Codebase Inventory & Layer System)
+# Added: 2025-12-30
+
+artifact_class_contract:
+  status: ENFORCED
+  principle: |
+    Nothing escapes the system. Not everything executes.
+
+    Every file in the codebase must have:
+    1. An artifact_class (CODE, TEST, DATA, STYLE, CONFIG, DOC)
+    2. A layer (L1-L8)
+
+    UNKNOWN is NEVER acceptable as a final state.
+
+  # ---------------------------------------------------------------------------
+  # ARTIFACT CLASSES
+  # ---------------------------------------------------------------------------
+  classes:
+    executable:
+      CODE:
+        description: "Executable code with imports"
+        extensions: [".py", ".ts", ".tsx", ".js", ".jsx", ".sh", ".sql"]
+        header_required: true
+        layer_source: "header or path inference"
+      TEST:
+        description: "Test files - executable but categorized separately"
+        extensions: [".py", ".ts", ".js"]
+        patterns: ["tests/", "test_", "_test.", ".test."]
+        header_required: true
+        layer_source: "always L8"
+
+    non_executable:
+      DATA:
+        description: "Static data files"
+        extensions: [".json"]
+        patterns: ["/data/", "fixtures", "catalog"]
+        header_required: false
+        layer_source: "L4 for domain data, L6 for platform data"
+      STYLE:
+        description: "Stylesheets"
+        extensions: [".css", ".scss", ".sass", ".less"]
+        header_required: false
+        layer_source: "always L1"
+      CONFIG:
+        description: "Configuration files"
+        extensions: [".yaml", ".yml", ".ini", ".toml", ".cfg", ".conf"]
+        patterns: ["Dockerfile", "Makefile", "Procfile"]
+        header_required: false  # optional brief header acceptable
+        layer_source: "always L7"
+      DOC:
+        description: "Documentation"
+        extensions: [".md", ".txt", ".rst"]
+        header_required: false
+        layer_source: "always L7"
+
+  # ---------------------------------------------------------------------------
+  # BLOCKING RULES
+  # ---------------------------------------------------------------------------
+  blocking_rules:
+    - id: AC-001
+      name: "Artifact Class Required"
+      rule: "Every file must have an artifact_class"
+      enforcement: BLOCKING
+
+    - id: AC-002
+      name: "No UNKNOWN"
+      rule: "UNKNOWN is never acceptable as artifact_class"
+      enforcement: BLOCKING
+
+    - id: AC-003
+      name: "Layer Required"
+      rule: "Every artifact must have a layer (derived from class or declared)"
+      enforcement: BLOCKING
+
+    - id: AC-004
+      name: "Executable Header"
+      rule: "Executable artifacts (CODE, TEST) require layer headers"
+      enforcement: BLOCKING
+
+  # ---------------------------------------------------------------------------
+  # ON VIOLATION
+  # ---------------------------------------------------------------------------
+  on_violation:
+    action: BLOCK
+    message: |
+      ARTIFACT CLASS CONTRACT VIOLATION
+
+      Every file must be classified:
+      - Executable: CODE, TEST (header required)
+      - Non-Executable: DATA, STYLE, CONFIG, DOC (header optional)
+
+      UNKNOWN is never acceptable. Classify before proceeding.
+
+      Reference: PIN-248
+
+# =============================================================================
+# SECTION 25: PROTECTIVE GOVERNANCE MODE (ENFORCED)
+# =============================================================================
+# Reference: docs/contracts/PROTECTIVE_GOVERNANCE_CONTRACT.md
+# Added: 2025-12-30
+# Purpose: Long-term protection against regression, noise, and silent debt growth
+
+protective_governance:
+  status: ENFORCED
+
+  principles:
+    - No repeated errors
+    - No silent debt growth
+    - No tool noise escalation
+    - Debt must be explicit and bounded
+
+  rules:
+    - id: PG-001
+      name: "No Unregistered Debt"
+      rule: "No new ignores or suppressions without QUARANTINE_LEDGER entry"
+      enforcement: BLOCKING
+
+    - id: PG-002
+      name: "Monotonicity Guard"
+      rule: "No increase in lint or typing warnings from baseline"
+      enforcement: BLOCKING
+
+    - id: PG-003
+      name: "Quarantine Ceiling"
+      rule: "No increase in quarantined artifacts without approval"
+      enforcement: BLOCKING
+
+    - id: PG-004
+      name: "Baseline Ceremony"
+      rule: "Baselines move only with explicit commit + justification"
+      enforcement: BLOCKING
+
+  session_behavior:
+    mode_transition_rule: |
+      If task scope changes (hygiene → feature, infra → product),
+      session must be re-bootstrapped.
+
+    require_rebootstrap_on:
+      - hygiene_to_feature
+      - infra_to_product
+      - cleanup_to_refactor
+      - tooling_to_business_logic
+
+  debt_ceilings:
+    quarantined_mypy_modules:
+      ceiling: "≤ 15% of runtime code (L1–L6)"
+      current: 10
+      status: under_ceiling
+
+    type_ignore_lines:
+      ceiling: "≤ 2 per file"
+      current: "varies"
+      status: under_ceiling
+
+    legacy_untyped_modules:
+      ceiling: "fixed allowlist only"
+      current: "see QUARANTINE_LEDGER.md"
+      status: frozen
+
+    config_suppressions:
+      ceiling: "no growth after housekeeping baseline"
+      current: 4
+      status: frozen
+
+  enforcement:
+    authority: CI
+    script: scripts/ci/lint_regression_guard.sh
+    baseline: docs/HOUSEKEEPING_BASELINE.md
+    ledger: docs/technical-debt/QUARANTINE_LEDGER.md
+
+  on_violation:
+    action: BLOCK
+    message: |
+      PROTECTIVE GOVERNANCE VIOLATION
+
+      This change violates monotonicity or debt ceiling rules.
+
+      Options:
+      1. Fix the regression (recommended)
+      2. Pay existing debt to make room
+      3. Request explicit exception with justification
+
+      Reference: docs/contracts/PROTECTIVE_GOVERNANCE_CONTRACT.md
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

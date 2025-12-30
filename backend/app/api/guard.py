@@ -1,3 +1,9 @@
+# Layer: L2a — Product API (Console-scoped)
+# Product: AI Console
+# Auth: verify_console_token (aud=console)
+# Reference: PIN-240
+# NOTE: Workers NEVER call this. SDK NEVER imports this.
+
 """Guard API - Customer Console Backend
 
 This router provides endpoints for the Customer Console (guard.agenticverz.com).
@@ -19,9 +25,12 @@ Endpoints:
 - GET  /guard/settings        - Read-only settings
 """
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, cast
+
+logger = logging.getLogger("nova.api.guard")
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -418,7 +427,7 @@ async def activate_killswitch(
     Immediate. All requests blocked until manually resumed.
     """
     # Verify tenant exists
-    tenant = get_tenant_from_auth(session, tenant_id)
+    _tenant = get_tenant_from_auth(session, tenant_id)
 
     # Get or create state
     stmt = select(KillSwitchState).where(
@@ -1313,7 +1322,7 @@ async def get_settings(
             KillSwitchState.entity_id == tenant_id,
         )
     )
-    state_row = session.exec(stmt).first()
+    _state_row = session.exec(stmt).first()
 
     # Return settings (with demo defaults if tenant not found)
     return TenantSettings(
@@ -1534,7 +1543,7 @@ async def search_incidents(
                         if "choices" in resp and resp["choices"]:
                             content = resp["choices"][0].get("message", {}).get("content", "")
                             output_preview = content[:80] if content else output_preview
-                    except:
+                    except Exception:
                         pass
 
         # Determine policy status
@@ -1627,7 +1636,7 @@ async def get_decision_timeline(
                     "content": last_msg.get("content", "")[:200],
                     "model_requested": req.get("model", "unknown"),
                 }
-        except:
+        except Exception:
             pass
 
     events.append(
@@ -1730,7 +1739,7 @@ async def get_decision_timeline(
             resp = json.loads(call.response_json)
             if "choices" in resp and resp["choices"]:
                 output_content = resp["choices"][0].get("message", {}).get("content", "")[:200]
-        except:
+        except Exception:
             pass
 
     events.append(
@@ -2321,8 +2330,6 @@ async def onboarding_verify(
             # Try to send Slack alert
             slack_webhook = os.getenv("SLACK_WEBHOOK_URL") or os.getenv("SLACK_MISMATCH_WEBHOOK")
             if slack_webhook:
-                import httpx
-
                 alert_msg = {
                     "text": f"🛡️ *Onboarding Verification Complete*\n\n"
                     f"*Tenant:* {tenant_name}\n"

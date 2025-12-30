@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Structured JSON logging configuration
+# Callers: main.py, all modules via logging
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Infrastructure
+
 import json
 import logging
 import sys

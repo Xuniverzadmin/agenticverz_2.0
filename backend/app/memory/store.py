@@ -246,7 +246,7 @@ class PostgresMemoryStore:
                         meta = json.loads(m.meta)
                         if meta.get("run_id") == run_id:
                             continue
-                    except:
+                    except Exception:
                         pass
 
                 text_len = len(m.text)

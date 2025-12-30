@@ -359,7 +359,7 @@ async def _make_request(
         latency = int((time.perf_counter() - start) * 1000) + 10  # Simulated
         try:
             body = mock.json()
-        except:
+        except Exception:
             body = mock.text
         return mock.status_code, dict(mock.headers), body, latency
 
@@ -380,7 +380,7 @@ async def _make_request(
 
             try:
                 response_body = response.json()
-            except:
+            except Exception:
                 response_body = response.text
 
             return response.status_code, dict(response.headers), response_body, latency

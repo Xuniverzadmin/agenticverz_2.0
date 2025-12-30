@@ -82,7 +82,7 @@ def api_request(
         try:
             error_body = json.loads(e.read().decode("utf-8"))
             print(f"Error ({e.code}): {json.dumps(error_body, indent=2)}", file=sys.stderr)
-        except:
+        except Exception:
             print(f"Error ({e.code}): {e.reason}", file=sys.stderr)
         sys.exit(1)
     except urllib.error.URLError as e:
@@ -286,12 +286,33 @@ def cmd_skills(args):
 
     print()
     print("=" * 60)
-    print("  AVAILABLE SKILLS")
+    if args.recommended:
+        print("  RECOMMENDED SKILLS")
+    else:
+        print("  AVAILABLE SKILLS")
     print("=" * 60)
     print()
 
     skills = result.get("skills", [])
     descriptors = result.get("descriptors", {})
+
+    # Filter to recommended skills if flag is set
+    if args.recommended:
+        # Recommended skills for getting started
+        RECOMMENDED_SKILLS = [
+            "llm_invoke",  # Core LLM capability
+            "http_call",  # API integrations
+            "web_search",  # Information gathering
+            "write_file",  # Output generation
+            "read_file",  # Input processing
+        ]
+        skills = [s for s in skills if s in RECOMMENDED_SKILLS]
+        if not skills:
+            # Fallback: show first 5 skills
+            skills = result.get("skills", [])[:5]
+
+        print("  💡 These skills are recommended for getting started:")
+        print()
 
     if not skills:
         # Fall back to capabilities endpoint
@@ -568,8 +589,120 @@ def cmd_version(args):
         print(f"API Phase:     {result.get('phase', 'N/A')}")
         print(f"Planner:       {result.get('planner_backend', 'N/A')}")
         print(f"Features:      {', '.join(result.get('features', []))}")
-    except:
+    except Exception:
         print("API: Not available")
+    print()
+
+
+# ============== QUICKSTART WIZARD ==============
+
+
+def cmd_quickstart(args):
+    """
+    Interactive quickstart wizard for new AOS users.
+
+    Guides through:
+    1. API connection check
+    2. Creating first agent
+    3. Running first workflow
+    4. Understanding results
+    """
+    print()
+    print("=" * 60)
+    print("  🚀 AOS QUICKSTART WIZARD")
+    print("=" * 60)
+    print()
+    print("  Welcome to AOS - the Machine-Native Agent Operating System!")
+    print("  This wizard will help you get started in ~5 minutes.")
+    print()
+
+    # Step 1: Check connection
+    print("  📡 Step 1: Checking API connection...")
+    try:
+        result = api_request("GET", "/health")
+        if result.get("status") == "healthy":
+            print("      ✅ API is healthy and ready!")
+        else:
+            print(f"      ⚠️  API status: {result.get('status', 'unknown')}")
+    except Exception as e:
+        print(f"      ❌ Cannot connect to API: {e}")
+        print()
+        print("  💡 Tip: Make sure AOS is running:")
+        print("      docker compose up -d")
+        print()
+        print("      Or set AOS_API_URL environment variable:")
+        print("      export AOS_API_URL=http://your-server:8000")
+        return
+
+    # Step 2: Check API key
+    print()
+    print("  🔑 Step 2: Checking authentication...")
+    api_key = get_api_key()
+    if api_key:
+        print("      ✅ API key found in AOS_API_KEY")
+        # Verify it works
+        try:
+            result = api_request("GET", "/api/v1/runtime/capabilities")
+            print("      ✅ API key is valid!")
+        except Exception:
+            print("      ⚠️  API key may be invalid. Check your credentials.")
+    else:
+        print("      ⚠️  No API key set. Set AOS_API_KEY environment variable:")
+        print("         export AOS_API_KEY=your-api-key")
+        print()
+        print("      📋 You can find your API key in the AOS console")
+        print("         or in your .env file.")
+
+    # Step 3: Show available skills
+    print()
+    print("  🔧 Step 3: Checking available skills...")
+    try:
+        result = api_request("GET", "/api/v1/runtime/capabilities")
+        skills = list(result.get("skills", {}).keys())
+        if skills:
+            print(f"      ✅ Found {len(skills)} skill(s): {', '.join(skills[:5])}", end="")
+            if len(skills) > 5:
+                print(f" ... and {len(skills) - 5} more")
+            else:
+                print()
+        else:
+            print("      ⚠️  No skills available. Check your configuration.")
+    except Exception:
+        print("      ⚠️  Could not fetch skills.")
+
+    # Step 4: Example workflow
+    print()
+    print("  📝 Step 4: Your first workflow")
+    print()
+    print("  Try running a simple simulation:")
+    print()
+    print('    aos simulate --plan \'{"steps": [{"skill": "llm_invoke", "params": {"prompt": "Hello!"}}]}\'')
+    print()
+    print("  Or query your remaining budget:")
+    print()
+    print("    aos query remaining_budget_cents")
+    print()
+
+    # Step 5: Quick reference
+    print("  📚 Quick Reference")
+    print("  " + "-" * 56)
+    print("  aos simulate --plan <json>    Simulate a plan")
+    print("  aos skills                    List all skills")
+    print("  aos skills --recommended      Show starter skills")
+    print("  aos skill <id>                Get skill details")
+    print("  aos capabilities              Show agent capabilities")
+    print("  aos query <type>              Query runtime state")
+    print("  aos recovery candidates       List recovery candidates")
+    print()
+
+    # Step 6: Resources
+    print("  🔗 Resources")
+    print("  " + "-" * 56)
+    print("  Documentation:   docs/API_WORKFLOW_GUIDE.md")
+    print("  Memory PINs:     docs/memory-pins/INDEX.md")
+    print("  Support:         https://github.com/anthropics/aos/issues")
+    print()
+    print("  Happy building! 🎉")
     print()
 
 
@@ -618,6 +751,9 @@ Environment:
     # skills command
     skills_parser = subparsers.add_parser("skills", help="List available skills")
     skills_parser.add_argument("--verbose", "-v", action="store_true", help="Show raw response")
+    skills_parser.add_argument(
+        "--recommended", "-r", action="store_true", help="Show recommended skills for getting started"
+    )
 
     # skill command
     skill_parser = subparsers.add_parser("skill", help="Describe a specific skill")
@@ -631,7 +767,10 @@ Environment:
     cap_parser.add_argument("--verbose", "-v", action="store_true", help="Show raw response")
 
     # version command
-    ver_parser = subparsers.add_parser("version", help="Show version info")
+    _ver_parser = subparsers.add_parser("version", help="Show version info")
+
+    # quickstart command
+    _qs_parser = subparsers.add_parser("quickstart", help="Interactive quickstart wizard for new users")
 
     # recovery command group (M10)
     recovery_parser = subparsers.add_parser("recovery", help="Recovery suggestion commands (M10)")
@@ -664,7 +803,7 @@ Environment:
     rr_parser.add_argument("--note", "-n", default="", help="Optional review note")
 
     # recovery stats
-    rs_parser = recovery_subparsers.add_parser("stats", help="Show recovery statistics")
+    _rs_parser = recovery_subparsers.add_parser("stats", help="Show recovery statistics")
 
     args = parser.parse_args()
 
@@ -680,6 +819,8 @@ Environment:
         cmd_capabilities(args)
     elif args.command == "version":
         cmd_version(args)
+    elif args.command == "quickstart":
+        cmd_quickstart(args)
     elif args.command == "recovery":
         if args.recovery_command == "candidates":
             cmd_recovery_candidates(args)

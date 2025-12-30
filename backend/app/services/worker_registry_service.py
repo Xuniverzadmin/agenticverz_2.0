@@ -1,3 +1,9 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Role: Worker discovery, status queries, capability registry
+# Callers: L2 APIs, L5 workers
+# Reference: PIN-242 (Baseline Freeze)
+
 """
 Worker Registry Service (M21)
 

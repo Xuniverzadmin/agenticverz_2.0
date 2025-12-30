@@ -1,3 +1,14 @@
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: external (HTTP)
+#   Execution: sync (request-response)
+# Role: FastAPI application entry point, route registration, middleware setup
+# Callers: uvicorn, gunicorn, docker entrypoint
+# Allowed Imports: L3, L4, L6
+# Forbidden Imports: L1, L5 (no direct worker imports)
+# Reference: Core Application
+
 import asyncio
 import json
 import os
@@ -226,7 +237,7 @@ async def lifespan(app: FastAPI):
     try:
         from .events.publisher import get_publisher
 
-        publisher = get_publisher()  # This will raise if misconfigured
+        _publisher = get_publisher()  # This will raise if misconfigured
     except Exception as e:
         logger.critical(f"[BOOT] EventPublisher initialization FAILED: {e}")
         raise

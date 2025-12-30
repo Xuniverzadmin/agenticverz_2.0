@@ -399,7 +399,7 @@ def cmd_stats(args):
                 try:
                     delta = ended_at - started_at
                     duration = f" ({delta.total_seconds():.1f}s)"
-                except:
+                except Exception:
                     pass
             print(f"    {run_id[:20]}... | {status:<15} | {format_timestamp(started_at)[:19]}{duration}")
 
@@ -507,7 +507,7 @@ def main():
     inspect_parser.add_argument("--run", "-r", required=True, help="Run ID to inspect")
 
     # list-running command
-    list_parser = subparsers.add_parser("list-running", help="List running workflows")
+    _list_parser = subparsers.add_parser("list-running", help="List running workflows")
 
     # golden-tail command
     tail_parser = subparsers.add_parser("golden-tail", help="Show last N golden events")

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Workflow policy enforcement
+# Callers: workflow engine
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Workflow System
+
 # Policy Enforcer (M4)
 """
 Per-step policy enforcement for workflow execution.

@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: HTTP skill execution adapter
+# Callers: skill runtime
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Skill System
+
 import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict
@@ -28,7 +39,7 @@ async def run_http_skill(
 
     for attempt in range(max_retries):
         attempts = attempt + 1
-        attempt_started = datetime.now(timezone.utc)
+        _attempt_started = datetime.now(timezone.utc)
 
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:

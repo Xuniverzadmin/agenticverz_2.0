@@ -1,6 +1,6 @@
 """Phase 4B Extension: Decision Records Causal Binding
 
-Revision ID: 050_decision_records_causal_binding
+Revision ID: 050_dr_causal_binding
 Revises: 049_decision_records
 Create Date: 2025-12-25
 
@@ -23,7 +23,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision = "050_decision_records_causal_binding"
+revision = "050_dr_causal_binding"
 down_revision = "049_decision_records"
 branch_labels = None
 depends_on = None
