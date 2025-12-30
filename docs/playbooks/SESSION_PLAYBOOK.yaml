@@ -15,11 +15,18 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.7"
+session_playbook_version: "2.8"
 created: "2025-12-27"
 last_updated: "2025-12-30"
 
 # Changelog:
+#   2.8 - Added Section 26: Layer Classification & Reassignment Gate (ENFORCED).
+#         Added ARCH-GOV-007 (Layer Classification Reassignment Gate).
+#         Mandatory 5-step procedure for layer audits and reclassification.
+#         Hard stops prevent new abstractions, unrelated refactors, invented layers.
+#         Outcomes: A (correct), B (misjudged), C (hybrid) - no shared/temporary allowed.
+#         Principle: "Optimizing for correctness, not speed. Blocking = success."
+#         Reference: PIN-249 (Protective Governance).
 #   2.7 - Added Section 25: Protective Governance Mode (ENFORCED).
 #         Added PG-001 (No Unregistered Debt), PG-002 (Monotonicity Guard),
 #         PG-003 (Quarantine Ceiling), PG-004 (Baseline Ceremony).
@@ -3101,6 +3108,181 @@ protective_governance:
       3. Request explicit exception with justification
 
       Reference: docs/contracts/PROTECTIVE_GOVERNANCE_CONTRACT.md
+
+# =============================================================================
+# SECTION 26: LAYER CLASSIFICATION & REASSIGNMENT GATE (ENFORCED)
+# =============================================================================
+# Reference: PIN-249 (Protective Governance)
+# Added: 2025-12-30
+# Purpose: Force correct layer reasoning, prevent hand-waving, block ambiguity
+
+layer_classification_gate:
+  status: ENFORCED
+
+  context:
+    description: |
+      The codebase is classified into 8 strict layers.
+      L1–L3 = Product-owned
+      L4–L7 = System / Foundation
+      L8 = Catalyst layer (CI, tests, validators, governance tooling)
+      Architecture is FROZEN. No new code may be written until classification is resolved.
+
+  authoritative_layer_model:
+    L1:
+      name: Product Experience
+      scope: AI Console, UI, UX
+      boundary: product
+
+    L2:
+      name: Product APIs
+      scope: request/response, controllers
+      boundary: product
+
+    L3:
+      name: Boundary Adapters
+      scope: protocols, SDK glue, IO normalization
+      boundary: product
+
+    L4:
+      name: Domain Engines
+      scope: business logic, rules, state machines
+      boundary: system
+
+    L5:
+      name: Execution & Workers
+      scope: jobs, schedulers, async execution
+      boundary: system
+
+    L6:
+      name: Platform Substrate
+      scope: DB, cache, messaging, auth infra
+      boundary: system
+
+    L7:
+      name: Ops & Deployment
+      scope: runtime ops, configs, scripts, runbooks
+      boundary: system
+
+    L8:
+      name: Catalyst / Meta
+      scope: CI, tests, validators, governance
+      boundary: meta
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-007: Layer Classification Reassignment Gate
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-007:
+    name: Layer Classification Reassignment Gate
+    enforcement: BLOCKING
+    applies_to:
+      - layer_audits
+      - file_reclassification
+      - architecture_reviews
+      - cross_layer_refactors
+
+    rule:
+      - For each file under review, determine placement correctness
+      - No assumptions, no shortcuts
+      - If classification cannot be resolved, STOP and ask
+
+    mandatory_procedure:
+      step_1_artifact_intake:
+        description: Gather facts about the artifact
+        required_information:
+          - file_path
+          - declared_purpose
+          - consumers (who calls it)
+          - dependents (who depends on it)
+          - execution_time: [request_time, async_background, build_ci_time, deploy_ops_time]
+        on_unclear: STOP and ask for clarification
+
+      step_2_layer_claim:
+        description: State one primary layer the artifact claims to belong to
+        rule: Justify using FUNCTION, not location
+        bad_justification: "It lives under /api so it's L2"
+        valid_justification: "It defines request/response schemas and performs no business logic, therefore L2"
+
+      step_3_violation_check:
+        description: Explicitly answer YES/NO for each
+        questions:
+          - Does it contain business logic?
+          - Does it touch infra primitives directly?
+          - Does it orchestrate async work?
+          - Does it enforce policy or governance?
+          - Does it leak product concerns downward?
+        on_yes_outside_layer: Violation exists
+
+      step_4_classification_outcome:
+        case_A_correct:
+          description: Confirm layer, no action required
+          artifact_registry: unchanged
+
+        case_B_misjudged:
+          description: Wrong original classification
+          required_actions:
+            - Identify why original classification was wrong
+            - Propose correct layer
+            - Specify required code changes for layer purity
+            - Specify new file location
+            - Update artifact registry entry
+          partial_fixes: NOT_ALLOWED
+
+        case_C_hybrid:
+          description: Straddles two layers
+          required_actions:
+            - Identify which two layers it straddles
+            - Decide closest correct layer (forced choice)
+            - State nuance being accepted
+            - Require explicit registry annotation
+          shared_layer_answer: NOT_ALLOWED
+          temporary_answer: NOT_ALLOWED
+
+      step_5_registry_update:
+        description: Required for Case B or C
+        format: |
+          Artifact: <name>
+          Old Layer: Lx
+          New Layer: Ly
+          Reason: <one-paragraph factual justification>
+          Nuance (if any): <explicitly documented>
+          Approval Required: YES / NO
+
+    hard_stops:
+      - Do NOT propose new abstractions
+      - Do NOT refactor unrelated code
+      - Do NOT invent new layers
+      - Do NOT proceed to feature work
+      - Do NOT allow "it's fine as-is" without proof
+
+    output_format:
+      required_sections:
+        - summary (3-5 lines)
+        - layer_decision
+        - violation_analysis
+        - outcome (A / B / C)
+        - required_actions (if any)
+        - registry_update_block (if required)
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-007 VIOLATION: Layer classification not resolved.
+
+        Before proceeding with code changes, you must:
+        1. Complete artifact intake (Step 1)
+        2. Make explicit layer claim with justification (Step 2)
+        3. Check for cross-layer violations (Step 3)
+        4. Declare outcome: A (correct), B (misjudged), or C (hybrid)
+        5. Provide registry update if B or C
+
+        If classification cannot be resolved, STOP and ask.
+
+        Reference: SESSION_PLAYBOOK Section 26
+
+  governance_principle: |
+    You are not optimizing for speed.
+    You are optimizing for architectural correctness and long-term clarity.
+    If this exercise blocks progress, that is SUCCESS, not failure.
 
 # =============================================================================
 # END OF SESSION PLAYBOOK
