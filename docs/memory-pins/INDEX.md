@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-30 (PIN-249 Protective Governance & Housekeeping Normalization)
+**Last Updated:** 2025-12-30 (PIN-250 Structural Truth Extraction Lifecycle)
 
 ---
 
@@ -281,6 +281,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-247](PIN-247-governance-closeout.md) | **Governance Close-Out** | Architecture / Governance / Close-Out | **✅ COMPLETE** | 2025-12-30 |
 | [PIN-248](PIN-248-codebase-inventory-layer-system.md) | **Codebase Inventory & Layer System** | Architecture / Governance | **ACTIVE** | 2025-12-30 |
 | [PIN-249](PIN-249-protective-governance-housekeeping-normalization.md) | **Protective Governance & Housekeeping Normalization** | Infrastructure / Governance | **✅ COMPLETE** | 2025-12-30 |
+| [PIN-250](PIN-250-structural-truth-extraction-lifecycle.md) | **Structural Truth Extraction Lifecycle** | Architecture / Governance | **ACTIVE** | 2025-12-30 |
 
 ---
 
@@ -1050,6 +1051,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-30 | **PIN-250 Structural Truth Extraction Lifecycle** - 6-phase lifecycle tracking: Governance Lock (DONE) → Structural Truth Extraction → Structural Alignment → CI Derivation → CI Sanity Pass → Business Logic Eligibility. |
 | 2025-12-30 | **PIN-249 Protective Governance & Housekeeping Normalization** - Created via memory_trail. |
 | 2025-12-29 | **PIN-241 Layer Violation Triage Strategy** - Classify violations by risk/intent before refactoring. Three buckets: Structural Smells (A), Shortcuts (B), Acceptable Bridges (C). Refactor safety rule: no behavior change during layer fixes. |
 | 2025-12-29 | **PIN-240 Seven-Layer Codebase Mental Model** - Constitutional mental model for vertical layer reasoning. |
