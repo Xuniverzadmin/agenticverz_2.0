@@ -271,12 +271,44 @@ At this point CI becomes a *measurement* of truth, not a *creator* of truth.
 
 ---
 
-## Next Action
+## Session Handoff (2025-12-30)
 
-To proceed, select Phase 1 scope:
+**Last Session Status:** Phase 1 IN_PROGRESS (backend only)
 
-1. **"Start Phase 1: structural truth extraction — repo-wide"**
-2. **"Start Phase 1 on backend only"**
-3. **"Start Phase 1 on AI Console slice only"**
+### Completed This Session
+- [x] Directory-level truth map — `docs/architecture/STRUCTURAL_TRUTH_MAP.md`
+- [x] Dependency-direction map — included in truth map
+- [x] 36 directories classified with layer assignments
+- [x] 14 structural issues identified and documented
+- [x] Zero circular dependencies confirmed (9.2/10 health score)
 
-Phase 1 rules will be strictly enforced.
+### Next Steps (Resume Here)
+1. **Runtime-trigger map** — Classify each directory by execution model:
+   - Import-time (runs when module loads)
+   - Request-time (runs on HTTP request)
+   - Async/deferred (runs in background)
+
+2. **State ownership map** — Identify which directories own state:
+   - Database state owners
+   - Cache state owners
+   - In-memory state owners
+
+3. **Policy enforcement map** — Document where policies are enforced
+
+4. **Glue vs Domain classification** — Distinguish orchestration from business logic
+
+### Key Artifacts
+- `docs/architecture/STRUCTURAL_TRUTH_MAP.md` — Main truth map (read this first)
+- `docs/memory-pins/PIN-250-*` — This tracking PIN
+
+### Critical Issues to Address (Phase 2)
+| Priority | Issue | Location |
+|----------|-------|----------|
+| P1 | API lacks L3 adapter | api/ |
+| P1 | Auth mixes L3+L4 | auth/ |
+| P1 | Module duplication | planner/ vs planners/ |
+| P1 | Hidden module | observability/ |
+| P1 | Empty module | tasks/ |
+
+### Resume Command
+Say: **"Continue Phase 1 structural truth extraction — runtime trigger map next"**
