@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-28 (PIN-232 C5 Learning & Evolution — Entry Conditions - Architectural Gap Identified)
+**Last Updated:** 2025-12-30 (PIN-249 Protective Governance & Housekeeping Normalization)
 
 ---
 
@@ -264,6 +264,23 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-230](PIN-230-c4-entry-conditions.md) | **C4 Entry Conditions and Non-Goals** | C4 Multi-Envelope / Entry Conditions | **✅ COMPLETE** | 2025-12-28 |
 | [PIN-231](PIN-231-c4-certification-complete.md) | **C4 Certification Complete** | C4 Multi-Envelope / Certification | **✅ CERTIFIED** | 2025-12-28 |
 | [PIN-232](PIN-232-c5-entry-conditions.md) | **C5 Entry Conditions (Design Only)** | C5 Learning & Evolution / Entry Conditions | **🔒 DESIGN_ONLY** | 2025-12-28 |
+| [PIN-233](PIN-233-file-utilization-customer-console.md) | **File Utilization Analysis - Customer Console UI** | Product / UI Architecture | **REFERENCE** | 2025-12-28 |
+| [PIN-234](PIN-234-customer-console-v1-constitution-and-governance-framework.md) | **Customer Console v1 Constitution and Governance Framework** | Governance / Console | **🏗️ ACTIVE** | 2025-12-29 |
+| [PIN-235](PIN-235-products-first-architecture-migration.md) | **Products-First Architecture Migration** | Architecture / Console / Migration | **✅ COMPLETE** | 2025-12-29 |
+| [PIN-236](PIN-236-code-purpose-authority-registry.md) | **Code Purpose & Authority Registry** | Architecture / Governance / Registry | **🎯 ACTIVE** | 2025-12-29 |
+| [PIN-237](PIN-237-codebase-registry-survey.md) | **Codebase Registry Survey** | Infrastructure / Governance / Registry | **✅ COMPLETE** | 2025-12-29 |
+| [PIN-238](PIN-238-code-registration-evolution-governance.md) | **Code Registration & Evolution Governance** | Infrastructure / Governance | **✅ COMPLETE** | 2025-12-29 |
+| [PIN-239](PIN-239-product-boundary-enforcement.md) | **Product Boundary Enforcement Framework** | Infrastructure / Governance | **✅ COMPLETE** | 2025-12-29 |
+| [PIN-240](PIN-240-seven-layer-codebase-mental-model.md) | **Seven-Layer Codebase Mental Model** | Architecture / Mental Model | **CONSTITUTIONAL** | 2025-12-29 |
+| [PIN-241](PIN-241-layer-violation-triage-strategy.md) | **Layer Violation Triage Strategy** | Architecture / Layer Governance | **ACTIVE** | 2025-12-29 |
+| [PIN-242](PIN-242-layer-map-baseline-freeze.md) | **Layer Map Baseline Freeze** | Architecture / Layer Governance | **FROZEN** | 2025-12-30 |
+| [PIN-243](PIN-243-l6-platform-subdivision.md) | **L6 Platform Substrate Subdivision** | Architecture / Layer Governance | **DESIGNED** | 2025-12-30 |
+| [PIN-244](PIN-244-l3-adapter-contract.md) | **L3 Adapter Contract** | Architecture / Layer Governance | **DESIGNED** | 2025-12-30 |
+| [PIN-245](PIN-245-integration-integrity-system.md) | **Integration Integrity System** | Architecture / Testing / CI | **ACTIVE** | 2025-12-30 |
+| [PIN-246](PIN-246-architecture-governance-implementation.md) | **Architecture Governance Implementation** | Architecture / Governance | **✅ COMPLETE** | 2025-12-30 |
+| [PIN-247](PIN-247-governance-closeout.md) | **Governance Close-Out** | Architecture / Governance / Close-Out | **✅ COMPLETE** | 2025-12-30 |
+| [PIN-248](PIN-248-codebase-inventory-layer-system.md) | **Codebase Inventory & Layer System** | Architecture / Governance | **ACTIVE** | 2025-12-30 |
+| [PIN-249](PIN-249-protective-governance-housekeeping-normalization.md) | **Protective Governance & Housekeeping Normalization** | Infrastructure / Governance | **✅ COMPLETE** | 2025-12-30 |
 
 ---
 
@@ -1033,6 +1050,20 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2025-12-30 | **PIN-249 Protective Governance & Housekeeping Normalization** - Created via memory_trail. |
+| 2025-12-29 | **PIN-241 Layer Violation Triage Strategy** - Classify violations by risk/intent before refactoring. Three buckets: Structural Smells (A), Shortcuts (B), Acceptable Bridges (C). Refactor safety rule: no behavior change during layer fixes. |
+| 2025-12-29 | **PIN-240 Seven-Layer Codebase Mental Model** - Constitutional mental model for vertical layer reasoning. |
+| 2025-12-29 | **PIN-239 Product Boundary Enforcement Framework** - Pre-build enforcement with 5 BOUNDARY rules. |
+| 2025-12-29 | **PIN-238 Code Registration & Evolution Governance** - Created via memory_trail. |
+| 2025-12-29 | **PIN-236 Code Purpose & Authority Registry** - Established formal artifact registry system. First audit: 17 AI Console artifacts registered. Schema v1 frozen. Found 1 orphan (SupportPage.tsx), 1 consolidation candidate. |
+| 2025-12-29 | **PIN-235 Products-First Architecture Migration** - 3-layer entry point separation complete. main.tsx + AIConsoleApp.tsx + pages. All freeze points locked. |
+| 2025-12-29 | **PIN-234 Phase 5 Complete** - URL-based routing. Deleted GuardConsoleApp.tsx. All 5 phases done. Customer Console v1 production ready. |
+| 2025-12-29 | **PIN-234 Phase 4 Complete** - CustomerIntegrationsPage.tsx created. All frozen domains now implemented. |
+| 2025-12-29 | **PIN-234 Phase 4 Logs Page** - CustomerLogsPage.tsx created. Logs domain wired to navigation. |
+| 2025-12-29 | **PIN-234 Phase 3 Account Separation** - Account nav moved from sidebar to header dropdown. Phases 1-3 complete. |
+| 2025-12-29 | **PIN-234 Customer Console v1 Constitution and Governance Framework** - Updated: Updates |
+| 2025-12-29 | **PIN-234 Customer Console v1 Constitution and Governance Framework** - Created via memory_trail. |
+| 2025-12-28 | **PIN-233 File Utilization Analysis** - Customer Console UI file mapping. 701 files analyzed: 156 customer-facing (22%), 171 internal (24%), 374 test/CI (54%). 5-lens model validated (Posture, Activity, Outcomes, Guardrails, Evidence). Constitutional boundaries respected. |
 | 2025-12-28 | **PIN-232 C5 Learning & Evolution — Entry Conditions** - Updated: Architectural Gap Identified |
 | 2025-12-28 | **PIN-232 C5 Learning & Evolution — Entry Conditions** - Updated: Implementation Complete |
 | 2025-12-28 | **C5-S1 Learning from Rollback Frequency FROZEN** - First learning scenario designed with complete governance: purpose (meta-learning on envelope failures), inputs (coordination_audit_records only), outputs (advisory suggestions), boundaries (no runtime access, kill-switch isolation). 26 acceptance criteria defined (I/B/M/O/H/D series). CI enforcement mapping complete (CI-C5-1 to CI-C5-6 for S1). Documents: C5_S1_LEARNING_SCENARIO.md, C5_S1_ACCEPTANCE_CRITERIA.md, C5_S1_CI_ENFORCEMENT.md. Implementation UNLOCKABLE. Core principle: "Learning observes rollbacks. Humans interpret. Existing envelopes apply." |
@@ -1539,3 +1570,4 @@ When resuming work on this project:
 | 2025-12-22 | **PIN-128 Master Plan M25-M30** - Strategic roadmap answering "build missing vs integrate first". Recommendation: INTEGRATE FIRST. Sequence: M25 (Pillar Integration) → M26 (Cost Intelligence) → M27 (Cost→Loop) → M28 (Unified Console). P0: 6 weeks. Conditional: M29 (Quality Score), M30 (Trust Badge). |
 | 2025-12-22 | **PIN-129 M25 Pillar Integration Blueprint** - Comprehensive specification for wiring the three pillars (Incident Console, Self-Healing, Governance) into a closed feedback loop. 5 bridges: Incident→Catalog, Pattern→Recovery, Recovery→Policy, Policy→CARE, Status→Console. Event bus architecture. Migration 042. 14-day implementation plan. |
 | 2025-12-22 | **PIN-130 M26 Cost Intelligence Blueprint** - Comprehensive specification for Cost Intelligence Dashboard. Feature tagging API, cost attribution by feature/user/model, anomaly detection (reusing M9 patterns), budget alerts, cost projection engine, M25 loop integration (cost anomaly → incident → policy). Migration 043. 11-day implementation plan. |
+| 2025-12-29 | **PIN-235 Products-First Architecture Migration (Phase 3)** - Restructured AI Console from feature-first to products-first architecture. Created `src/products/ai-console/` with domain-first folders. Added `main.tsx` entry point separation (3-layer: runtime entry → product root → features). Cleaned up old folder. Enables standalone deployment at `console.agenticverz.com`. |
