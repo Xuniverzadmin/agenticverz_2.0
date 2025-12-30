@@ -23,13 +23,13 @@ This PIN tracks the **Structural Truth Extraction** lifecycle — a systematic p
 | Phase | Name | Status | Started | Completed |
 |-------|------|--------|---------|-----------|
 | 0 | Governance Lock | DONE | 2025-12-30 | 2025-12-30 |
-| 1 | Structural Truth Extraction | PENDING | - | - |
+| 1 | Structural Truth Extraction | IN_PROGRESS | 2025-12-30 | - |
 | 2 | Structural Alignment | PENDING | - | - |
 | 3 | CI Derivation | PENDING | - | - |
 | 4 | CI Sanity Pass | PENDING | - | - |
 | 5 | Business Logic Eligibility | PENDING | - | - |
 
-**Current Phase:** Phase 0 COMPLETE — Ready for Phase 1
+**Current Phase:** Phase 1 IN_PROGRESS — Scope: Backend Only (~400 Python files)
 
 ---
 
@@ -55,9 +55,11 @@ This PIN tracks the **Structural Truth Extraction** lifecycle — a systematic p
 
 ---
 
-## Phase 1: Structural Truth Extraction (PENDING)
+## Phase 1: Structural Truth Extraction (IN_PROGRESS)
 
-**Status:** PENDING
+**Status:** IN_PROGRESS
+**Started:** 2025-12-30
+**Scope:** Backend only (~400 Python files)
 **Goal:** Understand what the codebase *is*, not what it *claims to be*.
 
 This phase explicitly **ignores business intent**.
@@ -85,12 +87,19 @@ This phase explicitly **ignores business intent**.
 
 ### Deliverables
 
-- [ ] Directory-level truth map
-- [ ] Dependency-direction map
+- [x] Directory-level truth map — `docs/architecture/STRUCTURAL_TRUTH_MAP.md`
+- [x] Dependency-direction map — included in truth map
 - [ ] Runtime-trigger map (import-time / request-time / async)
 - [ ] State ownership map
 - [ ] Policy enforcement map
 - [ ] Glue vs Domain classification
+
+### Artifacts Created
+
+- `docs/architecture/STRUCTURAL_TRUTH_MAP.md` — Comprehensive layer classification for 36 directories
+- Dependency matrix showing import flow (L2→L6)
+- Critical structural issues identified (14 total: 5 P1, 5 P2, 4 P3)
+- Architectural health score: 9.2/10 (zero circular dependencies)
 
 ### Scope Options
 
@@ -213,7 +222,7 @@ At this point CI becomes a *measurement* of truth, not a *creator* of truth.
 [DONE] Phase 0 — Governance Lock
           │
           ▼
-[PENDING] Phase 1 — Structural Truth Extraction   ◄── NEXT
+[IN_PROGRESS] Phase 1 — Structural Truth Extraction   ◄── CURRENT
           │
           ▼
 [PENDING] Phase 2 — Structural Alignment
@@ -236,6 +245,9 @@ At this point CI becomes a *measurement* of truth, not a *creator* of truth.
 |------|----------|-----------|
 | 2025-12-30 | Phase 0 complete | Governance, layers, ARCH-GOV rules established |
 | 2025-12-30 | Created PIN-250 | Track lifecycle formally |
+| 2025-12-30 | Phase 1 started (backend only) | Backend has structural complexity; ~400 files tractable |
+| 2025-12-30 | Directory truth map complete | 36 directories classified, 14 structural issues identified |
+| 2025-12-30 | Dependency map complete | Zero circular deps, 9.2/10 architectural health |
 
 ---
 
