@@ -109,13 +109,19 @@ remediation_hint: n/a - FastAPI requires this pattern
 ```yaml
 id: TD-005
 scope: backend/app/integrations/bridges.py
-layer: L3
+layer: L4
 type: typing
 reason: TYPE_CHECKING import for IntegrationDispatcher
 introduced_on: 2025-12-30
 introduced_by: housekeeping
 expiry: Phase B
 remediation_hint: resolve circular dependency
+rca_reference: |
+  Root cause identified via ARCH-GOV-007 audit (2025-12-30):
+  - Directory was mislabeled L3 (Boundary Adapter), actually L4 (Domain Engine)
+  - "integrations" means "pillar integration", not "external integration"
+  - Circular dep likely stems from unclear layer boundaries
+  - See: PIN-249, __init__.py historical note
 ```
 
 ```yaml

@@ -1,3 +1,21 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: M25 Pillar Integration — internal domain coordination
+# Callers: API (L2), Services (L4), Jobs (L5)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2
+# Reference: PIN-129 (M25 Pillar Integration Blueprint)
+#
+# HISTORICAL NOTE (2025-12-30, ARCH-GOV-007 Audit):
+# Directory named "integrations" for historical reasons (M25 "pillar integration").
+# This is NOT L3 (Boundary Adapter). This IS L4 (Domain Engine).
+# The name refers to internal domain coordination, not external service adapters.
+# Contents: Graduation engine, learning proof, prevention contracts, policy bridges.
+# See: PIN-129, PIN-249 (Layer Classification Audit)
+
 # M25 Pillar Integration Module
 # Implements the feedback loop: Incident → Pattern → Recovery → Policy → Routing
 #
