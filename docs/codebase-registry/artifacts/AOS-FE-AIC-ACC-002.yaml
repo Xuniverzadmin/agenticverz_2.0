@@ -1,0 +1,19 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-ACC-002
+name: SettingsPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: Configuration and export options
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: account
+  order_depth: O2
+notes: |
+  CRITICAL UX FIX: Fake toggles removed.
+  Keys tab duplicates KeysPage - CANDIDATE_CONSOLIDATION.

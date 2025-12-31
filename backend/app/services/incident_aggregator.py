@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide
+# Role: Incident grouping rules, escalation logic
+# Callers: L2 APIs, L5 workers
+# Reference: PIN-242 (Baseline Freeze)
+
 """Incident Aggregation Service - Prevents Incident Explosion Under Load
 
 This service implements intelligent incident grouping to prevent thousands of

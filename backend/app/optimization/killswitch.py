@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Optimization killswitch for emergency stops
+# Callers: API routes, workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M10 Optimization
+
 # C3 Kill-Switch Implementation
 # Reference: C3_KILLSWITCH_ROLLBACK_MODEL.md (FROZEN)
 #

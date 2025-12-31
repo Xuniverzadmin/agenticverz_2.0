@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: import-time
+//   Execution: sync
+// Role: Worker type definitions
+// Callers: Worker components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Types
+
 // Worker Execution Types for Business Builder Worker v0.2
 
 export interface BrandRequest {

@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Email Provider Configuration
+# Source: PIN-052 M11 Dependency
+# Created: 2025-12-30
+
+artifact_id: AOS-OP-DOC-CFG-001
+name: EMAIL_PROVIDER_CONFIGURATION.md
+type: doc
+status: active
+owner: infra
+purpose: Configuration guide for Resend email transactional provider
+authority_level: advise
+execution_surface: none
+traceability:
+  product: system-wide
+  console: ops
+  domain: deployment
+  subdomain: configuration
+  order_depth: O3
+responsibility: |
+  - Resend setup steps
+  - Environment variable documentation
+  - DNS verification instructions
+  - Testing procedures
+  - Rate limit documentation
+  - Troubleshooting guide
+notes: |
+  Created for PIN-052 M11 email dependency.
+  Documents Resend integration for workflow notifications and OTP.

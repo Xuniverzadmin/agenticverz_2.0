@@ -1,0 +1,33 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-GRD-001
+name: guard.py
+type: api-route
+status: active
+owner: backend
+purpose: Customer AI Console - Protection status, incidents, killswitch, replay
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: incidents
+  subdomain: guard
+  order_depth: O2
+responsibility: |
+  - GET /status - Protection status
+  - GET /snapshot/today - Today's metrics
+  - POST /killswitch/activate|deactivate - Traffic control
+  - GET /incidents - List incidents
+  - GET /incidents/{id} - Incident detail with timeline
+  - POST /incidents/{id}/acknowledge|resolve - Incident actions
+  - POST /replay/{call_id} - Replay a call
+  - GET /keys - List API keys
+  - POST /keys/{id}/freeze|unfreeze - Key control
+  - GET /settings - Read-only settings
+dependencies:
+  - CustomerToken
+  - verify_console_token (aud=console)
+  - CertificateService
+  - ReplayValidator

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: product-builder
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: UX generation stage
+# Callers: business_builder worker
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Business Builder
+
 # UX Layout Generation Stage Implementation
 """
 UX stage that generates HTML/CSS landing pages.

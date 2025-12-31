@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-FTL-001
+name: founder_timeline.py
+type: api-route
+status: active
+owner: backend
+purpose: Phase 4C-1 Founder Timeline - Raw decision record view
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: logs
+  subdomain: timeline
+  order_depth: O4
+responsibility: |
+  - GET /founder/timeline - List decisions chronologically
+  - GET /founder/timeline/run/{run_id} - Timeline for run
+  - Chronological order only, no grouping
+  - No collapsing, no status pills, no interpretation
+  - "Court transcript, not dashboard"
+  - DECISION_RECORD_CONTRACT v0.2 compliant
+dependencies:
+  - SQLAlchemy text queries
+  - DecisionRecordView model

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker|scheduler
+#   Execution: sync
+# Role: S1 rollback learning and suggestions
+# Callers: workers, scheduled jobs
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: C5 S1 Learning
+
 """
 C5-S1: Learning from Rollback Frequency.
 

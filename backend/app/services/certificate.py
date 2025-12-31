@@ -1,3 +1,8 @@
+# Layer: L3 — Boundary Adapter (Console → Platform)
+# Product: AI Console
+# Callers: guard.py (replay endpoint)
+# Reference: PIN-240
+
 """M23 Certificate Service - Cryptographic Evidence of Deterministic Replay
 
 Uses M4 HMAC infrastructure to create signed certificates that prove:

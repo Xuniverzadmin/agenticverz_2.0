@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-LGC-001
+name: legacy_routes.py
+type: api-route
+status: deprecated
+owner: backend
+purpose: M29 Category 7 - Legacy route handlers returning 410 Gone
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: all
+  domain: system
+  subdomain: legacy
+  order_depth: O1
+responsibility: |
+  - Returns 410 Gone for deprecated routes
+  - Prevents confusion from silent failures
+  - Prevents clients relying on deprecated endpoints
+  - Prevents security issues from undocumented paths
+  - NOT redirects (301/302) - paths are dead
+  - PIN-153: M29 Category 7 - Redirect Expiry & Cleanup
+dependencies: []
+notes: |
+  Deprecated routes include /dashboard and others removed in M29

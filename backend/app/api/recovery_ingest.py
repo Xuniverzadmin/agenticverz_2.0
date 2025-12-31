@@ -34,6 +34,7 @@ from app.metrics import (
     recovery_ingest_total,
 )
 from app.middleware.rate_limit import rate_limit_dependency
+from app.services.recovery_write_service import RecoveryWriteService
 
 logger = logging.getLogger("nova.api.recovery_ingest")
 
@@ -158,65 +159,28 @@ async def ingest_failure(
         # Atomic upsert: INSERT ... ON CONFLICT DO UPDATE RETURNING
         # This eliminates all race conditions between SELECT+INSERT
         # =================================================================
+        # Phase 2B: Use write service for DB operations
+        write_service = RecoveryWriteService(session)
+
         try:
-            result = session.execute(
-                text(
-                    """
-                    INSERT INTO recovery_candidates (
-                        failure_match_id,
-                        suggestion,
-                        confidence,
-                        explain,
-                        error_code,
-                        error_signature,
-                        source,
-                        created_by,
-                        idempotency_key,
-                        occurrence_count,
-                        last_occurrence_at
-                    ) VALUES (
-                        CAST(:failure_match_id AS uuid),
-                        :suggestion,
-                        :confidence,
-                        CAST(:explain AS jsonb),
-                        :error_code,
-                        :error_signature,
-                        :source,
-                        'ingest_api',
-                        CAST(:idempotency_key AS uuid),
-                        1,
-                        now()
-                    )
-                    ON CONFLICT (failure_match_id, error_signature) DO UPDATE
-                    SET
-                        occurrence_count = recovery_candidates.occurrence_count + 1,
-                        last_occurrence_at = now(),
-                        updated_at = now()
-                    RETURNING id, (xmax = 0) AS is_insert, occurrence_count
-                """
-                ),
+            explain_json = json.dumps(
                 {
-                    "failure_match_id": failure_match_id,
-                    "suggestion": suggestion,
-                    "confidence": 0.2,  # Default pending evaluation
-                    "explain": json.dumps(
-                        {
-                            "method": "pending_evaluation",
-                            "source": request.source,
-                            "ingested_at": datetime.now(timezone.utc).isoformat(),
-                        }
-                    ),
-                    "error_code": error_type,
-                    "error_signature": error_signature,
+                    "method": "pending_evaluation",
                     "source": request.source,
-                    "idempotency_key": idempotency_key,
-                },
+                    "ingested_at": datetime.now(timezone.utc).isoformat(),
+                }
             )
-            row = result.fetchone()
-            candidate_id = row[0]
-            is_insert = row[1]  # True if INSERT, False if UPDATE (xmax=0 means insert)
-            occurrence_count = row[2]
-            session.commit()
+            candidate_id, is_insert, occurrence_count = write_service.upsert_recovery_candidate(
+                failure_match_id=failure_match_id,
+                suggestion=suggestion,
+                confidence=0.2,  # Default pending evaluation
+                explain_json=explain_json,
+                error_code=error_type,
+                error_signature=error_signature,
+                source=request.source,
+                idempotency_key=idempotency_key,
+            )
+            write_service.commit()
 
             if not is_insert:
                 # This was an update (duplicate)
@@ -232,7 +196,7 @@ async def ingest_failure(
                 )
 
         except IntegrityError as ie:
-            session.rollback()
+            write_service.rollback()
 
             # Handle edge case: idempotency_key conflict (different failure_match_id)
             msg = str(ie.orig).lower() if ie.orig else ""
@@ -240,17 +204,7 @@ async def ingest_failure(
 
             if idempotency_key and "idempotency_key" in msg:
                 # Idempotency key matched different failure_match_id
-                result = session.execute(
-                    text(
-                        """
-                        SELECT id, failure_match_id
-                        FROM recovery_candidates
-                        WHERE idempotency_key = CAST(:key AS uuid)
-                    """
-                    ),
-                    {"key": idempotency_key},
-                )
-                existing = result.fetchone()
+                existing = write_service.get_candidate_by_idempotency_key(idempotency_key)
 
                 if existing:
                     status_label = "duplicate"
@@ -260,7 +214,7 @@ async def ingest_failure(
                         status="duplicate",
                         message="Idempotency key matched existing candidate",
                         is_duplicate=True,
-                        failure_match_id=str(existing[1]),
+                        failure_match_id=existing[1],
                     )
 
             # Unknown integrity error
@@ -394,23 +348,10 @@ async def _enqueue_evaluation_async(
             owns_session = False
 
         try:
-            session.execute(
-                text(
-                    """
-                    SELECT m10_recovery.enqueue_work(
-                        :candidate_id,
-                        CAST(:idempotency_key AS uuid),
-                        0,
-                        'db_fallback'
-                    )
-                """
-                ),
-                {
-                    "candidate_id": candidate_id,
-                    "idempotency_key": idempotency_key,
-                },
-            )
-            session.commit()
+            # Phase 2B: Use write service for DB operations
+            write_service = RecoveryWriteService(session)
+            write_service.enqueue_evaluation_db_fallback(candidate_id, idempotency_key)
+            write_service.commit()
             enqueue_method = "db_fallback"
             logger.info(f"Evaluation enqueued to DB fallback: candidate_id={candidate_id}")
             return True

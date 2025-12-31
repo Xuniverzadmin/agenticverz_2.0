@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Memory update background task
+# Callers: workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: Memory System
+
 """
 Memory Update Tasks - M7 Implementation
 

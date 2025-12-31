@@ -1,0 +1,17 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-LOG-001
+name: LogsPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: "Answer: What is the raw truth?"
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: logs
+  topic_o1: "What is the raw truth?"
+  order_depth: O1

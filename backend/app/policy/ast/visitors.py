@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Policy AST visitor pattern implementations
+# Callers: policy/engine
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Policy System
+
 # M20 Policy AST Visitors
 # Visitor pattern implementations for AST traversal
 """

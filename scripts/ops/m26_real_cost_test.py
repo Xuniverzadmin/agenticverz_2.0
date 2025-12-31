@@ -44,7 +44,10 @@ def validate_script_secrets() -> None:
     }
 
     optional_with_defaults = {
-        "AOS_API_KEY": ("AOS internal API key", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf"),
+        "AOS_API_KEY": (
+            "AOS internal API key",
+            "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf",
+        ),
     }
 
     missing = []
@@ -99,14 +102,19 @@ class M26TestSuite:
     total_cost_cents: float = 0.0
 
     def __post_init__(self):
-        self.api_key = os.getenv("AOS_API_KEY", "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf")
+        self.api_key = os.getenv(
+            "AOS_API_KEY",
+            "edf7eeb8df7ed639b9d1d8bcac572cea5b8cf97e1dffa00d0d3c5ded0f728aaf",
+        )
         self.openai_key = os.getenv("OPENAI_API_KEY", "")
 
     @property
     def headers(self) -> Dict[str, str]:
         return {"X-API-Key": self.api_key, "Content-Type": "application/json"}
 
-    async def api_call(self, method: str, path: str, data: Optional[dict] = None) -> httpx.Response:
+    async def api_call(
+        self, method: str, path: str, data: Optional[dict] = None
+    ) -> httpx.Response:
         """Make API call with proper headers."""
         async with httpx.AsyncClient(timeout=30.0) as client:
             url = f"{self.api_base}{path}"
@@ -127,7 +135,12 @@ class M26TestSuite:
     async def call_openai(self, prompt: str, max_tokens: int = 100) -> Dict[str, Any]:
         """Make real OpenAI API call and return usage."""
         if not self.openai_key:
-            return {"error": "No OpenAI key", "input_tokens": 0, "output_tokens": 0, "cost_cents": 0}
+            return {
+                "error": "No OpenAI key",
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cost_cents": 0,
+            }
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -144,7 +157,12 @@ class M26TestSuite:
             )
 
             if response.status_code != 200:
-                return {"error": response.text, "input_tokens": 0, "output_tokens": 0, "cost_cents": 0}
+                return {
+                    "error": response.text,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cost_cents": 0,
+                }
 
             data = response.json()
             usage = data.get("usage", {})
@@ -159,7 +177,9 @@ class M26TestSuite:
                 "output_tokens": output_tokens,
                 "cost_cents": cost_cents,
                 "model": "gpt-4o-mini",
-                "response": data.get("choices", [{}])[0].get("message", {}).get("content", ""),
+                "response": data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", ""),
             }
 
     # =========================================================================
@@ -250,19 +270,25 @@ class M26TestSuite:
             total_cost += result["cost_cents"]
 
             # Record in M26
-            record_response = await self.api_call("POST", "/cost/record", {
-                "model": result["model"],
-                "input_tokens": result["input_tokens"],
-                "output_tokens": result["output_tokens"],
-                "cost_cents": result["cost_cents"],
-                "feature_tag": feature_tag,
-                "user_id": user_id,
-                "request_id": f"baseline_test_{i}_{datetime.now(timezone.utc).isoformat()}",
-            })
+            record_response = await self.api_call(
+                "POST",
+                "/cost/record",
+                {
+                    "model": result["model"],
+                    "input_tokens": result["input_tokens"],
+                    "output_tokens": result["output_tokens"],
+                    "cost_cents": result["cost_cents"],
+                    "feature_tag": feature_tag,
+                    "user_id": user_id,
+                    "request_id": f"baseline_test_{i}_{datetime.now(timezone.utc).isoformat()}",
+                },
+            )
 
             if record_response.status_code in [200, 201]:
                 records_created += 1
-                print(f"  Request {i+1}: {result['input_tokens']}+{result['output_tokens']} tokens, ${result['cost_cents']/100:.4f}")
+                print(
+                    f"  Request {i+1}: {result['input_tokens']}+{result['output_tokens']} tokens, ${result['cost_cents']/100:.4f}"
+                )
             else:
                 print(f"  Request {i+1}: Failed to record - {record_response.text}")
 
@@ -279,7 +305,9 @@ class M26TestSuite:
         details = []
 
         if summary.get("request_count", 0) < records_created:
-            details.append(f"Request count mismatch: expected {records_created}, got {summary.get('request_count', 0)}")
+            details.append(
+                f"Request count mismatch: expected {records_created}, got {summary.get('request_count', 0)}"
+            )
             passed = False
 
         # Find our feature
@@ -295,7 +323,9 @@ class M26TestSuite:
             passed = False
 
         if passed:
-            details.append(f"Created {records_created} records, ${total_cost/100:.4f} total")
+            details.append(
+                f"Created {records_created} records, ${total_cost/100:.4f} total"
+            )
 
         self.total_cost_cents += total_cost
 
@@ -347,15 +377,19 @@ class M26TestSuite:
 
             spike_cost += result["cost_cents"]
 
-            await self.api_call("POST", "/cost/record", {
-                "model": result["model"],
-                "input_tokens": result["input_tokens"],
-                "output_tokens": result["output_tokens"],
-                "cost_cents": result["cost_cents"],
-                "feature_tag": feature_tag,
-                "user_id": user_id,
-                "request_id": f"spike_test_{i}_{datetime.now(timezone.utc).isoformat()}",
-            })
+            await self.api_call(
+                "POST",
+                "/cost/record",
+                {
+                    "model": result["model"],
+                    "input_tokens": result["input_tokens"],
+                    "output_tokens": result["output_tokens"],
+                    "cost_cents": result["cost_cents"],
+                    "feature_tag": feature_tag,
+                    "user_id": user_id,
+                    "request_id": f"spike_test_{i}_{datetime.now(timezone.utc).isoformat()}",
+                },
+            )
 
             if i % 5 == 4:
                 print(f"  Requests {i+1}/20 complete, ${spike_cost/100:.4f} spent")
@@ -364,7 +398,9 @@ class M26TestSuite:
 
         # Trigger anomaly detection
         detect_response = await self.api_call("POST", "/cost/anomalies/detect", {})
-        detect_data = detect_response.json() if detect_response.status_code == 200 else {}
+        detect_data = (
+            detect_response.json() if detect_response.status_code == 200 else {}
+        )
 
         detected_count = detect_data.get("detected_count", 0)
         anomalies = detect_data.get("anomalies", [])
@@ -379,10 +415,14 @@ class M26TestSuite:
         details = []
 
         if not spike_found and detected_count == 0:
-            details.append("No spike detected (may need more historical data for baseline)")
+            details.append(
+                "No spike detected (may need more historical data for baseline)"
+            )
             # Not a hard fail - spike detection needs historical data
         else:
-            details.append(f"Detected {detected_count} anomalies, spike_found={spike_found}")
+            details.append(
+                f"Detected {detected_count} anomalies, spike_found={spike_found}"
+            )
 
         details.append(f"Spike cost: ${spike_cost/100:.4f}")
 
@@ -421,7 +461,9 @@ class M26TestSuite:
 
         # Get dashboard
         dashboard_response = await self.api_call("GET", "/cost/dashboard?days=1")
-        dashboard = dashboard_response.json() if dashboard_response.status_code == 200 else {}
+        dashboard = (
+            dashboard_response.json() if dashboard_response.status_code == 200 else {}
+        )
 
         summary = dashboard.get("summary", {})
         budget_cents = summary.get("budget_cents")
@@ -433,7 +475,9 @@ class M26TestSuite:
         if not budgets:
             details.append("No budgets configured")
         else:
-            details.append(f"Budget: {budgets[0].get('daily_limit_cents', 0)/100:.2f}/day")
+            details.append(
+                f"Budget: {budgets[0].get('daily_limit_cents', 0)/100:.2f}/day"
+            )
 
         if budget_used_pct is not None:
             details.append(f"Used: {budget_used_pct:.1f}%")
@@ -476,31 +520,41 @@ class M26TestSuite:
             result = await self.call_openai("Say 'A'", max_tokens=5)
             if "error" not in result:
                 multi_user_cost += result["cost_cents"]
-                await self.api_call("POST", "/cost/record", {
-                    "model": result["model"],
-                    "input_tokens": result["input_tokens"],
-                    "output_tokens": result["output_tokens"],
-                    "cost_cents": result["cost_cents"],
-                    "feature_tag": feature_tag,
-                    "user_id": "user_A_low_usage",
-                    "request_id": f"multi_A_{i}_{datetime.now(timezone.utc).isoformat()}",
-                })
+                await self.api_call(
+                    "POST",
+                    "/cost/record",
+                    {
+                        "model": result["model"],
+                        "input_tokens": result["input_tokens"],
+                        "output_tokens": result["output_tokens"],
+                        "cost_cents": result["cost_cents"],
+                        "feature_tag": feature_tag,
+                        "user_id": "user_A_low_usage",
+                        "request_id": f"multi_A_{i}_{datetime.now(timezone.utc).isoformat()}",
+                    },
+                )
         print("  User A: 2 small requests")
 
         # User B: 8 larger requests
         for i in range(8):
-            result = await self.call_openai(f"Write a limerick about the number {i}", max_tokens=50)
+            result = await self.call_openai(
+                f"Write a limerick about the number {i}", max_tokens=50
+            )
             if "error" not in result:
                 multi_user_cost += result["cost_cents"]
-                await self.api_call("POST", "/cost/record", {
-                    "model": result["model"],
-                    "input_tokens": result["input_tokens"],
-                    "output_tokens": result["output_tokens"],
-                    "cost_cents": result["cost_cents"],
-                    "feature_tag": feature_tag,
-                    "user_id": "user_B_high_usage",
-                    "request_id": f"multi_B_{i}_{datetime.now(timezone.utc).isoformat()}",
-                })
+                await self.api_call(
+                    "POST",
+                    "/cost/record",
+                    {
+                        "model": result["model"],
+                        "input_tokens": result["input_tokens"],
+                        "output_tokens": result["output_tokens"],
+                        "cost_cents": result["cost_cents"],
+                        "feature_tag": feature_tag,
+                        "user_id": "user_B_high_usage",
+                        "request_id": f"multi_B_{i}_{datetime.now(timezone.utc).isoformat()}",
+                    },
+                )
         print("  User B: 8 larger requests")
 
         self.total_cost_cents += multi_user_cost
@@ -555,8 +609,12 @@ class M26TestSuite:
         print("\n[Test 5] Projection Honesty")
         print("-" * 40)
 
-        projection_response = await self.api_call("GET", "/cost/projection?lookback_days=7&forecast_days=7")
-        projection = projection_response.json() if projection_response.status_code == 200 else {}
+        projection_response = await self.api_call(
+            "GET", "/cost/projection?lookback_days=7&forecast_days=7"
+        )
+        projection = (
+            projection_response.json() if projection_response.status_code == 200 else {}
+        )
 
         daily_avg = projection.get("current_daily_avg_cents", 0)
         monthly_proj = projection.get("monthly_projection_cents", 0)
@@ -570,7 +628,9 @@ class M26TestSuite:
             passed = False
             details.append("Negative projection")
         else:
-            details.append(f"Daily avg: ${daily_avg/100:.2f}, Monthly: ${monthly_proj/100:.2f}, Trend: {trend}")
+            details.append(
+                f"Daily avg: ${daily_avg/100:.2f}, Monthly: ${monthly_proj/100:.2f}, Trend: {trend}"
+            )
 
         result = TestResult(
             name="Projection Honesty",
@@ -623,7 +683,12 @@ class M26TestSuite:
 
     async def generate_proof(self):
         """Generate proof document."""
-        proof_path = Path(__file__).parent.parent.parent / "docs" / "test_reports" / f"M26_REAL_TEST_PROOF_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        proof_path = (
+            Path(__file__).parent.parent.parent
+            / "docs"
+            / "test_reports"
+            / f"M26_REAL_TEST_PROOF_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        )
         proof_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(proof_path, "w") as f:
@@ -643,9 +708,13 @@ class M26TestSuite:
             f.write("## Verdict\n\n")
             passed = sum(1 for r in self.results if r.passed)
             if passed == len(self.results):
-                f.write("**ALL TESTS PASSED** - M26 Cost Intelligence is production-ready.\n")
+                f.write(
+                    "**ALL TESTS PASSED** - M26 Cost Intelligence is production-ready.\n"
+                )
             else:
-                f.write(f"**{len(self.results) - passed} TESTS FAILED** - Review required.\n")
+                f.write(
+                    f"**{len(self.results) - passed} TESTS FAILED** - Review required.\n"
+                )
 
         print(f"\nProof document: {proof_path}")
 

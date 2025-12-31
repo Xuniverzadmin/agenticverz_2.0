@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Golden file validation for replay fidelity
+# Callers: workflow engine, CI
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Workflow System
+
 # Golden-File Pipeline (M4)
 """
 Golden-file recorder and verifier for workflow replay testing.

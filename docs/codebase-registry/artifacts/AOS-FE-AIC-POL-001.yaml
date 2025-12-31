@@ -1,0 +1,17 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-POL-001
+name: PoliciesPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: "Answer: How is behavior defined?"
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: policies
+  topic_o1: "How is behavior defined?"
+  order_depth: O1

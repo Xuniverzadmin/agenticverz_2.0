@@ -1,3 +1,14 @@
+# Layer: L7 — Ops & Deployment
+# Product: system-wide
+# Temporal:
+#   Trigger: user (CLI)
+#   Execution: sync
+# Role: Backend CLI utilities
+# Callers: shell
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: CLI Tools
+
 #!/usr/bin/env python3
 """
 CLI adapter for AOS - unified execution from command line.

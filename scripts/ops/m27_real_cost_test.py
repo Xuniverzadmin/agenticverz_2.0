@@ -27,7 +27,6 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
-from decimal import Decimal
 
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
@@ -52,6 +51,7 @@ NUM_REQUESTS = 10
 # =============================================================================
 # COLORS
 # =============================================================================
+
 
 class Colors:
     GREEN = "\033[92m"
@@ -94,6 +94,7 @@ def log_phase(phase: str):
 # DATABASE HELPERS
 # =============================================================================
 
+
 async def get_db_session():
     """Get async database session."""
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -130,6 +131,7 @@ async def get_db_session():
 async def execute_sql(session, sql: str, params: dict = None):
     """Execute raw SQL."""
     from sqlalchemy import text
+
     result = await session.execute(text(sql), params or {})
     return result
 
@@ -137,6 +139,7 @@ async def execute_sql(session, sql: str, params: dict = None):
 # =============================================================================
 # PHASE 0: SETUP
 # =============================================================================
+
 
 async def setup_test_tenant(session) -> dict:
     """Create or verify test tenant and budget."""
@@ -159,11 +162,11 @@ async def setup_test_tenant(session) -> dict:
             VALUES (:id, :name, :slug, 'test', 1000, 'active')
             ON CONFLICT (id) DO NOTHING
         """
-        await execute_sql(session, create_sql, {
-            "id": TENANT_ID,
-            "name": TENANT_NAME,
-            "slug": "m27-test"
-        })
+        await execute_sql(
+            session,
+            create_sql,
+            {"id": TENANT_ID, "name": TENANT_NAME, "slug": "m27-test"},
+        )
         results["tenant_created"] = True
         log_pass(f"Created tenant: {TENANT_ID}")
 
@@ -178,12 +181,16 @@ async def setup_test_tenant(session) -> dict:
             hard_limit_enabled = true,
             updated_at = now()
     """
-    await execute_sql(session, budget_sql, {
-        "id": budget_id,
-        "tenant_id": TENANT_ID,
-        "daily_limit": DAILY_BUDGET_CENTS,
-        "monthly_limit": DAILY_BUDGET_CENTS * 30
-    })
+    await execute_sql(
+        session,
+        budget_sql,
+        {
+            "id": budget_id,
+            "tenant_id": TENANT_ID,
+            "daily_limit": DAILY_BUDGET_CENTS,
+            "monthly_limit": DAILY_BUDGET_CENTS * 30,
+        },
+    )
     results["budget_created"] = True
     log_pass(f"Budget set: ${DAILY_BUDGET_CENTS/100:.2f}/day with hard limit")
 
@@ -194,6 +201,7 @@ async def setup_test_tenant(session) -> dict:
 # =============================================================================
 # PHASE 1: GENERATE REAL COST (OPENAI)
 # =============================================================================
+
 
 async def generate_real_cost(session) -> dict:
     """Generate real OpenAI spend and record to DB."""
@@ -220,7 +228,7 @@ async def generate_real_cost(session) -> dict:
 
     # Cost per 1K tokens (gpt-4o-mini)
     INPUT_COST_PER_1K = 0.15  # $0.00015/token = 0.015 cents/token
-    OUTPUT_COST_PER_1K = 0.6   # $0.0006/token = 0.06 cents/token
+    OUTPUT_COST_PER_1K = 0.6  # $0.0006/token = 0.06 cents/token
 
     log_info(f"Making {NUM_REQUESTS} requests to {OPENAI_MODEL}...")
 
@@ -236,10 +244,9 @@ async def generate_real_cost(session) -> dict:
             output_tokens = response.usage.completion_tokens
 
             # Calculate cost in cents
-            cost_cents = (
-                (input_tokens / 1000) * INPUT_COST_PER_1K +
-                (output_tokens / 1000) * OUTPUT_COST_PER_1K
-            )
+            cost_cents = (input_tokens / 1000) * INPUT_COST_PER_1K + (
+                output_tokens / 1000
+            ) * OUTPUT_COST_PER_1K
 
             total_input_tokens += input_tokens
             total_output_tokens += output_tokens
@@ -254,25 +261,33 @@ async def generate_real_cost(session) -> dict:
                 VALUES (:id, :tenant_id, :user_id, :feature_tag, :model,
                         :input_tokens, :output_tokens, :cost_cents)
             """
-            await execute_sql(session, record_sql, {
-                "id": record_id,
-                "tenant_id": TENANT_ID,
-                "user_id": USER_ID,
-                "feature_tag": FEATURE_TAG,
-                "model": OPENAI_MODEL,
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "cost_cents": cost_cents,
-            })
+            await execute_sql(
+                session,
+                record_sql,
+                {
+                    "id": record_id,
+                    "tenant_id": TENANT_ID,
+                    "user_id": USER_ID,
+                    "feature_tag": FEATURE_TAG,
+                    "model": OPENAI_MODEL,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "cost_cents": cost_cents,
+                },
+            )
 
-            cost_records.append({
-                "id": record_id,
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "cost_cents": cost_cents,
-            })
+            cost_records.append(
+                {
+                    "id": record_id,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "cost_cents": cost_cents,
+                }
+            )
 
-            log_info(f"  Request {i+1}: {input_tokens} in / {output_tokens} out = ${cost_cents/100:.4f}")
+            log_info(
+                f"  Request {i+1}: {input_tokens} in / {output_tokens} out = ${cost_cents/100:.4f}"
+            )
 
             time.sleep(0.5)  # Rate limit
 
@@ -300,6 +315,7 @@ async def generate_real_cost(session) -> dict:
 # =============================================================================
 # PHASE 2: DETECT ANOMALY (M26)
 # =============================================================================
+
 
 async def detect_anomaly(session, cost_data: dict) -> dict:
     """Detect cost anomaly using M26 logic."""
@@ -337,7 +353,9 @@ async def detect_anomaly(session, cost_data: dict) -> dict:
     warn_threshold_pct = budget_row[1]
 
     # Calculate deviation
-    usage_pct = (today_total_cents / daily_limit_cents) * 100 if daily_limit_cents > 0 else 0
+    usage_pct = (
+        (today_total_cents / daily_limit_cents) * 100 if daily_limit_cents > 0 else 0
+    )
 
     log_info(f"Budget: ${daily_limit_cents/100:.2f}/day")
     log_info(f"Usage: {usage_pct:.1f}% of daily budget")
@@ -355,8 +373,12 @@ async def detect_anomaly(session, cost_data: dict) -> dict:
     elif record_count >= 5 and cost_data.get("total_cost_cents", 0) > 0:
         # Check for user spike - compare to expected baseline
         expected_per_request = 0.5  # cents
-        actual_per_request = cost_data["total_cost_cents"] / max(1, cost_data["requests_made"])
-        deviation_pct = ((actual_per_request - expected_per_request) / expected_per_request) * 100
+        actual_per_request = cost_data["total_cost_cents"] / max(
+            1, cost_data["requests_made"]
+        )
+        deviation_pct = (
+            (actual_per_request - expected_per_request) / expected_per_request
+        ) * 100
 
         if deviation_pct >= 200:
             anomaly_type = "user_spike"
@@ -390,22 +412,28 @@ async def detect_anomaly(session, cost_data: dict) -> dict:
 
     message = f"User {USER_ID} triggered cost spike: ${today_total_cents/100:.4f} ({usage_pct:.0f}% of budget)"
 
-    await execute_sql(session, anomaly_sql, {
-        "id": anomaly_id,
-        "tenant_id": TENANT_ID,
-        "anomaly_type": anomaly_type,
-        "severity": severity,
-        "entity_id": USER_ID,
-        "current_value": today_total_cents,
-        "expected_value": daily_limit_cents / 10,  # Expected ~10% per hour
-        "deviation_pct": deviation_pct,
-        "message": message,
-        "metadata": json.dumps({
-            "feature_tag": FEATURE_TAG,
-            "model": OPENAI_MODEL,
-            "requests_made": cost_data.get("requests_made", 0),
-        }),
-    })
+    await execute_sql(
+        session,
+        anomaly_sql,
+        {
+            "id": anomaly_id,
+            "tenant_id": TENANT_ID,
+            "anomaly_type": anomaly_type,
+            "severity": severity,
+            "entity_id": USER_ID,
+            "current_value": today_total_cents,
+            "expected_value": daily_limit_cents / 10,  # Expected ~10% per hour
+            "deviation_pct": deviation_pct,
+            "message": message,
+            "metadata": json.dumps(
+                {
+                    "feature_tag": FEATURE_TAG,
+                    "model": OPENAI_MODEL,
+                    "requests_made": cost_data.get("requests_made", 0),
+                }
+            ),
+        },
+    )
 
     await session.commit()
 
@@ -430,15 +458,15 @@ async def detect_anomaly(session, cost_data: dict) -> dict:
 # PHASE 3-5: RUN M27 COST LOOP (C1-C5)
 # =============================================================================
 
+
 async def run_m27_loop(session, anomaly_data: dict) -> dict:
     """Run the full M27 cost loop (C1-C5)."""
     log_phase("PHASE 3-5: M27 COST LOOP (C1-C5)")
 
-    from app.integrations.cost_bridges import (
-        CostAnomaly, AnomalyType, AnomalySeverity, CostLoopOrchestrator
-    )
+    from app.integrations.cost_bridges import CostAnomaly, AnomalyType
     from app.integrations.cost_safety_rails import (
-        SafeCostLoopOrchestrator, SafetyConfig
+        SafeCostLoopOrchestrator,
+        SafetyConfig,
     )
 
     # Build CostAnomaly from detected data
@@ -453,11 +481,13 @@ async def run_m27_loop(session, anomaly_data: dict) -> dict:
     # We need 300%+ deviation: (current - expected) / expected * 100 >= 300
     # So current = expected * 4 (for 300%) or expected * 6 (for 500% = CRITICAL)
     expected_cents = 100  # $1.00 expected
-    current_cents = 500   # $5.00 actual = 400% deviation = HIGH
+    current_cents = 500  # $5.00 actual = 400% deviation = HIGH
 
     anomaly = CostAnomaly.create(
         tenant_id=TENANT_ID,
-        anomaly_type=anomaly_type_map.get(anomaly_data["anomaly_type"], AnomalyType.USER_SPIKE),
+        anomaly_type=anomaly_type_map.get(
+            anomaly_data["anomaly_type"], AnomalyType.USER_SPIKE
+        ),
         entity_type="user",
         entity_id=USER_ID,
         current_value_cents=current_cents,
@@ -484,7 +514,7 @@ async def run_m27_loop(session, anomaly_data: dict) -> dict:
     result = await orchestrator.process_anomaly_safe(anomaly)
 
     # Log results
-    log_info(f"\nLoop Result:")
+    log_info("\nLoop Result:")
     log_info(f"  Status: {result.get('status', 'unknown')}")
     log_info(f"  Stages: {result.get('stages_completed', [])}")
 
@@ -498,10 +528,14 @@ async def run_m27_loop(session, anomaly_data: dict) -> dict:
             SET incident_id = :incident_id
             WHERE id = :anomaly_id
         """
-        await execute_sql(session, link_sql, {
-            "incident_id": result["incident_id"],
-            "anomaly_id": anomaly_data["anomaly_id"],
-        })
+        await execute_sql(
+            session,
+            link_sql,
+            {
+                "incident_id": result["incident_id"],
+                "anomaly_id": anomaly_data["anomaly_id"],
+            },
+        )
     else:
         log_warn("C1: No incident created (severity may be LOW)")
 
@@ -518,7 +552,9 @@ async def run_m27_loop(session, anomaly_data: dict) -> dict:
         recoveries = result["artifacts"]["recoveries"]
         log_pass(f"C3 RECOVERIES: {len(recoveries)} suggestions")
         for r in recoveries[:3]:
-            log_info(f"  - {r.get('action_type', 'unknown')} (conf: {r.get('confidence', 0):.2f})")
+            log_info(
+                f"  - {r.get('action_type', 'unknown')} (conf: {r.get('confidence', 0):.2f})"
+            )
     else:
         log_warn("C3: No recoveries generated")
 
@@ -536,7 +572,9 @@ async def run_m27_loop(session, anomaly_data: dict) -> dict:
         adjustments = result["artifacts"]["adjustments"]
         log_pass(f"C5 ROUTING: {len(adjustments)} adjustments")
         for a in adjustments[:3]:
-            log_info(f"  - {a.get('adjustment_type', 'unknown')}: {a.get('magnitude', 0)}")
+            log_info(
+                f"  - {a.get('adjustment_type', 'unknown')}: {a.get('magnitude', 0)}"
+            )
     else:
         log_warn("C5: No routing adjustments")
 
@@ -569,6 +607,7 @@ async def run_m27_loop(session, anomaly_data: dict) -> dict:
 # =============================================================================
 # PHASE 6: VERIFICATION
 # =============================================================================
+
 
 async def verify_db_state(session, loop_result: dict) -> dict:
     """Verify all state was persisted to DB."""
@@ -613,7 +652,10 @@ async def verify_db_state(session, loop_result: dict) -> dict:
         results["cost_records_persisted"] = False
 
     # 3. Summary
-    results["loop_completed"] = loop_result.get("loop_status") in ["complete", "partial"]
+    results["loop_completed"] = loop_result.get("loop_status") in [
+        "complete",
+        "partial",
+    ]
     results["stages_count"] = len(loop_result.get("stages_completed", []))
 
     return results
@@ -622,6 +664,7 @@ async def verify_db_state(session, loop_result: dict) -> dict:
 # =============================================================================
 # MAIN
 # =============================================================================
+
 
 async def main():
     """Run the full M27 real cost test."""
@@ -670,6 +713,7 @@ async def main():
     except Exception as e:
         log_fail(f"Test failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -681,12 +725,30 @@ async def main():
     print(f"\n{Colors.BOLD}Proof Checklist:{Colors.END}")
 
     checks = [
-        ("Real OpenAI spend", all_results.get("cost_generation", {}).get("success", False)),
-        ("Cost records in DB", all_results.get("verification", {}).get("cost_records_persisted", False)),
-        ("Anomaly detected", all_results.get("anomaly_detection", {}).get("anomaly_detected", False)),
-        ("Anomaly persisted", all_results.get("verification", {}).get("anomaly_persisted", False)),
-        ("Loop executed", all_results.get("verification", {}).get("loop_completed", False)),
-        ("Stages completed", all_results.get("verification", {}).get("stages_count", 0) >= 2),
+        (
+            "Real OpenAI spend",
+            all_results.get("cost_generation", {}).get("success", False),
+        ),
+        (
+            "Cost records in DB",
+            all_results.get("verification", {}).get("cost_records_persisted", False),
+        ),
+        (
+            "Anomaly detected",
+            all_results.get("anomaly_detection", {}).get("anomaly_detected", False),
+        ),
+        (
+            "Anomaly persisted",
+            all_results.get("verification", {}).get("anomaly_persisted", False),
+        ),
+        (
+            "Loop executed",
+            all_results.get("verification", {}).get("loop_completed", False),
+        ),
+        (
+            "Stages completed",
+            all_results.get("verification", {}).get("stages_count", 0) >= 2,
+        ),
     ]
 
     all_pass = True
@@ -700,7 +762,9 @@ async def main():
     print(f"\n{Colors.BOLD}Statistics:{Colors.END}")
     cost_data = all_results.get("cost_generation", {})
     print(f"  Requests made: {cost_data.get('requests_made', 0)}")
-    print(f"  Total tokens: {cost_data.get('total_input_tokens', 0)} in / {cost_data.get('total_output_tokens', 0)} out")
+    print(
+        f"  Total tokens: {cost_data.get('total_input_tokens', 0)} in / {cost_data.get('total_output_tokens', 0)} out"
+    )
     print(f"  Real spend: ${cost_data.get('total_cost_cents', 0)/100:.4f}")
     print(f"  Elapsed time: {elapsed:.1f}s")
 
@@ -729,7 +793,9 @@ async def main():
         "results": all_results,
     }
 
-    report_path = f"/tmp/m27_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    report_path = (
+        f"/tmp/m27_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2, default=str)
     print(f"\nReport saved: {report_path}")

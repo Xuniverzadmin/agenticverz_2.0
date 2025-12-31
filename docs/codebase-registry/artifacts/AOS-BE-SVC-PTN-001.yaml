@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-PTN-001
+name: pattern_detection.py
+type: service
+status: active
+owner: backend
+purpose: PB-S3 pattern detection WITHOUT modifying history
+authority_level: observe
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: feedback
+  subdomain: patterns
+  order_depth: O3
+responsibility: |
+  - Observe patterns in execution data
+  - Emit feedback WITHOUT modifying history
+  - failure_pattern: Same error signature N times
+  - cost_spike: Abnormal cost increase detected
+  - Feedback stored SEPARATELY in pattern_feedback table
+dependencies:
+  - app.models.feedback.PatternFeedback
+  - app.models.tenant.WorkerRun
+notes: |
+  Location: backend/app/services/pattern_detection.py
+  PB-S3 Contract: Observe patterns → create feedback → do nothing else
+  NO modification of worker_runs, traces, or costs

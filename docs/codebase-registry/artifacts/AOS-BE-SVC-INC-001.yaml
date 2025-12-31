@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-INC-001
+name: incident_aggregator.py
+type: service
+status: active
+owner: backend
+purpose: Anti-explosion incident grouping under load
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: incidents
+  subdomain: aggregation
+  order_depth: O2
+responsibility: |
+  - Time-window aggregation (default 5 minutes)
+  - Tenant + trigger_type grouping key
+  - Rate limiting (max 1 incident per key per window)
+  - Auto-escalation for high-volume windows
+  - Incident merging for related failures
+  - Watchpoint #1: During 1000-request outage, creates 1 incident, not 1000
+dependencies:
+  - app.models.killswitch.Incident
+  - app.models.killswitch.IncidentEvent
+notes: |
+  Location: backend/app/services/incident_aggregator.py
+  Architecture Rule: Explicit dependency injection, no lazy service resolution

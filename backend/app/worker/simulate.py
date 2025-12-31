@@ -1,5 +1,24 @@
-# Pre-Execution Cost Simulator (M5)
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Pre-execution cost simulation (M5)
+# Authority: Feasibility decisions (budget, permission, risk)
+# Callers: API runtime, workers (pre-run checks)
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: PIN-256 Phase E FIX-01
+#
+# Phase E FIX-01 Criteria Verification:
+# - Domain Decision: YES (cost/feasibility classification)
+# - Semantic Stability: YES (same plan = same result)
+# - No Execution Coupling: YES (uses static metadata, no execution)
+# - Idempotence: YES (deterministic by design)
+
 """
+Pre-Execution Cost Simulator (M5) - L4 Domain Orchestrator
+
 Cost and feasibility simulation for workflow plans before execution.
 
 Provides:

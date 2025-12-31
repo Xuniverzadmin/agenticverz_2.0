@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Deterministic workflow execution engine
+# Callers: workers, runtime service
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Workflow System
+
 # Workflow Engine (M4)
 """
 Deterministic Workflow Engine for multi-step execution.

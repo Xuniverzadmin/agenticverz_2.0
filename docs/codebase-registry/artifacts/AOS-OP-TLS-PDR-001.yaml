@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-TLS-PDR-001
+name: pin_drift_detector.sh
+type: script
+status: active
+owner: ops
+purpose: Memory PIN architecture consistency validation
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: tools
+  subdomain: governance
+  order_depth: O2
+responsibility: |
+  - PIN serial order and gap detection
+  - Missing files referenced in INDEX
+  - Orphan files not in INDEX
+  - Status consistency checks
+  - Date freshness validation
+dependencies: []
+notes: |
+  Location: scripts/tools/pin_drift_detector.sh
+  Target: docs/memory-pins/

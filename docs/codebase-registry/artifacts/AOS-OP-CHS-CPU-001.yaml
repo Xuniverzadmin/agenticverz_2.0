@@ -1,0 +1,25 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-CHS-CPU-001
+name: cpu_spike.sh
+type: script
+status: active
+owner: ops
+purpose: CPU spike chaos experiment
+authority_level: mutate
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: chaos
+  subdomain: cpu
+  order_depth: O2
+responsibility: |
+  - Simulates high CPU load to test system behavior under pressure
+  - Configurable: --duration, --load, --cores, --stop
+  - Defaults: 30 sec, 80% load
+dependencies: []
+notes: |
+  Location: scripts/chaos/cpu_spike.sh
+  SAFETY: Requires CHAOS_ALLOWED=true environment variable

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Policy intent model and declaration
+# Callers: policy engine, evaluators
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Policy System
+
 # M20 Policy Runtime - Intent System
 # M18 intent emission for governance-aware execution
 """

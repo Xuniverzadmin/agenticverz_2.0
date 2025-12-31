@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Trace data models
+# Callers: traces/*
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Trace System
+
 """
 Trace Models for AOS
 M6 Deliverable: Run traces with correlation IDs

@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-PRD-001
+name: predictions.py
+type: api-route
+status: active
+owner: backend
+purpose: PB-S5 Predictions API - Read-only prediction event exposure
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: predictions
+  subdomain: events
+  order_depth: O2
+responsibility: |
+  - GET /api/v1/predictions - List predictions (paginated)
+  - GET /api/v1/predictions/{id} - Prediction detail
+  - READ_ONLY = True
+  - Predictions are advisory only, zero side-effects
+  - Never modify execution, scheduling, or history
+dependencies:
+  - verify_api_key
+  - PredictionEvent model
+  - Async session

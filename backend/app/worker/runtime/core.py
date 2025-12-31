@@ -1,3 +1,16 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: Core runtime execution (StructuredOutcome, never throws)
+# Authority: Skill execution, budget queries, state queries
+# Callers: API routes, workers, SDK
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3
+# Contract: EXECUTION_SEMANTIC_CONTRACT.md (L5 Worker Rules)
+# Invariant: execute() NEVER throws - always returns StructuredOutcome
+
 # runtime/core.py
 """
 Core Runtime Implementation (M1)

@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from app.middleware.rate_limit import rate_limit_dependency
 from app.services.recovery_matcher import RecoveryMatcher
+from app.services.recovery_write_service import RecoveryWriteService
 
 logger = logging.getLogger("nova.api.recovery")
 
@@ -600,6 +601,9 @@ async def update_candidate(
         engine = create_engine(db_url)
 
         with Session(engine) as session:
+            # Phase 2B: Use write service for DB operations
+            write_service = RecoveryWriteService(session)
+
             # Verify candidate exists
             result = session.execute(
                 text("SELECT id, confidence FROM recovery_candidates WHERE id = :id"), {"id": candidate_id}
@@ -637,9 +641,8 @@ async def update_candidate(
             if not updates:
                 raise HTTPException(status_code=400, detail="No updates provided")
 
-            # Execute update
-            query = f"UPDATE recovery_candidates SET {', '.join(updates)} WHERE id = :id"
-            session.execute(text(query), params)
+            # Phase 2B: Execute update via write service
+            write_service.update_recovery_candidate(candidate_id, updates, params)
 
             # Record provenance
             try:
@@ -653,32 +656,24 @@ async def update_candidate(
                     )
                 )
 
-                session.execute(
-                    text(
-                        """
-                        INSERT INTO m10_recovery.suggestion_provenance
-                        (suggestion_id, event_type, details, action_id, confidence_before, actor)
-                        VALUES (:suggestion_id, :event_type, CAST(:details AS jsonb), :action_id, :confidence_before, :actor)
-                    """
+                # Phase 2B: Insert provenance via write service
+                write_service.insert_suggestion_provenance(
+                    suggestion_id=candidate_id,
+                    event_type=event_type,
+                    details_json=json.dumps(
+                        {
+                            "execution_status": request.execution_status,
+                            "note": request.note,
+                        }
                     ),
-                    {
-                        "suggestion_id": candidate_id,
-                        "event_type": event_type,
-                        "details": json.dumps(
-                            {
-                                "execution_status": request.execution_status,
-                                "note": request.note,
-                            }
-                        ),
-                        "action_id": request.selected_action_id,
-                        "confidence_before": old_confidence,
-                        "actor": "api",
-                    },
+                    action_id=request.selected_action_id,
+                    confidence_before=old_confidence,
+                    actor="api",
                 )
             except Exception:
                 pass  # Provenance table may not exist yet
 
-            session.commit()
+            write_service.commit()
 
             return {
                 "status": "updated",

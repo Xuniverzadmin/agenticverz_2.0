@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: External call guards for workflow safety
+# Callers: workflow engine
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Workflow System
+
 # External Calls Guard (M4 Hardening)
 """
 Guard for blocking external network calls during golden file tests.

@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-CRT-001
+name: certificate.py
+type: service
+status: active
+owner: backend
+purpose: M23 cryptographic evidence using HMAC infrastructure
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: evidence
+  subdomain: certificates
+  order_depth: O4
+responsibility: |
+  - Creates signed certificates proving policy decisions
+  - Replay validation passed at specific determinism level
+  - No tampering between original call and validation
+  - Certificate structure: ID, metadata, validation result, HMAC signature, timestamp, expiry
+  - CertificateType enum (REPLAY_PROOF, POLICY_AUDIT, INCIDENT_EXPORT)
+  - CertificateService class with create_certificate and verify_certificate
+dependencies:
+  - app.services.replay_determinism
+notes: |
+  Location: backend/app/services/certificate.py
+  Milestone: M23
+  Uses M4 HMAC infrastructure

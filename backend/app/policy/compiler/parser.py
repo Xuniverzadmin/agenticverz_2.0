@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Policy language parser
+# Callers: policy/engine
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Policy System
+
 # M20 PLang v2.0 Parser
 # Syntax analysis for policy language
 """

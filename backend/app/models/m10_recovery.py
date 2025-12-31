@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: M10 recovery data models
+# Callers: recovery services, workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: M10 Recovery
+
 # M10 Recovery Suggestion Engine - Async SQLAlchemy Models
 """
 SQLAlchemy models for M10 Recovery Suggestion Engine.

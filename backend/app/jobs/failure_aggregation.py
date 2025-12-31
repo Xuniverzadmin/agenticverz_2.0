@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler
+#   Execution: async
+# Role: Failure aggregation background job (orchestration only)
+# Callers: scheduler
+# Allowed Imports: L4, L6
+# Domain Engine: failure_classification_engine.py (L4)
+# Reference: M9 Failure System, PIN-256 Phase E FIX-01
+
 #!/usr/bin/env python3
 """
 M9: Failure Pattern Aggregation Job
@@ -20,14 +31,21 @@ Schedule via cron/systemd:
 """
 
 import argparse
-import hashlib
 import json
 import logging
 import sys
-from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# hashlib, defaultdict removed - moved to L4 engine (Phase E FIX-01)
+
+# Phase E FIX-01: Import domain classification logic from L4 engine
+from app.jobs.failure_classification_engine import (
+    aggregate_patterns,
+    compute_signature,
+    get_summary_stats,
+)
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -38,18 +56,7 @@ DEFAULT_OUTPUT_PATH = Path("/opt/agenticverz/state/candidate_failure_patterns.js
 FALLBACK_OUTPUT_PATH = Path("/root/agenticverz2.0/backend/data/candidate_failure_patterns.json")
 
 
-def compute_signature(error_code: str, error_message: Optional[str]) -> str:
-    """
-    Compute deterministic signature for error grouping.
-
-    Uses SHA256 of normalized error code + message prefix.
-    """
-    normalized_code = (error_code or "unknown").upper().strip()
-    # Take first 100 chars of message for grouping
-    normalized_msg = (error_message or "")[:100].lower().strip()
-
-    content = f"{normalized_code}:{normalized_msg}"
-    return hashlib.sha256(content.encode()).hexdigest()[:16]
+# compute_signature() moved to L4 engine (Phase E FIX-01)
 
 
 def fetch_unmatched_failures(
@@ -119,111 +126,17 @@ def fetch_unmatched_failures(
         return []
 
 
-def aggregate_patterns(raw_patterns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Aggregate patterns by signature for deduplication.
-
-    Groups similar errors that may have slightly different messages.
-    """
-    grouped: Dict[str, Dict[str, Any]] = defaultdict(
-        lambda: {
-            "signatures": [],
-            "error_codes": set(),
-            "total_occurrences": 0,
-            "affected_skills": set(),
-            "affected_tenants": set(),
-            "examples": [],
-            "last_seen": None,
-            "first_seen": None,
-        }
-    )
-
-    for pattern in raw_patterns:
-        sig = compute_signature(pattern["error_code"], pattern["error_message"])
-        group = grouped[sig]
-
-        group["signatures"].append(sig)
-        group["error_codes"].add(pattern["error_code"])
-        group["total_occurrences"] += pattern["occurrence_count"]
-        group["affected_skills"].update(pattern["affected_skills"])
-        group["affected_tenants"].update(pattern["affected_tenants"])
-
-        # Track examples
-        if len(group["examples"]) < 3:
-            group["examples"].append(
-                {
-                    "error_code": pattern["error_code"],
-                    "error_message": pattern["error_message"],
-                    "occurrence_count": pattern["occurrence_count"],
-                }
-            )
-
-        # Update timestamps
-        if pattern["last_seen"]:
-            if not group["last_seen"] or pattern["last_seen"] > group["last_seen"]:
-                group["last_seen"] = pattern["last_seen"]
-        if pattern["first_seen"]:
-            if not group["first_seen"] or pattern["first_seen"] < group["first_seen"]:
-                group["first_seen"] = pattern["first_seen"]
-
-    # Convert to list
-    result = []
-    for sig, group in grouped.items():
-        result.append(
-            {
-                "signature": sig,
-                "primary_error_code": list(group["error_codes"])[0] if group["error_codes"] else "UNKNOWN",
-                "all_error_codes": list(group["error_codes"]),
-                "total_occurrences": group["total_occurrences"],
-                "affected_skills": list(group["affected_skills"]),
-                "affected_tenants": list(group["affected_tenants"]),
-                "examples": group["examples"],
-                "last_seen": group["last_seen"],
-                "first_seen": group["first_seen"],
-                "suggested_category": suggest_category(list(group["error_codes"])),
-                "suggested_recovery": suggest_recovery(list(group["error_codes"])),
-            }
-        )
-
-    # Sort by occurrences
-    result.sort(key=lambda x: x["total_occurrences"], reverse=True)
-    return result
+# aggregate_patterns() moved to L4 engine (Phase E FIX-01)
+# L4 engine now OWNS classification decisions (imports from L4 recovery_rule_engine)
+# L5 passes DATA ONLY - no function injection, no callbacks
 
 
-def suggest_category(error_codes: List[str]) -> str:
-    """Suggest category based on error code patterns."""
-    codes_str = " ".join(error_codes).lower()
-
-    if any(k in codes_str for k in ["timeout", "network", "connection", "dns"]):
-        return "TRANSIENT"
-    if any(k in codes_str for k in ["permission", "auth", "forbidden", "401", "403"]):
-        return "PERMISSION"
-    if any(k in codes_str for k in ["budget", "quota", "rate", "limit"]):
-        return "RESOURCE"
-    if any(k in codes_str for k in ["validation", "schema", "invalid", "parse"]):
-        return "VALIDATION"
-    if any(k in codes_str for k in ["db", "database", "sql", "postgres"]):
-        return "INFRASTRUCTURE"
-    if any(k in codes_str for k in ["llm", "claude", "openai", "anthropic"]):
-        return "PLANNER"
-
-    return "PERMANENT"
-
-
-def suggest_recovery(error_codes: List[str]) -> str:
-    """Suggest recovery mode based on error code patterns."""
-    codes_str = " ".join(error_codes).lower()
-
-    if any(k in codes_str for k in ["timeout", "network", "unavailable", "503"]):
-        return "RETRY_EXPONENTIAL"
-    if any(k in codes_str for k in ["rate", "429"]):
-        return "RETRY_WITH_JITTER"
-    if any(k in codes_str for k in ["permission", "auth", "forbidden"]):
-        return "ESCALATE"
-    if any(k in codes_str for k in ["validation", "invalid"]):
-        return "ABORT"
-
-    return "ABORT"
+# GOVERNANCE: Classification authority removed from L5 (Phase E FIX-01 correction)
+# Previously: L5 had suggest_category/suggest_recovery wrappers injected into L4
+# This was a VIOLATION - L5 cannot inject behavior into L4
+# Now: L4 failure_classification_engine.py imports directly from L4 recovery_rule_engine.py
+# L5 only passes data, receives decisions. No executable code crosses the boundary.
+# Reference: PIN-256 Phase E FIX-01, DOMAIN_EXTRACTION_TEMPLATE.md
 
 
 def write_output(
@@ -261,38 +174,7 @@ def write_output(
         return False
 
 
-def get_summary_stats(patterns: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Generate summary statistics for logging/alerting."""
-    if not patterns:
-        return {
-            "total_patterns": 0,
-            "total_occurrences": 0,
-            "top_error_codes": [],
-            "most_affected_skills": [],
-        }
-
-    total_occurrences = sum(p["total_occurrences"] for p in patterns)
-
-    # Top error codes
-    code_counts = defaultdict(int)
-    for p in patterns:
-        for code in p["all_error_codes"]:
-            code_counts[code] += p["total_occurrences"]
-    top_codes = sorted(code_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-
-    # Most affected skills
-    skill_counts = defaultdict(int)
-    for p in patterns:
-        for skill in p["affected_skills"]:
-            skill_counts[skill] += p["total_occurrences"]
-    top_skills = sorted(skill_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-
-    return {
-        "total_patterns": len(patterns),
-        "total_occurrences": total_occurrences,
-        "top_error_codes": [{"code": c, "count": n} for c, n in top_codes],
-        "most_affected_skills": [{"skill": s, "count": n} for s, n in top_skills],
-    }
+# get_summary_stats() moved to L4 engine (Phase E FIX-01)
 
 
 def run_aggregation(
@@ -329,7 +211,9 @@ def run_aggregation(
         logger.info("No unmatched failures found, nothing to aggregate")
         return {"total_patterns": 0, "total_occurrences": 0}
 
-    # Aggregate patterns
+    # Aggregate patterns using L4 engine - L4 OWNS classification decisions
+    # L5 passes DATA ONLY. No function injection. No callbacks.
+    # L4 engine imports classification authority from L4 recovery_rule_engine.py
     aggregated = aggregate_patterns(raw_patterns)
     logger.info(f"Aggregated into {len(aggregated)} unique patterns")
 

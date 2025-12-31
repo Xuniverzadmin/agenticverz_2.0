@@ -1,6 +1,20 @@
 # Per-Tenant LLM Configuration (M11)
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: Tenant LLM configuration adapter
+# Callers: llm_invoke skills
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: PIN-254 Phase B Fix
 """
 Per-tenant LLM model configuration for cost optimization and rate limiting.
+
+B05 FIX: Model selection policy moved to L4 LLMPolicyEngine.
+This adapter provides tenant configuration data but delegates
+policy decisions to L4.
 
 Allows tenants to:
 - Override default model (e.g., use gpt-4o-mini instead of Claude)
@@ -62,18 +76,17 @@ class TenantLLMConfig:
         """
         Get effective model based on tenant config and request.
 
-        Priority:
-        1. If requested_model is in allowed_models, use it
-        2. Otherwise, use preferred_model
-        3. If preferred_model not available, use fallback_model
+        B05 FIX: Delegates to L4 LLMPolicyEngine.get_effective_model().
+        L3 no longer contains model selection policy logic.
         """
-        if requested_model and requested_model in self.allowed_models:
-            return requested_model
+        from app.services.llm_policy_engine import get_effective_model
 
-        if self.preferred_model in self.allowed_models:
-            return self.preferred_model
-
-        return self.fallback_model
+        return get_effective_model(
+            requested_model=requested_model,
+            preferred_model=self.preferred_model,
+            fallback_model=self.fallback_model,
+            allowed_models=self.allowed_models,
+        )
 
     def is_model_allowed(self, model: str) -> bool:
         """Check if model is allowed for this tenant."""
@@ -224,6 +237,9 @@ async def get_model_for_tenant(
     """
     Get the appropriate model for a tenant and task.
 
+    B05 FIX: Delegates to L4 LLMPolicyEngine.get_model_for_task().
+    L3 no longer contains task-based model selection policy logic.
+
     Args:
         tenant_id: Tenant identifier
         requested_model: Model explicitly requested by the caller
@@ -231,33 +247,17 @@ async def get_model_for_tenant(
 
     Returns:
         Model identifier to use
-
-    Cost Optimization:
-    - Planning tasks: Use cheaper models (gpt-4o-mini)
-    - Execution tasks: Use configured model
-    - High-value tasks: Use expensive models if allowed
     """
+    from app.services.llm_policy_engine import get_model_for_task
+
     config = await get_tenant_config(tenant_id)
 
-    # If explicit request and allowed, use it
-    if requested_model and config.is_model_allowed(requested_model):
-        return requested_model
-
-    # Task-based optimization
-    if task_type == "planning":
-        # Use cheap model for planning
-        if "gpt-4o-mini" in config.allowed_models:
-            return "gpt-4o-mini"
-        return config.fallback_model
-
-    if task_type == "high_value" and config.allow_expensive_models:
-        # Use best available model
-        expensive_models = ["claude-sonnet-4-20250514", "gpt-4o"]
-        for model in expensive_models:
-            if model in config.allowed_models:
-                return model
-
-    return config.get_effective_model(requested_model)
+    return get_model_for_task(
+        task_type=task_type,
+        requested_model=requested_model,
+        tenant_allowed_models=config.allowed_models,
+        allow_expensive=config.allow_expensive_models,
+    )
 
 
 # =============================================================================

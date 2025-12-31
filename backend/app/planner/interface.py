@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Planner interface definition (contract)
+# Callers: planners/*
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: LLM Integration
+
 # planner/interface.py
 """
 PlannerInterface Protocol (M2.5)

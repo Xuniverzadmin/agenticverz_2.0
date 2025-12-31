@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Learning system database tables
+# Callers: learning/*
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: C5 Learning
+
 """
 C5 Learning Table Boundaries.
 

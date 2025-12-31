@@ -1,0 +1,365 @@
+# =============================================================================
+# ARTIFACT INTENT SCHEMA
+# =============================================================================
+#
+# Purpose: Pre-build declaration schema for new artifacts.
+# This schema must be filled BEFORE any code is written.
+#
+# Status: FROZEN
+# Version: 1.0
+# Effective: 2025-12-29
+# Reference: PRODUCT_BOUNDARY_CONTRACT.md, SESSION_PLAYBOOK.yaml Section 21
+#
+# =============================================================================
+
+schema_name: artifact-intent-schema
+schema_version: "1.0"
+status: FROZEN
+created: "2025-12-29"
+
+description: |
+  This schema defines what must be declared BEFORE code is created.
+  It is a design-time gate, not a post-hoc registration.
+
+  If any field cannot be filled, the artifact is not understood yet,
+  and code creation must be BLOCKED.
+
+# =============================================================================
+# REQUIRED FIELDS
+# =============================================================================
+
+required_fields:
+
+  artifact_id:
+    type: string
+    format: "AOS-<LAYER>-<TYPE>-<DOMAIN>-<SEQ>"
+    description: "Unique identifier following naming convention"
+    layers:
+      - BE: Backend
+      - FE: Frontend
+      - OP: Operations
+      - LIB: Library
+      - SDK: SDK
+    examples:
+      - "AOS-BE-SVC-XXX-001"
+      - "AOS-FE-AIC-XXX-001"
+      - "AOS-OP-OPS-XXX-001"
+
+  type:
+    type: enum
+    values:
+      - api-route
+      - service
+      - worker
+      - page
+      - component
+      - script
+      - sdk-package
+      - library
+    description: "The architectural type of the artifact"
+
+  product:
+    type: enum
+    values:
+      - ai-console
+      - system-wide
+      - product-builder
+    description: "Product ownership - who owns this artifact"
+    rule: "Determined by caller graph, not intent"
+
+  bucket:
+    type: enum
+    values:
+      - surface
+      - adapter
+      - platform
+    description: "Boundary classification"
+    definitions:
+      surface: |
+        User-facing presentation layer, product-specific.
+        Only imported by product UI or product-specific routes.
+        Removal breaks ONLY this product.
+      adapter: |
+        Thin translation layer between platform and product.
+        Must remain thin (< 200 LOC, no business logic).
+        May not mutate global state.
+        Called only by product surface.
+      platform: |
+        Shared infrastructure serving multiple surfaces.
+        Called by workers, SDK, or multiple products.
+        Removal affects system-wide functionality.
+
+  intent:
+    type: object
+    required: true
+    properties:
+      purpose:
+        type: string
+        max_length: 200
+        description: "1-2 sentences describing why this code exists"
+        rule: "No implementation details - describe the WHAT, not the HOW"
+      user_promise:
+        type: string
+        description: "What the user/system gets from this artifact"
+        allowed_values:
+          - 'specific promise (e.g., "Export incidents as PDF")'
+          - '"NONE" (for internal infrastructure)'
+        rule: "If user_promise is empty, artifact may be platform, not product"
+
+  invocation:
+    type: object
+    required: true
+    properties:
+      expected_callers:
+        type: array
+        items: string
+        description: "List of modules/files that will call this artifact"
+        rule: "Must be specific - 'probably' is not acceptable"
+        examples:
+          - "guard.py"
+          - "AIConsoleApp.tsx"
+          - "recovery_evaluator.py"
+      forbidden_callers:
+        type: array
+        items: string
+        description: "List of modules/patterns that must NOT call this artifact"
+        rule: "Explicit boundaries prevent drift"
+        examples:
+          - "workers/*"
+          - "sdk/*"
+          - "ops/*"
+
+  failure_scope:
+    type: object
+    required: true
+    properties:
+      breaks_if_removed:
+        type: array
+        items: string
+        description: "What products/features break if this artifact is deleted"
+        rule: "If list includes non-console items, artifact is platform"
+        examples:
+          - "ai-console"
+          - "nothing (platform-only)"
+          - "worker-execution"
+      must_not_break:
+        type: array
+        items: string
+        description: "What must continue working even if this artifact fails"
+        rule: "Defines isolation boundary"
+        examples:
+          - "workers"
+          - "sdk"
+          - "other-consoles"
+
+  state:
+    type: object
+    required: true
+    properties:
+      mutates_global_state:
+        type: boolean
+        description: "Does this artifact modify global system state?"
+        rule: "If true, likely platform, not product"
+      mutates_tenant_state:
+        type: boolean
+        description: "Does this artifact modify tenant-specific state?"
+        rule: "Console artifacts may mutate tenant state only"
+
+# =============================================================================
+# OPTIONAL FIELDS
+# =============================================================================
+
+optional_fields:
+
+  owner:
+    type: enum
+    values:
+      - backend
+      - frontend
+      - sdk
+      - ops
+    description: "Team/area ownership"
+
+  authority_level:
+    type: enum
+    values:
+      - observe: "Read-only, no side effects"
+      - advise: "Suggestions only, no enforcement"
+      - enforce: "Policy enforcement, blocking actions"
+      - mutate: "State modification"
+    description: "What authority does this artifact have?"
+
+  execution_surface:
+    type: enum
+    values:
+      - server
+      - client
+      - cli
+    description: "Where does this code execute?"
+
+  traceability:
+    type: object
+    properties:
+      console:
+        type: enum
+        values: [customer, founder, internal, external]
+      domain:
+        type: string
+        description: "Domain code (e.g., INC, POL, OVR)"
+      subdomain:
+        type: string
+      order_depth:
+        type: enum
+        values: [O1, O2, O3, O4, O5]
+
+  notes:
+    type: string
+    description: "Additional context or warnings"
+
+# =============================================================================
+# VALIDATION RULES
+# =============================================================================
+
+validation_rules:
+
+  - name: "Product must match callers"
+    rule: |
+      If expected_callers includes workers/*, product must be system-wide.
+      If expected_callers includes sdk/*, product must be system-wide.
+      If expected_callers is console-only, product may be ai-console.
+
+  - name: "Bucket must match failure scope"
+    rule: |
+      If breaks_if_removed includes only one product, bucket may be surface.
+      If breaks_if_removed includes platform items, bucket must be platform.
+      If breaks_if_removed is empty, artifact may be orphan.
+
+  - name: "Adapters must be thin"
+    rule: |
+      If bucket is adapter:
+      - mutates_global_state must be false
+      - user_promise should not be NONE
+      - Expected LOC < 200
+
+  - name: "Platform must have multiple callers"
+    rule: |
+      If bucket is platform:
+      - expected_callers should include multiple surfaces
+      - OR expected_callers should include workers/sdk
+
+# =============================================================================
+# THREE BLOCKING QUESTIONS
+# =============================================================================
+# These questions must be answerable BEFORE filling this schema.
+# If any answer is "not sure" / "later" / "probably", BLOCK.
+
+blocking_questions:
+
+  Q1:
+    question: "Who calls this in production?"
+    maps_to: invocation.expected_callers
+    acceptable:
+      - Specific modules/files
+      - '"Nothing" (orphan → reject)'
+    unacceptable:
+      - '"Not sure"'
+      - '"Later"'
+      - '"Probably"'
+
+  Q2:
+    question: "What breaks if AI Console is deleted?"
+    maps_to: failure_scope.breaks_if_removed
+    acceptable:
+      - Specific products/features
+      - '"Nothing" (platform-only)'
+    unacceptable:
+      - '"I don''t know"'
+      - '"Everything"'
+
+  Q3:
+    question: "Who must NOT depend on this?"
+    maps_to: invocation.forbidden_callers
+    acceptable:
+      - Specific modules/patterns
+      - '"Workers must not call this"'
+    unacceptable:
+      - '"Anyone can use it"'
+      - '"No restrictions"'
+
+# =============================================================================
+# EXAMPLE INTENT DECLARATIONS
+# =============================================================================
+
+examples:
+
+  # Surface artifact (console-only)
+  - artifact_id: AOS-FE-AIC-OVR-001
+    type: page
+    product: ai-console
+    bucket: surface
+    intent:
+      purpose: "Display system health summary for customer"
+      user_promise: "Quickly see if the system is okay right now"
+    invocation:
+      expected_callers:
+        - AIConsoleApp.tsx
+      forbidden_callers:
+        - workers/*
+        - sdk/*
+        - ops/*
+    failure_scope:
+      breaks_if_removed:
+        - ai-console
+      must_not_break:
+        - workers
+        - sdk
+    state:
+      mutates_global_state: false
+      mutates_tenant_state: false
+
+  # Adapter artifact (thin translation)
+  - artifact_id: AOS-BE-SVC-EVD-001
+    type: service
+    product: ai-console
+    bucket: adapter
+    intent:
+      purpose: "Transform trace data into legal-grade PDF evidence"
+      user_promise: "Export incident proof as downloadable PDF"
+    invocation:
+      expected_callers:
+        - guard.py
+      forbidden_callers:
+        - workers/*
+        - sdk/*
+    failure_scope:
+      breaks_if_removed:
+        - ai-console evidence export
+      must_not_break:
+        - trace persistence
+        - workers
+    state:
+      mutates_global_state: false
+      mutates_tenant_state: false
+
+  # Platform artifact (shared infrastructure)
+  - artifact_id: AOS-BE-SVC-RMT-001
+    type: service
+    product: system-wide
+    bucket: platform
+    intent:
+      purpose: "Match execution failures to recovery patterns"
+      user_promise: "NONE"
+    invocation:
+      expected_callers:
+        - recovery_evaluator.py
+        - workers.py
+      forbidden_callers: []
+    failure_scope:
+      breaks_if_removed:
+        - worker recovery
+        - system-wide
+      must_not_break:
+        - console UI (should degrade gracefully)
+    state:
+      mutates_global_state: false
+      mutates_tenant_state: false

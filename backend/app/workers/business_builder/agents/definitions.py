@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: product-builder
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Business builder agent definitions
+# Callers: business_builder worker
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Business Builder
+
 # Agent Definitions for Business Builder Worker
 # Uses M15 SBA Schema for strategy-bound execution
 """

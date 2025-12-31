@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-INT-E2E-001
+name: e2e_integration.sh
+type: script
+status: active
+owner: ops
+purpose: M8 comprehensive E2E integration test harness
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: integration
+  subdomain: e2e
+  order_depth: O1
+responsibility: |
+  - Comprehensive end-to-end testing for trace determinism
+  - Modes: --quick (smoke), --verbose, --parity (only parity tests)
+  - Test counters and reporting
+dependencies: []
+notes: |
+  Location: scripts/e2e_integration.sh
+  Milestone: M8
+  Environment: API_URL, API_KEY, TENANT_ID, REPORT_DIR

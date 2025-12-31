@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any
+#   Execution: sync
+# Role: SQLModel query helpers to prevent Row tuple extraction bugs
+# Callers: All DB-accessing code
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Infrastructure
+
 """Database Query Helpers - Prevent SQLModel Row Tuple Issues
 
 SQLModel's session.exec() returns Row tuples, not model instances directly.

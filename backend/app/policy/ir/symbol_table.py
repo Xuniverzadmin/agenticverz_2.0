@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Policy symbol table management
+# Callers: policy/ir/ir_builder
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Policy System
+
 # M20 Policy IR Symbol Table
 # Symbol management for policy compilation
 """

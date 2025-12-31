@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-COP-001
+name: cost_ops.py
+type: api-route
+status: active
+owner: backend
+purpose: M29 Ops Console Cost Intelligence - Founder cost visibility
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: cost
+  subdomain: ops
+  order_depth: O2
+responsibility: |
+  - GET /ops/cost/overview - Global cost overview
+  - GET /ops/cost/anomalies - Cross-tenant anomaly aggregation
+  - GET /ops/cost/tenants - Per-tenant cost drilldown
+  - THE INVARIANT: All values from complete snapshots, never live
+  - Uses FROZEN DTOs from app.contracts.ops
+dependencies:
+  - verify_fops_token (aud=fops, mfa=true)
+  - Frozen DTOs (FounderCostOverviewDTO, etc.)
+  - get_session

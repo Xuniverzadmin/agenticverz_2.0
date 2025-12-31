@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Role-to-permission mapping engine
+# Callers: RBAC engine, services
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Auth System
+
 """
 Role Mapping - M7-M28 RBAC Integration (PIN-169)
 

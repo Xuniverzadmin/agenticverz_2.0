@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api (every request)
+#   Execution: sync
+# Role: Tenant context injection middleware
+# Callers: main.py middleware chain
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Security
+
 # Tenancy Middleware
 # Enforces tenant_id on all requests and provides tenant context
 

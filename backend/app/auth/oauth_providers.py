@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: external
+#   Execution: async
+# Role: OAuth provider adapters (Google, GitHub, etc)
+# Callers: auth services
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Auth Integration
+
 """
 OAuth2 Providers - Google & Azure
 

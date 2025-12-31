@@ -1,0 +1,24 @@
+# Artifact Registry Entry - SDK Package
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-SDK-PY-NVA-001
+name: nova_sdk (Python)
+type: sdk-package
+status: active
+owner: sdk
+purpose: Python SDK for Nova - Legacy agent client
+authority_level: observe
+execution_surface: client
+traceability:
+  product: system-wide
+  console: external
+  domain: sdk
+  subdomain: python
+  order_depth: O2
+responsibility: |
+  - NovaClient: HTTP client for Nova API
+  - Legacy compatibility layer
+dependencies: []
+notes: |
+  Location: /sdk/python/nova_sdk/
+  Minimal client for Nova API compatibility

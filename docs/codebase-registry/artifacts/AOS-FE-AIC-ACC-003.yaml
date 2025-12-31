@@ -1,0 +1,19 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-ACC-003
+name: SupportPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: Customer support and documentation links
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: account
+  order_depth: O2
+notes: |
+  CANDIDATE_ORPHAN: File exists but no route defined in AIConsoleApp.tsx.
+  Decision needed: add route or remove file.

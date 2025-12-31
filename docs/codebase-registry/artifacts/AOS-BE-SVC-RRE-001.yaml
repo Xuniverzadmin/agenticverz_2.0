@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-RRE-001
+name: recovery_rule_engine.py
+type: service
+status: active
+owner: backend
+purpose: M10 rule-based evaluation for recovery suggestions
+authority_level: advise
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: recovery
+  subdomain: rules
+  order_depth: O3
+responsibility: |
+  - Evaluates rules against failure context
+  - Returns scored action recommendations
+  - Error code matching (exact or prefix)
+  - Historical pattern matching
+  - Skill-specific rules
+  - Tenant-specific overrides
+  - Time-based rules (different behavior during incidents)
+  - RuleContext dataclass
+dependencies: []
+notes: |
+  Location: backend/app/services/recovery_rule_engine.py
+  Milestone: M10
+  Environment: RECOVERY_RULE_DEBUG for debug logging

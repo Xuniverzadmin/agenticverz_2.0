@@ -1,0 +1,17 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-SYS-001
+name: main.tsx
+type: page
+status: active
+owner: ai-console
+purpose: Browser entry point for standalone AI Console deployment
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: system
+  order_depth: O0
+notes: FROZEN per PIN-235 Freeze #1. No business logic allowed.

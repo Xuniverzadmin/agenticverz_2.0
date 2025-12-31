@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-CVS-001
+name: customer_visibility.py
+type: api-route
+status: active
+owner: backend
+purpose: Phase 4C-2 Customer Visibility - Pre/post execution views
+authority_level: observe
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: overview
+  subdomain: visibility
+  order_depth: O2
+responsibility: |
+  - GET /customer/pre-run/{run_id} - Pre-run declaration
+  - GET /customer/post-run/{run_id} - Post-run accountability
+  - Show effects, not mechanics
+  - No decision records exposed
+  - No governance internals
+  - Predictability before, accountability after
+dependencies:
+  - verify_api_key
+  - PreRunDeclaration, PostRunSummary models
+  - SQLAlchemy text queries

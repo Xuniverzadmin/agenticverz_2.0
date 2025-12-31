@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Worker
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-WKR-RUN-001
+name: runner.py
+type: worker
+status: active
+owner: backend
+purpose: RunRunner - Executes single run's plan steps with retry and backoff
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: activity
+  subdomain: execution
+  order_depth: O4
+responsibility: |
+  - Execute run plan steps
+  - Handle retries and exponential backoff
+  - Phase 5A: Budget enforcement decision emission
+  - BudgetContext: Immutable budget from PRE-RUN
+  - Skill execution with SkillExecutor
+  - MAX_ATTEMPTS config (default: 5)
+dependencies:
+  - emit_budget_enforcement_decision
+  - Agent, Memory, Provenance, Run models
+  - SkillExecutor
+  - budget_tracker
+  - plan_inspector

@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-PRD-001
+name: prediction.py
+type: service
+status: active
+owner: backend
+purpose: PB-S5 advisory predictions - zero side-effects
+authority_level: advise
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: predictions
+  subdomain: failure-likelihood
+  order_depth: O3
+responsibility: |
+  - Generates predictions WITHOUT affecting execution behavior
+  - predict_failure_likelihood function
+  - Predictions are advisory only
+  - Predictions have zero side-effects
+  - Predictions never modify execution, scheduling, or history
+dependencies:
+  - app.models.feedback.PatternFeedback
+  - app.models.prediction.PredictionEvent
+  - app.models.tenant.WorkerRun
+notes: |
+  Location: backend/app/services/prediction.py
+  PB-S5 Contract: Advise → Observe → Do Nothing
+  Rule: Advise, don't influence

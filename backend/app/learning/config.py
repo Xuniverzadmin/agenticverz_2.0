@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Learning system configuration
+# Callers: learning/*
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: C5 Learning
+
 """
 C5 Learning Configuration.
 

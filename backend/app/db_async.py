@@ -1,4 +1,14 @@
-# Async Database Session Factory
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any (async contexts)
+#   Execution: async
+# Role: Async SQLAlchemy session factory for non-blocking DB operations
+# Callers: Async API routes, async services
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Infrastructure
+
 """
 Async SQLAlchemy session factory for non-blocking DB operations.
 

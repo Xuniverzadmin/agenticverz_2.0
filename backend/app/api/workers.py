@@ -1,5 +1,22 @@
-# Business Builder Worker API
-# Exposes the Business Builder Worker v0.2 as hostable API endpoints
+# Layer: L2 — Product API
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: async
+# Role: Business Builder Worker API endpoints
+# Callers: External clients via HTTP
+# Allowed Imports: L3, L4, L6
+# Forbidden Imports: L1, L5
+# Reference: PIN-258 Phase F-3 Workers Cluster
+# Contract: PHASE_F_FIX_DESIGN (F-W-RULE-1 to F-W-RULE-5)
+#
+# GOVERNANCE NOTE (F-W-RULE-4):
+# This L2 module must ONLY call the L3 workers_adapter.
+# Direct L5 worker imports are FORBIDDEN.
+#
+# F-W-RULE-1: No semantic changes - all logic stays where it is.
+# F-W-RULE-4: L3 Adapter Is the Only Entry - only workers_adapter.py.
+#
 """
 API endpoints for Business Builder Worker.
 
@@ -36,9 +53,36 @@ from app.contracts.decisions import emit_policy_precheck_decision
 from app.db import CostAnomaly, CostBudget, CostRecord, get_async_session
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
-from app.worker.runner import calculate_llm_cost_cents
+from app.services.worker_write_service_async import WorkerWriteServiceAsync
 
 logger = logging.getLogger("nova.api.workers")
+
+
+# =============================================================================
+# L3 Adapter Access (Phase F-3: F-W-RULE-4)
+# =============================================================================
+
+
+def _get_workers_adapter():
+    """
+    Get the L3 workers adapter.
+
+    This is the ONLY way L2 should access worker functionality.
+    F-W-RULE-4: L3 Adapter Is the Only Entry.
+    """
+    from app.adapters.workers_adapter import get_workers_adapter
+
+    return get_workers_adapter()
+
+
+def _calculate_cost_cents(model: str, input_tokens: int, output_tokens: int) -> int:
+    """
+    Calculate LLM cost in cents via L3 adapter.
+
+    Phase F-3: This replaces the direct L5 import.
+    """
+    adapter = _get_workers_adapter()
+    return adapter.calculate_cost_cents(model, input_tokens, output_tokens)
 
 router = APIRouter(prefix="/api/v1/workers/business-builder", tags=["Workers"])
 
@@ -197,53 +241,10 @@ async def _store_run(run_id: str, data: Dict[str, Any], tenant_id: str = "defaul
     P0-005 Fix: Database is the source of truth, not memory.
     """
     async with get_async_session() as session:
-        # Check if run exists (upsert logic)
-        result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
-        existing = result.scalar_one_or_none()
-
-        if existing:
-            # Update existing run
-            existing.status = data.get("status", existing.status)
-            existing.success = data.get("success", existing.success)
-            existing.error = data.get("error", existing.error)
-            existing.output_json = json.dumps(data.get("artifacts")) if data.get("artifacts") else None
-            existing.replay_token_json = json.dumps(data.get("replay_token")) if data.get("replay_token") else None
-            existing.total_tokens = data.get("total_tokens_used", existing.total_tokens)
-            existing.total_latency_ms = int(data.get("total_latency_ms", 0)) if data.get("total_latency_ms") else None
-            existing.policy_violations = len(data.get("policy_violations", [])) if data.get("policy_violations") else 0
-            existing.recoveries = len(data.get("recovery_log", [])) if data.get("recovery_log") else 0
-            # P0-006 Fix: Store cost_cents
-            if data.get("cost_cents") is not None:
-                existing.cost_cents = data.get("cost_cents")
-            if data.get("status") in ("completed", "failed"):
-                existing.completed_at = datetime.utcnow()  # Naive UTC for WITHOUT TIME ZONE
-            if data.get("status") == "running" and not existing.started_at:
-                existing.started_at = datetime.utcnow()  # Naive UTC for WITHOUT TIME ZONE
-        else:
-            # Create new run
-            run = WorkerRun(
-                id=run_id,
-                tenant_id=tenant_id,
-                worker_id="business-builder",
-                task=data.get("task", ""),
-                status=data.get("status", "queued"),
-                success=data.get("success"),
-                error=data.get("error"),
-                input_json=json.dumps({"task": data.get("task", "")}),
-                output_json=json.dumps(data.get("artifacts")) if data.get("artifacts") else None,
-                replay_token_json=json.dumps(data.get("replay_token")) if data.get("replay_token") else None,
-                total_tokens=data.get("total_tokens_used"),
-                total_latency_ms=int(data.get("total_latency_ms", 0)) if data.get("total_latency_ms") else None,
-                policy_violations=len(data.get("policy_violations", [])) if data.get("policy_violations") else 0,
-                recoveries=len(data.get("recovery_log", [])) if data.get("recovery_log") else 0,
-                # P0-006 Fix: Store cost_cents
-                cost_cents=data.get("cost_cents"),
-                created_at=datetime.utcnow(),  # Naive UTC for WITHOUT TIME ZONE
-                started_at=datetime.utcnow() if data.get("status") == "running" else None,  # Naive UTC
-            )
-            session.add(run)
-
-        await session.commit()
+        # Phase 2B: Use write service for DB operations
+        write_service = WorkerWriteServiceAsync(session)
+        await write_service.upsert_worker_run(run_id, tenant_id, data)
+        await write_service.commit()
 
         # Verification mode guardrail
         if VERIFICATION_MODE:
@@ -289,21 +290,17 @@ async def _insert_cost_record(
     This creates the authoritative cost fact that S2 requires.
     """
     async with get_async_session() as session:
-        # Use naive datetime for asyncpg compatibility with TIMESTAMP WITHOUT TIME ZONE
-        created_at_naive = datetime.utcnow()
-        cost_record = CostRecord(
+        # Phase 2B: Use write service for DB operations
+        write_service = WorkerWriteServiceAsync(session)
+        await write_service.insert_cost_record(
+            run_id=run_id,
             tenant_id=tenant_id,
-            request_id=run_id,
-            workflow_id="business-builder",
-            skill_id="llm_invoke",
             model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            cost_cents=float(cost_cents),
-            created_at=created_at_naive,
+            cost_cents=cost_cents,
         )
-        session.add(cost_record)
-        await session.commit()
+        await write_service.commit()
         logger.info(
             "cost_record_inserted",
             extra={
@@ -414,9 +411,6 @@ async def _check_and_emit_cost_advisory(
                 )
             else:
                 # Emit advisory (BUDGET_WARNING, not incident)
-                # Use naive datetime for asyncpg compatibility with TIMESTAMP WITHOUT TIME ZONE
-                detected_at_naive = datetime.utcnow()
-
                 # Budget snapshot: capture budget-at-run-time for audit trail
                 # This ensures historical analysis uses the budget that was active during the run
                 budget_snapshot = {
@@ -426,25 +420,16 @@ async def _check_and_emit_cost_advisory(
                     "hard_limit_enabled": budget.hard_limit_enabled,
                 }
 
-                advisory = CostAnomaly(
+                # Phase 2B: Use write service for DB operations
+                write_service = WorkerWriteServiceAsync(session)
+                advisory = await write_service.insert_cost_advisory(
                     tenant_id=tenant_id,
-                    anomaly_type="BUDGET_WARNING",
-                    severity="MEDIUM",
-                    entity_type="tenant",
-                    entity_id=tenant_id,
-                    current_value_cents=float(daily_spend),
-                    expected_value_cents=float(warn_threshold),
-                    deviation_pct=((daily_spend - warn_threshold) / warn_threshold) * 100 if warn_threshold > 0 else 0,
-                    threshold_pct=float(budget.warn_threshold_pct),
-                    message=f"Daily spend ({daily_spend}¢) exceeds {budget.warn_threshold_pct}% warning threshold ({int(warn_threshold)}¢)",
-                    metadata_json={
-                        "run_id": run_id,
-                        "budget_snapshot": budget_snapshot,  # Budget at run time
-                    },
-                    detected_at=detected_at_naive,
+                    run_id=run_id,
+                    daily_spend=daily_spend,
+                    warn_threshold=warn_threshold,
+                    budget_snapshot=budget_snapshot,
                 )
-                session.add(advisory)
-                await session.commit()
+                await write_service.commit()
 
                 result["advisory_emitted"] = True
                 result["advisory_id"] = advisory.id
@@ -682,76 +667,26 @@ class EventType:
 
 
 def _brand_request_to_schema(brand_req: BrandRequest):
-    """Convert API request to BrandSchema."""
-    from app.workers.business_builder.schemas.brand import (
-        AudienceSegment,
-        BrandSchema,
-        ForbiddenClaim,
-        ToneLevel,
-        ToneRule,
-        VisualIdentity,
-    )
+    """
+    Convert API request to BrandSchema via L3 adapter.
 
-    # Convert tone
-    tone = ToneRule(
-        primary=ToneLevel(brand_req.tone.primary),
-        avoid=[ToneLevel(t) for t in brand_req.tone.avoid if t in [e.value for e in ToneLevel]],
-        examples_good=brand_req.tone.examples_good,
-        examples_bad=brand_req.tone.examples_bad,
-    )
-
-    # Convert forbidden claims
-    forbidden = [
-        ForbiddenClaim(
-            pattern=fc.pattern,
-            reason=fc.reason,
-            severity=fc.severity,
-        )
-        for fc in brand_req.forbidden_claims
-    ]
-
-    # Convert visual
-    visual = VisualIdentity(
-        primary_color=brand_req.visual.primary_color,
-        secondary_color=brand_req.visual.secondary_color,
-        font_heading=brand_req.visual.font_heading,
-        font_body=brand_req.visual.font_body,
-        logo_placement=brand_req.visual.logo_placement,
-    )
-
-    # Convert audience
-    audience = []
-    for a in brand_req.target_audience:
-        try:
-            audience.append(AudienceSegment(a))
-        except ValueError:
-            pass
-    if not audience:
-        audience = [AudienceSegment.B2B_SMB]
-
-    return BrandSchema(
-        company_name=brand_req.company_name,
-        tagline=brand_req.tagline,
-        mission=brand_req.mission,
-        vision=brand_req.vision,
-        value_proposition=brand_req.value_proposition,
-        target_audience=audience,
-        audience_pain_points=brand_req.audience_pain_points,
-        tone=tone,
-        voice_attributes=brand_req.voice_attributes,
-        forbidden_claims=forbidden,
-        required_disclosures=brand_req.required_disclosures,
-        visual=visual,
-        budget_tokens=brand_req.budget_tokens,
-    )
+    Phase F-3: This replaces the direct L5 schema import.
+    F-W-RULE-4: L3 Adapter Is the Only Entry.
+    """
+    adapter = _get_workers_adapter()
+    return adapter.convert_brand_request(brand_req)
 
 
 async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
-    """Execute worker in background and update run store."""
-    tenant_id = request.tenant_id or "default"
-    try:
-        from app.workers.business_builder.worker import BusinessBuilderWorker
+    """
+    Execute worker in background and update run store.
 
+    Phase F-3: Uses L3 adapter instead of direct L5 worker import.
+    F-W-RULE-4: L3 Adapter Is the Only Entry.
+    """
+    tenant_id = request.tenant_id or "default"
+    adapter = _get_workers_adapter()
+    try:
         await _store_run(
             run_id,
             {
@@ -763,19 +698,19 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
             tenant_id=tenant_id,
         )
 
-        worker = BusinessBuilderWorker()
-
         # Convert brand if provided
         brand = None
         if request.brand:
             brand = _brand_request_to_schema(request.brand)
 
-        result = await worker.run(
+        # Execute via L3 adapter (F-W-RULE-4)
+        result = await adapter.execute_worker(
             task=request.task,
             brand=brand,
             budget=request.budget,
             strict_mode=request.strict_mode,
             depth=request.depth,
+            run_id=run_id,
         )
 
         # P0-006 Fix: Compute cost from tokens
@@ -790,7 +725,7 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
         input_tokens = int(total_tokens * 0.3)
         output_tokens = total_tokens - input_tokens
         model = "claude-sonnet-4-20250514"  # Default model
-        cost_cents = calculate_llm_cost_cents(model, input_tokens, output_tokens)
+        cost_cents = _calculate_cost_cents(model, input_tokens, output_tokens)
 
         logger.info(
             "cost_computed",
@@ -1015,23 +950,22 @@ async def run_worker(
             policy_status=policy_status,  # Phase 5B: Include pre-check result
         )
 
-    # Synchronous execution
+    # Synchronous execution via L3 adapter (Phase F-3: F-W-RULE-4)
+    adapter = _get_workers_adapter()
     try:
-        from app.workers.business_builder.worker import BusinessBuilderWorker
-
-        worker = BusinessBuilderWorker()
-
         # Convert brand if provided
         brand = None
         if request.brand:
             brand = _brand_request_to_schema(request.brand)
 
-        result = await worker.run(
+        # Execute via L3 adapter (F-W-RULE-4)
+        result = await adapter.execute_worker(
             task=request.task,
             brand=brand,
             budget=request.budget,
             strict_mode=request.strict_mode,
             depth=request.depth,
+            run_id=run_id,
         )
 
         response = WorkerRunResponse(
@@ -1063,7 +997,7 @@ async def run_worker(
 
 
 @router.post("/replay", response_model=WorkerRunResponse, status_code=202)
-async def replay_execution(
+async def replay_execution_endpoint(
     request: ReplayRequest,
     _: str = Depends(verify_api_key),
 ):
@@ -1071,13 +1005,19 @@ async def replay_execution(
     Replay a previous execution using Golden Replay (M4).
 
     Deterministically reproduces the same outputs given the same replay token.
+
+    Phase F-3: Uses L3 adapter instead of direct L5 worker import.
+    F-W-RULE-4: L3 Adapter Is the Only Entry.
     """
     run_id = str(uuid.uuid4())
+    adapter = _get_workers_adapter()
 
     try:
-        from app.workers.business_builder.worker import replay
-
-        result = await replay(request.replay_token)
+        # Replay via L3 adapter (F-W-RULE-4)
+        result = await adapter.replay_execution(
+            replay_token=request.replay_token,
+            run_id=run_id,
+        )
 
         return WorkerRunResponse(
             run_id=run_id,
@@ -1273,11 +1213,12 @@ async def delete_run(
     Note: In production, this would require admin privileges.
     """
     async with get_async_session() as session:
-        result = await session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
-        run = result.scalar_one_or_none()
+        # Phase 2B: Use write service for DB operations
+        write_service = WorkerWriteServiceAsync(session)
+        run = await write_service.get_worker_run(run_id)
         if run:
-            await session.delete(run)
-            await session.commit()
+            await write_service.delete_worker_run(run)
+            await write_service.commit()
             return {"deleted": True, "run_id": run_id}
 
     raise HTTPException(status_code=404, detail="Run not found")
@@ -1412,13 +1353,15 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
     Execute worker with REAL event emission from worker itself.
 
     v0.4: Worker is source of truth. PostgreSQL persistence. No in-memory storage.
+
+    Phase F-3: Uses L3 adapter instead of direct L5 worker import.
+    F-W-RULE-4: L3 Adapter Is the Only Entry.
     """
     event_bus = get_event_bus()
     tenant_id = request.tenant_id or "default"
+    adapter = _get_workers_adapter()
 
     try:
-        from app.workers.business_builder.worker import BusinessBuilderWorker
-
         await _store_run(
             run_id,
             {
@@ -1435,18 +1378,16 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
         if request.brand:
             brand = _brand_request_to_schema(request.brand)
 
-        # Create worker WITH event bus - worker emits its own events
-        worker = BusinessBuilderWorker(event_bus=event_bus)
-
-        # Run worker - all events are emitted by worker itself
-        # NO SIMULATION - real execution with real events
-        result = await worker.run(
+        # Execute via L3 adapter with event bus (F-W-RULE-4)
+        # Worker emits its own events - NO SIMULATION
+        result = await adapter.execute_worker(
             task=request.task,
             brand=brand,
             budget=request.budget,
             strict_mode=request.strict_mode,
             depth=request.depth,
             run_id=run_id,
+            event_bus=event_bus,
         )
 
         # Store final result

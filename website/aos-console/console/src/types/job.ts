@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: import-time
+//   Execution: sync
+// Role: Job type definitions
+// Callers: Job-related components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Types
+
 export interface Job {
   id: string;
   orchestrator_agent?: string;

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: RBAC authorization engine with policy evaluation
+# Callers: API routes, middleware, services
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Auth System
+
 """
 Enhanced RBAC Engine - M7 Implementation
 
@@ -66,6 +77,129 @@ RBAC_POLICY_LOADS = get_or_create_counter("rbac_policy_loads_total", "Policy fil
 RBAC_POLICY_VERSION = get_or_create_gauge("rbac_policy_version_info", "Current policy version (hash as integer)")
 
 RBAC_AUDIT_WRITES = get_or_create_counter("rbac_audit_writes_total", "Audit log writes", ["status"])
+
+
+# =============================================================================
+# L4 Domain Authority: Role Mapping Rules
+# =============================================================================
+# B03/B04 FIX: Role-to-level and role classification logic moved from L3 adapters
+# Reference: PIN-254 Phase B Fix
+
+# Role-to-approval-level mapping (L4 domain authority)
+# Clerk adapter and other auth sources must delegate to this
+ROLE_APPROVAL_LEVELS: Dict[str, int] = {
+    # Level 5 - Full administrative access
+    "owner": 5,
+    "admin": 5,
+    "realm-admin": 5,
+    "aos-admin": 5,
+    # Level 4 - Policy and management access
+    "manager": 4,
+    "policy_admin": 4,
+    "director": 4,
+    # Level 3 - Team leadership access
+    "team_lead": 3,
+    "senior_engineer": 3,
+    "tech_lead": 3,
+    # Level 2 - Standard member access
+    "team_member": 2,
+    "engineer": 2,
+    "developer": 2,
+    "dev": 2,
+    # Level 1 - Minimal access
+    "guest": 1,
+    "readonly": 1,
+    "viewer": 1,
+}
+
+# External provider role mappings (L4 domain authority)
+# Keycloak/OIDC provider roles to AOS internal roles
+EXTERNAL_TO_AOS_ROLE_MAP: Dict[str, str] = {
+    # Admin roles
+    "admin": "admin",
+    "realm-admin": "admin",
+    "aos-admin": "admin",
+    # Infrastructure roles
+    "infra": "infra",
+    "infrastructure": "infra",
+    "platform": "infra",
+    # Developer roles
+    "developer": "dev",
+    "dev": "dev",
+    "engineer": "dev",
+    # Machine/service roles
+    "machine": "machine",
+    "service": "machine",
+    "service-account": "machine",
+    # Readonly roles
+    "readonly": "readonly",
+    "viewer": "readonly",
+    "guest": "readonly",
+}
+
+
+def get_role_approval_level(role: str) -> int:
+    """
+    Get approval level for a role (L4 domain decision).
+
+    L3 adapters must NOT hardcode role-to-level mappings.
+    This function is the authoritative source.
+
+    Args:
+        role: Role name (case-insensitive)
+
+    Returns:
+        Approval level (1-5), defaults to 1 for unknown roles
+    """
+    return ROLE_APPROVAL_LEVELS.get(role.lower(), 1)
+
+
+def get_max_approval_level(roles: List[str]) -> int:
+    """
+    Get maximum approval level from a list of roles (L4 domain decision).
+
+    Args:
+        roles: List of role names
+
+    Returns:
+        Maximum approval level (1-5)
+    """
+    if not roles:
+        return 1
+    return max(get_role_approval_level(role) for role in roles)
+
+
+def map_external_role_to_aos(external_role: str) -> str:
+    """
+    Map external provider role to AOS internal role (L4 domain decision).
+
+    L3 adapters (OIDC, Clerk) must NOT hardcode role mappings.
+    This function is the authoritative source.
+
+    Args:
+        external_role: Role from external provider (Keycloak, Clerk, etc.)
+
+    Returns:
+        AOS internal role name
+    """
+    role_lower = external_role.lower()
+    return EXTERNAL_TO_AOS_ROLE_MAP.get(role_lower, role_lower)
+
+
+def map_external_roles_to_aos(external_roles: List[str]) -> List[str]:
+    """
+    Map list of external roles to AOS internal roles (L4 domain decision).
+
+    Args:
+        external_roles: List of roles from external provider
+
+    Returns:
+        List of AOS internal roles (deduplicated)
+    """
+    aos_roles = set()
+    for role in external_roles:
+        aos_roles.add(map_external_role_to_aos(role))
+    return list(aos_roles)
 
 
 # =============================================================================

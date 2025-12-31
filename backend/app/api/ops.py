@@ -84,6 +84,7 @@ from app.contracts.ops import (
     FounderRootCauseDTO,
 )
 from app.db import get_session
+from app.services.ops_write_service import OpsWriteService
 
 # Incident model for database queries
 from app.models.killswitch import Incident, IncidentEvent
@@ -383,6 +384,20 @@ class IncidentPattern(BaseModel):
     sample_ids: List[str]
 
 
+class EstimationBasis(BaseModel):
+    """
+    PIN-254 Phase C Fix (C3 Partial Truth): Explicit disclosure of estimation assumptions.
+
+    Revenue metrics use assumptions that must be visible to consumers.
+    """
+
+    mrr_assumption: str = "$50_avg_plan"  # What assumption is used for MRR
+    mrr_source: str = "hardcoded"  # hardcoded | billing_system | historical_avg
+    revenue_markup: float = 2.0  # Markup applied to LLM costs
+    confidence: str = "low"  # low | medium | high
+    disclaimer: str = "MRR estimate uses hardcoded $50/tenant assumption. Connect billing system for accurate data."
+
+
 class RevenueRisk(BaseModel):
     """Revenue and risk metrics."""
 
@@ -397,6 +412,12 @@ class RevenueRisk(BaseModel):
 
     # Alerts
     revenue_alerts: List[Dict[str, Any]]
+
+    # PIN-254 Phase C Fix: Estimation transparency
+    estimation_basis: EstimationBasis = Field(
+        default_factory=EstimationBasis,
+        description="Disclosure of how revenue estimates were derived (PIN-254 C3 fix)"
+    )
 
 
 class FounderIntervention(BaseModel):
@@ -2268,209 +2289,18 @@ async def get_event_stream(
 
 
 # =============================================================================
-# Silent Churn Detection (Background Job Endpoint)
+# REMOVED: Job Endpoints (PIN-254 Phase C Fix - C1 Decorative Violation)
 # =============================================================================
-
-
-@router.post("/jobs/detect-silent-churn", response_model=OpsJobResult)
-async def detect_silent_churn(
-    session: Session = Depends(get_session),
-) -> OpsJobResult:
-    """
-    DEPRECATED: Internal job endpoint - should run via systemd timer, not API.
-
-    Background job to detect silent churn.
-
-    Silent churn = API active but investigation behavior stopped.
-    Updates ops_customer_segments table.
-    """
-    # ==========================================================================
-    # M25 HYGIENE: Job triggers disabled in production API
-    # See PIN-140: "Internal mechanics exposed" - move to cron/systemd
-    # ==========================================================================
-    import os
-
-    if not os.getenv("JOB_ENDPOINTS_ENABLED", "").lower() == "true":
-        raise HTTPException(
-            status_code=410,  # Gone
-            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true.",
-        )
-    try:
-        stmt = text(
-            """
-            UPDATE ops_customer_segments
-            SET
-                is_silent_churn = true,
-                risk_level = 'high',
-                risk_reason = 'API active but no investigation in 7 days'
-            WHERE tenant_id IN (
-                SELECT tenant_id
-                FROM ops_events
-                GROUP BY tenant_id
-                HAVING
-                    MAX(timestamp) FILTER (WHERE event_type = 'API_CALL_RECEIVED') > now() - interval '48 hours'
-                    AND
-                    MAX(timestamp) FILTER (WHERE event_type IN ('INCIDENT_VIEWED', 'REPLAY_EXECUTED')) < now() - interval '7 days'
-            )
-        """
-        )
-        result = session.execute(stmt)
-        session.commit()
-
-        return OpsJobResult(
-            status="completed",
-            message="Silent churn detection completed",
-            affected_count=result.rowcount if hasattr(result, "rowcount") else None,
-            job_type="detect-silent-churn",
-        )
-    except Exception as e:
-        logger.error(f"Silent churn detection failed: {e}")
-        return OpsJobResult(
-            status="error",
-            message=str(e),
-            job_type="detect-silent-churn",
-        )
-
-
+#
+# Rationale: POST /ops/jobs/detect-silent-churn and POST /ops/jobs/compute-stickiness
+# were C1 (Decorative API) violations - they existed in L2 API surface but had no
+# real execution path in production (JOB_ENDPOINTS_ENABLED=false by default).
+#
+# Fix: Removed from L2 API. Job triggers should be invoked via:
+#   - L7 systemd timer: /etc/systemd/system/aos-detect-silent-churn.timer
+#   - L7 systemd timer: /etc/systemd/system/aos-compute-stickiness.timer
+#   - Direct service call: OpsWriteService(session).update_silent_churn()
+#   - Direct service call: OpsWriteService(session).compute_stickiness_scores()
+#
+# Reference: PIN-254 Phase C, LAYERED_SEMANTIC_COMPLETION_CONTRACT.md
 # =============================================================================
-# Stickiness Score Computation (Background Job)
-# =============================================================================
-
-
-@router.post("/jobs/compute-stickiness", response_model=OpsJobResult)
-async def compute_stickiness(
-    session: Session = Depends(get_session),
-) -> OpsJobResult:
-    """
-    DEPRECATED: Internal job endpoint - should run via systemd timer, not API.
-
-    Background job to compute comprehensive stickiness scores.
-
-    Computes:
-    - stickiness_7d: Recent 7-day engagement score
-    - stickiness_30d: Full 30-day engagement score
-    - stickiness_delta: Ratio of 7d/30d (trend indicator)
-    - friction_score: Weighted friction events
-    - last_friction_event: Most recent friction timestamp
-
-    Stickiness = weighted sum of (incidents * 0.2) + (replays * 0.3) + (exports * 0.5)
-    With time decay: recent (7d) actions weighted 2x.
-    """
-    # ==========================================================================
-    # M25 HYGIENE: Job triggers disabled in production API
-    # See PIN-140: "Internal mechanics exposed" - move to cron/systemd
-    # ==========================================================================
-    import os
-
-    if not os.getenv("JOB_ENDPOINTS_ENABLED", "").lower() == "true":
-        raise HTTPException(
-            status_code=410,  # Gone
-            detail="Job endpoint disabled. Use systemd timer or set JOB_ENDPOINTS_ENABLED=true.",
-        )
-    try:
-        stmt = text(
-            """
-            WITH actions AS (
-                SELECT
-                    tenant_id,
-                    -- 7-day stickiness (recent engagement)
-                    COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp > now() - interval '7 days') as views_7d,
-                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp > now() - interval '7 days') as replays_7d,
-                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp > now() - interval '7 days') as exports_7d,
-                    -- 30-day stickiness (full window)
-                    COUNT(*) FILTER (WHERE event_type = 'INCIDENT_VIEWED' AND timestamp > now() - interval '30 days') as views_30d,
-                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_EXECUTED' AND timestamp > now() - interval '30 days') as replays_30d,
-                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_GENERATED' AND timestamp > now() - interval '30 days') as exports_30d,
-                    -- Friction events (weighted by severity)
-                    COUNT(*) FILTER (WHERE event_type = 'REPLAY_ABORTED' AND timestamp > now() - interval '14 days') as aborts,
-                    COUNT(*) FILTER (WHERE event_type = 'EXPORT_ABORTED' AND timestamp > now() - interval '14 days') as export_aborts,
-                    COUNT(*) FILTER (WHERE event_type = 'POLICY_BLOCK_REPEAT' AND timestamp > now() - interval '14 days') as policy_blocks,
-                    COUNT(*) FILTER (WHERE event_type = 'SESSION_IDLE_TIMEOUT' AND timestamp > now() - interval '14 days') as idle_timeouts,
-                    MAX(timestamp) FILTER (WHERE event_type IN (
-                        'REPLAY_ABORTED', 'EXPORT_ABORTED', 'POLICY_BLOCK_REPEAT',
-                        'SESSION_IDLE_TIMEOUT', 'SESSION_STARTED', 'INVESTIGATION_NO_ACTION'
-                    )) as last_friction,
-                    -- Last activity timestamps
-                    MAX(timestamp) FILTER (WHERE event_type = 'API_CALL_RECEIVED') as last_api,
-                    MAX(timestamp) FILTER (WHERE event_type IN ('INCIDENT_VIEWED', 'REPLAY_EXECUTED')) as last_investigation,
-                    -- First action
-                    MIN(timestamp) as first_action_at
-                FROM ops_events
-                WHERE timestamp > now() - interval '30 days'
-                GROUP BY tenant_id
-            ),
-            computed AS (
-                SELECT
-                    tenant_id,
-                    -- 7-day stickiness
-                    ROUND((views_7d * 0.2 + replays_7d * 0.3 + exports_7d * 0.5)::numeric, 2) as stickiness_7d,
-                    -- 30-day stickiness (normalized to weekly equivalent)
-                    ROUND(((views_30d * 0.2 + replays_30d * 0.3 + exports_30d * 0.5) / 4.28)::numeric, 2) as stickiness_30d,
-                    -- Friction score (capped per Phase-2.1 rules)
-                    ROUND(LEAST(
-                        (aborts * 2.0 + export_aborts * 1.5 + policy_blocks * 3.0 + idle_timeouts * 1.0),
-                        50.0  -- Global cap
-                    )::numeric, 2) as friction_score,
-                    last_friction,
-                    last_api,
-                    last_investigation,
-                    first_action_at
-                FROM actions
-            )
-            INSERT INTO ops_customer_segments (
-                tenant_id, current_stickiness, stickiness_7d, stickiness_30d, stickiness_delta,
-                friction_score, last_friction_event, last_api_call, last_investigation,
-                first_action_at, computed_at
-            )
-            SELECT
-                tenant_id,
-                stickiness_7d as current_stickiness,
-                stickiness_7d,
-                stickiness_30d,
-                CASE
-                    WHEN stickiness_30d > 0 THEN ROUND((stickiness_7d / stickiness_30d)::numeric, 2)
-                    WHEN stickiness_7d > 0 THEN 2.0  -- New active customer
-                    ELSE 0.0
-                END as stickiness_delta,
-                friction_score,
-                last_friction,
-                last_api,
-                last_investigation,
-                first_action_at,
-                now()
-            FROM computed
-            ON CONFLICT (tenant_id) DO UPDATE SET
-                current_stickiness = EXCLUDED.current_stickiness,
-                stickiness_7d = EXCLUDED.stickiness_7d,
-                stickiness_30d = EXCLUDED.stickiness_30d,
-                stickiness_delta = EXCLUDED.stickiness_delta,
-                peak_stickiness = GREATEST(ops_customer_segments.peak_stickiness, EXCLUDED.current_stickiness),
-                stickiness_trend = CASE
-                    WHEN EXCLUDED.stickiness_delta > 1.1 THEN 'rising'
-                    WHEN EXCLUDED.stickiness_delta < 0.9 THEN 'falling'
-                    ELSE 'stable'
-                END,
-                friction_score = EXCLUDED.friction_score,
-                last_friction_event = EXCLUDED.last_friction_event,
-                last_api_call = EXCLUDED.last_api_call,
-                last_investigation = EXCLUDED.last_investigation,
-                first_action_at = COALESCE(ops_customer_segments.first_action_at, EXCLUDED.first_action_at),
-                computed_at = now()
-        """
-        )
-        result = session.execute(stmt)
-        session.commit()
-
-        return OpsJobResult(
-            status="completed",
-            message="Stickiness computation completed",
-            affected_count=result.rowcount if hasattr(result, "rowcount") else None,
-            job_type="compute-stickiness",
-        )
-    except Exception as e:
-        logger.error(f"Stickiness computation failed: {e}")
-        return OpsJobResult(
-            status="error",
-            message=str(e),
-            job_type="compute-stickiness",
-        )

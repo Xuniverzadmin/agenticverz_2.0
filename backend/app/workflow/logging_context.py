@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Workflow logging context management
+# Callers: workflow engine, steps
+# Allowed Imports: None
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Observability
+
 # M4-T5: Observability Deepening - Logging Context
 """
 Structured logging context for workflow execution.

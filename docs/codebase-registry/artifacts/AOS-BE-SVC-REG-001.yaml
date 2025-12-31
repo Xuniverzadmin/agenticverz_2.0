@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-REG-001
+name: registry_service.py
+type: service
+status: active
+owner: backend
+purpose: M12 agent registration, heartbeats, stale detection
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: agents
+  subdomain: registry
+  order_depth: O2
+responsibility: |
+  - Agent registration
+  - Heartbeat tracking (default 30s interval)
+  - Stale detection (default 60s threshold)
+  - AgentInstance dataclass with status, capabilities, heartbeat
+  - Pattern reused from M7 memory pins TTL + M2 SkillRegistry (50% reuse)
+dependencies: []
+notes: |
+  Location: backend/app/agents/services/registry_service.py
+  Milestone: M12

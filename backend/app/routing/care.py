@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: CARE-L routing algorithm core
+# Callers: API routes, runtime
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M18 CARE-L
+
 # M17 CARE - Cascade-Aware Routing Engine
 # Strategic router that routes based on agent Strategy Cascade
 #

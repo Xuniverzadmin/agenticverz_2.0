@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Trace store abstraction
+# Callers: services, workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Trace System
+
 """
 Trace Storage for AOS
 M6 Deliverable: Run traces with correlation IDs

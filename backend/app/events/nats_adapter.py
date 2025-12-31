@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: NATS event streaming adapter
+# Callers: event publisher
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Event System
+
 """
 NATS adapter stub. Does not actually require a NATS server by default.
 If NATS is configured in env (NATS_URL), this adapter will attempt a connect.

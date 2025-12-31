@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: SBA agent generation
+# Callers: API routes
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M18 SBA
+
 # M15.1 SBA Generator
 # Auto-generate boilerplate SBA for existing agents
 #

@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: JWT token validation and parsing
+# Callers: middleware, API routes
+# Allowed Imports: None
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Auth Infrastructure
+
 """
 JWT/OIDC Authentication for AOS Traces API
 

@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-STR-FLT-001
+name: run_fault_injection.sh
+type: script
+status: active
+owner: ops
+purpose: M4-T2 fault injection testing rig
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: stress
+  subdomain: fault-injection
+  order_depth: O2
+responsibility: |
+  - Tests workflow engine resilience under fault conditions:
+    - Redis connection drops
+    - Database timeouts
+    - Filesystem permission errors
+    - Network latency injection
+  - Supports --fault, --quick, --chaos modes
+dependencies: []
+notes: |
+  Location: scripts/stress/run_fault_injection.sh
+  Milestone: M4-T2

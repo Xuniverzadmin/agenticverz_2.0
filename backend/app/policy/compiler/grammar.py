@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Policy language grammar definitions
+# Callers: policy/compiler/parser
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Policy System
+
 # M20 PLang v2.0 Grammar
 # Policy Language Grammar with M19 Categories
 """

@@ -1,0 +1,17 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-OVR-001
+name: OverviewPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: "Answer: Is the system okay right now?"
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: overview
+  topic_o1: "Is the system okay right now?"
+  order_depth: O1

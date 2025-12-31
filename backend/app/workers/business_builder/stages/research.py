@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: product-builder
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Research stage
+# Callers: business_builder worker
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Business Builder
+
 # Research Stage Implementation
 """
 Market research stage that uses:

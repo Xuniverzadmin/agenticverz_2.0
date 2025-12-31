@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: import-time
+//   Execution: sync
+// Role: Frontend constants and configuration
+// Callers: All frontend components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Utilities
+
 export const API_BASE = import.meta.env.VITE_API_BASE;
 export const WS_URL = import.meta.env.VITE_WS_URL;
 

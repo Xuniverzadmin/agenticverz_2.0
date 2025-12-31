@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-MSG-001
+name: message_service.py
+type: service
+status: active
+owner: backend
+purpose: M12 P2P messaging with LISTEN/NOTIFY
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: agents
+  subdomain: messaging
+  order_depth: O2
+responsibility: |
+  - P2P messaging between agents
+  - PostgreSQL LISTEN/NOTIFY for low-latency message delivery (M12.1)
+  - Channel name sanitization for SQL injection prevention
+  - Pattern reused from M10 outbox_processor.py (80% reuse)
+dependencies:
+  - psycopg2
+notes: |
+  Location: backend/app/agents/services/message_service.py
+  Milestone: M12.1

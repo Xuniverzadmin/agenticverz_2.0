@@ -1,3 +1,19 @@
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: async
+# Role: Runtime API endpoints for machine-native primitives
+# Callers: External API clients
+# Allowed Imports: L3, L4, L6
+# Forbidden Imports: L1, L5
+# Reference: PIN-258 Phase F-3 Runtime Cluster
+#
+# GOVERNANCE NOTE (PIN-258 Phase F-3):
+# This L2 API layer must NOT import from L5 (workers/execution).
+# All runtime operations go through L3 RuntimeAdapter.
+# Direct L5 imports were eliminated in Phase F-3.
+
 # api/runtime.py
 """
 Machine-Native Runtime API Endpoints (M5.5)
@@ -153,15 +169,21 @@ def _get_cost_simulator():
         return None
 
 
-def _get_runtime():
-    """Get Runtime instance."""
-    try:
-        from app.worker.runtime.core import Runtime
+def _get_runtime_adapter():
+    """
+    Get RuntimeAdapter instance (L3).
 
-        return Runtime()
-    except ImportError as e:
-        logger.warning(f"Runtime not available: {e}")
-        return None
+    This is the compliant way to access runtime functionality.
+    L2 calls L3 (adapter), not L5 (worker).
+
+    Reference: PIN-258 Phase F-3 Runtime Cluster
+
+    Returns:
+        RuntimeAdapter instance
+    """
+    from app.adapters.runtime_adapter import get_runtime_adapter
+
+    return get_runtime_adapter()
 
 
 def _get_skill_registry():
@@ -175,106 +197,9 @@ def _get_skill_registry():
         return None
 
 
-# Default skill metadata for when registry not available
-DEFAULT_SKILL_METADATA = {
-    "http_call": {
-        "cost_cents": 0,
-        "latency_ms": 500,
-        "failure_modes": [
-            {"code": "TIMEOUT", "category": "TRANSIENT", "probability": 0.1},
-            {"code": "DNS_FAILURE", "category": "TRANSIENT", "probability": 0.02},
-            {"code": "HTTP_4XX", "category": "PERMANENT", "probability": 0.05},
-            {"code": "HTTP_5XX", "category": "TRANSIENT", "probability": 0.03},
-        ],
-        "constraints": {"max_timeout_ms": 30000, "blocked_hosts": ["localhost", "169.254.169.254"]},
-        "composition_hints": {
-            "often_followed_by": ["json_transform", "llm_invoke"],
-            "often_preceded_by": ["cache_lookup"],
-            "anti_patterns": ["calling same URL repeatedly without cache"],
-        },
-    },
-    "llm_invoke": {
-        "cost_cents": 5,
-        "latency_ms": 2000,
-        "failure_modes": [
-            {"code": "RATE_LIMITED", "category": "TRANSIENT", "probability": 0.05},
-            {"code": "CONTEXT_OVERFLOW", "category": "PERMANENT", "probability": 0.02},
-            {"code": "TIMEOUT", "category": "TRANSIENT", "probability": 0.03},
-        ],
-        "constraints": {"max_tokens": 100000, "models_allowed": ["claude-3-haiku", "claude-sonnet-4-20250514"]},
-        "composition_hints": {
-            "often_followed_by": ["json_transform", "http_call"],
-            "often_preceded_by": ["http_call", "fs_read"],
-            "anti_patterns": ["chaining multiple LLM calls without caching"],
-        },
-    },
-    "json_transform": {
-        "cost_cents": 0,
-        "latency_ms": 10,
-        "failure_modes": [
-            {"code": "SCHEMA_VALIDATION_FAILED", "category": "PERMANENT", "probability": 0.01},
-            {"code": "TRANSFORM_ERROR", "category": "PERMANENT", "probability": 0.01},
-        ],
-        "constraints": {"max_input_size_bytes": 10485760},
-        "composition_hints": {
-            "often_followed_by": ["http_call", "llm_invoke"],
-            "often_preceded_by": ["http_call", "llm_invoke"],
-            "anti_patterns": [],
-        },
-    },
-    "fs_read": {
-        "cost_cents": 0,
-        "latency_ms": 50,
-        "failure_modes": [
-            {"code": "FILE_NOT_FOUND", "category": "PERMANENT", "probability": 0.05},
-            {"code": "PERMISSION_DENIED", "category": "PERMISSION", "probability": 0.02},
-        ],
-        "constraints": {"workspace_root": AOS_WORKSPACE_ROOT, "max_file_size_bytes": 10485760},
-        "composition_hints": {
-            "often_followed_by": ["llm_invoke", "json_transform"],
-            "often_preceded_by": ["fs_write"],
-            "anti_patterns": ["reading same file multiple times without caching"],
-        },
-    },
-    "fs_write": {
-        "cost_cents": 0,
-        "latency_ms": 100,
-        "failure_modes": [
-            {"code": "PERMISSION_DENIED", "category": "PERMISSION", "probability": 0.05},
-            {"code": "DISK_FULL", "category": "RESOURCE", "probability": 0.01},
-        ],
-        "constraints": {"workspace_root": AOS_WORKSPACE_ROOT, "max_file_size_bytes": 10485760},
-        "composition_hints": {
-            "often_followed_by": ["fs_read"],
-            "often_preceded_by": ["llm_invoke", "http_call"],
-            "anti_patterns": [],
-        },
-    },
-    "webhook_send": {
-        "cost_cents": 0,
-        "latency_ms": 300,
-        "failure_modes": [
-            {"code": "TIMEOUT", "category": "TRANSIENT", "probability": 0.1},
-            {"code": "HTTP_5XX", "category": "TRANSIENT", "probability": 0.05},
-        ],
-        "constraints": {"max_payload_bytes": 1048576},
-        "composition_hints": {"often_followed_by": [], "often_preceded_by": ["json_transform"], "anti_patterns": []},
-    },
-    "email_send": {
-        "cost_cents": 1,
-        "latency_ms": 500,
-        "failure_modes": [
-            {"code": "DELIVERY_FAILED", "category": "TRANSIENT", "probability": 0.05},
-            {"code": "RATE_LIMITED", "category": "TRANSIENT", "probability": 0.02},
-        ],
-        "constraints": {"max_recipients": 10, "max_body_size_bytes": 1048576},
-        "composition_hints": {
-            "often_followed_by": [],
-            "often_preceded_by": ["llm_invoke", "json_transform"],
-            "anti_patterns": ["sending same email multiple times"],
-        },
-    },
-}
+# Import skill metadata from L4 domain command module (PIN-258 Phase F-3)
+# This is the authoritative source for skill metadata
+from app.commands.runtime_command import DEFAULT_SKILL_METADATA
 
 
 # =============================================================================
@@ -462,85 +387,16 @@ async def query_runtime(
         "skills_available_for_goal",
     ]
 
-    # Try to use Runtime if available
-    runtime = _get_runtime()
-    if runtime:
-        try:
-            result = await runtime.query(request.query_type, **request.params)
-            return QueryResponse(
-                query_type=request.query_type,
-                result=result,
-                supported_queries=supported_queries,
-            )
-        except Exception as e:
-            logger.warning(f"Runtime query error: {e}")
-            # Fall through to manual handling
+    # Use L3 RuntimeAdapter (PIN-258 Phase F-3)
+    # L2 calls L3 (adapter), which calls L4 (domain commands)
+    adapter = _get_runtime_adapter()
+    query_result = adapter.query(request.query_type, request.params)
 
-    # Manual query handling
-    if request.query_type == "remaining_budget_cents":
-        # Default budget (1000 cents = $10)
-        return QueryResponse(
-            query_type=request.query_type,
-            result={
-                "remaining_cents": 1000,
-                "spent_cents": 0,
-                "total_cents": 1000,
-            },
-            supported_queries=supported_queries,
-        )
-
-    elif request.query_type == "what_did_i_try_already":
-        # No history without runtime context
-        return QueryResponse(
-            query_type=request.query_type,
-            result={"history": []},
-            supported_queries=supported_queries,
-        )
-
-    elif request.query_type == "allowed_skills":
-        skills = list(DEFAULT_SKILL_METADATA.keys())
-        return QueryResponse(
-            query_type=request.query_type,
-            result={
-                "skills": skills,
-                "count": len(skills),
-            },
-            supported_queries=supported_queries,
-        )
-
-    elif request.query_type == "last_step_outcome":
-        return QueryResponse(
-            query_type=request.query_type,
-            result={"outcome": None},
-            supported_queries=supported_queries,
-        )
-
-    elif request.query_type == "skills_available_for_goal":
-        goal = request.params.get("goal", "")
-        # Deterministic pseudo-matching based on goal hash
-        seed = sum(ord(c) for c in goal) % 997
-        all_skills = list(DEFAULT_SKILL_METADATA.keys())
-        # Deterministic sort using seed
-        matched = sorted(all_skills, key=lambda s: (hash(s) + seed) % 1000)
-        return QueryResponse(
-            query_type=request.query_type,
-            result={
-                "goal": goal,
-                "skills": matched[:5],
-                "seed": seed,
-            },
-            supported_queries=supported_queries,
-        )
-
-    else:
-        return QueryResponse(
-            query_type=request.query_type,
-            result={
-                "error": f"Unknown query type: {request.query_type}",
-                "supported": supported_queries,
-            },
-            supported_queries=supported_queries,
-        )
+    return QueryResponse(
+        query_type=query_result.query_type,
+        result=query_result.result,
+        supported_queries=query_result.supported_queries,
+    )
 
 
 @router.get("/skills", response_model=SkillListResponse)
@@ -554,7 +410,7 @@ async def list_available_skills(
 
     Returns skill IDs and basic descriptors for each skill.
     """
-    # Try to use skill registry if available
+    # Try to use skill registry if available (L6 - platform)
     registry = _get_skill_registry()
     if registry:
         try:
@@ -568,19 +424,10 @@ async def list_available_skills(
         except Exception as e:
             logger.warning(f"Skill registry error: {e}")
 
-    # Fall back to default metadata
-    skills = list(DEFAULT_SKILL_METADATA.keys())
-    descriptors = {}
-    for skill_id in skills:
-        meta = DEFAULT_SKILL_METADATA[skill_id]
-        descriptors[skill_id] = {
-            "skill_id": skill_id,
-            "name": skill_id,
-            "version": "0.1.0",
-            "description": f"{skill_id} skill",
-            "cost_model": {"base_cents": meta.get("cost_cents", 0)},
-            "latency_ms": meta.get("latency_ms", 100),
-        }
+    # Use L3 RuntimeAdapter for skill listing (PIN-258 Phase F-3)
+    adapter = _get_runtime_adapter()
+    skills = adapter.list_skills()
+    descriptors = adapter.get_skill_descriptors()
 
     return SkillListResponse(
         skills=skills,
@@ -606,51 +453,31 @@ async def describe_skill(
     - Constraints
     - Composition hints (what skills often precede/follow)
     """
-    # Check if skill exists
-    if skill_id not in DEFAULT_SKILL_METADATA:
-        # Try runtime
-        runtime = _get_runtime()
-        if runtime:
-            try:
-                descriptor = runtime.describe_skill(skill_id)
-                if descriptor:
-                    return SkillDescriptorResponse(
-                        skill_id=descriptor.skill_id,
-                        name=descriptor.name,
-                        version=descriptor.version,
-                        description=descriptor.description,
-                        inputs_schema=descriptor.inputs_schema,
-                        outputs_schema=descriptor.outputs_schema,
-                        cost_model={"base_cents": descriptor.cost_model.get("base_cents", 0)},
-                        failure_modes=descriptor.failure_modes or [],
-                        constraints=descriptor.constraints or {},
-                        composition_hints=descriptor.composition_hints or {},
-                    )
-            except Exception as e:
-                logger.warning(f"Runtime describe_skill error: {e}")
+    # Use L3 RuntimeAdapter (PIN-258 Phase F-3)
+    adapter = _get_runtime_adapter()
+    skill_info = adapter.describe_skill(skill_id)
 
+    if skill_info is None:
         raise HTTPException(
             status_code=404,
             detail={
                 "error": "SKILL_NOT_FOUND",
                 "message": f"Skill '{skill_id}' not found",
-                "available_skills": list(DEFAULT_SKILL_METADATA.keys()),
+                "available_skills": adapter.list_skills(),
             },
         )
 
-    meta = DEFAULT_SKILL_METADATA[skill_id]
-
     return SkillDescriptorResponse(
-        skill_id=skill_id,
-        name=skill_id,
-        version="0.1.0",
-        description=f"{skill_id} skill for AOS runtime",
-        inputs_schema=None,  # Would come from skill contract
-        outputs_schema=None,
-        cost_model={"base_cents": meta.get("cost_cents", 0), "per_kb_cents": 0},
-        failure_modes=meta.get("failure_modes", []),
-        constraints=meta.get("constraints", {}),
-        composition_hints=meta.get("composition_hints", {}),
+        skill_id=skill_info.skill_id,
+        name=skill_info.name,
+        version=skill_info.version,
+        description=skill_info.description,
+        inputs_schema=skill_info.inputs_schema,
+        outputs_schema=skill_info.outputs_schema,
+        cost_model=skill_info.cost_model,
+        failure_modes=skill_info.failure_modes,
+        constraints=skill_info.constraints,
+        composition_hints=skill_info.composition_hints,
     )
 
 
@@ -673,32 +500,16 @@ async def get_capabilities(
 
     This allows agents to know exactly what they can do before attempting.
     """
-    # Build capabilities response
-    skills_caps = {}
-    for skill_id, meta in DEFAULT_SKILL_METADATA.items():
-        skills_caps[skill_id] = {
-            "available": True,
-            "cost_estimate_cents": meta.get("cost_cents", 0),
-            "avg_latency_ms": meta.get("latency_ms", 100),
-            "rate_limit_remaining": 95,  # Default
-            "known_failure_patterns": [
-                fm.get("code") for fm in meta.get("failure_modes", []) if fm.get("probability", 0) > 0.05
-            ],
-        }
+    # Use L3 RuntimeAdapter (PIN-258 Phase F-3)
+    adapter = _get_runtime_adapter()
+    caps_info = adapter.get_capabilities(agent_id, tenant_id)
 
     return CapabilitiesResponse(
-        agent_id=agent_id,
-        skills=skills_caps,
-        budget={
-            "total_cents": 1000,
-            "remaining_cents": 1000,
-            "per_step_max_cents": 100,
-        },
-        rate_limits={
-            "http_call": {"remaining": 95, "resets_in_seconds": 60},
-            "llm_invoke": {"remaining": 50, "resets_in_seconds": 60},
-        },
-        permissions=["read", "write", "execute"],
+        agent_id=caps_info.agent_id,
+        skills=caps_info.skills,
+        budget=caps_info.budget,
+        rate_limits=caps_info.rate_limits,
+        permissions=caps_info.permissions,
     )
 
 
@@ -709,43 +520,24 @@ async def get_resource_contract(resource_id: str):
 
     Returns budget, rate limits, and concurrency constraints.
     """
-    # Try runtime
-    runtime = _get_runtime()
-    if runtime:
-        try:
-            contract = runtime.get_resource_contract(resource_id)
-            if contract:
-                return {
-                    "resource_id": resource_id,
-                    "budget": {
-                        "total_cents": contract.budget_cents,
-                        "remaining_cents": contract.budget_cents,
-                    },
-                    "rate_limits": {
-                        "requests_per_minute": contract.rate_limit_per_minute,
-                    },
-                    "concurrency": {
-                        "max_concurrent": contract.max_concurrent,
-                    },
-                }
-        except Exception as e:
-            logger.warning(f"Runtime get_resource_contract error: {e}")
+    # Use L3 RuntimeAdapter (PIN-258 Phase F-3)
+    adapter = _get_runtime_adapter()
+    contract_info = adapter.get_resource_contract(resource_id)
 
-    # Default contract
     return {
-        "resource_id": resource_id,
+        "resource_id": contract_info.resource_id,
         "budget": {
-            "total_cents": 1000,
-            "remaining_cents": 1000,
+            "total_cents": contract_info.budget_cents,
+            "remaining_cents": contract_info.budget_cents,
             "per_step_max_cents": 100,
         },
         "rate_limits": {
-            "requests_per_minute": 100,
+            "requests_per_minute": contract_info.rate_limit_per_minute,
             "remaining": 95,
             "resets_at": None,
         },
         "concurrency": {
-            "max_concurrent": 5,
+            "max_concurrent": contract_info.max_concurrent,
             "current_running": 0,
         },
         "time": {

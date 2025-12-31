@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api (every authenticated request)
+#   Execution: sync
+# Role: API key verification dependency for FastAPI routes
+# Callers: All protected API routes via Depends()
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Security
+
 import os
 
 from fastapi import Header, HTTPException, status

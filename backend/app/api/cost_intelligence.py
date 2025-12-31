@@ -28,6 +28,9 @@ from app.db import (
     utc_now,
 )
 
+# Phase 2B: Write service for DB operations
+from app.services.cost_write_service import CostWriteService
+
 
 def get_tenant_id(tenant_id: str = Query(..., description="Tenant ID")) -> str:
     """Extract tenant_id from query parameter."""
@@ -244,17 +247,15 @@ async def create_feature_tag(
             status_code=400, detail="Feature tag must be in namespace.action format (e.g., 'customer_support.chat')"
         )
 
-    feature_tag = FeatureTag(
+    # Phase 2B: Use write service for DB operations
+    cost_service = CostWriteService(session)
+    feature_tag = cost_service.create_feature_tag(
         tenant_id=tenant_id,
         tag=data.tag,
         display_name=data.display_name,
         description=data.description,
         budget_cents=data.budget_cents,
     )
-
-    session.add(feature_tag)
-    session.commit()
-    session.refresh(feature_tag)
 
     logger.info(f"Created feature tag: {data.tag} for tenant {tenant_id}")
 
@@ -319,20 +320,15 @@ async def update_feature_tag(
     if not feature_tag:
         raise HTTPException(status_code=404, detail=f"Feature tag '{tag}' not found")
 
-    if data.display_name is not None:
-        feature_tag.display_name = data.display_name
-    if data.description is not None:
-        feature_tag.description = data.description
-    if data.budget_cents is not None:
-        feature_tag.budget_cents = data.budget_cents
-    if data.is_active is not None:
-        feature_tag.is_active = data.is_active
-
-    feature_tag.updated_at = utc_now()
-
-    session.add(feature_tag)
-    session.commit()
-    session.refresh(feature_tag)
+    # Phase 2B: Use write service for DB operations
+    cost_service = CostWriteService(session)
+    feature_tag = cost_service.update_feature_tag(
+        feature_tag=feature_tag,
+        display_name=data.display_name,
+        description=data.description,
+        budget_cents=data.budget_cents,
+        is_active=data.is_active,
+    )
 
     return FeatureTagResponse(
         id=feature_tag.id,
@@ -380,7 +376,9 @@ async def record_cost(
             logger.warning(f"Unknown feature tag '{feature_tag}' - defaulting to 'unclassified'")
             feature_tag = "unclassified"
 
-    record = CostRecord(
+    # Phase 2B: Use write service for DB operations
+    cost_service = CostWriteService(session)
+    record = cost_service.create_cost_record(
         tenant_id=tenant_id,
         user_id=data.user_id,
         feature_tag=feature_tag,
@@ -390,11 +388,8 @@ async def record_cost(
         model=data.model,
         input_tokens=data.input_tokens,
         output_tokens=data.output_tokens,
-        cost_cents=data.cost_cents,
+        cost_cents=int(data.cost_cents),
     )
-
-    session.add(record)
-    session.commit()
 
     return {"id": record.id, "status": "recorded"}
 
@@ -608,7 +603,7 @@ async def create_or_update_budget(
     if data.budget_type in ("feature", "user") and not data.entity_id:
         raise HTTPException(status_code=400, detail=f"entity_id required for {data.budget_type} budget")
 
-    # Find existing or create
+    # Find existing budget (read operation)
     existing = session.exec(
         select(CostBudget).where(
             CostBudget.tenant_id == tenant_id,
@@ -617,27 +612,18 @@ async def create_or_update_budget(
         )
     ).first()
 
-    if existing:
-        existing.daily_limit_cents = data.daily_limit_cents
-        existing.monthly_limit_cents = data.monthly_limit_cents
-        existing.warn_threshold_pct = data.warn_threshold_pct
-        existing.hard_limit_enabled = data.hard_limit_enabled
-        existing.updated_at = utc_now()
-        budget = existing
-    else:
-        budget = CostBudget(
-            tenant_id=tenant_id,
-            budget_type=data.budget_type,
-            entity_id=data.entity_id,
-            daily_limit_cents=data.daily_limit_cents,
-            monthly_limit_cents=data.monthly_limit_cents,
-            warn_threshold_pct=data.warn_threshold_pct,
-            hard_limit_enabled=data.hard_limit_enabled,
-        )
-        session.add(budget)
-
-    session.commit()
-    session.refresh(budget)
+    # Phase 2B: Use write service for DB operations
+    cost_service = CostWriteService(session)
+    budget = cost_service.create_or_update_budget(
+        existing_budget=existing,
+        tenant_id=tenant_id,
+        budget_type=data.budget_type,
+        entity_id=data.entity_id,
+        daily_limit_cents=data.daily_limit_cents,
+        monthly_limit_cents=data.monthly_limit_cents,
+        warn_threshold_pct=data.warn_threshold_pct,
+        hard_limit_enabled=data.hard_limit_enabled,
+    )
 
     # Get current spend
     current_spend = await _get_current_spend(session, tenant_id, data.budget_type, data.entity_id)

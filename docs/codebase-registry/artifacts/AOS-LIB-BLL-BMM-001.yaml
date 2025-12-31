@@ -1,0 +1,28 @@
+# Artifact Registry Entry - BudgetLLM Library Module
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-LIB-BLL-BMM-001
+name: backends/memory.py
+type: library
+status: active
+owner: backend
+purpose: Thread-safe in-memory cache backend with LRU eviction
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: budgetllm
+  subdomain: backends
+  order_depth: O3
+responsibility: |
+  - Simple in-memory cache, no dependencies
+  - Suitable for single-process usage
+  - MemoryBackend class with:
+    - TTL support
+    - LRU eviction at max capacity
+    - Thread-safe operations
+    - get, set, delete methods
+dependencies: []
+notes: |
+  Location: budgetllm/core/backends/memory.py

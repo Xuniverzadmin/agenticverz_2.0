@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Plan structure inspection
+# Callers: runtime API
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Plan System
+
 # Plan Safety Inspector
 # Validates plans before execution to prevent dangerous operations
 

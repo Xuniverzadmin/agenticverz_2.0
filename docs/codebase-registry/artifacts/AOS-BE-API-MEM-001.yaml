@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-MEM-001
+name: memory_pins.py
+type: api-route
+status: active
+owner: backend
+purpose: M7 Memory Pins API - Structured key-value storage
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: memory
+  subdomain: pins
+  order_depth: O3
+responsibility: |
+  - POST /api/v1/memory/pins - Create or upsert pin
+  - GET /api/v1/memory/pins/{key} - Get pin by key
+  - GET /api/v1/memory/pins - List pins for tenant
+  - DELETE /api/v1/memory/pins/{key} - Delete pin
+  - Tenant-isolated storage
+  - JSONB values, optional TTL
+  - RBAC enforcement (when enabled)
+dependencies:
+  - Prometheus metrics
+  - MEMORY_PINS_ENABLED flag
+  - get_session

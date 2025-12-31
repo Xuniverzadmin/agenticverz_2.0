@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-OPS-M10-001
+name: m10_orchestrator.py
+type: script
+status: active
+owner: ops
+purpose: M10 consolidated maintenance orchestrator (5 timers → 1)
+authority_level: mutate
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: maintenance
+  subdomain: orchestration
+  order_depth: O2
+responsibility: |
+  - Consolidates 5 systemd timers into 1 orchestrated job:
+    - Outbox processor
+    - Dead-letter reconciliation (XACK orphaned pending)
+    - Matview refresh
+    - Retention cleanup
+    - Reclaim GC
+  - Reduces operational burden from 5 failure points to 1
+  - Supports --dry-run, --tasks, --json modes
+dependencies: []
+notes: |
+  Location: scripts/ops/m10_orchestrator.py
+  Milestone: M10
+  Systemd timer: runs every 5 minutes

@@ -14,6 +14,20 @@ from app.models.costsim_cb import (
     CostSimCBStateModel,
     CostSimProvenanceModel,
 )
+from app.models.governance import (
+    GovernanceSignal,
+    GovernanceSignalCreate,
+    GovernanceSignalResponse,
+    GovernanceSignalQuery,
+    GovernanceCheckResult,
+)
+from app.models.external_response import (
+    ExternalResponse,
+    ExternalResponseCreate,
+    ExternalResponseRead,
+    InterpretationUpdate,
+    InterpretedResponse,
+)
 from app.models.tenant import (
     PLAN_QUOTAS,
     APIKey,
@@ -34,6 +48,18 @@ __all__ = [
     "CostSimCBIncidentModel",
     "CostSimProvenanceModel",
     "CostSimAlertQueueModel",
+    # Governance models (Phase E FIX-03)
+    "GovernanceSignal",
+    "GovernanceSignalCreate",
+    "GovernanceSignalResponse",
+    "GovernanceSignalQuery",
+    "GovernanceCheckResult",
+    # External response models (Phase E FIX-04)
+    "ExternalResponse",
+    "ExternalResponseCreate",
+    "ExternalResponseRead",
+    "InterpretationUpdate",
+    "InterpretedResponse",
     # Tenant models (M21)
     "Tenant",
     "User",

@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Migration 022 Runbook
+# Source: PIN-052 Production Hardening
+# Created: 2025-12-30
+
+artifact_id: AOS-OP-DOC-RNB-001
+name: MIGRATION_022_PRODUCTION_RUNBOOK.md
+type: doc
+status: active
+owner: infra
+purpose: Production runbook for Migration 022 (M10 distributed locks)
+authority_level: advise
+execution_surface: none
+traceability:
+  product: system-wide
+  console: ops
+  domain: deployment
+  subdomain: migrations
+  order_depth: O3
+responsibility: |
+  - Pre-deployment checklist
+  - Deployment steps for migration 022
+  - Rollback procedure
+  - Post-deployment verification
+  - Sign-off requirements
+notes: |
+  Created for PIN-052 M10 Phase 6 completion.
+  Covers distributed_locks, replay_log, dead_letter_archive, outbox tables.

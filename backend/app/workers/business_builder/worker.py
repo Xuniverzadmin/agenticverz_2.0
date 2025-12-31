@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: product-builder
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Business builder main worker
+# Callers: worker pool
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: Business Builder
+
 # Business Builder Worker v0.3
 # Main entry point that integrates M0-M20 moats with REAL event emission
 """

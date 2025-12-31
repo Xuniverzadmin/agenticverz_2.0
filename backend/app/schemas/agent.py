@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Agent API request/response schemas
+# Callers: API routes
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: API Schemas
+
 # Agent Schemas
 # Pydantic models for Agent capabilities and configuration
 

@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Embedding Cost Dashboard
+# Source: PIN-047 Embedding Observability
+# Created: 2025-12-30
+
+artifact_id: AOS-IF-MON-DSH-001
+name: embedding-cost-dashboard.json
+type: infra
+status: active
+owner: infra
+purpose: Grafana dashboard for embedding cost monitoring
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: system-wide
+  console: ops
+  domain: monitoring
+  subdomain: costs
+  order_depth: O2
+responsibility: |
+  - Display embedding API usage metrics
+  - Show cost per tenant
+  - Show daily quota usage
+  - Alert on quota approaching limits
+  - Historical cost trends
+relations:
+  imports: []
+  imported_by: []
+notes: |
+  Created for PIN-047 embedding cost observability.
+  Imports into Grafana as JSON dashboard.

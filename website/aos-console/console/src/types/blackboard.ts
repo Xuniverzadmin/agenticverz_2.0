@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: import-time
+//   Execution: sync
+// Role: Blackboard type definitions
+// Callers: Blackboard components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Types
+
 export interface BlackboardEntry {
   key: string;
   value: unknown;

@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: user
+//   Execution: sync
+// Role: Debounce hook for input handling
+// Callers: UI components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Utilities
+
 /**
  * useDebounce Hook
  *

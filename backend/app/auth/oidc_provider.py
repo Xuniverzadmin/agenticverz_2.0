@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: external
+#   Execution: async
+# Role: OIDC authentication provider adapter
+# Callers: auth services
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Auth Integration
+
 """
 OIDC Provider Integration for Keycloak
 
@@ -246,34 +257,20 @@ def validate_and_extract(token: str) -> Tuple[Dict[str, Any], List[str]]:
     return claims, roles
 
 
-# Role mapping from Keycloak roles to AOS RBAC roles
-KEYCLOAK_TO_AOS_ROLE_MAP = {
-    # Admin roles
-    "admin": "admin",
-    "realm-admin": "admin",
-    "aos-admin": "admin",
-    # Infrastructure roles
-    "infra": "infra",
-    "infrastructure": "infra",
-    "platform": "infra",
-    # Developer roles
-    "developer": "dev",
-    "dev": "dev",
-    "engineer": "dev",
-    # Machine/service roles
-    "machine": "machine",
-    "service": "machine",
-    "service-account": "machine",
-    # Readonly roles
-    "readonly": "readonly",
-    "viewer": "readonly",
-    "guest": "readonly",
-}
+# =============================================================================
+# B04 FIX: Role mapping moved to L4 RBACEngine
+# =============================================================================
+# Previously: Local KEYCLOAK_TO_AOS_ROLE_MAP and map_keycloak_roles_to_aos()
+# Now: Delegates to L4 RBACEngine.map_external_roles_to_aos()
+# Reference: PIN-254 Phase B Fix
 
 
 def map_keycloak_roles_to_aos(keycloak_roles: List[str]) -> List[str]:
     """
     Map Keycloak roles to AOS RBAC roles.
+
+    B04 FIX: Delegates to L4 RBACEngine for domain authority.
+    L3 no longer contains role mapping logic.
 
     Args:
         keycloak_roles: Roles from Keycloak token
@@ -281,16 +278,6 @@ def map_keycloak_roles_to_aos(keycloak_roles: List[str]) -> List[str]:
     Returns:
         Mapped AOS roles
     """
-    aos_roles = set()
+    from app.auth.rbac_engine import map_external_roles_to_aos
 
-    for kc_role in keycloak_roles:
-        kc_role_lower = kc_role.lower()
-
-        # Check direct mapping
-        if kc_role_lower in KEYCLOAK_TO_AOS_ROLE_MAP:
-            aos_roles.add(KEYCLOAK_TO_AOS_ROLE_MAP[kc_role_lower])
-        else:
-            # Pass through unmapped roles
-            aos_roles.add(kc_role_lower)
-
-    return list(aos_roles)
+    return map_external_roles_to_aos(keycloak_roles)

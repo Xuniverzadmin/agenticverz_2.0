@@ -1,3 +1,8 @@
+# Layer: L3 — Boundary Adapter (Console → Platform)
+# Product: AI Console
+# Callers: guard.py (incident export endpoint)
+# Reference: PIN-240
+
 """
 Evidence Report Generator - Legal-Grade PDF Export
 

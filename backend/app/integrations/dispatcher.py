@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Integration event dispatcher
+# Callers: workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: Event Dispatch
+
 """
 M25 Integration Dispatcher
 

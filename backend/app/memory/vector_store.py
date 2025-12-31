@@ -49,6 +49,7 @@ from app.memory.embedding_metrics import (
     check_embedding_quota,
     increment_embedding_count,
 )
+from app.security.sanitize import sanitize_for_embedding
 
 logger = logging.getLogger("nova.memory.vector_store")
 
@@ -289,11 +290,13 @@ class VectorMemoryStore:
         memory_id = str(uuid.uuid4())
         meta_json = json.dumps(meta) if meta else None
 
-        # Generate embedding
+        # Generate embedding with sanitization (PIN-052)
         embedding = None
         if generate_embedding and text.strip():
             try:
-                embedding = await self._embedding_fn(text)
+                # Sanitize text before embedding to prevent secret leakage
+                sanitized_text = sanitize_for_embedding(text)
+                embedding = await self._embedding_fn(sanitized_text)
                 logger.debug(f"Generated embedding for memory {memory_id[:8]}")
             except EmbeddingError as e:
                 logger.warning(f"Embedding generation failed: {e}")
@@ -384,9 +387,10 @@ class VectorMemoryStore:
 
         start_time = time.perf_counter()
 
-        # Generate query embedding
+        # Generate query embedding (sanitize query for consistency - PIN-052)
         try:
-            query_embedding = await self._embedding_fn(query)
+            sanitized_query = sanitize_for_embedding(query)
+            query_embedding = await self._embedding_fn(sanitized_query)
         except EmbeddingError as e:
             logger.warning(f"Query embedding failed, using keyword search: {e}")
             VECTOR_FALLBACK_COUNT.labels(reason="no_embedding").inc()

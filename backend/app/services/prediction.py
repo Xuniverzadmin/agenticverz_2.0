@@ -1,3 +1,9 @@
+# Layer: L3 — Boundary Adapter (Console → Platform)
+# Product: AI Console
+# Callers: predictions API (read-side)
+# Reference: PIN-240
+# NOTE: Advisory only. Predictions have zero side-effects.
+
 """
 Prediction Service (PB-S5)
 

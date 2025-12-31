@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-TRC-001
+name: traces.py
+type: api-route
+status: active
+owner: backend
+purpose: Trace storage, retrieval, comparison, and replay mismatch management
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: logs
+  subdomain: traces
+  order_depth: O3
+responsibility: |
+  - GET/POST / - List and store traces
+  - GET /{run_id} - Complete trace by run ID
+  - GET /by-hash/{root_hash} - Trace by deterministic hash
+  - GET /compare/{run_id1}/{run_id2} - Deterministic equality comparison
+  - DELETE /{run_id} - Delete trace (admin)
+  - POST /cleanup - Delete old traces (admin)
+  - GET /idempotency/{key} - Check idempotency key
+  - POST/GET /{trace_id}/mismatch* - Mismatch management
+dependencies:
+  - JWT auth
+  - RBAC (admin/operator roles)
+  - PostgreSQL
+  - GitHub integration

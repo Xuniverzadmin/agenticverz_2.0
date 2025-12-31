@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Cost snapshot management
+# Callers: cost services
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Cost System
+
 """M27 Cost Snapshots - Deterministic Enforcement Barrier
 
 This module provides the snapshot layer between async cost ingestion

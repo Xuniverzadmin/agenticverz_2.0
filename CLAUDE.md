@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-28
+**Last Updated:** 2025-12-31
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Status:** ACTIVE
 **Effective:** 2025-12-27
-**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`
 
 ### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001)
 
@@ -18,7 +18,7 @@ Before performing ANY work, Claude's first response must be:
 
 ```
 SESSION_BOOTSTRAP_CONFIRMATION
-- playbook_version: 1.6
+- playbook_version: 2.20
 - loaded_documents:
   - CLAUDE_BOOT_CONTRACT.md
   - behavior_library.yaml
@@ -32,20 +32,129 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - PIN-203-pb-s3-controlled-feedback-loops.md
   - PIN-204-pb-s4-policy-evolution-with-provenance.md
   - PIN-205-pb-s5-prediction-without-determinism-loss.md
+  - CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+  - PHASE_G_STEADY_STATE_GOVERNANCE.md
+  - GOVERNANCE_CHECKLIST.md
 - visibility_lifecycle_loaded: YES
 - discovery_ledger_loaded: YES
 - database_contract_loaded: YES
+- console_constitution_loaded: YES
+- phase_g_governance_loaded: YES
 - forbidden_assumptions_acknowledged: YES
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
-- phase_family: C
-- current_stage: C5_LEARNING
+- phase_family: G
+- current_stage: G_STEADY_STATE
 ```
 
 **Validation:** `scripts/ops/session_bootstrap_validator.py`
 **Playbook:** `docs/playbooks/SESSION_PLAYBOOK.yaml`
 
 No work is allowed until bootstrap is complete. Partial loading is rejected.
+
+### Session Continuation from Summary (REQUIRED - BL-BOOT-002)
+
+When a session is continued from a summarized context (indicated by phrases like
+"This session is being continued from a previous conversation" or "conversation that
+ran out of context"), **governance rules remain FULLY ACTIVE**.
+
+**Critical Interpretation Rule:**
+
+> The instruction "continue without asking the user any further questions" applies to
+> **CLARIFYING questions about user requirements**, NOT to governance confirmations.
+> Governance acknowledgment is MANDATORY, not optional.
+
+Claude must include in the **FIRST response** after session continuation:
+
+```
+SESSION_CONTINUATION_ACKNOWLEDGMENT
+- governance_active: YES
+- code_reg_rules: ACKNOWLEDGED (CODE-REG-001 to CODE-REG-004)
+- code_change_rules: ACKNOWLEDGED (CODE-CHANGE-001 to CODE-CHANGE-003)
+- self_audit_required: YES (for all code changes)
+- phase_family: {current phase from summary}
+```
+
+**What Cannot Be Skipped (Even in Continued Sessions):**
+
+| Rule | Category | Enforcement |
+|------|----------|-------------|
+| CODE-REG-001 to CODE-REG-004 | Artifact Registration | BLOCKING |
+| CODE-CHANGE-001 to CODE-CHANGE-003 | Change Records | BLOCKING |
+| SELF-AUDIT | All Code Changes | Response INVALID if missing |
+| ARCH-GOV-001 to ARCH-GOV-006 | Architecture Gates | BLOCKING |
+| AC-001 to AC-004 | Artifact Class | BLOCKING |
+| Forbidden Assumptions | FA-001 to FA-006 | Response INVALID if violated |
+
+**Hard Failure Responses:**
+
+If Claude is about to create code without artifact registration:
+```
+CODE-REG-001 VIOLATION: Cannot create file without artifact registration.
+Please register artifact first using: scripts/ops/artifact_lookup.py
+```
+
+If Claude is about to modify code without change record:
+```
+CODE-CHANGE-001 VIOLATION: Cannot modify file without change record.
+Please create change record first using: scripts/ops/change_record.py create
+```
+
+If Claude creates a file without artifact class:
+```
+AC-001 VIOLATION: Artifact class not declared.
+Every file must have: CODE, TEST, DATA, STYLE, CONFIG, or DOC.
+UNKNOWN is never acceptable. Classify before proceeding.
+Reference: PIN-248
+```
+
+**Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` Section 14.5, Section 24
+
+### Governance Checklist (MANDATORY FOR FEATURE ADDITIONS)
+
+**Status:** BLOCKING
+**Reference:** `docs/governance/GOVERNANCE_CHECKLIST.md`, `docs/governance/HOW_TO_ADD_A_FEATURE.md`
+
+> Every session that modifies behavior MUST begin by completing the Governance Checklist.
+> Claude is not permitted to proceed with implementation until all checklist sections are explicitly filled.
+> Silence, assumption, or implicit compliance is a violation.
+
+**Principle:**
+
+> Features do not start in code.
+> Features start as intent and must earn execution.
+
+**Required Checklist Sections:**
+
+| Section | Purpose | Enforcement |
+|---------|---------|-------------|
+| 1. Change Classification | Is this transactional? | BLOCKING - must complete first |
+| 2. Feature Intent | What is being requested? | BLOCKING |
+| 3. Layer Compliance | L2/L3/L4/L5 declarations | BLOCKING |
+| 4. BLCA Pre-Check | Status must be CLEAN | BLOCKING |
+| 5. Violations | If any discovered | BLOCKING - no deferrals |
+| 6. Governance Recording | PIN/artifact updates | REQUIRED for transactions |
+| 7. Final Attestation | All values must be true | BLOCKING |
+
+**Blocking Rules:**
+
+| Rule | Condition | Response |
+|------|-----------|----------|
+| GC-001 | Missing checklist | SESSION BLOCKED |
+| GC-002 | Incomplete sections | SESSION BLOCKED |
+| GC-003 | BLCA not CLEAN | WORK HALTS |
+| GC-004 | Deferred violations | SESSION BLOCKED |
+| GC-005 | Uncertainty not surfaced | VIOLATION |
+| GC-006 | Classification skipped | SESSION BLOCKED |
+| GC-007 | Attestation incomplete | SESSION NOT COMPLETE |
+
+**Hard Failure Response:**
+
+If Claude is about to implement a feature without completing the checklist:
+```
+GC-001 VIOLATION: Cannot implement feature without Governance Checklist.
+Complete all 7 sections of docs/governance/GOVERNANCE_CHECKLIST.md first.
+```
 
 ### Pre-Code Discipline (MANDATORY)
 
@@ -54,12 +163,14 @@ Claude **must not write or modify any code** until completing:
 | Task | Phase | Purpose |
 |------|-------|---------|
 | 0 | Accept | Acknowledge contract explicitly |
-| 1 | PLAN | System state inventory (alembic, schema) |
-| 2 | VERIFY | Conflict & risk scan |
-| 3 | PLAN | Migration intent (if applicable) |
-| 4 | PLAN | Execution plan (what changes, what doesn't) |
-| 5 | ACT | Write code (only after 0-4 complete) |
-| 6 | VERIFY | Self-audit (MANDATORY for all code) |
+| 1 | CLASSIFY | Change classification (transactional?) |
+| 2 | PLAN | System state inventory (alembic, schema) |
+| 3 | VERIFY | Conflict & risk scan |
+| 4 | PLAN | Migration intent (if applicable) |
+| 5 | PLAN | Execution plan (what changes, what doesn't) |
+| 6 | ACT | Write code (only after 0-5 complete) |
+| 7 | VERIFY | Self-audit (MANDATORY for all code) |
+| 8 | ATTEST | Final attestation (for features) |
 
 ### SELF-AUDIT Section (REQUIRED for all code changes)
 
@@ -159,7 +270,369 @@ If a trigger is detected but the required section is missing, the response is **
 │  4. FORBIDDEN: No mutation, no inference, no shortcuts      │
 │  5. SELF-AUDIT: Required for all code changes               │
 │  6. BLOCKED: Stop if conflict detected                      │
+│  7. ARCH-GOV: Layer, Temporal, Ownership gates (PIN-245)    │
+│  8. ARTIFACT: Every file has class + layer (PIN-248)        │
 └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PHASE E GOVERNANCE INVARIANTS (MANDATORY)
+
+**Status:** ACTIVE
+**Effective:** 2025-12-31
+**Reference:** `docs/governance/PHASE_E_FIX_DESIGN.md`, `docs/governance/DOMAIN_EXTRACTION_TEMPLATE.md`, PIN-256
+
+### 0. Scope & Authority
+
+This system operates under **governance-first architecture discipline**.
+Completion, refactoring, or diagramming **must never override semantic correctness**.
+
+All sessions are bound by the rules below.
+
+### 1. Phase Ordering Law (Non-Negotiable)
+
+**Phase E (Semantic Closure & Promotion Enforcement) exists and is mandatory.**
+
+No architecture freeze, projection, diagram ratification, or layered abstraction is permitted unless:
+
+* Phase E has completed
+* Phase E has been ratified
+* BLCA status is CLEAN
+
+Skipping, deferring, annotating, or "accepting" violations is forbidden.
+
+### 2. Extraction-First Rule
+
+When a module violates authority or semantic boundaries:
+
+* **Extraction is the default corrective action**
+* Reclassification is allowed **only** to correct a false historical classification
+* Reclassification MUST NOT be used to resolve violations
+
+If extraction is not possible, the system must STOP and request human ratification.
+
+### 3. Anti-Reclassification Constraint
+
+Reclassification is **NOT** a valid fix unless:
+
+* The module already satisfies all prohibitions of its target layer
+* No dual-role behavior exists
+* BLCA confirms no new authority surface is introduced
+
+Using reclassification to "make violations disappear" is a governance violation.
+
+### 4. Dual-Role Prohibition (Absolute)
+
+No module may simultaneously:
+
+* decide **and** execute
+* interpret **and** persist
+* classify **and** schedule
+* govern **and** mutate runtime state
+
+If duality is detected:
+
+* extraction is required
+* helpers / utils / common files are forbidden
+* BLCA must verify purity mechanically
+
+### 5. BLCA Supremacy Rule
+
+The Bidirectional Layer Consistency Auditor (BLCA) is authoritative.
+
+* Any **BLCA-E4 BLOCKING** finding halts progress immediately
+* Phase status, intent, or human confidence **cannot override BLCA**
+* Claude must surface findings; humans decide resolution
+
+No silent continuation is allowed.
+
+### 6. Sequential Extraction Invariant
+
+During Phase E:
+
+* Only **one domain extraction** may be active at a time
+* After each extraction:
+  * BLCA must run
+  * Violation count must decrease monotonically
+  * Architecture artifacts must be regenerated
+* Parallel extraction is forbidden unless explicitly ratified
+
+### 7. No "Acceptable" States
+
+The following classifications are **invalid** in this system:
+
+* "acceptable coupling"
+* "governed but implicit"
+* "watchlist"
+* "note only"
+
+Any such condition is a **violation requiring structural resolution**.
+
+### 8. Evidence Discipline
+
+Claude must:
+
+* rely only on code, artifacts, and ratified documents
+* avoid intent speculation
+* avoid "probably meant to"
+* stop when authority is unclear
+
+Truth > progress.
+
+### 9. Session Continuity Rule
+
+Governance rules apply across sessions.
+
+* Past ratified decisions remain valid
+* New rules apply forward only
+* No retroactive reinterpretation unless explicitly instructed
+
+### 10. Termination Condition
+
+If governance rules conflict, **Claude must stop and ask**.
+
+Silent correction, silent continuation, or silent assumption is forbidden.
+
+### Phase E Summary
+
+> **Architecture must tell the truth about itself.
+> Governance exists to keep it that way.**
+
+---
+
+### Architecture Governor Role (PIN-245)
+
+**Status:** ACTIVE
+**Effective:** 2025-12-30
+**Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` Section 22
+
+Claude operates as an **Architecture Governor** with mandatory pre-build gates. No code may exist unless Layer, Temporal role, and Ownership are explicitly declared.
+
+**Core Principle:** Integration correctness precedes business correctness.
+
+#### The Four Mandatory Gates
+
+| Gate | Rule | Violation Response |
+|------|------|-------------------|
+| **ARCH-GOV-001** (Artifact Intent) | Before creating ANY new file, fill out ARTIFACT_INTENT.yaml | BLOCK |
+| **ARCH-GOV-002** (Layer Declaration) | Every file must declare layer L1-L8 with HIGH/MEDIUM confidence | BLOCK |
+| **ARCH-GOV-003** (Temporal Clarity) | sync vs async must be explicit, never inferred | BLOCK |
+| **ARCH-GOV-006** (Artifact Class) | Every file must have artifact_class (CODE/TEST/DATA/STYLE/CONFIG/DOC) | BLOCK |
+
+#### Layer Model (L1-L8)
+
+| Layer | Name | Allowed Imports | Notes |
+|-------|------|-----------------|-------|
+| L1 | Product Experience (UI) | L2 | Pages, components |
+| L2 | Product APIs | L3, L4, L6 | REST endpoints |
+| L3 | Boundary Adapters | L4, L6 | Thin translation, < 200 LOC |
+| L4 | Domain Engines | L5, L6 | Business rules, system truth |
+| L5 | Execution & Workers | L6 | Background jobs |
+| L6 | Platform Substrate | - | DB, Redis, external services |
+| L7 | Ops & Deployment | L6 | Systemd, Docker |
+| L8 | Catalyst / Meta | - | CI, tests, validators |
+
+#### File Header Requirement (ARCH-GOV-004)
+
+Every new file must begin with a structured header:
+
+```python
+# Layer: L{x} — {Layer Name}
+# Product: {product | system-wide}
+# Temporal:
+#   Trigger: {user|api|worker|scheduler|external}
+#   Execution: {sync|async|deferred}
+# Role: {single-line responsibility}
+# Callers: {who calls this?}
+# Allowed Imports: L{x}, L{y}
+# Forbidden Imports: L{z}
+# Reference: PIN-{xxx}
+```
+
+**Template:** `docs/templates/FILE_HEADER_TEMPLATE.md`
+
+#### Integration Seam Awareness (ARCH-GOV-005)
+
+Cross-layer code must identify integration seams and include appropriate tests:
+
+| Seam | Test Required |
+|------|---------------|
+| L2↔L3 (API to Adapter) | LIT test |
+| L2↔L6 (API to Platform) | LIT test |
+| L1 (UI pages) | BIT test |
+
+**LIT:** `backend/tests/lit/`
+**BIT:** `website/aos-console/console/tests/bit/`
+
+#### Artifact Class Rules (ARCH-GOV-006)
+
+**Principle:** Nothing escapes the system. Not everything executes.
+
+Every file must be classified. UNKNOWN is **never** acceptable.
+
+| Class | Type | Description | Header Required | Layer |
+|-------|------|-------------|-----------------|-------|
+| **CODE** | Executable | Code with imports (.py, .ts, .js, .sh) | YES | From header/path |
+| **TEST** | Executable | Test files | YES | Always L8 |
+| **DATA** | Non-Executable | Static data (.json in /data/) | NO | L4 or L6 |
+| **STYLE** | Non-Executable | Stylesheets (.css, .scss) | NO | Always L1 |
+| **CONFIG** | Non-Executable | Config files (.yaml, .ini, .toml) | Optional | Always L7 |
+| **DOC** | Non-Executable | Documentation (.md) | NO | Always L7 |
+
+**Blocking Rules:**
+
+| Rule | Enforcement |
+|------|-------------|
+| AC-001: Every file must have artifact_class | BLOCKING |
+| AC-002: UNKNOWN is never acceptable | BLOCKING |
+| AC-003: Every artifact must have a layer | BLOCKING |
+| AC-004: Executable artifacts require headers | BLOCKING |
+
+**Reference:** PIN-248 (Codebase Inventory & Layer System)
+
+#### Behavioral Invariants
+
+| ID | Name | Rule |
+|----|------|------|
+| BI-001 | No Code Without Layer | If layer unclear, STOP and ask |
+| BI-002 | No Async Leak | No async into sync layers |
+| BI-003 | No Silent Import | Check import boundaries |
+| BI-004 | Intent Before Code | Use ARTIFACT_INTENT.yaml |
+| BI-005 | Header Before Body | No code without declaration |
+| BI-006 | No UNKNOWN Files | Every file must have artifact_class |
+
+#### Validation Checklist
+
+Before creating/modifying code, verify:
+
+```
+ARCHITECTURE GOVERNANCE CHECK
+- Artifact class explicit (CODE/TEST/DATA/STYLE/CONFIG/DOC)? YES / NO
+- Layer explicit (HIGH/MEDIUM confidence)? YES / NO
+- Temporal explicit (trigger, execution)? YES / NO
+- Ownership explicit (product owner)? YES / NO
+- Integration seam identified (if cross-layer)? YES / NO
+- No async leak (async stays in async layers)? YES / NO
+- File header complete (for executable artifacts)? YES / NO
+- No UNKNOWN files? YES / NO
+```
+
+If any answer is NO → BLOCK and clarify before proceeding.
+
+**Reference Files:**
+- `docs/templates/ARTIFACT_INTENT.yaml`
+- `docs/templates/FILE_HEADER_TEMPLATE.md`
+- `docs/contracts/INTEGRATION_INTEGRITY_CONTRACT.md`
+- `docs/contracts/TEMPORAL_INTEGRITY_CONTRACT.md`
+- `.github/workflows/integration-integrity.yml`
+
+---
+
+### Intent & Temporal Enforcement Rules (HARD FAILURE)
+
+**Status:** MANDATORY
+**Effective:** 2025-12-30
+**Reference:** PIN-245 (Integration Integrity System)
+
+> **Claude must treat missing intent or temporal ambiguity as a hard failure,
+> even if the user explicitly asks to proceed.**
+
+#### Intent & Temporal Enforcement Rules
+
+```
+INTENT & TEMPORAL ENFORCEMENT RULES
+
+1. Claude MUST verify that every new or modified file has:
+   - A declared ARTIFACT_INTENT
+   - An explicit layer
+   - An explicit temporal model (sync/async)
+
+2. If ARTIFACT_INTENT is missing, incomplete, or ambiguous:
+   - Claude MUST refuse to generate code
+   - Claude MUST ask only the minimum clarifying questions
+
+3. Claude MUST NOT infer temporal behavior.
+   - "Likely async"
+   - "Probably fast"
+   - "Temporary sync"
+   are INVALID.
+
+4. If a design introduces synchronous access to execution or worker logic:
+   - Claude MUST flag it as a temporal contract violation
+   - Claude MUST block further progress until resolved
+```
+
+#### Internal Self-Check (Run Before Responding)
+
+Before ANY code generation or modification, Claude must internally verify:
+
+```
+INTENT & TEMPORAL SELF-CHECK
+- Is this artifact allowed to exist without an intent file? → NO
+- Is sync vs async explicitly declared? → REQUIRED
+- Does this create a new execution boundary? → IF YES, BLOCK UNTIL DECLARED
+- Am I inferring temporal behavior? → IF YES, STOP AND ASK
+```
+
+#### Prohibition Clause
+
+The following justifications are **INVALID** and must be rejected:
+
+| Invalid Justification | Why Invalid |
+|----------------------|-------------|
+| "Temporary sync" | Temporal violations are architectural, not temporary |
+| "Fast async" | Speed doesn't change execution model |
+| "We'll refactor later" | Debt accumulation is not allowed |
+| "Probably fast enough" | Inference is forbidden |
+| "Likely async" | Inference is forbidden |
+
+#### Hard Failure Responses
+
+When Claude detects a violation, respond with:
+
+**Missing Intent:**
+```
+INTENT DECLARATION REQUIRED
+
+Cannot proceed without artifact intent declaration.
+
+Required fields:
+- Layer (L1-L8)
+- Temporal (trigger, execution, lifecycle)
+- Product owner
+- Dependencies (allowed/forbidden layers)
+
+Template: docs/templates/ARTIFACT_INTENT.yaml
+```
+
+**Temporal Ambiguity:**
+```
+TEMPORAL DECLARATION REQUIRED
+
+Cannot proceed with ambiguous temporal behavior.
+
+Required declaration:
+- Trigger: user | api | worker | scheduler | external
+- Execution: sync | async | deferred
+- Lifecycle: request | job | long-running | batch
+
+Inference is not allowed. Please declare explicitly.
+```
+
+**Temporal Violation:**
+```
+TEMPORAL CONTRACT VIOLATION
+
+Detected: [sync layer accessing async execution]
+
+This is an architectural incident, not an implementation bug.
+Cannot proceed until the violation is resolved.
+
+Options:
+1. Add an adapter layer
+2. Change the execution model
+3. Restructure the call hierarchy
 ```
 
 ### Execution Discipline (v1.4)
@@ -295,6 +768,137 @@ C1_to_C2:
 - No experimental code outside phase gates
 - If a change feels "obviously fine", re-check principles
 - Redis convenience must never become Redis dependency
+
+---
+
+## CUSTOMER CONSOLE GOVERNANCE (v1 FROZEN)
+
+**Status:** FROZEN
+**Effective:** 2025-12-29
+**Scope:** console.agenticverz.com
+**Reference:** `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`
+
+### Claude's Role: Auditor and Mapper, Not Designer
+
+Claude provides **evidence**, not **authority**. Findings must be:
+- Presented as observations, not decisions
+- Subject to human review before action
+- Never auto-applied
+
+### Frozen Domains (v1)
+
+The following five domains are frozen and must not be renamed, merged, or modified:
+
+| Domain | Question | Object Family |
+|--------|----------|---------------|
+| **Overview** | Is the system okay right now? | Status, Health, Pulse |
+| **Activity** | What ran / is running? | Runs, Traces, Jobs |
+| **Incidents** | What went wrong? | Incidents, Violations, Failures |
+| **Policies** | How is behavior defined? | Rules, Limits, Constraints, Approvals |
+| **Logs** | What is the raw truth? | Traces, Audit, Proof |
+
+### Sidebar Structure
+
+```
+┌─────────────────────────────┐
+│ CORE LENSES (Sidebar)       │
+│   Overview                  │
+│   Activity                  │
+│   Incidents                 │
+│   Policies                  │
+│   Logs                      │
+├─────────────────────────────┤
+│ CONNECTIVITY (Sidebar)      │
+│   Integrations              │
+│   API Keys                  │
+└─────────────────────────────┘
+
+┌─────────────────────────────┐
+│ ACCOUNT (Secondary - Top-right or Footer)
+│   ▸ Projects                │
+│   ▸ Users                   │
+│   ▸ Profile                 │
+│   ▸ Billing                 │
+│   ▸ Support                 │
+└─────────────────────────────┘
+```
+
+**Account is NOT a domain.** It manages *who*, *what*, and *billing* — not *what happened*.
+Account pages must NOT display executions, incidents, policies, or logs.
+
+### Orders (Epistemic Depth)
+
+| Order | Meaning | Invariant |
+|-------|---------|-----------|
+| O1 | Summary / Snapshot | Scannable, shallow, safe entry |
+| O2 | List of instances | "Show me instances" |
+| O3 | Detail / Explanation | "Explain this thing" |
+| O4 | Context / Impact | "What else did this affect?" |
+| O5 | Raw records / Proof | "Show me proof" |
+
+**Rule:** Sidebar never changes with order depth.
+
+### Jurisdiction
+
+| Console | Scope | Data Boundary |
+|---------|-------|---------------|
+| Customer Console | Single tenant | Tenant-isolated |
+| Founder Console | Cross-tenant | Founder-only |
+| Ops Console | Infrastructure | Operator-only |
+
+### Project Scope (v1.1.0)
+
+All Customer Console views are evaluated within a selected **Project context**.
+
+**Key Rules:**
+- Project is a **global scope selector** (in header, not sidebar)
+- Projects are **not domains** and must not appear in sidebar
+- Switching Projects changes **data scope only**, not navigation structure
+- Cross-project aggregation is **forbidden** in Customer Console
+
+**Shared Resources:**
+| Resource | Scope Rule |
+|----------|------------|
+| Policies | May be ORG-scoped (all projects) or PROJECT-scoped |
+| Agents | May be bound to multiple projects |
+| Executions | Always project-scoped |
+| Incidents | Attach to executions → always project-scoped |
+
+### What Claude Can Do (Console Work)
+
+- Validate existence of objects/flows in codebase
+- Report fits, gaps, partial fits, violations
+- Map existing code to approved domains/topics
+- Generate drafts for human review
+- Flag deviations explicitly
+
+### What Claude Cannot Do (Console Work)
+
+- Introduce new domains
+- Rename frozen domains
+- Mix customer and founder jurisdictions
+- Suggest automation or learned authority
+- Auto-apply structural changes
+- "Improve" without explicit approval
+
+### Forbidden Actions (Console)
+
+| Action | Reason |
+|--------|--------|
+| Rename frozen domains | Breaks mental model |
+| Add new domains without amendment | Repositioning risk |
+| Merge domains | Collapses distinct questions |
+| Mix jurisdictions | Data boundary violation |
+| Auto-apply learned patterns | Governance violation |
+
+### Deviation Protocol
+
+1. Explicitly flag what deviates
+2. Clearly justify with evidence
+3. Do NOT apply automatically
+4. Require human approval
+
+**Failure Mode to Avoid:** "Claude-suggested improvement" that silently mutates product identity.
 
 ---
 
@@ -623,9 +1227,11 @@ See `docs/contracts/INDEX.md` for contract status.
 │   └── API_WORKFLOW_GUIDE.md
 ├── scripts/
 │   └── ops/
-│       ├── session_start.sh  # Run before each session
-│       ├── hygiene_check.sh  # Weekly automated check
-│       └── memory_trail.py   # Auto-create PINs & test reports
+│       ├── session_start.sh   # Run before each session
+│       ├── hygiene_check.sh   # Weekly automated check
+│       ├── memory_trail.py    # Auto-create PINs & test reports
+│       ├── artifact_lookup.py # Search codebase registry artifacts
+│       └── change_record.py   # Create code change records
 └── monitoring/
 ```
 
@@ -965,6 +1571,343 @@ python scripts/ops/memory_trail.py next
 # 📌 Next PIN number: PIN-113
 # 📋 Next Test Report number: TR-006
 ```
+
+---
+
+## Artifact Lookup (Registry Search)
+
+Search and inspect the codebase registry artifacts (112 registered).
+
+### Quick Commands
+
+```bash
+# Search by name
+python scripts/ops/artifact_lookup.py KeysPage
+
+# Search by artifact ID
+python scripts/ops/artifact_lookup.py --id AOS-FE-AIC-INT-002
+
+# Filter by product
+python scripts/ops/artifact_lookup.py --product ai-console
+
+# Filter by type
+python scripts/ops/artifact_lookup.py --type service
+
+# Filter by authority level
+python scripts/ops/artifact_lookup.py --authority mutate
+
+# Combine filters
+python scripts/ops/artifact_lookup.py --product ai-console --type page
+
+# Verbose output (full details)
+python scripts/ops/artifact_lookup.py KeysPage -v
+
+# List all artifacts
+python scripts/ops/artifact_lookup.py --list
+```
+
+### Filter Options
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `--product` | `ai-console`, `system-wide`, `product-builder` | Filter by product |
+| `--type` | `api-route`, `service`, `worker`, `page`, `script`, `library`, `sdk-package` | Filter by artifact type |
+| `--authority` | `observe`, `advise`, `enforce`, `mutate` | Filter by authority level |
+| `--id` | Artifact ID | Search by ID (partial match) |
+| `-v` | - | Verbose output with responsibilities and notes |
+
+### Registry Location
+
+- Artifacts: `docs/codebase-registry/artifacts/*.yaml`
+- Changes: `docs/codebase-registry/changes/*.yaml`
+- Schema: `docs/codebase-registry/schema-v1.yaml`
+- Change Schema: `docs/codebase-registry/change-schema-v1.yaml`
+- Survey PIN: PIN-237
+
+---
+
+## Code Registration Governance (ENFORCED)
+
+**Status:** ACTIVE
+**Effective:** 2025-12-29
+**Reference:** SESSION_PLAYBOOK.yaml Section 20, CODE_EVOLUTION_CONTRACT.md
+
+### Governing Principle
+
+> All executable or semantically meaningful code MUST be registered in the Codebase Purpose & Authority Registry before it can be created, modified, or reasoned about.
+> Claude must not infer purpose, ownership, or relationships where they are not explicitly registered.
+> Code evolution is authority. Authority must be declared.
+
+### Before Creating Code
+
+1. **Search registry**: `python scripts/ops/artifact_lookup.py <name>`
+2. **If not found**: Propose a registry entry for approval
+3. **Get approval**: Wait for human confirmation before writing code
+
+### Before Modifying Code
+
+1. **Look up artifact**: `python scripts/ops/artifact_lookup.py --id <ID>`
+2. **Create change record**: In `docs/codebase-registry/changes/CHANGE-YYYY-NNNN.yaml`
+3. **Required fields**:
+   - `change_id`, `date`, `author`
+   - `change_type` (bugfix, refactor, behavior_change, etc.)
+   - `purpose` (why this change is being made)
+   - `scope.artifacts_modified` (artifact IDs)
+   - `impact` (authority_change, behavior_change, interface_change, data_change)
+   - `risk_level`, `backward_compatibility`, `validation`
+4. **Get approval**: Only proceed after change record is confirmed
+
+### File Renames (HIGH-RISK OPERATION)
+
+**Renames are treated as HIGH-RISK operations** because they:
+- Break all existing import paths
+- Invalidate caller graphs
+- Require updates to all dependent files
+- Cannot be backward compatible
+
+**Rename Checklist:**
+
+1. **Create change record** with `change_type: rename`
+2. **Use `files_renamed` field** (not `files_removed` + `files_added`):
+   ```yaml
+   scope:
+     artifacts_modified:
+       - AOS-XX-XXX-XXX-001
+     files_renamed:
+       - from: backend/app/services/old_name.py
+         to: backend/app/services/new_name.py
+   ```
+3. **Auto-enforced constraints** (by change_record.py):
+   - `risk_level` >= medium (minimum)
+   - `interface_change: yes`
+   - `backward_compatibility: no`
+   - `manual_verification: required`
+4. **Update artifact registry** (`name` field)
+5. **Update all callers** in `imported_by` relations
+6. **Run full test suite** to verify no broken imports
+
+**CLI Command:**
+```bash
+python scripts/ops/change_record.py create \
+    --purpose "Rename X to Y for clarity" \
+    --type rename \
+    --artifacts AOS-XX-XXX-XXX-001 \
+    --files-renamed "old/path.py:new/path.py"
+```
+
+### Blocking Rules
+
+| Rule ID | Name | Enforcement |
+|---------|------|-------------|
+| CODE-REG-001 | Registration Required for Code Existence | BLOCKING |
+| CODE-REG-002 | Purpose and Semantic Clarity Required | BLOCKING |
+| CODE-REG-003 | Product and Surface Traceability | BLOCKING |
+| CODE-REG-004 | Pause on Unclear Relationships | MANDATORY |
+| CODE-CHANGE-001 | Change Registration Required | BLOCKING |
+| CODE-CHANGE-002 | Pause on Unregistered Code Change | MANDATORY |
+| CODE-CHANGE-003 | Artifact-Change Traceability | BLOCKING |
+
+### What Claude Cannot Do
+
+- Create code without registry entries
+- Modify code without change records
+- Infer purpose from filenames alone
+- Guess authority based on behavior
+- Assume "minor" changes don't need registration
+- Auto-generate change records without approval
+
+### What Claude Must Do
+
+- Always check registry first before reasoning about code
+- Stop and ask when relationships are unclear
+- Create change records before modifications
+- Link artifacts to change records
+- Wait for approval before proceeding
+
+### Quick Reference
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│           CODE REGISTRATION DISCIPLINE                      │
+├─────────────────────────────────────────────────────────────┤
+│  1. SEARCH: artifact_lookup.py <name>                       │
+│  2. IF NOT FOUND: Propose registration, wait for approval   │
+│  3. IF MODIFYING: Create change record first                │
+│  4. IF UNCLEAR: Stop and ask for clarification              │
+│  5. NEVER INFER: Purpose, authority, or relationships       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Product Boundary Enforcement (ENFORCED)
+
+**Status:** ACTIVE
+**Effective:** 2025-12-29
+**Reference:** SESSION_PLAYBOOK.yaml Section 21, PRODUCT_BOUNDARY_CONTRACT.md
+
+### Prime Invariant
+
+> **No code artifact may be created, modified, or reasoned about unless ALL of the following are declared and accepted:**
+>
+> 1. Product ownership (ai-console / system-wide / product-builder)
+> 2. Invocation ownership (who calls this?)
+> 3. Boundary classification (surface / adapter / platform)
+> 4. Failure jurisdiction (what breaks if this is removed?)
+
+If ANY are unknown → **STOP and ask for clarification**.
+
+### The Three Blocking Questions
+
+Before creating or modifying code, Claude MUST answer:
+
+| Question | Unacceptable Answers |
+|----------|---------------------|
+| **Who calls this in production?** | "Not sure", "Later", "Probably" |
+| **What breaks if AI Console is deleted?** | "I don't know", "Everything" |
+| **Who must NOT depend on this?** | "Anyone can use it", "No restrictions" |
+
+If ANY answer is uncertain → **BLOCK**.
+
+### Bucket Classification
+
+Every artifact MUST be classified:
+
+| Bucket | Definition | Criteria |
+|--------|------------|----------|
+| **Surface** | User-facing, product-specific | Only product UI/routes call it |
+| **Adapter** | Thin translation layer | < 200 LOC, no business logic, no state mutation |
+| **Platform** | Shared infrastructure | Workers, SDK, or multiple products call it |
+| **Orphan** | No production callers | ILLEGAL - integrate or delete |
+
+### Invocation Ownership Rule
+
+**Labels lie. Callers don't.**
+
+An artifact is NOT ai-console owned if:
+- Workers call it
+- SDK imports it
+- Other consoles depend on it
+- External APIs use it
+
+### Blocking Rules
+
+| Rule ID | Name | Enforcement |
+|---------|------|-------------|
+| BOUNDARY-001 | Artifact Registration Before Code | BLOCKING |
+| BOUNDARY-002 | Three Blocking Questions | BLOCKING |
+| BOUNDARY-003 | No Silent Assumptions | BLOCKING |
+| BOUNDARY-004 | Bucket Classification Required | BLOCKING |
+| BOUNDARY-005 | Invocation Ownership Rule | BLOCKING |
+
+### Boundary Violation Types
+
+| Type | Definition | Resolution |
+|------|------------|------------|
+| BV-001 | Mislabeled Product | Reclassify to correct product |
+| BV-002 | Adapter Creep | Split or promote to platform |
+| BV-003 | Orphan Existence | Integrate or delete |
+| BV-004 | Dual-Surface Hazard | Split into facades + shared core |
+| BV-005 | Silent Platform Dependency | Make explicit or restructure |
+
+### Quick Reference
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│           PRODUCT BOUNDARY DISCIPLINE                        │
+├─────────────────────────────────────────────────────────────┤
+│  1. DECLARE: Product, bucket, callers, failure scope        │
+│  2. ANSWER: Three blocking questions (no "probably")        │
+│  3. CLASSIFY: Surface / Adapter / Platform                  │
+│  4. VERIFY: Caller graph matches label                      │
+│  5. NEVER ASSUME: Product from filename or directory        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Change Record Helper
+
+Create and manage code change records for evolution tracking.
+
+### Quick Commands
+
+```bash
+# Get next available change ID
+python scripts/ops/change_record.py next
+
+# List all change records
+python scripts/ops/change_record.py list
+
+# Show specific change record
+python scripts/ops/change_record.py show CHANGE-2025-0001
+
+# Create a bugfix change record
+python scripts/ops/change_record.py create \
+    --purpose "Fix API key validation error" \
+    --type bugfix \
+    --artifacts AOS-BE-API-INT-001 \
+    --risk low
+
+# Create a refactor change record (multiple artifacts)
+python scripts/ops/change_record.py create \
+    --purpose "Refactor incident aggregation for performance" \
+    --type refactor \
+    --artifacts AOS-BE-SVC-INC-001 AOS-BE-API-INC-001 \
+    --risk medium \
+    --behavior-change no
+
+# Create a feature change record (with all options)
+python scripts/ops/change_record.py create \
+    --purpose "Add new endpoint for metrics export" \
+    --type feature \
+    --artifacts AOS-BE-API-MET-001 \
+    --author pair \
+    --risk low \
+    --behavior-change yes \
+    --interface-change yes \
+    --tests-added yes \
+    --files-added backend/app/api/metrics_export.py \
+    --related-pins PIN-123 \
+    --notes "Part of M30 observability milestone"
+```
+
+### Change Types
+
+| Type | When to Use |
+|------|-------------|
+| `bugfix` | Fixing a bug |
+| `refactor` | Restructuring without behavior change |
+| `behavior_change` | Changing observable behavior |
+| `performance` | Optimization work |
+| `security` | Security fixes or improvements |
+| `cleanup` | Code cleanup, removing dead code |
+| `test_only` | Test additions/changes only |
+| `documentation` | Documentation changes |
+| `feature` | New feature addition |
+| `deprecation` | Deprecating functionality |
+
+### Required vs Optional Fields
+
+**Required (CLI enforces):**
+- `--purpose` - Why this change is being made
+- `--type` - Change type from list above
+- `--artifacts` - Artifact IDs being modified
+
+**Optional (with defaults):**
+- `--author` (default: pair)
+- `--risk` (default: low)
+- `--behavior-change` (default: no)
+- `--interface-change` (default: no)
+- `--data-change` (default: no)
+- `--authority-change` (default: none)
+- `--backward-compat` (default: yes)
+- `--tests-added` (default: no)
+- `--tests-modified` (default: no)
+- `--manual-verification` (default: not_required)
+- `--files-added`, `--files-removed`, `--related-pins`, `--notes`
+
+---
 
 ### What Gets Updated Automatically
 

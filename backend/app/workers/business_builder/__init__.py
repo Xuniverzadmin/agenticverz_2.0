@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Business builder worker package marker
+# Callers: Worker imports
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: Package Structure
+
 # Business Builder Worker v0.2
 # The first worker that demonstrates M0-M20 moats
 """

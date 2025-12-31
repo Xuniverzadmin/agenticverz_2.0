@@ -1,0 +1,16 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-SYS-003
+name: AIConsoleLayout.tsx
+type: page
+status: active
+owner: ai-console
+purpose: Layout shell with sidebar navigation and header
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: system
+  order_depth: O0

@@ -1,7 +1,18 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: CARE-L routing models and types
+# Callers: routing/*
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M18 CARE-L
+
 # M17 CARE - Routing Models
 # Pydantic models for Cascade-Aware Routing Engine
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 

@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide
+# Role: Orphan detection logic, PB-S2 truth guarantee
+# Callers: L5 workers (startup), L7 ops scripts
+# Reference: PIN-242 (Baseline Freeze)
+
 """
 Orphan Run Recovery Service (PB-S2)
 

@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Trace replay execution
+# Callers: API routes
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Trace System
+
 """
 Server-Side Replay Enforcement
 M8 Deliverable: Enforce replay_behavior during trace execution

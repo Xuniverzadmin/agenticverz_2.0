@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Workflow input/output canonicalization
+# Callers: workflow engine
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Workflow System
+
 # Golden File Canonicalization (M4 Hardening)
 """
 Canonicalization utilities for deterministic golden file comparison.

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Blackboard read/write operations skill
+# Callers: agent runtime, workers
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Agent Skills
+
 # M12 Blackboard Operation Skills
 # Read, write, and lock operations on shared blackboard
 #

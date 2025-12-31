@@ -1,0 +1,24 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-CI-SYN-001
+name: synthetic_alert.sh
+type: script
+status: active
+owner: ops
+purpose: Synthetic alert verification for Prometheus → Alertmanager flow
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: ci
+  subdomain: alerting
+  order_depth: O2
+responsibility: |
+  - Fires test metrics to verify Prometheus → Alertmanager → notification flow
+  - Supports --alert (specific), --verify (check if fired)
+dependencies: []
+notes: |
+  Location: scripts/ci/synthetic_alert.sh
+  Environment: PROMETHEUS_URL, ALERTMANAGER_URL, BACKEND_URL

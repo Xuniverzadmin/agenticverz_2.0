@@ -1,3 +1,27 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler (standalone process)
+#   Execution: async
+# Role: Recovery claim processing orchestration (L5 execution wrapper)
+# Authority: Recovery candidate state mutation (unevaluated → claimed → processed)
+# Callers: Standalone process
+# Allowed Imports: L4, L6
+# Domain Engine: claim_decision_engine.py (L4)
+# Forbidden Imports: L1, L2, L3
+# Contract: EXECUTION_SEMANTIC_CONTRACT.md (L5 Worker Rules)
+# Reference: PIN-257 Phase E-4 Extraction #4
+#
+# GOVERNANCE NOTE: L5 owns all DB operations.
+# L4 claim_decision_engine.py provides pure domain logic:
+#   - is_candidate_claimable() - claim eligibility threshold
+#   - determine_claim_status() - status from evaluation result
+#   - get_result_confidence() - confidence extraction
+# This L5 file:
+#   - Orchestrates batch claim processing
+#   - Calls L4 for domain decisions
+#   - Persists results TO database (L6)
+
 # app/worker/recovery_claim_worker.py
 """
 M10 Recovery Claim Worker - Concurrent-safe batch processor
@@ -96,11 +120,14 @@ class RecoveryClaimWorker:
         """
         Claim a batch of unevaluated candidates using FOR UPDATE SKIP LOCKED.
 
+        Uses L4 CLAIM_ELIGIBILITY_THRESHOLD to determine which candidates need evaluation.
+        Reference: PIN-257 Phase E-4 Extraction #4
+
         SQL Pattern:
         ```sql
         WITH claimed AS (
             SELECT id FROM recovery_candidates
-            WHERE decision = 'pending' AND confidence <= 0.2
+            WHERE decision = 'pending' AND confidence <= :threshold
             ORDER BY created_at ASC
             FOR UPDATE SKIP LOCKED
             LIMIT :batch_size
@@ -115,6 +142,10 @@ class RecoveryClaimWorker:
         Returns:
             List of claimed candidate dicts
         """
+        # L4 domain decision: claim eligibility threshold
+        # Reference: PIN-257 Phase E-4 Extraction #4
+        from app.services.claim_decision_engine import CLAIM_ELIGIBILITY_THRESHOLD
+
         session = self._get_session()
         try:
             result = session.execute(
@@ -124,7 +155,7 @@ class RecoveryClaimWorker:
                         SELECT id
                         FROM recovery_candidates
                         WHERE decision = 'pending'
-                          AND (confidence IS NULL OR confidence <= 0.2)
+                          AND (confidence IS NULL OR confidence <= :threshold)
                           AND (execution_status IS NULL OR execution_status = 'pending')
                         ORDER BY created_at ASC
                         FOR UPDATE SKIP LOCKED
@@ -148,7 +179,7 @@ class RecoveryClaimWorker:
                         rc.explain
                 """
                 ),
-                {"batch_size": self.batch_size},
+                {"batch_size": self.batch_size, "threshold": CLAIM_ELIGIBILITY_THRESHOLD},
             )
 
             rows = result.fetchall()
@@ -232,11 +263,18 @@ class RecoveryClaimWorker:
             candidate_id: ID of candidate to update
             result: Evaluation result dict
         """
+        # L4 domain decisions: status and confidence extraction
+        # Reference: PIN-257 Phase E-4 Extraction #4
+        from app.services.claim_decision_engine import (
+            determine_claim_status,
+            get_result_confidence,
+        )
+
+        status = determine_claim_status(result)
+        confidence = get_result_confidence(result)
+
         session = self._get_session()
         try:
-            success = result.get("error") is None
-            status = "succeeded" if success else "failed"
-
             session.execute(
                 text(
                     """
@@ -250,7 +288,7 @@ class RecoveryClaimWorker:
                 ),
                 {
                     "id": candidate_id,
-                    "confidence": result.get("confidence", 0.2),
+                    "confidence": confidence,
                     "status": status,
                 },
             )

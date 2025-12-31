@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Input sanitization for security
+# Callers: API routes
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Input Security
+
 # Input Sanitizer
 # Phase 5: Prompt-Injection Safe Input Gate
 # Sanitizes user input before it reaches the planner

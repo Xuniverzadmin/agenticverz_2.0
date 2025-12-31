@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Cost-related integration bridges
+# Callers: cost services
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Cost Integration
+
 """
 M27 Cost Loop Integration Bridges
 

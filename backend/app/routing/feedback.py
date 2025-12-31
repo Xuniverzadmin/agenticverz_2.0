@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: CARE-L feedback loop processing
+# Callers: API routes
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M18 CARE-L
+
 # M18 Feedback Loop
 # Bidirectional reward loop between CARE-L (routing) and SBA Evolution (agents)
 #

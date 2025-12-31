@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any
+#   Execution: sync
+# Role: Metrics helper functions
+# Callers: all modules
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Observability
+
 """
 Prometheus Metrics Helpers - Idempotent Registration
 

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Prevention contract enforcement
+# Callers: policy engine, workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Prevention System
+
 """
 M25 Prevention Contract Enforcement
 

@@ -1,0 +1,17 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-ACT-001
+name: ActivityPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: "Answer: What ran / is running?"
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: activity
+  topic_o1: "What ran / is running?"
+  order_depth: O1

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: product-builder
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Strategy generation stage
+# Callers: business_builder worker
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Business Builder
+
 # Strategy Stage Implementation
 """
 Brand strategy stage that uses:

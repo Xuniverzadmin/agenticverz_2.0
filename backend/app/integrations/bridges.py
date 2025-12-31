@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Integration bridge abstractions
+# Callers: services
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Integration System
+
 """
 M25 Integration Bridges
 
@@ -20,7 +31,10 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from .dispatcher import IntegrationDispatcher
 
 from .events import (
     LOOP_MECHANICS_FROZEN_AT,

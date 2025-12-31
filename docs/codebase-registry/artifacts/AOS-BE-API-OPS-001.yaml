@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-OPS-001
+name: ops.py
+type: api-route
+status: active
+owner: backend
+purpose: Founder Ops Console - System pulse, customers, incidents, insights
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: overview
+  subdomain: ops
+  order_depth: O1
+responsibility: |
+  - GET /pulse - System pulse endpoint
+  - GET /customers - Customer intelligence list
+  - GET /customers/{tenant_id} - Customer detail
+  - GET /incidents - List incidents
+  - GET /incidents/{incident_id} - Incident detail
+  - GET /insights - Founder insights
+  - GET /playbooks - Playbook suggestions
+dependencies:
+  - FounderToken with MFA
+  - verify_fops_token
+  - ops_events table

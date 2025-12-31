@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-CRD-001
+name: credit_service.py
+type: service
+status: active
+owner: backend
+purpose: M12 Credit Service - Per-skill credit billing with reservation
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: cost
+  subdomain: credits
+  order_depth: O4
+responsibility: |
+  - Per-skill and per-item credit billing
+  - Reservation, spend, and refund operations
+  - Credit pricing: agent_spawn (5), agent_invoke (10), blackboard_* (1-2), agent_message (2), job_item (2)
+  - CreditBalance tracking
+  - CreditOperation results
+dependencies:
+  - SQLAlchemy
+  - Decimal for precision

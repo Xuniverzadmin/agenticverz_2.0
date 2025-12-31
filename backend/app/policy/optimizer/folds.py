@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Policy constant folding optimizations
+# Callers: policy/optimizer
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Policy System
+
 # M20 Policy Optimizer - Constant Folding and Simplification
 # Optimizations that preserve governance semantics
 """

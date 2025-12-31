@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-OPS-MTL-001
+name: memory_trail.py
+type: script
+status: active
+owner: ops
+purpose: Memory PIN and test report automation
+authority_level: mutate
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: ops
+  subdomain: memory
+  order_depth: O2
+responsibility: |
+  - Find existing PINs (search by keyword or number)
+  - Update existing PIN (add section content)
+  - Create new PIN (with auto INDEX.md update)
+  - Create test reports
+  - Check next available IDs
+dependencies: []
+notes: |
+  Location: scripts/ops/memory_trail.py
+  Commands: find, update, pin, report, next

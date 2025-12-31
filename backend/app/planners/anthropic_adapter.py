@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: Anthropic Claude LLM adapter
+# Callers: planner interface, workers
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: LLM Integration
+
 # Anthropic Planner Adapter
 # Uses Claude API for intelligent plan generation with proper Plan schema output
 

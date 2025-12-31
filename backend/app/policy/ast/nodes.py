@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Policy AST node definitions
+# Callers: policy/compiler, policy/engine
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Policy System
+
 # M20 Policy AST Nodes
 # AST node definitions with M19 governance metadata
 """

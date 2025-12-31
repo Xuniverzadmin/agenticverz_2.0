@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Tenant authentication and isolation
+# Callers: middleware, services
+# Allowed Imports: None
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Auth Infrastructure
+
 """
 Tenant-Aware API Key Authentication (M21)
 

@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Prediction service API logic
+# Callers: API routes
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: C2 Prediction
+
 """
 C2 Prediction API (Minimal, Advisory-Only)
 

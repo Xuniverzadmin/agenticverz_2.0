@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: product-builder
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Brand schema definitions
+# Callers: business_builder/*
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Business Builder
+
 # Brand Schema for Business Builder Worker
 # Defines brand constraints that SBA agents must adhere to
 """

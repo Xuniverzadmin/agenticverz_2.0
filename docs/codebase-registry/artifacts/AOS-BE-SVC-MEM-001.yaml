@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-MEM-001
+name: memory_service.py
+type: service
+status: active
+owner: backend
+purpose: M7 Memory Service - Redis cache + DB persistence
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: memory
+  subdomain: service
+  order_depth: O4
+responsibility: |
+  - Redis caching layer with fail-open behavior
+  - Database persistence
+  - Audit logging
+  - Prometheus metrics
+  - Update rules engine integration
+  - Phase 4B: emit_memory_decision
+  - Environment: MEMORY_CACHE_TTL, MEMORY_FAIL_OPEN, MEMORY_AUDIT_ENABLED, MEMORY_MAX_SIZE_BYTES
+dependencies:
+  - emit_memory_decision
+  - Prometheus Counter, Histogram
+  - Redis client
+  - DB session factory

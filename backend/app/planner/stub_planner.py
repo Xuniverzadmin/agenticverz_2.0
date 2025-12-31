@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Stub planner for testing
+# Callers: planner interface (test mode)
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: LLM Integration
+
 # planner/stub_planner.py
 """
 Stub Planner (M2.5)

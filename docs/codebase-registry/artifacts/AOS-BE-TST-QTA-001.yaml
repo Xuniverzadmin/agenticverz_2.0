@@ -1,0 +1,34 @@
+# Artifact Registry Entry - Backend Quota Exhaustion Tests
+# Source: PIN-047 Quota Testing
+# Created: 2025-12-30
+
+artifact_id: AOS-BE-TST-QTA-001
+name: test_quota_exhaustion.py
+type: test
+status: active
+owner: backend
+purpose: Test quota exhaustion scenarios for embedding service
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: null
+  domain: testing
+  subdomain: quota
+  order_depth: O0
+responsibility: |
+  - 19 test cases for quota exhaustion scenarios
+  - Tests daily quota limits
+  - Tests per-tenant quota enforcement
+  - Tests quota recovery after reset
+  - Tests error handling when quota exceeded
+  - Tests graceful degradation
+relations:
+  imports:
+    - pytest
+    - app.api.embedding
+    - app.services.quota
+  imported_by: []
+notes: |
+  Created for PIN-047 quota testing compliance.
+  Verifies embedding service handles quota exhaustion gracefully.

@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-SCE-001
+name: scoped_execution.py
+type: service
+status: active
+owner: backend
+purpose: M6 scoped execution context for MEDIUM+ risk recovery actions
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: recovery
+  subdomain: scoped-execution
+  order_depth: O2
+responsibility: |
+  - Scope creation with incident binding, cost ceiling, action limits, expiry
+  - Scope-gated execution (no execution without valid scope)
+  - Scope exhaustion tracking (single-use by default)
+  - Scope tampering detection (action must match scope)
+  - Audit trail for all scope operations
+  - Scope Model binds: action type, target, cost ceiling, duration/count limit, intent
+dependencies: []
+notes: |
+  Location: backend/app/services/scoped_execution.py
+  Milestone: M6
+  Core Invariant: No recovery action may execute without explicit, bounded execution scope
+  Related PINs: PIN-148, PIN-161, PIN-172

@@ -161,6 +161,22 @@ class ComparisonResponse(BaseModel):
     feasibility_match: bool
 
 
+class SideEffectDisclosure(BaseModel):
+    """
+    PIN-254 Phase C Fix (C5 Implicit Side-Effect): Explicit disclosure of side effects.
+
+    The /simulate endpoint can trigger memory writes when MEMORY_POST_UPDATE=true.
+    This violates the implicit contract that "simulation" is side-effect-free.
+
+    This disclosure makes the side-effect conditions explicit in the response.
+    """
+
+    memory_write_occurred: bool = False  # Did this call write to memory?
+    memory_write_feature_flag: str = "MEMORY_POST_UPDATE"  # Which flag controls it
+    memory_write_enabled: bool = False  # Is the flag currently enabled?
+    disclaimer: str = "Simulation may update memory when MEMORY_POST_UPDATE=true."
+
+
 class SandboxSimulateResponse(BaseModel):
     """Response from sandbox simulation."""
 
@@ -182,6 +198,9 @@ class SandboxSimulateResponse(BaseModel):
     memory_updates_applied: Optional[int] = None
     drift_detected: Optional[bool] = None
     drift_score: Optional[float] = None
+
+    # PIN-254 Phase C Fix: Side-effect transparency
+    side_effects: Optional[SideEffectDisclosure] = None
 
 
 class SandboxStatusResponse(BaseModel):
@@ -469,6 +488,14 @@ async def simulate_v2(request: SimulateRequest):
     )
 
     # Build response
+    # PIN-254 Phase C Fix: Include side-effect disclosure
+    side_effects = SideEffectDisclosure(
+        memory_write_occurred=False,  # Will be updated below if writes occur
+        memory_write_feature_flag="MEMORY_POST_UPDATE",
+        memory_write_enabled=MEMORY_POST_UPDATE and _memory_features_enabled,
+        disclaimer="Simulation may update memory when MEMORY_POST_UPDATE=true.",
+    )
+
     response = SandboxSimulateResponse(
         v1_feasible=result.v1_result.feasible,
         v1_cost_cents=result.v1_result.estimated_cost_cents,
@@ -477,6 +504,8 @@ async def simulate_v2(request: SimulateRequest):
         v2_error=result.v2_error,
         # M7: Include memory context info
         memory_context_keys=memory_context_keys if memory_context_keys else None,
+        # PIN-254 Phase C Fix: Side-effect transparency
+        side_effects=side_effects,
     )
 
     # Add V2 result if available
@@ -533,6 +562,9 @@ async def simulate_v2(request: SimulateRequest):
                     simulation_result=simulation_result,
                 )
                 response.memory_updates_applied = updates_applied
+                # PIN-254 Phase C Fix: Track that memory write occurred
+                if updates_applied > 0 and response.side_effects:
+                    response.side_effects.memory_write_occurred = True
             else:
                 # Async apply - non-blocking, default for production
                 updates_applied = await apply_post_execution_updates(
@@ -542,6 +574,9 @@ async def simulate_v2(request: SimulateRequest):
                     simulation_result=simulation_result,
                 )
                 response.memory_updates_applied = updates_applied
+                # PIN-254 Phase C Fix: Track that memory write occurred
+                if updates_applied > 0 and response.side_effects:
+                    response.side_effects.memory_write_occurred = True
 
         # M7: Drift detection between baseline and memory-enabled runs
         if DRIFT_DETECTION_ENABLED and memory_context and _memory_features_enabled:

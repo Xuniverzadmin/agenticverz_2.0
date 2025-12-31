@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-KSW-001
+name: v1_killswitch.py
+type: api-route
+status: active
+owner: backend
+purpose: Kill-switch controls for tenant and API key freezing
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: policies
+  subdomain: killswitch
+  order_depth: O2
+responsibility: |
+  - POST /killswitch/tenant - Freeze tenant
+  - POST /killswitch/key - Freeze API key
+  - GET /killswitch/status - Freeze status
+  - DELETE /killswitch/tenant|key - Unfreeze
+  - GET /policies/active - Active guardrails
+  - GET /incidents - List incidents
+  - POST /replay/{call_id} - Replay call
+dependencies:
+  - TenantContext
+  - Tier gating (OBSERVE/REACT/PREVENT)
+  - KillSwitch models

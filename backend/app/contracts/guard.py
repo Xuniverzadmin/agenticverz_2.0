@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Guard contract for access control
+# Callers: API routes
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Contract System
+
 """
 Guard Console Data Contracts - Customer-Facing API
 

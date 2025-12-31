@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: Redis pub/sub event adapter
+# Callers: event publisher
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Event System
+
 """
 Redis Pub/Sub Event Publisher Adapter.
 

@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-STR-GLD-001
+name: run_golden_stress.sh
+type: script
+status: active
+owner: ops
+purpose: Golden replay verification stress testing
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: stress
+  subdomain: golden-replay
+  order_depth: O2
+responsibility: |
+  - Runs golden replay verification N times (default 100)
+  - Reports any canonical diffs
+  - Slack/webhook notifications
+  - Detailed diff capture
+  - Supports --iterations, --workflow, --parallel, --nightly modes
+  - 7-day tracking for nightly mode
+dependencies: []
+notes: |
+  Location: scripts/stress/run_golden_stress.sh
+  Environment: SLACK_WEBHOOK_URL, PAGERDUTY_KEY, OPS_WEBHOOK_URL

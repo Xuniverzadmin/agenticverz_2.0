@@ -496,15 +496,15 @@ def diff_contracts(old_descriptor: SkillDescriptor, new_descriptor: SkillDescrip
         )
 
     # Check for determinism changes
-    for field in old_stable & new_stable:
-        old_val = old_descriptor.stable_fields.get(field)
-        new_val = new_descriptor.stable_fields.get(field)
+    for field_name in old_stable & new_stable:
+        old_val = old_descriptor.stable_fields.get(field_name)
+        new_val = new_descriptor.stable_fields.get(field_name)
         if old_val == "DETERMINISTIC" and new_val != "DETERMINISTIC":
             diff.breaking_changes.append(
                 {
                     "type": "determinism_weakened",
-                    "field": field,
-                    "message": f"Field {field} changed from DETERMINISTIC to {new_val}",
+                    "field": field_name,
+                    "message": f"Field {field_name} changed from DETERMINISTIC to {new_val}",
                 }
             )
 

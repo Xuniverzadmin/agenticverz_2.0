@@ -1,0 +1,27 @@
+# Artifact Registry Entry - BudgetLLM Library Module
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-LIB-BLL-BGT-001
+name: budget.py
+type: library
+status: active
+owner: backend
+purpose: Budget enforcement with daily/monthly/cumulative hard limits
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: budgetllm
+  subdomain: core
+  order_depth: O2
+responsibility: |
+  - Hard budget limits (daily, monthly, cumulative)
+  - Automatic kill-switch on budget exceeded
+  - BudgetExceededError exception
+  - StateAdapter protocol for storage backends
+  - InMemoryStateAdapter for single-process usage
+  - BudgetTracker class
+dependencies: []
+notes: |
+  Location: budgetllm/core/budget.py

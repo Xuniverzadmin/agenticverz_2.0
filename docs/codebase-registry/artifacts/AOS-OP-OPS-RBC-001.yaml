@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-OPS-RBC-001
+name: rbac_enable.sh
+type: script
+status: active
+owner: ops
+purpose: Safe RBAC enforcement rollout (Sections A-G)
+authority_level: mutate
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: ops
+  subdomain: rbac
+  order_depth: O1
+responsibility: |
+  - Safe, controlled, reversible RBAC enforcement rollout
+  - Commands: preflight, backup, enable, disable, smoke, verify, full, status
+  - Sections A through G coverage
+  - Emergency rollback support
+dependencies: []
+notes: |
+  Location: scripts/ops/rbac_enable.sh
+  Environment: BASE_URL, MACHINE_SECRET_TOKEN, DATABASE_URL, BACKUP_DIR

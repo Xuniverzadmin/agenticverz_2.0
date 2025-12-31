@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any
+#   Execution: sync
+# Role: Schema parity checking utilities
+# Callers: SDK, API
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Schema Parity
+
 """
 M26 Prevention Mechanism #2: Startup Schema Parity Guard
 =========================================================

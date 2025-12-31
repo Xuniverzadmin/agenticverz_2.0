@@ -1,3 +1,23 @@
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: async
+# Role: Policy sandbox evaluation and approval workflow management
+# Authority: WRITE ApprovalRequest, PolicyApprovalLevel records
+# Callers: External clients, SDK, Customer Console
+# Allowed Imports: L3, L4, L6
+# Forbidden Imports: L1, L5
+# Reference: M5 Policy System, PIN-158 Tier Gating, PIN-258 Phase F-3
+# Contract: PHASE_F_FIX_DESIGN (F-P-RULE-1 to F-P-RULE-5)
+#
+# GOVERNANCE NOTE (F-P-RULE-1):
+# This L2 module must ONLY call the L3 policy_adapter.
+# Direct L5 workflow imports are FORBIDDEN.
+#
+# F-P-RULE-1: Policy Decisions Live Only in L4 - we call L3 which calls L4
+# F-P-RULE-3: L3 Is Translation Only - we call L3, not L5
+
 # api/policy.py
 """
 Policy API Endpoints (M5)
@@ -48,78 +68,68 @@ router = APIRouter(prefix="/api/v1/policy", tags=["policy"])
 
 
 # =============================================================================
-# Metrics Helper (safe import with fallback)
+# L3 Adapter Access (Phase F-3: F-P-RULE-1)
+# =============================================================================
+
+
+def _get_policy_adapter():
+    """
+    Get the L3 policy adapter.
+
+    This is the ONLY way L2 should access policy functionality.
+    F-P-RULE-1: Policy Decisions Live Only in L4.
+    """
+    from app.adapters.policy_adapter import get_policy_adapter
+
+    return get_policy_adapter()
+
+
+# =============================================================================
+# Metrics Helpers (via L3 adapter)
+# Phase F-3: These now delegate to L3 → L4 → L5 instead of L2 → L5
 # =============================================================================
 
 
 def _record_policy_decision(decision: str, policy_type: str) -> None:
-    """Safely record policy decision metric."""
-    try:
-        from app.workflow.metrics import record_policy_decision
-
-        record_policy_decision(decision, policy_type)
-    except Exception as e:
-        logger.debug(f"Failed to record policy decision metric: {e}")
+    """Record policy decision metric via L3 adapter."""
+    # No longer needed - metrics are recorded in L4 evaluate_policy
+    pass
 
 
 def _record_capability_violation(violation_type: str, skill_id: str, tenant_id: Optional[str] = None) -> None:
-    """Safely record capability violation metric."""
-    try:
-        from app.workflow.metrics import record_capability_violation
-
-        record_capability_violation(violation_type, skill_id, tenant_id)
-    except Exception as e:
-        logger.debug(f"Failed to record capability violation metric: {e}")
+    """Record capability violation metric via L3 adapter."""
+    # No longer needed - metrics are recorded in L4 check_policy_violations
+    pass
 
 
 def _record_budget_rejection(resource_type: str, skill_id: str) -> None:
-    """Safely record budget rejection metric."""
-    try:
-        from app.workflow.metrics import record_budget_rejection
-
-        record_budget_rejection(resource_type, skill_id)
-    except Exception as e:
-        logger.debug(f"Failed to record budget rejection metric: {e}")
+    """Record budget rejection metric via L3 adapter."""
+    # No longer needed - metrics are recorded in L4 check_policy_violations
+    pass
 
 
 def _record_approval_request_created(policy_type: str) -> None:
-    """Safely record approval request creation metric."""
-    try:
-        from app.workflow.metrics import record_approval_request_created
-
-        record_approval_request_created(policy_type)
-    except Exception as e:
-        logger.debug(f"Failed to record approval request metric: {e}")
+    """Record approval request creation metric via L3 adapter."""
+    adapter = _get_policy_adapter()
+    adapter.record_approval_created(policy_type)
 
 
 def _record_approval_action(result: str) -> None:
-    """Safely record approval action metric."""
-    try:
-        from app.workflow.metrics import record_approval_action
-
-        record_approval_action(result)
-    except Exception as e:
-        logger.debug(f"Failed to record approval action metric: {e}")
+    """Record approval action metric via L3 adapter."""
+    adapter = _get_policy_adapter()
+    adapter.record_approval_outcome(result)
 
 
 def _record_approval_escalation() -> None:
-    """Safely record approval escalation metric."""
-    try:
-        from app.workflow.metrics import record_approval_escalation
-
-        record_approval_escalation()
-    except Exception as e:
-        logger.debug(f"Failed to record approval escalation metric: {e}")
+    """Record approval escalation metric via L3 adapter."""
+    adapter = _get_policy_adapter()
+    adapter.record_escalation()
 
 
 def _record_webhook_fallback() -> None:
-    """Safely record webhook fallback metric."""
-    try:
-        from app.workflow.metrics import record_webhook_fallback
-
-        record_webhook_fallback()
-    except Exception as e:
-        logger.debug(f"Failed to record webhook fallback metric: {e}")
+    """Record webhook fallback metric via L3 adapter."""
+    adapter = _get_policy_adapter()
+    adapter.record_webhook_used()
 
 
 # =============================================================================
@@ -368,79 +378,38 @@ def _config_to_dict(config) -> Dict[str, Any]:
 
 
 async def _simulate_cost(skill_id: str, tenant_id: str, payload: Dict[str, Any]) -> Optional[int]:
-    """Simulate cost for a skill execution."""
-    try:
-        from app.workflow.cost_sim import CostSimulator
+    """
+    Simulate cost for a skill execution via L3 adapter.
 
-        sim = CostSimulator()
-        result = await sim.simulate(skill_id=skill_id, tenant_id=tenant_id, payload=payload)
-        return int(result.estimated_cost_cents)
-    except ImportError:
-        pass
-    except Exception as e:
-        logger.warning(f"Cost simulation failed: {e}")
-
-    # Fallback estimate
-    return 10
+    Phase F-3: This replaces the direct L5 CostSimulator import.
+    F-P-RULE-4: No Dual Ownership - CostSimulator logic stays intact in L5.
+    """
+    adapter = _get_policy_adapter()
+    return await adapter.simulate_cost(
+        skill_id=skill_id,
+        tenant_id=tenant_id,
+        payload=payload,
+    )
 
 
 async def _check_policy_violations(
     skill_id: str, tenant_id: str, agent_id: Optional[str], payload: Dict[str, Any], simulated_cost: Optional[int]
 ) -> List[Dict[str, Any]]:
-    """Check for policy violations."""
-    violations = []
+    """
+    Check for policy violations via L3 adapter.
 
-    try:
-        from dataclasses import dataclass
-
-        from app.workflow.policies import BudgetExceededError, PolicyEnforcer, PolicyViolationError
-
-        @dataclass
-        class MinimalStep:
-            id: str = "sandbox_eval"
-            estimated_cost_cents: int = 0
-            max_cost_cents: Optional[int] = None
-            idempotency_key: Optional[str] = "sandbox"
-            retry: bool = False
-            max_retries: int = 0
-            inputs: Dict[str, Any] = None
-
-            def __post_init__(self):
-                if self.inputs is None:
-                    self.inputs = {}
-
-        @dataclass
-        class MinimalContext:
-            run_id: str = "sandbox_eval"
-
-        step = MinimalStep(estimated_cost_cents=simulated_cost or 0, inputs=payload)
-        ctx = MinimalContext()
-        enforcer = PolicyEnforcer()
-
-        try:
-            await enforcer.check_can_execute(step, ctx, agent_id=agent_id)
-        except BudgetExceededError as e:
-            violations.append(
-                {
-                    "type": "BudgetExceededError",
-                    "message": str(e),
-                    "policy": "budget",
-                    "details": {"breach_type": e.breach_type, "limit_cents": e.limit_cents},
-                }
-            )
-            _record_budget_rejection("cost", skill_id)
-        except PolicyViolationError as e:
-            violations.append(
-                {"type": "PolicyViolationError", "message": str(e), "policy": e.policy, "details": e.details}
-            )
-            _record_capability_violation(e.policy, skill_id, tenant_id)
-        except Exception as e:
-            violations.append({"type": type(e).__name__, "message": str(e), "policy": "unknown", "details": {}})
-
-    except ImportError:
-        logger.debug("PolicyEnforcer not available")
-
-    return violations
+    Phase F-3: This replaces the direct L5 PolicyEnforcer import.
+    F-P-RULE-1: Policy Decisions Live Only in L4 - L4 handles enforcement.
+    F-P-RULE-2: Metrics Are Effects - L4 emits metrics via L5.
+    """
+    adapter = _get_policy_adapter()
+    return await adapter.check_policy_violations(
+        skill_id=skill_id,
+        tenant_id=tenant_id,
+        agent_id=agent_id,
+        payload=payload,
+        simulated_cost=simulated_cost,
+    )
 
 
 def _compute_webhook_signature(payload: str, secret: str) -> str:

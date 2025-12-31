@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: Event publishing abstraction
+# Callers: services, workers
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Event System
+
 """
 Publisher interface for events. Uses pluggable adapters.
 

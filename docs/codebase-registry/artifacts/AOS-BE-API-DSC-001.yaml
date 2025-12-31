@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-DSC-001
+name: discovery.py
+type: api-route
+status: active
+owner: backend
+purpose: Discovery Ledger API - Signal observation for Founder
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: discovery
+  subdomain: signals
+  order_depth: O2
+responsibility: |
+  - GET /api/v1/discovery - List discovery signals
+  - GET /api/v1/discovery/stats - Signal statistics
+  - Read-only, founder/dev only
+  - Sorted by seen_count, last_seen_at
+  - Reference: visibility_lifecycle.yaml
+dependencies:
+  - get_signals from discovery.ledger
+  - get_sync_engine

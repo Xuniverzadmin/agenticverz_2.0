@@ -1,3 +1,9 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Callers: Multiple products (founder console, ops console)
+# Reference: PIN-240
+# NOTE: This layer must not know what a "product" is.
+
 """
 Event Emitter Service (M24 Ops Console)
 

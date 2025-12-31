@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Base optimization envelope definition
+# Callers: optimization/*
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M10 Optimization
+
 # C3/C4 Optimization Envelope
 # Reference: C3_ENVELOPE_ABSTRACTION.md (FROZEN), C4_ENVELOPE_COORDINATION_CONTRACT.md (FROZEN)
 #

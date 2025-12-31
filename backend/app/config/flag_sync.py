@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler
+#   Execution: async
+# Role: Feature flag synchronization
+# Callers: Background jobs
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Configuration
+
 """
 Feature Flag File↔DB Sync Shim
 

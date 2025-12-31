@@ -1,0 +1,33 @@
+# Artifact Registry Entry - AOS CLI
+# Source: Core CLI
+# Created: 2025-12-30
+
+artifact_id: AOS-CLI-AOS-001
+name: aos.py
+type: script
+status: active
+owner: backend
+purpose: Main CLI entry point for AOS - agent/skill/run management
+authority_level: mutate
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: null
+  domain: cli
+  subdomain: main
+  order_depth: O0
+responsibility: |
+  - aos agent create/list/delete
+  - aos skill list/install (--recommended flag added PIN-053)
+  - aos run create/status/cancel
+  - aos quickstart wizard (added PIN-053)
+  - aos config management
+relations:
+  imports:
+    - click
+    - app.api.*
+    - app.services.*
+  imported_by: []
+notes: |
+  Modified 2025-12-30 for PIN-053 DX improvements.
+  Added cmd_quickstart and --recommended flag.

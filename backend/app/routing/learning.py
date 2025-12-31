@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: CARE-L learning from routing decisions
+# Callers: workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M18 CARE-L
+
 # M18 CARE-L Learning Engine
 # Adaptive routing based on historical performance
 #

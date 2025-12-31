@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any
+#   Execution: sync
+# Role: HashiCorp Vault client for secret retrieval
+# Callers: config, services needing secrets
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Security
+
 """
 HashiCorp Vault client for secrets management.
 

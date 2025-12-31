@@ -1,0 +1,237 @@
+# Code Change Registry Schema v1.1
+# Status: FROZEN
+# Effective: 2025-12-29
+# Updated: 2025-12-29 (Added files_renamed field)
+# Reference: PIN-237 (Codebase Registry Survey), PIN-239 (Product Boundary Enforcement)
+
+# Governing Principle:
+# Code evolution is authority. Authority must be declared.
+# Any modification to existing code requires an explicit, registered
+# change record describing purpose, scope, and impact.
+
+schema_version: "1.0"
+status: FROZEN
+
+fields:
+  change_id:
+    type: string
+    format: "CHANGE-YYYY-NNNN"
+    required: true
+    description: Unique identifier for this change record
+    example: "CHANGE-2025-0001"
+
+  date:
+    type: string
+    format: "YYYY-MM-DD"
+    required: true
+    description: Date the change was registered
+
+  author:
+    type: enum
+    values:
+      - human
+      - claude
+      - pair
+    required: true
+    description: Who authored/initiated the change
+
+  change_type:
+    type: enum
+    values:
+      - bugfix
+      - refactor
+      - behavior_change
+      - performance
+      - security
+      - cleanup
+      - test_only
+      - documentation
+      - feature
+      - deprecation
+      - rename           # File/artifact rename (HIGH-RISK)
+    required: true
+    description: Category of change being made
+
+  purpose:
+    type: string
+    required: true
+    description: |
+      Why this change is being made.
+      One or two sentences. No implementation detail.
+      Must answer "what problem does this solve?"
+
+  scope:
+    type: object
+    required: true
+    properties:
+      artifacts_modified:
+        type: array
+        items: string
+        description: List of artifact IDs being modified
+        example:
+          - AOS-FE-AIC-ACT-001
+          - AOS-BE-SVC-INC-001
+      files_added:
+        type: array
+        items: string
+        description: New files being created (if any)
+      files_removed:
+        type: array
+        items: string
+        description: Files being deleted (if any)
+      files_renamed:
+        type: array
+        items:
+          type: object
+          properties:
+            from:
+              type: string
+              description: Original file path
+            to:
+              type: string
+              description: New file path
+        description: |
+          Files being renamed. Each entry is {from, to}.
+          IMPORTANT: Renames are HIGH-RISK operations because:
+          - All import paths must be updated
+          - Caller graphs are invalidated
+          - backward_compatibility should be 'no'
+          - interface_change should be 'yes'
+        example:
+          - from: backend/app/services/old_name.py
+            to: backend/app/services/new_name.py
+
+  impact:
+    type: object
+    required: true
+    properties:
+      authority_change:
+        type: enum
+        values: [none, increased, reduced]
+        required: true
+        description: Does this change artifact authority levels?
+      behavior_change:
+        type: enum
+        values: [yes, no]
+        required: true
+        description: Does this change observable behavior?
+      interface_change:
+        type: enum
+        values: [yes, no]
+        required: true
+        description: Does this change API/interface contracts?
+      data_change:
+        type: enum
+        values: [yes, no]
+        required: true
+        description: Does this change data schemas or persistence?
+
+  risk_level:
+    type: enum
+    values:
+      - low
+      - medium
+      - high
+    required: true
+    description: |
+      low = isolated change, well-tested path
+      medium = cross-cutting concern, moderate blast radius
+      high = system-wide impact, requires careful review
+
+  backward_compatibility:
+    type: enum
+    values:
+      - yes
+      - no
+      - unknown
+    required: true
+    description: Is this change backward compatible?
+
+  validation:
+    type: object
+    required: true
+    properties:
+      tests_added:
+        type: enum
+        values: [yes, no]
+        required: true
+      tests_modified:
+        type: enum
+        values: [yes, no]
+        required: true
+      manual_verification:
+        type: enum
+        values: [required, not_required]
+        required: true
+
+  related_pins:
+    type: array
+    items: string
+    required: false
+    description: Related memory PINs for context
+
+  notes:
+    type: string
+    required: false
+    description: Optional context, assumptions, or constraints
+
+# Example Change Record:
+example:
+  change_id: CHANGE-2025-0001
+  date: "2025-12-29"
+  author: pair
+  change_type: feature
+  purpose: Add artifact lookup script to search codebase registry
+  scope:
+    artifacts_modified: []
+    files_added:
+      - scripts/ops/artifact_lookup.py
+      - docs/codebase-registry/artifacts/AOS-OP-OPS-ALK-001.yaml
+  impact:
+    authority_change: none
+    behavior_change: no
+    interface_change: no
+    data_change: no
+  risk_level: low
+  backward_compatibility: yes
+  validation:
+    tests_added: no
+    tests_modified: no
+    manual_verification: not_required
+  related_pins:
+    - PIN-237
+  notes: Self-registered tooling for registry search capability
+
+# Example Rename Change Record:
+example_rename:
+  change_id: CHANGE-2025-0002
+  date: "2025-12-29"
+  author: pair
+  change_type: rename
+  purpose: Rename cost_detector.py to cost_anomaly_detector.py for clarity
+  scope:
+    artifacts_modified:
+      - AOS-BE-SVC-CAD-001
+    files_renamed:
+      - from: backend/app/services/cost_detector.py
+        to: backend/app/services/cost_anomaly_detector.py
+  impact:
+    authority_change: none
+    behavior_change: no
+    interface_change: yes   # Import paths changed
+    data_change: no
+  risk_level: medium        # Renames always at least medium risk
+  backward_compatibility: no # Old imports will fail
+  validation:
+    tests_added: no
+    tests_modified: yes     # Update imports in tests
+    manual_verification: required  # Verify all callers updated
+  related_pins:
+    - PIN-239
+  notes: |
+    Rename checklist:
+    - [ ] Update artifact registry (name field)
+    - [ ] Update all import statements
+    - [ ] Update all callers in imported_by
+    - [ ] Run full test suite
+    - [ ] Verify no broken imports

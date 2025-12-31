@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Cost tracking and metrics
+# Callers: services, workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Cost Observability
+
 # app/observability/cost_tracker.py
 """
 Cost Tracking and Quota Management

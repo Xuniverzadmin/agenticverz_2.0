@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-OPS-HYG-001
+name: hygiene_check.sh
+type: script
+status: active
+owner: ops
+purpose: Weekly automated hygiene check
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: ops
+  subdomain: hygiene
+  order_depth: O2
+responsibility: |
+  - Detects stale files
+  - Checks PIN count
+  - Validates INDEX.md freshness
+  - Flags completed checklists
+  - Supports --fix and --json modes
+dependencies: []
+notes: |
+  Location: scripts/ops/hygiene_check.sh
+  Recommended: Run weekly (via cron)

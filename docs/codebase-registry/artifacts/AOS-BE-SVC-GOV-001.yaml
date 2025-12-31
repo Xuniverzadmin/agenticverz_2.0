@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-GOV-001
+name: governance_service.py
+type: service
+status: active
+owner: backend
+purpose: M15 LLM Governance Service - BudgetLLM orchestration
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: policies
+  subdomain: governance
+  order_depth: O4
+responsibility: |
+  - Per-job budget envelope management
+  - Per-worker budget allocation and tracking
+  - Risk aggregation and metrics
+  - Budget check before LLM calls
+  - Automatic budget distribution
+  - BudgetStatus, RiskMetrics, GovernanceStatus dataclasses
+dependencies:
+  - SQLAlchemy
+  - BudgetLLM

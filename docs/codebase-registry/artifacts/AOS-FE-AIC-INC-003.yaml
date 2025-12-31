@@ -1,0 +1,16 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-INC-003
+name: DecisionTimeline.tsx
+type: page
+status: active
+owner: ai-console
+purpose: Render step-by-step decision sequence for incidents
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: incidents
+  order_depth: O3

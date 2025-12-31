@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-DPL-CON-001
+name: aos-console-deploy.sh
+type: script
+status: active
+owner: ops
+purpose: AOS Console production deployment
+authority_level: mutate
+execution_surface: cli
+traceability:
+  product: ai-console
+  console: customer
+  domain: deploy
+  subdomain: console
+  order_depth: O1
+responsibility: |
+  - Production deployment for agenticverz.com/console
+  - 5-step process: Build, Backup, Deploy, Verify, Report
+  - npm ci, npm run build, bundle verification
+  - Automatic backup of existing deployment
+dependencies: []
+notes: |
+  Location: scripts/deploy/aos-console-deploy.sh
+  Target: /opt/agenticverz/apps/console

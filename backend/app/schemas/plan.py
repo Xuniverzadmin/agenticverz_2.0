@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Plan API schemas
+# Callers: API routes
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: API Schemas
+
 # Plan Schemas
 # Pydantic models for Plan and PlanStep definitions
 

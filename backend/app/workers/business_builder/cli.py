@@ -1,3 +1,14 @@
+# Layer: L7 — Ops & Deployment
+# Product: product-builder
+# Temporal:
+#   Trigger: user (CLI)
+#   Execution: sync
+# Role: Business builder CLI
+# Callers: shell
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Business Builder
+
 # CLI commands for Business Builder Worker
 """
 Usage:

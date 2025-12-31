@@ -156,7 +156,7 @@ class TestGuardContractInvariants:
         """IncidentSummaryDTO.id should document prefix requirement."""
         from app.contracts.guard import IncidentSummaryDTO
 
-        id_field = GuardStatusDTO if False else IncidentSummaryDTO.model_fields["id"]
+        id_field = IncidentSummaryDTO.model_fields["id"]
         description = id_field.description or ""
 
         assert (

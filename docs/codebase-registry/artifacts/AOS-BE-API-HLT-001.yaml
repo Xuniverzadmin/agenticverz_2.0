@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+# Extraction: Direct transcription from survey
+
+artifact_id: AOS-BE-API-HLT-001
+name: health.py
+type: api-route
+status: active
+owner: backend
+purpose: Health check endpoints for system monitoring and Kubernetes probes
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: ops
+  domain: system
+  subdomain: health
+  order_depth: O1
+responsibility: |
+  - GET /health - Basic health check
+  - GET /health/ready - Kubernetes readiness probe
+  - GET /health/determinism - Determinism status and drift detection
+  - GET /health/adapters - LLM adapter availability
+  - GET /health/skills - Skill registry status
+relations:
+  imports: []
+  imported_by:
+    - main.py

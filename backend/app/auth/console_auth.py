@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Console-specific authentication handling
+# Callers: console API routes
+# Allowed Imports: None
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Auth Infrastructure
+
 """
 Console Auth - Domain-Separated Authentication for AOS Consoles
 

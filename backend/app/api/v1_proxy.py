@@ -1,3 +1,13 @@
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: OpenAI-compatible proxy with KillSwitch and budget enforcement
+# Authority: WRITE ProxyCall records, Incident records (API self-authority)
+# Callers: External clients (drop-in OpenAI replacement), SDK
+# Reference: M22 KillSwitch MVP
+
 """M22 KillSwitch MVP - OpenAI-Compatible Proxy API
 
 Drop-in replacement for OpenAI API with:

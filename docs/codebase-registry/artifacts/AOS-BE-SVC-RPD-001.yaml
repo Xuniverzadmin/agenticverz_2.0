@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-RPD-001
+name: replay_determinism.py
+type: service
+status: active
+owner: backend
+purpose: Determinism semantics (STRICT/LOGICAL/SEMANTIC)
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: replay
+  subdomain: determinism
+  order_depth: O3
+responsibility: |
+  - Defines determinism levels:
+    - STRICT: Byte-for-byte match (local/cached responses)
+    - LOGICAL: Policy decision match (default for LLM calls)
+    - SEMANTIC: Meaning-equivalent match (content validation)
+  - ReplayValidator class with validate_replay method
+  - ReplayResult dataclass
+  - DeterminismLevel enum
+dependencies: []
+notes: |
+  Location: backend/app/services/replay_determinism.py
+  Watchpoint #2: Replay Determinism Across Model Versions
+  Key Insight: Cannot guarantee byte-for-byte as LLMs drift

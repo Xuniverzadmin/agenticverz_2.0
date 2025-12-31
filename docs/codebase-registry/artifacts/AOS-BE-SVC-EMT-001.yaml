@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-EMT-001
+name: event_emitter.py
+type: service
+status: active
+owner: backend
+purpose: M24 Ops Console event emission with friction tracking
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: ops
+  subdomain: events
+  order_depth: O2
+responsibility: |
+  - Event emission to ops_events table
+  - Background batching for high-throughput scenarios
+  - Type-safe event creation
+  - Automatic timestamp and metadata handling
+  - EventType enum with friction events (*_STARTED, *_COMPLETED, *_ABORTED, *_NO_ACTION)
+dependencies: []
+notes: |
+  Location: backend/app/services/event_emitter.py
+  Milestone: M24
+  Reference: PIN-105 Ops Console - Founder Intelligence System

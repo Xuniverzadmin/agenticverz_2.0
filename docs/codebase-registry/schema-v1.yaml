@@ -1,0 +1,167 @@
+# Code Purpose & Authority Registry - Schema v1 (FROZEN)
+# Source: PIN-236-code-purpose-authority-registry.md
+# Status: FROZEN - No field additions without amendment
+
+schema_version: v1
+frozen: true
+source_pin: PIN-236
+
+artifact_schema:
+  artifact_id:
+    format: "AOS-<LAYER>-<PRODUCT>-<DOMAIN>-<SEQUENCE>"
+    description: "Unique identifier for the artifact"
+    required: true
+
+  name:
+    type: string
+    description: "Filename including extension"
+    required: true
+
+  type:
+    enum:
+      - ui-page
+      - ui-component
+      - api-route
+      - service
+      - worker
+      - job
+      - script
+      - migration
+      - test
+      - infra
+      - doc
+    required: true
+
+  status:
+    enum:
+      - active
+      - deprecated
+      - experimental
+    required: true
+
+  owner:
+    enum:
+      - ai-console
+      - backend
+      - infra
+      - founder
+      - unknown
+    required: true
+
+  purpose:
+    type: string
+    description: "One-line description of what this artifact does"
+    required: true
+
+  responsibility:
+    type: string
+    description: "Multi-line description of responsibilities"
+    required: false
+
+  authority_level:
+    enum:
+      - observe    # Read-only, display data
+      - advise     # Can recommend actions
+      - enforce    # Controls access/routing
+      - mutate     # Can create/modify/delete data
+    required: true
+
+  execution_surface:
+    enum:
+      - browser
+      - server
+      - worker
+      - cli
+      - none
+    required: true
+
+  traceability:
+    type: object
+    properties:
+      product:
+        enum:
+          - ai-console
+          - agents
+          - product-builder
+      console:
+        enum:
+          - customer
+          - founder
+          - ops
+      domain:
+        enum:
+          - overview
+          - activity
+          - incidents
+          - policies
+          - logs
+          - account
+          - integrations
+          - system
+      subdomain:
+        type: string
+        nullable: true
+      topic_o1:
+        type: string
+        description: "The question this artifact answers"
+        nullable: true
+      order_depth:
+        enum:
+          - O0
+          - O1
+          - O2
+          - O3
+          - O4
+          - O5
+    required: true
+
+  relations:
+    type: object
+    properties:
+      imports:
+        type: array
+        items: string
+      imported_by:
+        type: array
+        items: string
+    required: false
+
+  notes:
+    type: string
+    description: "Additional context, warnings, candidate flags"
+    required: false
+
+# Registry ID Format (FROZEN)
+id_format:
+  layer:
+    FE: Frontend
+    BE: Backend
+    IF: Infrastructure
+    OP: Operations
+
+  product:
+    AIC: AI Console
+    AGT: Agents
+    PBL: Product Builder
+    SYS: System-wide
+
+  domain:
+    SYS: System/Internal
+    OVR: Overview
+    ACT: Activity
+    INC: Incidents
+    POL: Policies
+    LOG: Logs
+    ACC: Account
+    INT: Integrations
+
+  sequence:
+    format: "NNN"
+    example: "001, 002, 003"
+
+# Authority Level Hierarchy (FROZEN)
+authority_hierarchy:
+  - observe
+  - advise
+  - enforce
+  - mutate

@@ -1,0 +1,33 @@
+# Artifact Registry Entry - BudgetLLM Library Module
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-LIB-BLL-CLT-001
+name: client.py
+type: library
+status: active
+owner: backend
+purpose: OpenAI-compatible client wrapper with budget + safety governance
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: budgetllm
+  subdomain: core
+  order_depth: O1
+responsibility: |
+  - Drop-in replacement for openai.OpenAI()
+  - Hard budget limits integration
+  - Prompt caching integration
+  - Hallucination risk scoring
+  - Parameter clamping
+  - Safety enforcement
+  - Cost per 1M tokens tracking for OpenAI and Anthropic models
+dependencies:
+  - budgetllm.core.budget
+  - budgetllm.core.cache
+  - budgetllm.core.safety
+  - budgetllm.core.backends
+notes: |
+  Location: budgetllm/core/client.py
+  Usage: from budgetllm import Client as OpenAI

@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-PLY-001
+name: policy_layer.py
+type: api-route
+status: active
+owner: backend
+purpose: M19 Policy Layer API - Constitutional governance
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: policies
+  subdomain: evaluation
+  order_depth: O3
+responsibility: |
+  - POST /policy-layer/evaluate - Evaluate action against policies
+  - POST /policy-layer/simulate - Dry-run evaluation
+  - GET /policy-layer/state - Query policy state
+  - GET /policy-layer/violations - Query violations
+  - Manage risk ceilings and safety rules
+dependencies:
+  - PolicyEngine
+  - PolicyEvaluationRequest/Result
+  - PolicyState, PolicyViolation
+  - ActionType, ViolationType

@@ -15,11 +15,97 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.8"
+session_playbook_version: "2.20"
 created: "2025-12-27"
-last_updated: "2025-12-30"
+last_updated: "2025-12-31"
 
 # Changelog:
+#   2.20 - PHASE G STEADY-STATE GOVERNANCE (Section 30).
+#          Phase E (Semantic Closure) and Phase F (Structural Closure) COMPLETE.
+#          Phase G is PERMANENT governance regime, not a construction phase.
+#          Added G-RULE-1 through G-RULE-10 (hard rules, no drift allowed).
+#          Added Phase G governance documents to mandatory_load.
+#          Updated system_state: phase_family=G, current_stage=G_STEADY_STATE.
+#          Added HOW_TO_ADD_A_FEATURE.md for compliant feature development.
+#          Reference: PIN-258, PIN-259
+#   2.19 - POST-PHASE D STEADY-STATE GOVERNANCE LOOP (Section 29).
+#          Phase D complete. Architecture is now "Baseline: Truthful Architecture v1".
+#          Added severity classification: BLOCKING/WARN/LOW with corrected tiers.
+#          Corrected: Unregistered endpoints are BLOCKING (not WARN).
+#          Added explicit ACK requirement: "BLCA reviewed for this session".
+#          Added weekly acknowledgment cadence with explicit anti-decay purpose.
+#          Added override authority with scope limit rule.
+#          Defined safe work (no re-audit) vs audit-triggering work.
+#          Clarified "mini phase" = same rules, smaller scope.
+#          Added governance caveats: first test ≠ lifetime guarantee.
+#          Added "auditability over findings" principle.
+#          Reference: PIN-254, User governance review feedback
+#   2.18 - PHASE D FINAL LOCKS (pre-Phase D governance hardening).
+#          Added transaction clarifier: ephemeral UI state is NOT a transaction.
+#          Lock 1 (D-4): Phase D failure semantics - failure is valid, silent correction forbidden.
+#          Lock 2: F2 (Client-Side Authority) elevated to HIGH severity, always BLOCKING.
+#          Lock 3: D-3 updated with full binary completion criteria including L1 and Unclassified=0.
+#          Added restart_condition: If BLCA flips, Phase D RESTARTS (not continues).
+#          Reference: PIN-254, User governance review feedback
+#   2.17 - BLCA SCOPE EXPANSION: Backend-only BLCA is insufficient.
+#          Added blast_radius (entire system where intent becomes effect).
+#          Added transaction_definition (intent→effect, not just DB writes).
+#          Added frontend_rules (F1: Entry Points, F2: Authority, F3: Side Effects).
+#          Added intent_graph model (graph validation, not code scanning).
+#          Added governance_escalation matrix (Claude surfaces, humans decide).
+#          Added axis A6: Frontend Transaction Audit.
+#          Reference: PIN-254, User governance review feedback
+#   2.16 - BLCA hardening for Phase D governance.
+#          Added governance_artifact_change trigger (BLCA guards process, not just code).
+#          Added Phase D Governance Constraints (D-1, D-2, D-3):
+#            D-1: BLCA supremacy during Phase D (BLCA can block Phase D mid-execution)
+#            D-2: Validation-only mode (fixes only for BLCA restoration)
+#            D-3: Binary success criteria (BLCA must remain CLEAN for full duration)
+#          Added phase_d_as_blca_stress_test documentation.
+#          Reference: PIN-254, User governance review feedback
+#   2.15 - Added Section 28: BIDIRECTIONAL LAYER CONSISTENCY AUDITOR (BLCA).
+#          Standing governance sentinel for continuous bidirectional verification.
+#          Claude must run BLCA at session start and after code changes.
+#          Non-clean results must escalate into governance artifacts (PIN/playbook).
+#          Work is BLOCKED while audit status is BLOCKED.
+#          Single source of truth: docs/governance/BIDIRECTIONAL_AUDIT_STATUS.md
+#          Reference: PIN-254 (Phase C′ certified, Phase D unblocked)
+#   2.14 - GOVERNANCE INCIDENT RATIFICATION (2025-12-31).
+#          Phase C remediation was applied immediately following discovery.
+#          This violated phase discipline: discovery ≠ remediation.
+#          RATIFICATION: All fixes were strictly structural, non-semantic, and within
+#          Phase C′ authorization scope. No behavior changes were introduced.
+#          This action is ratified as Phase C′ remediation, not Phase C activity.
+#          Phase C′ must still execute: L8 hygiene, authority integrity, closure report.
+#          This incident is recorded as a governance example to prevent future drift.
+#          Reference: PIN-254, Phase C Discipline Violation
+#   2.13 - Added Section: GOVERNANCE_QUALIFIER (PIN-254 Phase C).
+#          Explicit boundary: Session playbook governs reasoning order, not system meaning.
+#          Authority Boundary: Playbook may NOT decide domain policy, thresholds, guarantees.
+#          Fix Authorization: Only structural moves allowed, not semantic choices.
+#          Escalation Clause: Claude must pause when domain intent is ambiguous.
+#          Reference: PIN-254 (Layered Semantic Completion Phase C)
+#   2.12 - PHASE 3 COMPLETE. Added ARCH-GOV-015, ARCH-GOV-016, ARCH-GOV-PRODUCT.
+#          ARCH-GOV-015: Semantic Contract Authority — Frozen contracts are normative.
+#          ARCH-GOV-016: Semantic Change Protocol — Meaning changes before behavior.
+#          ARCH-GOV-PRODUCT: Product Unlock Condition — Foundational phases closed.
+#          All 5 semantic pillars (Auth, Execution, Workers, Recovery, Transactions) FROZEN.
+#          PRODUCT work is now UNLOCKED.
+#          Reference: PIN-251, TRANSACTION_AUTHORITY_SEMANTIC_CONTRACT.md
+#   2.11 - Added ARCH-GOV-014 (Mandatory Semantic Spot Audits).
+#          Rule: No phase may be approved without random semantic spot audit verifying
+#          code-level alignment with declared semantics.
+#          Adversarial verification prevents "paper compliance" and semantic drift.
+#          Reference: PIN-251, EXECUTION_SEMANTIC_CONTRACT.md
+#   2.10 - Added ARCH-GOV-011 (CI Discovery Timing Gate).
+#          Rule: CI discovery must occur only after structural alignment is complete
+#          and before semantic alignment begins.
+#          Reference: PIN-250, CI_CANDIDATE_MATRIX.md, PHASE2_RETROSPECTIVE.md
+#   2.9 - Added ARCH-GOV-008, 009, 010 (Phase 2 Governance Elevations).
+#         ARCH-GOV-008: Minimum Runnable Definition (>5 files requires explicit criteria)
+#         ARCH-GOV-009: Batch Independence Validation (prove before batched extraction)
+#         ARCH-GOV-010: Structural Diff Invariant (document every responsibility move)
+#         Reference: PIN-250, PHASE2_ALIGNMENT_PLAN_v2.md
 #   2.8 - Added Section 26: Layer Classification & Reassignment Gate (ENFORCED).
 #         Added ARCH-GOV-007 (Layer Classification Reassignment Gate).
 #         Mandatory 5-step procedure for layer audits and reclassification.
@@ -200,6 +286,27 @@ mandatory_load:
   - path: docs/codebase-registry/README.md
     purpose: Registry scope and governance rules
     required: true
+
+  # Phase G Governance Documents (PERMANENT)
+  - path: docs/governance/PHASE_F_CLOSURE_DECLARATION.md
+    purpose: Formal closure of Phase F (structural completion certified)
+    required: true
+    phase: G
+
+  - path: docs/governance/PHASE_G_STEADY_STATE_GOVERNANCE.md
+    purpose: Hard rules for steady-state governance (G-RULE-1 to G-RULE-10)
+    required: true
+    phase: G
+
+  - path: docs/governance/EXECUTIVE_ARCHITECTURE_MAP.md
+    purpose: 1-page architecture truth map
+    required: true
+    phase: G
+
+  - path: docs/governance/HOW_TO_ADD_A_FEATURE.md
+    purpose: Compliant feature development guide
+    required: true
+    phase: G
 
 # =============================================================================
 # FORBIDDEN ACTIONS (Before Bootstrap)
@@ -539,10 +646,12 @@ truth_anchor: |
 system_state:
   # Phase Family: Which era are we in?
   # A = Truth & Determinism, B = Control & Resilience, C = Learning & Optimization
-  phase_family: C
+  # D = Visibility & Discovery, E = Semantic Closure, F = Structural Closure
+  # G = Steady-State Governance (PERMANENT)
+  phase_family: G
 
   # Current Stage: What behavior is currently allowed?
-  current_stage: C5_LEARNING
+  current_stage: G_STEADY_STATE
 
   # Stage Status: Each stage is a gate, not a mode
   stages:
@@ -551,11 +660,14 @@ system_state:
     C2_PREDICTION: CERTIFIED # Prediction plane certified 2025-12-28 (sealed, O4 governance frozen)
     C3_OPTIMIZATION: CERTIFIED # Optimization safety certified 2025-12-28 (S1/S2/S3 - 69 tests)
     C4_COORDINATION: CERTIFIED # Multi-envelope coordination certified 2025-12-28 (14 tests, 83 total)
-    C5_LEARNING: ACTIVE      # Learning & Evolution - DESIGN SURFACE COMPLETE
+    C5_LEARNING: CERTIFIED   # Learning & Evolution - certified 2025-12-28
     C5_S1_ROLLBACK: CERTIFIED # Learning from Rollback Frequency certified 2025-12-28 (27 tests)
     C5_S2_FRICTION: FROZEN       # Learning from Coordination Friction frozen 2025-12-28
     C5_S3_EFFECTIVENESS: FROZEN  # Learning from Optimization Effectiveness frozen 2025-12-28
-    C5_IMPLEMENTATION: LOCKED # S2/S3 implementation requires explicit unlock
+    D_VISIBILITY: CERTIFIED  # Visibility & Discovery certified 2025-12-30
+    E_SEMANTIC: CERTIFIED    # Semantic Closure certified 2025-12-31 (domain extractions complete)
+    F_STRUCTURAL: CERTIFIED  # Structural Closure certified 2025-12-31 (BLCA = 0)
+    G_STEADY_STATE: ACTIVE   # Steady-State Governance - PERMANENT REGIME
 
   rule:
     - No stage transition is implicit
@@ -563,8 +675,9 @@ system_state:
     - Presence of code does not imply stage readiness
     - CERTIFIED stages remain binding invariants, not "previous locations"
     - FROZEN = design locked, implementation requires explicit unlock
-    - C5-S1 allows advisory learning only (suggests, never decides)
-    - C5-S2/S3 contracts are FROZEN - implementation requires explicit unlock
+    - Phase G is PERMANENT - no successor phase exists
+    - G-RULE-1 through G-RULE-10 are HARD rules with no exceptions
+    - BLCA supremacy is absolute - violations block all work
 
 # =============================================================================
 # SECTION 10: AUTHORITATIVE ENVIRONMENT (GLOBAL)
@@ -3283,6 +3396,1654 @@ layer_classification_gate:
     You are not optimizing for speed.
     You are optimizing for architectural correctness and long-term clarity.
     If this exercise blocks progress, that is SUCCESS, not failure.
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-008: Minimum Runnable Definition (Phase 2 Elevation)
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-008:
+    name: Minimum Runnable Definition
+    enforcement: BLOCKING
+    added: 2025-12-30
+    reference: PIN-250, PHASE2_ALIGNMENT_PLAN_v2.md
+    applies_to:
+      - structural_alignment
+      - refactors_touching_5_plus_files
+      - responsibility_migrations
+
+    rule: |
+      Any structural alignment touching >5 files must define a "minimum runnable"
+      condition BEFORE execution begins.
+
+    rationale: |
+      Prevents silent breakage under "no behavior change" claims.
+      Makes rollback criteria explicit and verifiable.
+
+    minimum_runnable_template:
+      import_succeeds: "python -c 'from app.main import app' — no exceptions"
+      server_boots: "uvicorn starts without crash"
+      core_router_loads: "/health returns 200"
+      auth_initializes: "auth endpoints return 401/200, not 500"
+      representative_endpoint: "one endpoint per affected group responds"
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-008 VIOLATION: No minimum runnable definition provided.
+
+        Before proceeding with structural changes touching >5 files:
+        1. Define explicit runnable criteria
+        2. List verification commands
+        3. Document rollback trigger
+
+        Reference: PHASE2_ALIGNMENT_PLAN_v2.md (Minimum Runnable Definition)
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-009: Batch Independence Validation
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-009:
+    name: Batch Independence Validation
+    enforcement: BLOCKING
+    added: 2025-12-30
+    reference: PIN-250, PHASE2_ALIGNMENT_PLAN_v2.md
+    applies_to:
+      - batched_migrations
+      - multi_step_extractions
+      - phased_refactors
+
+    rule: |
+      Structural extraction batches must prove or disprove batch independence
+      BEFORE execution begins.
+
+    rationale: |
+      Prevents false isolation assumptions.
+      Ensures batch ordering reflects actual dependency graph.
+      Avoids hidden coupling that breaks later batches.
+
+    validation_requirements:
+      - cross_batch_import_check: "grep for imports between batch files"
+      - dependency_graph_confirmation: "document which batches depend on which"
+      - reorder_decision: "if coupling found, adjust batch boundaries"
+      - independence_report: "produce written report before first batch"
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-009 VIOLATION: Batch independence not validated.
+
+        Before proceeding with batched extraction:
+        1. Check for cross-batch imports
+        2. Document batch dependencies
+        3. Produce Batch Independence Report
+        4. Reorder if coupling found
+
+        Reference: PHASE2_ALIGNMENT_PLAN_v2.md (Batch Independence Validation)
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-010: Structural Diff Invariant
+  # ---------------------------------------------------------------------------
+  ARCH-GOV-010:
+    name: Structural Diff Invariant
+    enforcement: BLOCKING
+    added: 2025-12-30
+    reference: PIN-250, PHASE2_ALIGNMENT_PLAN_v2.md
+    applies_to:
+      - responsibility_migrations
+      - db_write_extractions
+      - layer_boundary_changes
+
+    rule: |
+      Structural Diff Invariant tables are mandatory for any responsibility migration.
+      For every file touched, document: what moved, where it moved, who owns it now.
+
+    rationale: |
+      Makes "no behavior change" auditable, not aspirational.
+      Creates reviewable evidence trail.
+      Enables precise rollback if issues discovered.
+
+    required_table_format: |
+      | File | Existing Behavior | New Owner | Layer | Before | After |
+      |------|-------------------|-----------|-------|--------|-------|
+      | path | what it did       | new func  | L4/L6 | direct | via X |
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-010 VIOLATION: No Structural Diff Invariant table provided.
+
+        Before migrating responsibility:
+        1. Produce table showing every move
+        2. Document existing behavior
+        3. Document new owner function and layer
+        4. Show before/after call paths
+
+        No undocumented moves. Period.
+
+        Reference: PHASE2_ALIGNMENT_PLAN_v2.md (Structural Diff Invariant)
+
+  # ARCH-GOV-011: CI Discovery Timing Gate
+  # Purpose: CI must measure truth, not encode assumptions.
+  ARCH-GOV-011:
+    name: CI Discovery Timing
+    purpose: Ensure CI discovery occurs only after structural alignment and before semantic alignment
+    status: BLOCKING
+    effective_date: 2025-12-30
+    applies_to: CI implementation decisions
+
+    rule: |
+      CI discovery must occur only after structural alignment is complete
+      and before semantic alignment begins.
+
+    rationale: |
+      - Premature CI encodes lies at scale
+      - CI checks on unstable structure create false signals
+      - Structure must be understood before it can be measured
+      - CI discovery is observation, not enforcement
+
+    preconditions:
+      - Phase 2 structural alignment complete (PHASE2_COMPLETION_GATE.md exists)
+      - Structural Truth Map updated (post-alignment)
+      - No structural work remains in current phase
+
+    ci_discovery_ladder:
+      rung_1:
+        name: Discovery
+        behavior: Observe, record, propose
+        enforcement: None
+      rung_2:
+        name: Dry-Run CI
+        behavior: Warn only, never fail
+        phase: Phase 3
+      rung_3:
+        name: Soft Gates
+        behavior: Fail new violations, grandfather existing
+        phase: Mid Phase 3
+      rung_4:
+        name: Hard Gates
+        behavior: Full enforcement
+        phase: Phase 4
+
+    forbidden_during_discovery:
+      - Adding CI checks
+      - Writing test code for CI
+      - Fixing lint/typing issues flagged by discovery
+      - Refactoring because CI flagged it
+      - Mixing CI discovery with Phase 3 execution
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-011 VIOLATION: CI discovery timing incorrect.
+
+        CI discovery requires:
+        1. Structural alignment complete (PHASE2_COMPLETION_GATE.md)
+        2. Structural Truth Map current
+        3. No structural work remains
+
+        CI discovery produces:
+        - CI Candidate Matrix (observation only)
+
+        CI discovery does NOT:
+        - Add CI checks
+        - Fail builds
+        - Fix code
+
+        Reference: CI_CANDIDATE_MATRIX.md, PHASE2_RETROSPECTIVE.md
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-014: Mandatory Semantic Spot Audits
+  # ---------------------------------------------------------------------------
+  # Purpose: Artifacts do NOT guarantee semantics. Only code inspection does.
+  # Paper is necessary but never sufficient.
+  ARCH-GOV-014:
+    name: Mandatory Semantic Spot Audits
+    purpose: Ensure declared semantics are reflected in actual code behavior
+    status: BLOCKING
+    added: 2025-12-30
+    reference: PIN-251
+
+    principle: |
+      Never audit everything.
+      Always audit randomly.
+      Drift hides in the "unlikely" files.
+
+    audit_trigger_points:
+      - End of each Phase sub-step (e.g., Phase 3.1, Phase 3.2)
+      - Before approval of the next phase
+      - Before any governance or CI promotion
+      - Before unlocking product work
+
+    file_selection_rules:
+      minimum_files: 5
+      alternative: "5% of touched files (whichever is higher)"
+      span_requirement: "Files must span multiple layers"
+      mandatory_inclusion:
+        - At least one "semantically neutral" file
+        - At least one "authority" file (decision/enforcement)
+        - At least one "boundary" file (cross-layer)
+
+    verification_checks:
+      - name: Layer fidelity
+        question: "Is this file actually behaving like its declared layer?"
+      - name: X-axis role
+        question: "Is its role (verification/decision/execution/utility) true in code?"
+      - name: Y-axis boundary
+        question: "Is it leaking authority across layers?"
+      - name: Z-axis timing
+        question: "Does execution timing match the contract?"
+      - name: State authority
+        question: "Is it mutating state it claims not to?"
+      - name: Naming honesty
+        question: "Does the name reflect what it does?"
+
+    classification_outcomes:
+      MATCH:
+        meaning: "Code aligns with declared semantics"
+        action: "Proceed to approval"
+      DRIFT:
+        meaning: "Behavior violates declared semantics"
+        action: "BLOCK phase until resolved"
+        resolution_options:
+          - Fix code
+          - Update semantic contract
+          - Reclassify file
+      MISREPRESENTATION:
+        meaning: "Semantics are wrong or misleading"
+        action: "BLOCK phase, escalate to governance review"
+
+    role_separation:
+      claude:
+        - Produces artifacts
+        - Implements code
+        - Declares semantics
+        - Surfaces code on request for inspection
+      human_or_adversarial_inspector:
+        - Randomly selects files
+        - Challenges claims
+        - Blocks approval if semantics do not hold
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-014 VIOLATION: No Semantic Spot Audit performed.
+
+        Phase approval requires:
+        1. Random file selection (≥5 files or ≥5% of touched files)
+        2. Code-level verification against declared semantics
+        3. Pass verdict from adversarial inspector
+
+        Artifacts do NOT guarantee semantics.
+        Only code inspection does.
+
+        Reference: PIN-251, Semantic Spot Audit mechanism
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-015: Semantic Contract Authority
+  # ---------------------------------------------------------------------------
+  # Purpose: Frozen semantic contracts are the source of truth, not just guidance.
+  # Code, refactors, and product work must conform to them.
+  ARCH-GOV-015:
+    name: Semantic Contract Authority
+    purpose: Frozen semantic contracts are normative, not advisory
+    status: BLOCKING
+    added: 2025-12-30
+    reference: PIN-251, Phase 3 Completion
+
+    principle: |
+      Frozen semantic contracts are the source of truth.
+      Code must conform to declared semantics.
+      "But it works" is not a valid override.
+
+    frozen_contracts:
+      - name: AUTH_SEMANTIC_CONTRACT.md
+        phase: "3.1"
+        frozen: 2025-12-30
+        scope: Authentication and authorization semantics
+
+      - name: EXECUTION_SEMANTIC_CONTRACT.md
+        phase: "3.2"
+        frozen: 2025-12-30
+        scope: Execution model, async/sync, guarantees
+
+      - name: WORKER_LIFECYCLE_SEMANTIC_CONTRACT.md
+        phase: "3.3"
+        frozen: 2025-12-30
+        scope: Worker states, transitions, authority
+
+      - name: RECOVERY_SEMANTIC_CONTRACT.md
+        phase: "3.4"
+        frozen: 2025-12-30
+        scope: Recovery candidates, actions, provenance
+
+      - name: TRANSACTION_AUTHORITY_SEMANTIC_CONTRACT.md
+        phase: "3.5"
+        frozen: 2025-12-30
+        scope: WHO may mutate WHAT, authority classes
+
+    rules:
+      - id: SCA-001
+        rule: No code change may contradict a frozen semantic contract
+        enforcement: BLOCKING
+        resolution: Semantic amendment required, not workaround
+
+      - id: SCA-002
+        rule: Violations require explicit semantic amendment, not bypass
+        enforcement: BLOCKING
+        resolution: Amendment process in ARCH-GOV-016
+
+      - id: SCA-003
+        rule: Semantic contracts outrank patterns, conventions, and CI heuristics
+        enforcement: BLOCKING
+        resolution: When in conflict, contract wins
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-015 VIOLATION: Code contradicts frozen semantic contract.
+
+        Frozen semantic contracts are normative.
+        Code must conform to declared semantics.
+
+        Resolution options:
+        1. Modify code to conform to the contract
+        2. Initiate semantic amendment process (ARCH-GOV-016)
+
+        "But it works" is not a valid override.
+
+        Reference: PIN-251, Phase 3 Semantic Contracts
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-016: Semantic Change Protocol
+  # ---------------------------------------------------------------------------
+  # Purpose: Semantics must evolve intentionally, not accidentally.
+  # Meaning changes before behavior changes.
+  ARCH-GOV-016:
+    name: Semantic Change Protocol
+    purpose: Define how frozen semantics may be amended
+    status: BLOCKING
+    added: 2025-12-30
+    reference: PIN-251, Phase 3 Completion
+
+    principle: |
+      Meaning changes before behavior changes.
+      Code must not diverge from frozen semantics without formal process.
+      Accidental semantic drift is a governance failure.
+
+    amendment_process:
+      - step: 1
+        action: Identify affected contract(s)
+        description: Which frozen semantic contract(s) need to change?
+
+      - step: 2
+        action: Declare reason
+        description: |
+          Why does the semantic need to change?
+          Valid reasons: new capability, constraint relaxation, error correction
+          Invalid reasons: convenience, "easier this way", optimization
+
+      - step: 3
+        action: Draft versioned amendment
+        description: |
+          Create amendment document with:
+          - Original semantic definition
+          - Proposed new semantic definition
+          - Justification for change
+          - Impact analysis (what code changes)
+
+      - step: 4
+        action: Human approval
+        description: Semantic amendments require explicit human approval
+
+      - step: 5
+        action: Update contract version
+        description: Contract version incremented, amendment recorded
+
+    rules:
+      - id: SCP-001
+        rule: Code must not diverge from frozen semantics without this process
+        enforcement: BLOCKING
+
+      - id: SCP-002
+        rule: Semantic amendments must precede code changes
+        enforcement: BLOCKING
+
+      - id: SCP-003
+        rule: Amendments require human approval
+        enforcement: BLOCKING
+
+    on_violation:
+      action: BLOCK
+      message: |
+        ARCH-GOV-016 VIOLATION: Code diverges from frozen semantics without amendment.
+
+        Semantic change requires:
+        1. Identified affected contract(s)
+        2. Declared reason (new capability, constraint, or correction)
+        3. Versioned amendment or replacement
+        4. Human approval
+
+        Code must not diverge from frozen semantics without this process.
+
+        Reference: PIN-251, Semantic Change Protocol
+
+  # ---------------------------------------------------------------------------
+  # ARCH-GOV-PRODUCT: Product Unlock Condition
+  # ---------------------------------------------------------------------------
+  # Purpose: Record that Phase 3 is complete and PRODUCT work is unlocked.
+  # Foundational phases may not be reopened without formal amendment.
+  ARCH-GOV-PRODUCT:
+    name: Product Unlock Condition
+    purpose: Record Phase 3 completion and protect momentum
+    status: INFORMATIONAL
+    added: 2025-12-30
+    reference: PIN-251, Phase 3 Completion
+
+    phase_3_status: COMPLETE
+
+    semantic_pillars:
+      - phase: "3.1"
+        name: Auth Semantics
+        contract: AUTH_SEMANTIC_CONTRACT.md
+        status: FROZEN
+
+      - phase: "3.2"
+        name: Execution Semantics
+        contract: EXECUTION_SEMANTIC_CONTRACT.md
+        status: FROZEN
+
+      - phase: "3.3"
+        name: Worker Lifecycle
+        contract: WORKER_LIFECYCLE_SEMANTIC_CONTRACT.md
+        status: FROZEN
+
+      - phase: "3.4"
+        name: Recovery Semantics
+        contract: RECOVERY_SEMANTIC_CONTRACT.md
+        status: FROZEN
+
+      - phase: "3.5"
+        name: Transaction Authority
+        contract: TRANSACTION_AUTHORITY_SEMANTIC_CONTRACT.md
+        status: FROZEN
+
+    unlocked:
+      - PRODUCT work
+      - Feature development
+      - UI/UX changes
+      - Business experiments
+
+    protected:
+      note: |
+        Once Phase 3 (Semantics) is closed:
+        - Product work is allowed
+        - Foundational phases (1–3) may not be reopened
+          unless a semantic contract is formally amended (ARCH-GOV-016)
+
+    principle: |
+      Phase 3 is COMPLETE.
+      All semantic pillars are defined.
+      The system has explicit meaning.
+
+      Product work proceeds under semantic governance.
+      Foundational phases are closed.
+
+# =============================================================================
+# SECTION 27: GOVERNANCE QUALIFIER — SESSION PLAYBOOK AUTHORITY
+# =============================================================================
+# Purpose: This session playbook is a governance instrument, not an execution mandate.
+# It governs HOW analysis proceeds and WHEN fixes are allowed.
+# It does NOT grant authority to invent product behavior or redefine domain policy.
+# Reference: PIN-254 Phase C
+# =============================================================================
+
+governance_qualifier:
+  purpose: |
+    This session playbook is a GOVERNANCE INSTRUMENT, not an execution mandate.
+
+    It governs:
+    - How analysis proceeds
+    - When fixes are allowed
+    - Who has authority to decide intent
+
+    It does NOT grant authority to:
+    - Invent product behavior
+    - Redefine domain policy
+    - Introduce new capabilities
+    - Optimize or redesign architecture
+
+  classification:
+    document_type: Governance & Verification Playbook
+    authority_level: Process-Governing, NOT System-Governing
+    scope: Analysis order, fix timing, credibility gates
+    binding_nature: Binding on SESSION BEHAVIOR, not code semantics
+
+  authority_boundary:
+    description: |
+      The Session Playbook governs the order and rules of reasoning —
+      NOT the meaning of the system.
+
+    playbook_may_decide:
+      - When a phase starts or blocks
+      - Whether a violation must be fixed now or later
+      - Whether the system is "clean enough" to proceed
+
+    playbook_may_NOT_decide:
+      - What the correct domain policy is
+      - What thresholds should be
+      - How business logic should behave
+      - What product promises are made
+
+    such_decisions_belong_to:
+      - L4 domain contracts
+      - Explicit design authority
+      - Human owner approval
+
+    on_ambiguity: |
+      If such decisions are required → the playbook must pause and escalate.
+
+  claude_enforcement_clause:
+    rule: |
+      If a task requires choosing WHAT the system should do (policy, thresholds, guarantees),
+      and not merely WHERE that logic should live,
+      Claude must stop and request explicit design authority input.
+
+    claude_must_NOT_infer_intent_from:
+      - Naming
+      - Usage frequency
+      - Convenience
+      - Common patterns
+
+  fix_authorization_constraint:
+    description: |
+      Fixes are allowed ONLY when ALL of the following are true:
+
+    conditions:
+      - id: FAC-001
+        condition: A violation has been identified by a completed phase
+        required: true
+
+      - id: FAC-002
+        condition: The fix is STRUCTURAL, not semantic
+        required: true
+
+      - id: FAC-003
+        condition: The fix MOVES existing logic to the correct layer
+        required: true
+
+      - id: FAC-004
+        condition: The fix does NOT change behavior
+        required: true
+
+      - id: FAC-005
+        condition: The fix resolves a defined governance violation
+        required: true
+
+    unauthorized_fixes:
+      description: |
+        If a fix would do any of the following, it is NOT authorized:
+
+      disallowed:
+        - Introduce new rules
+        - Change thresholds
+        - Redefine eligibility
+        - Alter product guarantees
+
+      requires_instead:
+        - Explicit domain design approval
+        - Separate design contract or PIN
+
+  session_validity_rule:
+    rule: |
+      Any work performed outside the rules of this playbook is
+      NON-AUTHORITATIVE and must be re-validated.
+
+    prevents:
+      - Silent drift
+      - '"We already fixed this" arguments'
+      - Retroactive justification
+
+  escalation_clause:
+    claude_must_escalate_if:
+      - Domain intent is ambiguous
+      - Two layers claim authority over the same rule
+      - A fix would require semantic choice
+      - A violation cannot be resolved structurally
+
+    escalation_response: |
+      "Governance boundary reached. This decision requires explicit domain authority. Session paused."
+
+  rationale: |
+    This qualifier ensures:
+    - The playbook KEEPS THE SYSTEM HONEST
+    - The AI DOES NOT BECOME THE ARCHITECT
+    - Fixes do not smuggle in design decisions
+    - Top-down validation reflects REAL AUTHORITY, not inferred intent
+
+    Without this qualifier:
+    - The process becomes powerful but unsafe
+    - Claude could unintentionally redesign the system
+
+    With it:
+    - The system stays credible
+    - Authority remains human-owned
+    - Governance is explicit, not implicit
+
+# =============================================================================
+# SECTION 28: BIDIRECTIONAL LAYER CONSISTENCY AUDITOR (BLCA)
+# =============================================================================
+# Purpose: Standing governance sentinel for continuous bidirectional verification.
+# Claude must run BLCA at session start and after any L2-L7 code changes.
+# Non-clean results must escalate into governance artifacts (PIN or playbook update).
+# Work is BLOCKED while audit status is BLOCKED.
+# Single source of truth: docs/governance/BIDIRECTIONAL_AUDIT_STATUS.md
+# Reference: PIN-254 (Layered Semantic Completion), Phase C′ certified
+# =============================================================================
+
+bidirectional_layer_consistency_auditor:
+  version: "1.0"
+  status: ACTIVE
+  reference: PIN-254
+
+  purpose: |
+    The Bidirectional Layer Consistency Auditor (BLCA) is a standing governance
+    sentinel that ensures the architecture tells the truth in both directions:
+
+    - Bottom-Up: Every execution path maps to an L4 semantic owner
+    - Top-Down: Every L2 API has a real execution path
+
+    BLCA runs at defined triggers and produces persistent audit artifacts.
+    Inline or conversational reporting is NOT acceptable.
+
+  enforcement_contract:
+    rule: |
+      Claude must run the Bidirectional Layer Consistency Auditor at the start
+      of every session. Any non-clean result must be escalated into governance
+      artifacts (PIN or playbook update). Claude may not proceed while audit
+      status is BLOCKED. Audit results must never be reported only inline or
+      conversationally.
+
+    claude_must:
+      - Run BLCA at session start
+      - Run BLCA after any L2-L7 code modification
+      - Update docs/governance/BIDIRECTIONAL_AUDIT_STATUS.md with results
+      - Escalate non-clean results to PIN-254 or create new PIN
+      - Block work if audit status is BLOCKED
+
+    claude_must_NOT:
+      - Report audit results only in conversation
+      - Skip BLCA after code changes
+      - Proceed with work while audit is BLOCKED
+      - Mark issues as CLEAN without verification
+
+  audit_triggers:
+    - trigger: session_start
+      description: Every new session
+      action: Run full audit
+
+    - trigger: code_change
+      description: After any L2-L7 modification
+      action: Run incremental audit on affected layers
+
+    - trigger: phase_completion
+      description: After any phase completion (A, B, C, D)
+      action: Run full audit with certification
+
+    - trigger: pre_product_work
+      description: Before any L1 changes
+      action: Run full audit to verify L1 can safely proceed
+
+    - trigger: governance_artifact_change
+      description: After any modification to SESSION_PLAYBOOK.yaml or PINs
+      action: Run full audit (governance drift can occur without code changes)
+      rationale: |
+        Governance drift can happen without code changes.
+        The Phase C incident demonstrated this risk.
+        BLCA must guard PROCESS, not just code.
+
+  # ---------------------------------------------------------------------------
+  # BLCA BLAST RADIUS (v2.17)
+  # ---------------------------------------------------------------------------
+  # BLCA confined to backend is INSUFFICIENT and creates false safety.
+  # BLCA's blast radius is the entire system surface where intent becomes effect.
+  # ---------------------------------------------------------------------------
+
+  blast_radius:
+    principle: |
+      BLCA's blast radius is the entire system surface where intent becomes effect.
+      If it can change state, schedule execution, or commit intent, it is in scope.
+      Anything else is observability.
+
+    in_scope:
+      - surface: Backend (L2-L7)
+        reason: Obvious - execution and state mutation
+        included: true
+
+      - surface: Frontend (L1)
+        reason: User-triggered transactions originate here
+        included: true
+
+      - surface: API contracts
+        reason: Promise ↔ execution boundary
+        included: true
+
+      - surface: Workers / jobs
+        reason: Deferred transactions
+        included: true
+
+      - surface: Integrations / webhooks
+        reason: External-triggered authority
+        included: true
+
+      - surface: Feature flags / config
+        reason: Conditional authority
+        included: true
+
+      - surface: CI / automation
+        reason: Must never transact (hygiene only)
+        included: false
+        note: Except L8 hygiene checks
+
+  # ---------------------------------------------------------------------------
+  # TRANSACTION DEFINITION (v2.17)
+  # ---------------------------------------------------------------------------
+  # Narrow definition (DB writes only) misses 60-70% of real risk.
+  # ---------------------------------------------------------------------------
+
+  transaction_definition:
+    principle: |
+      A transaction is any action that moves the system from one authoritative
+      state to another, whether synchronously or asynchronously.
+
+    clarifier: |
+      A transaction requires irreversible or authoritative effect.
+      Ephemeral UI state, client-side previews, and optimistic rendering
+      are NOT transactions unless they commit intent downstream.
+
+    NOT_transactions:
+      description: |
+        The following are explicitly NOT transactions and must NOT be flagged by A6:
+      excludes:
+        - Ephemeral UI state (component state, form drafts)
+        - Client-side previews (hover states, tooltips)
+        - Optimistic rendering (until committed)
+        - Feature toggles (unless they gate authority)
+        - Navigation shortcuts
+        - Local storage caching
+        - UI animations and transitions
+
+    backend_transactions:
+      - DB writes
+      - Redis mutations
+      - Job enqueueing
+      - State machine transitions
+      - API calls that create/update/delete
+      - Workflow triggers
+      - Approval/rejection/escalation actions
+
+    frontend_transactions:
+      description: |
+        If a UI action CAN cause a backend mutation, it is a transaction initiator.
+      includes:
+        - API calls that create/update/delete
+        - API calls that trigger workflows
+        - API calls that approve/reject/escalate
+        - Client-side gating that suppresses actions
+        - Client-side gating that auto-submits decisions
+        - Confirm/Apply/Execute button handlers
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND RULES (F1, F2, F3) — v2.17
+  # ---------------------------------------------------------------------------
+  # BLCA does not audit code style — it audits intent-to-effect paths.
+  # ---------------------------------------------------------------------------
+
+  frontend_rules:
+    principle: |
+      BLCA does not audit code style — it audits intent-to-effect paths.
+      BLCA cares about three things in frontend code: F1, F2, F3.
+
+    rules:
+      - id: F1
+        name: Transactional Entry Points
+        description: |
+          Any UI action that:
+            - calls a mutating API
+            - triggers execution
+            - commits a decision
+        examples:
+          - onSubmit()
+          - onApprove()
+          - onExecute()
+          - dispatch(action) that calls L2
+        requirements:
+          - Each entry point maps to a known L2 API
+          - The API is registered in BLCA
+          - The API has a full L2→L7 path
+        violation_response: |
+          BLCA BLOCK: UI calls unknown API. Register in BLCA before proceeding.
+
+      - id: F2
+        name: Client-Side Authority
+        severity: HIGH
+        blocking: true
+        description: |
+          BLCA must flag if frontend code:
+            - decides eligibility
+            - applies thresholds
+            - auto-approves without backend confirmation
+        violation_examples:
+          - "if (confidence > 0.8) autoExecute()"
+          - Client-enforced role checks
+          - Feature gating without backend confirmation
+        classification: Authority leak, not UX choice
+        escalation_rule: |
+          Any frontend authority violation (F2) is automatically HIGH severity and BLOCKING.
+          Client-side authority leaks are the most dangerous class of drift.
+          F2 violations may NEVER be classified as MEDIUM or LOW.
+        violation_response: |
+          BLCA BLOCK: Frontend authority detected. Authority belongs in L4.
+          Severity: HIGH. This is a blocking issue.
+
+      - id: F3
+        name: Silent Side Effects
+        description: |
+          BLCA must flag if frontend code:
+            - auto-fires transactions on load
+            - retries without user intent
+            - batches or cascades actions
+        frontend_allowed:
+          - Display data
+          - Collect input
+          - Request action (with user intent)
+        frontend_forbidden:
+          - Decide eligibility
+          - Auto-execute
+          - Cascade without explicit user action
+        violation_response: |
+          BLCA BLOCK: Silent side effect detected. Transactions require explicit intent.
+
+  # ---------------------------------------------------------------------------
+  # INTENT GRAPH MODEL (v2.17)
+  # ---------------------------------------------------------------------------
+  # BLCA operates as graph validation, not code scanning.
+  # ---------------------------------------------------------------------------
+
+  intent_graph:
+    description: |
+      BLCA maintains a living Intent Graph that traces from actor to state.
+      BLCA checks two things continuously: bottom-up and top-down.
+
+    graph_structure:
+      - level: Human / External Actor
+        description: Origin of intent
+      - level: L1 Entry Point
+        description: UI transaction initiator
+      - level: L2 API
+        description: Contract boundary
+      - level: L3 Adapter
+        description: Translation layer
+      - level: L4 Policy
+        description: Domain authority
+      - level: L5 Execution
+        description: Action performer
+      - level: L6 State
+        description: Authoritative storage
+      - level: L7 Ops
+        description: Infrastructure
+
+    checks:
+      bottom_up: |
+        Does this execution path have a declared origin and exposure?
+      top_down: |
+        Does this exposed action actually execute something real?
+
+    break_condition: |
+      If either side breaks → governance alert.
+
+  # ---------------------------------------------------------------------------
+  # GOVERNANCE ESCALATION RULES (v2.17)
+  # ---------------------------------------------------------------------------
+  # Claude must surface — humans must decide.
+  # BLCA never decides intent, it decides consistency.
+  # ---------------------------------------------------------------------------
+
+  governance_escalation:
+    principle: |
+      Claude must surface — humans must decide.
+      BLCA never decides intent, it decides consistency.
+
+    escalation_matrix:
+      - finding: Unknown transaction
+        action: New governance issue
+        severity: HIGH
+
+      - finding: Ambiguous authority
+        action: Escalate to human
+        severity: MEDIUM
+
+      - finding: Frontend authority leak
+        action: BLOCK
+        severity: HIGH
+
+      - finding: Backend orphan execution
+        action: BLOCK
+        severity: HIGH
+
+      - finding: Partial mapping
+        action: WARN + decision required
+        severity: MEDIUM
+
+    output: |
+      BLCA produces facts.
+      Humans ratify intent.
+
+  consistency_axes:
+    - axis: A1
+      name: Bottom-Up Execution Path Verification
+      question: Does every L5/L6/L7 action map to an L4 semantic owner?
+      clean_condition: All execution paths have L4 authority
+      failure_action: Document orphan path, assign to domain engine or quarantine
+
+    - axis: A2
+      name: Top-Down API Truthfulness Verification
+      question: Does every L2 API have a real execution path?
+      clean_condition: All APIs map to real execution
+      failure_action: Remove decorative API or implement real path
+
+    - axis: A3
+      name: Layer Authority Purity Check
+      question: Does each layer contain only its authorized content?
+      clean_condition: |
+        - L2: No policy, no execution
+        - L3: No policy, no classification
+        - L4: No execution, no orchestration
+        - L5: No domain decisions
+        - L6: No business meaning
+        - L7: No domain semantics
+        - L8: No runtime, no domain, no execution
+      failure_action: Relocate misplaced logic to correct layer
+
+    - axis: A4
+      name: L8 Containment Sentinel
+      question: Is L8 free of runtime/domain/execution leaks?
+      clean_condition: |
+        - No runtime writes in L8
+        - No domain decisions in tests
+        - No execution orchestration in CI
+        - No prod-impacting test logic
+        - Validators are observational only
+      failure_action: Relocate to appropriate layer
+
+    - axis: A5
+      name: Governance Escalation Audit
+      question: Have all findings been escalated to governance artifacts?
+      clean_condition: No orphan findings (all in PINs or playbook)
+      failure_action: Create PIN or update playbook
+
+    - axis: A6
+      name: Frontend Transaction Audit
+      question: Do all L1 transaction initiators map to registered L2 APIs with full paths?
+      clean_condition: |
+        - All transactional entry points (F1) map to known L2 APIs
+        - No client-side authority leaks (F2)
+        - No silent side effects (F3)
+        - All L1→L2 calls have documented L2→L7 paths
+      failure_action: |
+        F1 violation: Register API in BLCA, document full path
+        F2 violation: BLOCK - relocate authority to L4
+        F3 violation: BLOCK - require explicit user intent
+      scope: Frontend (L1) transaction initiators
+      note: |
+        A6 extends BLCA beyond backend to close the frontend loophole.
+        Frontend is allowed to: display, collect input, request action.
+        Frontend is NOT allowed to: decide, auto-execute, cascade.
+
+  audit_output:
+    single_source_of_truth: docs/governance/BIDIRECTIONAL_AUDIT_STATUS.md
+
+    required_fields:
+      - field: run_metadata
+        contains:
+          - session_id
+          - timestamp
+          - scope (L2-L8)
+          - trigger
+          - previous_status
+
+      - field: axis_results
+        contains:
+          - axis_id
+          - status (CLEAN, WARNING, BLOCKED)
+          - findings (if non-clean)
+          - remediation_required
+
+      - field: overall_verdict
+        values:
+          - CLEAN: All axes pass
+          - WARNING: Non-critical issues found
+          - BLOCKED: Critical issues require remediation
+
+      - field: next_action
+        description: What must happen before proceeding
+
+  status_transitions:
+    - from: CLEAN
+      to: WARNING
+      condition: Non-critical finding discovered
+      action: Document finding, continue with caution
+
+    - from: CLEAN
+      to: BLOCKED
+      condition: Critical finding discovered (C1 or authority violation)
+      action: STOP work, remediate immediately
+
+    - from: WARNING
+      to: CLEAN
+      condition: All warnings resolved
+      action: Document resolution in audit history
+
+    - from: WARNING
+      to: BLOCKED
+      condition: Warning escalates or new critical finding
+      action: STOP work, remediate immediately
+
+    - from: BLOCKED
+      to: CLEAN
+      condition: All blockers resolved and verified
+      action: Document resolution, full re-audit required
+
+  blocking_rules:
+    - rule_id: BLCA-001
+      name: Session Audit Required
+      enforcement: |
+        Claude must run BLCA at session start. Work is invalid without
+        SESSION_BOOTSTRAP_CONFIRMATION including BLCA status.
+
+    - rule_id: BLCA-002
+      name: Code Change Re-audit
+      enforcement: |
+        After any L2-L7 code modification, BLCA must run before proceeding.
+        Changes without re-audit are governance violations.
+
+    - rule_id: BLCA-003
+      name: BLOCKED Status Halts Work
+      enforcement: |
+        While audit status is BLOCKED, Claude may only work on remediation.
+        No new features, no refactors, no unrelated changes.
+
+    - rule_id: BLCA-004
+      name: Persistent Artifact Required
+      enforcement: |
+        Audit results must be written to BIDIRECTIONAL_AUDIT_STATUS.md.
+        Inline conversation is NOT acceptable for audit results.
+
+    - rule_id: BLCA-005
+      name: Escalation Required for Non-Clean
+      enforcement: |
+        Any non-CLEAN result must be escalated to:
+        - PIN-254 (if related to layered semantic completion)
+        - New PIN (if new architectural issue)
+        - SESSION_PLAYBOOK.yaml (if governance gap)
+
+  integration_with_phases:
+    phase_a:
+      description: L5 → L4 Domain Semantics
+      blca_axes: A1 (Bottom-Up), A3 (Authority)
+      audit_timing: After each violation fix
+
+    phase_b:
+      description: L4 → L3 Translation Integrity
+      blca_axes: A1, A3
+      audit_timing: After each adapter fix
+
+    phase_c:
+      description: L3 → L2 API Truthfulness
+      blca_axes: A2 (Top-Down), A3
+      audit_timing: After Phase C discovery, after C′ remediation
+
+    phase_c_prime:
+      description: Architectural Closure & L8 Hygiene
+      blca_axes: A3, A4 (L8 Containment), A5 (Governance)
+      audit_timing: Full audit required for certification
+
+    phase_d:
+      description: Bidirectional Reconciliation (Top-Down)
+      blca_axes: All (A1-A5)
+      audit_timing: Continuous during top-down validation
+
+  rationale: |
+    BLCA institutionalizes the bidirectional verification discipline established
+    by PIN-254. Without BLCA:
+
+    - Architectural drift can occur silently between sessions
+    - Code changes may violate layer boundaries without detection
+    - Governance findings may exist only in conversation (ephemeral)
+    - Phase D (top-down) may run on a system that has drifted
+
+    With BLCA:
+    - Every session starts with verified architectural state
+    - Code changes trigger immediate re-verification
+    - Findings are persistent in governance artifacts
+    - The system remains truthful in both directions
+
+  # ---------------------------------------------------------------------------
+  # PHASE D GOVERNANCE CONSTRAINTS
+  # ---------------------------------------------------------------------------
+  # These constraints ensure Phase D operates under BLCA supremacy and
+  # produces binary (pass/fail) results, not subjective assessments.
+  # ---------------------------------------------------------------------------
+
+  phase_d_governance:
+    status: MANDATORY
+    effective: 2025-12-31
+    reference: PIN-254
+
+    constraints:
+      - id: D-1
+        name: BLCA Supremacy During Phase D
+        rule: |
+          During Phase D, BLCA findings override Phase D progress.
+          If BLCA status becomes BLOCKED at any point, Phase D must pause immediately.
+        enforcement: |
+          Phase D cannot continue, complete, or claim success while BLCA status is non-CLEAN.
+          This prevents "we're almost done, let's ignore this" reasoning.
+        violation_response: |
+          PHASE D PAUSED: BLCA status is [status]. Remediation required before continuation.
+
+      - id: D-2
+        name: Validation-Only Mode
+        rule: |
+          Phase D may not introduce fixes unless they are required to restore BLCA to CLEAN status.
+        enforcement: |
+          Phase D is for VERIFICATION, not REPAIR.
+          Any fix applied during Phase D must:
+            1. Be directly required to restore BLCA CLEAN
+            2. Be documented as "D-remediation" not "D-improvement"
+            3. Trigger BLCA re-run immediately after
+        violation_response: |
+          PHASE D FIX REJECTED: This fix is not required for BLCA restoration.
+          Phase D is validation-only. Defer to future phase or separate PIN.
+
+      - id: D-3
+        name: Binary Success Criteria
+        rule: |
+          Phase D is COMPLETE when ALL of the following are true:
+            1. All L2→L7 paths are traceable
+            2. All L1 transactional entry points are classified
+            3. Unclassified Transactions = 0
+            4. No undocumented asymmetry remains
+            5. BLCA status remained CLEAN for the full duration of Phase D
+        enforcement: |
+          Phase D success is BINARY, not subjective.
+          "Looks good" is not an acceptable completion criterion.
+          If BLCA flipped even once during Phase D → Phase D is INCOMPLETE.
+          If Unclassified Transactions > 0 → Phase D is INCOMPLETE.
+        completion_gate: |
+          Phase D may only be marked COMPLETE when:
+            - BLCA has run at least once per session during Phase D
+            - BLCA has never reported non-CLEAN during Phase D
+            - All L2 APIs have documented L7 provenance
+            - All L7 execution paths have documented L2 exposure
+            - All L1 transactional entry points are in Frontend Transaction Registry
+            - Unclassified Transactions section is EMPTY
+
+      - id: D-4
+        name: Phase D Failure Semantics
+        rule: |
+          Phase D may fail. Failure is a valid and expected outcome.
+          Any failure must result in governance artifacts, not silent correction.
+        enforcement: |
+          If Phase D discovers issues:
+            1. Issues must be logged in governance artifacts (BLCA status, PIN, or playbook)
+            2. Silent correction is FORBIDDEN
+            3. "Let's just fix it and move on" is FORBIDDEN
+            4. Each failure must be traceable and ratifiable
+        failure_outcomes:
+          - outcome: BLCA becomes non-CLEAN during Phase D
+            action: Log to BIDIRECTIONAL_AUDIT_STATUS.md, pause Phase D
+          - outcome: Unclassified transaction discovered
+            action: Add to Unclassified Transactions section, require human decision
+          - outcome: Frontend authority leak (F2) found
+            action: BLOCK immediately (HIGH severity), document in PIN
+          - outcome: Undocumented L2→L7 path found
+            action: Document gap, classify as WARNING or BLOCK based on severity
+        restart_condition: |
+          If BLCA flips to non-CLEAN during Phase D, Phase D does not "continue after fix".
+          Phase D RESTARTS from the beginning after remediation is complete.
+
+    phase_d_as_blca_stress_test:
+      description: |
+        Phase D is the FIRST ADVERSARIAL TEST of BLCA.
+
+        BLCA was installed immediately after Phase C′ certification.
+        At that moment, the system had just been certified clean.
+        "CLEAN" status is plausible but BLCA has not yet proven itself adversarial.
+
+        Phase D must therefore be treated as:
+          - A validation exercise for the architecture
+          - AND a stress test for BLCA itself
+
+        If Phase D completes without BLCA detecting any issues, this proves:
+          1. The architecture is bidirectionally consistent
+          2. BLCA is capable of maintaining that consistency
+
+        If Phase D reveals issues BLCA should have caught, this requires:
+          1. BLCA enhancement (new axis or refined check)
+          2. Documented as BLCA gap, not just architecture gap
+
+      primary_objective: |
+        Phase D's primary objective is to test BLCA's ability to detect drift,
+        NOT to prove the system is perfect.
+
+        Phase D success is NOT "no findings".
+        Phase D success IS "findings are surfaced, escalated, and handled correctly".
+
+        This protects against false failure if BLCA catches something.
+        A finding is evidence BLCA works, not evidence Phase D failed.
+
+# =============================================================================
+# Section 29: STEADY-STATE BLCA GOVERNANCE LOOP (Post-Phase D)
+# =============================================================================
+#
+# Status: ACTIVE (effective after Phase D completion)
+# Created: 2025-12-31
+# Reference: PIN-254, BIDIRECTIONAL_AUDIT_STATUS.md
+# Baseline: "Truthful Architecture v1" (2025-12-31)
+#
+# Purpose: Define operational cadence for BLCA to prevent decay.
+#          Without this, BLCA fatigue, soft overrides, and semantic rot are guaranteed.
+#
+# =============================================================================
+
+steady_state_governance:
+
+  # ---------------------------------------------------------------------------
+  # Core Principle: Auditability Over Findings
+  # ---------------------------------------------------------------------------
+  core_principle: |
+    Phase D success does not require findings; it requires auditability and enforceability.
+
+    The real success condition is:
+      "If a violation HAD existed, BLCA would have forced it into governance."
+
+    Anti-pattern to prevent: Future teams "optimising for green" by suppressing signals.
+
+    Enforcement: BLCA value is measured by escalation fidelity, not finding count.
+
+  # ---------------------------------------------------------------------------
+  # Governance Caveats (Binding)
+  # ---------------------------------------------------------------------------
+  caveats:
+
+    - id: CAVEAT-1
+      name: First Test ≠ Lifetime Guarantee
+      description: |
+        BLCA passed its first adversarial test, not its lifetime guarantee.
+
+        PROVEN:
+          - BLCA can model the current system
+          - BLCA can detect drift if it happens
+
+        NOT YET PROVEN:
+          - How BLCA behaves under rapid change
+          - How noisy BLCA gets under iteration
+          - Whether humans respect BLOCKED state under pressure
+
+        Do not treat Phase D completion as permission to relax BLCA discipline.
+
+    - id: CAVEAT-2
+      name: Narrow Claim
+      description: |
+        Phase D proves exactly this, nothing more:
+
+        "There is no hidden authority, no unaccounted transaction, and no semantic lie
+         between intent and effect across L1-L8."
+
+        This does NOT mean:
+          - The system is "perfect"
+          - No future bugs will occur
+          - No design decisions remain
+
+  # ---------------------------------------------------------------------------
+  # 1. Severity Classification
+  # ---------------------------------------------------------------------------
+  severity_classification:
+
+    blocking:
+      description: Work halts immediately. Cannot proceed until resolved.
+      findings:
+        - Frontend authority violations (F2)
+        - Unclassified transactions
+        - Authority leakage across layers
+        - Implemented endpoints not registered in BLCA
+      note: |
+        CORRECTED: "Implemented endpoints not registered" is BLOCKING, not WARN.
+        Unregistered endpoints are how shadow APIs are born.
+        "Later registration" thinking is how drift starts.
+
+        PROPOSING an endpoint without registry = allowed (must register first)
+        IMPLEMENTING an endpoint without registry = BLOCKING
+
+    warn:
+      description: Track, resolve within 48 hours. Work may continue on unrelated items.
+      findings:
+        - L3 translation creep
+        - New signals without full consumer mapping
+        - Partial documentation gaps affecting traceability
+
+    low:
+      description: Informational. Log but do not block.
+      findings:
+        - Naming inconsistencies
+        - Non-semantic documentation drift
+
+  # ---------------------------------------------------------------------------
+  # 2. Review & Acknowledgment
+  # ---------------------------------------------------------------------------
+  review_and_acknowledgment:
+
+    session_review:
+      rule: |
+        BLCA runs at session start and after qualifying changes.
+        Session initiator must explicitly acknowledge:
+          "BLCA reviewed for this session"
+      enforcement: |
+        This is a MECHANICAL acknowledgement, not trust.
+        "Review happened" is not the same as "review was implicit".
+        Missing acknowledgement = governance violation.
+
+    blocking_acknowledgment:
+      rule: |
+        BLOCKING findings must be acknowledged in the same session.
+        Cannot defer BLOCKING to next session.
+
+  # ---------------------------------------------------------------------------
+  # 3. Acknowledgment Cadence
+  # ---------------------------------------------------------------------------
+  acknowledgment_cadence:
+
+    weekly_acknowledgment:
+      rule: Weekly human acknowledgment required even if BLCA is CLEAN.
+      purpose: |
+        The purpose of periodic acknowledgment is not to find issues,
+        but to prevent false confidence from silent green status.
+
+        This prevents future "why are we doing this?" erosion.
+      enforcement: |
+        Missed acknowledgment = governance violation (non-blocking but logged).
+        Pattern of missed acknowledgments = escalation to playbook review.
+
+  # ---------------------------------------------------------------------------
+  # 4. Override Authority
+  # ---------------------------------------------------------------------------
+  override_authority:
+
+    no_unilateral_override:
+      rule: BLOCKING findings cannot be overridden unilaterally.
+
+    emergency_override:
+      requirements:
+        - Written justification
+        - PIN created documenting the override
+        - 24-hour remediation SLA
+        - Scope limited to minimum necessary
+      scope_limit: |
+        CRITICAL: Emergency override applies only to the minimal scope required.
+        All unrelated work remains blocked.
+
+        Without this, overrides become a backdoor.
+
+        Example:
+          - BLOCKING finding in module A
+          - Override granted for module A work only
+          - Work on modules B, C, D remains blocked until CLEAN
+
+  # ---------------------------------------------------------------------------
+  # 5. Safe Work (No Re-Audit Required)
+  # ---------------------------------------------------------------------------
+  safe_work:
+
+    definition: |
+      The following work may proceed without triggering a full phase re-audit:
+
+    allowed:
+      - L1 features using registered L2 APIs
+      - L2 endpoints registered BEFORE implementation
+      - Refactors with zero new transactions
+
+    key_phrase: |
+      "Refactors that do not introduce new transactions"
+      This line alone prevents 80% of accidental drift.
+
+  # ---------------------------------------------------------------------------
+  # 6. Audit-Triggering Work
+  # ---------------------------------------------------------------------------
+  audit_triggering_work:
+
+    definition: |
+      The following work requires a scoped phase audit before proceeding:
+
+    triggers:
+      - trigger: New transaction types
+        audit: Scoped Phase C
+      - trigger: New domain engines
+        audit: Scoped Phase A + B
+      - trigger: Frontend authority patterns
+        audit: Scoped Phase D
+
+    mini_phase_definition: |
+      "Mini phase" means:
+        - Same rules
+        - Same BLCA enforcement
+        - Smaller scope only
+
+      "Mini phase" does NOT mean:
+        - Lighter rules
+        - Relaxed enforcement
+        - "Good enough" verification
+
+      If someone treats "mini" as "easier", they have misunderstood.
+
+  # ---------------------------------------------------------------------------
+  # Baseline Reference
+  # ---------------------------------------------------------------------------
+  baseline:
+    tag: "Baseline: Truthful Architecture v1"
+    date: "2025-12-31"
+    scope: L1-L8 Full Stack
+    purpose: |
+      This is a REFERENCE POINT, not an aspiration.
+      All future BLCA audits compare against this baseline.
+      Drift is measured from here.
+
+# =============================================================================
+# SECTION 30: PHASE G STEADY-STATE GOVERNANCE (PERMANENT)
+# =============================================================================
+#
+# Date: 2025-12-31
+# Status: ACTIVE (Permanent)
+# Reference: PIN-258 (Phase F Closure), PIN-259 (Phase G Governance)
+#
+# Phase G is not a construction phase. It is a GOVERNANCE REGIME.
+# The architecture is complete. Phase G ensures it stays complete.
+#
+# =============================================================================
+
+phase_g_governance:
+
+  # ---------------------------------------------------------------------------
+  # Prime Directive
+  # ---------------------------------------------------------------------------
+  prime_directive: |
+    No code may be added, modified, or removed that causes BLCA to report violations.
+    This is not a guideline. This is a hard gate.
+
+  # ---------------------------------------------------------------------------
+  # G-RULE Summary (Hard Rules)
+  # ---------------------------------------------------------------------------
+  rules:
+    - rule_id: G-RULE-1
+      name: BLCA Supremacy
+      severity: ABSOLUTE
+      summary: BLCA is sole authority. Violations block merge.
+
+    - rule_id: G-RULE-2
+      name: Layer Contract Immutability
+      severity: HARD
+      summary: Seven-layer model is frozen. No additions, removals, or renames.
+
+    - rule_id: G-RULE-3
+      name: Import Direction Enforcement
+      severity: HARD
+      summary: Import directions are mechanically enforced. L2→L5 forbidden.
+
+    - rule_id: G-RULE-4
+      name: Adapter Discipline
+      severity: HARD
+      summary: L3 adapters are translation only. Zero logic, <200 LOC.
+
+    - rule_id: G-RULE-5
+      name: Command Discipline
+      severity: HARD
+      summary: L4 commands authorize and delegate. No execution logic.
+
+    - rule_id: G-RULE-6
+      name: Worker Isolation
+      severity: HARD
+      summary: L5 workers are blind executors. No decisions.
+
+    - rule_id: G-RULE-7
+      name: No Reclassification Escapes
+      severity: ABSOLUTE
+      summary: Reclassification is not a fix. Extraction is the fix.
+
+    - rule_id: G-RULE-8
+      name: Extraction-First Resolution
+      severity: HARD
+      summary: Layer violations fixed by extraction, not suppression.
+
+    - rule_id: G-RULE-9
+      name: Sequential Modification
+      severity: HARD
+      summary: One change at a time, BLCA between each.
+
+    - rule_id: G-RULE-10
+      name: Amendment Protocol
+      severity: CONSTITUTIONAL
+      summary: Rule changes require PIN + human ratification.
+
+  # ---------------------------------------------------------------------------
+  # Feature Development Guide
+  # ---------------------------------------------------------------------------
+  feature_development:
+    guide: docs/governance/HOW_TO_ADD_A_FEATURE.md
+    checklist: docs/governance/GOVERNANCE_CHECKLIST.md
+    golden_rule: "Build the authority path before you build the feature."
+    principle: |
+      Features do not start in code.
+      Features start as intent and must earn execution.
+    steps:
+      - Classify (transactional or not)
+      - Declare intent
+      - Create L4 command (decision authority)
+      - Create L3 adapter (translation only)
+      - Create L2 route (HTTP concerns only)
+      - Run BLCA (must be CLEAN)
+      - Governance recording
+      - Final attestation
+
+  # ---------------------------------------------------------------------------
+  # Governance Checklist Enforcement Rules
+  # ---------------------------------------------------------------------------
+  governance_checklist_rules:
+    - rule_id: GC-001
+      name: Checklist Required For All Features
+      enforcement: BLOCKING
+      description: |
+        Every session that introduces or modifies behavior MUST complete
+        the Governance Checklist. Missing sections block the session.
+
+    - rule_id: GC-002
+      name: Missing Sections Block Session
+      enforcement: BLOCKING
+      description: |
+        All 7 sections of the checklist must be completed.
+        Partial completion is not allowed.
+
+    - rule_id: GC-003
+      name: BLCA Not Clean Blocks Progress
+      enforcement: BLOCKING
+      description: |
+        BLCA status must be CLEAN before claiming completion.
+        Non-CLEAN status halts all work.
+
+    - rule_id: GC-004
+      name: Deferred Violations Forbidden
+      enforcement: BLOCKING
+      description: |
+        Discovery without resolution = BLOCKED SESSION.
+        Violations may not be documented away.
+
+    - rule_id: GC-005
+      name: Claude Must Surface Uncertainty
+      enforcement: BLOCKING
+      description: |
+        If Claude is unsure about layer placement, authority,
+        or classification, it must STOP and surface the uncertainty.
+        Silence, assumption, or implicit compliance is a violation.
+
+    - rule_id: GC-006
+      name: Change Classification Required First
+      enforcement: BLOCKING
+      description: |
+        change_classification section must be completed BEFORE any code.
+        If any field is true, full governance pipeline is required.
+
+    - rule_id: GC-007
+      name: Final Attestation Required
+      enforcement: BLOCKING
+      description: |
+        Session is NOT COMPLETE until attestation section shows
+        all values as true. Any false value blocks completion.
+
+  # ---------------------------------------------------------------------------
+  # Layer Compliance Enforcement
+  # ---------------------------------------------------------------------------
+  layer_compliance_enforcement:
+
+    L2_rules:
+      performs_decision_logic: false    # MUST be false
+      imports_L4_or_L5: false           # MUST be false
+      delegates_to_L3: true             # MUST be true
+      violation_response: BLOCKED
+
+    L3_rules:
+      contains_policy_or_thresholds: false   # MUST be false
+      performs_side_effects: false           # MUST be false
+      calls_single_L4_command: true          # MUST be true
+      violation_response: BLOCKED
+
+    L4_rules:
+      contains_all_decisions: true           # MUST be true
+      imports_only_L5_L6: true               # MUST be true
+      returns_domain_result: true            # MUST be true
+      violation_response: BLOCKED
+
+    L5_rules:
+      executes_only_L4_decisions: true       # MUST be true
+      recomputes_authority: false            # MUST be false
+      violation_response: BLOCKED
+
+  # ---------------------------------------------------------------------------
+  # Reference Documents
+  # ---------------------------------------------------------------------------
+  reference:
+    - docs/governance/PHASE_F_CLOSURE_DECLARATION.md
+    - docs/governance/PHASE_G_STEADY_STATE_GOVERNANCE.md
+    - docs/governance/EXECUTIVE_ARCHITECTURE_MAP.md
+    - docs/governance/HOW_TO_ADD_A_FEATURE.md
+    - docs/governance/GOVERNANCE_CHECKLIST.md
+    - docs/memory-pins/PIN-258-phase-f-application-boundary-completion.md
+    - docs/memory-pins/PIN-259-phase-f-closure-and-phase-g-steady-state-governance.md
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

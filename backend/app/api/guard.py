@@ -82,6 +82,9 @@ from app.services.replay_determinism import (
 # Guard Cache for latency optimization (EU server -> Singapore DB)
 from app.utils.guard_cache import get_guard_cache
 
+# Phase 2B: Write service for DB operations
+from app.services.guard_write_service import GuardWriteService
+
 # =============================================================================
 # Router - GA Lock: Customer-only access (tenant-scoped)
 # =============================================================================
@@ -429,37 +432,24 @@ async def activate_killswitch(
     # Verify tenant exists
     _tenant = get_tenant_from_auth(session, tenant_id)
 
-    # Get or create state
-    stmt = select(KillSwitchState).where(
-        and_(
-            KillSwitchState.entity_type == "tenant",
-            KillSwitchState.entity_id == tenant_id,
-        )
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    state, _ = guard_service.get_or_create_killswitch_state(
+        entity_type="tenant",
+        entity_id=tenant_id,
+        tenant_id=tenant_id,
     )
-    row = session.exec(stmt).first()
-    state = row[0] if row else None
-
-    if not state:
-        state = KillSwitchState(
-            id=str(uuid.uuid4()),
-            entity_type="tenant",
-            entity_id=tenant_id,
-            tenant_id=tenant_id,
-            is_frozen=False,
-        )
 
     if state.is_frozen:
         raise HTTPException(status_code=409, detail="Traffic is already stopped")
 
-    state.freeze(
+    guard_service.freeze_killswitch(
+        state=state,
         by="customer",
         reason="Manual kill switch activated via Customer Console",
         auto=False,
         trigger=TriggerType.MANUAL.value,
     )
-
-    session.add(state)
-    session.commit()
 
     # Invalidate cache on mutation
     cache = get_guard_cache()
@@ -478,21 +468,18 @@ async def deactivate_killswitch(
 
     Guardrails will continue protecting.
     """
-    stmt = select(KillSwitchState).where(
-        and_(
-            KillSwitchState.entity_type == "tenant",
-            KillSwitchState.entity_id == tenant_id,
-        )
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    state, _ = guard_service.get_or_create_killswitch_state(
+        entity_type="tenant",
+        entity_id=tenant_id,
+        tenant_id=tenant_id,
     )
-    row = session.exec(stmt).first()
-    state = row[0] if row else None
 
-    if not state or not state.is_frozen:
+    if not state.is_frozen:
         raise HTTPException(status_code=400, detail="Traffic is not stopped")
 
-    state.unfreeze(by="customer")
-    session.add(state)
-    session.commit()
+    guard_service.unfreeze_killswitch(state=state, by="customer")
 
     # Invalidate cache on mutation
     cache = get_guard_cache()
@@ -647,9 +634,9 @@ async def acknowledge_incident(
     if incident.status == IncidentStatus.RESOLVED.value:
         raise HTTPException(status_code=400, detail="Incident is already resolved")
 
-    incident.status = IncidentStatus.ACKNOWLEDGED.value
-    session.add(incident)
-    session.commit()
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    guard_service.acknowledge_incident(incident)
 
     return {"status": "acknowledged"}
 
@@ -667,13 +654,9 @@ async def resolve_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    incident.status = IncidentStatus.RESOLVED.value
-    incident.ended_at = utc_now()
-    if incident.started_at:
-        incident.duration_seconds = int((incident.ended_at - incident.started_at).total_seconds())
-
-    session.add(incident)
-    session.commit()
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    guard_service.resolve_incident(incident)
 
     return {"status": "resolved"}
 
@@ -1212,37 +1195,24 @@ async def freeze_api_key(
     if not key:
         raise HTTPException(status_code=404, detail="API key not found")
 
-    # Get or create state
-    stmt = select(KillSwitchState).where(
-        and_(
-            KillSwitchState.entity_type == "key",
-            KillSwitchState.entity_id == key_id,
-        )
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    state, _ = guard_service.get_or_create_killswitch_state(
+        entity_type="key",
+        entity_id=key_id,
+        tenant_id=key.tenant_id,
     )
-    state_row = session.exec(stmt).first()
-    state = state_row[0] if state_row else None
-
-    if not state:
-        state = KillSwitchState(
-            id=str(uuid.uuid4()),
-            entity_type="key",
-            entity_id=key_id,
-            tenant_id=key.tenant_id,
-            is_frozen=False,
-        )
 
     if state.is_frozen:
         raise HTTPException(status_code=409, detail="Key is already frozen")
 
-    state.freeze(
+    guard_service.freeze_killswitch(
+        state=state,
         by="customer",
         reason="Frozen via Customer Console",
         auto=False,
         trigger=TriggerType.MANUAL.value,
     )
-
-    session.add(state)
-    session.commit()
 
     return {"status": "frozen", "key_id": key_id}
 
@@ -1265,9 +1235,9 @@ async def unfreeze_api_key(
     if not state or not state.is_frozen:
         raise HTTPException(status_code=400, detail="Key is not frozen")
 
-    state.unfreeze(by="customer")
-    session.add(state)
-    session.commit()
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    guard_service.unfreeze_killswitch(state=state, by="customer")
 
     return {"status": "active", "key_id": key_id}
 
@@ -2234,44 +2204,25 @@ async def onboarding_verify(
             was_blocked = True
             blocked_by = "prompt_injection_block"
 
-            # Create a REAL incident
+            # Phase 2B: Use write service for DB operations
             incident_id = f"inc_verify_{uuid.uuid4().hex[:8]}"
-            incident = Incident(
-                id=incident_id,
+            guard_service = GuardWriteService(session)
+            guard_service.create_demo_incident(
+                incident_id=incident_id,
                 tenant_id=tenant_id,
                 title="🛡️ Safety Test: Guardrail Blocked Malicious Input",
-                severity=IncidentSeverity.HIGH.value,
-                status=IncidentStatus.RESOLVED.value,
                 trigger_type="policy_violation",
                 policy_id="prompt_injection_block",
+                auto_action="block",
+                events=[
+                    ("TRIGGERED", f"Prompt injection pattern detected: '{detected_pattern}'"),
+                    ("RESOLVED", "Onboarding verification test - guardrail working correctly"),
+                ],
+                severity=IncidentSeverity.HIGH.value,
                 calls_affected=1,
                 cost_delta_cents=Decimal("0"),
-                auto_action="block",
-                started_at=now,
-                resolved_at=now,
+                call_id=call_id,
             )
-            incident.add_related_call(call_id)
-            session.add(incident)
-
-            # Create timeline events
-            events = [
-                IncidentEvent(
-                    id=str(uuid.uuid4()),
-                    incident_id=incident_id,
-                    event_type="TRIGGERED",
-                    description=f"Prompt injection pattern detected: '{detected_pattern}'",
-                ),
-                IncidentEvent(
-                    id=str(uuid.uuid4()),
-                    incident_id=incident_id,
-                    event_type="RESOLVED",
-                    description="Onboarding verification test - guardrail working correctly",
-                ),
-            ]
-            for event in events:
-                session.add(event)
-
-            session.commit()
 
         elif not prompt_injection_enabled:
             # Guardrail is disabled - inform user
@@ -2289,40 +2240,23 @@ async def onboarding_verify(
         was_blocked = True
         blocked_by = "killswitch_demo"
 
-        incident = Incident(
-            id=incident_id,
+        # Phase 2B: Use write service for DB operations
+        guard_service = GuardWriteService(session)
+        guard_service.create_demo_incident(
+            incident_id=incident_id,
             tenant_id=tenant_id,
             title="🚨 Kill Switch Demo: Traffic Would Be Stopped",
-            severity=IncidentSeverity.HIGH.value,
-            status=IncidentStatus.RESOLVED.value,
             trigger_type="killswitch_demo",
             policy_id="killswitch",
+            auto_action="freeze",
+            events=[
+                ("TRIGGERED", "Kill switch activation demo - this is what you'd see if costs spiked"),
+                ("ACTION", "In a real scenario, all AI traffic would be stopped immediately"),
+            ],
+            severity=IncidentSeverity.HIGH.value,
             calls_affected=0,
             cost_delta_cents=Decimal("0"),
-            auto_action="freeze",
-            started_at=now,
-            resolved_at=now,
         )
-        session.add(incident)
-
-        events = [
-            IncidentEvent(
-                id=str(uuid.uuid4()),
-                incident_id=incident_id,
-                event_type="TRIGGERED",
-                description="Kill switch activation demo - this is what you'd see if costs spiked",
-            ),
-            IncidentEvent(
-                id=str(uuid.uuid4()),
-                incident_id=incident_id,
-                event_type="ACTION",
-                description="In a real scenario, all AI traffic would be stopped immediately",
-            ),
-        ]
-        for event in events:
-            session.add(event)
-
-        session.commit()
 
     # Send alert if configured and requested
     if request.trigger_alert and incident_id:

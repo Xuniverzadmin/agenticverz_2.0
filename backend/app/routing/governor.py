@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: CARE-L routing governor/throttling
+# Callers: API routes, workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M18 CARE-L
+
 # M18 Governor / Stabilization Layer
 # Prevents oscillation and overcorrection in the learning system
 #

@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide
+# Role: S4 failure truth model, fact persistence
+# Callers: L5 workers (on LLM failure)
+# Reference: PIN-242 (Baseline Freeze)
+
 """
 LLMFailureService - S4 Failure Truth Implementation
 

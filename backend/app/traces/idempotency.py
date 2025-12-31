@@ -1,3 +1,15 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: Trace idempotency enforcement (Redis + Lua scripts)
+# Authority: Idempotency state mutation (NEW/DUPLICATE/CONFLICT)
+# Callers: trace store, workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 2: Idempotent Trace Emission)
+
 """
 Redis Idempotency Store for AOS Traces
 

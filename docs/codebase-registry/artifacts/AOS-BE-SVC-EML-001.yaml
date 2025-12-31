@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-EML-001
+name: email_verification.py
+type: service
+status: active
+owner: backend
+purpose: OTP-based email verification (6-digit, 10-min TTL)
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: onboarding
+  subdomain: verification
+  order_depth: O2
+responsibility: |
+  - OTP-based email verification for customer onboarding
+  - 6-digit OTP generation
+  - 10-minute TTL (configurable via EMAIL_VERIFICATION_TTL)
+  - Max 3 OTP attempts
+  - 60-second cooldown between requests
+  - VerificationResult dataclass
+dependencies:
+  - httpx (for Resend.com API)
+  - redis
+notes: |
+  Location: backend/app/services/email_verification.py
+  Milestone: M24
+  Uses Resend.com API for sending emails

@@ -1,3 +1,13 @@
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Trace storage, indexing, query, and determinism validation
+# Authority: WRITE trace mismatch reports (via store abstraction)
+# Callers: External clients, SDK, Customer Console, Replay system
+# Reference: M8 Trace System
+
 """
 Trace Query API
 M8 Deliverable: Trace storage, indexing, and query endpoints

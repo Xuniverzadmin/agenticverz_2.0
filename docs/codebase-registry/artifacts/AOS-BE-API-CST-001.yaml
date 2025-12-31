@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-CST-001
+name: cost_intelligence.py
+type: api-route
+status: active
+owner: backend
+purpose: M26 Cost intelligence - tracking, attribution, projections, anomalies
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: overview
+  subdomain: cost
+  order_depth: O2
+responsibility: |
+  - POST/GET/PUT /features - Feature tag CRUD
+  - POST /records - Record cost entry
+  - GET /summary - Cost summary
+  - GET /by-feature|user|model - Cost breakdowns
+  - GET /projection - Cost projection
+  - GET /anomalies - Cost anomalies
+  - POST /budgets - Create/update budget
+  - GET /dashboard - Complete cost dashboard
+dependencies:
+  - SessionLocal
+  - Query parameter tenant_id

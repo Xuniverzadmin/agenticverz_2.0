@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any
+#   Execution: sync
+# Role: Deterministic execution utilities
+# Callers: runtime, workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Determinism
+
 # Deterministic Utilities for M11 Skills
 # Provides seeded randomness and backoff for replay-safe operations
 

@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any (import-time lazy, runtime on-demand)
+#   Execution: sync (connection pooled)
+# Role: Database connection, SQLModel definitions, session management
+# Callers: All services, API routes, workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Infrastructure
+
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -266,6 +277,30 @@ class Run(SQLModel, table=True):
     completed_at: Optional[datetime] = None
     next_attempt_at: Optional[datetime] = None
     duration_ms: Optional[float] = None
+
+    # Phase E FIX-02: Pre-computed authorization fields
+    # Authorization is computed at submission (L2 → L4) and read at execution (L5 → L6)
+    # This eliminates L5 → L4 import violation (VIOLATION-002, VIOLATION-003)
+    authorization_decision: Optional[str] = Field(
+        default="GRANTED",
+        description="Auth decision: GRANTED, DENIED, PENDING_APPROVAL",
+    )
+    authorization_engine: Optional[str] = Field(
+        default=None,
+        description="L4 engine that evaluated: rbac_engine, approvals_engine, etc.",
+    )
+    authorization_context: Optional[str] = Field(
+        default=None,
+        description="JSON: {roles, permissions, resource, action, decision_reason}",
+    )
+    authorized_at: Optional[datetime] = Field(
+        default=None,
+        description="When authorization decision was computed (submission time)",
+    )
+    authorized_by: Optional[str] = Field(
+        default=None,
+        description="Principal that authorized: user_id, api_key_id, system",
+    )
 
 
 class Provenance(SQLModel, table=True):

@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-PPL-001
+name: policy_proposal.py
+type: service
+status: active
+owner: backend
+purpose: PB-S4 policy proposals without auto-enforcement
+authority_level: advise
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: policies
+  subdomain: proposals
+  order_depth: O3
+responsibility: |
+  - Proposes policy changes based on observed feedback
+  - NO auto-enforcement
+  - NO execution modification
+  - Human approval is MANDATORY
+  - Proposal types: failure_pattern → retry_policy, cost_spike → cost_cap
+dependencies:
+  - app.models.feedback.PatternFeedback
+  - app.models.policy.PolicyProposal
+  - app.models.policy.PolicyApprovalRequest
+notes: |
+  Location: backend/app/services/policy_proposal.py
+  PB-S4 Contract: Observe feedback patterns → propose policy → wait for human
+  Rule: Propose → Review → Decide (Human)

@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: external
+#   Execution: async
+# Role: Clerk authentication provider adapter
+# Callers: auth services
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Auth Integration
+
 """
 Clerk Auth Provider for AOS
 
@@ -65,7 +76,11 @@ class ClerkAuthProvider:
     Handles:
     - User role lookup via Clerk API
     - JWT token verification
-    - Role-to-level mapping for RBAC
+    - Role-to-level mapping delegated to L4 RBACEngine
+
+    B03 FIX: Role-to-level mapping removed from L3.
+    Now delegates to L4 RBACEngine.get_max_approval_level().
+    Reference: PIN-254 Phase B Fix
     """
 
     def __init__(
@@ -79,23 +94,6 @@ class ClerkAuthProvider:
         self.jwks_url = jwks_url or f"{issuer_url}/.well-known/jwks.json"
         self._jwk_client: Optional[PyJWKClient] = None
         self._http_client: Optional[httpx.AsyncClient] = None
-
-        # Role to approval level mapping
-        self.role_levels = {
-            "owner": 5,
-            "admin": 5,
-            "manager": 4,
-            "policy_admin": 4,
-            "director": 4,
-            "team_lead": 3,
-            "senior_engineer": 3,
-            "tech_lead": 3,
-            "team_member": 2,
-            "engineer": 2,
-            "developer": 2,
-            "guest": 1,
-            "readonly": 1,
-        }
 
     @property
     def is_configured(self) -> bool:
@@ -227,17 +225,15 @@ class ClerkAuthProvider:
         return public_meta.get("tenant_id")
 
     def _roles_to_level(self, roles: List[str]) -> int:
-        """Convert roles to maximum approval level."""
-        if not roles:
-            return 1  # Default to guest level
+        """
+        Convert roles to maximum approval level.
 
-        max_level = 1
-        for role in roles:
-            role_lower = role.lower()
-            if role_lower in self.role_levels:
-                max_level = max(max_level, self.role_levels[role_lower])
+        B03 FIX: Delegates to L4 RBACEngine for domain authority.
+        L3 no longer contains role-to-level mapping logic.
+        """
+        from app.auth.rbac_engine import get_max_approval_level
 
-        return max_level
+        return get_max_approval_level(roles)
 
     async def get_user_roles(
         self,

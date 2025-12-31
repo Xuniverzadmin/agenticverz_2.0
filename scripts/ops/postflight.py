@@ -972,7 +972,10 @@ class PostflightChecker:
                 # something - datetime.now(timezone.utc) (may be naive)
                 (r"\w+\.\w+\s*-\s*datetime\.now\(timezone\.utc\)", "TZ002"),
                 # .total_seconds() * 1000 with started_at/created_at
-                (r"\(.*(?:started_at|created_at|updated_at).*\)\.total_seconds\(\)", "TZ003"),
+                (
+                    r"\(.*(?:started_at|created_at|updated_at).*\)\.total_seconds\(\)",
+                    "TZ003",
+                ),
             ]
 
             # Safe patterns - indicate proper handling
@@ -996,9 +999,7 @@ class PostflightChecker:
                         context_end = min(len(lines), line_num + 2)
                         context = "\n".join(lines[context_start:context_end])
 
-                        is_safe = any(
-                            re.search(sp, context) for sp in safe_patterns
-                        )
+                        is_safe = any(re.search(sp, context) for sp in safe_patterns)
 
                         if not is_safe:
                             issues.append(

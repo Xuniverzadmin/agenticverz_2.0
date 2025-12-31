@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Agent-to-agent invocation skill
+# Callers: agent runtime, workers
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Agent Skills
+
 # M12 Agent Invoke Skill
 # Invoke another agent and wait for response with correlation ID
 #

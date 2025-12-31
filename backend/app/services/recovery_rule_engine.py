@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide (NOT console-owned)
+# Callers: recovery_evaluator.py (worker)
+# Reference: PIN-240
+# WARNING: If this logic is wrong, ALL products break.
+
 # M10 Recovery Rule Engine
 """
 Rule-based evaluation engine for recovery suggestions.
@@ -565,6 +571,147 @@ class RecoveryRuleEngine:
 
 
 # =============================================================================
+# Domain Classification Functions (L4 Authority)
+# =============================================================================
+# These functions define domain rules for error classification and recovery.
+# They are the AUTHORITATIVE source for these decisions.
+# L5 workers must call these functions, not implement their own heuristics.
+# Reference: PIN-254 Phase A Fix (SHADOW-002, SHADOW-003)
+
+
+# =============================================================================
+# L4 Domain Decision Thresholds
+# =============================================================================
+# These thresholds are the AUTHORITATIVE source for recovery decisions.
+# L5 workers must call these functions, not implement their own thresholds.
+# Reference: PIN-257 Phase E-4 Extraction #3
+
+# Auto-execute confidence threshold (L4 domain rule)
+# This is the authoritative threshold for automatic recovery execution.
+# Reference: PIN-254 Phase A Fix (SHADOW-001)
+AUTO_EXECUTE_CONFIDENCE_THRESHOLD: float = 0.8
+
+# Action selection threshold (L4 domain rule)
+# This is the authoritative threshold for action selection.
+# Reference: PIN-257 Phase E-4 Extraction #3
+ACTION_SELECTION_THRESHOLD: float = 0.3
+
+
+def combine_confidences(rule_confidence: float, match_confidence: float) -> float:
+    """
+    Combine rule and matcher confidence scores.
+
+    This is an L4 domain decision. L5 workers must NOT implement their own formulas.
+
+    Args:
+        rule_confidence: Confidence from rule evaluation (0.0 to 1.0)
+        match_confidence: Confidence from pattern matching (0.0 to 1.0)
+
+    Returns:
+        Combined confidence score (0.0 to 1.0)
+
+    Reference: PIN-257 Phase E-4 Extraction #3
+    """
+    return (rule_confidence + match_confidence) / 2
+
+
+def should_select_action(combined_confidence: float) -> bool:
+    """
+    Determine if an action should be selected based on combined confidence.
+
+    This is an L4 domain decision. L5 workers must NOT hardcode thresholds.
+
+    Args:
+        combined_confidence: Combined confidence score (0.0 to 1.0)
+
+    Returns:
+        True if confidence meets threshold for action selection
+
+    Reference: PIN-257 Phase E-4 Extraction #3
+    """
+    return combined_confidence >= ACTION_SELECTION_THRESHOLD
+
+
+def should_auto_execute(confidence: float) -> bool:
+    """
+    Determine if a recovery action should be auto-executed based on confidence.
+
+    This is an L4 domain decision. L5 workers must NOT hardcode thresholds.
+
+    Args:
+        confidence: Combined confidence score (0.0 to 1.0)
+
+    Returns:
+        True if confidence meets threshold for auto-execution
+    """
+    return confidence >= AUTO_EXECUTE_CONFIDENCE_THRESHOLD
+
+
+# Error Category Classification (L4 domain rule)
+# These keywords define the authoritative category classification rules.
+ERROR_CATEGORY_RULES: Dict[str, List[str]] = {
+    "TRANSIENT": ["timeout", "network", "connection", "dns", "unavailable", "503"],
+    "PERMISSION": ["permission", "auth", "forbidden", "401", "403"],
+    "RESOURCE": ["budget", "quota", "rate", "limit", "429"],
+    "VALIDATION": ["validation", "schema", "invalid", "parse"],
+    "INFRASTRUCTURE": ["db", "database", "sql", "postgres", "redis"],
+    "PLANNER": ["llm", "claude", "openai", "anthropic", "model"],
+}
+
+
+def classify_error_category(error_codes: List[str]) -> str:
+    """
+    Classify error codes into a category.
+
+    This is an L4 domain decision. L5 workers must NOT implement their own heuristics.
+
+    Args:
+        error_codes: List of error codes to classify
+
+    Returns:
+        Category string (TRANSIENT, PERMISSION, RESOURCE, VALIDATION, INFRASTRUCTURE, PLANNER, PERMANENT)
+    """
+    codes_str = " ".join(error_codes).lower()
+
+    for category, keywords in ERROR_CATEGORY_RULES.items():
+        if any(k in codes_str for k in keywords):
+            return category
+
+    return "PERMANENT"
+
+
+# Recovery Mode Suggestion (L4 domain rule)
+# These keywords define the authoritative recovery mode selection rules.
+RECOVERY_MODE_RULES: Dict[str, List[str]] = {
+    "RETRY_EXPONENTIAL": ["timeout", "network", "unavailable", "503"],
+    "RETRY_WITH_JITTER": ["rate", "429", "quota"],
+    "ESCALATE": ["permission", "auth", "forbidden", "401", "403"],
+    "ABORT": ["validation", "invalid", "schema", "parse"],
+}
+
+
+def suggest_recovery_mode(error_codes: List[str]) -> str:
+    """
+    Suggest a recovery mode based on error codes.
+
+    This is an L4 domain decision. L5 workers must NOT implement their own heuristics.
+
+    Args:
+        error_codes: List of error codes to analyze
+
+    Returns:
+        Recovery mode string (RETRY_EXPONENTIAL, RETRY_WITH_JITTER, ESCALATE, ABORT)
+    """
+    codes_str = " ".join(error_codes).lower()
+
+    for mode, keywords in RECOVERY_MODE_RULES.items():
+        if any(k in codes_str for k in keywords):
+            return mode
+
+    return "ABORT"
+
+
+# =============================================================================
 # Convenience Function
 # =============================================================================
 
@@ -628,4 +775,15 @@ __all__ = [
     "RecoveryRuleEngine",
     "evaluate_rules",
     "DEFAULT_RULES",
+    # L4 Domain Classification Functions (PIN-254 Phase A)
+    "AUTO_EXECUTE_CONFIDENCE_THRESHOLD",
+    "should_auto_execute",
+    "ERROR_CATEGORY_RULES",
+    "classify_error_category",
+    "RECOVERY_MODE_RULES",
+    "suggest_recovery_mode",
+    # L4 Domain Decision Functions (PIN-257 Phase E-4 Extraction #3)
+    "ACTION_SELECTION_THRESHOLD",
+    "combine_confidences",
+    "should_select_action",
 ]

@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-FND-001
+name: founder_actions.py
+type: api-route
+status: active
+owner: backend
+purpose: Founder action paths - tenant/key freeze, throttle, override
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: policies
+  subdomain: actions
+  order_depth: O4
+responsibility: |
+  - POST /freeze-tenant - Freeze all API calls (REACT tier)
+  - POST /throttle-tenant - Reduce rate limit to 10%
+  - POST /freeze-api-key - Revoke API key
+  - POST /override-incident - Mark as false positive
+  - POST /unfreeze-tenant - Restore access
+  - POST /unthrottle-tenant - Restore rate limit
+  - POST /unfreeze-api-key - Restore key
+  - GET / - Audit trail
+dependencies:
+  - FounderToken
+  - verify_fops_token (aud=fops, mfa=true)
+  - Rate limiting
+  - Audit logging

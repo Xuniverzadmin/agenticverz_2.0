@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide (NOT console-owned)
+# Callers: tests, future background job
+# Reference: PIN-240
+# WARNING: If this logic is wrong, ALL products break.
+
 """
 M29 Cost Anomaly Detector - Aligned Rules
 

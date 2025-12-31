@@ -1,15 +1,30 @@
 # CostSim V2 Adapter (M6)
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: Cost simulation adapter (translation only)
+# Callers: simulation endpoints, workflow engine
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: PIN-254 Phase B Fix
 """
 CostSim V2 Adapter - Enhanced simulation with confidence scoring.
 
+B02 FIX: Cost modeling logic moved to L4 CostModelEngine.
+This adapter now delegates domain decisions to L4:
+- Step cost estimation → L4 estimate_step_cost()
+- Feasibility checks → L4 check_feasibility()
+- Drift classification → L4 classify_drift()
+
+L3 responsibility: shape, transport, provenance, context binding.
+
 This adapter wraps V1 CostSimulator and adds:
-1. Confidence scoring (0.0 - 1.0)
-2. V2-specific model calculations
+1. Confidence scoring (delegated to L4)
+2. V2-specific model calculations (delegated to L4)
 3. Provenance logging integration
 4. Comparison with V1 results
-
-The V2 model uses historical data and machine learning coefficients
-to provide more accurate estimates than V1's static lookup.
 """
 
 from __future__ import annotations
@@ -32,82 +47,8 @@ from app.worker.simulate import CostSimulator, SimulationResult
 logger = logging.getLogger("nova.costsim.v2_adapter")
 
 
-# V2 Model coefficients (learned from historical data)
-# These would be updated via canary runs and ML pipelines
-V2_MODEL_COEFFICIENTS: Dict[str, Dict[str, float]] = {
-    "http_call": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 350.0,
-        "latency_variance_ms": 150.0,
-        "confidence_base": 0.85,
-        "timeout_risk_factor": 0.08,
-    },
-    "llm_invoke": {
-        "base_cost_cents": 3.5,
-        "cost_per_1k_input_chars": 0.8,
-        "cost_per_1k_output_chars": 1.2,
-        "latency_base_ms": 1800.0,
-        "latency_per_1k_chars_ms": 200.0,
-        "confidence_base": 0.92,
-        "rate_limit_risk_factor": 0.03,
-    },
-    "json_transform": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 5.0,
-        "confidence_base": 0.98,
-        "error_risk_factor": 0.005,
-    },
-    "fs_read": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 30.0,
-        "confidence_base": 0.95,
-        "not_found_risk_factor": 0.03,
-    },
-    "fs_write": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 50.0,
-        "confidence_base": 0.94,
-        "permission_risk_factor": 0.02,
-    },
-    "shell_lite": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 150.0,
-        "confidence_base": 0.88,
-        "timeout_risk_factor": 0.07,
-    },
-    "kv_get": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 3.0,
-        "confidence_base": 0.97,
-        "miss_risk_factor": 0.01,
-    },
-    "kv_set": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 5.0,
-        "confidence_base": 0.97,
-        "quota_risk_factor": 0.01,
-    },
-    "webhook_send": {
-        "base_cost_cents": 0.0,
-        "latency_base_ms": 200.0,
-        "confidence_base": 0.90,
-        "timeout_risk_factor": 0.08,
-    },
-    "email_send": {
-        "base_cost_cents": 0.8,
-        "latency_base_ms": 350.0,
-        "confidence_base": 0.93,
-        "delivery_risk_factor": 0.03,
-    },
-}
-
-# Default for unknown skills
-V2_UNKNOWN_SKILL = {
-    "base_cost_cents": 5.0,
-    "latency_base_ms": 500.0,
-    "confidence_base": 0.70,
-    "unknown_risk_factor": 0.15,
-}
+# B02 FIX: Cost model coefficients moved to L4 CostModelEngine
+# See: app/services/cost_model_engine.py for SKILL_COST_COEFFICIENTS
 
 
 @dataclass
@@ -160,7 +101,8 @@ class CostSimV2Adapter:
 
         self.budget_cents = budget_cents
         self.allowed_skills = set(allowed_skills) if allowed_skills else None
-        self.coefficients = {**V2_MODEL_COEFFICIENTS, **(model_coefficients or {})}
+        # B02 FIX: model_coefficients parameter kept for API compatibility but ignored.
+        # Coefficients are now managed by L4 CostModelEngine.
         self.risk_threshold = risk_threshold
         self.enable_provenance = enable_provenance and config.provenance_enabled
         self.tenant_id = tenant_id
@@ -178,97 +120,38 @@ class CostSimV2Adapter:
         self._adapter_version = config.adapter_version
 
     def _get_coefficients(self, skill_id: str) -> Dict[str, float]:
-        """Get V2 model coefficients for a skill."""
-        return self.coefficients.get(skill_id, V2_UNKNOWN_SKILL)
+        """
+        Get V2 model coefficients for a skill.
+
+        B02 FIX: Delegates to L4 CostModelEngine.
+        """
+        from app.services.cost_model_engine import get_skill_coefficients
+
+        return get_skill_coefficients(skill_id)
 
     def _estimate_step_v2(self, step_index: int, step: Dict[str, Any]) -> V2StepEstimate:
         """
         Estimate cost and latency using V2 model.
 
-        V2 uses learned coefficients and considers more factors
-        than V1's static lookup.
+        B02 FIX: Delegates to L4 CostModelEngine.estimate_step_cost().
+        L3 no longer contains estimation logic.
         """
+        from app.services.cost_model_engine import estimate_step_cost
+
         skill_id = step.get("skill", "unknown")
         params = step.get("params", {})
-        coef = self._get_coefficients(skill_id)
 
-        # Base estimates
-        cost_cents = coef.get("base_cost_cents", 0.0)
-        latency_ms = coef.get("latency_base_ms", 500.0)
-        confidence = coef.get("confidence_base", 0.70)
-        risk_factors = {}
+        # Delegate to L4 for domain logic
+        l4_estimate = estimate_step_cost(step_index, skill_id, params)
 
-        # Skill-specific adjustments
-        if skill_id == "llm_invoke":
-            # Estimate based on prompt/output length
-            prompt = str(params.get("prompt", ""))
-            prompt_len = len(prompt)
-            estimated_output_len = min(prompt_len * 2, 4000)  # Heuristic
-
-            cost_cents += (prompt_len / 1000) * coef.get("cost_per_1k_input_chars", 0.8)
-            cost_cents += (estimated_output_len / 1000) * coef.get("cost_per_1k_output_chars", 1.2)
-            latency_ms += (prompt_len / 1000) * coef.get("latency_per_1k_chars_ms", 200.0)
-
-            risk_factors["rate_limit"] = coef.get("rate_limit_risk_factor", 0.03)
-
-            # Model confidence decreases with longer prompts
-            if prompt_len > 2000:
-                confidence *= 0.95
-            if prompt_len > 4000:
-                confidence *= 0.90
-
-        elif skill_id == "http_call":
-            # Adjust for timeout parameter
-            timeout = params.get("timeout", 30)
-            latency_ms = min(latency_ms + coef.get("latency_variance_ms", 150), timeout * 1000)
-            risk_factors["timeout"] = coef.get("timeout_risk_factor", 0.08)
-
-            # External URLs have higher risk
-            url = params.get("url", "")
-            if not url.startswith(("http://localhost", "http://127.0.0.1")):
-                risk_factors["timeout"] *= 1.5
-                confidence *= 0.95
-
-        elif skill_id == "json_transform":
-            # Simple and fast
-            risk_factors["transform_error"] = coef.get("error_risk_factor", 0.005)
-
-        elif skill_id in ("fs_read", "fs_write"):
-            # File operations
-            risk_key = "not_found_risk_factor" if skill_id == "fs_read" else "permission_risk_factor"
-            risk_factors[skill_id.split("_")[1]] = coef.get(risk_key, 0.03)
-
-        elif skill_id == "shell_lite":
-            # Shell commands have variable latency
-            risk_factors["timeout"] = coef.get("timeout_risk_factor", 0.07)
-            # Longer commands have more risk
-            cmd = str(params.get("command", ""))
-            if len(cmd) > 100:
-                risk_factors["timeout"] *= 1.2
-                confidence *= 0.95
-
-        elif skill_id in ("kv_get", "kv_set"):
-            risk_key = "miss_risk_factor" if skill_id == "kv_get" else "quota_risk_factor"
-            risk_factors[skill_id.split("_")[1]] = coef.get(risk_key, 0.01)
-
-        elif skill_id == "webhook_send":
-            risk_factors["timeout"] = coef.get("timeout_risk_factor", 0.08)
-
-        elif skill_id == "email_send":
-            risk_factors["delivery"] = coef.get("delivery_risk_factor", 0.03)
-
-        else:
-            # Unknown skill
-            risk_factors["unknown"] = coef.get("unknown_risk_factor", 0.15)
-            confidence = 0.60  # Low confidence for unknown skills
-
+        # Convert L4 output to adapter output format
         return V2StepEstimate(
-            step_index=step_index,
-            skill_id=skill_id,
-            cost_cents=cost_cents,
-            latency_ms=latency_ms,
-            confidence=confidence,
-            risk_factors=risk_factors,
+            step_index=l4_estimate.step_index,
+            skill_id=l4_estimate.skill_id,
+            cost_cents=l4_estimate.cost_cents,
+            latency_ms=l4_estimate.latency_ms,
+            confidence=l4_estimate.confidence,
+            risk_factors=l4_estimate.risk_factors,
         )
 
     async def simulate(self, plan: List[Dict[str, Any]]) -> V2SimulationResult:
@@ -440,50 +323,47 @@ class CostSimV2Adapter:
         return v2_result, comparison
 
     def _compare_results(self, v1: SimulationResult, v2: V2SimulationResult) -> ComparisonResult:
-        """Compare V1 and V2 simulation results."""
-        config = get_config()
+        """
+        Compare V1 and V2 simulation results.
 
-        # Calculate deltas
-        cost_delta = v2.estimated_cost_cents - v1.estimated_cost_cents
-        cost_delta_pct = abs(cost_delta) / max(v1.estimated_cost_cents, 1) if v1.estimated_cost_cents > 0 else 0.0
+        B02 FIX: Delegates drift classification to L4 CostModelEngine.
+        L3 only handles shape/transport, not classification thresholds.
+        """
+        from app.services.cost_model_engine import classify_drift
 
+        # Delegate drift classification to L4
+        drift_analysis = classify_drift(
+            v1_cost_cents=v1.estimated_cost_cents,
+            v2_cost_cents=v2.estimated_cost_cents,
+            v1_feasible=v1.feasible,
+            v2_feasible=v2.feasible,
+        )
+
+        # Map L4 verdict to L3 ComparisonVerdict
+        verdict_map = {
+            "MATCH": ComparisonVerdict.MATCH,
+            "MINOR_DRIFT": ComparisonVerdict.MINOR_DRIFT,
+            "MAJOR_DRIFT": ComparisonVerdict.MAJOR_DRIFT,
+            "MISMATCH": ComparisonVerdict.MISMATCH,
+        }
+        verdict = verdict_map.get(drift_analysis.verdict.value, ComparisonVerdict.MISMATCH)
+
+        # Calculate duration delta (L3 shape responsibility - not a policy decision)
         duration_delta = v2.estimated_duration_ms - v1.estimated_duration_ms
-
-        feasibility_match = v1.feasible == v2.feasible
-
-        # Calculate drift score
-        # Weighted combination of cost drift and feasibility mismatch
-        cost_weight = 0.6
-        feasibility_weight = 0.4
-
-        normalized_cost_drift = min(cost_delta_pct, 1.0)
-        feasibility_drift = 0.0 if feasibility_match else 1.0
-
-        drift_score = (cost_weight * normalized_cost_drift) + (feasibility_weight * feasibility_drift)
-
-        # Determine verdict
-        if drift_score <= 0.05:
-            verdict = ComparisonVerdict.MATCH
-        elif drift_score <= config.drift_warning_threshold:
-            verdict = ComparisonVerdict.MINOR_DRIFT
-        elif drift_score <= config.drift_threshold:
-            verdict = ComparisonVerdict.MAJOR_DRIFT
-        else:
-            verdict = ComparisonVerdict.MISMATCH
 
         return ComparisonResult(
             verdict=verdict,
             v1_cost_cents=v1.estimated_cost_cents,
             v2_cost_cents=v2.estimated_cost_cents,
-            cost_delta_cents=cost_delta,
-            cost_delta_pct=round(cost_delta_pct, 4),
+            cost_delta_cents=drift_analysis.details.get("cost_delta_cents", 0),
+            cost_delta_pct=drift_analysis.cost_delta_pct,
             v1_duration_ms=v1.estimated_duration_ms,
             v2_duration_ms=v2.estimated_duration_ms,
             duration_delta_ms=duration_delta,
             v1_feasible=v1.feasible,
             v2_feasible=v2.feasible,
-            feasibility_match=feasibility_match,
-            drift_score=round(drift_score, 4),
+            feasibility_match=drift_analysis.feasibility_match,
+            drift_score=drift_analysis.drift_score,
             details={
                 "v1_status": v1.status.value,
                 "v2_status": v2.status.value,

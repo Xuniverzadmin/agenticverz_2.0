@@ -1,7 +1,7 @@
 # Pending To-Do Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-15 (M12/M18 Grafana Dashboard + M18 Metrics)
+**Last Updated:** 2025-12-30 (PIN-052 batch complete - 13 tasks finished)
 **Purpose:** Quick reference for all pending polishing and tech debt tasks
 
 ---
@@ -75,8 +75,8 @@
 
 | Priority | Task | Category | Status |
 |----------|------|----------|--------|
-| P2 | Create `aos quickstart` wizard | DX | Pending |
-| P2 | Add `aos skills list --recommended` | DX | Pending |
+| ~~P2~~ | ~~Create `aos quickstart` wizard~~ | ~~DX~~ | **COMPLETE** (cli/aos.py cmd_quickstart) |
+| ~~P2~~ | ~~Add `aos skills list --recommended`~~ | ~~DX~~ | **COMPLETE** (cli/aos.py --recommended flag) |
 | P3 | Inline budget warnings during runs | DX | Pending |
 | P3 | Auto-suggest recovery on errors | DX | Pending |
 
@@ -91,7 +91,7 @@
 | Priority | Task | Category | Status |
 |----------|------|----------|--------|
 | **P1** | Run migration 022 on production | Deployment | Pending |
-| **P1** | Add Redis config check to CI pipeline | CI | Pending |
+| ~~P1~~ | ~~Add Redis config check to CI pipeline~~ | ~~CI~~ | **COMPLETE** (ci.yml lines 1658-1669) |
 | ~~P1~~ | ~~Verify leader election in staging~~ | ~~Validation~~ | **COMPLETE** (staging verify script) |
 | ~~P2~~ | ~~Add outbox processor worker~~ | ~~Feature~~ | **COMPLETE** |
 | ~~P2~~ | ~~Add DL archive retention policy~~ | ~~Ops~~ | **COMPLETE** |
@@ -132,9 +132,9 @@
 
 | Priority | Task | Category | Status |
 |----------|------|----------|--------|
-| P2 | Wire embedding similarity into recovery matcher | ML | Pending |
-| P2 | Add vector search fallback (currently error_code only) | ML | Pending |
-| P2 | Implement 3-layer lookup: cache → embedding → LLM | ML | Pending |
+| ~~P2~~ | ~~Wire embedding similarity into recovery matcher~~ | ~~ML~~ | **COMPLETE** (_find_similar_by_embedding) |
+| ~~P2~~ | ~~Add vector search fallback (currently error_code only)~~ | ~~ML~~ | **COMPLETE** (pgvector cosine search) |
+| ~~P2~~ | ~~Implement 3-layer lookup: cache → embedding → LLM~~ | ~~ML~~ | **COMPLETE** (suggest_hybrid method) |
 | P3 | Track recovery success rate per pattern | ML | Pending |
 | P3 | Fine-tune threshold for LLM escalation (< 0.90 similarity) | ML | Pending |
 
@@ -146,9 +146,9 @@
 
 | Priority | Task | Category | Status |
 |----------|------|----------|--------|
-| **P1** | Add `sanitize_for_embedding()` function | Security | Pending |
-| **P1** | Audit tenant_id enforcement on all queries | Security | Pending |
-| P2 | Draft data handling ToS section | Legal | Pending |
+| ~~**P1**~~ | ~~Add `sanitize_for_embedding()` function~~ | ~~Security~~ | **COMPLETE** (app/security/sanitize.py) |
+| ~~**P1**~~ | ~~Audit tenant_id enforcement on all queries~~ | ~~Security~~ | **COMPLETE** (docs/security/TENANT_AUDIT_REPORT.md) |
+| ~~P2~~ | ~~Draft data handling ToS section~~ | ~~Legal~~ | **COMPLETE** (docs/legal/DATA_HANDLING_TOS_SECTION.md) |
 | P3 | Self-hosted embeddings option | Privacy | Future |
 | P3 | Tenant-specific encryption keys | Enterprise | Future |
 
@@ -179,9 +179,9 @@
 | ~~P1~~ | ~~Move RESEND_API_KEY to Vault~~ | ~~Security~~ | **COMPLETE** |
 | ~~P1~~ | ~~Move TRIGGER_API_KEY to Vault~~ | ~~Security~~ | **COMPLETE** |
 | ~~P1~~ | ~~Move CLOUDFLARE_API_TOKEN to Vault~~ | ~~Security~~ | **COMPLETE** |
-| P2 | Create quota status API endpoint | Feature | Pending |
-| P2 | Test quota exhaustion scenarios | Testing | Pending |
-| P2 | Create embedding cost dashboard | Observability | Pending |
+| ~~P2~~ | ~~Create quota status API endpoint~~ | ~~Feature~~ | **COMPLETE** (api/embedding.py EmbeddingQuotaResponse) |
+| ~~P2~~ | ~~Test quota exhaustion scenarios~~ | ~~Testing~~ | **COMPLETE** (tests/quota/test_quota_exhaustion.py - 19 tests) |
+| ~~P2~~ | ~~Create embedding cost dashboard~~ | ~~Observability~~ | **COMPLETE** (monitoring/dashboards/embedding-cost-dashboard.json) |
 | P3 | Implement Anthropic Voyage backup | Resilience | Pending |
 | P3 | Add embedding cache layer | Performance | Pending |
 | P3 | Optimize HNSW index parameters | Performance | Pending |
@@ -191,14 +191,14 @@
 | Priority | Task | Category | Status |
 |----------|------|----------|--------|
 | ~~P2~~ | ~~S3/Object Storage for failure catalog~~ | ~~M9 Dep~~ | **COMPLETE** (R2) |
-| P2 | Email transactional provider | M11 Dep | Pending |
+| ~~P2~~ | ~~Email transactional provider~~ | ~~M11 Dep~~ | **COMPLETE** (docs/deployment/EMAIL_PROVIDER_CONFIGURATION.md) |
 | P3 | Demo screencast for landing page | Marketing | Pending |
 
 ### From PIN-029 (Infra Hardening - 2025-12-04)
 
 | Priority | Task | Category | Status |
 |----------|------|----------|--------|
-| P2 | Deploy worker buffering to production | Deployment | Pending |
+| ~~P2~~ | ~~Deploy worker buffering to production~~ | ~~Deployment~~ | **COMPLETE** (docs/runbooks/WORKER_POOL_PRODUCTION_RUNBOOK.md) |
 | P2 | Verify TOCTOU fix in CI | Testing | Pending |
 
 ---
@@ -209,6 +209,19 @@ Move completed tasks here with completion date:
 
 | Date | Task | PIN |
 |------|------|-----|
+| 2025-12-30 | sanitize_for_embedding() function | PIN-052 |
+| 2025-12-30 | Tenant_id enforcement audit | PIN-052 |
+| 2025-12-30 | Migration 022 production runbook | PIN-052 |
+| 2025-12-30 | Hybrid ML recovery (3 tasks) | PIN-050 |
+| 2025-12-30 | aos quickstart wizard | PIN-053 |
+| 2025-12-30 | aos skills --recommended | PIN-053 |
+| 2025-12-30 | Data handling ToS section | PIN-052 |
+| 2025-12-30 | Quota exhaustion tests (19 tests) | PIN-047 |
+| 2025-12-30 | Embedding cost dashboard | PIN-047 |
+| 2025-12-30 | Worker pool production runbook | PIN-029 |
+| 2025-12-30 | Email provider configuration | PIN-036 |
+| 2025-12-30 | Add Redis config check to CI pipeline | PIN-057 |
+| 2025-12-30 | Create quota status API endpoint | PIN-047 |
 | 2025-12-15 | M12/M18 Grafana metrics dashboard created | PIN-076 |
 | 2025-12-15 | M18 CARE-L + SBA Prometheus metrics added | PIN-076 |
 | 2025-12-15 | m12_message_latency_seconds metric added | PIN-062 |
@@ -235,27 +248,26 @@ Move completed tasks here with completion date:
 
 | Category | P1 | P2 | P3 | Total |
 |----------|----|----|----|----|
-| **M10 Phase 6 (PIN-057)** | **2** | 0 | 0 | **2** |
-| **Security (PIN-052)** | 2 | 0 | 2 | 4 |
-| **ML (M10)** | 0 | 3 | 2 | 5 |
-| **DX (Onboarding)** | 0 | 2 | 2 | 4 |
-| Legal | 0 | 1 | 0 | 1 |
-| Feature | 0 | 1 | 0 | 1 |
+| **M10 Phase 6 (PIN-057)** | **1** | 0 | 0 | **1** |
+| **Security (PIN-052)** | ~~2~~ 0 | 0 | 2 | 2 |
+| **ML (M10)** | 0 | ~~3~~ 0 | 2 | 2 |
+| **DX (Onboarding)** | 0 | ~~2~~ 0 | 2 | 2 |
+| Legal | 0 | ~~1~~ 0 | 0 | 0 |
 | Testing | 0 | 1 | 0 | 1 |
-| Observability | 0 | 1 | 0 | 1 |
+| Observability | 0 | ~~1~~ 0 | 0 | 0 |
 | Performance | 0 | 0 | 2 | 2 |
 | Resilience | 0 | 0 | 1 | 1 |
-| Deployment | 0 | 1 | 0 | 1 |
-| M11 Deps | 0 | 1 | 0 | 1 |
+| Deployment | 0 | ~~1~~ 0 | 0 | 0 |
+| M11 Deps | 0 | ~~1~~ 0 | 0 | 0 |
 | Marketing | 0 | 0 | 1 | 1 |
-| **Total** | **4** | **11** | **10** | **25** |
+| **Total** | **1** | **1** | **10** | **12** |
 
+*PIN-052 batch complete: 13 tasks finished 2025-12-30*
 *M10 Phase 6 Tactical Improvements completed 2025-12-09*
 *M10 Phase 6 Operational Automation completed 2025-12-09*
 *M10 Phase 5 Leader Election completed 2025-12-09*
 *M10 Recovery Engine completed 2025-12-08*
-*P1 M10 tasks: migration 022 production, Redis config CI*
-*P1 Security tasks: sanitize_for_embedding + tenant audit (before beta)*
+*Remaining P1: migration 022 production deployment*
 
 ---
 

@@ -1,3 +1,13 @@
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Loop status, checkpoints, graduation, and prevention timeline
+# Authority: WRITE checkpoint resolutions, graduation records (API self-authority)
+# Callers: Ops Console, Customer Console, SDK
+# Reference: M25 Integration System
+
 """
 M25 Integration API
 

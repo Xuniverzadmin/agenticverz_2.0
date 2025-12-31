@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler
+#   Execution: async
+# Role: Storage maintenance jobs
+# Callers: scheduler
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: Storage System
+
 """
 R2 Object Storage Helper for Failure Pattern Aggregation
 

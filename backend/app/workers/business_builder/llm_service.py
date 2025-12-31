@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: product-builder
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: LLM service adapter for business builder
+# Callers: business_builder stages
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Business Builder
+
 # Worker LLM Service
 """
 LLM Service for Business Builder Worker v0.3

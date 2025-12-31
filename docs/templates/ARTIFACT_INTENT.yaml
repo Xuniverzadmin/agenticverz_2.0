@@ -1,0 +1,145 @@
+# ARTIFACT_INTENT.yaml
+# Required pre-build declaration for any new file or modification
+# Reference: PIN-245 (Integration Integrity System), PIN-240 (Seven-Layer Model)
+#
+# USAGE:
+# 1. Copy this template
+# 2. Fill out ALL sections
+# 3. Review with Claude before implementation
+# 4. If any section is unclear → STOP AND ASK
+#
+# RULE: No code may be created, modified, or reasoned about
+#       unless Layer, Temporal role, and Ownership are explicitly declared.
+
+# ============================================
+# ARTIFACT IDENTIFICATION
+# ============================================
+
+artifact_id: ""  # e.g., AOS-BE-SVC-XYZ-001 (from registry)
+file_path: ""    # Relative to repo root
+
+# ============================================
+# ARTIFACT CLASS (PIN-248)
+# ============================================
+# Every file must be classified. UNKNOWN is never acceptable.
+#
+# Executable:
+#   CODE  — Executable code with imports (.py, .ts, .js, .sh, .sql)
+#   TEST  — Test files (executable but categorized separately)
+#
+# Non-Executable:
+#   DATA   — Static data files (.json in /data/, fixtures)
+#   STYLE  — Stylesheets (.css, .scss)
+#   CONFIG — Configuration files (.yaml, .ini, .toml)
+#   DOC    — Documentation (.md, .txt, .rst)
+
+artifact_class:
+  class: ""  # CODE | TEST | DATA | STYLE | CONFIG | DOC
+  executable: true  # true for CODE/TEST, false for DATA/STYLE/CONFIG/DOC
+  requires_header: true  # false for non-executable artifacts
+
+# ============================================
+# LAYER CLASSIFICATION (PIN-240)
+# ============================================
+# L1 — Product Experience (UI)
+# L2 — Product APIs (Console / Public)
+# L3 — Boundary Adapters (Translation)
+# L4 — Domain Engines (Truth & Rules)
+# L5 — Execution & Workers
+# L6 — Platform Substrate
+# L7 — Ops & Deployment
+# L8 — Catalyst / Meta (CI, tests, validators)
+
+layer:
+  declared: ""  # L1 | L2 | L3 | L4 | L5 | L6 | L7 | L8
+  confidence: high  # high | medium (low = BLOCK)
+  justification: ""  # Why this layer? What evidence?
+
+# ============================================
+# TEMPORAL BEHAVIOR
+# ============================================
+# Critical for integration correctness.
+# Async execution leaking into sync layers = violation.
+
+temporal:
+  trigger: ""  # user | api | worker | scheduler | external
+  execution: ""  # sync | async | deferred
+  lifecycle: ""  # request | job | long-running | batch
+
+# ============================================
+# PRODUCT OWNERSHIP
+# ============================================
+# Products may own L1–L3 only.
+# L4–L8 are always system-wide.
+# Never infer ownership — declare explicitly.
+
+product:
+  owner: ""  # ai-console | ops-console | product-builder | system-wide
+  slice: ""  # surface | adapter | platform | catalyst
+
+# ============================================
+# RESPONSIBILITY
+# ============================================
+# What this artifact does, and explicitly what it must NOT do.
+
+responsibility:
+  role: ""
+  must_not_do:
+    - ""  # Anti-patterns this artifact must avoid
+
+# ============================================
+# DEPENDENCIES
+# ============================================
+# Direction: L1 → L2 → L3 → L4 → L5 → L6 → L7
+# Reverse dependencies are FORBIDDEN unless whitelisted.
+
+dependencies:
+  allowed_layers:
+    - ""  # Layers this can import FROM
+  forbidden_layers:
+    - ""  # Layers this must NEVER import
+
+# ============================================
+# STATE MUTATION
+# ============================================
+# Critical for understanding failure scope.
+
+state:
+  mutates_persistent_state: false  # Does this write to DB?
+  mutates_global_state: false      # Does this modify in-memory globals?
+
+# ============================================
+# FAILURE SCOPE
+# ============================================
+# What breaks if this is removed?
+# What must NOT break if this is removed?
+
+failure_scope:
+  breaks_if_removed:
+    - ""  # Components that depend on this
+  must_not_break:
+    - ""  # Components that should be unaffected
+
+# ============================================
+# INTEGRATION REQUIREMENTS
+# ============================================
+# What tests are required for this artifact?
+
+integration:
+  lit_required: false      # Layer Integration Test needed?
+  bit_required: false      # Browser Integration Test needed?
+  seam_tested: ""          # Which seam? (e.g., L2↔L3)
+
+# ============================================
+# VALIDATION CHECKLIST (Claude must verify)
+# ============================================
+# All must be YES before proceeding.
+
+validation:
+  artifact_class_explicit: false  # ARCH-GOV-006
+  layer_explicit: false
+  temporal_explicit: false
+  ownership_explicit: false
+  integration_seam_identified: false
+  no_integration_leak: false  # Async does not leak into sync
+  not_unknown: true  # UNKNOWN is never acceptable

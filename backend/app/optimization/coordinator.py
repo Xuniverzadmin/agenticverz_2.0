@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Optimization envelope coordination
+# Callers: workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: M10 Optimization
+
 # C4 Multi-Envelope Coordination Manager
 # Reference: C4_ENVELOPE_COORDINATION_CONTRACT.md (FROZEN), PIN-230
 #

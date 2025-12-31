@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: any
+#   Execution: sync
+# Role: Canonical JSON serialization for hashing
+# Callers: SDK, trace system
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Hash Parity
+
 # utils/canonical_json.py
 """
 Canonical JSON serialization for AOS.

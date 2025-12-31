@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Trace data redaction for security
+# Callers: trace store
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Trace System
+
 """
 PII Redaction Utility for Trace Storage
 M8 Deliverable: Secure trace storage with PII masking

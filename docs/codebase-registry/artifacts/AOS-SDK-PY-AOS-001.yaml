@@ -1,0 +1,31 @@
+# Artifact Registry Entry - SDK Package
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-SDK-PY-AOS-001
+name: aos_sdk (Python)
+type: sdk-package
+status: active
+owner: sdk
+purpose: Python SDK for AOS - Machine-native agent runtime
+authority_level: observe
+execution_surface: client
+traceability:
+  product: system-wide
+  console: external
+  domain: sdk
+  subdomain: python
+  order_depth: O2
+responsibility: |
+  - AOSClient: HTTP client for AOS API
+  - RuntimeContext: Deterministic runtime context (seed, time, RNG)
+  - Trace: Execution trace for replay and verification
+  - TraceStep: Individual step in trace
+  - canonical_json, hash_trace, freeze_time utilities
+  - Replay and idempotency support
+  - TRACE_SCHEMA_VERSION management
+dependencies:
+  - httpx or requests
+  - hashlib
+notes: |
+  Version: 0.1.0
+  Location: /sdk/python/aos_sdk/

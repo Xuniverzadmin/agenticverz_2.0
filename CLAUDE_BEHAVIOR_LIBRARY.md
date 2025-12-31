@@ -1,8 +1,16 @@
 # AgenticVerz — Claude Behavior Library
 
-**Version:** 1.0.0
-**Effective:** 2025-12-27
+**Version:** 1.5.0
+**Effective:** 2025-12-29
 **Status:** ACTIVE (Auto-Enforced)
+
+**Changelog:**
+- 1.5.0 (2025-12-29): Added BL-BOUNDARY-001/002/003 for product boundary enforcement (PIN-239)
+- 1.4.0 (2025-12-29): Added BL-CODE-REG-001/002/003 for codebase registry enforcement (PIN-237)
+- 1.3.0 (2025-12-29): Added BL-FRONTEND-001/002 for frontend architecture enforcement (PIN-235)
+- 1.2.0 (2025-12-29): Added BL-CONSOLE-003 for Project Scope enforcement
+- 1.1.0 (2025-12-29): Added BL-CONSOLE-001/002 for Customer Console governance
+- 1.0.0 (2025-12-27): Initial version
 
 ---
 
@@ -386,6 +394,813 @@ output_required: |
 
 ---
 
+### BL-CONSOLE-001: Customer Console Constitution Compliance
+
+**Class:** Console structure deviation / governance violation
+
+**Problem:** Claude proposes console changes that deviate from the frozen v1 constitution without explicit approval.
+
+```yaml
+id: BL-CONSOLE-001
+name: Customer Console Constitution Compliance
+class: console_governance
+severity: BLOCKING
+
+triggers:
+  - Any work on console.agenticverz.com
+  - Any UI structure changes
+  - Any sidebar modifications
+  - Any domain/subdomain additions
+  - Any new page creation for Customer Console
+  - Discussion of console navigation
+  - Mapping codebase to console structure
+
+requires:
+  step_1:
+    action: "Load Customer Console Constitution"
+    document: "docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md"
+    verify: "Document exists and is read"
+  step_2:
+    action: "Verify frozen domains"
+    check: "Are only these 5 domains being used?"
+    frozen_domains:
+      - Overview
+      - Activity
+      - Incidents
+      - Policies
+      - Logs
+  step_3:
+    action: "Check sidebar section placement"
+    rule: |
+      Core Lenses → Top section
+      Connectivity → Middle section
+      Administration → Bottom section
+  step_4:
+    action: "Verify jurisdiction boundaries"
+    check: "Is this tenant-scoped only?"
+    forbidden: "Cross-tenant data in Customer Console"
+  step_5:
+    action: "Confirm Claude role constraints"
+    rule: "Auditor and mapper, not designer"
+    output: "Findings are evidence, not authority"
+
+forbid:
+  - Introducing new domains without amendment
+  - Renaming frozen domains
+  - Merging domains
+  - Mixing Customer Console with Founder/Ops Console data
+  - Suggesting automation or learned authority
+  - Auto-applying structural changes
+  - "Improving" without explicit approval
+  - Using "system decided" language
+  - Cross-tenant intelligence claims
+
+violation:
+  type: BLOCKING
+  message: "BL-CONSOLE-001 VIOLATION: Console constitution not followed"
+  action: "STOP. Verify compliance with CUSTOMER_CONSOLE_V1_CONSTITUTION.md"
+
+output_required: |
+  CONSOLE CONSTITUTION CHECK
+  - Constitution loaded: YES / NO
+  - Frozen domains respected: YES / NO
+  - Sidebar structure correct: YES / NO
+  - Jurisdiction boundaries maintained: YES / NO
+  - Claude role acknowledged: Auditor and mapper, not designer
+  - Deviations identified: <list or NONE>
+  - Human approval required: YES / NO
+```
+
+---
+
+### BL-CONSOLE-002: Console Deviation Protocol
+
+**Class:** Structural deviation without proper flagging
+
+**Problem:** Claude makes console structure suggestions without following the deviation protocol.
+
+```yaml
+id: BL-CONSOLE-002
+name: Console Deviation Protocol
+class: deviation_handling
+severity: BLOCKING
+
+triggers:
+  - Any proposed deviation from frozen console structure
+  - Suggestion to add new domain
+  - Suggestion to rename domain
+  - Suggestion to merge domains
+  - Any structural change recommendation
+
+requires:
+  step_1:
+    action: "Explicitly identify the deviation"
+    output: "What specifically deviates from constitution?"
+  step_2:
+    action: "Provide clear justification"
+    output: "Why is this deviation necessary?"
+    evidence: "Codebase evidence supporting the deviation"
+  step_3:
+    action: "State it will NOT be auto-applied"
+    declaration: "This requires human approval before implementation"
+  step_4:
+    action: "Request explicit approval"
+    output: "Propose amendment process if needed"
+
+forbid:
+  - Silent deviation (not flagging it)
+  - Auto-applying deviations
+  - Presenting deviation as recommendation
+  - Justifying without evidence
+  - Assuming approval
+
+violation:
+  type: BLOCKING
+  message: "BL-CONSOLE-002 VIOLATION: Deviation not properly flagged"
+  action: "STOP. Follow deviation protocol before proposing changes."
+
+output_required: |
+  CONSOLE DEVIATION REPORT
+  - Deviation identified: <specific item>
+  - Justification: <evidence-based reason>
+  - Auto-applied: NO (must be NO)
+  - Approval required: YES
+  - Amendment process: <proposed steps if structural change>
+```
+
+---
+
+### BL-CONSOLE-003: Project Scope Enforcement
+
+**Class:** Project scope violation / navigation structure contamination
+
+**Problem:** Claude proposes project-related changes that violate the global scope selector model or attempt to introduce Projects as domains/sidebar items.
+
+```yaml
+id: BL-CONSOLE-003
+name: Project Scope Enforcement
+class: project_scope_violation
+severity: BLOCKING
+
+triggers:
+  - Any discussion of Project context in Customer Console
+  - Any proposal to add Project to navigation
+  - Any suggestion affecting project-scoped vs org-scoped data
+  - Any cross-project aggregation proposal
+  - Any UI change that could affect project selector placement
+
+requires:
+  step_1:
+    action: "Verify Project Scope rules are loaded"
+    document: "docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md Section 5.4"
+    check: "Project Scope clarification is understood"
+  step_2:
+    action: "Confirm Project is treated as global scope selector"
+    rule: |
+      Project selector location: global header
+      Project selector NOT in: sidebar
+      Project is NOT a domain
+  step_3:
+    action: "Verify data scope vs structure separation"
+    check: |
+      Switching Projects changes DATA SCOPE only
+      Does NOT change: Domains, Sidebar structure, Topics, Order semantics
+  step_4:
+    action: "Check for cross-project aggregation"
+    rule: "Cross-project aggregation is FORBIDDEN in Customer Console"
+  step_5:
+    action: "Verify shared resources handling"
+    check: |
+      Policies: May be ORG-scoped or PROJECT-scoped
+      Agents: May be bound to multiple projects
+      Executions: Always project-scoped
+      Incidents: Attach to executions → always project-scoped
+
+forbid:
+  - Proposing Project as a domain
+  - Proposing Project as a sidebar item
+  - Suggesting project-specific navigation changes
+  - Cross-project data exposure in Customer Console
+  - Treating Project selector as anything other than global scope filter
+  - Aggregating data across projects in Customer Console views
+
+violation:
+  type: BLOCKING
+  message: "BL-CONSOLE-003 VIOLATION: Project scope rules not followed"
+  action: "STOP. Verify Project is treated as global scope selector only."
+
+output_required: |
+  PROJECT SCOPE CHECK
+  - Project Scope rules loaded: YES / NO
+  - Project treated as global selector: YES / NO
+  - Project NOT proposed as domain/sidebar: YES / NO
+  - Data scope vs structure separation maintained: YES / NO
+  - Cross-project aggregation avoided: YES / NO
+  - Shared resources correctly scoped: YES / NO
+```
+
+---
+
+### BL-FRONTEND-001: Entry Point & Product Boundary Enforcement
+
+**Class:** Frontend architecture violation / entry point contamination
+
+**Problem:** Claude creates or modifies frontend code that violates the 3-layer entry point model or products-first folder structure frozen in PIN-235.
+
+```yaml
+id: BL-FRONTEND-001
+name: Entry Point & Product Boundary Enforcement
+class: frontend_architecture
+severity: BLOCKING
+
+triggers:
+  - Any change to src/products/*/main.tsx
+  - Any change to src/products/*/app/*.tsx
+  - Any new product folder creation
+  - Any page relocation or rename
+  - Any import path changes in products folder
+  - Discussion of frontend entry points
+  - Creating new frontend components
+
+requires:
+  step_1:
+    action: "Load PIN-235 freeze points"
+    document: "docs/memory-pins/PIN-235-products-first-architecture-migration.md"
+    verify: "Freeze points 1-3 are understood"
+  step_2:
+    action: "Verify 3-layer architecture"
+    check: |
+      Layer 1: main.tsx = runtime entry (DOM mounting, BrowserRouter)
+      Layer 2: AIConsoleApp.tsx = product root (providers, routing, layout)
+      Layer 3: pages/* = features (UI, business logic)
+  step_3:
+    action: "Verify folder structure compliance"
+    check: |
+      products/{product-name}/
+        main.tsx
+        app/
+        pages/
+        account/
+        integrations/
+  step_4:
+    action: "Verify import patterns"
+    check: |
+      Correct: @ai-console/*, @/*
+      Wrong: relative imports like ../../
+  step_5:
+    action: "Check anti-patterns"
+    forbidden:
+      - Business logic in main.tsx
+      - DOM mounting in product code
+      - Reorganizing Orders (O2-O5) into folders
+      - Merging account + pages
+      - Moving providers into main.tsx
+      - Adding global Admin folder
+      - Renaming AIConsoleApp
+
+forbid:
+  - Adding business logic to main.tsx
+  - Adding DOM mounting to product components
+  - Creating non-standard product folder structures
+  - Using relative imports in products folder
+  - Renaming frozen components (AIConsoleApp, etc.)
+  - Creating new folder patterns without explicit approval
+  - Debating frozen architectural decisions
+
+violation:
+  type: BLOCKING
+  message: "BL-FRONTEND-001 VIOLATION: Frontend architecture invariant violated"
+  action: "STOP. Verify compliance with PIN-235 freeze points."
+
+output_required: |
+  FRONTEND ARCHITECTURE CHECK
+  - PIN-235 loaded: YES / NO
+  - 3-layer separation maintained: YES / NO
+  - main.tsx is runtime-only: YES / NO
+  - Product root handles providers/routing: YES / NO
+  - Folder structure compliant: YES / NO
+  - Import patterns use aliases: YES / NO
+  - Anti-patterns avoided: YES / NO
+```
+
+---
+
+### BL-FRONTEND-002: Dead Click & 500 Error Prevention
+
+**Class:** Frontend integration failure / incomplete deployment
+
+**Problem:** Claude creates frontend changes that result in dead clicks (nav items without routes), 500 errors (missing API endpoints), or broken imports.
+
+```yaml
+id: BL-FRONTEND-002
+name: Dead Click & 500 Error Prevention
+class: frontend_integration
+severity: BLOCKING
+
+triggers:
+  - Any new page added
+  - Any route change
+  - Any navigation item added
+  - Any API integration added
+  - Before any frontend deployment
+  - Adding onClick handlers
+  - Creating fetch/axios calls
+
+requires:
+  step_1:
+    action: "Run build verification"
+    command: "cd website/aos-console/console && npm run build"
+    condition: "Build succeeds without errors"
+    reason: "Catches import errors and TypeScript issues"
+  step_2:
+    action: "Verify route completeness"
+    check: |
+      For each new page:
+      - Route exists in AIConsoleApp.tsx: <Route path=... element=... />
+      - Route is accessible: navigation to route renders page
+    reason: "Prevents 404 on navigation"
+  step_3:
+    action: "Verify navigation completeness"
+    check: |
+      For each nav item:
+      - onClick or href is present and valid
+      - Corresponding route exists
+      - Active state reflects current route
+    reason: "Prevents dead clicks"
+  step_4:
+    action: "Verify API integration"
+    check: |
+      For each API call:
+      - Endpoint exists in backend
+      - Error states are handled (try/catch, error UI)
+      - Loading states are implemented
+    reason: "Prevents 500 errors and white screens"
+  step_5:
+    action: "Verify import paths"
+    check: |
+      - All @ai-console/* imports resolve
+      - All @/* imports resolve
+      - No broken import paths
+    reason: "Prevents build failures"
+
+forbid:
+  - Deploying without successful build
+  - Adding nav items without corresponding routes
+  - Adding routes without corresponding page components
+  - Creating API calls without error handling
+  - Leaving TODO comments in production code
+  - Ignoring TypeScript errors
+  - Assuming backend endpoints exist without verification
+
+violation:
+  type: BLOCKING
+  message: "BL-FRONTEND-002 VIOLATION: Frontend integration incomplete"
+  action: "STOP. Complete integration checklist before proceeding."
+
+output_required: |
+  FRONTEND INTEGRATION CHECK
+  - Build succeeds: YES / NO
+  - All routes have pages: YES / NO
+  - All nav items have routes: YES / NO
+  - All API calls have error handling: YES / NO
+  - All imports resolve: YES / NO
+  - No dead clicks: YES / NO
+  - No TODO comments: YES / NO
+```
+
+---
+
+### BL-CODE-REG-001: Codebase Registry Supremacy
+
+**Class:** Unregistered code reasoning / purpose inference
+
+**Problem:** Claude reasons about, creates, or modifies code without checking if it's registered in the Codebase Purpose & Authority Registry.
+
+```yaml
+id: BL-CODE-REG-001
+name: Codebase Registry Supremacy
+class: code_registration
+severity: BLOCKING
+
+triggers:
+  - Creating any new code file
+  - Modifying existing code
+  - Reasoning about code behavior
+  - Refactoring code
+  - Analyzing dependencies
+  - Suggesting architectural changes
+
+requires:
+  step_1:
+    action: "Search registry for artifact"
+    command: "python scripts/ops/artifact_lookup.py <name>"
+    check: "Is artifact registered?"
+  step_2:
+    action: "If not found, pause and propose registration"
+    output: |
+      Proposed artifact entry:
+      - artifact_id: AOS-XX-XXX-XXX-NNN
+      - name: <filename>
+      - type: <type>
+      - purpose: <description>
+      - authority_level: <observe|advise|enforce|mutate>
+  step_3:
+    action: "If found, verify purpose and authority"
+    check: "Does the proposed change align with declared purpose?"
+  step_4:
+    action: "Create change record if modifying"
+    requirement: "All modifications need change records"
+
+forbid:
+  - Creating code without proposing registry entry
+  - Modifying code without checking registry
+  - Reasoning about unregistered code behavior
+  - Inferring purpose from filename alone
+  - Guessing authority based on behavior
+  - "Best-practice" assumptions about code
+
+violation:
+  type: BLOCKING
+  message: "BL-CODE-REG-001 VIOLATION: Code registry not consulted"
+  action: "STOP. Search registry before proceeding."
+
+output_required: |
+  CODE REGISTRY CHECK
+  - Artifact searched: <name>
+  - Registry result: FOUND / NOT FOUND
+  - If FOUND:
+    - artifact_id: <ID>
+    - purpose: <purpose>
+    - authority_level: <level>
+  - If NOT FOUND:
+    - Proposed registration: <details or "pending user approval">
+  - Change record required: YES / NO
+```
+
+---
+
+### BL-CODE-REG-002: No Silent Semantics
+
+**Class:** Silent purpose inference / authority assumption
+
+**Problem:** Claude silently infers why code exists, what it's allowed to do, or where it belongs without explicit registry information.
+
+```yaml
+id: BL-CODE-REG-002
+name: No Silent Semantics
+class: silent_inference
+severity: BLOCKING
+
+triggers:
+  - Any reasoning about code purpose
+  - Any statement about what code "should" do
+  - Any suggestion about code placement
+  - Any assumption about code authority
+  - Explaining code behavior without registry check
+
+requires:
+  step_1:
+    action: "Check if purpose is declared in registry"
+    command: "python scripts/ops/artifact_lookup.py --id <ID> -v"
+    check: "Is purpose field populated?"
+  step_2:
+    action: "Check if authority is declared"
+    check: "Is authority_level field populated?"
+  step_3:
+    action: "If unclear, stop and ask"
+    response: |
+      I cannot determine the intended purpose of this code.
+      Please clarify:
+      - What does this code do? (purpose)
+      - What is it allowed to modify? (authority_level)
+      - Where does it belong? (product, domain)
+
+forbid:
+  - Inferring purpose from behavior
+  - Inferring authority from naming conventions
+  - Assuming placement from file location
+  - "Best practice" recommendations without registry basis
+  - "This code probably does X" statements
+  - Proceeding with ambiguous semantics
+
+violation:
+  type: BLOCKING
+  message: "BL-CODE-REG-002 VIOLATION: Purpose inferred without registry"
+  action: "STOP. Check registry or ask for clarification."
+
+output_required: |
+  SEMANTIC CLARITY CHECK
+  - Purpose from registry: <stated or UNKNOWN>
+  - Authority from registry: <stated or UNKNOWN>
+  - Inference attempted: NO (must be NO)
+  - Clarification needed: YES / NO
+```
+
+---
+
+### BL-CODE-REG-003: Change Record Before Modification
+
+**Class:** Untracked code changes / evolution without audit
+
+**Problem:** Claude modifies code without creating a change record, making evolution untrackable.
+
+```yaml
+id: BL-CODE-REG-003
+name: Change Record Before Modification
+class: untracked_changes
+severity: BLOCKING
+
+triggers:
+  - Any code modification
+  - Any refactoring
+  - Any bug fix
+  - Any optimization
+  - Any interface change
+  - Any dependency update
+
+requires:
+  step_1:
+    action: "Identify affected artifacts"
+    command: "python scripts/ops/artifact_lookup.py <name>"
+    output: "List of artifact IDs being modified"
+  step_2:
+    action: "Create change record"
+    location: "docs/codebase-registry/changes/CHANGE-YYYY-NNNN.yaml"
+    required_fields:
+      - change_id
+      - date
+      - author
+      - change_type
+      - purpose
+      - scope.artifacts_modified
+      - impact (authority_change, behavior_change, interface_change, data_change)
+      - risk_level
+      - backward_compatibility
+      - validation
+  step_3:
+    action: "Request user approval of change record"
+    check: "User confirms purpose and scope"
+  step_4:
+    action: "Only then proceed with modification"
+    condition: "Change record approved"
+
+forbid:
+  - Modifying code without change record
+  - Creating change records without user approval
+  - Bundling unrelated changes in one record
+  - Proceeding with "minor" changes without registration
+  - Assuming changes are too small to track
+  - Retrospective change record creation
+
+violation:
+  type: BLOCKING
+  message: "BL-CODE-REG-003 VIOLATION: No change record for modification"
+  action: "STOP. Create and get approval for change record first."
+
+output_required: |
+  CHANGE REGISTRATION CHECK
+  - Artifacts affected: <list of IDs>
+  - Change record created: YES / NO
+  - Change ID: <CHANGE-YYYY-NNNN or PENDING>
+  - Purpose stated: <purpose>
+  - User approval: OBTAINED / PENDING
+  - Modification allowed: YES / NO
+```
+
+---
+
+### BL-BOUNDARY-001: Product Boundary Declaration Required
+
+**Class:** Product boundary violation / undeclared ownership
+
+**Problem:** Claude creates or modifies code without declaring product ownership, bucket classification, and failure jurisdiction — allowing boundary confusion to accumulate.
+
+```yaml
+id: BL-BOUNDARY-001
+name: Product Boundary Declaration Required
+class: product_boundary
+severity: BLOCKING
+
+triggers:
+  - Creating any new code file
+  - Creating any new module
+  - Proposing any new artifact
+  - Discussion of where code should live
+  - Architectural decisions about code placement
+
+requires:
+  step_1:
+    action: "Declare product ownership"
+    options:
+      - ai-console
+      - system-wide
+      - product-builder
+    reason: "Product determines who owns the artifact"
+  step_2:
+    action: "Declare bucket classification"
+    options:
+      - surface (product UI/routes only)
+      - adapter (thin translation layer)
+      - platform (shared infrastructure)
+    reason: "Bucket determines architectural role"
+  step_3:
+    action: "Declare expected callers"
+    output: "List of modules/files that will call this"
+    reason: "Callers determine true ownership"
+  step_4:
+    action: "Declare forbidden callers"
+    output: "List of modules/patterns that must NOT call this"
+    reason: "Forbidden callers enforce boundaries"
+  step_5:
+    action: "Declare failure scope"
+    output: "What breaks if this is removed?"
+    reason: "Failure scope validates classification"
+
+forbid:
+  - Creating code without product ownership declaration
+  - Creating code without bucket classification
+  - Assuming product from filename or directory
+  - Proceeding with "we'll figure out ownership later"
+  - Inferring callers from code structure
+
+violation:
+  type: BLOCKING
+  message: "BL-BOUNDARY-001 VIOLATION: Product boundary not declared"
+  action: "STOP. Declare product, bucket, callers, and failure scope."
+
+output_required: |
+  PRODUCT BOUNDARY DECLARATION
+  - Product: ai-console / system-wide / product-builder
+  - Bucket: surface / adapter / platform
+  - Expected callers: <list>
+  - Forbidden callers: <list>
+  - Breaks if removed: <list>
+  - Must not break: <list>
+  - Declaration approved: YES / PENDING
+```
+
+---
+
+### BL-BOUNDARY-002: Three Blocking Questions Gate
+
+**Class:** Uncertain ownership / speculative architecture
+
+**Problem:** Claude proceeds with code creation or modification while unable to answer fundamental ownership questions.
+
+```yaml
+id: BL-BOUNDARY-002
+name: Three Blocking Questions Gate
+class: ownership_uncertainty
+severity: BLOCKING
+
+triggers:
+  - Creating any code artifact
+  - Modifying existing code
+  - Proposing architectural changes
+  - Discussing code placement
+  - Reasoning about code dependencies
+
+requires:
+  step_1:
+    question: "Who calls this in production?"
+    acceptable_answers:
+      - Specific modules/files (e.g., "guard.py", "AIConsoleApp.tsx")
+      - "Nothing" (orphan → reject or archive)
+      - Explicit list of callers
+    unacceptable_answers:
+      - "Not sure"
+      - "Later"
+      - "Probably"
+      - "We'll figure it out"
+    on_unacceptable: BLOCK
+  step_2:
+    question: "What breaks if AI Console is deleted?"
+    acceptable_answers:
+      - Specific products/features
+      - "Nothing" (platform-only)
+      - "Only this feature"
+    unacceptable_answers:
+      - "I don't know"
+      - "Everything"
+      - "Hard to say"
+    on_unacceptable: BLOCK
+  step_3:
+    question: "Who must NOT depend on this?"
+    acceptable_answers:
+      - Specific modules/patterns
+      - "Workers must not call this"
+      - "SDK must not import this"
+    unacceptable_answers:
+      - "Anyone can use it"
+      - "No restrictions"
+      - "Not sure yet"
+    on_unacceptable: BLOCK
+
+forbid:
+  - Proceeding when any question has uncertain answer
+  - Answering "probably" to ownership questions
+  - Deferring ownership decisions to later
+  - Assuming boundary questions are "obvious"
+
+violation:
+  type: BLOCKING
+  message: "BL-BOUNDARY-002 VIOLATION: Cannot answer blocking questions"
+  action: "STOP. All three questions must have acceptable answers."
+
+output_required: |
+  BLOCKING QUESTIONS CHECK
+  - Q1: Who calls this in production?
+    Answer: <specific list or BLOCKED>
+  - Q2: What breaks if AI Console is deleted?
+    Answer: <specific products or BLOCKED>
+  - Q3: Who must NOT depend on this?
+    Answer: <specific restrictions or BLOCKED>
+  - All questions answered acceptably: YES / NO
+  - Proceed allowed: YES / NO
+```
+
+---
+
+### BL-BOUNDARY-003: Caller Graph Determines Truth
+
+**Class:** Label-based mislabeling / invocation drift
+
+**Problem:** Claude trusts registry labels instead of actual invocation patterns, allowing boundary violations to persist.
+
+```yaml
+id: BL-BOUNDARY-003
+name: Caller Graph Determines Truth
+class: invocation_drift
+severity: BLOCKING
+
+triggers:
+  - Validating artifact product ownership
+  - Reviewing boundary classification
+  - Auditing registry accuracy
+  - When label and behavior seem misaligned
+  - Before reclassifying artifacts
+
+requires:
+  step_1:
+    action: "Trace actual callers"
+    method: "Search codebase for imports/calls"
+    output: "List of files that import or call this artifact"
+  step_2:
+    action: "Classify callers by surface"
+    buckets:
+      - console-ui (product pages, components)
+      - console-api (product routes)
+      - workers (background jobs)
+      - sdk (published packages)
+      - ops/founder (other consoles)
+      - tests (test files)
+    output: "Caller classification by surface"
+  step_3:
+    action: "Apply Non-Console Caller Test"
+    rule: |
+      If ANY of these call the artifact:
+      - workers/*
+      - sdk/*
+      - ops/* (founder/ops console)
+      - External API consumers
+
+      Then artifact is NOT ai-console owned.
+    output: "Non-console callers found: YES / NO"
+  step_4:
+    action: "Compare label vs reality"
+    check: "Does registered product match actual callers?"
+    on_mismatch: "Flag for reclassification"
+
+forbid:
+  - Trusting labels over caller evidence
+  - Ignoring non-console callers
+  - Assuming "tests don't count" (they reveal real usage)
+  - Keeping mislabeled artifacts without flagging
+
+violation:
+  type: BLOCKING
+  message: "BL-BOUNDARY-003 VIOLATION: Label does not match caller graph"
+  action: "STOP. Reclassify artifact based on actual invocation."
+
+output_required: |
+  CALLER GRAPH ANALYSIS
+  - Artifact: <name>
+  - Registry label: <product>
+  - Actual callers:
+    - Console-UI: <list>
+    - Console-API: <list>
+    - Workers: <list>
+    - SDK: <list>
+    - Ops/Founder: <list>
+    - Tests: <list>
+  - Non-console callers found: YES / NO
+  - Label matches reality: YES / NO
+  - Reclassification needed: YES / NO
+  - If YES: Proposed new label: <product>
+```
+
+---
+
 ## Rule Application Protocol
 
 ### When Rules Trigger
@@ -421,6 +1236,17 @@ When an incident repeats or a new class is identified:
 | BL-MIG-001 | Migration Head Verification | migration_fork | BLOCKING |
 | BL-DOCKER-001 | Service Name Resolution | service_name_mismatch | WARNING |
 | BL-TEST-001 | Test Execution Prerequisites | test_prerequisites | BLOCKING |
+| BL-CONSOLE-001 | Customer Console Constitution Compliance | console_governance | BLOCKING |
+| BL-CONSOLE-002 | Console Deviation Protocol | deviation_handling | BLOCKING |
+| BL-CONSOLE-003 | Project Scope Enforcement | project_scope_violation | BLOCKING |
+| BL-FRONTEND-001 | Entry Point & Product Boundary Enforcement | frontend_architecture | BLOCKING |
+| BL-FRONTEND-002 | Dead Click & 500 Error Prevention | frontend_integration | BLOCKING |
+| BL-CODE-REG-001 | Codebase Registry Supremacy | code_registration | BLOCKING |
+| BL-CODE-REG-002 | No Silent Semantics | silent_inference | BLOCKING |
+| BL-CODE-REG-003 | Change Record Before Modification | untracked_changes | BLOCKING |
+| BL-BOUNDARY-001 | Product Boundary Declaration Required | product_boundary | BLOCKING |
+| BL-BOUNDARY-002 | Three Blocking Questions Gate | ownership_uncertainty | BLOCKING |
+| BL-BOUNDARY-003 | Caller Graph Determines Truth | invocation_drift | BLOCKING |
 
 ---
 
@@ -475,6 +1301,15 @@ violation:
 - `CLAUDE_PRE_CODE_DISCIPLINE.md` — Pre-code task checklist
 - `scripts/ops/claude_response_validator.py` — Automated validation
 - `docs/LESSONS_ENFORCED.md` — Failure prevention rules
+- `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md` — Console governance (v1 frozen)
+- `docs/contracts/CODE_EVOLUTION_CONTRACT.md` — Code registration & change tracking
+- `docs/contracts/PRODUCT_BOUNDARY_CONTRACT.md` — Product boundary enforcement (pre-build)
+- `docs/playbooks/SESSION_PLAYBOOK.yaml` — Session bootstrap and console governance
+- `docs/memory-pins/PIN-235-products-first-architecture-migration.md` — Frontend architecture (frozen)
+- `docs/memory-pins/PIN-237-codebase-registry-survey.md` — Codebase registry (113 artifacts)
+- `docs/memory-pins/PIN-239-product-boundary-enforcement.md` — Product boundary enforcement
+- `docs/codebase-registry/` — Artifact registry and change records
+- `scripts/ops/artifact_lookup.py` — Registry search tool
 
 ---
 

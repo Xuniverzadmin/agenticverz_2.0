@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide
+# Role: Pre-execution gate, scope enforcement
+# Callers: L2 APIs (recovery actions), L5 workers
+# Reference: PIN-242 (Baseline Freeze)
+
 # app/services/scoped_execution.py
 """
 M6: Scoped Execution Context Service (P2FC-4)

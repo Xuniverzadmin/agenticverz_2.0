@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Guard decision caching
+# Callers: guard API
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Guard System
+
 # Guard API Cache Layer
 """
 Redis-based cache for Guard Console endpoints.

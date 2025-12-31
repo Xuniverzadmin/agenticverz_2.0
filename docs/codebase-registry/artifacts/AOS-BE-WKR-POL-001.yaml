@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend Worker
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-WKR-POL-001
+name: pool.py
+type: worker
+status: active
+owner: backend
+purpose: Worker pool - Polls runs table and dispatches to runner workers
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: activity
+  subdomain: execution
+  order_depth: O4
+responsibility: |
+  - Poll for queued runs
+  - Dispatch runs to runner threads via ThreadPoolExecutor
+  - Graceful shutdown via SIGTERM/SIGINT
+  - Wait for running tasks to complete on shutdown
+  - Environment: WORKER_POLL_INTERVAL, WORKER_CONCURRENCY, WORKER_BATCH_SIZE
+dependencies:
+  - Run model
+  - RunRunner
+  - EventPublisher
+  - nova_worker_pool_size metric

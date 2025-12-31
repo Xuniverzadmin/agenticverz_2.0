@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Shadow audit logging for auth decisions
+# Callers: RBAC engine, middleware
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Auth System
+
 """
 Shadow Audit Logging - M7-M28 RBAC Integration (PIN-169)
 

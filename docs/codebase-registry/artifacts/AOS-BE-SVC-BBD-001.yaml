@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-BBD-001
+name: blackboard_service.py
+type: service
+status: active
+owner: backend
+purpose: M12 shared Redis blackboard for agent coordination
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: agents
+  subdomain: coordination
+  order_depth: O2
+responsibility: |
+  - KV read/write operations
+  - Atomic increment operations
+  - Pattern read (SCAN)
+  - Distributed locks (SET NX)
+  - BlackboardEntry and LockResult dataclasses
+  - Key prefixes: agents:blackboard:, agents:lock:, agents:job:
+dependencies:
+  - redis
+notes: |
+  Location: backend/app/agents/services/blackboard_service.py
+  Milestone: M12

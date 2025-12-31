@@ -1,0 +1,367 @@
+/**
+ * Customer Policies Page - Constraints & Behavioral Rules
+ *
+ * Customer Console v1 Constitution: Policies Domain
+ * Question: "How is behavior defined?"
+ *
+ * Shows:
+ * - Budget constraints: current spend vs limit
+ * - Rate limits: current usage vs allowed
+ * - Warnings: when approaching limits
+ *
+ * Does NOT show:
+ * - Policy mechanics internals
+ * - CARE internals
+ * - Emergency controls
+ */
+
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { logger } from '@/lib/consoleLogger';
+
+interface PolicyLimits {
+  // Budget
+  budget_limit_cents: number;
+  budget_used_cents: number;
+  budget_period: 'daily' | 'weekly' | 'monthly';
+  budget_resets_at: string;
+  budget_mode: 'enforced' | 'advisory'; // Phase 5E-5: Contract surfacing
+
+  // Rate limits
+  rate_limit_per_minute: number;
+  rate_current_per_minute: number;
+  rate_limit_per_day: number;
+  rate_current_per_day: number;
+
+  // Cost per request
+  max_cost_per_request_cents: number;
+  avg_cost_per_request_cents: number;
+
+  // Warnings
+  warnings: Array<{
+    id: string;
+    type: 'budget' | 'rate' | 'cost';
+    message: string;
+    severity: 'info' | 'warning' | 'critical';
+  }>;
+}
+
+const SEVERITY_CONFIG: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+  info: { bg: 'bg-blue-500/10', border: 'border-blue-400/30', text: 'text-blue-400', icon: 'i' },
+  warning: { bg: 'bg-amber-500/10', border: 'border-amber-400/30', text: 'text-amber-400', icon: '!' },
+  critical: { bg: 'bg-red-500/10', border: 'border-red-400/30', text: 'text-red-400', icon: '!!' },
+};
+
+function formatTimeRemaining(isoString: string): string {
+  const reset = new Date(isoString);
+  const now = new Date();
+  const diffMs = reset.getTime() - now.getTime();
+
+  if (diffMs <= 0) return 'Now';
+
+  const hours = Math.floor(diffMs / 3600000);
+  const minutes = Math.floor((diffMs % 3600000) / 60000);
+
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  }
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function ProgressBar({
+  current,
+  max,
+  label,
+  unit,
+  warning = 80,
+  critical = 95,
+}: {
+  current: number;
+  max: number;
+  label: string;
+  unit: string;
+  warning?: number;
+  critical?: number;
+}) {
+  const percentage = max > 0 ? Math.min(100, (current / max) * 100) : 0;
+
+  let barColor = 'bg-green-500';
+  let textColor = 'text-green-400';
+
+  if (percentage >= critical) {
+    barColor = 'bg-red-500';
+    textColor = 'text-red-400';
+  } else if (percentage >= warning) {
+    barColor = 'bg-amber-500';
+    textColor = 'text-amber-400';
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm">
+        <span className="text-slate-400">{label}</span>
+        <span className={textColor}>
+          {current.toLocaleString()} / {max.toLocaleString()} {unit}
+        </span>
+      </div>
+      <div className="h-2 bg-navy-inset rounded-full overflow-hidden">
+        <div
+          className={`h-full ${barColor} transition-all duration-300`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+      <div className="text-xs text-slate-500 text-right">
+        {percentage.toFixed(1)}% used
+      </div>
+    </div>
+  );
+}
+
+export function PoliciesPage() {
+  useEffect(() => {
+    logger.componentMount('CustomerPoliciesPage');
+    return () => logger.componentUnmount('CustomerPoliciesPage');
+  }, []);
+
+  // Fetch policy limits
+  const { data, isLoading } = useQuery<PolicyLimits>({
+    queryKey: ['customer', 'policies'],
+    queryFn: async () => {
+      // In production, this would call: GET /api/v1/customer/policies
+      // For now, return demo data
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setHours(24, 0, 0, 0);
+
+      return {
+        budget_limit_cents: 5000, // $50/day
+        budget_used_cents: 3750, // $37.50 used (75%)
+        budget_period: 'daily',
+        budget_resets_at: tomorrow.toISOString(),
+        budget_mode: 'advisory', // Phase 5E-5: Show advisory mode by default for demo
+
+        rate_limit_per_minute: 60,
+        rate_current_per_minute: 12,
+        rate_limit_per_day: 10000,
+        rate_current_per_day: 4523,
+
+        max_cost_per_request_cents: 50, // $0.50 max per request
+        avg_cost_per_request_cents: 8, // $0.08 average
+
+        warnings: [
+          {
+            id: 'w1',
+            type: 'budget',
+            message: 'Budget is at 75%. You will be notified at 80%.',
+            severity: 'info',
+          },
+        ],
+      };
+    },
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-slate-400">Loading policies...</div>
+      </div>
+    );
+  }
+
+  const policies = data!;
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <span>📜</span> Policies
+        </h1>
+        <p className="text-slate-400 mt-1">
+          How behavior is defined
+        </p>
+      </div>
+
+      {/* Warnings */}
+      {policies.warnings.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {policies.warnings.map((warning) => {
+            const config = SEVERITY_CONFIG[warning.severity];
+            return (
+              <div
+                key={warning.id}
+                className={`${config.bg} ${config.border} border rounded-lg px-4 py-3 flex items-center gap-3`}
+              >
+                <span className={`w-6 h-6 rounded-full ${config.bg} ${config.text} flex items-center justify-center text-sm font-bold`}>
+                  {config.icon}
+                </span>
+                <span className={config.text}>{warning.message}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-6">
+        {/* Budget Card */}
+        <div className="bg-navy-surface border border-navy-border rounded-xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span>💰</span> Budget Constraint
+            </h2>
+            <div className="text-sm text-slate-400">
+              Resets in {formatTimeRemaining(policies.budget_resets_at)}
+            </div>
+          </div>
+
+          {/* Phase 5E-5: Budget Mode Badge - Contract Surfacing */}
+          <div className="mb-6 p-4 bg-navy-elevated rounded-lg border border-navy-border">
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Mode</div>
+            {policies.budget_mode === 'enforced' ? (
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+                <span className="text-green-400 font-bold text-lg">ENFORCED</span>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                  <span className="text-amber-400 font-bold text-lg">ADVISORY</span>
+                </div>
+                <div className="bg-amber-500/10 border border-amber-400/30 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber-400">⚠️</span>
+                    <div className="text-sm text-amber-300">
+                      <div className="font-medium mb-1">Advisory mode:</div>
+                      <div className="text-amber-400/80">
+                        Execution may exceed the configured budget.
+                        No runs will be blocked automatically.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl font-bold text-white">
+                ${(policies.budget_used_cents / 100).toFixed(2)}
+              </div>
+              <div className="text-slate-400 mt-1">
+                of ${(policies.budget_limit_cents / 100).toFixed(2)} {policies.budget_period}
+              </div>
+            </div>
+
+            <ProgressBar
+              current={policies.budget_used_cents}
+              max={policies.budget_limit_cents}
+              label="Budget Used"
+              unit="cents"
+            />
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-navy-border">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Avg. cost per request</span>
+              <span className="text-white">
+                ${(policies.avg_cost_per_request_cents / 100).toFixed(3)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm mt-2">
+              <span className="text-slate-400">Max cost per request</span>
+              <span className="text-white">
+                ${(policies.max_cost_per_request_cents / 100).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Rate Limits Card */}
+        <div className="bg-navy-surface border border-navy-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
+            <span>⚡</span> Rate Constraints
+          </h2>
+
+          <div className="space-y-6">
+            <ProgressBar
+              current={policies.rate_current_per_minute}
+              max={policies.rate_limit_per_minute}
+              label="Requests / Minute"
+              unit="req/min"
+              warning={70}
+              critical={90}
+            />
+
+            <ProgressBar
+              current={policies.rate_current_per_day}
+              max={policies.rate_limit_per_day}
+              label="Requests / Day"
+              unit="req"
+            />
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-navy-border bg-navy-elevated rounded-lg p-4">
+            <h4 className="text-sm font-medium text-slate-300 mb-2">What happens when constraints are reached?</h4>
+            <ul className="text-sm text-slate-400 space-y-1">
+              <li>• <span className="text-amber-400">Rate constraint</span>: Requests are throttled</li>
+              <li>• <span className="text-red-400">Budget constraint</span>: Requests are blocked</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Usage Breakdown */}
+      <div className="mt-6 bg-navy-surface border border-navy-border rounded-xl p-6">
+        <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+          <span>📈</span> Usage Summary
+        </h2>
+
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-navy-elevated rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-white">
+              {policies.rate_current_per_day.toLocaleString()}
+            </div>
+            <div className="text-sm text-slate-400 mt-1">Requests Today</div>
+          </div>
+          <div className="bg-navy-elevated rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-green-400">
+              ${(policies.budget_used_cents / 100).toFixed(2)}
+            </div>
+            <div className="text-sm text-slate-400 mt-1">Spent Today</div>
+          </div>
+          <div className="bg-navy-elevated rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-white">
+              ${(policies.avg_cost_per_request_cents / 100).toFixed(3)}
+            </div>
+            <div className="text-sm text-slate-400 mt-1">Avg per Request</div>
+          </div>
+          <div className="bg-navy-elevated rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-white">
+              {Math.round(((policies.budget_limit_cents - policies.budget_used_cents) / policies.avg_cost_per_request_cents))}
+            </div>
+            <div className="text-sm text-slate-400 mt-1">Est. Remaining</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Help Section */}
+      <div className="mt-6 bg-navy-elevated border border-accent-info/20 rounded-lg p-4">
+        <h4 className="font-medium text-accent-info flex items-center gap-2">
+          <span>💡</span> Need different constraints?
+        </h4>
+        <p className="text-sm text-slate-300 mt-2">
+          Contact support to discuss adjusting your budget or rate constraints.
+          Enterprise plans include custom policies and priority support.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default PoliciesPage;

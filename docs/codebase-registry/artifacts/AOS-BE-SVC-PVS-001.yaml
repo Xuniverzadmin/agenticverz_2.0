@@ -1,0 +1,34 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-PVS-001
+name: policy_violation_service.py
+type: service
+status: active
+owner: backend
+purpose: S3 violation detection, fact persistence, incident creation
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: policy
+  subdomain: violations
+  order_depth: O2
+responsibility: |
+  - Violation detection
+  - Violation fact persistence
+  - Incident creation (severity-bound)
+  - Evidence linking
+  - API + Console exposure
+dependencies:
+  - app.utils.runtime.generate_uuid
+notes: |
+  Location: backend/app/services/policy_violation_service.py
+  Reference: PIN-195 S3 truth model
+  Critical Invariants (VERIFICATION_MODE):
+    - No incident without persisted violation fact
+    - Policy must be enabled for tenant
+    - Evidence must exist before incident creation
+    - One incident per (run_id, policy_id)
+    - Cost and policy systems don't interfere

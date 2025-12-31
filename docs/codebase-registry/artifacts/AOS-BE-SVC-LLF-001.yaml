@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-LLF-001
+name: llm_failure_service.py
+type: service
+status: active
+owner: backend
+purpose: S4 LLM failure truth - persistence BEFORE any action
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: failures
+  subdomain: llm-truth
+  order_depth: O2
+responsibility: |
+  - Failure fact persistence (before any other action)
+  - Run state transition to FAILED
+  - Evidence capture (mandatory)
+  - No downstream contamination
+  - LLMFailureFact dataclass
+dependencies:
+  - app.utils.runtime.generate_uuid
+  - app.utils.runtime.utc_now
+notes: |
+  Location: backend/app/services/llm_failure_service.py
+  Reference: PIN-196
+  Critical Invariant: A failed run must never appear as "successful" or "completed with results"
+  Architecture Rule: Explicit dependency injection, NO lazy service resolution

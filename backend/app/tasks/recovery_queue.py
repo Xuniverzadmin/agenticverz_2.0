@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Recovery queue processing
+# Callers: workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: M10 Recovery
+
 # app/tasks/recovery_queue.py
 """
 Redis-based task queue for M10 Recovery evaluation.

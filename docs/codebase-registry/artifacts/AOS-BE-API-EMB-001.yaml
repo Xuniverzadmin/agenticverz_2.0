@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-EMB-001
+name: embedding.py
+type: api-route
+status: active
+owner: backend
+purpose: Embedding API - Quota status and configuration
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: memory
+  subdomain: embedding
+  order_depth: O2
+responsibility: |
+  - GET /embedding/quota - Embedding quota status
+  - GET /embedding/config - Embedding configuration
+  - PIN-047: Quota Status API
+  - PIN-082: IAEC v3.0 Instruction-Aware Embedding Composer
+dependencies:
+  - verify_api_key
+  - embedding_metrics
+  - EMBEDDING_DAILY_QUOTA

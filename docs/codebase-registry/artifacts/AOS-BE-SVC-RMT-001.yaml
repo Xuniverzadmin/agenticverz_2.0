@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-RMT-001
+name: recovery_matcher.py
+type: service
+status: active
+owner: backend
+purpose: M10 pattern matching with time-decay scoring
+authority_level: advise
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: recovery
+  subdomain: matching
+  order_depth: O3
+responsibility: |
+  - Matches failure entries against historical patterns
+  - Generates recovery suggestions with confidence scoring
+  - Scoring Algorithm:
+    - Basic score: matches / occurrences
+    - Weighted time-decay: exp(-lambda * age_in_days), half-life = 30 days
+    - Final: alpha * weighted + (1-alpha) * basic, alpha = 0.7
+  - MatchResult dataclass
+dependencies: []
+notes: |
+  Location: backend/app/services/recovery_matcher.py
+  Milestone: M10
+  Reference: PIN-033 M8-M14 Machine-Native Realignment

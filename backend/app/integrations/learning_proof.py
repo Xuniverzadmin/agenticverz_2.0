@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Learning proof generation
+# Callers: learning workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Learning System
+
 """
 M25 Learning Proof System
 

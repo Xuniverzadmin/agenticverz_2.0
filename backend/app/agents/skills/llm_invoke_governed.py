@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Governed LLM invocation skill with budget enforcement
+# Callers: agent runtime, workers
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Agent Skills
+
 # M15 LLM Invoke with BudgetLLM Governance
 # Provides LLM inference with budget control and safety governance
 #

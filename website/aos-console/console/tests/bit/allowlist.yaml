@@ -1,0 +1,46 @@
+# Browser Integration Test - Console Error Allowlist
+# Reference: PIN-245 (Integration Integrity System)
+#
+# RULES:
+# 1. Every entry MUST have an expiry date
+# 2. No expiry = INVALID (CI will reject)
+# 3. Expired entries are ignored (error will fail build)
+# 4. Use sparingly - this is an escape hatch, not a silencer
+
+allowed_console_errors:
+  # ============================================
+  # TEMPLATE (copy and modify)
+  # ============================================
+  # - page: /example
+  #   pattern: "Error message substring to match"
+  #   reason: brief_reason_code
+  #   expiry: 2025-03-01
+  #   owner: team-name
+  #   jira: PROJ-123
+
+  # ============================================
+  # ACTIVE ALLOWLIST
+  # ============================================
+
+  # React development warnings (dev mode only, should not appear in prod build)
+  - page: "*"
+    pattern: "Warning: Each child in a list should have"
+    reason: react_dev_warning
+    expiry: 2025-06-01
+    owner: frontend-team
+
+  # Known issue: Auth redirect on first load (acceptable)
+  - page: /login
+    pattern: "Redirecting to auth provider"
+    reason: auth_redirect_expected
+    expiry: 2025-12-31
+    owner: auth-team
+
+# ============================================
+# EXPIRED / REMOVED ENTRIES (keep for audit)
+# ============================================
+# - page: /old-page
+#   pattern: "Old error"
+#   reason: fixed_in_pr_123
+#   expiry: 2025-01-01
+#   removed: 2025-01-02

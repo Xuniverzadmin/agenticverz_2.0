@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-CSM-001
+name: costsim.py
+type: api-route
+status: active
+owner: backend
+purpose: CostSim V2 API - Sandbox simulation with M7 memory
+authority_level: advise
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: cost
+  subdomain: simulation
+  order_depth: O3
+responsibility: |
+  - POST /costsim/v2/simulate - V2 simulation (sandbox mode)
+  - GET /costsim/v2/status - Sandbox status
+  - POST /costsim/v2/reset - Reset circuit breaker
+  - GET /costsim/divergence - Divergence report
+  - POST /costsim/canary/run - Trigger canary run
+  - GET /costsim/canary/reports - Canary reports
+  - M7: Memory context injection, post-execution updates
+  - M7: Drift detection between baseline and memory-enabled
+dependencies:
+  - Circuit breaker
+  - simulate_with_sandbox
+  - Memory service (when enabled)
+  - Drift detector

@@ -1,0 +1,29 @@
+# Code Change Record
+# Created: 2025-12-29
+# Schema: change-schema-v1.yaml
+
+change_id: CHANGE-2025-0001
+date: '2025-12-29'
+author: pair
+change_type: feature
+purpose: Add change_record.py helper script for code evolution tracking
+scope:
+  artifacts_modified:
+  - AOS-OP-OPS-CHR-001
+  files_added:
+  - scripts/ops/change_record.py
+  - docs/codebase-registry/artifacts/AOS-OP-OPS-CHR-001.yaml
+impact:
+  authority_change: none
+  behavior_change: 'no'
+  interface_change: 'no'
+  data_change: 'no'
+risk_level: low
+backward_compatibility: 'yes'
+validation:
+  tests_added: 'no'
+  tests_modified: 'no'
+  manual_verification: not_required
+related_pins:
+- PIN-237
+notes: Self-registering governance tooling

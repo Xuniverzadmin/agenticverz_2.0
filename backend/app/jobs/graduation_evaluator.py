@@ -1,3 +1,22 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler
+#   Execution: async
+# Role: Agent graduation evaluation job (orchestration only)
+# Callers: scheduler
+# Allowed Imports: L4, L6
+# Domain Engine: graduation_engine.py (L4)
+# Forbidden Imports: L1, L2, L3
+# Reference: PIN-256 Phase E FIX-01
+#
+# GOVERNANCE NOTE: L5 owns all DB operations.
+# L4 graduation_engine.py provides pure domain logic only.
+# This L5 file:
+#   - Fetches evidence FROM database (L6)
+#   - Calls L4 engine.compute() to get decisions
+#   - Persists results TO database (L6)
+
 """
 M25 Graduation Status Periodic Evaluator
 
@@ -19,9 +38,175 @@ CRITICAL INVARIANTS:
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# EVIDENCE FETCH (L5 responsibility - moved from L4 graduation_engine.py)
+# =============================================================================
+
+
+async def fetch_graduation_evidence(session, window_days: int = 30):
+    """
+    Fetch graduation evidence from database.
+
+    This is an L5/L6 responsibility - DB operations stay in L5.
+    L4 graduation_engine.py receives only the computed evidence dataclass.
+
+    Reference: PIN-256 Phase E FIX-01, DOMAIN_EXTRACTION_TEMPLATE.md Section 7.1
+    """
+    from sqlalchemy import text
+
+    from app.integrations.graduation_engine import GraduationEvidence
+
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(days=window_days)
+
+    # Gate 1: Prevention evidence (exclude simulated)
+    prevention_result = await session.execute(
+        text(
+            """
+            SELECT
+                COUNT(*) FILTER (WHERE outcome = 'prevented') as prevented,
+                COUNT(*) as total,
+                MAX(created_at) as last_at
+            FROM prevention_records
+            WHERE created_at >= :window_start
+            AND (
+                id NOT LIKE 'prev_sim_%' OR id IS NULL
+            )
+        """
+        ),
+        {"window_start": window_start},
+    )
+    prev_row = prevention_result.fetchone()
+
+    # Gate 2: Regret evidence (exclude simulated)
+    regret_result = await session.execute(
+        text(
+            """
+            SELECT
+                COUNT(*) as total_events,
+                COUNT(*) FILTER (WHERE was_auto_rolled_back = true) as demotions,
+                MAX(created_at) FILTER (WHERE was_auto_rolled_back = true) as last_demotion
+            FROM regret_events
+            WHERE created_at >= :window_start
+            AND (
+                id NOT LIKE 'regret_sim_%' OR id IS NULL
+            )
+        """
+        ),
+        {"window_start": window_start},
+    )
+    regret_row = regret_result.fetchone()
+
+    # Gate 3: Timeline views (real user views only)
+    timeline_result = await session.execute(
+        text(
+            """
+            SELECT
+                COUNT(*) as views_with_prevention,
+                MAX(viewed_at) as last_view
+            FROM timeline_views
+            WHERE viewed_at >= :window_start
+            AND has_prevention = true
+            AND is_simulated = false
+        """
+        ),
+        {"window_start": window_start},
+    )
+    timeline_row = timeline_result.fetchone()
+
+    # Compute rates
+    total_prevention_attempts = prev_row.total if prev_row else 0
+    total_preventions = prev_row.prevented if prev_row else 0
+    prevention_rate = total_preventions / total_prevention_attempts if total_prevention_attempts > 0 else 0.0
+
+    # Get total policy evaluations for regret rate calculation
+    total_policy_evaluations = await _get_total_policy_evaluations(session, window_start)
+    regret_rate = (regret_row.total_events or 0) / total_policy_evaluations if total_policy_evaluations > 0 else 0.0
+
+    return GraduationEvidence(
+        total_preventions=total_preventions,
+        total_prevention_attempts=total_prevention_attempts,
+        last_prevention_at=prev_row.last_at if prev_row else None,
+        prevention_rate=prevention_rate,
+        total_regret_events=regret_row.total_events if regret_row else 0,
+        total_auto_demotions=regret_row.demotions if regret_row else 0,
+        last_demotion_at=regret_row.last_demotion if regret_row else None,
+        regret_rate=regret_rate,
+        timeline_views_with_prevention=timeline_row.views_with_prevention if timeline_row else 0,
+        last_timeline_view_at=timeline_row.last_view if timeline_row else None,
+        evaluated_at=now,
+        evidence_window_start=window_start,
+        evidence_window_end=now,
+    )
+
+
+async def _get_total_policy_evaluations(session, window_start: datetime) -> int:
+    """Get total policy evaluations for regret rate calculation.
+
+    Falls back to policy_rules count if policy_evaluations table doesn't exist.
+    """
+    from sqlalchemy import text
+
+    # Check if policy_evaluations table exists
+    table_check = await session.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_name = 'policy_evaluations'
+            )
+        """
+        )
+    )
+    has_policy_evaluations = table_check.scalar()
+
+    if has_policy_evaluations:
+        result = await session.execute(
+            text(
+                """
+                SELECT COUNT(*) as total
+                FROM policy_evaluations
+                WHERE created_at >= :window_start
+            """
+            ),
+            {"window_start": window_start},
+        )
+        row = result.fetchone()
+        return row.total if row else 0
+
+    # Fall back to policy_rules count
+    table_check2 = await session.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_name = 'policy_rules'
+            )
+        """
+        )
+    )
+    has_policy_rules = table_check2.scalar()
+
+    if has_policy_rules:
+        result = await session.execute(
+            text(
+                """
+                SELECT COUNT(*) as total
+                FROM policy_rules
+                WHERE created_at >= :window_start
+            """
+            ),
+            {"window_start": window_start},
+        )
+        row = result.fetchone()
+        return row.total if row else 0
+
+    return 0
 
 
 async def evaluate_graduation_status() -> dict:
@@ -29,6 +214,12 @@ async def evaluate_graduation_status() -> dict:
     Evaluate graduation status from evidence.
 
     Returns the computed status with degradation info if applicable.
+
+    GOVERNANCE NOTE (Phase E FIX-01):
+    - L5 fetches evidence FROM database (fetch_graduation_evidence)
+    - L4 computes decision (engine.compute)
+    - L5 persists results TO database
+    - No DB operations cross into L4. L4 is pure.
     """
     from sqlalchemy import text
 
@@ -36,14 +227,15 @@ async def evaluate_graduation_status() -> dict:
     from app.integrations.graduation_engine import (
         CapabilityGates,
         GraduationEngine,
-        GraduationEvidence,
     )
 
     async with get_async_session() as session:
         engine = GraduationEngine()
 
         try:
-            evidence = await GraduationEvidence.fetch_from_database(session)
+            # L5 responsibility: fetch evidence from DB
+            evidence = await fetch_graduation_evidence(session)
+            # L4 responsibility: compute domain decision (pure, sync)
             status = engine.compute(evidence)
         except Exception as e:
             logger.error(f"Failed to fetch graduation evidence: {e}")

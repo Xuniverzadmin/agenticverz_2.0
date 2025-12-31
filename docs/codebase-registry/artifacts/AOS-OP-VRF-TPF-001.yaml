@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-VRF-TPF-001
+name: truth_preflight.sh
+type: script
+status: active
+owner: ops
+purpose: Phase A.5 preflight truth guard - blocking gate for S2-S6 scenarios
+authority_level: enforce
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: verification
+  subdomain: preflight
+  order_depth: O1
+responsibility: |
+  - BLOCKING SCRIPT: Must pass before ANY S2-S6 scenario execution
+  - Guards against historical failures:
+    - P0-001: Database mismatch (local vs cloud)
+    - P0-005: In-memory only storage
+    - Silent persistence failure
+  - Exit 0 = proceed, Exit 1 = BLOCKED
+dependencies: []
+notes: |
+  Location: scripts/verification/truth_preflight.sh
+  Exit codes: 0 = passed, 1 = failed

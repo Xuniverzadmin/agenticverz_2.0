@@ -1,3 +1,9 @@
+# Layer: L2b — Public API (Tenant-scoped, NOT console-only)
+# Product: system-wide (BOUNDARY VIOLATION if labeled ai-console)
+# Auth: get_tenant_context + requires_feature (tier-gating)
+# Reference: PIN-240
+# WARNING: This is NOT console-exclusive. SDK users and external systems call this.
+
 """M22 KillSwitch MVP - Control & Observability API
 
 Endpoints:
@@ -53,6 +59,9 @@ from app.models.killswitch import (
 )
 from app.models.tenant import APIKey, Tenant
 
+# Phase 2B: Write service for DB operations
+from app.services.guard_write_service import GuardWriteService
+
 # =============================================================================
 # Router
 # =============================================================================
@@ -67,37 +76,6 @@ router = APIRouter(prefix="/v1", tags=["KillSwitch"])
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def get_or_create_killswitch_state(
-    session: Session,
-    entity_type: str,
-    entity_id: str,
-    tenant_id: str,
-) -> KillSwitchState:
-    """Get existing killswitch state or create new one."""
-    stmt = select(KillSwitchState).where(
-        and_(
-            KillSwitchState.entity_type == entity_type,
-            KillSwitchState.entity_id == entity_id,
-        )
-    )
-    row = session.exec(stmt).first()
-    state = row[0] if row else None
-
-    if not state:
-        state = KillSwitchState(
-            id=str(uuid.uuid4()),
-            entity_type=entity_type,
-            entity_id=entity_id,
-            tenant_id=tenant_id,
-            is_frozen=False,
-        )
-        session.add(state)
-        session.commit()
-        session.refresh(state)
-
-    return state
 
 
 # =============================================================================
@@ -131,23 +109,24 @@ async def freeze_tenant(
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    # Get or create state
-    state = get_or_create_killswitch_state(session, "tenant", tenant_id, tenant_id)
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    state, _ = guard_service.get_or_create_killswitch_state(
+        entity_type="tenant",
+        entity_id=tenant_id,
+        tenant_id=tenant_id,
+    )
 
     if state.is_frozen:
         raise HTTPException(status_code=409, detail="Tenant is already frozen")
 
-    # Freeze
-    state.freeze(
+    state = guard_service.freeze_killswitch(
+        state=state,
         by=action.actor or "system",
         reason=action.reason,
         auto=False,
         trigger=TriggerType.MANUAL.value,
     )
-
-    session.add(state)
-    session.commit()
-    session.refresh(state)
 
     # Extract values while session is open
     return KillSwitchStatus(
@@ -188,23 +167,24 @@ async def freeze_key(
     if not key:
         raise HTTPException(status_code=404, detail="API key not found")
 
-    # Get or create state
-    state = get_or_create_killswitch_state(session, "key", key_id, key.tenant_id)
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    state, _ = guard_service.get_or_create_killswitch_state(
+        entity_type="key",
+        entity_id=key_id,
+        tenant_id=key.tenant_id,
+    )
 
     if state.is_frozen:
         raise HTTPException(status_code=409, detail="API key is already frozen")
 
-    # Freeze
-    state.freeze(
+    state = guard_service.freeze_killswitch(
+        state=state,
         by=action.actor or "system",
         reason=action.reason,
         auto=False,
         trigger=TriggerType.MANUAL.value,
     )
-
-    session.add(state)
-    session.commit()
-    session.refresh(state)
 
     # Extract values while session is open
     return KillSwitchStatus(
@@ -302,10 +282,9 @@ async def unfreeze_tenant(
     if not state or not state.is_frozen:
         raise HTTPException(status_code=404, detail="Tenant is not frozen")
 
-    state.unfreeze(by=actor)
-    session.add(state)
-    session.commit()
-    session.refresh(state)
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    state = guard_service.unfreeze_killswitch(state=state, by=actor)
 
     return KillSwitchStatus(
         entity_type="tenant",
@@ -344,10 +323,9 @@ async def unfreeze_key(
     if not state or not state.is_frozen:
         raise HTTPException(status_code=404, detail="API key is not frozen")
 
-    state.unfreeze(by=actor)
-    session.add(state)
-    session.commit()
-    session.refresh(state)
+    # Phase 2B: Use write service for DB operations
+    guard_service = GuardWriteService(session)
+    state = guard_service.unfreeze_killswitch(state=state, by=actor)
 
     return KillSwitchStatus(
         entity_type="key",

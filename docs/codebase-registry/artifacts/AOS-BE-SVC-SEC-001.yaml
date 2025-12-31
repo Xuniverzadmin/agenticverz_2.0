@@ -1,0 +1,32 @@
+# Artifact Registry Entry - Backend Security Service
+# Source: PIN-052 Data Ownership & Embedding Security
+# Created: 2025-12-30
+
+artifact_id: AOS-BE-SVC-SEC-001
+name: sanitize.py
+type: service
+status: active
+owner: backend
+purpose: Sanitize data before embedding to prevent secrets from being stored
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: null
+  domain: security
+  subdomain: sanitization
+  order_depth: O0
+responsibility: |
+  - sanitize_for_embedding(): Remove secrets/PII before embedding
+  - Patterns: API keys, tokens, passwords, PII
+  - Called by vector_store.py before embedding generation
+  - Returns sanitized text safe for external API calls
+relations:
+  imports:
+    - re (stdlib)
+  imported_by:
+    - AOS-BE-MEM-VEC-001 (vector_store.py)
+notes: |
+  Created for PIN-052 embedding security compliance.
+  Prevents secrets like API keys, passwords, and PII from
+  being sent to external embedding APIs (OpenAI).

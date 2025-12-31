@@ -1,0 +1,16 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-ACC-001
+name: AccountPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: Organization and team management
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: account
+  order_depth: O2

@@ -1,0 +1,17 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-INC-001
+name: IncidentsPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: "Answer: What went wrong?"
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: incidents
+  topic_o1: "What went wrong?"
+  order_depth: O1

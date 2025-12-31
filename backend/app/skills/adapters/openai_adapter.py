@@ -1,4 +1,14 @@
 # adapters/openai_adapter.py
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: async
+# Role: OpenAI API translation adapter
+# Callers: llm_invoke_v2 skill
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: PIN-254 Phase B Fix
 """
 OpenAI Adapter for LLM Invoke Skill (M11)
 
@@ -8,95 +18,26 @@ Supports:
 - Native seeding support for determinism
 - Error mapping to contract errors
 - Cost tracking
-- SAFETY LIMITS: max tokens, max cost per request, rate limiting
+
+B01 FIX: Safety limits moved to L4 LLMPolicyEngine.
+This adapter now delegates policy decisions to L4.
+L3 is translation-only: shape, transport, protocol binding.
 
 See: app/skills/llm_invoke_v2.py for adapter interface
-See: app/skills/contracts/llm_invoke.contract.yaml for contract
+See: app/services/llm_policy_engine.py for safety limits (L4)
 
 Environment Variables:
 - OPENAI_API_KEY: API key
 - OPENAI_DEFAULT_MODEL: Default model (default: gpt-4o-mini)
-- OPENAI_MAX_TOKENS_PER_REQUEST: Max tokens per request (default: 16000)
-- OPENAI_MAX_COST_CENTS_PER_REQUEST: Max cost in cents per request (default: 50)
-- OPENAI_REQUESTS_PER_MINUTE: Rate limit (default: 60)
 """
 
 import hashlib
 import logging
 import os
-import threading
 import time
-from collections import deque
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger("nova.adapters.openai")
-
-
-# =============================================================================
-# Safety Limits Configuration
-# =============================================================================
-
-# Max tokens per request (prevents runaway costs)
-MAX_TOKENS_PER_REQUEST = int(os.getenv("OPENAI_MAX_TOKENS_PER_REQUEST", "16000"))
-
-# Max estimated cost per single request in cents (prevents expensive requests)
-MAX_COST_CENTS_PER_REQUEST = float(os.getenv("OPENAI_MAX_COST_CENTS_PER_REQUEST", "50"))
-
-# Rate limit (requests per minute)
-REQUESTS_PER_MINUTE = int(os.getenv("OPENAI_REQUESTS_PER_MINUTE", "60"))
-
-# Model restrictions (if set, only these models are allowed)
-ALLOWED_MODELS = os.getenv("OPENAI_ALLOWED_MODELS", "").split(",") if os.getenv("OPENAI_ALLOWED_MODELS") else None
-
-
-class SafetyLimitExceeded(Exception):
-    """Raised when a safety limit is exceeded."""
-
-    pass
-
-
-class RateLimiter:
-    """Simple in-memory rate limiter using sliding window."""
-
-    def __init__(self, requests_per_minute: int = REQUESTS_PER_MINUTE):
-        self.requests_per_minute = requests_per_minute
-        self.window_seconds = 60
-        self.timestamps: deque = deque()
-        self._lock = threading.Lock()
-
-    def check_and_record(self) -> bool:
-        """
-        Check if request is allowed and record it.
-
-        Returns True if allowed, False if rate limited.
-        """
-        now = time.time()
-        window_start = now - self.window_seconds
-
-        with self._lock:
-            # Remove old timestamps outside the window
-            while self.timestamps and self.timestamps[0] < window_start:
-                self.timestamps.popleft()
-
-            # Check if we're at the limit
-            if len(self.timestamps) >= self.requests_per_minute:
-                return False
-
-            # Record this request
-            self.timestamps.append(now)
-            return True
-
-    def requests_remaining(self) -> int:
-        """Get number of requests remaining in current window."""
-        now = time.time()
-        window_start = now - self.window_seconds
-
-        with self._lock:
-            # Remove old timestamps
-            while self.timestamps and self.timestamps[0] < window_start:
-                self.timestamps.popleft()
-
-            return max(0, self.requests_per_minute - len(self.timestamps))
 
 
 # Import base types from llm_invoke_v2
@@ -142,12 +83,11 @@ class OpenAIAdapter:
     - Native seeding: OpenAI supports seed parameter for reproducibility
     - Error mapping: Maps OpenAI API errors to contract error codes
     - Lazy loading: openai SDK is only imported when invoke() is called
-    - Cost tracking: Per-model pricing in cents per million tokens
-    - SAFETY LIMITS: max tokens, max cost, rate limiting, model restrictions
-    """
+    - Cost tracking: Delegates to L4 LLMPolicyEngine
 
-    # Shared rate limiter across all adapter instances
-    _rate_limiter = RateLimiter()
+    B01 FIX: Safety limits delegated to L4 LLMPolicyEngine.
+    This adapter is translation-only (L3 responsibility).
+    """
 
     def __init__(
         self,
@@ -157,21 +97,22 @@ class OpenAIAdapter:
         max_cost_cents_per_request: Optional[float] = None,
     ):
         """
-        Initialize OpenAI adapter with safety limits.
+        Initialize OpenAI adapter.
 
         Args:
             api_key: OpenAI API key. If not provided, uses OPENAI_API_KEY env var.
             default_model: Default model to use. Defaults to gpt-4o-mini for cost.
-            max_tokens_per_request: Override max tokens limit (default from env or 16000)
-            max_cost_cents_per_request: Override max cost limit (default from env or 50)
+            max_tokens_per_request: Override max tokens limit (passed to L4)
+            max_cost_cents_per_request: Override max cost limit (passed to L4)
         """
         self._api_key = api_key if api_key is not None else os.environ.get("OPENAI_API_KEY")
         self._default_model = (
             default_model if default_model is not None else os.environ.get("OPENAI_DEFAULT_MODEL", DEFAULT_MODEL)
         )
         self._client = None
-        self._max_tokens = max_tokens_per_request or MAX_TOKENS_PER_REQUEST
-        self._max_cost_cents = max_cost_cents_per_request or MAX_COST_CENTS_PER_REQUEST
+        # Store overrides for L4 policy engine
+        self._max_tokens_override = max_tokens_per_request
+        self._max_cost_cents_override = max_cost_cents_per_request
 
     @property
     def adapter_id(self) -> str:
@@ -246,16 +187,24 @@ class OpenAIAdapter:
         return "overloaded", str(error), True
 
     def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text."""
-        # OpenAI uses roughly 4 chars per token
-        return len(text) // 4
+        """
+        Estimate token count for text.
+
+        B01 FIX: Delegates to L4 LLMPolicyEngine.
+        """
+        from app.services.llm_policy_engine import estimate_tokens
+
+        return estimate_tokens(text)
 
     def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
-        """Estimate cost in cents."""
-        pricing = OPENAI_COST_MODEL.get(model, OPENAI_COST_MODEL[DEFAULT_MODEL])
-        input_cost = (input_tokens / 1_000_000) * pricing["input"]
-        output_cost = (output_tokens / 1_000_000) * pricing["output"]
-        return input_cost + output_cost
+        """
+        Estimate cost in cents.
+
+        B01 FIX: Delegates to L4 LLMPolicyEngine.
+        """
+        from app.services.llm_policy_engine import estimate_cost_cents
+
+        return estimate_cost_cents(model, input_tokens, output_tokens)
 
     def _check_safety_limits(
         self, model: str, max_tokens: int, estimated_input_tokens: int
@@ -263,44 +212,24 @@ class OpenAIAdapter:
         """
         Check safety limits before making API call.
 
+        B01 FIX: Delegates to L4 LLMPolicyEngine.check_safety_limits().
+        L3 no longer contains policy/threshold logic.
+
         Returns error tuple if limits exceeded, None if OK.
         """
-        # Check rate limit
-        if not self._rate_limiter.check_and_record():
-            remaining = self._rate_limiter.requests_remaining()
-            return (
-                "rate_limited",
-                f"Rate limit exceeded ({REQUESTS_PER_MINUTE} req/min). "
-                f"Remaining: {remaining}. Please wait before retrying.",
-                True,  # Retryable
-            )
+        from app.services.llm_policy_engine import check_safety_limits
 
-        # Check model restrictions
-        if ALLOWED_MODELS and model not in ALLOWED_MODELS:
-            return (
-                "invalid_model",
-                f"Model '{model}' is not in allowed list: {ALLOWED_MODELS}",
-                False,  # Not retryable
-            )
+        result = check_safety_limits(
+            model=model,
+            max_tokens=max_tokens,
+            estimated_input_tokens=estimated_input_tokens,
+            provider="openai",
+            max_tokens_limit=self._max_tokens_override,
+            max_cost_cents_limit=self._max_cost_cents_override,
+        )
 
-        # Check max tokens
-        if max_tokens > self._max_tokens:
-            return (
-                "invalid_prompt",
-                f"Requested max_tokens ({max_tokens}) exceeds limit ({self._max_tokens}). "
-                f"Reduce max_tokens to continue.",
-                False,
-            )
-
-        # Estimate max possible cost (input + max output)
-        estimated_max_cost = self.estimate_cost(model, estimated_input_tokens, max_tokens)
-        if estimated_max_cost > self._max_cost_cents:
-            return (
-                "budget_exceeded",
-                f"Estimated max cost ({estimated_max_cost:.2f}¢) exceeds limit "
-                f"({self._max_cost_cents:.2f}¢). Reduce prompt size or max_tokens.",
-                False,
-            )
+        if not result.allowed:
+            return (result.error_type, result.error_message, result.retryable)
 
         return None
 

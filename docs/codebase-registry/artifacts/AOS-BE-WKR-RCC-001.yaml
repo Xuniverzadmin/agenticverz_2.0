@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend Worker
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-WKR-RCC-001
+name: recovery_claim_worker.py
+type: worker
+status: active
+owner: backend
+purpose: M10 Recovery Claim Worker - Concurrent-safe batch processor
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: incidents
+  subdomain: recovery
+  order_depth: O4
+responsibility: |
+  - Claim unevaluated recovery candidates
+  - FOR UPDATE SKIP LOCKED pattern
+  - Process claims in batches
+  - Graceful shutdown with unclaimed row release
+  - Multiple workers without duplicate work
+  - Atomic claims
+dependencies:
+  - SQLAlchemy text queries
+  - Environment: RECOVERY_WORKER_BATCH_SIZE, RECOVERY_WORKER_POLL_INTERVAL

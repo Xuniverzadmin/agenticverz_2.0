@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler
+#   Execution: sync
+# Role: Workflow health checks and status
+# Callers: monitoring, health endpoints
+# Allowed Imports: None
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Observability
+
 # Workflow Engine Health Endpoints (M4 Hardening)
 """
 Health and readiness endpoints for workflow engine.

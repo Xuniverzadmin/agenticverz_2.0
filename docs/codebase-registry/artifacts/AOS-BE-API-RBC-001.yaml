@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-RBC-001
+name: rbac_api.py
+type: api-route
+status: active
+owner: backend
+purpose: M7 RBAC Management API - Policy info and audit
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: policies
+  subdomain: rbac
+  order_depth: O3
+responsibility: |
+  - GET /api/v1/rbac/info - Current policy info
+  - POST /api/v1/rbac/reload - Hot-reload policies
+  - GET /api/v1/rbac/matrix - Current permission matrix
+  - GET /api/v1/rbac/audit - Query audit logs
+  - Requires rbac:read or rbac:reload permission
+dependencies:
+  - rbac_engine
+  - check_permission
+  - get_rbac_engine

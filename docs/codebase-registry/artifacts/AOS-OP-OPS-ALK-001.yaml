@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-OPS-ALK-001
+name: artifact_lookup.py
+type: script
+status: active
+owner: ops
+purpose: Search and display codebase registry artifacts
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: ops
+  subdomain: registry
+  order_depth: O2
+responsibility: |
+  - Search artifacts by name (partial match)
+  - Search artifacts by artifact ID
+  - Filter by product (ai-console, system-wide, product-builder)
+  - Filter by type (api-route, service, worker, page, etc.)
+  - Filter by authority level (observe, advise, enforce, mutate)
+  - List all artifacts with table view
+  - Verbose mode for detailed artifact information
+dependencies:
+  - pyyaml
+notes: |
+  Location: scripts/ops/artifact_lookup.py
+  Commands: search, --id, --product, --type, --authority, --list
+  Self-registered artifact (AOS-OP-OPS-ALK-001)

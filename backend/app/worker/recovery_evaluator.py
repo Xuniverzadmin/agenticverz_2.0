@@ -1,3 +1,28 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker (failure events)
+#   Execution: async
+# Role: Recovery evaluation orchestration (L5 execution wrapper)
+# Authority: Recovery suggestion creation (M9/M10 pattern)
+# Callers: Failure processing pipeline
+# Allowed Imports: L4, L6
+# Domain Engine: recovery_rule_engine.py (L4)
+# Forbidden Imports: L1, L2, L3
+# Contract: EXECUTION_SEMANTIC_CONTRACT.md (Failure Semantics: recover mode)
+# Reference: PIN-257 Phase E-4 Extraction #3
+#
+# GOVERNANCE NOTE: L5 owns all DB operations.
+# L4 recovery_rule_engine.py provides pure domain logic:
+#   - combine_confidences() - confidence combination formula
+#   - should_select_action() - action selection threshold
+#   - should_auto_execute() - auto-execute threshold
+#   - evaluate_rules() - rule evaluation
+# This L5 file:
+#   - Orchestrates evaluation flow
+#   - Calls L4 for domain decisions
+#   - Persists results TO database (L6)
+
 # M10 Recovery Evaluator Worker
 """
 Background worker that evaluates failures and generates recovery suggestions.
@@ -224,8 +249,14 @@ class RecoveryEvaluator:
 
             candidate_id = match_result.candidate_id
 
-            # Combine confidences (average of rule and matcher)
-            combined_confidence = (rule_result.confidence + match_result.confidence) / 2
+            # L4 domain decision: combine confidences
+            # Reference: PIN-257 Phase E-4 Extraction #3
+            from app.services.recovery_rule_engine import combine_confidences
+
+            combined_confidence = combine_confidences(
+                rule_confidence=rule_result.confidence,
+                match_confidence=match_result.confidence,
+            )
 
             # Trigger suggestion hook
             await self._hooks.trigger(
@@ -236,11 +267,15 @@ class RecoveryEvaluator:
                 rule_result=rule_result.to_dict(),
             )
 
-            # Step 3: Select action if confidence is high enough
+            # Step 3: Select action if confidence meets L4 threshold
+            # L4 domain decision: should_select_action()
+            # Reference: PIN-257 Phase E-4 Extraction #3
+            from app.services.recovery_rule_engine import should_select_action
+
             suggested_action = rule_result.recommended_action
             action_id = None
 
-            if combined_confidence >= MIN_CONFIDENCE and suggested_action:
+            if should_select_action(combined_confidence) and suggested_action:
                 action_id = await self._select_action(
                     candidate_id=candidate_id,
                     action_code=suggested_action,
@@ -275,7 +310,12 @@ class RecoveryEvaluator:
             execution_result = None
             auto_executed = False
 
-            if AUTO_EXECUTE and action_id and combined_confidence >= 0.8:
+            # SHADOW-001 FIX: Use L4 domain authority for auto-execute threshold
+            # Previously: hardcoded `combined_confidence >= 0.8`
+            # Now: L4 RecoveryRuleEngine.should_auto_execute() is authoritative
+            from app.services.recovery_rule_engine import should_auto_execute
+
+            if AUTO_EXECUTE and action_id and should_auto_execute(combined_confidence):
                 auto_executed, execution_result = await self._auto_execute(
                     candidate_id=candidate_id,
                     action_id=action_id,

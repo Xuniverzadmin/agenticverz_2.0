@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-EVT-001
+name: publisher.py
+type: service
+status: active
+owner: backend
+purpose: Event Publisher - Pluggable adapter pattern for events
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: events
+  subdomain: publishing
+  order_depth: O4
+responsibility: |
+  - Adapter pattern: redis, nats, logging
+  - Fail-fast if misconfigured (no silent fallback)
+  - Observable at runtime
+  - Supported: Redis Pub/Sub, NATS messaging, Logging fallback
+  - Singleton publisher instance
+dependencies:
+  - Redis (optional)
+  - NATS (optional)

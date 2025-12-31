@@ -1,3 +1,9 @@
+# Layer: L2a — Product API (Console-scoped)
+# Product: AI Console
+# Auth: verify_api_key
+# Reference: PIN-240
+# NOTE: Part of Phase 4C-2 contract framework.
+
 """Phase 4C-2: Customer Visibility Endpoints
 
 Customer-facing endpoints for predictability and accountability.
@@ -15,12 +21,13 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.auth import verify_api_key
+from app.middleware.tenancy import get_tenant_id
 
 logger = logging.getLogger("nova.api.customer_visibility")
 
@@ -72,6 +79,22 @@ class MemoryDeclaration(BaseModel):
     description: str  # Human-readable explanation
 
 
+class EstimationMethodology(BaseModel):
+    """
+    PIN-254 Phase C Fix (C3 Partial Truth): Explicit disclosure of estimation basis.
+
+    Ensures API consumers know whether estimates are derived from:
+    - Real planner output (planner_v1)
+    - Hardcoded defaults (default_stages_v1)
+    - Historical data (historical_avg)
+    """
+
+    stages_source: str = "default_stages_v1"  # How stages were determined
+    cost_source: str = "base_rate_v1"  # How costs were calculated
+    confidence: str = "low"  # low | medium | high
+    disclaimer: str = "Estimates based on default assumptions. Actual execution may vary."
+
+
 class PreRunDeclaration(BaseModel):
     """
     Complete PRE-RUN declaration for customer visibility.
@@ -95,6 +118,12 @@ class PreRunDeclaration(BaseModel):
     budget: BudgetDeclaration
     policy: PolicyDeclaration
     memory: MemoryDeclaration
+
+    # PIN-254 Phase C Fix: Estimation transparency
+    estimation_methodology: EstimationMethodology = Field(
+        default_factory=EstimationMethodology,
+        description="Disclosure of how estimates were derived (PIN-254 C3 fix)"
+    )
 
     # Acknowledgement required
     requires_acknowledgement: bool = True
@@ -265,8 +294,16 @@ def estimate_cost(agent_id: str, goal: str, stages: List[StageDeclaration]) -> C
     )
 
 
-def fetch_run_outcome(run_id: str) -> Optional[Dict[str, Any]]:
-    """Fetch run data for outcome reconciliation."""
+def fetch_run_outcome(run_id: str, tenant_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch run data for outcome reconciliation.
+
+    Args:
+        run_id: Run ID to fetch
+        tenant_id: Tenant ID for access control (PIN-052 audit fix)
+
+    Returns:
+        Run data dict or None if not found/unauthorized
+    """
     db_url = get_db_url()
     if not db_url:
         return None
@@ -274,6 +311,7 @@ def fetch_run_outcome(run_id: str) -> Optional[Dict[str, Any]]:
     try:
         engine = create_engine(db_url)
         with engine.connect() as conn:
+            # PIN-052: Always filter by tenant_id for data isolation
             result = conn.execute(
                 text(
                     """
@@ -283,10 +321,10 @@ def fetch_run_outcome(run_id: str) -> Optional[Dict[str, Any]]:
                         error_message,
                         started_at, completed_at, duration_ms
                     FROM runs
-                    WHERE id = :run_id
+                    WHERE id = :run_id AND tenant_id = :tenant_id
                 """
                 ),
-                {"run_id": run_id},
+                {"run_id": run_id, "tenant_id": tenant_id},
             )
             row = result.fetchone()
             if not row:
@@ -309,11 +347,15 @@ def fetch_run_outcome(run_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def fetch_decision_summary(run_id: str) -> Dict[str, Any]:
+def fetch_decision_summary(run_id: str, tenant_id: str) -> Dict[str, Any]:
     """
     Fetch decision summary for outcome reconciliation.
 
     Returns EFFECTS only, not decision details.
+
+    Args:
+        run_id: Run ID to fetch decisions for
+        tenant_id: Tenant ID for access control (PIN-052 audit fix)
     """
     db_url = get_db_url()
     if not db_url:
@@ -322,17 +364,19 @@ def fetch_decision_summary(run_id: str) -> Dict[str, Any]:
     try:
         engine = create_engine(db_url)
         with engine.connect() as conn:
+            # PIN-052: Always filter by tenant_id for data isolation
             # Count budget decisions with warnings
             budget_result = conn.execute(
                 text(
                     """
                     SELECT COUNT(*) FROM contracts.decision_records
                     WHERE run_id = :run_id
+                    AND tenant_id = :tenant_id
                     AND decision_type = 'budget'
                     AND decision_outcome != 'selected'
                 """
                 ),
-                {"run_id": run_id},
+                {"run_id": run_id, "tenant_id": tenant_id},
             )
             budget_warnings = budget_result.scalar() or 0
 
@@ -342,11 +386,12 @@ def fetch_decision_summary(run_id: str) -> Dict[str, Any]:
                     """
                     SELECT COUNT(*) FROM contracts.decision_records
                     WHERE run_id = :run_id
+                    AND tenant_id = :tenant_id
                     AND decision_type = 'policy'
                     AND decision_outcome IN ('blocked', 'rejected')
                 """
                 ),
-                {"run_id": run_id},
+                {"run_id": run_id, "tenant_id": tenant_id},
             )
             policy_warnings = policy_result.scalar() or 0
 
@@ -356,10 +401,11 @@ def fetch_decision_summary(run_id: str) -> Dict[str, Any]:
                     """
                     SELECT COUNT(*) FROM contracts.decision_records
                     WHERE run_id = :run_id
+                    AND tenant_id = :tenant_id
                     AND decision_type = 'recovery'
                 """
                 ),
-                {"run_id": run_id},
+                {"run_id": run_id, "tenant_id": tenant_id},
             )
             recovery_count = recovery_result.scalar() or 0
 
@@ -513,6 +559,7 @@ async def acknowledge_declaration(
 @router.get("/outcome/{run_id}", response_model=OutcomeReconciliation)
 async def get_outcome_reconciliation(
     run_id: str,
+    request: Request,
     _: str = Depends(verify_api_key),
 ) -> OutcomeReconciliation:
     """
@@ -524,13 +571,16 @@ async def get_outcome_reconciliation(
     - Policy compliance status
     - Recovery status
     """
-    # Fetch run data
-    run_data = fetch_run_outcome(run_id)
+    # PIN-052: Get tenant_id for data isolation
+    tenant_id = get_tenant_id(request)
+
+    # Fetch run data (now with tenant_id filtering)
+    run_data = fetch_run_outcome(run_id, tenant_id)
     if not run_data:
         raise HTTPException(status_code=404, detail="Run not found")
 
-    # Fetch decision summary (effects only)
-    decision_summary = fetch_decision_summary(run_id)
+    # Fetch decision summary (effects only, with tenant_id filtering)
+    decision_summary = fetch_decision_summary(run_id, tenant_id)
 
     # Build decomposed outcomes
     outcomes: List[OutcomeItem] = []

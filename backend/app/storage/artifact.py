@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Artifact storage (R2/S3)
+# Callers: services, workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Storage System
+
 # Artifact Storage
 # Provides storage backends for run artifacts (files, blobs, etc.)
 

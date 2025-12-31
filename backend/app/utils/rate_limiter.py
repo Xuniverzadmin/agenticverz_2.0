@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Rate limiting utilities
+# Callers: middleware, API routes
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Rate Limiting
+
 # Rate Limiter
 # Token bucket rate limiting using Redis
 

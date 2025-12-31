@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-JOB-001
+name: job_service.py
+type: service
+status: active
+owner: backend
+purpose: M12 job creation, status tracking, and item distribution
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: agents
+  subdomain: jobs
+  order_depth: O2
+responsibility: |
+  - Job spawn with item creation
+  - Job status queries
+  - Progress tracking
+  - Job completion/failure handling
+  - JobConfig dataclass with parallelism, timeout, max_retries
+  - M15 LLM Governance integration
+dependencies:
+  - agents.services.credit_service
+notes: |
+  Location: backend/app/agents/services/job_service.py
+  Milestone: M12

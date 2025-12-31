@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: external
+//   Execution: async
+// Role: WebSocket client utility
+// Callers: Real-time components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Utilities
+
 type MessageHandler = (data: unknown) => void;
 
 export class WebSocketConnection {

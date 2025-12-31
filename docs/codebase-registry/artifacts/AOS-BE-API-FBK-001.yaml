@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-FBK-001
+name: feedback.py
+type: api-route
+status: active
+owner: backend
+purpose: PB-S3 Pattern Feedback API - Read-only feedback exposure
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: feedback
+  subdomain: patterns
+  order_depth: O2
+responsibility: |
+  - GET /api/v1/feedback - List feedback records (paginated)
+  - GET /api/v1/feedback/{id} - Feedback detail
+  - READ_ONLY = True
+  - Feedback observes but never mutates
+  - Provenance references runs (read-only)
+dependencies:
+  - verify_api_key
+  - PatternFeedback model
+  - Async session

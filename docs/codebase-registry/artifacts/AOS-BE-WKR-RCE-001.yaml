@@ -1,0 +1,27 @@
+# Artifact Registry Entry - Backend Worker
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-WKR-RCE-001
+name: recovery_evaluator.py
+type: worker
+status: active
+owner: backend
+purpose: M10 Recovery Evaluator - Evaluates failures and generates recovery suggestions
+authority_level: advise
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: incidents
+  subdomain: recovery
+  order_depth: O4
+responsibility: |
+  - Receive failure events from worker
+  - Evaluate rules and generate suggestions
+  - Record provenance for audit
+  - Optionally execute automated actions
+  - Phase 4B: Decision Record Emission
+  - Environment: RECOVERY_EVALUATOR_ENABLED, RECOVERY_AUTO_EXECUTE, RECOVERY_MIN_CONFIDENCE
+dependencies:
+  - emit_recovery_decision
+  - FailureEvent dataclass

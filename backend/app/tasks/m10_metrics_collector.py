@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler
+#   Execution: async
+# Role: M10 metrics collection task
+# Callers: scheduler
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: M10 Metrics
+
 # app/tasks/m10_metrics_collector.py
 """
 Periodic metrics collector for M10 Recovery System.

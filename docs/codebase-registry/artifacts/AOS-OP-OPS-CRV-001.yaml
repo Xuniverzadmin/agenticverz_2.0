@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-OPS-CRV-001
+name: claude_response_validator.py
+type: script
+status: active
+owner: ops
+purpose: Claude response validation against behavior rules
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: ops
+  subdomain: governance
+  order_depth: O2
+responsibility: |
+  - Validates Claude responses against behavior library
+  - Checks for required sections (SELF-AUDIT, etc.)
+  - Enforces behavior rules (BL-BOOT-001, BL-ENV-001, etc.)
+  - Rejects responses missing required sections
+dependencies: []
+notes: |
+  Location: scripts/ops/claude_response_validator.py
+  Reference: CLAUDE_BEHAVIOR_LIBRARY.md

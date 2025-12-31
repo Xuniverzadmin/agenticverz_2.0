@@ -1,0 +1,81 @@
+# Change Record - PIN-052 Batch Modifications
+# Created: 2025-12-30
+# Purpose: Document code changes from PIN-052 session
+
+change_id: CHANGE-2025-0002
+date: 2025-12-30
+author: pair  # Claude + Human
+
+change_type: feature
+purpose: |
+  PIN-052 batch: Security sanitization, hybrid ML recovery,
+  tenant isolation enforcement, and CLI DX improvements.
+
+scope:
+  artifacts_modified:
+    - AOS-BE-MEM-VEC-001   # vector_store.py
+    - AOS-BE-SVC-RMT-001   # recovery_matcher.py
+    - AOS-BE-API-CVS-001   # customer_visibility.py
+    - AOS-CLI-AOS-001      # aos.py
+
+  files_added:
+    - backend/app/security/sanitize.py
+    - backend/app/security/__init__.py
+    - backend/tests/quota/test_quota_exhaustion.py
+    - docs/runbooks/MIGRATION_022_PRODUCTION_RUNBOOK.md
+    - docs/runbooks/WORKER_POOL_PRODUCTION_RUNBOOK.md
+    - docs/security/TENANT_AUDIT_REPORT.md
+    - docs/legal/DATA_HANDLING_TOS_SECTION.md
+    - docs/deployment/EMAIL_PROVIDER_CONFIGURATION.md
+    - monitoring/dashboards/embedding-cost-dashboard.json
+
+impact:
+  authority_change: none
+  behavior_change: yes
+  interface_change: yes
+  data_change: no
+
+risk_level: medium
+backward_compatibility: yes
+
+validation:
+  tests_added: yes
+  tests_modified: no
+  manual_verification: required
+
+changes_detail:
+  - artifact: AOS-BE-MEM-VEC-001
+    file: backend/app/memory/vector_store.py
+    change: Added sanitize_for_embedding() call before external API
+    reason: PIN-052 security - prevent secrets in embeddings
+
+  - artifact: AOS-BE-SVC-RMT-001
+    file: backend/app/services/recovery_matcher.py
+    change: |
+      - Added _find_similar_by_embedding() method
+      - Added pgvector cosine similarity search
+      - Implemented suggest_hybrid() for 3-layer lookup
+    reason: PIN-050 hybrid ML recovery
+
+  - artifact: AOS-BE-API-CVS-001
+    file: backend/app/api/customer_visibility.py
+    change: Added explicit tenant_id filtering on all queries
+    reason: PIN-052 tenant isolation audit
+
+  - artifact: AOS-CLI-AOS-001
+    file: backend/cli/aos.py
+    change: |
+      - Added cmd_quickstart() wizard command
+      - Added --recommended flag to skills list
+    reason: PIN-053 DX onboarding improvements
+
+related_pins:
+  - PIN-050  # Hybrid ML Recovery
+  - PIN-052  # Data Ownership & Embedding Security
+  - PIN-053  # Go-to-Market Strategy
+
+notes: |
+  This change record documents retroactive registration of code
+  changes made during a session continuation where governance
+  was inadvertently bypassed. The SESSION_PLAYBOOK.yaml Section 14.5
+  was added to prevent future occurrences.

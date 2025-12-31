@@ -1,3 +1,14 @@
+# Layer: L3 — Boundary Adapter
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Planner package marker
+# Callers: Planner imports
+# Allowed Imports: L4, L6
+# Forbidden Imports: L1, L2, L5
+# Reference: Package Structure
+
 # planner/__init__.py
 """
 Planner Module (M2.5)

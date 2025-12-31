@@ -1,0 +1,35 @@
+# Artifact Registry Entry - Vector Store Service
+# Source: M10 Hybrid ML Recovery
+# Created: 2025-12-30
+
+artifact_id: AOS-BE-MEM-VEC-001
+name: vector_store.py
+type: service
+status: active
+owner: backend
+purpose: pgvector-based vector storage for embeddings and similarity search
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: null
+  domain: memory
+  subdomain: vectors
+  order_depth: O0
+responsibility: |
+  - Store and retrieve embedding vectors
+  - Cosine similarity search via pgvector
+  - Hybrid ML recovery pattern matching
+  - 3-layer lookup: cache -> embedding -> LLM
+  - Sanitization integration (PIN-052)
+relations:
+  imports:
+    - pgvector
+    - app.security.sanitize
+    - openai (for embeddings)
+  imported_by:
+    - AOS-BE-SVC-RMT-001 (recovery_matcher.py)
+    - AOS-BE-SVC-MEM-001 (memory_service.py)
+notes: |
+  Modified 2025-12-30 for PIN-052 embedding security.
+  Added sanitize_for_embedding() integration.

@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time, runtime increment
+#   Execution: sync
+# Role: Prometheus metrics definitions and multiprocess support
+# Callers: All modules that emit metrics
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Observability
+
 """
 Prometheus metrics for NOVA Agent Manager.
 

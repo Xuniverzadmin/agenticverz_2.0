@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@ai-console': path.resolve(__dirname, './src/products/ai-console'),
     },
   },
   server: {

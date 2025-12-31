@@ -42,6 +42,10 @@ from ..services.email_verification import (
     get_email_verification_service,
 )
 
+# Phase 2B: Write services for DB operations
+from ..services.tenant_service import TenantService
+from ..services.user_write_service import UserWriteService
+
 logger = logging.getLogger("nova.api.onboarding")
 
 router = APIRouter(prefix="/api/v1/auth", tags=["onboarding"])
@@ -233,39 +237,28 @@ def get_or_create_user_from_oauth(user_info: OAuthUserInfo) -> tuple[dict, bool]
         # Handle both Row tuple and direct model return (SQLModel version differences)
         user = result if isinstance(result, User) else (result[0] if result else None)
 
+        # Phase 2B: Use write service for DB operations
+        user_service = UserWriteService(session)
+
         is_new = False
         if not user:
-            # Create new user
-            user = User(
+            # Create new user via write service
+            user = user_service.create_user(
                 email=user_info.email,
+                clerk_user_id=f"{user_info.provider}_{user_info.provider_user_id}",
                 name=user_info.name or user_info.given_name,
                 avatar_url=user_info.picture,
-                clerk_user_id=f"{user_info.provider}_{user_info.provider_user_id}",
                 status="active",
             )
-            session.add(user)
-            session.commit()
-            session.refresh(user)
             is_new = True
 
             logger.info(f"Created new user via OAuth: {user.id[:8]}... ({user_info.provider})")
         else:
-            # Update last login
-            user.last_login_at = utc_now()
-            user.updated_at = utc_now()
-            session.add(user)
-            session.commit()
-            session.refresh(user)
+            # Update last login via write service
+            user = user_service.update_user_login(user)
 
         # Extract values before session closes to avoid DetachedInstanceError
-        user_data = {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "avatar_url": user.avatar_url,
-            "default_tenant_id": user.default_tenant_id,
-            "status": user.status,
-        }
+        user_data = user_service.user_to_dict(user)
         return user_data, is_new
 
 
@@ -281,38 +274,27 @@ def get_or_create_user_from_email(email: str, name: Optional[str] = None) -> tup
         # Handle both Row tuple and direct model return (SQLModel version differences)
         user = result if isinstance(result, User) else (result[0] if result else None)
 
+        # Phase 2B: Use write service for DB operations
+        user_service = UserWriteService(session)
+
         is_new = False
         if not user:
-            # Create new user
-            user = User(
+            # Create new user via write service
+            user = user_service.create_user(
                 email=email,
-                name=name,
                 clerk_user_id=f"email_{hashlib.sha256(email.encode()).hexdigest()[:16]}",
+                name=name,
                 status="active",
             )
-            session.add(user)
-            session.commit()
-            session.refresh(user)
             is_new = True
 
             logger.info(f"Created new user via email: {user.id[:8]}...")
         else:
-            # Update last login
-            user.last_login_at = utc_now()
-            user.updated_at = utc_now()
-            session.add(user)
-            session.commit()
-            session.refresh(user)
+            # Update last login via write service
+            user = user_service.update_user_login(user)
 
         # Extract values before session closes to avoid DetachedInstanceError
-        user_data = {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "avatar_url": user.avatar_url,
-            "default_tenant_id": user.default_tenant_id,
-            "status": user.status,
-        }
+        user_data = user_service.user_to_dict(user)
         return user_data, is_new
 
 
@@ -330,32 +312,25 @@ def create_default_tenant_for_user(user_data: dict) -> dict:
         user_name = user_data.get("name")
         user_email = user_data.get("email")
 
-        # Create personal tenant
+        # Phase 2B: Use write services for DB operations
+        tenant_service = TenantService(session)
+
+        # Create personal tenant via service
         slug = f"personal-{user_id[:8]}"
-        tenant = Tenant(
+        tenant = tenant_service.create_tenant(
             name=f"{user_name or user_email}'s Workspace",
             slug=slug,
             plan="free",
             status="active",
         )
-        session.add(tenant)
-        session.commit()
-        session.refresh(tenant)
 
-        # Create membership (owner)
-        membership = TenantMembership(
-            tenant_id=tenant.id,
+        # Create membership (owner) and set as default tenant via service
+        tenant_service.create_membership_with_default(
+            tenant=tenant,
             user_id=user_id,
             role="owner",
+            set_as_default=True,
         )
-        session.add(membership)
-
-        # Set as default tenant on user
-        user = session.get(User, user_id)
-        if user:
-            user.default_tenant_id = tenant.id
-            session.add(user)
-        session.commit()
 
         logger.info(f"Created default tenant for user: {tenant.id[:8]}...")
 

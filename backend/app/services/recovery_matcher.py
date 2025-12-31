@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide (NOT console-owned)
+# Callers: recovery_evaluator.py (worker)
+# Reference: PIN-240
+# WARNING: If this logic is wrong, ALL products break.
+
 # app/services/recovery_matcher.py
 """
 M10 Recovery Suggestion Engine - Matcher Service
@@ -23,10 +29,15 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from app.security.sanitize import sanitize_error_message
+
 logger = logging.getLogger("nova.services.recovery_matcher")
 
 # Scoring constants
 HALF_LIFE_DAYS = 30
+EMBEDDING_SIMILARITY_THRESHOLD = 0.85  # Minimum similarity for embedding match
+LLM_ESCALATION_THRESHOLD = 0.75  # Below this, escalate to LLM
+CACHE_TTL_SECONDS = 3600  # 1 hour cache for recovery suggestions
 LAMBDA = math.log(2) / HALF_LIFE_DAYS  # ~0.0231
 ALPHA = 0.7  # Weight for time-decayed score
 MIN_CONFIDENCE_THRESHOLD = 0.1  # Minimum confidence to store suggestion
@@ -82,8 +93,11 @@ class RecoveryMatcher:
         error_type = payload.get("error_type", payload.get("error_code", "UNKNOWN"))
         raw = payload.get("raw", payload.get("error_message", ""))
 
+        # Sanitize error message to prevent secrets in signatures (PIN-052)
+        sanitized_raw = sanitize_error_message(str(raw))
+
         # Normalize: lowercase, strip whitespace, truncate
-        normalized = str(raw).lower().strip()[:500]
+        normalized = sanitized_raw.lower().strip()[:500]
 
         # Generate signature hash
         signature_input = f"{error_type}:{normalized}"
@@ -258,6 +272,306 @@ class RecoveryMatcher:
         except Exception as e:
             logger.warning(f"Failed to count occurrences: {e}")
             return 0
+
+    # =========================================================================
+    # Hybrid ML Recovery (PIN-050)
+    # 3-layer lookup: cache → embedding → LLM
+    # =========================================================================
+
+    def _get_cached_recovery(self, error_signature: str) -> Optional[Dict[str, Any]]:
+        """
+        Layer 1: Check in-memory/Redis cache for recovery suggestion.
+
+        Fast O(1) lookup for recently seen error patterns.
+        """
+        try:
+            import redis
+
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+            r = redis.from_url(redis_url, decode_responses=True)
+
+            cache_key = f"recovery:cache:{error_signature}"
+            cached = r.get(cache_key)
+
+            if cached:
+                import json
+
+                logger.debug(f"Cache hit for error_signature={error_signature[:8]}")
+                return json.loads(cached)
+
+            return None
+        except Exception as e:
+            logger.debug(f"Cache lookup failed (non-fatal): {e}")
+            return None
+
+    def _set_cached_recovery(self, error_signature: str, recovery: Dict[str, Any]) -> None:
+        """Store recovery suggestion in cache."""
+        try:
+            import json
+
+            import redis
+
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+            r = redis.from_url(redis_url, decode_responses=True)
+
+            cache_key = f"recovery:cache:{error_signature}"
+            r.setex(cache_key, CACHE_TTL_SECONDS, json.dumps(recovery))
+        except Exception as e:
+            logger.debug(f"Cache set failed (non-fatal): {e}")
+
+    async def _find_similar_by_embedding(self, error_message: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Layer 2: Vector similarity search for similar failures.
+
+        Uses pgvector to find semantically similar error messages
+        even if error_code differs.
+
+        Args:
+            error_message: Sanitized error message to match
+            limit: Maximum results
+
+        Returns:
+            List of similar failures with similarity scores
+        """
+        try:
+            from app.memory.vector_store import get_embedding
+
+            # Get embedding for the error message
+            sanitized = sanitize_error_message(error_message)
+            embedding = await get_embedding(sanitized[:500])  # Truncate for embedding
+
+            from sqlalchemy import text
+
+            session = self._get_session()
+
+            # Vector similarity search on failure_catalog (if embeddings exist)
+            result = session.execute(
+                text(
+                    """
+                    SELECT
+                        id,
+                        error_code,
+                        error_pattern,
+                        recovery_action,
+                        success_rate,
+                        1 - (embedding <=> CAST(:embedding AS vector)) as similarity
+                    FROM failure_catalog
+                    WHERE embedding IS NOT NULL
+                      AND 1 - (embedding <=> CAST(:embedding AS vector)) >= :threshold
+                    ORDER BY embedding <=> CAST(:embedding AS vector)
+                    LIMIT :limit
+                """
+                ),
+                {
+                    "embedding": f"[{','.join(str(x) for x in embedding)}]",
+                    "threshold": EMBEDDING_SIMILARITY_THRESHOLD,
+                    "limit": limit,
+                },
+            )
+
+            rows = result.fetchall()
+
+            similar = [
+                {
+                    "id": str(row[0]),
+                    "error_code": row[1],
+                    "error_pattern": row[2],
+                    "recovery_action": row[3],
+                    "success_rate": float(row[4]) if row[4] else 0.0,
+                    "similarity": float(row[5]),
+                    "source": "embedding",
+                }
+                for row in rows
+            ]
+
+            logger.info(f"Embedding search found {len(similar)} similar failures")
+            return similar
+
+        except Exception as e:
+            logger.warning(f"Embedding search failed: {e}")
+            return []
+
+    async def _escalate_to_llm(
+        self, error_code: str, error_message: str, context: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Layer 3: LLM reasoning for complex/novel failures.
+
+        Only called when:
+        - No cache hit
+        - No embedding match above threshold
+        - Error is complex or novel
+
+        Uses structured output for recovery suggestion.
+        """
+        try:
+            import httpx
+
+            anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+            if not anthropic_key:
+                logger.warning("ANTHROPIC_API_KEY not set, skipping LLM escalation")
+                return None
+
+            # Build prompt
+            prompt = f"""Analyze this error and suggest a recovery action.
+
+Error Code: {error_code}
+Error Message: {sanitize_error_message(error_message)[:500]}
+
+Provide a JSON response with:
+- suggested_action: string (concise recovery action, max 200 chars)
+- confidence: float (0.0-1.0)
+- reasoning: string (brief explanation)
+- requires_human: boolean (true if needs manual intervention)
+"""
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": anthropic_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    json={
+                        "model": "claude-sonnet-4-20250514",
+                        "max_tokens": 500,
+                        "messages": [{"role": "user", "content": prompt}],
+                    },
+                )
+
+                if response.status_code != 200:
+                    logger.warning(f"LLM API error: {response.status_code}")
+                    return None
+
+                data = response.json()
+                content = data.get("content", [{}])[0].get("text", "")
+
+                # Parse JSON response
+                import json
+                import re
+
+                # Extract JSON from response
+                json_match = re.search(r"\{[^{}]*\}", content, re.DOTALL)
+                if json_match:
+                    result = json.loads(json_match.group())
+                    result["source"] = "llm"
+                    logger.info(f"LLM suggested recovery with confidence={result.get('confidence', 0):.2f}")
+                    return result
+
+                return None
+
+        except Exception as e:
+            logger.warning(f"LLM escalation failed: {e}")
+            return None
+
+    async def suggest_hybrid(self, request: Dict[str, Any]) -> MatchResult:
+        """
+        Hybrid ML recovery suggestion using 3-layer lookup.
+
+        Layer 1: Cache (fast, O(1))
+        Layer 2: Embedding similarity (semantic match)
+        Layer 3: LLM reasoning (complex/novel failures)
+
+        Args:
+            request: Dict with failure_match_id, failure_payload, source
+
+        Returns:
+            MatchResult with suggestion and confidence
+        """
+        failure_match_id = str(request.get("failure_match_id", ""))
+        payload = request.get("failure_payload", {})
+        source = request.get("source", "unknown")
+
+        # Normalize and sanitize
+        error_code, error_signature = self._normalize_error(payload)
+        error_message = payload.get("raw", payload.get("error_message", ""))
+
+        logger.info(f"Hybrid recovery for failure_match_id={failure_match_id}, error_code={error_code}")
+
+        # Layer 1: Cache lookup
+        cached = self._get_cached_recovery(error_signature)
+        if cached:
+            return MatchResult(
+                matched_entry=cached.get("matched_entry"),
+                suggested_recovery=cached.get("suggestion"),
+                confidence=cached.get("confidence", 0.8),
+                candidate_id=None,
+                explain={"method": "cache", "cache_hit": True},
+                failure_match_id=failure_match_id,
+                error_code=error_code,
+                error_signature=error_signature,
+            )
+
+        # Layer 2: Embedding similarity search
+        similar_by_embedding = await self._find_similar_by_embedding(error_message)
+
+        if similar_by_embedding:
+            best_match = similar_by_embedding[0]
+            similarity = best_match.get("similarity", 0)
+
+            if similarity >= EMBEDDING_SIMILARITY_THRESHOLD:
+                suggestion = best_match.get("recovery_action", "")
+                confidence = min(0.95, similarity * best_match.get("success_rate", 0.8))
+
+                # Cache for future lookups
+                self._set_cached_recovery(
+                    error_signature,
+                    {
+                        "suggestion": suggestion,
+                        "confidence": confidence,
+                        "matched_entry": best_match,
+                    },
+                )
+
+                return MatchResult(
+                    matched_entry=best_match,
+                    suggested_recovery=suggestion,
+                    confidence=confidence,
+                    candidate_id=None,
+                    explain={
+                        "method": "embedding",
+                        "similarity": similarity,
+                        "catalog_id": best_match.get("id"),
+                    },
+                    failure_match_id=failure_match_id,
+                    error_code=error_code,
+                    error_signature=error_signature,
+                )
+
+        # Layer 3: LLM escalation for complex/novel failures
+        llm_result = await self._escalate_to_llm(error_code, error_message)
+
+        if llm_result:
+            suggestion = llm_result.get("suggested_action", "")
+            confidence = llm_result.get("confidence", 0.5)
+
+            # Cache LLM results too (shorter TTL could be configured)
+            self._set_cached_recovery(
+                error_signature,
+                {
+                    "suggestion": suggestion,
+                    "confidence": confidence,
+                    "matched_entry": {"source": "llm", "reasoning": llm_result.get("reasoning")},
+                },
+            )
+
+            return MatchResult(
+                matched_entry={"source": "llm", "reasoning": llm_result.get("reasoning")},
+                suggested_recovery=suggestion,
+                confidence=confidence,
+                candidate_id=None,
+                explain={
+                    "method": "llm",
+                    "requires_human": llm_result.get("requires_human", False),
+                },
+                failure_match_id=failure_match_id,
+                error_code=error_code,
+                error_signature=error_signature,
+            )
+
+        # Fallback: Use error_code matching (original behavior)
+        return self.suggest(request)
 
     def _upsert_candidate(
         self,

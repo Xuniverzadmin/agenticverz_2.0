@@ -1,3 +1,16 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: scheduler (standalone process)
+#   Execution: sync (dispatch loop) + ThreadPoolExecutor (worker threads)
+# Role: Worker pool dispatch (polls DB, dispatches to RunRunner)
+# Authority: Run claim (pending → running via ThreadPool dispatch)
+# Callers: Standalone process (`python -m app.worker.pool`)
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3
+# Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 3: At-Least-Once Worker Dispatch)
+# Pattern: Sync dispatch loop with ThreadPoolExecutor for worker isolation
+
 """
 Worker pool: polls runs table and dispatches runs to runner workers.
 Designed to be launched as a separate process: `python -m app.worker.pool`

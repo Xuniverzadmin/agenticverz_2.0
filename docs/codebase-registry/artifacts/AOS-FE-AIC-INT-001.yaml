@@ -1,0 +1,16 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-INT-001
+name: IntegrationsPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: Manage connected services and webhooks
+authority_level: observe
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: integrations
+  order_depth: O2

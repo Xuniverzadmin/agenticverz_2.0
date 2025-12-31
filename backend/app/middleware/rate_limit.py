@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api (every request)
+#   Execution: sync
+# Role: Rate limiting middleware
+# Callers: main.py middleware chain
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Core Security
+
 """
 Rate Limit Middleware
 M8 Deliverable: JWT-based rate limiting per tenant/tier

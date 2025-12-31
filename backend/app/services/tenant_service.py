@@ -1,3 +1,9 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Role: Tenant CRUD, API key management, quota enforcement
+# Callers: L2 APIs, L4 engines, L5 workers
+# Reference: PIN-242 (Baseline Freeze)
+
 """
 Tenant Service (M21)
 
@@ -21,6 +27,8 @@ from ..models.tenant import (
     APIKey,
     AuditLog,
     Tenant,
+    TenantMembership,
+    User,
     UsageRecord,
     WorkerRun,
 )
@@ -139,6 +147,53 @@ class TenantService:
 
         logger.warning("tenant_suspended", extra={"tenant_id": tenant_id, "reason": reason})
         return tenant
+
+    def create_membership_with_default(
+        self,
+        tenant: Tenant,
+        user_id: str,
+        role: str = "owner",
+        set_as_default: bool = True,
+    ) -> TenantMembership:
+        """
+        Create a tenant membership and optionally set as user's default tenant.
+
+        Phase 2B Batch 1: Extracted from api/onboarding.py.
+
+        Args:
+            tenant: The tenant to add the user to
+            user_id: The user ID
+            role: Role in tenant (default: owner)
+            set_as_default: Whether to set this as user's default tenant
+
+        Returns:
+            Created TenantMembership
+        """
+        membership = TenantMembership(
+            tenant_id=tenant.id,
+            user_id=user_id,
+            role=role,
+        )
+        self.session.add(membership)
+
+        if set_as_default:
+            user = self.session.get(User, user_id)
+            if user:
+                user.default_tenant_id = tenant.id
+                self.session.add(user)
+
+        self.session.commit()
+
+        logger.info(
+            "tenant_membership_created",
+            extra={
+                "tenant_id": tenant.id,
+                "user_id": user_id,
+                "role": role,
+                "set_as_default": set_as_default,
+            },
+        )
+        return membership
 
     # ============== API Key Operations ==============
 

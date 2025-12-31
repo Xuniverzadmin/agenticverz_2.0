@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: import-time
+#   Execution: sync
+# Role: Configuration package marker
+# Callers: Config imports
+# Allowed Imports: None
+# Forbidden Imports: None
+# Reference: Package Structure
+
 # Configuration module
 """
 Runtime configuration and feature flags.

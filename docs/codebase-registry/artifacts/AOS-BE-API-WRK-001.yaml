@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-WRK-001
+name: workers.py
+type: api-route
+status: active
+owner: backend
+purpose: Business Builder Worker API - Worker execution and replay
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: product-builder
+  console: customer
+  domain: workers
+  subdomain: execution
+  order_depth: O3
+responsibility: |
+  - POST /api/v1/workers/business-builder/run - Execute worker
+  - POST /api/v1/workers/business-builder/replay - Replay execution
+  - GET /api/v1/workers/business-builder/runs/{run_id} - Run details
+  - GET /api/v1/workers/business-builder/runs - List recent runs
+  - POST /api/v1/workers/business-builder/validate-brand - Validate schema
+  - GET /api/v1/workers/business-builder/stream/{run_id} - SSE streaming
+dependencies:
+  - verify_api_key
+  - PolicyEngine
+  - WorkerRun model
+  - CostRecord, CostBudget
+  - emit_policy_precheck_decision

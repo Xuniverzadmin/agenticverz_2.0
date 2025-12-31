@@ -1,0 +1,32 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-EVD-001
+name: evidence_report.py
+type: service
+status: active
+owner: backend
+purpose: Legal-grade PDF evidence report generation
+authority_level: observe
+execution_surface: server
+traceability:
+  product: ai-console
+  console: customer
+  domain: incidents
+  subdomain: evidence
+  order_depth: O4
+responsibility: |
+  - Cover page with metadata generation
+  - Executive summary for legal/leadership
+  - Factual reconstruction (pure evidence)
+  - Policy evaluation record
+  - Decision timeline (deterministic trace)
+  - Replay verification with hash matching
+  - Counterfactual prevention proof
+  - Legal attestation with verification signature
+dependencies:
+  - reportlab
+notes: |
+  Location: backend/app/services/evidence_report.py
+  Milestone: M23
+  Document survives legal review, audit, and hostile questioning

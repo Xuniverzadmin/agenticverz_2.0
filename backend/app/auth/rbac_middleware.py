@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: FastAPI RBAC middleware for request auth
+# Callers: main.py, route handlers
+# Allowed Imports: None
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Auth Infrastructure
+
 """
 RBAC Middleware with PolicyObject - M7/M8 Implementation
 

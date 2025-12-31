@@ -1,0 +1,183 @@
+# Signal Registry Auditor Rules
+# Status: FROZEN
+# Generated: 2025-12-31
+# Reference: PIN-252
+#
+# Schema Definition (Non-negotiable):
+# - One row = one runtime-generated artifact
+# - UNKNOWN allowed, must be explicit
+# - L7 and L8 never appear as Consumers in L1 sense
+# - L2 API is a boundary, not a consumer
+
+schema:
+  version: "1.0"
+  frozen: true
+  columns:
+    - uid                    # SIG-XXX format
+    - signal                 # Name of runtime artifact
+    - class                  # raw | derived | terminal
+    - trigger                # What causes signal creation
+    - producer               # File that creates the signal
+    - p_layer                # Producer layer (L2-L7)
+    - processor              # File that transforms/enriches (optional)
+    - x_layer                # Processor layer (optional)
+    - intermediary_hops      # L7→L5→L4 style path (optional)
+    - output_artifact        # What is created
+    - form                   # record | event | file | metric
+    - persistence            # PostgreSQL | Redis | R2 | Memory | None
+    - consumer               # File that reads the signal
+    - c_layer                # Consumer layer
+    - exposure               # internal-only | indirect | direct
+    - l2_api                 # API endpoint if exposed (or "—")
+    - verified_path          # YES | NO | PARTIAL
+    - source_files           # Literal file paths
+
+rules:
+  signal_definition:
+    description: "A signal is a runtime-generated artifact created or mutated as a result of execution"
+    not_signals:
+      - "Configuration files (read, not produced)"
+      - "Validation schemas (enforcement, not creation)"
+      - "Static data files (unless they trigger persisted match records)"
+      - "Build/ops artifacts"
+      - "Documentation"
+
+  layer_constraints:
+    l7_as_consumer:
+      allowed: true
+      note: "L7 can consume for ops continuity (logs, housekeeping)"
+      l1_exposure: false
+    l8_as_consumer:
+      allowed: true
+      note: "L8 consumes for testing/CI only"
+      l1_exposure: false
+    l2_is_boundary:
+      description: "L2 API exposes signals, does not consume them in registry sense"
+
+  unknown_handling:
+    allowed: true
+    expected_rate: "10-20% at scale"
+    must_be_explicit: true
+    fields_that_can_be_unknown:
+      - trigger
+      - processor
+      - consumer
+      - intermediary_hops
+      - verified_path
+
+  orphan_detection:
+    definition: "Signal with no consumer"
+    action: "Flag for review, do not auto-delete"
+    l7_only_exception: "L7-only signals with no L6 consumer are valid if documented"
+
+# L7 Flow Analysis Rules
+l7_analysis:
+  description: "Rules for analyzing L7→L6 and L7→L7 flows"
+
+  l7_output_definition:
+    description: "Runtime artifact produced by schedulers, systemd, cron, deployment hooks, or ops automation"
+    examples:
+      - "cleanup job completion markers"
+      - "rollover job outputs"
+      - "snapshot files"
+      - "aggregation job results"
+      - "graduation status updates"
+
+  decision_tree:
+    q1_l7_only:
+      question: "Is the output required ONLY within L7?"
+      criteria:
+        - "Consumer layer = L7"
+        - "Output affects ops continuity only"
+        - "No runtime domain logic depends on it"
+      if_yes:
+        exposure: "internal-only"
+        l2_api: "—"
+        check: "Consumer exists and is explicit"
+        fail_condition: "No consumer = orphaned operational signal"
+
+    q2_l7_to_l6:
+      question: "Is the output required by L6?"
+      criteria:
+        - "Output mutates DB/Redis/external state"
+        - "Used later by L5/L4 logic"
+      if_yes:
+        consumer_layer: "L6 or L5/L4"
+        intermediary_hops: "Must show L7→L6 (or via L5)"
+        fail_conditions:
+          - "Consumer is missing"
+          - "Consumer is declared but not implemented"
+          - "Persistence = no"
+        severity: "REAL BUG, not documentation debt"
+
+    q3_l7_to_both:
+      question: "Is the output required by BOTH L7 and L6?"
+      valid: true
+      requirements:
+        - "Consumer listed for both L7 and L6"
+        - "Persistence must be 'yes'"
+        - "Intermediary hops explicit"
+      fail_condition: "Latent reliability issue if not met"
+
+# CI Gate Definitions
+ci_gates:
+  blocking:
+    - rule: "Every new session.add/execute must be registered"
+      check: "grep for session.add/execute not in registry"
+      action: "BLOCK merge"
+
+    - rule: "No UNKNOWN producer or consumer for L2-exposed signals"
+      check: "exposure=direct AND (producer=UNKNOWN OR consumer=UNKNOWN)"
+      action: "BLOCK merge"
+
+    - rule: "L7→L6 flows must have verified_path=YES"
+      check: "p_layer=L7 AND c_layer contains L6 AND verified_path!=YES"
+      action: "BLOCK merge"
+
+  warning:
+    - rule: "UNKNOWN fields in non-exposed signals"
+      check: "exposure=internal-only AND any field=UNKNOWN"
+      action: "WARN, allow merge"
+
+    - rule: "New L7 job without signal registration"
+      check: "New file in app/jobs/ without corresponding SIG-XXX"
+      action: "WARN, allow merge"
+
+    - rule: "Orphaned signal detected"
+      check: "consumer=NONE AND exposure!=internal-only"
+      action: "WARN, require justification"
+
+# Verification Commands
+verification:
+  file_count:
+    python: "find backend/app -type f -name '*.py' ! -path '*/tests/*' | wc -l"
+    expected: 336
+
+  signal_count:
+    command: "grep -c '^| SIG-' docs/architecture/SIGNAL_REGISTRY_COMPLETE.md"
+    expected: 47
+
+  db_writers:
+    command: "grep -rln 'session\\.add\\|session\\.execute' backend/app --include='*.py' | wc -l"
+    expected: 77
+
+  l7_producers:
+    command: "grep -c 'P-Layer.*L7\\|p_layer.*L7' docs/architecture/SIGNAL_REGISTRY_COMPLETE.md"
+    note: "Should match L7 job count"
+
+# Auditor Script Interface
+auditor_interface:
+  input:
+    - registry_path: "docs/architecture/SIGNAL_REGISTRY_COMPLETE.md"
+    - codebase_root: "backend/app"
+
+  output:
+    - orphaned_signals: "List of signals with no verified consumer"
+    - unregistered_writes: "List of session.add/execute not in registry"
+    - l7_flow_gaps: "L7→L6 flows without verified consumption"
+    - unknown_report: "Summary of UNKNOWN fields by signal"
+
+  exit_codes:
+    0: "All checks pass"
+    1: "Warnings only"
+    2: "Blocking violations found"

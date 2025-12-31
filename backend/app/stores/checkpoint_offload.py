@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Checkpoint offload to object storage
+# Callers: workers
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Storage System
+
 # Checkpoint Offload to Cloudflare R2 (M11)
 """
 Offloads old checkpoints from PostgreSQL to Cloudflare R2 for cost optimization.

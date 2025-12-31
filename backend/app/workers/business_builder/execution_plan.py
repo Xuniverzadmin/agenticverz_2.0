@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: product-builder
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Business builder execution planning
+# Callers: business_builder worker
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Business Builder
+
 # Execution Plan for Business Builder Worker
 # Defines stages that map to M4 execution engine
 """

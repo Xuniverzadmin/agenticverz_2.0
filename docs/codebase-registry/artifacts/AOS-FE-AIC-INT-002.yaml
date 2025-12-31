@@ -1,0 +1,17 @@
+# Artifact Registry Entry
+# Source: PIN-236-code-purpose-authority-registry.md
+# Extraction: Direct transcription, no modification
+
+artifact_id: AOS-FE-AIC-INT-002
+name: KeysPage.tsx
+type: page
+status: active
+owner: ai-console
+purpose: API key management
+authority_level: mutate
+execution_surface: browser
+traceability:
+  product: ai-console
+  domain: integrations
+  order_depth: O2
+notes: "Mutate authority - can create/revoke keys. Security: keys shown ONCE."

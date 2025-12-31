@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api
+#   Execution: sync
+# Role: Policy content accuracy validation
+# Callers: policy/engine
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: Policy System
+
 # M23 Content Accuracy Validator
 # Prevents AI from making assertions about data that is missing or NULL
 #

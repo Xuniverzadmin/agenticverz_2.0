@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: scheduler
+//   Execution: async
+// Role: Health check utility for backend connectivity
+// Callers: App root, status components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Utilities
+
 /**
  * Health Check & Circuit Breaker System
  *

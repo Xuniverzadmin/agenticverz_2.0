@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-ORP-001
+name: orphan_recovery.py
+type: service
+status: active
+owner: backend
+purpose: PB-S2 crash recovery - detect runs orphaned by system crash
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: recovery
+  subdomain: orphan-detection
+  order_depth: O2
+responsibility: |
+  - On startup, detect runs stuck in "queued" or "running"
+  - Mark as "crashed" (factual status, not mutation)
+  - Log for operator visibility
+  - detect_orphaned_runs function with configurable threshold
+dependencies:
+  - app.models.tenant.WorkerRun
+notes: |
+  Location: backend/app/services/orphan_recovery.py
+  Reference: PIN-199 (PB-S1/S2 Implementation)
+  PB-S2 Guarantee: Crashed runs are never silently lost
+  Truth Constraints: Cannot mutate historical execution data

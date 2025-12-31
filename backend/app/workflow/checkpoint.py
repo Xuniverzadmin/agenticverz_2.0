@@ -1,3 +1,15 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Workflow checkpoint persistence and recovery
+# Authority: Checkpoint state mutation (optimistic locking via version)
+# Callers: workflow engine
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 4: Exactly-Once Step Execution)
+
 # Checkpoint Store (M4 + Hardening)
 """
 DB-backed checkpoint store for workflow resume-on-restart.

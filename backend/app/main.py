@@ -39,7 +39,7 @@ from .metrics import (
     nova_worker_pool_size,
 )
 from .middleware.tenant import TenantMiddleware
-from .planners import get_planner
+from .planners import PlannerProtocol, get_planner
 from .skills import get_skill, get_skill_manifest, list_skills
 from .utils.budget_tracker import BudgetTracker, enforce_budget
 from .utils.concurrent_runs import ConcurrentRunsLimiter
@@ -47,28 +47,20 @@ from .utils.idempotency import check_idempotency
 from .utils.input_sanitizer import sanitize_goal
 from .utils.rate_limiter import RateLimiter
 
-# Initialize utilities
-rate_limiter = RateLimiter()
-concurrent_limiter = ConcurrentRunsLimiter()
-budget_tracker = BudgetTracker()
+# =============================================================================
+# Global Utilities (Phase 2A: Deferred initialization)
+# =============================================================================
+# STRUCTURAL NOTE: These globals are initialized in lifespan(), not at import.
+# This prevents DB connections and resource allocation during module import.
+# All usage is guarded by lifespan startup completing before requests are served.
 
-# Initialize logging
+rate_limiter: Optional[RateLimiter] = None
+concurrent_limiter: Optional[ConcurrentRunsLimiter] = None
+budget_tracker: Optional[BudgetTracker] = None
+planner: Optional[PlannerProtocol] = None
+
+# Initialize logging (safe at import - no external resources)
 logger = setup_logging()
-
-# Initialize database on startup
-init_db()
-
-# Initialize planner
-planner = get_planner()
-
-# Log startup with skills info
-logger.info(
-    "NOVA Agent Manager started",
-    extra={
-        "planner_backend": os.getenv("PLANNER_BACKEND", "stub"),
-        "skills_registered": [s["name"] for s in list_skills()],
-    },
-)
 
 
 # ---------- API Schemas ----------
@@ -213,6 +205,36 @@ def validate_route_order(app: FastAPI) -> list:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan - start background tasks and initialize services."""
+    # ==========================================================================
+    # Phase 2A: Deferred initialization of globals
+    # ==========================================================================
+    # These were previously initialized at import time. Now initialized here
+    # to prevent DB connections and resource allocation during module import.
+    global rate_limiter, concurrent_limiter, budget_tracker, planner
+
+    # Initialize utilities
+    rate_limiter = RateLimiter()
+    concurrent_limiter = ConcurrentRunsLimiter()
+    budget_tracker = BudgetTracker()
+
+    # Initialize database
+    init_db()
+
+    # Initialize planner
+    planner = get_planner()
+
+    # Log startup with skills info
+    logger.info(
+        "NOVA Agent Manager started",
+        extra={
+            "planner_backend": os.getenv("PLANNER_BACKEND", "stub"),
+            "skills_registered": [s["name"] for s in list_skills()],
+        },
+    )
+
+    # Set worker pool size gauge
+    nova_worker_pool_size.set(int(os.getenv("WORKER_CONCURRENCY", "0")))
+
     # M26: Validate required secrets at startup - FAIL FAST
     from .config.secrets import SecretValidationError, validate_required_secrets
 
@@ -811,10 +833,6 @@ async def worker_pool_health():
     """Worker pool health probe endpoint."""
     concurrency = int(os.getenv("WORKER_CONCURRENCY", "0"))
     return {"worker_pool_configured": concurrency, "status": "standby" if concurrency == 0 else "active"}
-
-
-# Set static worker pool size gauge on startup
-nova_worker_pool_size.set(int(os.getenv("WORKER_CONCURRENCY", "0")))
 
 
 @app.get("/metrics")

@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: external
+//   Execution: async
+// Role: Server-sent events client utility
+// Callers: Real-time components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Utilities
+
 type EventHandler = (event: MessageEvent) => void;
 
 export class SSEConnection {

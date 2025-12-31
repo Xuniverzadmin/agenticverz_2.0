@@ -1,3 +1,16 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker-pool
+#   Execution: sync-over-async
+# Role: Run execution (sync entrypoint wrapping async internal execution)
+# Authority: Run state mutation (pending → running → succeeded/failed/halted)
+# Callers: WorkerPool (via ThreadPoolExecutor)
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3
+# Contract: EXECUTION_SEMANTIC_CONTRACT.md (Guarantee 3: At-Least-Once Worker Dispatch)
+# Pattern: Sync-over-async per contract (ThreadPool requires sync callable)
+
 """
 Runner: executes a single run's plan steps, handles retries and backoff.
 This runner expects `run_row` to contain id, agent_id, goal, plan_json, attempts.
@@ -159,6 +172,106 @@ class RunRunner:
         with Session(engine) as session:
             return session.get(Run, self.run_id)
 
+    def _check_authorization(self, run: Run) -> bool:
+        """
+        Phase E FIX-02: Check pre-computed authorization from L6.
+
+        Authorization is computed at submission time (L2 → L4) and persisted in L6.
+        The runner only reads the decision from L6 - never calls L4 directly.
+
+        This eliminates the L5 → L4 import violation (VIOLATION-002, VIOLATION-003).
+
+        Args:
+            run: The run record from L6
+
+        Returns:
+            True if authorized, False if denied or pending
+        """
+        # Check authorization_decision field from L6
+        authorization_decision = getattr(run, "authorization_decision", None)
+
+        # Backward compatibility: if field is None or missing, default to GRANTED
+        # (for runs created before FIX-02 migration)
+        if authorization_decision is None:
+            logger.debug(
+                "authorization_decision_missing",
+                extra={"run_id": self.run_id, "defaulting_to": "GRANTED"},
+            )
+            return True
+
+        if authorization_decision == "GRANTED":
+            return True
+
+        if authorization_decision == "DENIED":
+            # Log and fail the run
+            authorization_context = getattr(run, "authorization_context", None)
+            reason = "unknown"
+            if authorization_context:
+                try:
+                    import json as _json
+                    ctx = _json.loads(authorization_context)
+                    reason = ctx.get("decision_reason", "unknown")
+                except (ValueError, TypeError):
+                    pass
+
+            logger.warning(
+                "run_authorization_denied",
+                extra={
+                    "run_id": self.run_id,
+                    "authorization_decision": authorization_decision,
+                    "reason": reason,
+                },
+            )
+
+            # Update run status to reflect authorization failure
+            self._update_run(
+                status="failed",
+                attempts=run.attempts or 0,
+                completed_at=datetime.now(timezone.utc),
+                error_message=f"Authorization denied: {reason}",
+            )
+
+            self.publisher.publish(
+                "run.failed",
+                {
+                    "run_id": self.run_id,
+                    "status": "failed",
+                    "reason": "authorization_denied",
+                    "authorization_decision": authorization_decision,
+                },
+            )
+
+            return False
+
+        if authorization_decision == "PENDING_APPROVAL":
+            logger.info(
+                "run_pending_approval",
+                extra={
+                    "run_id": self.run_id,
+                    "authorization_decision": authorization_decision,
+                },
+            )
+
+            # Don't fail, just don't execute yet - worker will retry later
+            # Set status to waiting for approval
+            self._update_run(
+                status="pending_approval",
+                attempts=run.attempts or 0,
+                error_message="Waiting for authorization approval",
+            )
+
+            return False
+
+        # Unknown authorization decision - log warning and deny
+        logger.warning(
+            "run_authorization_unknown",
+            extra={
+                "run_id": self.run_id,
+                "authorization_decision": authorization_decision,
+            },
+        )
+        return False
+
     def _update_run(
         self,
         status: str,
@@ -225,6 +338,12 @@ class RunRunner:
         run = self._get_run()
         if not run:
             logger.error("run_not_found", extra={"run_id": self.run_id})
+            return
+
+        # Phase E FIX-02: Check pre-computed authorization from L6
+        # Authorization decision is computed at submission time (L2 → L4)
+        # Runner only reads the decision - no L4 import needed
+        if not self._check_authorization(run):
             return
 
         start_time = time.time()

@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: user
+//   Execution: async
+// Role: Worker stream hook for real-time updates
+// Callers: Worker-related components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Utilities
+
 // SSE Hook for Real-Time Worker Event Streaming
 import { useEffect, useRef, useCallback, useState } from 'react';
 import type {

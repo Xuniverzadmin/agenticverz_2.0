@@ -1,3 +1,9 @@
+# Layer: L3 — Boundary Adapter (Console → Platform)
+# Product: AI Console
+# Callers: None (ORPHAN - pending M25+ integration)
+# Reference: PIN-240
+# NOTE: Service complete, UI integration missing. Human approval required.
+
 """
 Policy Proposal Service (PB-S4)
 

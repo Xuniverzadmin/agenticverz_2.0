@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-POL-001
+name: policy.py
+type: api-route
+status: active
+owner: backend
+purpose: Policy sandbox evaluation and approval requests
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: policies
+  subdomain: policy
+  order_depth: O2
+responsibility: |
+  - POST /eval - Policy sandbox evaluation
+  - POST /requests - Create approval request
+  - GET /requests - List approval requests
+  - GET /requests/{request_id} - Request details
+  - POST /requests/{request_id}/approve - Approve/reject
+dependencies:
+  - TenantContext
+  - Tier gating (PREVENT, ASSIST)
+  - PolicyEnforcer
+  - CostSim V2

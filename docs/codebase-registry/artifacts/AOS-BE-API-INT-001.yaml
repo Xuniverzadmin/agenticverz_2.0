@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-INT-001
+name: integration.py
+type: api-route
+status: active
+owner: backend
+purpose: M25 Integration loop - incident-to-learning pipeline
+authority_level: enforce
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: incidents
+  subdomain: integration
+  order_depth: O3
+responsibility: |
+  - GET /loop/{incident_id} - Loop status for incident
+  - GET /loop/{incident_id}/stages - Detailed stage info
+  - GET /checkpoint/{checkpoint_id} - Human checkpoint
+  - POST /checkpoint/{checkpoint_id}/resolve - Resolve checkpoint
+  - GET /stats - Integration statistics
+  - POST /retry - Retry failed stage
+  - POST /revert - Revert loop
+dependencies:
+  - Integration dispatcher
+  - Human checkpoints
+  - M25 learning verification

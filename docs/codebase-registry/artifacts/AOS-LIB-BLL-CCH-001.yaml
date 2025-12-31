@@ -1,0 +1,26 @@
+# Artifact Registry Entry - BudgetLLM Library Module
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-LIB-BLL-CCH-001
+name: cache.py
+type: library
+status: active
+owner: backend
+purpose: Prompt caching for cost savings on repeated queries
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: budgetllm
+  subdomain: core
+  order_depth: O2
+responsibility: |
+  - Caches responses based on (model, messages, temperature, system_prompt)
+  - CacheBackend protocol for storage backends
+  - PromptCache class with get/set operations
+  - Cache key generation from prompt parameters
+  - Cache hit/miss metrics
+dependencies: []
+notes: |
+  Location: budgetllm/core/cache.py

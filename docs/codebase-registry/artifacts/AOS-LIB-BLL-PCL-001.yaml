@@ -1,0 +1,25 @@
+# Artifact Registry Entry - BudgetLLM Library Module
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-LIB-BLL-PCL-001
+name: prompt_classifier.py
+type: library
+status: active
+owner: backend
+purpose: Prompt categorization (factual, analytical, coding, etc.)
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: budgetllm
+  subdomain: core
+  order_depth: O3
+responsibility: |
+  - Classifies user prompts into categories to adjust risk scoring
+  - Categories: factual, analytical, coding, instruction, opinion, creative, general
+  - Pattern definitions with weights
+  - Factual queries need high accuracy, creative queries can be loose
+dependencies: []
+notes: |
+  Location: budgetllm/core/prompt_classifier.py

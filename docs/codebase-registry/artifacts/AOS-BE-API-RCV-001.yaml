@@ -1,0 +1,30 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-RCV-001
+name: recovery.py
+type: api-route
+status: active
+owner: backend
+purpose: M10 Recovery suggestion generation and management
+authority_level: advise
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: incidents
+  subdomain: recovery
+  order_depth: O3
+responsibility: |
+  - POST /suggest - Generate recovery suggestion
+  - GET /candidates - List recovery candidates
+  - GET /candidates/{id} - Single candidate with context
+  - PATCH /candidates/{id} - Update candidate
+  - POST /approve - Approve/reject candidate
+  - DELETE /candidates/{id} - Revoke suggestion (admin)
+  - GET /actions - Available recovery actions
+  - POST /evaluate - Evaluate rules without persisting
+  - GET /stats - Statistics and metrics
+dependencies:
+  - RecoveryMatcher
+  - Rate limiting

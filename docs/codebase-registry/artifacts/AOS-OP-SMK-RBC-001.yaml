@@ -1,0 +1,23 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-SMK-RBC-001
+name: rbac_smoke.sh
+type: script
+status: active
+owner: ops
+purpose: Quick RBAC validation smoke test
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: smoke
+  subdomain: rbac
+  order_depth: O2
+responsibility: |
+  - Quick validation of RBAC configuration
+  - Tests basic auth flows
+dependencies: []
+notes: |
+  Location: scripts/smoke/rbac_smoke.sh

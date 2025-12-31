@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend Worker
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-WKR-OBX-001
+name: outbox_processor.py
+type: worker
+status: active
+owner: backend
+purpose: Outbox Processor - Exactly-once transactional outbox pattern
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: integrations
+  subdomain: outbox
+  order_depth: O4
+responsibility: |
+  - Process transactional outbox events
+  - FOR UPDATE SKIP LOCKED for concurrent-safe claiming
+  - Leader election via distributed locks
+  - Idempotent HTTP calls with Idempotency-Key header
+  - Exponential backoff on failures
+  - Dead-letter after max retries
+  - Prometheus metrics
+dependencies:
+  - httpx
+  - DATABASE_URL
+  - Environment: OUTBOX_BATCH_SIZE, OUTBOX_POLL_INTERVAL, OUTBOX_MAX_RETRIES, OUTBOX_LOCK_TTL

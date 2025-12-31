@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: import-time
+//   Execution: sync
+// Role: Message type definitions
+// Callers: Message components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Types
+
 export interface Message {
   id: string;
   from_agent: string;

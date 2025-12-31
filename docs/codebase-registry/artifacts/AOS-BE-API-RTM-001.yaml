@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-RTM-001
+name: runtime.py
+type: api-route
+status: active
+owner: backend
+purpose: Machine-native runtime - simulation, queries, skills, capabilities
+authority_level: advise
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: activity
+  subdomain: runtime
+  order_depth: O2
+responsibility: |
+  - POST /simulate - Pre-execution plan simulation
+  - POST /query - Runtime state queries
+  - GET /skills - List available skills
+  - GET /skills/{skill_id} - Describe skill
+  - GET /capabilities - Get capabilities for agent
+dependencies:
+  - TenantContext
+  - Tier gating (OBSERVE, PREVENT)
+  - CostSimulator
+  - Skill registry

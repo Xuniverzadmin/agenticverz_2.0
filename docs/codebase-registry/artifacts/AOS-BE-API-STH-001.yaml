@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-STH-001
+name: status_history.py
+type: api-route
+status: active
+owner: backend
+purpose: M6 Status History API - Immutable audit trail
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: logs
+  subdomain: status_history
+  order_depth: O3
+responsibility: |
+  - GET /status_history - Query status history with filters
+  - GET /status_history/{entity_type}/{entity_id} - History for entity
+  - GET /status_history/export - Export to CSV/JSONL (signed URL)
+  - GET /status_history/stats - Statistics for audit reporting
+  - Tenant isolation via tenant_id filter
+  - Signed URLs for exports (time-limited)
+dependencies:
+  - StatusHistory model
+  - SIGNED_URL_SECRET
+  - EXPORT_DIR

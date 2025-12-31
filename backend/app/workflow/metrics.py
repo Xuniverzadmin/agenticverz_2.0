@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Workflow Prometheus metrics instrumentation
+# Callers: workflow engine
+# Allowed Imports: None
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: Observability
+
 # Workflow Engine Metrics (M4 Hardening)
 """
 Prometheus metrics for workflow engine observability.

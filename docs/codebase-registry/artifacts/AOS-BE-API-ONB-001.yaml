@@ -1,0 +1,31 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-ONB-001
+name: onboarding.py
+type: api-route
+status: active
+owner: backend
+purpose: M24 Customer onboarding - OAuth and email verification
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: account
+  subdomain: onboarding
+  order_depth: O2
+responsibility: |
+  - POST /login/google - Initiate Google OAuth
+  - GET /callback/google - Google OAuth callback
+  - POST /login/azure - Initiate Azure OAuth
+  - GET /callback/azure - Azure OAuth callback
+  - POST /signup/email - Email signup (sends OTP)
+  - POST /verify/email - Verify email OTP
+  - POST /refresh - Refresh session token
+  - POST /logout - Logout (invalidate session)
+dependencies:
+  - OAuth providers (Google, Azure)
+  - Redis (state storage)
+  - JWT tokens
+  - Email verification service

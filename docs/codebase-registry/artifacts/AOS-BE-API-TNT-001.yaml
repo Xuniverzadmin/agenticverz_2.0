@@ -1,0 +1,28 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-TNT-001
+name: tenants.py
+type: api-route
+status: active
+owner: backend
+purpose: Tenant management, API keys, quotas, and worker queries
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: customer
+  domain: account
+  subdomain: tenant
+  order_depth: O2
+responsibility: |
+  - GET /tenant - Current tenant info
+  - GET /tenant/usage - Usage summary
+  - GET /tenant/quota/* - Run and token quota checks
+  - GET/POST/DELETE /api-keys - API key CRUD
+  - GET /workers - Worker listing and details
+  - GET /runs - Runs for tenant
+dependencies:
+  - TenantContext
+  - TenantService
+  - WorkerRegistryService

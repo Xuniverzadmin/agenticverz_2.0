@@ -9,7 +9,7 @@
  *
  * CURRENT STATE:
  * - Single domain with path-based routing
- * - /guard/* → Customer Console (GuardConsoleEntry)
+ * - /guard/* → Customer Console (AIConsoleApp)
  * - /ops/*   → Founder Console (OpsConsoleEntry)
  *
  * See: docs/M28_ROUTE_OWNERSHIP.md for authoritative route ownership
@@ -64,7 +64,7 @@ const CompletePage = lazy(() => import('@/pages/onboarding/CompletePage'));
 // CONSOLE ENTRY POINTS (Standalone - handle their own auth)
 // =============================================================================
 // CUSTOMER: /guard/* → console.agenticverz.com (future)
-const GuardConsoleEntry = lazy(() => import('@/pages/guard/GuardConsoleEntry'));
+const AIConsoleApp = lazy(() => import('@ai-console/app/AIConsoleApp'));
 // FOUNDER: /ops/* → fops.agenticverz.com (future)
 const OpsConsoleEntry = lazy(() => import('@/pages/ops/OpsConsoleEntry'));
 
@@ -129,8 +129,8 @@ export function AppRoutes() {
          * CUSTOMER CONSOLE (Target: console.agenticverz.com)
          * Owner: CUSTOMER | See: docs/M28_ROUTE_OWNERSHIP.md
          * ================================================================= */}
-        <Route path="/guard" element={<GuardConsoleEntry />} />
-        <Route path="/guard/*" element={<GuardConsoleEntry />} />
+        <Route path="/guard" element={<AIConsoleApp />} />
+        <Route path="/guard/*" element={<AIConsoleApp />} />
 
         {/* =================================================================
          * FOUNDER OPS CONSOLE (Target: fops.agenticverz.com)

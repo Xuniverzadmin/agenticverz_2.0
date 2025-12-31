@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: S2 Cost smoothing envelope implementation
+# Callers: optimization/coordinator
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L5
+# Reference: M10 S2 Envelope
+
 # C3-S2: Cost Smoothing Optimization Envelope
 # Reference: PIN-225, C3_ENVELOPE_ABSTRACTION.md
 #

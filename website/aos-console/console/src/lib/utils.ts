@@ -1,3 +1,14 @@
+// Layer: L1 — Product Experience
+// Product: ai-console
+// Temporal:
+//   Trigger: user
+//   Execution: sync
+// Role: General frontend utility functions
+// Callers: All frontend components
+// Allowed Imports: L2
+// Forbidden Imports: L3, L4, L5, L6
+// Reference: Frontend Utilities
+
 import { clsx, type ClassValue } from 'clsx';
 
 export function cn(...inputs: ClassValue[]) {

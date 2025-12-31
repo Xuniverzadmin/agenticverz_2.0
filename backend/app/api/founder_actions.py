@@ -43,6 +43,7 @@ from app.contracts.ops import (
 )
 from app.db import get_session
 from app.models.tenant import FounderAction
+from app.services.founder_action_write_service import FounderActionWriteService
 
 logger = logging.getLogger(__name__)
 
@@ -341,8 +342,11 @@ async def execute_action(
     # Determine reversibility
     is_reversible = request.action in REVERSIBLE_ACTIONS
 
+    # Phase 2B: Use write service for DB operations
+    write_service = FounderActionWriteService(session)
+
     # Step 5: Write audit record FIRST (immutable)
-    action = FounderAction(
+    action = write_service.create_founder_action(
         action_type=request.action,
         target_type=request.target.type,
         target_id=request.target.id,
@@ -355,8 +359,6 @@ async def execute_action(
         mfa_verified=token.mfa,
         is_reversible=is_reversible,
     )
-    session.add(action)
-    session.flush()  # Get ID before commit
 
     # Step 6: Apply action effect
     success = apply_action_effect(
@@ -367,7 +369,7 @@ async def execute_action(
     )
 
     if not success:
-        session.rollback()
+        write_service.rollback()
         return FounderActionResponseDTO(
             status="REJECTED",
             action_id="",
@@ -377,7 +379,7 @@ async def execute_action(
             message="Failed to apply action effect",
         )
 
-    session.commit()
+    write_service.commit()
 
     # Build undo hint
     undo_hint = None
@@ -610,8 +612,11 @@ async def execute_reversal(
             message=f"Cannot use {reversal_type} to reverse {original.action_type}",
         )
 
+    # Phase 2B: Use write service for DB operations
+    write_service = FounderActionWriteService(session)
+
     # Step 5: Write reversal audit record
-    reversal_action = FounderAction(
+    reversal_action = write_service.create_founder_action(
         action_type=reversal_type,
         target_type=original.target_type,
         target_id=original.target_id,
@@ -624,8 +629,6 @@ async def execute_reversal(
         mfa_verified=token.mfa,
         is_reversible=False,  # Reversals are not reversible
     )
-    session.add(reversal_action)
-    session.flush()
 
     # Step 6: Apply reversal effect
     success = apply_action_effect(
@@ -636,7 +639,7 @@ async def execute_reversal(
     )
 
     if not success:
-        session.rollback()
+        write_service.rollback()
         return FounderActionResponseDTO(
             status="REJECTED",
             action_id="",
@@ -647,24 +650,13 @@ async def execute_reversal(
         )
 
     # Step 7: Mark original action as reversed
-    session.execute(
-        text(
-            """
-            UPDATE founder_actions
-            SET is_active = false,
-                reversed_at = :now,
-                reversed_by_action_id = :reversal_id
-            WHERE id = :action_id
-        """
-        ),
-        {
-            "now": now,
-            "reversal_id": reversal_action.id,
-            "action_id": request.action_id,
-        },
+    write_service.mark_action_reversed(
+        action_id=request.action_id,
+        reversed_at=now,
+        reversed_by_action_id=reversal_action.id,
     )
 
-    session.commit()
+    write_service.commit()
 
     logger.info(
         f"Founder action reversed: {reversal_type} on {original.target_type}:{original.target_id} "

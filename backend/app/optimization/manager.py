@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: Optimization envelope lifecycle management
+# Callers: workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: M10 Optimization
+
 # C3 Envelope Manager
 # Reference: PIN-225, C3_ENVELOPE_ABSTRACTION.md, C3_KILLSWITCH_ROLLBACK_MODEL.md
 #

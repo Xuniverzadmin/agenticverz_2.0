@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend API Route
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-API-PPR-001
+name: policy_proposals.py
+type: api-route
+status: active
+owner: backend
+purpose: PB-S4 Policy Proposals API - Read-only proposal exposure
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: founder
+  domain: policies
+  subdomain: proposals
+  order_depth: O2
+responsibility: |
+  - GET /api/v1/policy-proposals - List proposals (paginated)
+  - GET /api/v1/policy-proposals/{id} - Proposal detail
+  - GET /api/v1/policy-proposals/{id}/versions - Version history
+  - READ_ONLY = True
+  - Policies proposed, never auto-enforced
+  - Human approval mandatory
+  - Rejection preserved for audit trail
+dependencies:
+  - verify_api_key
+  - PolicyProposal, PolicyVersion models
+  - Async session

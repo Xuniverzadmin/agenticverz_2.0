@@ -1,3 +1,14 @@
+# Layer: L6 — Platform Substrate
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: sync
+# Role: Optimization audit trail persistence
+# Callers: optimization/coordinator
+# Allowed Imports: None (foundational)
+# Forbidden Imports: L1, L2, L3, L4, L5
+# Reference: M10 Optimization
+
 # C4 Coordination Audit Persistence
 # Reference: C4_COORDINATION_AUDIT_SCHEMA.md
 #

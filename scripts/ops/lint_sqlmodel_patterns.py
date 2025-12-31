@@ -572,8 +572,12 @@ def main():
     print()
     print("11. Timezone-aware datetime (PREV-20):")
     print("    # Ensure DB datetime is timezone-aware before subtraction:")
-    print("    started_at_aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt")
-    print("    duration = (datetime.now(timezone.utc) - started_at_aware).total_seconds()")
+    print(
+        "    started_at_aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt"
+    )
+    print(
+        "    duration = (datetime.now(timezone.utc) - started_at_aware).total_seconds()"
+    )
     print()
 
     # Exit code based on severity

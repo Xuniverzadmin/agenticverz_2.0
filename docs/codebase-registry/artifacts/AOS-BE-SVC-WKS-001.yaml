@@ -1,0 +1,29 @@
+# Artifact Registry Entry - Backend Service
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-BE-SVC-WKS-001
+name: worker_service.py
+type: service
+status: active
+owner: backend
+purpose: M12 concurrent-safe job item claiming (FOR UPDATE SKIP LOCKED)
+authority_level: mutate
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: agents
+  subdomain: workers
+  order_depth: O2
+responsibility: |
+  - Concurrent-safe job item claiming using FOR UPDATE SKIP LOCKED
+  - ClaimedItem dataclass with job context and LLM budget
+  - WorkerStats dataclass
+  - M15 LLM Governance integration
+  - Pattern reused from M10 recovery_claim_worker.py (95% reuse)
+dependencies:
+  - agents.services.credit_service
+  - agents.services.governance_service
+notes: |
+  Location: backend/app/agents/services/worker_service.py
+  Milestone: M12

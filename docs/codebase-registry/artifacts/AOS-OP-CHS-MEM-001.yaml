@@ -1,0 +1,24 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-CHS-MEM-001
+name: memory_pressure.sh
+type: script
+status: active
+owner: ops
+purpose: Memory pressure chaos experiment
+authority_level: mutate
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: chaos
+  subdomain: memory
+  order_depth: O2
+responsibility: |
+  - Simulates high memory pressure to test system behavior
+  - Tests OOM handling and memory management
+dependencies: []
+notes: |
+  Location: scripts/chaos/memory_pressure.sh
+  SAFETY: Requires CHAOS_ALLOWED=true environment variable

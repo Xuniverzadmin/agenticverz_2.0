@@ -1,3 +1,14 @@
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker
+#   Execution: async
+# Role: DAG-based parallel policy executor
+# Callers: policy engine, workers
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: Policy System
+
 # M20 Policy Runtime - DAG Executor
 # Parallel execution of policy DAG stages
 """

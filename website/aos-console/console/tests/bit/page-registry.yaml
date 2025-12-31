@@ -1,0 +1,91 @@
+# Browser Integration Test - Page Registry
+# Reference: PIN-245 (Integration Integrity System)
+#
+# All L1 pages must be registered here.
+# BIT will load each page and verify no console errors.
+
+pages:
+  # ============================================
+  # AI CONSOLE - Core Lenses
+  # ============================================
+  - path: /
+    name: Overview
+    auth_required: true
+    product: ai-console
+
+  - path: /activity
+    name: Activity
+    auth_required: true
+    product: ai-console
+
+  - path: /incidents
+    name: Incidents
+    auth_required: true
+    product: ai-console
+
+  - path: /policies
+    name: Policies
+    auth_required: true
+    product: ai-console
+
+  - path: /logs
+    name: Logs
+    auth_required: true
+    product: ai-console
+
+  # ============================================
+  # AI CONSOLE - Connectivity
+  # ============================================
+  - path: /integrations
+    name: Integrations
+    auth_required: true
+    product: ai-console
+
+  - path: /keys
+    name: API Keys
+    auth_required: true
+    product: ai-console
+
+  # ============================================
+  # AI CONSOLE - Account
+  # ============================================
+  - path: /account
+    name: Account
+    auth_required: true
+    product: ai-console
+
+  - path: /settings
+    name: Settings
+    auth_required: true
+    product: ai-console
+
+  # ============================================
+  # OPS CONSOLE
+  # ============================================
+  - path: /ops
+    name: Ops Console
+    auth_required: true
+    role: founder
+    product: ops-console
+
+  - path: /ops/pulse
+    name: Founder Pulse
+    auth_required: true
+    role: founder
+    product: ops-console
+
+  # ============================================
+  # PUBLIC PAGES (no auth)
+  # ============================================
+  - path: /login
+    name: Login
+    auth_required: false
+    product: auth
+
+  # ============================================
+  # WORKERS / TRACES (if exposed)
+  # ============================================
+  - path: /traces
+    name: Traces
+    auth_required: true
+    product: ai-console

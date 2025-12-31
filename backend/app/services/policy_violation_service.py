@@ -1,3 +1,9 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide
+# Role: S3 violation truth model, fact persistence, evidence linking
+# Callers: L4 policy engine, L5 workers
+# Reference: PIN-242 (Baseline Freeze)
+
 """
 Policy Violation Service - S3 Hardening for Phase A.5 Verification
 

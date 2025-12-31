@@ -1,0 +1,26 @@
+# Artifact Registry Entry - Operations Script
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-OP-OPS-SST-001
+name: session_start.sh
+type: script
+status: active
+owner: ops
+purpose: Session start hygiene check (MANDATORY before work)
+authority_level: observe
+execution_surface: cli
+traceability:
+  product: system-wide
+  console: internal
+  domain: ops
+  subdomain: session
+  order_depth: O1
+responsibility: |
+  - Checks working environment exists
+  - Shows current phase
+  - Lists blockers
+  - Verifies services are healthy
+dependencies: []
+notes: |
+  Location: scripts/ops/session_start.sh
+  MANDATORY: Run at start of every session

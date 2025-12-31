@@ -1,3 +1,9 @@
+# Layer: L3 — Boundary Adapter (Console → Platform)
+# Product: AI Console
+# Callers: onboarding.py (auth flow)
+# Reference: PIN-240
+# NOTE: Redis-only state (not PostgreSQL). M24 onboarding.
+
 """
 Email Verification Service
 

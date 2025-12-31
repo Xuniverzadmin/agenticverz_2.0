@@ -1,3 +1,14 @@
+# Layer: L4 — Domain Engine
+# Product: system-wide
+# Temporal:
+#   Trigger: api|worker
+#   Execution: sync
+# Role: Policy rule evaluation engine
+# Callers: API routes, workers, services
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Reference: Policy System
+
 # M19 Policy Engine
 # Constitutional governance for multi-agent systems
 #
@@ -11,14 +22,19 @@
 #
 # The Policy Engine is the "Constitution" of the multi-agent ecosystem.
 
+from __future__ import annotations
+
 import json
 import logging
 import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from app.policy.models import RecoverabilityType, ViolationSeverity
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError

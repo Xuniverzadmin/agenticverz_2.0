@@ -1,0 +1,28 @@
+# Artifact Registry Entry - BudgetLLM Library Module
+# Source: Codebase Survey 2025-12-29
+
+artifact_id: AOS-LIB-BLL-OAN-001
+name: output_analysis.py
+type: library
+status: active
+owner: backend
+purpose: Risk signal detection (unsupported claims, hedging, contradictions)
+authority_level: observe
+execution_surface: server
+traceability:
+  product: system-wide
+  console: internal
+  domain: budgetllm
+  subdomain: core
+  order_depth: O3
+responsibility: |
+  - Analyzes LLM output for risk signals:
+    - Unsupported claims (assertions without evidence)
+    - Hedging language (uncertainty markers)
+    - Self-contradiction (conflicting statements)
+    - Numeric inconsistency (conflicting numbers)
+  - HEDGING_PHRASES and UNSUPPORTED_CLAIM_PATTERNS lists
+  - These are HEURISTICS, not ground truth
+dependencies: []
+notes: |
+  Location: budgetllm/core/output_analysis.py
