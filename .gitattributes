@@ -1,0 +1,1 @@
+docs/ci/scd/evidence/*.json filter=lfs diff=lfs merge=lfs -text

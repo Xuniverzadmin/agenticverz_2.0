@@ -1,0 +1,223 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SCE Evidence Schema",
+  "description": "Schema for Signal Circuit Enumerator evidence output",
+  "type": "object",
+  "required": ["run_id", "timestamp", "phase", "passes", "summary"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Human-chosen immutable identifier for this run"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of run execution"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["1"],
+      "description": "Phase during which this run was executed (Phase 1 only)"
+    },
+    "repo_root": {
+      "type": "string",
+      "description": "Absolute path to repository root"
+    },
+    "passes": {
+      "type": "object",
+      "required": ["pass_1", "pass_2", "pass_3", "pass_4"],
+      "properties": {
+        "pass_1": {
+          "$ref": "#/definitions/pass_1_output"
+        },
+        "pass_2": {
+          "$ref": "#/definitions/pass_2_output"
+        },
+        "pass_3": {
+          "$ref": "#/definitions/pass_3_output"
+        },
+        "pass_4": {
+          "$ref": "#/definitions/pass_4_output"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["files_scanned", "layers_found", "boundary_crossings", "declared_signals", "observed_patterns", "drifts_detected"],
+      "properties": {
+        "files_scanned": { "type": "integer" },
+        "layers_found": { "type": "integer" },
+        "boundary_crossings": { "type": "integer" },
+        "declared_signals": { "type": "integer" },
+        "observed_patterns": { "type": "integer" },
+        "drifts_detected": { "type": "integer" }
+      }
+    }
+  },
+  "definitions": {
+    "layer_assignment": {
+      "type": "object",
+      "required": ["file_path", "layer", "confidence", "source"],
+      "properties": {
+        "file_path": { "type": "string" },
+        "layer": {
+          "type": "string",
+          "enum": ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "UNKNOWN"]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW", "HEURISTIC"]
+        },
+        "source": {
+          "type": "string",
+          "enum": ["metadata", "path_heuristic", "content_heuristic"]
+        }
+      }
+    },
+    "boundary_crossing": {
+      "type": "object",
+      "required": ["from_file", "to_file", "from_layer", "to_layer", "crossing_type"],
+      "properties": {
+        "from_file": { "type": "string" },
+        "to_file": { "type": "string" },
+        "from_layer": { "type": "string" },
+        "to_layer": { "type": "string" },
+        "crossing_type": {
+          "type": "string",
+          "enum": ["import", "call", "inheritance"]
+        },
+        "line_number": { "type": "integer" }
+      }
+    },
+    "pass_1_output": {
+      "type": "object",
+      "required": ["layer_assignments", "import_graph", "boundary_crossings"],
+      "properties": {
+        "layer_assignments": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/layer_assignment" }
+        },
+        "import_graph": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "boundary_crossings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/boundary_crossing" }
+        }
+      }
+    },
+    "declared_signal": {
+      "type": "object",
+      "required": ["file_path", "signal_type", "signal_name"],
+      "properties": {
+        "file_path": { "type": "string" },
+        "signal_type": {
+          "type": "string",
+          "enum": ["emit", "consume"]
+        },
+        "signal_name": { "type": "string" },
+        "declared_layer": { "type": "string" },
+        "declared_role": { "type": "string" },
+        "declared_boundary": { "type": "string" },
+        "line_number": { "type": "integer" },
+        "raw_metadata": { "type": "string" }
+      }
+    },
+    "pass_2_output": {
+      "type": "object",
+      "required": ["declared_signals", "metadata_files"],
+      "properties": {
+        "declared_signals": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/declared_signal" }
+        },
+        "metadata_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "observed_pattern": {
+      "type": "object",
+      "required": ["file_path", "pattern_type", "evidence"],
+      "properties": {
+        "file_path": { "type": "string" },
+        "pattern_type": {
+          "type": "string",
+          "enum": [
+            "object_construction",
+            "dispatch_call",
+            "enqueue_call",
+            "return_signal",
+            "exception_signal",
+            "log_signal",
+            "event_publish",
+            "event_subscribe"
+          ]
+        },
+        "evidence": { "type": "string" },
+        "line_number": { "type": "integer" },
+        "confidence": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"]
+        }
+      }
+    },
+    "pass_3_output": {
+      "type": "object",
+      "required": ["observed_patterns", "implicit_signals"],
+      "properties": {
+        "observed_patterns": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/observed_pattern" }
+        },
+        "implicit_signals": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/observed_pattern" }
+        }
+      }
+    },
+    "drift_finding": {
+      "type": "object",
+      "required": ["drift_type", "description"],
+      "properties": {
+        "drift_type": {
+          "type": "string",
+          "enum": [
+            "declared_not_observed",
+            "observed_not_declared",
+            "direction_mismatch",
+            "boundary_bypass",
+            "half_circuit"
+          ]
+        },
+        "description": { "type": "string" },
+        "file_path": { "type": "string" },
+        "declared_signal": { "type": "string" },
+        "observed_pattern": { "type": "string" },
+        "severity": {
+          "type": "string",
+          "enum": ["HIGH", "MEDIUM", "LOW"]
+        }
+      }
+    },
+    "pass_4_output": {
+      "type": "object",
+      "required": ["semantic_drifts", "broken_circuits"],
+      "properties": {
+        "semantic_drifts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/drift_finding" }
+        },
+        "broken_circuits": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/drift_finding" }
+        }
+      }
+    }
+  }
+}

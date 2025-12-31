@@ -1,0 +1,222 @@
+# =============================================================================
+# SIGNAL CIRCUIT ENUMERATOR (SCE) CONTRACT
+# =============================================================================
+# Status: AUTHORITATIVE · RATIFIED
+# Version: 1.0.0
+# Date: 2025-12-31
+# Reference: SESSION_PLAYBOOK.yaml Section 32, PIN-262
+# =============================================================================
+
+contract_version: "1.0.0"
+contract_status: RATIFIED
+effective_date: "2025-12-31"
+
+# -----------------------------------------------------------------------------
+# Worker Identity
+# -----------------------------------------------------------------------------
+identity:
+  name: signal_circuit_enumerator
+  class: Forensic / Evidence Generator
+  phase_eligibility: PHASE_1_ONLY
+  authority: READ_ONLY
+  ci_blocking: FORBIDDEN
+
+# -----------------------------------------------------------------------------
+# Blast Radius (ABSOLUTE LIMIT)
+# -----------------------------------------------------------------------------
+blast_radius:
+  behavioral_impact: ZERO
+  enforcement_impact: ZERO
+  runtime_impact: ZERO
+  failure_consequence: "If this worker breaks, nothing else must break."
+
+# -----------------------------------------------------------------------------
+# Access Control (Exhaustive List)
+# -----------------------------------------------------------------------------
+allowed_access:
+  source_code: read
+  metadata_annotations: read
+  ast: parse
+  import_graph: build
+  call_graph_shallow: build
+  ci_configs: read
+  docs_contracts_playbooks: read
+
+forbidden_actions:
+  - modify_code
+  - modify_CI
+  - enforce_rules
+  - block_builds
+  - rewrite_metadata
+  - assign_ownership
+  - infer_intent_beyond_metadata
+
+# -----------------------------------------------------------------------------
+# Processing Passes (Deterministic)
+# -----------------------------------------------------------------------------
+passes:
+  - pass: 1
+    name: Layer & Boundary Indexing
+    operations:
+      - assign_file_to_layer
+      - build_import_graph
+      - detect_boundary_crossings
+    emits:
+      - BOUNDARY_CROSSING_OBSERVED
+
+  - pass: 2
+    name: Semantic Claim Extraction
+    source: metadata_only
+    extracts:
+      - declared_layer
+      - declared_role
+      - declared_emits
+      - declared_consumes
+      - declared_boundary
+    emits:
+      - DECLARED_SIGNAL_EMIT
+      - DECLARED_SIGNAL_CONSUME
+
+  - pass: 3
+    name: Mechanical Observation
+    source: ast_and_call_graph
+    observes:
+      - object_construction_signal_payloads
+      - dispatch_enqueue_calls
+      - return_based_control_signaling
+      - exception_based_signaling
+      - log_only_signaling
+    emits:
+      - OBSERVED_SIGNAL_EMIT
+      - OBSERVED_SIGNAL_CONSUME
+      - IMPLICIT_SIGNAL_PATTERN
+
+  - pass: 4
+    name: Diff & Drift Detection
+    operation: compare_declared_vs_observed
+    detects:
+      - declared_not_observed
+      - observed_not_declared
+      - direction_mismatch
+      - boundary_bypass
+      - half_circuits
+    emits:
+      - SEMANTIC_DRIFT
+      - BROKEN_CANDIDATE_CIRCUIT
+
+# -----------------------------------------------------------------------------
+# Output Artifacts
+# -----------------------------------------------------------------------------
+outputs:
+  raw_evidence:
+    path: docs/ci/scd/evidence/SCE_RUN_<timestamp>.json
+    mode: append_only
+    content:
+      - all_declared_signals
+      - all_observed_signal_patterns
+      - all_boundary_crossings
+      - no_judgments
+
+  boundary_summary:
+    path_pattern: docs/ci/scd/SCE-L{X}-L{Y}-EVIDENCE.md
+    mode: generated
+    content:
+      - declared_signals
+      - observed_signals
+      - missing_signals
+      - extra_signals
+      - implicit_patterns
+      - boundary_violations
+    rule: "No conclusions. No fixes."
+
+  registry_hints:
+    path: docs/ci/scd/SCE_REGISTRY_HINTS.md
+    mode: non_authoritative
+    content:
+      - candidate_signals
+      - candidate_gaps
+      - candidate_drift
+    rule: "NOT applied automatically."
+
+# -----------------------------------------------------------------------------
+# Output Classification
+# -----------------------------------------------------------------------------
+output_classification:
+  absolute_rule: "Worker output is evidence, not truth."
+
+  human_treatment:
+    declared_not_observed: review_in_scd
+    observed_not_declared: decide_relevance
+    boundary_violation: record_gap
+    implicit_signal: classify_risk
+    missing_emission: mark_MISSING_EMITTER
+
+  forbidden_outcomes:
+    - close_a_circuit
+    - declare_correctness
+    - advance_a_phase
+
+# -----------------------------------------------------------------------------
+# Explicit Non-Goals
+# -----------------------------------------------------------------------------
+non_goals:
+  - prove_signals_fire
+  - prove_signals_are_complete
+  - prove_correctness
+  - replace_SCD
+  - replace_CI
+
+misuse_consequence: "Violating governance"
+
+# -----------------------------------------------------------------------------
+# Sanity Test
+# -----------------------------------------------------------------------------
+sanity_test:
+  question: "If the worker produces zero output, does governance still function?"
+  expected_answer: "yes"
+  on_failure: "Worker is too powerful - kill it."
+
+# -----------------------------------------------------------------------------
+# Governance Tasks
+# -----------------------------------------------------------------------------
+governance_tasks:
+  - task_id: TASK-GOV-010
+    description: "Create and ratify Signal Circuit Enumerator Contract"
+    constraints:
+      - evidence_only
+      - no_enforcement
+      - phase_1_only
+    status: COMPLETE
+
+  - task_id: TASK-GOV-011
+    description: "Add SCE automation rule to SESSION_PLAYBOOK"
+    rule: "Automated signal enumeration output must never be treated as proof. Human SCD ratification is required."
+    status: COMPLETE
+    location: SESSION_PLAYBOOK.yaml v2.25 Section 32
+
+# -----------------------------------------------------------------------------
+# Implementation Pre-Conditions
+# -----------------------------------------------------------------------------
+implementation_preconditions:
+  - contract_read_and_understood
+  - blast_radius_constraint_satisfied
+  - no_forbidden_actions_possible_in_design
+  - output_is_evidence_only_by_construction
+  - ci_blocking_architecturally_impossible
+  - human_ratification_required_for_any_action
+
+on_unclear_precondition: "STOP and ask for clarification."
+
+# -----------------------------------------------------------------------------
+# Related Documents
+# -----------------------------------------------------------------------------
+related_documents:
+  - docs/playbooks/SESSION_PLAYBOOK.yaml  # Section 32
+  - docs/memory-pins/PIN-262-signal-circuit-discovery-governance-clarification.md
+  - docs/ci/scd/INDEX.md
+  - docs/ci/CI_SIGNAL_REGISTRY.md
+  - docs/contracts/PRODUCT_DEVELOPMENT_CONTRACT_V3.md
+
+# =============================================================================
+# END OF CONTRACT
+# =============================================================================
