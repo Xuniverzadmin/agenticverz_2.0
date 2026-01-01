@@ -1,10 +1,11 @@
 # Phase-1 Exit Declaration
 
-**STATUS: DRAFT — HUMAN RATIFICATION REQUIRED**
+**STATUS: RATIFIED**
 
 **Date Drafted:** 2025-12-31
+**Date Ratified:** 2026-01-01
 **Drafted By:** Claude (Governance Assistant)
-**Ratification Required:** Maheshwar VM (Founder / System Owner)
+**Ratified By:** Maheshwar VM (Founder / System Owner)
 
 ---
 
@@ -221,21 +222,21 @@ The following require human signature to ratify Phase-1 exit:
 
 ## 9. Ratification Block
 
-**TO BE COMPLETED BY HUMAN:**
+**RATIFICATION COMPLETE:**
 
 ```
 PHASE-1 EXIT RATIFICATION
 
-I, _________________________, attest that:
+I, Maheshwar VM, attest that:
 
-[ ] All Phase-1 completion criteria have been satisfied
-[ ] All CI signals have documented, accountable owners
-[ ] The temporary consolidation notice is accepted
-[ ] Remaining P1/P2/P3 gaps are documented and not blocking
-[ ] Phase-2 (Signal Promotion & Enforcement) may proceed
+[x] All Phase-1 completion criteria have been satisfied
+[x] All CI signals have documented, accountable owners
+[x] The temporary consolidation notice is accepted
+[x] Remaining P1/P2/P3 gaps are documented and not blocking
+[x] Phase-2 (Signal Promotion & Enforcement) may proceed when capacity allows
 
-Signature: _________________________
-Date: _________________________
+Signature: Maheshwar VM
+Date: 2026-01-01
 ```
 
 ---
@@ -265,7 +266,8 @@ The following remain FORBIDDEN until Phase-2:
 | Date | Change |
 |------|--------|
 | 2025-12-31 | Initial draft created by Claude |
+| 2026-01-01 | **RATIFIED** by Maheshwar VM (Founder / System Owner) |
 
 ---
 
-**END OF DRAFT — HUMAN RATIFICATION REQUIRED**
+**PHASE-1 EXIT COMPLETE — RATIFIED 2026-01-01**

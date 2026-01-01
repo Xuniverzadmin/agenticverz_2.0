@@ -1,8 +1,9 @@
 # Signal Circuit Discovery (SCD) Index
 
-**Status:** PHASE 1 COMPLETE
+**Status:** PHASE 1 RATIFIED
 **Date:** 2025-12-31
 **Ownership Assigned:** 2025-12-31
+**Ratified:** 2026-01-01
 **Reference:** PRODUCT_DEVELOPMENT_CONTRACT_V3.md
 
 ---
@@ -142,6 +143,7 @@ From PRODUCT_DEVELOPMENT_CONTRACT_V3.md:
 
 | Date | Change |
 |------|--------|
+| 2026-01-01 | **PHASE 1 RATIFIED:** Exit declaration signed by Maheshwar VM |
 | 2025-12-31 | **PHASE 1 COMPLETE:** All ownership assigned, P0 gaps closed |
 | 2025-12-31 | Added L5↔L6 boundary discovery (5 gaps found) |
 | 2025-12-31 | Added L2↔L4 boundary discovery (5 gaps found) |
