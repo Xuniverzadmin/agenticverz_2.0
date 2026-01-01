@@ -40,7 +40,7 @@ Pre-incident engineering phase. Build diagnostic capability before users arrive.
 
 When the **first bug / complaint / incident** occurs, you already have:
 - ✅ Evidence
-- ✅ Timeline  
+- ✅ Timeline
 - ✅ Root cause
 - ✅ Prevention path
 
@@ -190,9 +190,120 @@ Phase ends when:
 
 ## Next Concrete Step
 
-> **Design the Unified Error Envelope + Correlation ID standard**
+> ~~Design the Unified Error Envelope + Correlation ID standard~~ **DONE**
 
-Everything else builds on that.
+Next: Implement Error Persistence (Track 1.3)
+
+---
+
+## Implementation Progress
+
+### Track 1.1 — Unified Error Envelope ✅ COMPLETE (2026-01-01)
+
+**Files Created:**
+- `backend/app/infra/__init__.py` — Infrastructure namespace
+- `backend/app/infra/error_envelope.py` — Error envelope schema
+- `backend/app/infra/correlation.py` — Correlation ID utilities
+
+**Namespace Separation:**
+- `infra.*` namespace for Phase-S infrastructure systems
+- Distinct from `product.*` (customer-facing code)
+- All files are L6 (Platform Substrate)
+
+**ErrorEnvelope Schema:**
+```python
+@dataclass(frozen=True)
+class ErrorEnvelope:
+    error_id: str              # Unique: err_<12-char-hex>
+    timestamp: datetime        # UTC
+    layer: str                 # L2/L3/L4/L5/L6
+    component: str             # Module path
+    error_class: ErrorClass    # Classification enum
+    severity: ErrorSeverity    # DEBUG/INFO/WARNING/ERROR/CRITICAL
+    message: str               # Human-readable
+
+    # Correlation
+    correlation_id: Optional[str]
+    decision_id: Optional[str]
+    run_id: Optional[str]
+    agent_id: Optional[str]
+    tenant_id: Optional[str]
+
+    # Security
+    input_hash: Optional[str]  # SHA256[:16], never raw input
+
+    # Exception (sanitized)
+    exception_type: Optional[str]
+    exception_chain: Optional[List[str]]
+
+    # Arbitrary context
+    context: Dict[str, Any]
+```
+
+**ErrorClass Taxonomy:**
+- `infra.*` — Infrastructure errors (network, database, timeout)
+- `domain.*` — Business logic errors (validation, authorization, budget)
+- `system.*` — Internal errors (configuration, recovery, corruption)
+
+**Usage Example:**
+```python
+from app.infra import ErrorEnvelope, ErrorClass, ErrorSeverity
+
+envelope = ErrorEnvelope.create(
+    layer="L4",
+    component="app.services.budget_engine",
+    error_class=ErrorClass.DOMAIN_BUDGET_EXCEEDED,
+    severity=ErrorSeverity.ERROR,
+    message="Budget exhausted for run",
+    correlation_id=request_id,
+    run_id=run.id,
+)
+```
+
+### Track 1.2 — Correlation IDs ✅ COMPLETE (2026-01-01)
+
+**CorrelationContext:**
+```python
+@dataclass(frozen=True)
+class CorrelationContext:
+    correlation_id: str        # Root trace ID (same for entire request)
+    span_id: str              # Current operation span
+    parent_span_id: Optional[str]
+    component: Optional[str]
+    started_at: datetime
+```
+
+**Context Manager Pattern:**
+```python
+from app.infra import correlation_scope, child_span
+
+# Establish correlation scope
+with correlation_scope(component="api.users") as ctx:
+    print(f"Correlation ID: {ctx.correlation_id}")
+
+    # Create child spans for sub-operations
+    with child_span("database") as db_span:
+        # db_span.parent_span_id == ctx.span_id
+        do_database_work()
+```
+
+**Thread-Safe:** Uses `contextvars` for async-safe propagation
+
+### Track 1.3 — Error Persistence 📋 PENDING
+
+Next implementation:
+- Append-only error store (DB table or JSONL)
+- Indexed by error_class + component
+- Retained across deploys
+
+### BLCA Verification
+
+```
+Layer Validator (PIN-240)
+Files scanned: 605
+Violations found: 0
+Layer architecture is clean.
+```
 
 ---
 
