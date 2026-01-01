@@ -103,6 +103,11 @@ SCD is forensic topology mapping — observe and document, do NOT fix.
 | `SCD-L8-ALL-BOUNDARY.md` | L8↔All (CI↔All layers) discovery |
 | `SCD-L2-L4-BOUNDARY.md` | L2↔L4 (APIs↔Domain via Adapters) discovery |
 | `SCD-L5-L6-BOUNDARY.md` | L5↔L6 (Workers↔Platform) discovery |
+| `PHASE_1_EXIT_DECLARATION.md` | Phase-1 exit ratification (RATIFIED) |
+| `PHASE_1_5_TRANSITION_PLAN_DRAFT.md` | Phase-1.5 transition planning |
+| `FUTURE_DELEGATION_CHECKLIST_DRAFT.md` | Ownership redistribution planning |
+| `WAVE_1_IMPORT_DIRECTION_PLAN.md` | Wave-1 CI enforcement planning |
+| `IMPORT_VIOLATION_BASELINE.md` | Violation baseline observation |
 
 ---
 
@@ -143,6 +148,7 @@ From PRODUCT_DEVELOPMENT_CONTRACT_V3.md:
 
 | Date | Change |
 |------|--------|
+| 2026-01-01 | Phase-1.5: Wave-1 planning docs and violation baseline added |
 | 2026-01-01 | **PHASE 1 RATIFIED:** Exit declaration signed by Maheshwar VM |
 | 2025-12-31 | **PHASE 1 COMPLETE:** All ownership assigned, P0 gaps closed |
 | 2025-12-31 | Added L5↔L6 boundary discovery (5 gaps found) |
