@@ -289,18 +289,59 @@ with correlation_scope(component="api.users") as ctx:
 
 **Thread-Safe:** Uses `contextvars` for async-safe propagation
 
-### Track 1.3 — Error Persistence 📋 PENDING
+### Track 1.3 — Error Persistence ✅ COMPLETE (2026-01-01)
 
-Next implementation:
-- Append-only error store (DB table or JSONL)
-- Indexed by error_class + component
-- Retained across deploys
+**Files Created:**
+- `backend/app/infra/error_store.py` — Append-only persistence interface
+- `backend/alembic/versions/067_phase_s_error_persistence.py` — Migration
+
+**Table: `infra_error_events`**
+```sql
+error_id (PK)        -- Unique identifier
+timestamp            -- When error occurred
+layer                -- L2/L3/L4/L5/L6
+component            -- Module path
+error_class          -- infra.*/domain.*/system.*
+severity             -- Severity level
+message              -- Human-readable
+correlation_id       -- Request trace (nullable)
+decision_id          -- Related decision (nullable)
+run_id               -- Related run (nullable)
+input_hash           -- SHA256[:16] of input
+exception_type       -- Exception class name
+exception_chain      -- Cause chain (JSONB)
+context              -- Arbitrary context (JSONB)
+envelope_version     -- Schema version
+created_at           -- For retention cleanup
+```
+
+**Indexes:**
+- `correlation_id` — Request tracing
+- `component + timestamp` — Incident aggregation
+- `error_class + timestamp` — Pattern detection
+- `created_at` — Retention cleanup
+- `run_id` — Run correlation
+
+**Append-Only Enforcement:**
+- Database trigger prevents UPDATE operations
+- DELETE only allowed via `cleanup_old_errors()` (retention)
+- ON CONFLICT DO NOTHING (first write wins)
+
+**Query Functions (for L4 aggregation):**
+- `get_errors_by_correlation()` — Trace requests
+- `get_errors_by_component()` — Component health
+- `get_errors_by_class()` — Pattern detection
+- `get_error_counts_by_*()` — Trend metrics
+- `get_error_timeline()` — Time-series analysis
+
+**Retention:**
+- `cleanup_old_errors(retention_days=90)` — L7 scheduled cleanup
 
 ### BLCA Verification
 
 ```
 Layer Validator (PIN-240)
-Files scanned: 605
+Files scanned: 608
 Violations found: 0
 Layer architecture is clean.
 ```
@@ -377,9 +418,10 @@ L1  Consoles (fops, preflight-fops)
 |-------|------|--------|
 | 1.1 | Error Envelope Schema | ✅ COMPLETE |
 | 1.2 | Correlation IDs | ✅ COMPLETE |
-| 1.3 | Error Persistence | 📋 PENDING |
+| 1.3 | Error Persistence | ✅ COMPLETE |
 | — | Semantic Lockdown | ✅ COMPLETE |
 | — | L4 Ops Domain Models | ✅ COMPLETE |
+| — | L4 Aggregation Services | 📋 NEXT |
 | — | L3 View Adapters | 📋 PENDING |
 | — | L2 Ops APIs | 📋 PENDING |
 | — | L1 Console Wiring | 📋 PENDING |

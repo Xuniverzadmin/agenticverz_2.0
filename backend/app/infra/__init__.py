@@ -35,11 +35,34 @@ from app.infra.error_envelope import (
     ErrorEnvelope,
     ErrorSeverity,
 )
+from app.infra.error_store import (
+    persist_error,
+    persist_errors_batch,
+    get_errors_by_correlation,
+    get_errors_by_component,
+    get_errors_by_class,
+    get_error_counts_by_class,
+    get_error_counts_by_component,
+    get_error_timeline,
+    cleanup_old_errors,
+)
 
 __all__ = [
+    # Error Envelope
     "ErrorEnvelope",
     "ErrorSeverity",
     "ErrorClass",
+    # Correlation
     "generate_correlation_id",
     "CorrelationContext",
+    # Error Persistence (Track 1.3)
+    "persist_error",
+    "persist_errors_batch",
+    "get_errors_by_correlation",
+    "get_errors_by_component",
+    "get_errors_by_class",
+    "get_error_counts_by_class",
+    "get_error_counts_by_component",
+    "get_error_timeline",
+    "cleanup_old_errors",
 ]
