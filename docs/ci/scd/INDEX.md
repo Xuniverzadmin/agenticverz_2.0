@@ -108,6 +108,8 @@ SCD is forensic topology mapping — observe and document, do NOT fix.
 | `FUTURE_DELEGATION_CHECKLIST_DRAFT.md` | Ownership redistribution planning |
 | `WAVE_1_IMPORT_DIRECTION_PLAN.md` | Wave-1 CI enforcement planning |
 | `IMPORT_VIOLATION_BASELINE.md` | Violation baseline observation |
+| `PHASE_R_ARCHITECTURE_REALIGNMENT.md` | Phase-R declaration (active) |
+| `PHASE_R_L5_L4_VIOLATIONS.md` | L5→L4 violation classification |
 
 ---
 
@@ -148,6 +150,7 @@ From PRODUCT_DEVELOPMENT_CONTRACT_V3.md:
 
 | Date | Change |
 |------|--------|
+| 2026-01-01 | Phase-R declared: L5→L4 violation classification complete (11 violations) |
 | 2026-01-01 | Phase-1.5: Wave-1 planning docs and violation baseline added |
 | 2026-01-01 | **PHASE 1 RATIFIED:** Exit declaration signed by Maheshwar VM |
 | 2025-12-31 | **PHASE 1 COMPLETE:** All ownership assigned, P0 gaps closed |
