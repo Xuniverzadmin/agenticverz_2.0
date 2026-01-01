@@ -95,9 +95,7 @@ class RepoWalker:
             root_path = Path(root)
 
             # Filter out ignored directories (modify in place to prevent descent)
-            dirs[:] = [
-                d for d in dirs if not self._should_ignore_dir(root_path / d)
-            ]
+            dirs[:] = [d for d in dirs if not self._should_ignore_dir(root_path / d)]
 
             # Sort for deterministic ordering
             dirs.sort()

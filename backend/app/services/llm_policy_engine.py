@@ -34,7 +34,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("nova.services.llm_policy_engine")
 
@@ -56,9 +56,7 @@ LLM_REQUESTS_PER_MINUTE = int(os.getenv("LLM_REQUESTS_PER_MINUTE", "60"))
 # Model restrictions (if set, only these models are allowed)
 _allowed_models_str = os.getenv("LLM_ALLOWED_MODELS", "")
 LLM_ALLOWED_MODELS: Optional[List[str]] = (
-    [m.strip() for m in _allowed_models_str.split(",") if m.strip()]
-    if _allowed_models_str
-    else None
+    [m.strip() for m in _allowed_models_str.split(",") if m.strip()] if _allowed_models_str else None
 )
 
 

@@ -373,24 +373,42 @@ class TestRecoveryEvaluator:
 
         importlib.reload(evaluator_module)
 
+        # Phase R-1: RecoveryEvaluator renamed to RecoveryExecutor
+        from app.services.recovery_evaluation_engine import RecoveryDecision
         from app.worker.recovery_evaluator import (
             FailureEvent,
-            RecoveryEvaluator,
+            RecoveryExecutor,
         )
 
         # Force disabled state
         evaluator_module.EVALUATOR_ENABLED = False
 
+        failure_id = str(uuid4())
         event = FailureEvent(
-            failure_match_id=str(uuid4()),
+            failure_match_id=failure_id,
             error_code="TIMEOUT",
             error_message="Test",
         )
 
-        evaluator = RecoveryEvaluator()
-        result = await evaluator.evaluate(event)
+        # Phase R-1: execute_decision now requires a RecoveryDecision from L4
+        decision = RecoveryDecision(
+            suggested_action=None,
+            combined_confidence=0.0,
+            should_select_action=False,
+            should_auto_execute=False,
+            candidate_id=None,
+            rule_result={},
+            match_confidence=0.0,
+            failure_match_id=failure_id,
+            run_id=None,
+            tenant_id=None,
+        )
 
-        assert result.error == "Evaluator disabled"
+        executor = RecoveryExecutor()
+        result = await executor.execute_decision(event, decision)
+
+        # Phase R-1: RecoveryEvaluator renamed conceptually to RecoveryExecutor
+        assert result.error == "Executor disabled"
         assert result.candidate_id is None
 
         # Reset

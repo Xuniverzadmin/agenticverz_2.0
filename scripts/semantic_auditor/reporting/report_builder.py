@@ -16,7 +16,7 @@ Groups risks by domain, layer, and file for easy navigation.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 
 from ..correlation.delta_engine import DeltaReport, SemanticDelta
@@ -113,8 +113,7 @@ class ReportBuilder:
 
         for domain, deltas in domain_deltas.items():
             high_risk_count = sum(
-                1 for d in deltas
-                if d.severity in ["HIGH_RISK", "CRITICAL"]
+                1 for d in deltas if d.severity in ["HIGH_RISK", "CRITICAL"]
             )
             report.by_domain[domain] = DomainReport(
                 domain=domain,
@@ -133,8 +132,7 @@ class ReportBuilder:
 
         for layer, deltas in layer_deltas.items():
             high_risk_count = sum(
-                1 for d in deltas
-                if d.severity in ["HIGH_RISK", "CRITICAL"]
+                1 for d in deltas if d.severity in ["HIGH_RISK", "CRITICAL"]
             )
             report.by_layer[layer] = LayerReport(
                 layer=layer,
@@ -197,17 +195,13 @@ class ReportBuilder:
         """Render the report as JSON."""
         return self.json_renderer.render(report)
 
-    def save_markdown(
-        self, report: StructuredReport, output_path: Path
-    ) -> None:
+    def save_markdown(self, report: StructuredReport, output_path: Path) -> None:
         """Save the report as a markdown file."""
         content = self.render_markdown(report)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(content, encoding="utf-8")
 
-    def save_json(
-        self, report: StructuredReport, output_path: Path
-    ) -> None:
+    def save_json(self, report: StructuredReport, output_path: Path) -> None:
         """Save the report as a JSON file."""
         content = self.render_json(report)
         output_path.parent.mkdir(parents=True, exist_ok=True)

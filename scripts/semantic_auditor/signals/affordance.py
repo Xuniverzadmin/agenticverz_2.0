@@ -178,9 +178,7 @@ class AffordanceSignalDetector:
         # Consider it to have a header if it has at least Layer or Role
         return bool(fields.keys() & self.REQUIRED_HEADER_FIELDS)
 
-    def get_header_field(
-        self, analysis: ASTAnalysis, field_name: str
-    ) -> Optional[str]:
+    def get_header_field(self, analysis: ASTAnalysis, field_name: str) -> Optional[str]:
         """Get a specific header field value."""
         fields = self._extract_header_fields(analysis.header_comments)
         return fields.get(field_name)

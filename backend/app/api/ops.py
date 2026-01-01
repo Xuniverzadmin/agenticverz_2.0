@@ -59,7 +59,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlmodel import Session
 
@@ -84,7 +84,6 @@ from app.contracts.ops import (
     FounderRootCauseDTO,
 )
 from app.db import get_session
-from app.services.ops_write_service import OpsWriteService
 
 # Incident model for database queries
 from app.models.killswitch import Incident, IncidentEvent
@@ -415,8 +414,7 @@ class RevenueRisk(BaseModel):
 
     # PIN-254 Phase C Fix: Estimation transparency
     estimation_basis: EstimationBasis = Field(
-        default_factory=EstimationBasis,
-        description="Disclosure of how revenue estimates were derived (PIN-254 C3 fix)"
+        default_factory=EstimationBasis, description="Disclosure of how revenue estimates were derived (PIN-254 C3 fix)"
     )
 
 

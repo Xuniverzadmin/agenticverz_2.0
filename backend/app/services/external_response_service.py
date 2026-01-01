@@ -43,9 +43,6 @@ from sqlalchemy.orm import Session
 
 from app.models.external_response import (
     ExternalResponse,
-    ExternalResponseCreate,
-    ExternalResponseRead,
-    InterpretationUpdate,
     InterpretedResponse,
 )
 

@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2025-12-31 (PIN-259 Phase F Closure & Phase G Steady-State Governance - Status)
+**Last Updated:** 2026-01-01 (PIN-263 Phase R Step 5 — L5→L4 Enforcement Enabled)
 
 ---
 
@@ -289,6 +289,12 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-255](PIN-255-blca-ci-integration-strategy.md) | **BLCA CI Integration Strategy** | Infrastructure / CI | **⏳ PENDING** | 2025-12-31 |
 | [PIN-256](PIN-256-raw-architecture-extraction.md) | **Raw Architecture Extraction Exercise** | Governance / Architecture | **🔄 ACTIVE** | 2025-12-31 |
 | [PIN-257](PIN-257-phase-e-4-domain-extractions---critical-findings.md) | **Phase E-4 Domain Extractions - Critical Findings** | Architecture / Governance | **🏗️ IN_PROGRESS** | 2025-12-31 |
+| [PIN-258](PIN-258-phase-f-application-boundary-completion.md) | **Phase F — Application Boundary Completion** | Architecture / Governance | **✅ COMPLETE** | 2025-12-31 |
+| [PIN-259](PIN-259-phase-f-closure-and-phase-g-steady-state-governance.md) | **Phase F Closure & Phase G Steady-State Governance** | Architecture / Governance | **RATIFIED** | 2025-12-31 |
+| [PIN-260](PIN-260-product-architecture-clarity.md) | **Product Architecture Clarity — One Console, All Products** | Architecture / Product Strategy | **RATIFIED** | 2025-12-31 |
+| [PIN-261](PIN-261-product-development-contract-v3.md) | **Product Development Contract v3 — Stabilization → Productization** | Governance / Product Strategy | **RATIFIED** | 2025-12-31 |
+| [PIN-262](PIN-262-signal-circuit-discovery-governance-clarification.md) | **Signal Circuit Discovery — Governance Clarification** | Governance / Phase 1 | **RATIFIED** | 2025-12-31 |
+| [PIN-263](PIN-263-phase-r-structural-repair-complete.md) | **Phase R — L5→L4 Structural Repair Complete** | Architecture / Layer Model | **🔒 ENFORCED** | 2026-01-01 |
 
 ---
 
@@ -1058,6 +1064,12 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-01 | **PIN-263 Phase R Step 5 ENFORCED** - L5→L4 CI merge-blocking enabled. layer-enforcement job added to ci.yml. Escape hatch: SIG-001 in commit message. Baseline: 602 files, 0 violations. |
+| 2026-01-01 | **PIN-263 Phase R Step 4 COMPLETE** - E2E Stabilization done. 6/6 E2E tests passing, 17/17 recovery tests passing. BLCA CLEAN (602 files, 0 violations). Fixed Phase R expectations in tests. Ready for Step 5 enforcement. |
+| 2026-01-01 | **PIN-263 Phase R — L5→L4 Structural Repair Complete** - All 11 L5→L4 violations eliminated. RecoveryEvaluationEngine, PlanGenerationEngine, BudgetEnforcementEngine created. BLCA verified: 602 files, 0 violations. Layer model enforced. |
+| 2025-12-31 | **PIN-262 Signal Circuit Discovery — Governance Clarification** - Four structural tests, three levels of truth, ownership requirement - RATIFIED |
+| 2025-12-31 | **PIN-261 Product Development Contract v3** - Stabilization → Productization - RATIFIED |
+| 2025-12-31 | **PIN-260 Product Architecture Clarity** - One Console, All Products - RATIFIED |
 | 2025-12-31 | **PIN-259 Phase F Closure & Phase G Steady-State Governance** - Updated: Status |
 | 2025-12-31 | **PIN-257 Phase E-4 Domain Extractions - Critical Findings** - Updated: Phase E Complete History |
 | 2025-12-31 | **PIN-257 Phase E-4 Domain Extractions - Critical Findings** - Created via memory_trail. |

@@ -215,4 +215,3 @@ If suggesting "missing architecture" → check if it's productization work
 | Date | Change |
 |------|--------|
 | 2025-12-31 | PIN-260 created and ratified |
-

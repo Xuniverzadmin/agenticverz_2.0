@@ -379,6 +379,27 @@ async def lifespan(app: FastAPI):
         # Recovery failure should not block startup, but must be logged
         logger.error(f"pb_s2_orphan_recovery_error: {e}", exc_info=True)
 
+    # =========================================================================
+    # Phase R-3: Process pending budget enforcement decisions
+    # L4 BudgetEnforcementEngine emits decision records for halted runs
+    # that don't have corresponding decision records yet.
+    # Reference: PIN-257 Phase R-3 (L5→L4 Violation Fix)
+    # =========================================================================
+    try:
+        from .services.budget_enforcement_engine import process_pending_budget_decisions
+
+        decisions_emitted = await process_pending_budget_decisions()
+        if decisions_emitted > 0:
+            logger.info(
+                "phase_r3_budget_decisions_processed",
+                extra={"decisions_emitted": decisions_emitted},
+            )
+        else:
+            logger.debug("phase_r3_no_pending_budget_decisions")
+    except Exception as e:
+        # Decision emission failure should not block startup
+        logger.error(f"phase_r3_budget_decision_error: {e}", exc_info=True)
+
     # Start queue depth updater
     task = asyncio.create_task(update_queue_depth())
     logger.info("queue_depth_updater_started")
@@ -1003,6 +1024,42 @@ async def post_goal(
         session.refresh(run)
 
         run_id = run.id
+
+        # Phase R-2: Generate plan at creation time (L4 domain logic)
+        # Previously, plan generation happened in L5 runner.py, which violated
+        # layer boundaries (L5 importing L4). Now L4 generates plans before
+        # the run is queued for L5 execution.
+        # Reference: PIN-257 Phase R-2 (L5→L4 Violation Fix)
+        try:
+            from app.services.plan_generation_engine import generate_plan_for_run
+
+            plan_result = generate_plan_for_run(
+                agent_id=agent_id,
+                goal=sanitized_goal,
+                run_id=run_id,
+            )
+
+            # Store generated plan in run record
+            run.plan_json = plan_result.plan_json
+            session.add(run)
+            session.commit()
+
+            logger.info(
+                "plan_generated_at_creation",
+                extra={
+                    "run_id": run_id,
+                    "step_count": len(plan_result.steps),
+                    "memory_snippet_count": plan_result.memory_snippet_count,
+                },
+            )
+        except Exception as e:
+            # Plan generation failed - update run status and re-raise
+            run.status = "failed"
+            run.error_message = f"Plan generation failed: {str(e)}"
+            session.add(run)
+            session.commit()
+            concurrent_limiter.release(concurrency_key, slot_token)
+            raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
 
     # Phase 4B Extension: Backfill run_id for pre-run decisions
     # This binds budget/policy decisions made before run creation

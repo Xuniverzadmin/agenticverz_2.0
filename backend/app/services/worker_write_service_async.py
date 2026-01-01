@@ -61,9 +61,7 @@ class WorkerWriteServiceAsync:
         Returns:
             The created or updated WorkerRun
         """
-        result = await self.session.execute(
-            select(WorkerRun).where(WorkerRun.id == run_id)
-        )
+        result = await self.session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
         existing = result.scalar_one_or_none()
 
         if existing:
@@ -71,28 +69,12 @@ class WorkerWriteServiceAsync:
             existing.status = data.get("status", existing.status)
             existing.success = data.get("success", existing.success)
             existing.error = data.get("error", existing.error)
-            existing.output_json = (
-                json.dumps(data.get("artifacts")) if data.get("artifacts") else None
-            )
-            existing.replay_token_json = (
-                json.dumps(data.get("replay_token"))
-                if data.get("replay_token")
-                else None
-            )
+            existing.output_json = json.dumps(data.get("artifacts")) if data.get("artifacts") else None
+            existing.replay_token_json = json.dumps(data.get("replay_token")) if data.get("replay_token") else None
             existing.total_tokens = data.get("total_tokens_used", existing.total_tokens)
-            existing.total_latency_ms = (
-                int(data.get("total_latency_ms", 0))
-                if data.get("total_latency_ms")
-                else None
-            )
-            existing.policy_violations = (
-                len(data.get("policy_violations", []))
-                if data.get("policy_violations")
-                else 0
-            )
-            existing.recoveries = (
-                len(data.get("recovery_log", [])) if data.get("recovery_log") else 0
-            )
+            existing.total_latency_ms = int(data.get("total_latency_ms", 0)) if data.get("total_latency_ms") else None
+            existing.policy_violations = len(data.get("policy_violations", [])) if data.get("policy_violations") else 0
+            existing.recoveries = len(data.get("recovery_log", [])) if data.get("recovery_log") else 0
             if data.get("cost_cents") is not None:
                 existing.cost_cents = data.get("cost_cents")
             if data.get("status") in ("completed", "failed"):
@@ -111,33 +93,15 @@ class WorkerWriteServiceAsync:
                 success=data.get("success"),
                 error=data.get("error"),
                 input_json=json.dumps({"task": data.get("task", "")}),
-                output_json=(
-                    json.dumps(data.get("artifacts")) if data.get("artifacts") else None
-                ),
-                replay_token_json=(
-                    json.dumps(data.get("replay_token"))
-                    if data.get("replay_token")
-                    else None
-                ),
+                output_json=(json.dumps(data.get("artifacts")) if data.get("artifacts") else None),
+                replay_token_json=(json.dumps(data.get("replay_token")) if data.get("replay_token") else None),
                 total_tokens=data.get("total_tokens_used"),
-                total_latency_ms=(
-                    int(data.get("total_latency_ms", 0))
-                    if data.get("total_latency_ms")
-                    else None
-                ),
-                policy_violations=(
-                    len(data.get("policy_violations", []))
-                    if data.get("policy_violations")
-                    else 0
-                ),
-                recoveries=(
-                    len(data.get("recovery_log", [])) if data.get("recovery_log") else 0
-                ),
+                total_latency_ms=(int(data.get("total_latency_ms", 0)) if data.get("total_latency_ms") else None),
+                policy_violations=(len(data.get("policy_violations", [])) if data.get("policy_violations") else 0),
+                recoveries=(len(data.get("recovery_log", [])) if data.get("recovery_log") else 0),
                 cost_cents=data.get("cost_cents"),
                 created_at=datetime.utcnow(),
-                started_at=(
-                    datetime.utcnow() if data.get("status") == "running" else None
-                ),
+                started_at=(datetime.utcnow() if data.get("status") == "running" else None),
             )
             self.session.add(run)
             return run
@@ -210,11 +174,7 @@ class WorkerWriteServiceAsync:
             entity_id=tenant_id,
             current_value_cents=float(daily_spend),
             expected_value_cents=float(warn_threshold),
-            deviation_pct=(
-                ((daily_spend - warn_threshold) / warn_threshold) * 100
-                if warn_threshold > 0
-                else 0
-            ),
+            deviation_pct=(((daily_spend - warn_threshold) / warn_threshold) * 100 if warn_threshold > 0 else 0),
             threshold_pct=float(budget_snapshot.get("warn_threshold_pct", 0)),
             message=f"Daily spend ({daily_spend}¢) exceeds {budget_snapshot.get('warn_threshold_pct', 0)}% warning threshold ({int(warn_threshold)}¢)",
             metadata_json={
@@ -249,7 +209,5 @@ class WorkerWriteServiceAsync:
         Returns:
             WorkerRun if found, None otherwise
         """
-        result = await self.session.execute(
-            select(WorkerRun).where(WorkerRun.id == run_id)
-        )
+        result = await self.session.execute(select(WorkerRun).where(WorkerRun.id == run_id))
         return result.scalar_one_or_none()

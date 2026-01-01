@@ -154,8 +154,6 @@ class ExecutionSignalDetector:
 
         return False
 
-    def get_blocking_calls_in_function(
-        self, func: FunctionInfo
-    ) -> List[str]:
+    def get_blocking_calls_in_function(self, func: FunctionInfo) -> List[str]:
         """Get all blocking calls in a function."""
         return [call for call in func.calls if self._is_blocking_call(call)]

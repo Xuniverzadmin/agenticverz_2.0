@@ -32,7 +32,6 @@ Reference: PIN-258 Phase F-3 Runtime Cluster
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-
 # =============================================================================
 # L4 Domain Constants (System Truth)
 # =============================================================================
@@ -64,6 +63,7 @@ SUPPORTED_QUERY_TYPES: List[str] = [
 @dataclass
 class QueryResult:
     """Result from a runtime query command."""
+
     query_type: str
     result: Dict[str, Any]
     supported_queries: List[str] = field(default_factory=lambda: SUPPORTED_QUERY_TYPES.copy())
@@ -72,6 +72,7 @@ class QueryResult:
 @dataclass
 class SkillInfo:
     """Domain information about a skill."""
+
     skill_id: str
     name: str
     version: str
@@ -88,6 +89,7 @@ class SkillInfo:
 @dataclass
 class ResourceContractInfo:
     """Domain information about a resource contract."""
+
     resource_id: str
     budget_cents: int
     rate_limit_per_minute: int
@@ -97,6 +99,7 @@ class ResourceContractInfo:
 @dataclass
 class CapabilitiesInfo:
     """Domain information about available capabilities."""
+
     agent_id: Optional[str]
     skills: Dict[str, Dict[str, Any]]
     budget: Dict[str, Any]

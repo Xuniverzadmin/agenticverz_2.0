@@ -221,10 +221,10 @@ After repairs:
 
 | Check | Status |
 |-------|--------|
-| `recovery_evaluator.py` has 0 L4 imports | PENDING |
-| `runner.py` has 0 L4 imports | PENDING |
-| `recovery_claim_worker.py` has 0 L4 imports | PENDING |
-| BLCA reports 0 L5→L4 violations | PENDING |
+| `recovery_evaluator.py` has 0 L4 imports | ✅ COMPLETE (Phase R-1) |
+| `runner.py` has 0 L4 imports | ✅ COMPLETE (Phase R-2, R-3) |
+| `recovery_claim_worker.py` has 0 L4 imports | ✅ COMPLETE (Phase R-4) |
+| BLCA reports 0 L5→L4 violations | ✅ CLEAN (602 files, 0 violations) |
 | E2E tests pass | PENDING |
 | Layer headers added to planners/memory | PENDING |
 
@@ -232,8 +232,12 @@ After repairs:
 
 ## 8. Next Steps (After Classification Approval)
 
-1. **Human Decision:** Approve classification and repair sequence
-2. **Step 3:** Fix structurally per PHASE_R_ARCHITECTURE_REALIGNMENT.md
+1. ~~**Human Decision:** Approve classification and repair sequence~~ ✅ APPROVED
+2. ~~**Step 3:** Fix structurally per PHASE_R_ARCHITECTURE_REALIGNMENT.md~~ ✅ COMPLETE
+   - ✅ Phase R-1: recovery_evaluator.py (6 violations → 0)
+   - ✅ Phase R-2: runner.py planning logic (2 violations → 0)
+   - ✅ Phase R-3: runner.py decision emission (1 violation → 0)
+   - ✅ Phase R-4: recovery_claim_worker.py (2 violations → 0)
 3. **Step 4:** Fix E2E deterministically
 4. **Step 5:** Enable enforcement
 
@@ -243,8 +247,18 @@ After repairs:
 
 | Date | Change |
 |------|--------|
+| 2026-01-01 | **Phase R-4 COMPLETE:** recovery_claim_worker.py threshold via env var (dependency inversion) |
+| 2026-01-01 | **Phase R-3 COMPLETE:** runner.py decision emission moved to L4 BudgetEnforcementEngine |
+| 2026-01-01 | **Phase R-2 COMPLETE:** runner.py planning logic moved to L4 PlanGenerationEngine |
+| 2026-01-01 | **Phase R-1 COMPLETE:** recovery_evaluator.py extracted to L4 engine (6 violations fixed) |
 | 2026-01-01 | L5→L4 violation classification complete |
 
 ---
 
-**OBSERVATION COMPLETE — AWAITING APPROVAL FOR STRUCTURAL REPAIR**
+**STRUCTURAL REPAIR COMPLETE — All 11 L5→L4 violations fixed (Phase R-1 through R-4)**
+
+All L5 workers now comply with the layer model:
+- L5 imports L6 only
+- L4 imports L5, L6
+- Decision logic in L4, execution logic in L5
+- Configuration via environment variables (dependency inversion)

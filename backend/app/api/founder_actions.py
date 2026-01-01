@@ -42,7 +42,6 @@ from app.contracts.ops import (
     FounderReversalRequestDTO,
 )
 from app.db import get_session
-from app.models.tenant import FounderAction
 from app.services.founder_action_write_service import FounderActionWriteService
 
 logger = logging.getLogger(__name__)

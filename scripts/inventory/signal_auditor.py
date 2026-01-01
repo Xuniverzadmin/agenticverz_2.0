@@ -26,12 +26,11 @@ Usage:
 import argparse
 import json
 import logging
-import os
 import pathlib
 import re
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 # Setup logging
 logging.basicConfig(
@@ -43,7 +42,9 @@ logger = logging.getLogger("signal_auditor")
 # Paths
 REPO_ROOT = pathlib.Path(__file__).parent.parent.parent
 REGISTRY_PATH = REPO_ROOT / "docs" / "architecture" / "SIGNAL_REGISTRY_COMPLETE.md"
-PYTHON_BASELINE = REPO_ROOT / "docs" / "architecture" / "SIGNAL_REGISTRY_PYTHON_BASELINE.md"
+PYTHON_BASELINE = (
+    REPO_ROOT / "docs" / "architecture" / "SIGNAL_REGISTRY_PYTHON_BASELINE.md"
+)
 RULES_PATH = pathlib.Path(__file__).parent / "auditor_rules.yaml"
 BACKEND_APP = REPO_ROOT / "backend" / "app"
 
@@ -58,12 +59,12 @@ WRITE_PATTERNS = [
 
 # Patterns to EXCLUDE (comments, docstrings, model definitions)
 EXCLUDE_LINE_PATTERNS = [
-    re.compile(r"^\s*#"),           # Comments
-    re.compile(r"^\s*\"\"\""),      # Docstrings
-    re.compile(r"^\s*'''"),         # Docstrings
-    re.compile(r"Field\s*\("),      # SQLModel field definitions
-    re.compile(r"description\s*="), # Field descriptions
-    re.compile(r"^\s*def\s+"),      # Function definitions
+    re.compile(r"^\s*#"),  # Comments
+    re.compile(r"^\s*\"\"\""),  # Docstrings
+    re.compile(r"^\s*'''"),  # Docstrings
+    re.compile(r"Field\s*\("),  # SQLModel field definitions
+    re.compile(r"description\s*="),  # Field descriptions
+    re.compile(r"^\s*def\s+"),  # Function definitions
 ]
 
 # Files to exclude from analysis
@@ -78,6 +79,7 @@ EXCLUDED_PATTERNS = [
 @dataclass
 class Signal:
     """Parsed signal from registry."""
+
     uid: str
     name: str
     signal_class: str = "UNKNOWN"
@@ -94,6 +96,7 @@ class Signal:
 @dataclass
 class WriteLocation:
     """Location of a DB write in codebase."""
+
     file: str
     line: int
     pattern: str
@@ -103,6 +106,7 @@ class WriteLocation:
 @dataclass
 class AuditResult:
     """Complete audit result."""
+
     mode: str = "observe"
     registry_signals: int = 0
     codebase_writes: int = 0
@@ -327,14 +331,22 @@ def run_audit(mode: str = "observe") -> AuditResult:
     # Check unregistered writes
     result.unregistered_writes = check_unregistered_writes(writes, registered_producers)
     if result.unregistered_writes:
-        result.warnings.append(f"Found {len(result.unregistered_writes)} unregistered write locations")
+        result.warnings.append(
+            f"Found {len(result.unregistered_writes)} unregistered write locations"
+        )
 
     # Check unknown fields
     result.unknown_fields = check_unknown_fields(signals)
     if result.unknown_fields:
         unknown_count = len(result.unknown_fields)
-        unknown_pct = (unknown_count / result.registry_signals * 100) if result.registry_signals else 0
-        result.warnings.append(f"Found {unknown_count} signals ({unknown_pct:.1f}%) with UNKNOWN fields")
+        unknown_pct = (
+            (unknown_count / result.registry_signals * 100)
+            if result.registry_signals
+            else 0
+        )
+        result.warnings.append(
+            f"Found {unknown_count} signals ({unknown_pct:.1f}%) with UNKNOWN fields"
+        )
 
     # Determine pass/fail based on mode
     if mode == "enforce":
@@ -355,7 +367,12 @@ def print_report(result: AuditResult, json_output: bool = False) -> None:
             "codebase_writes": result.codebase_writes,
             "orphaned_signals": result.orphaned_signals,
             "unregistered_writes": [
-                {"file": w.file, "line": w.line, "pattern": w.pattern, "context": w.context}
+                {
+                    "file": w.file,
+                    "line": w.line,
+                    "pattern": w.pattern,
+                    "context": w.context,
+                }
                 for w in result.unregistered_writes[:20]  # Limit output
             ],
             "unknown_fields": result.unknown_fields,
@@ -372,7 +389,7 @@ def print_report(result: AuditResult, json_output: bool = False) -> None:
     print(f"Mode: {result.mode.upper()}")
     print("=" * 60)
 
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"   Registry signals: {result.registry_signals}")
     print(f"   Codebase writes:  {result.codebase_writes}")
     print(f"   Orphaned signals: {len(result.orphaned_signals)}")
@@ -402,12 +419,12 @@ def print_report(result: AuditResult, json_output: bool = False) -> None:
             print(f"   ... and {len(result.unknown_fields) - 10} more")
 
     if result.warnings:
-        print(f"\n⚠️  Warnings:")
+        print("\n⚠️  Warnings:")
         for warning in result.warnings:
             print(f"   - {warning}")
 
     if result.errors:
-        print(f"\n❌ Errors:")
+        print("\n❌ Errors:")
         for error in result.errors:
             print(f"   - {error}")
 

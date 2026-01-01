@@ -3,40 +3,48 @@
 # Temporal:
 #   Trigger: worker (failure events)
 #   Execution: async
-# Role: Recovery evaluation orchestration (L5 execution wrapper)
-# Authority: Recovery suggestion creation (M9/M10 pattern)
-# Callers: Failure processing pipeline
-# Allowed Imports: L4, L6
-# Domain Engine: recovery_rule_engine.py (L4)
-# Forbidden Imports: L1, L2, L3
+# Role: Recovery execution (L5 pure execution)
+# Authority: Recovery action execution (M9/M10 pattern)
+# Callers: L4 RecoveryEvaluationEngine (via call-down)
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md (Failure Semantics: recover mode)
-# Reference: PIN-257 Phase E-4 Extraction #3
+# Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
 #
-# GOVERNANCE NOTE: L5 owns all DB operations.
-# L4 recovery_rule_engine.py provides pure domain logic:
-#   - combine_confidences() - confidence combination formula
-#   - should_select_action() - action selection threshold
-#   - should_auto_execute() - auto-execute threshold
-#   - evaluate_rules() - rule evaluation
+# GOVERNANCE NOTE: L5 owns EXECUTION only.
+# L4 recovery_evaluation_engine.py provides domain decisions.
 # This L5 file:
-#   - Orchestrates evaluation flow
-#   - Calls L4 for domain decisions
-#   - Persists results TO database (L6)
+#   - Receives decisions from L4 (via RecoveryDecision DTO)
+#   - Executes decisions
+#   - Persists results to database (L6)
+#   - Does NOT make domain decisions
 
-# M10 Recovery Evaluator Worker
+# M10 Recovery Executor (L5 Pure Execution)
 """
-Background worker that evaluates failures and generates recovery suggestions.
+L5 Executor for recovery actions.
 
-Hooks into the failure processing pipeline to:
-1. Receive failure events from the worker
-2. Evaluate rules and generate suggestions
+This L5 module receives decisions from L4 RecoveryEvaluationEngine and
+executes them. It does NOT make domain decisions.
+
+L5 Responsibilities:
+1. Receive RecoveryDecision from L4
+2. Execute decisions (DB operations, action execution)
 3. Record provenance for audit
-4. Optionally execute automated actions
+4. Trigger execution hooks
+
+L5 does NOT:
+- Evaluate rules (L4 responsibility)
+- Combine confidences (L4 responsibility)
+- Determine action selection (L4 responsibility)
+- Determine auto-execution (L4 responsibility)
+- Emit decision records (L4 responsibility)
 
 Environment Variables:
-- RECOVERY_EVALUATOR_ENABLED: Enable/disable evaluator (default: true)
+- RECOVERY_EVALUATOR_ENABLED: Enable/disable executor (default: true)
 - RECOVERY_AUTO_EXECUTE: Auto-execute automated actions (default: false)
 - RECOVERY_MIN_CONFIDENCE: Minimum confidence for suggestions (default: 0.3)
+
+Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
 """
 
 import asyncio
@@ -48,10 +56,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
-logger = logging.getLogger("nova.worker.recovery_evaluator")
+logger = logging.getLogger("nova.worker.recovery_executor")
 
-# Phase 4B: Decision Record Emission (DECISION_RECORD_CONTRACT v0.2)
-from app.contracts.decisions import emit_recovery_decision
+# NOTE: emit_recovery_decision moved to L4 RecoveryEvaluationEngine
+# L5 does NOT emit decision records - that is L4 domain authority
+# Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
 
 # Configuration
 EVALUATOR_ENABLED = os.getenv("RECOVERY_EVALUATOR_ENABLED", "true").lower() == "true"
@@ -165,30 +174,54 @@ hooks = RecoveryHooks()
 # =============================================================================
 
 
-class RecoveryEvaluator:
+class RecoveryExecutor:
     """
-    Evaluates failures and generates recovery suggestions.
+    L5 Executor for recovery actions.
 
-    Integrates with:
-    - RecoveryMatcher: For suggestion generation
-    - RecoveryRuleEngine: For rule-based evaluation
-    - SuggestionAction: For action selection
+    This L5 class executes decisions made by L4 RecoveryEvaluationEngine.
+    It does NOT make domain decisions.
+
+    L5 Responsibilities:
+    - Execute action selection (DB operation)
+    - Record provenance (DB operation)
+    - Execute automated actions (execution)
+    - Trigger execution hooks
+
+    L4 Responsibilities (NOT here):
+    - Evaluate rules
+    - Match patterns
+    - Combine confidences
+    - Determine action selection
+    - Determine auto-execution
+    - Emit decision records
+
+    Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
     """
 
     def __init__(self, db_url: Optional[str] = None):
-        """Initialize evaluator."""
+        """Initialize executor."""
         self._db_url = db_url or os.getenv("DATABASE_URL")
         self._hooks = hooks
 
-    async def evaluate(self, event: FailureEvent) -> EvaluationOutcome:
+    async def execute_decision(
+        self,
+        event: FailureEvent,
+        decision: "RecoveryDecision",
+    ) -> EvaluationOutcome:
         """
-        Evaluate a failure event and generate recovery suggestion.
+        Execute a recovery decision made by L4.
+
+        This L5 method receives a RecoveryDecision from L4 and executes it.
+        It does NOT make domain decisions - all decisions come from L4.
 
         Args:
             event: FailureEvent with error details
+            decision: RecoveryDecision from L4 with all domain decisions
 
         Returns:
-            EvaluationOutcome with suggestion and optional execution result
+            EvaluationOutcome with execution result
+
+        Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
         """
         start_time = time.perf_counter()
 
@@ -201,81 +234,40 @@ class RecoveryEvaluator:
                 auto_executed=False,
                 execution_result=None,
                 duration_ms=0,
-                error="Evaluator disabled",
+                error="Executor disabled",
             )
 
         try:
-            # Trigger start hook
+            # Trigger start hook (L5 infrastructure)
             await self._hooks.trigger(
                 "on_evaluation_start",
                 event=event,
             )
 
-            # Step 1: Evaluate rules
-            from app.services.recovery_rule_engine import (
-                evaluate_rules,
-            )
-
-            rule_result = evaluate_rules(
-                error_code=event.error_code,
-                error_message=event.error_message,
-                skill_id=event.skill_id,
-                tenant_id=event.tenant_id,
-                occurrence_count=event.metadata.get("occurrence_count", 1),
-            )
+            # Use L4 decision values (no L4 imports needed)
+            candidate_id = decision.candidate_id
+            combined_confidence = decision.combined_confidence
+            suggested_action = decision.suggested_action
 
             logger.info(
-                f"Rule evaluation for {event.failure_match_id}: "
-                f"action={rule_result.recommended_action}, "
-                f"confidence={rule_result.confidence:.2f}"
+                f"L5 executing decision for {event.failure_match_id}: "
+                f"action={suggested_action}, "
+                f"confidence={combined_confidence:.2f}"
             )
 
-            # Step 2: Generate suggestion via matcher
-            from app.services.recovery_matcher import RecoveryMatcher
-
-            matcher = RecoveryMatcher()
-            match_result = matcher.suggest(
-                {
-                    "failure_match_id": event.failure_match_id,
-                    "failure_payload": {
-                        "error_type": event.error_code,
-                        "raw": event.error_message,
-                        "meta": event.metadata,
-                    },
-                    "source": "worker",
-                    "occurred_at": event.occurred_at.isoformat() if event.occurred_at else None,
-                }
-            )
-
-            candidate_id = match_result.candidate_id
-
-            # L4 domain decision: combine confidences
-            # Reference: PIN-257 Phase E-4 Extraction #3
-            from app.services.recovery_rule_engine import combine_confidences
-
-            combined_confidence = combine_confidences(
-                rule_confidence=rule_result.confidence,
-                match_confidence=match_result.confidence,
-            )
-
-            # Trigger suggestion hook
+            # Trigger suggestion hook (L5 infrastructure)
             await self._hooks.trigger(
                 "on_suggestion_generated",
                 event=event,
                 candidate_id=candidate_id,
                 confidence=combined_confidence,
-                rule_result=rule_result.to_dict(),
+                rule_result=decision.rule_result,
             )
 
-            # Step 3: Select action if confidence meets L4 threshold
-            # L4 domain decision: should_select_action()
-            # Reference: PIN-257 Phase E-4 Extraction #3
-            from app.services.recovery_rule_engine import should_select_action
-
-            suggested_action = rule_result.recommended_action
+            # Step 1: Select action if L4 decision says so (L6 DB operation)
             action_id = None
 
-            if should_select_action(combined_confidence) and suggested_action:
+            if decision.should_select_action and suggested_action:
                 action_id = await self._select_action(
                     candidate_id=candidate_id,
                     action_code=suggested_action,
@@ -289,15 +281,14 @@ class RecoveryEvaluator:
                     action_id=action_id,
                 )
 
-            # Step 4: Record provenance
+            # Step 2: Record provenance (L6 DB operation)
             await self._record_provenance(
                 candidate_id=candidate_id,
                 event_type="created",
                 details={
-                    "rule_result": rule_result.to_dict(),
+                    "rule_result": decision.rule_result,
                     "match_result": {
-                        "confidence": match_result.confidence,
-                        "suggestion": match_result.suggested_recovery,
+                        "confidence": decision.match_confidence,
                     },
                     "combined_confidence": combined_confidence,
                 },
@@ -306,16 +297,13 @@ class RecoveryEvaluator:
                 confidence_after=combined_confidence,
             )
 
-            # Step 5: Auto-execute if enabled and conditions met
+            # Step 3: Auto-execute if L4 decision says so (L5 execution + L6 DB)
             execution_result = None
             auto_executed = False
 
-            # SHADOW-001 FIX: Use L4 domain authority for auto-execute threshold
-            # Previously: hardcoded `combined_confidence >= 0.8`
-            # Now: L4 RecoveryRuleEngine.should_auto_execute() is authoritative
-            from app.services.recovery_rule_engine import should_auto_execute
-
-            if AUTO_EXECUTE and action_id and should_auto_execute(combined_confidence):
+            # L4 decision.should_auto_execute already contains the threshold check
+            # L5 just executes based on the decision
+            if AUTO_EXECUTE and action_id and decision.should_auto_execute:
                 auto_executed, execution_result = await self._auto_execute(
                     candidate_id=candidate_id,
                     action_id=action_id,
@@ -324,7 +312,7 @@ class RecoveryEvaluator:
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
-            # Update metrics
+            # Step 4: Update metrics (L6)
             try:
                 from app.metrics import recovery_suggestions_total
 
@@ -335,17 +323,9 @@ class RecoveryEvaluator:
             except Exception:
                 pass
 
-            # Phase 4B: Emit recovery decision record (DECISION_RECORD_CONTRACT v0.2)
-            # Rule: Emit records where decisions already happen. No logic changes.
-            emit_recovery_decision(
-                run_id=event.run_id,
-                evaluated=True,
-                triggered=auto_executed,
-                action=suggested_action,
-                candidates_count=1 if candidate_id else 0,
-                reason=f"Confidence: {combined_confidence:.2f}, action: {suggested_action or 'none'}",
-                tenant_id=event.tenant_id or "default",
-            )
+            # NOTE: emit_recovery_decision is now L4 responsibility
+            # L5 does NOT emit decision records
+            # Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
 
             return EvaluationOutcome(
                 failure_match_id=event.failure_match_id,
@@ -359,18 +339,11 @@ class RecoveryEvaluator:
 
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            logger.error(f"Evaluation error: {e}", exc_info=True)
+            logger.error(f"Execution error: {e}", exc_info=True)
 
-            # Phase 4B: Emit recovery decision record for error case
-            emit_recovery_decision(
-                run_id=event.run_id,
-                evaluated=False,
-                triggered=False,
-                action=None,
-                candidates_count=0,
-                reason=f"Evaluation error: {str(e)}",
-                tenant_id=event.tenant_id or "default",
-            )
+            # NOTE: emit_recovery_decision for error case is now L4 responsibility
+            # L5 does NOT emit decision records
+            # Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
 
             return EvaluationOutcome(
                 failure_match_id=event.failure_match_id,
@@ -687,32 +660,10 @@ class RecoveryEvaluator:
 # =============================================================================
 
 
-async def evaluate_failure(failure_match_id: str, error_code: str, error_message: str, **kwargs) -> EvaluationOutcome:
-    """
-    Convenience function to evaluate a failure.
-
-    Args:
-        failure_match_id: ID of the failure match record
-        error_code: Error code
-        error_message: Error message
-        **kwargs: Additional event fields
-
-    Returns:
-        EvaluationOutcome
-    """
-    event = FailureEvent(
-        failure_match_id=failure_match_id,
-        error_code=error_code,
-        error_message=error_message,
-        skill_id=kwargs.get("skill_id"),
-        tenant_id=kwargs.get("tenant_id"),
-        agent_id=kwargs.get("agent_id"),
-        run_id=kwargs.get("run_id"),
-        metadata=kwargs.get("metadata", {}),
-    )
-
-    evaluator = RecoveryEvaluator()
-    return await evaluator.evaluate(event)
+# NOTE: evaluate_failure() moved to L4 recovery_evaluation_engine.py
+# Callers should import from:
+#   from app.services.recovery_evaluation_engine import evaluate_and_execute
+# Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
 
 
 def register_hook(hook_name: str, callback: Callable) -> None:
@@ -729,15 +680,22 @@ def unregister_hook(hook_name: str, callback: Callable) -> bool:
 # Exports
 # =============================================================================
 
+# L5 exports only execution-related items
+# Domain decision entry points are in L4 recovery_evaluation_engine.py
+# Reference: PIN-257 Phase R-1 (L5→L4 Violation Fix)
+
 __all__ = [
+    # Data classes
     "FailureEvent",
     "EvaluationOutcome",
-    "RecoveryEvaluator",
+    # L5 Executor (called by L4)
+    "RecoveryExecutor",
+    # Hook infrastructure (L5)
     "RecoveryHooks",
-    "evaluate_failure",
     "register_hook",
     "unregister_hook",
     "hooks",
+    # Configuration
     "EVALUATOR_ENABLED",
     "AUTO_EXECUTE",
     "MIN_CONFIDENCE",

@@ -24,8 +24,6 @@ Reference: PIN-246 (Architecture Governance Implementation)
 
 import argparse
 import json
-import os
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -121,14 +119,24 @@ def generate_report() -> dict:
     # Tier mapping
     tier_map = {
         # Tier A: Structural violations
-        "TV-001": "A", "TV-002": "A", "TV-003": "A",
-        "TV-004": "A", "TV-005": "A", "TV-006": "A",
-        "INTENT-001": "A", "INTENT-002": "A", "INTENT-003": "A",
-        "LAYER-001": "A", "LAYER-002": "A", "LAYER-003": "A",
+        "TV-001": "A",
+        "TV-002": "A",
+        "TV-003": "A",
+        "TV-004": "A",
+        "TV-005": "A",
+        "TV-006": "A",
+        "INTENT-001": "A",
+        "INTENT-002": "A",
+        "INTENT-003": "A",
+        "LAYER-001": "A",
+        "LAYER-002": "A",
+        "LAYER-003": "A",
         # Tier B: Integration violations
-        "LIT-FAIL": "B", "BIT-FAIL": "B",
+        "LIT-FAIL": "B",
+        "BIT-FAIL": "B",
         # Tier C: Governance friction
-        "FALSE-POS": "C", "HEURISTIC": "C",
+        "FALSE-POS": "C",
+        "HEURISTIC": "C",
     }
 
     by_code = {}
@@ -163,7 +171,9 @@ def main():
 
     # Log command
     log_parser = subparsers.add_parser("log", help="Log an incident")
-    log_parser.add_argument("--code", required=True, help="Violation code (e.g., TV-001)")
+    log_parser.add_argument(
+        "--code", required=True, help="Violation code (e.g., TV-001)"
+    )
     log_parser.add_argument("--file", required=True, help="File path")
     log_parser.add_argument("--layer", help="Layer classification")
     log_parser.add_argument("--author", help="Author")
@@ -204,7 +214,7 @@ def main():
         else:
             for inc in incidents:
                 print(f"[{inc['timestamp']}] {inc['violation_code']} - {inc['file']}")
-                if inc.get('summary'):
+                if inc.get("summary"):
                     print(f"  {inc['summary']}")
 
     elif args.command == "report":
@@ -224,17 +234,19 @@ def main():
             print(f"  C (Friction):     {report['by_tier'].get('C', 0)}")
 
             print("\nBy Code:")
-            for code, count in sorted(report['by_code'].items(), key=lambda x: -x[1]):
+            for code, count in sorted(report["by_code"].items(), key=lambda x: -x[1]):
                 print(f"  {code}: {count}")
 
             print("\nBy Layer:")
-            for layer, count in sorted(report['by_layer'].items(), key=lambda x: -x[1]):
+            for layer, count in sorted(report["by_layer"].items(), key=lambda x: -x[1]):
                 print(f"  {layer}: {count}")
 
-            if report['recent']:
+            if report["recent"]:
                 print("\nRecent Incidents:")
-                for inc in report['recent']:
-                    print(f"  [{inc['timestamp'][:10]}] {inc['violation_code']} - {inc['file']}")
+                for inc in report["recent"]:
+                    print(
+                        f"  [{inc['timestamp'][:10]}] {inc['violation_code']} - {inc['file']}"
+                    )
 
     else:
         parser.print_help()

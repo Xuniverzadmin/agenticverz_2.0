@@ -22,7 +22,6 @@ from sqlmodel import Session, select
 from app.db import (
     CostAnomaly,
     CostBudget,
-    CostRecord,
     FeatureTag,
     get_session,
     utc_now,

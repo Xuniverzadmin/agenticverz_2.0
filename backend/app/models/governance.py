@@ -52,10 +52,7 @@ class GovernanceSignal(Base):
 
     # Signal type: what kind of governance decision
     signal_type = Column(
-        String(50),
-        nullable=False,
-        index=True,
-        comment="Type: BLCA_STATUS, CI_STATUS, DEPLOYMENT_GATE, SESSION_BLOCK"
+        String(50), nullable=False, index=True, comment="Type: BLCA_STATUS, CI_STATUS, DEPLOYMENT_GATE, SESSION_BLOCK"
     )
 
     # Scope: what this signal applies to
@@ -63,80 +60,45 @@ class GovernanceSignal(Base):
         String(500),
         nullable=False,
         index=True,
-        comment="Scope identifier: file path, PR number, commit SHA, session ID, etc."
+        comment="Scope identifier: file path, PR number, commit SHA, session ID, etc.",
     )
 
     # Decision: the governance verdict
-    decision = Column(
-        String(20),
-        nullable=False,
-        index=True,
-        comment="Decision: CLEAN, BLOCKED, WARN, PENDING"
-    )
+    decision = Column(String(20), nullable=False, index=True, comment="Decision: CLEAN, BLOCKED, WARN, PENDING")
 
     # Reason: human-readable explanation
-    reason = Column(
-        Text,
-        nullable=True,
-        comment="Why this decision was made"
-    )
+    reason = Column(Text, nullable=True, comment="Why this decision was made")
 
     # Constraints: structured details about what's blocked
     constraints = Column(
-        JSONB,
-        nullable=True,
-        comment="Structured constraints: {blocked_files: [...], blocked_actions: [...]}"
+        JSONB, nullable=True, comment="Structured constraints: {blocked_files: [...], blocked_actions: [...]}"
     )
 
     # Source: who/what generated this signal
-    recorded_by = Column(
-        String(100),
-        nullable=False,
-        comment="Source: BLCA, CI, OPS, MANUAL"
-    )
+    recorded_by = Column(String(100), nullable=False, comment="Source: BLCA, CI, OPS, MANUAL")
 
     # Timestamps
-    recorded_at = Column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-        comment="When this signal was recorded"
-    )
+    recorded_at = Column(DateTime, nullable=False, server_default=func.now(), comment="When this signal was recorded")
 
-    expires_at = Column(
-        DateTime,
-        nullable=True,
-        comment="Optional expiration (for temporary blocks)"
-    )
+    expires_at = Column(DateTime, nullable=True, comment="Optional expiration (for temporary blocks)")
 
     # Superseded tracking: when a newer signal replaces this one
-    superseded_by = Column(
-        PGUUID(as_uuid=True),
-        nullable=True,
-        comment="ID of signal that superseded this one"
-    )
+    superseded_by = Column(PGUUID(as_uuid=True), nullable=True, comment="ID of signal that superseded this one")
 
-    superseded_at = Column(
-        DateTime,
-        nullable=True,
-        comment="When this signal was superseded"
-    )
+    superseded_at = Column(DateTime, nullable=True, comment="When this signal was superseded")
 
     # Phase E FIX-04: Semantic ownership
-    semantic_owner = Column(
-        String(100),
-        nullable=True,
-        comment="L4 engine with interpretation authority (FIX-04)"
-    )
+    semantic_owner = Column(String(100), nullable=True, comment="L4 engine with interpretation authority (FIX-04)")
 
     # Composite index for efficient lookups
     __table_args__ = (
-        Index('ix_governance_signals_scope_type_active', 'scope', 'signal_type', 'decision'),
-        {"comment": "Phase E FIX-03: Explicit governance signals from L7 to L6"}
+        Index("ix_governance_signals_scope_type_active", "scope", "signal_type", "decision"),
+        {"comment": "Phase E FIX-03: Explicit governance signals from L7 to L6"},
     )
 
 
 # Pydantic models for API/Service use
+
 
 class GovernanceSignalCreate(BaseModel):
     """Input model for creating governance signals."""

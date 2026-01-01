@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
 
-from ..scanner.file_classifier import FileClassifier, FileClassification, LayerLevel, FileRole
+from ..scanner.file_classifier import FileClassifier, LayerLevel, FileRole
 
 
 @dataclass
@@ -140,17 +140,11 @@ class SemanticCoordinateMap:
 
     def get_layer_summary(self) -> Dict[str, int]:
         """Get count of files per layer."""
-        return {
-            layer.value: len(files)
-            for layer, files in self._by_layer.items()
-        }
+        return {layer.value: len(files) for layer, files in self._by_layer.items()}
 
     def get_domain_summary(self) -> Dict[str, int]:
         """Get count of files per domain."""
-        return {
-            domain: len(files)
-            for domain, files in self._by_domain.items()
-        }
+        return {domain: len(files) for domain, files in self._by_domain.items()}
 
     def clear(self) -> None:
         """Clear all mappings."""

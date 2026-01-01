@@ -29,8 +29,7 @@ PIN-052: Data Ownership & Embedding Security
 """
 
 import re
-from typing import List, Optional, Tuple
-
+from typing import List, Tuple
 
 # Compiled regex patterns for performance
 PATTERNS: List[Tuple[re.Pattern, str, str]] = [
@@ -229,7 +228,7 @@ def sanitize_for_embedding(
         >>> sanitize_for_embedding("API key: sk-1234567890abcdefghij")
         "API key: [REDACTED_API_KEY]"
 
-        >>> sanitize_for_embedding("Connect to postgres://user:pass@host/db")
+        >>> sanitize_for_embedding("Connect to postgres://user:pass@host/db")  # pragma: allowlist secret
         "Connect to postgres://[REDACTED_CONNECTION]"
     """
     if not text:

@@ -17,7 +17,6 @@ Produces markdown table of signal emitters and their locations.
 import ast
 import pathlib
 import re
-import sys
 
 # Directories that constitute L8 (Catalyst/Meta layer)
 L8_ROOTS = [
@@ -79,25 +78,29 @@ def scan_python_file(path: pathlib.Path):
                 func_lower = func_name.lower()
                 for pattern in SIGNAL_PATTERNS:
                     if pattern.lower() in func_lower:
-                        signals.append({
-                            "call": func_name,
-                            "file": path.as_posix(),
-                            "line": getattr(node, "lineno", 0),
-                            "type": "function_call"
-                        })
+                        signals.append(
+                            {
+                                "call": func_name,
+                                "file": path.as_posix(),
+                                "line": getattr(node, "lineno", 0),
+                                "type": "function_call",
+                            }
+                        )
                         break
 
     # Also scan for metric definitions
     for pattern in METRIC_PATTERNS:
         for match in re.finditer(pattern, text):
             # Find line number
-            line_num = text[:match.start()].count('\n') + 1
-            signals.append({
-                "call": match.group().rstrip('('),
-                "file": path.as_posix(),
-                "line": line_num,
-                "type": "metric_definition"
-            })
+            line_num = text[: match.start()].count("\n") + 1
+            signals.append(
+                {
+                    "call": match.group().rstrip("("),
+                    "file": path.as_posix(),
+                    "line": line_num,
+                    "type": "metric_definition",
+                }
+            )
 
     return signals
 
@@ -113,21 +116,25 @@ def scan_yaml_file(path: pathlib.Path):
 
     # Look for alert definitions
     if "alert:" in text.lower() or "alertname:" in text.lower():
-        signals.append({
-            "call": "AlertRule",
-            "file": path.as_posix(),
-            "line": 0,
-            "type": "alert_rule"
-        })
+        signals.append(
+            {
+                "call": "AlertRule",
+                "file": path.as_posix(),
+                "line": 0,
+                "type": "alert_rule",
+            }
+        )
 
     # Look for metric references
     if "expr:" in text:
-        signals.append({
-            "call": "PrometheusQuery",
-            "file": path.as_posix(),
-            "line": 0,
-            "type": "prometheus_query"
-        })
+        signals.append(
+            {
+                "call": "PrometheusQuery",
+                "file": path.as_posix(),
+                "line": 0,
+                "type": "prometheus_query",
+            }
+        )
 
     return signals
 

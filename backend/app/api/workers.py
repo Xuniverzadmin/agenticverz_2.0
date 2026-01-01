@@ -50,7 +50,7 @@ from app.auth import verify_api_key
 
 # Phase 5B: Policy Pre-Check Integration
 from app.contracts.decisions import emit_policy_precheck_decision
-from app.db import CostAnomaly, CostBudget, CostRecord, get_async_session
+from app.db import CostBudget, get_async_session
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.services.worker_write_service_async import WorkerWriteServiceAsync
@@ -83,6 +83,7 @@ def _calculate_cost_cents(model: str, input_tokens: int, output_tokens: int) -> 
     """
     adapter = _get_workers_adapter()
     return adapter.calculate_cost_cents(model, input_tokens, output_tokens)
+
 
 router = APIRouter(prefix="/api/v1/workers/business-builder", tags=["Workers"])
 

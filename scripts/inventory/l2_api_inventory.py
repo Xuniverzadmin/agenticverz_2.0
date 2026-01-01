@@ -14,7 +14,6 @@ Extracts FastAPI routes and maps them to files, HTTP verbs, and authority.
 Produces authoritative list of L2 surface area.
 """
 
-import ast
 import pathlib
 import re
 import sys
@@ -22,7 +21,17 @@ import sys
 API_ROOT = pathlib.Path("backend/app/api")
 
 # Keywords that indicate mutation
-MUTATION_KEYWORDS = ["create", "update", "delete", "add", "remove", "set", "write", "post", "put"]
+MUTATION_KEYWORDS = [
+    "create",
+    "update",
+    "delete",
+    "add",
+    "remove",
+    "set",
+    "write",
+    "post",
+    "put",
+]
 SYSTEM_KEYWORDS = ["system", "internal", "admin", "ops", "founder"]
 
 
@@ -34,7 +43,7 @@ def extract_semantic_header(file_path: pathlib.Path):
         return {}
 
     header = {}
-    lines = text.split('\n')[:20]  # Check first 20 lines
+    lines = text.split("\n")[:20]  # Check first 20 lines
 
     for line in lines:
         if line.startswith("# Layer:"):
@@ -67,11 +76,11 @@ def extract_routes(file_path: pathlib.Path):
     # Pattern: @router.method("path") or @router.method("/path", ...)
     route_pattern = re.compile(
         r'@router\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']*)["\']',
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     # Find function definitions after decorators
-    lines = text.split('\n')
+    lines = text.split("\n")
     for i, line in enumerate(lines):
         match = route_pattern.search(line)
         if match:
@@ -81,7 +90,7 @@ def extract_routes(file_path: pathlib.Path):
             # Find the function name (next def or async def)
             func_name = "unknown"
             for j in range(i + 1, min(i + 10, len(lines))):
-                func_match = re.search(r'(?:async\s+)?def\s+(\w+)', lines[j])
+                func_match = re.search(r"(?:async\s+)?def\s+(\w+)", lines[j])
                 if func_match:
                     func_name = func_match.group(1)
                     break
@@ -99,16 +108,20 @@ def extract_routes(file_path: pathlib.Path):
             if "founder" in func_lower:
                 authority = "founder"
 
-            full_path = router_prefix + path if not path.startswith(router_prefix) else path
+            full_path = (
+                router_prefix + path if not path.startswith(router_prefix) else path
+            )
 
-            routes.append({
-                "method": method,
-                "path": full_path,
-                "function": func_name,
-                "mutates": mutates,
-                "authority": authority,
-                "line": i + 1,
-            })
+            routes.append(
+                {
+                    "method": method,
+                    "path": full_path,
+                    "function": func_name,
+                    "mutates": mutates,
+                    "authority": authority,
+                    "line": i + 1,
+                }
+            )
 
     return routes, router_prefix
 
@@ -164,7 +177,9 @@ def main():
 
         for r in sorted(routes, key=lambda x: (x["path"], x["method"])):
             mutates = "YES" if r["mutates"] else "NO"
-            print(f"| {r['method']} | `{r['path']}` | `{r['function']}` | {mutates} | {r['authority']} | `{r['file']}` |")
+            print(
+                f"| {r['method']} | `{r['path']}` | `{r['function']}` | {mutates} | {r['authority']} | `{r['file']}` |"
+            )
 
         print()
 

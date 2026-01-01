@@ -171,4 +171,3 @@ It indicates **success of the diagnosis**.
 | Date | Change |
 |------|--------|
 | 2025-12-31 | PIN-262 created — SCD governance clarification ratified |
-

@@ -37,31 +37,32 @@ Exit codes:
 import os
 import sys
 import re
-import ast
 import argparse
 import subprocess
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Optional, Tuple
 from enum import Enum
 
 # Import incident logger
 try:
     from architecture_incident_logger import log_incident
+
     INCIDENT_LOGGING_ENABLED = True
 except ImportError:
     INCIDENT_LOGGING_ENABLED = False
+
     def log_incident(*args, **kwargs):
         pass  # Fallback if logger not available
 
 
 class TemporalViolationType(Enum):
     SYNC_IMPORTING_ASYNC = "TV-001"  # Sync layer importing from L5
-    API_AWAITING_WORKER = "TV-002"   # API handler awaiting worker
-    HIDDEN_DEFERRED = "TV-003"       # Deferred execution hidden behind sync API
-    BACKGROUND_IN_L1L2 = "TV-004"    # Background task creation in L1-L2
-    UNDECLARED_TEMPORAL = "TV-005"   # Undeclared temporal behavior
-    ASYNC_LEAK_UPWARD = "TV-006"     # Async semantics leaking upward
+    API_AWAITING_WORKER = "TV-002"  # API handler awaiting worker
+    HIDDEN_DEFERRED = "TV-003"  # Deferred execution hidden behind sync API
+    BACKGROUND_IN_L1L2 = "TV-004"  # Background task creation in L1-L2
+    UNDECLARED_TEMPORAL = "TV-005"  # Undeclared temporal behavior
+    ASYNC_LEAK_UPWARD = "TV-006"  # Async semantics leaking upward
 
 
 @dataclass
@@ -92,33 +93,26 @@ LAYER_PATH_PATTERNS = {
     "website/aos-console/console/src/products": "L1",
     "website/aos-console/console/src/pages": "L1",
     "website/aos-console/console/src/components": "L1",
-
     # L2: API routes
     "backend/app/api": "L2",
     "backend/app/routes": "L2",
-
     # L3: Adapters
     "backend/app/adapters": "L3",
-
     # L4: Domain engines
     "backend/app/domain": "L4",
     "backend/app/engines": "L4",
     "backend/app/policy": "L4",
-
     # L5: Workers/Execution
     "backend/app/worker": "L5",
     "backend/app/execution": "L5",
     "backend/app/jobs": "L5",
-
     # L6: Platform
     "backend/app/db": "L6",
     "backend/app/services": "L6",
     "backend/app/core": "L6",
-
     # L7: Ops
     "scripts/ops": "L7",
     "monitoring": "L7",
-
     # L8: Tests/CI
     "backend/tests": "L8",
     "scripts/ci": "L8",
@@ -148,13 +142,11 @@ ASYNC_LEAK_PATTERNS = [
     (r"concurrent\.futures", "concurrent.futures usage"),
     (r"ProcessPoolExecutor", "ProcessPoolExecutor"),
     (r"ThreadPoolExecutor", "ThreadPoolExecutor"),
-
     # Worker dispatch patterns
     (r"\.delay\s*\(", "Celery delay()"),
     (r"\.apply_async\s*\(", "Celery apply_async()"),
     (r"\.enqueue\s*\(", "Task queue enqueue()"),
     (r"\.send\s*\(", "Message send()"),
-
     # Deferred execution
     (r"schedule\s*\(", "Scheduler usage"),
     (r"run_in_executor\s*\(", "run_in_executor()"),
@@ -185,7 +177,7 @@ class TemporalDetector:
 
         # Try to read from file header
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read(2048)
 
             # Python header
@@ -206,7 +198,7 @@ class TemporalDetector:
     def _detect_temporal(self, file_path: Path) -> Optional[str]:
         """Detect temporal execution mode from file header."""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read(2048)
 
             match = re.search(r"#\s*Execution:\s*(\w+)", content)
@@ -227,7 +219,9 @@ class TemporalDetector:
         imports = []
 
         # Python imports
-        for match in re.finditer(r"^(?:from\s+(\S+)\s+import|import\s+(\S+))", content, re.MULTILINE):
+        for match in re.finditer(
+            r"^(?:from\s+(\S+)\s+import|import\s+(\S+))", content, re.MULTILINE
+        ):
             module = match.group(1) or match.group(2)
             imports.append(module)
 
@@ -254,7 +248,7 @@ class TemporalDetector:
     def _find_async_patterns(self, content: str) -> List[Tuple[int, str, str]]:
         """Find async execution patterns with line numbers."""
         findings = []
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         for line_num, line in enumerate(lines, 1):
             for pattern, description in ASYNC_LEAK_PATTERNS:
@@ -266,7 +260,7 @@ class TemporalDetector:
     def _find_await_in_sync(self, content: str) -> List[Tuple[int, str]]:
         """Find await calls that might be in sync context."""
         findings = []
-        lines = content.split('\n')
+        lines = content.split("\n")
         in_sync_function = False
         current_indent = 0
 
@@ -287,7 +281,11 @@ class TemporalDetector:
                 in_sync_function = False
 
             # Check indent to see if we're still in the function
-            if stripped and len(line) - len(stripped) <= current_indent and not stripped.startswith('#'):
+            if (
+                stripped
+                and len(line) - len(stripped) <= current_indent
+                and not stripped.startswith("#")
+            ):
                 if not re.match(r"def\s+", stripped):
                     in_sync_function = False
 
@@ -299,16 +297,14 @@ class TemporalDetector:
 
     def analyze_file(self, file_path: Path) -> FileAnalysis:
         """Analyze a single file for temporal violations."""
-        analysis = FileAnalysis(
-            file_path=str(file_path.relative_to(self.repo_root))
-        )
+        analysis = FileAnalysis(file_path=str(file_path.relative_to(self.repo_root)))
 
         # Skip non-Python files for detailed analysis
-        if file_path.suffix not in {'.py', '.ts', '.tsx'}:
+        if file_path.suffix not in {".py", ".ts", ".tsx"}:
             return analysis
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
         except Exception:
             return analysis
@@ -324,47 +320,55 @@ class TemporalDetector:
         if analysis.layer in {"L1", "L2", "L3"}:
             l5_imports = self._check_l5_imports(analysis.imports, analysis.layer)
             for imp in l5_imports:
-                analysis.violations.append(TemporalViolation(
-                    file_path=analysis.file_path,
-                    line_number=0,
-                    violation_type=TemporalViolationType.SYNC_IMPORTING_ASYNC,
-                    message=f"Sync layer {analysis.layer} imports from L5 module: {imp}",
-                    context=f"Import: {imp}"
-                ))
+                analysis.violations.append(
+                    TemporalViolation(
+                        file_path=analysis.file_path,
+                        line_number=0,
+                        violation_type=TemporalViolationType.SYNC_IMPORTING_ASYNC,
+                        message=f"Sync layer {analysis.layer} imports from L5 module: {imp}",
+                        context=f"Import: {imp}",
+                    )
+                )
 
         # Check for async patterns in wrong layers (TV-004)
         if analysis.layer in {"L1", "L2"}:
             async_patterns = self._find_async_patterns(content)
             for line_num, description, context in async_patterns:
-                analysis.violations.append(TemporalViolation(
-                    file_path=analysis.file_path,
-                    line_number=line_num,
-                    violation_type=TemporalViolationType.BACKGROUND_IN_L1L2,
-                    message=f"Background task pattern in {analysis.layer}: {description}",
-                    context=context
-                ))
+                analysis.violations.append(
+                    TemporalViolation(
+                        file_path=analysis.file_path,
+                        line_number=line_num,
+                        violation_type=TemporalViolationType.BACKGROUND_IN_L1L2,
+                        message=f"Background task pattern in {analysis.layer}: {description}",
+                        context=context,
+                    )
+                )
 
         # Check for await in sync functions (TV-002)
         await_in_sync = self._find_await_in_sync(content)
         for line_num, context in await_in_sync:
-            analysis.violations.append(TemporalViolation(
-                file_path=analysis.file_path,
-                line_number=line_num,
-                violation_type=TemporalViolationType.API_AWAITING_WORKER,
-                message="await found in sync function context",
-                context=context
-            ))
+            analysis.violations.append(
+                TemporalViolation(
+                    file_path=analysis.file_path,
+                    line_number=line_num,
+                    violation_type=TemporalViolationType.API_AWAITING_WORKER,
+                    message="await found in sync function context",
+                    context=context,
+                )
+            )
 
         # Check for undeclared temporal (TV-005)
         if analysis.layer and analysis.layer in {"L1", "L2", "L3", "L4", "L5"}:
             if not analysis.temporal_execution:
-                analysis.violations.append(TemporalViolation(
-                    file_path=analysis.file_path,
-                    line_number=0,
-                    violation_type=TemporalViolationType.UNDECLARED_TEMPORAL,
-                    message=f"Layer {analysis.layer} file has no temporal execution declaration",
-                    severity="WARNING"
-                ))
+                analysis.violations.append(
+                    TemporalViolation(
+                        file_path=analysis.file_path,
+                        line_number=0,
+                        violation_type=TemporalViolationType.UNDECLARED_TEMPORAL,
+                        message=f"Layer {analysis.layer} file has no temporal execution declaration",
+                        severity="WARNING",
+                    )
+                )
 
         return analysis
 
@@ -377,7 +381,7 @@ class TemporalDetector:
             dirs[:] = [d for d in dirs if d not in skip_dirs]
 
             for file in files:
-                if file.endswith(('.py', '.ts', '.tsx')):
+                if file.endswith((".py", ".ts", ".tsx")):
                     file_path = Path(root) / file
                     analysis = self.analyze_file(file_path)
                     if analysis.violations:
@@ -392,7 +396,7 @@ class TemporalDetector:
                 ["git", "diff", "--name-only", "HEAD"],
                 capture_output=True,
                 text=True,
-                cwd=self.repo_root
+                cwd=self.repo_root,
             )
             changed = set(result.stdout.strip().split("\n"))
 
@@ -400,7 +404,7 @@ class TemporalDetector:
                 ["git", "diff", "--name-only", "--cached"],
                 capture_output=True,
                 text=True,
-                cwd=self.repo_root
+                cwd=self.repo_root,
             )
             changed.update(result.stdout.strip().split("\n"))
             changed.discard("")
@@ -411,7 +415,7 @@ class TemporalDetector:
         results = []
         for file_path in changed:
             full_path = self.repo_root / file_path
-            if full_path.exists() and full_path.suffix in {'.py', '.ts', '.tsx'}:
+            if full_path.exists() and full_path.suffix in {".py", ".ts", ".tsx"}:
                 analysis = self.analyze_file(full_path)
                 if analysis.violations:
                     results.append(analysis)
@@ -422,9 +426,7 @@ class TemporalDetector:
         """Generate temporal violation report."""
         total_violations = sum(len(a.violations) for a in results)
         blocking = sum(
-            1 for a in results
-            for v in a.violations
-            if v.severity == "BLOCKING"
+            1 for a in results for v in a.violations if v.severity == "BLOCKING"
         )
 
         report = []
@@ -450,7 +452,9 @@ class TemporalDetector:
                 by_type[vtype].append(v)
 
         for vtype, violations in sorted(by_type.items()):
-            report.append(f"\n{vtype}: {TemporalViolationType(vtype).name} ({len(violations)} violations)")
+            report.append(
+                f"\n{vtype}: {TemporalViolationType(vtype).name} ({len(violations)} violations)"
+            )
             report.append("-" * 50)
             for v in violations[:5]:
                 loc = f"{v.file_path}:{v.line_number}" if v.line_number else v.file_path
@@ -470,7 +474,9 @@ class TemporalDetector:
             report.append("")
             report.append("Resolution patterns:")
             report.append("  1. Add adapter layer between sync and async")
-            report.append("  2. Change execution model (return job_id, poll for result)")
+            report.append(
+                "  2. Change execution model (return job_id, poll for result)"
+            )
             report.append("  3. Restructure call hierarchy through domain layer")
         else:
             report.append("RESULT: PASSED (with warnings)")
@@ -491,7 +497,7 @@ def main():
         "--repo-root",
         type=Path,
         default=Path("/root/agenticverz2.0"),
-        help="Repository root"
+        help="Repository root",
     )
 
     args = parser.parse_args()
@@ -500,7 +506,9 @@ def main():
     results = []
 
     if args.check:
-        file_path = args.check if args.check.is_absolute() else args.repo_root / args.check
+        file_path = (
+            args.check if args.check.is_absolute() else args.repo_root / args.check
+        )
         analysis = detector.analyze_file(file_path)
         results = [analysis] if analysis.violations else []
 
@@ -520,6 +528,7 @@ def main():
 
     if args.json:
         import json
+
         output = {
             "total_violations": sum(len(a.violations) for a in results),
             "results": [
@@ -532,13 +541,13 @@ def main():
                             "type": v.violation_type.value,
                             "line": v.line_number,
                             "message": v.message,
-                            "severity": v.severity
+                            "severity": v.severity,
                         }
                         for v in a.violations
-                    ]
+                    ],
                 }
                 for a in results
-            ]
+            ],
         }
         print(json.dumps(output, indent=2))
     else:
@@ -546,11 +555,7 @@ def main():
         print(report)
 
     # Exit code and incident logging
-    blocking = any(
-        v.severity == "BLOCKING"
-        for a in results
-        for v in a.violations
-    )
+    blocking = any(v.severity == "BLOCKING" for a in results for v in a.violations)
 
     # Log incidents for blocking violations
     if blocking and INCIDENT_LOGGING_ENABLED:
@@ -562,7 +567,7 @@ def main():
                         file=v.file_path,
                         layer=a.layer or "unknown",
                         summary=v.message,
-                        source="temporal_detector"
+                        source="temporal_detector",
                     )
 
     return 1 if blocking else 0

@@ -45,14 +45,14 @@ class FileRole(Enum):
 class LayerLevel(Enum):
     """Architecture layers (L1-L8)."""
 
-    L1_STORAGE = "L1"      # Storage/Persistence
-    L2_DATA = "L2"         # Data Access Layer
-    L3_DOMAIN = "L3"       # Domain/Business Logic
-    L4_SERVICE = "L4"      # Service Layer
-    L5_API = "L5"          # API Layer
+    L1_STORAGE = "L1"  # Storage/Persistence
+    L2_DATA = "L2"  # Data Access Layer
+    L3_DOMAIN = "L3"  # Domain/Business Logic
+    L4_SERVICE = "L4"  # Service Layer
+    L5_API = "L5"  # API Layer
     L6_INTEGRATION = "L6"  # External Integrations
-    L7_WORKERS = "L7"      # Background Workers
-    L8_META = "L8"         # Meta/Tooling
+    L7_WORKERS = "L7"  # Background Workers
+    L8_META = "L8"  # Meta/Tooling
     UNKNOWN = "UNKNOWN"
 
 
@@ -267,8 +267,18 @@ class FileClassifier:
 
         # Skip common prefixes
         skip_dirs = {
-            "app", "src", "backend", "frontend", "api", "services",
-            "routers", "models", "schemas", "core", "common", "utils",
+            "app",
+            "src",
+            "backend",
+            "frontend",
+            "api",
+            "services",
+            "routers",
+            "models",
+            "schemas",
+            "core",
+            "common",
+            "utils",
         }
 
         for i, part in enumerate(path_parts):

@@ -33,15 +33,18 @@ EXCLUDE_PATTERNS = [
 LAYER_PATTERN_PY = re.compile(r"^#\s*Layer:\s*(L\d+)", re.MULTILINE)
 LAYER_PATTERN_TS = re.compile(r"^//\s*Layer:\s*(L\d+)", re.MULTILINE)
 
+
 def should_skip(path: str) -> bool:
     return any(p in path for p in EXCLUDE_PATTERNS)
 
+
 def has_layer_header(content: str, ext: str) -> bool:
     first_2k = content[:2000]
-    if ext in ['.py']:
+    if ext in [".py"]:
         return bool(LAYER_PATTERN_PY.search(first_2k))
     else:  # TS/JS/TSX
         return bool(LAYER_PATTERN_TS.search(first_2k))
+
 
 def infer_layer_from_path(path: Path) -> str:
     path_str = str(path)
@@ -113,6 +116,7 @@ def infer_layer_from_path(path: Path) -> str:
 
     return "UNKNOWN"
 
+
 def scan_directory(scan_dir: str):
     unknown_files = []
 
@@ -130,11 +134,11 @@ def scan_directory(scan_dir: str):
             if should_skip(rel_path):
                 continue
 
-            if not fpath.suffix in [".py", ".ts", ".tsx", ".js"]:
+            if fpath.suffix not in [".py", ".ts", ".tsx", ".js"]:
                 continue
 
             try:
-                content = fpath.read_text(errors='ignore')
+                content = fpath.read_text(errors="ignore")
             except:
                 continue
 
@@ -148,6 +152,7 @@ def scan_directory(scan_dir: str):
                 unknown_files.append(rel_path)
 
     return unknown_files
+
 
 def main():
     all_unknown = []
@@ -163,6 +168,7 @@ def main():
         print()
         for f in all_unknown:
             print(f)
+
 
 if __name__ == "__main__":
     main()

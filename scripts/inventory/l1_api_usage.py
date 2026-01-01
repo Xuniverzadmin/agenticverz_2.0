@@ -16,8 +16,6 @@ Exposes: missing bindings, hardcoded assumptions, dead UI paths.
 
 import pathlib
 import re
-import sys
-import json
 
 # Frontend roots to scan
 FRONTEND_ROOTS = [
@@ -37,11 +35,11 @@ API_PATTERNS = [
 
 # Also look for hardcoded assumptions
 ASSUMPTION_PATTERNS = [
-    (re.compile(r'localhost:\d+'), "hardcoded_localhost"),
-    (re.compile(r'127\.0\.0\.1:\d+'), "hardcoded_ip"),
+    (re.compile(r"localhost:\d+"), "hardcoded_localhost"),
+    (re.compile(r"127\.0\.0\.1:\d+"), "hardcoded_ip"),
     (re.compile(r'http://[^"\'\s]+'), "hardcoded_http"),
-    (re.compile(r'assumes?\s+sync', re.I), "assumes_sync"),
-    (re.compile(r'assumes?\s+real[\-\s]?time', re.I), "assumes_realtime"),
+    (re.compile(r"assumes?\s+sync", re.I), "assumes_sync"),
+    (re.compile(r"assumes?\s+real[\-\s]?time", re.I), "assumes_realtime"),
 ]
 
 
@@ -59,23 +57,27 @@ def scan_file(path: pathlib.Path):
         for match in pattern.finditer(text):
             api_path = match.group(1) if match.lastindex else match.group(0)
             # Normalize
-            if api_path.startswith('/'):
-                line_num = text[:match.start()].count('\n') + 1
-                apis.append({
-                    "api": api_path,
-                    "file": str(path),
-                    "line": line_num,
-                })
+            if api_path.startswith("/"):
+                line_num = text[: match.start()].count("\n") + 1
+                apis.append(
+                    {
+                        "api": api_path,
+                        "file": str(path),
+                        "line": line_num,
+                    }
+                )
 
     for pattern, assumption_type in ASSUMPTION_PATTERNS:
         for match in pattern.finditer(text):
-            line_num = text[:match.start()].count('\n') + 1
-            assumptions.append({
-                "type": assumption_type,
-                "match": match.group(0)[:50],  # Truncate
-                "file": str(path),
-                "line": line_num,
-            })
+            line_num = text[: match.start()].count("\n") + 1
+            assumptions.append(
+                {
+                    "type": assumption_type,
+                    "match": match.group(0)[:50],  # Truncate
+                    "file": str(path),
+                    "line": line_num,
+                }
+            )
 
     return apis, assumptions
 

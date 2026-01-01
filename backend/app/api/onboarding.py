@@ -36,7 +36,7 @@ from ..auth.oauth_providers import (
     get_google_provider,
 )
 from ..db import engine
-from ..models.tenant import Tenant, TenantMembership, User
+from ..models.tenant import User
 from ..services.email_verification import (
     EmailVerificationError,
     get_email_verification_service,

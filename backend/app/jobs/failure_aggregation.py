@@ -39,11 +39,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # hashlib, defaultdict removed - moved to L4 engine (Phase E FIX-01)
-
 # Phase E FIX-01: Import domain classification logic from L4 engine
 from app.jobs.failure_classification_engine import (
     aggregate_patterns,
-    compute_signature,
     get_summary_stats,
 )
 

@@ -15,11 +15,49 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.20"
+session_playbook_version: "2.25"
 created: "2025-12-27"
 last_updated: "2025-12-31"
 
 # Changelog:
+#   2.25 - CLAUDE GOVERNANCE INSTRUCTION SET (Section 32).
+#          Comprehensive phase-aware, SCD-compatible governance rules.
+#          Adds: Operating mode, phase awareness, signal definition, SCD rules,
+#                metadata semantics handling, automation limits, task discipline,
+#                prohibited behaviors, output discipline, canonical self-test.
+#          Adds: Signal Circuit Enumerator (SCE) automation specification.
+#          Reference: PIN-262 (SCD Governance Clarification)
+#   2.24 - SIGNAL OWNERSHIP REQUIREMENT (G-RULE-11).
+#          Any discovered signal (CI, runtime, or boundary) without a named owner
+#          is classified as a P0 governance defect and blocks phase progression.
+#          Signal Circuit Discovery must record ownership status explicitly.
+#          Reference: PIN-262 (Signal Circuit Discovery Governance Clarification)
+#   2.23 - PRODUCT DEVELOPMENT CONTRACT V3 (mandatory_load + PIN-261).
+#          Added PRODUCT_DEVELOPMENT_CONTRACT_V3.md to mandatory_load.
+#          Establishes phase-ordered productization: CI → Console → Lifecycle.
+#          Current phase: 1 (CI Signal Rediscovery & Stabilization).
+#          Created CI_SIGNAL_REGISTRY.md template for Phase 1 output.
+#          Supremacy order locked: Governance → CI → Product → UX.
+#          Session start question: "Which phase, which work item?"
+#          Reference: PIN-261
+#   2.22 - PRODUCT ARCHITECTURE RULES (Section 31).
+#          Documented: AI Console IS the product container.
+#          Added frozen_domains (5): Overview, Activity, Incidents, Policies, Logs.
+#          Added product_mapping: "products" → existing domain features.
+#          Added expansion_rules: domains FROZEN, topics/orders expandable.
+#          Added gap classification: productization vs architecture gaps.
+#          Added session_guidance with 6 quick-reference rules.
+#          Prevents proposing "new products" that are existing domains.
+#          SDK confirmed PUBLISHED (PyPI + npm), not a gap.
+#          Only true gap: Federated Agent Identity (intentionally deferred).
+#          Reference: PIN-260 Product Architecture Clarity
+#   2.21 - BLCA BOOTSTRAP ENFORCEMENT (BL-BOOT-002).
+#          BLCA verification is now MANDATORY at session start.
+#          Added blca_verification section with command and enforcement.
+#          Added BLCA status to bootstrap_confirmation_format.
+#          Added BL-BOOT-002 behavior rule (BLCA at bootstrap).
+#          Bootstrap is INCOMPLETE without BLCA CLEAN status.
+#          Reference: Phase G governance, G-RULE-1 compliance.
 #   2.20 - PHASE G STEADY-STATE GOVERNANCE (Section 30).
 #          Phase E (Semantic Closure) and Phase F (Structural Closure) COMPLETE.
 #          Phase G is PERMANENT governance regime, not a construction phase.
@@ -308,6 +346,74 @@ mandatory_load:
     required: true
     phase: G
 
+  # Product Development Contract v3 (Stabilization → Productization)
+  - path: docs/contracts/PRODUCT_DEVELOPMENT_CONTRACT_V3.md
+    purpose: Phase-ordered productization governance (CI → Console → Lifecycle)
+    required: true
+    phase: G
+    current_phase: 1
+    current_phase_name: CI Signal Rediscovery & Stabilization
+
+# =============================================================================
+# BLCA VERIFICATION (MANDATORY - BL-BOOT-002)
+# =============================================================================
+# BLCA must run at session start per G-RULE-1 (BLCA Supremacy).
+# Bootstrap is INCOMPLETE without BLCA verification.
+#
+# Sequence: Load documents → Run BLCA → Confirm bootstrap
+# A bootstrap without BLCA is governance-invalid.
+
+blca_verification:
+  rule_id: BL-BOOT-002
+  name: BLCA Bootstrap Verification
+  status: MANDATORY
+  severity: BLOCKING
+
+  trigger: session_start
+
+  command: python3 scripts/ops/layer_validator.py --backend --ci
+
+  required_output:
+    - "Files scanned:"
+    - "Violations found: 0"
+    - "Layer architecture is clean."
+
+  on_clean:
+    action: PROCEED
+    message: "BLCA verification passed. Bootstrap may complete."
+
+  on_violations:
+    action: BLOCK
+    message: |
+      BLCA VERIFICATION FAILED
+
+      Layer violations detected. Bootstrap cannot complete.
+
+      Required action:
+      1. Review violations from BLCA output
+      2. Fix violations before proceeding
+      3. Re-run BLCA until CLEAN
+
+      No work is allowed while BLCA has violations.
+      Reference: G-RULE-1 (BLCA Supremacy)
+
+  on_skip:
+    action: BLOCK
+    message: |
+      BLCA VERIFICATION SKIPPED
+
+      Bootstrap is INCOMPLETE without BLCA verification.
+
+      Run: python3 scripts/ops/layer_validator.py --backend --ci
+
+      A bootstrap confirmation without BLCA is governance-invalid.
+
+  bootstrap_sequence:
+    step_1: Load all mandatory_load documents
+    step_2: Run BLCA verification
+    step_3: Only if BLCA is CLEAN → provide SESSION_BOOTSTRAP_CONFIRMATION
+    step_4: If BLCA has violations → BLOCK and report (do NOT say "ready")
+
 # =============================================================================
 # FORBIDDEN ACTIONS (Before Bootstrap)
 # =============================================================================
@@ -358,12 +464,20 @@ bootstrap_confirmation_format: |
     - PIN-204-pb-s4-policy-evolution-with-provenance.md
     - PIN-205-pb-s5-prediction-without-determinism-loss.md
     - CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+    - PHASE_G_STEADY_STATE_GOVERNANCE.md
+    - GOVERNANCE_CHECKLIST.md
     - codebase-registry/schema-v1.yaml
     - codebase-registry/change-schema-v1.yaml
+  - blca_verification:
+      command_run: python3 scripts/ops/layer_validator.py --backend --ci
+      files_scanned: {count}
+      violations_found: 0
+      status: CLEAN
   - visibility_lifecycle_loaded: YES
   - discovery_ledger_loaded: YES
   - database_contract_loaded: YES
   - console_constitution_loaded: YES
+  - phase_g_governance_loaded: YES
   - codebase_registry_loaded: YES
   - forbidden_assumptions_acknowledged: YES
   - restrictions_acknowledged: YES
@@ -375,6 +489,7 @@ bootstrap_confirmation_format: |
       dpcc: {dpcc_mode}
       cseg: {cseg_mode}
       code_registration: ENFORCED
+      blca: ENFORCED
 
 # =============================================================================
 # PHASE EXTENSIONS
@@ -4931,6 +5046,21 @@ phase_g_governance:
       severity: CONSTITUTIONAL
       summary: Rule changes require PIN + human ratification.
 
+    - rule_id: G-RULE-11
+      name: Signal Ownership Requirement
+      severity: BLOCKING
+      summary: |
+        Any discovered signal (CI, runtime, or boundary) without a named owner
+        is classified as a P0 governance defect and blocks phase progression.
+      reference: PIN-262
+      enforcement: |
+        Signal Circuit Discovery must record ownership status explicitly for every signal.
+        Signals without owners:
+        - Are classified as P0 governance defects
+        - Block phase advancement
+        - Require human action to assign an owner
+        - Cannot be deferred, annotated, or accepted
+
   # ---------------------------------------------------------------------------
   # Feature Development Guide
   # ---------------------------------------------------------------------------
@@ -5044,6 +5174,479 @@ phase_g_governance:
     - docs/governance/GOVERNANCE_CHECKLIST.md
     - docs/memory-pins/PIN-258-phase-f-application-boundary-completion.md
     - docs/memory-pins/PIN-259-phase-f-closure-and-phase-g-steady-state-governance.md
+
+# =============================================================================
+# SECTION 31: PRODUCT ARCHITECTURE RULES
+# =============================================================================
+# Reference: PIN-260 Product Architecture Clarity — One Console, All Products
+# =============================================================================
+
+product_architecture:
+  # ---------------------------------------------------------------------------
+  # Prime Invariant
+  # ---------------------------------------------------------------------------
+  prime_invariant: |
+    The AI Console is not one product among many — it IS the product container.
+    All product capabilities fit within the frozen console framework.
+    No new architecture is required.
+
+  # ---------------------------------------------------------------------------
+  # Frozen Console Structure
+  # ---------------------------------------------------------------------------
+  frozen_domains:
+    - name: Overview
+      question: "Is the system okay right now?"
+      expandable: false
+    - name: Activity
+      question: "What ran / is running?"
+      expandable: false
+    - name: Incidents
+      question: "What went wrong?"
+      expandable: false
+    - name: Policies
+      question: "How is behavior defined?"
+      expandable: false
+    - name: Logs
+      question: "What is the raw truth?"
+      expandable: false
+
+  # ---------------------------------------------------------------------------
+  # Expansion Rules
+  # ---------------------------------------------------------------------------
+  expansion_rules:
+    domain:
+      definition: "Fundamental user question"
+      expandable: false
+      note: "FROZEN - Cannot add new domains"
+    subdomain:
+      definition: "Real system boundary"
+      expandable: "cautiously"
+      note: "Requires strong justification"
+    topic:
+      definition: "View or capability"
+      expandable: true
+      note: "Safe to add features"
+    orders:
+      definition: "Depth levels O1-O5"
+      expandable: true
+      note: "Safe to add depth"
+
+  # ---------------------------------------------------------------------------
+  # Product-to-Domain Mapping (AUTHORITATIVE)
+  # ---------------------------------------------------------------------------
+  product_mapping:
+    - suggested_name: "AI Cost Guard"
+      actually_is: "Cost visibility feature"
+      console_domain: "Overview + Activity"
+    - suggested_name: "AI Incident Console"
+      actually_is: "The Incidents domain"
+      console_domain: "Incidents"
+    - suggested_name: "Agent Governance Platform"
+      actually_is: "The Policies domain"
+      console_domain: "Policies"
+    - suggested_name: "Compliance Evidence Generator"
+      actually_is: "The Logs domain"
+      console_domain: "Logs"
+    - suggested_name: "Execution Monitor"
+      actually_is: "The Activity domain"
+      console_domain: "Activity"
+    - suggested_name: "System Health Dashboard"
+      actually_is: "The Overview domain"
+      console_domain: "Overview"
+
+  # ---------------------------------------------------------------------------
+  # External Products (Not Console)
+  # ---------------------------------------------------------------------------
+  external_products:
+    - name: "Python SDK"
+      location: "PyPI: aos-sdk"
+      status: "PUBLISHED"
+    - name: "JavaScript SDK"
+      location: "npm: @agenticverz/aos-sdk"
+      status: "PUBLISHED"
+    - name: "Ops Console"
+      location: "pages/ops/"
+      status: "Separate jurisdiction"
+    - name: "Founder Console"
+      location: "pages/founder/"
+      status: "Separate jurisdiction"
+
+  # ---------------------------------------------------------------------------
+  # Governance Rules
+  # ---------------------------------------------------------------------------
+  prevents:
+    - "Suggesting new sidebar domains"
+    - "Proposing 'new products' that are existing domains"
+    - "Conflating feature gaps with architecture gaps"
+    - "Claiming SDK 'needs packaging' (already published)"
+
+  allows:
+    - "Adding Topics within existing domains"
+    - "Adding Order depth (O1-O5) within topics"
+    - "Feature polish within frozen structure"
+    - "UX improvements that surface existing functionality"
+
+  # ---------------------------------------------------------------------------
+  # Gap Classification
+  # ---------------------------------------------------------------------------
+  productization_gaps:
+    description: "NOT architecture gaps — product definition work"
+    types:
+      - "SKU Definition: Naming what already exists implicitly"
+      - "Feature Polish: Completing Topics within domains"
+      - "UX Scaffolding: Guided setup for non-expert users"
+      - "Customer Defaults: Pre-approved policy bundles"
+      - "Documentation: User-facing feature documentation"
+
+  true_architecture_gaps:
+    - name: "Federated Agent Identity"
+      status: "Intentionally Deferred"
+      rationale: "Requires new identity layer, expands threat model"
+
+  # ---------------------------------------------------------------------------
+  # Session Guidance
+  # ---------------------------------------------------------------------------
+  session_guidance:
+    rule_1: "AI Console IS the product container"
+    rule_2: "5 Core Domains are FROZEN: Overview, Activity, Incidents, Policies, Logs"
+    rule_3: "'Products' map to domains, not new architecture"
+    rule_4: "Features fit as Topics within domains"
+    rule_5: "SDK is PUBLISHED (PyPI + npm)"
+    rule_6: "Only true gap: Federated Agent Identity (deferred)"
+
+  quick_check:
+    if_suggesting_new_product: "Check if it's actually a domain feature"
+    if_suggesting_missing_architecture: "Check if it's productization work"
+
+  # ---------------------------------------------------------------------------
+  # One-Line Truth
+  # ---------------------------------------------------------------------------
+  one_line_truth: |
+    The hard infrastructure is already built.
+    What remains is productization discipline: feature polish within frozen domains.
+
+  # ---------------------------------------------------------------------------
+  # Reference Documents
+  # ---------------------------------------------------------------------------
+  reference:
+    - docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+    - docs/memory-pins/PIN-260-product-architecture-clarity.md
+    - docs/memory-pins/PIN-035-sdk-package-registry.md
+    - docs/memory-pins/PIN-259-phase-f-closure-and-phase-g-steady-state-governance.md
+
+# =============================================================================
+# SECTION 32: CLAUDE GOVERNANCE INSTRUCTION SET
+# =============================================================================
+# Reference: PIN-262 Signal Circuit Discovery Governance Clarification
+# Status: AUTHORITATIVE · PHASE-AWARE · NON-NEGOTIABLE
+# =============================================================================
+
+claude_governance:
+  # ---------------------------------------------------------------------------
+  # 0. Operating Mode (Always On)
+  # ---------------------------------------------------------------------------
+  operating_mode:
+    name: Governed System Mode
+    status: ALWAYS_ON
+    forbidden:
+      - default_assumptions
+      - inference_without_evidence
+      - optimization_before_topology
+    required:
+      - explicit_contracts
+      - declared_intent
+      - mechanical_evidence
+      - phase_discipline
+
+  # ---------------------------------------------------------------------------
+  # 1. Phase Awareness (Hard Gate)
+  # ---------------------------------------------------------------------------
+  phase_awareness:
+    gate_type: HARD
+    session_start_question: "Which phase are we in, and what work is permitted in this phase?"
+    canonical_phases:
+      - phase: 0
+        name: Architecture & Governance
+        status: FROZEN
+      - phase: 1
+        name: CI Signal Rediscovery & Stabilization
+        status: ACTIVE
+      - phase: 1.5
+        name: Signal Closure / Promotion
+        status: BLOCKED_UNTIL_PHASE_1_EXIT
+      - phase: 2
+        name: Console Completion
+        status: BLOCKED
+      - phase: 3
+        name: Customer Lifecycle & RBAC
+        status: BLOCKED
+      - phase: 4
+        name: Commercialization
+        status: BLOCKED
+      - phase: 5
+        name: Support & GTM
+        status: BLOCKED
+    on_phase_violation:
+      - action: REFUSE
+      - action: STATE_VIOLATION
+      - action: REDIRECT_TO_ALLOWED_WORK
+
+  # ---------------------------------------------------------------------------
+  # 2. Layer Model (Authoritative)
+  # ---------------------------------------------------------------------------
+  layer_model:
+    status: VERBATIM_REQUIRED
+    layers:
+      - layer: L1
+        name: Product Experience
+        responsibility: UI, components
+      - layer: L2
+        name: Product APIs
+        responsibility: REST surfaces
+      - layer: L3
+        name: Boundary Adapters
+        responsibility: External/LLM
+      - layer: L4
+        name: Domain Engines
+        responsibility: Policy, workflows, agents
+      - layer: L5
+        name: Execution & Workers
+        responsibility: Jobs, runtime
+      - layer: L6
+        name: Platform Substrate
+        responsibility: DB, auth, SDK
+      - layer: L7
+        name: Ops & Deployment
+        responsibility: Infra, scripts
+      - layer: L8
+        name: Catalyst / Meta
+        responsibility: CI, validators
+    requirements:
+      - respect_allowed_import_directions
+      - flag_violations_immediately
+      - never_normalize_boundary_breaches
+
+  # ---------------------------------------------------------------------------
+  # 3. Definition of a Signal (Non-Negotiable)
+  # ---------------------------------------------------------------------------
+  signal_definition:
+    status: NON_NEGOTIABLE
+    signal_is_not:
+      - function_call
+      - return_value
+      - log_line
+      - human_check
+    signal_must_have:
+      - Intent
+      - Emission
+      - Transport
+      - Consumption
+      - Consequence
+    rule: "If any segment is missing, signal does not exist."
+    direction_default: bidirectional_unless_proven_otherwise
+
+  # ---------------------------------------------------------------------------
+  # 4. Signal Circuit Discovery (SCD) Rules
+  # ---------------------------------------------------------------------------
+  scd_rules:
+    what_scd_is:
+      - forensic_topology_mapping
+      - structural_truth_discovery
+      - phase_1_only_activity
+    what_scd_is_not:
+      - refactoring
+      - correctness_validation
+      - runtime_testing
+      - optimization
+    application: mechanical_using_scd_checklist
+
+  # ---------------------------------------------------------------------------
+  # 5. Structural Correctness Standard (Phase 1)
+  # ---------------------------------------------------------------------------
+  structural_correctness:
+    phase: 1
+    circuit_acceptable_only_if:
+      - expected_signals_are_named
+      - emissions_are_explicit
+      - consumptions_are_explicit
+      - ownership_is_defined
+      - consequences_are_observable
+    explicitly_out_of_scope: runtime_correctness
+
+  # ---------------------------------------------------------------------------
+  # 6. Metadata Semantics Handling
+  # ---------------------------------------------------------------------------
+  metadata_semantics:
+    rule: "Metadata is a CLAIM, not truth."
+    requirements:
+      - claims_must_be_corroborated_by_mechanical_evidence
+      - discrepancies_must_be_surfaced_as_drift
+    classification_types:
+      - DECLARED_NOT_OBSERVED
+      - OBSERVED_NOT_DECLARED
+      - DECLARED_DIRECTION_MISMATCH
+    invariant: "Metadata alone never proves correctness."
+
+  # ---------------------------------------------------------------------------
+  # 7. Automation & Workers (Strict Limits)
+  # ---------------------------------------------------------------------------
+  automation_limits:
+    allowed_operations:
+      - static_enumeration
+      - boundary_detection
+      - claim_vs_mechanics_comparison
+    forbidden_operations:
+      - declare_correctness
+      - block_CI
+      - enforce_governance
+      - override_human_judgment
+    output_classification: evidence_only
+
+  # ---------------------------------------------------------------------------
+  # 8. Governance Qualifier Handling (Mandatory)
+  # ---------------------------------------------------------------------------
+  governance_qualifier_handling:
+    triggers:
+      - missing_ownership
+      - implicit_signals
+      - boundary_violations
+      - phase_violations
+      - unenforced_governance_rules
+    required_actions:
+      - action: DECLARE_EXPLICITLY_AS_GOVERNANCE_QUALIFIER
+      - action: ADD_AS_TASK_TO_DO
+      - action: PROPOSE_SESSION_PLAYBOOK_UPDATE_RECORD_ONLY
+    confirmation_rule: "Wait for user confirmation before any playbook changes are considered applied."
+
+  # ---------------------------------------------------------------------------
+  # 9. Task Discipline
+  # ---------------------------------------------------------------------------
+  task_discipline:
+    requirements:
+      - uniquely_identifiable
+      - phrased_as_actions
+      - explicitly_scoped
+      - phase_compatible
+    forbidden:
+      - vague_tasks
+      - future_phase_execution
+
+  # ---------------------------------------------------------------------------
+  # 10. CI & Signal Ownership Rule (Hard)
+  # ---------------------------------------------------------------------------
+  signal_ownership_rule:
+    severity: HARD
+    rule: "Any signal without a named owner is a P0 governance defect and a phase blocker."
+    prohibited: "normalizing or downplaying unowned signals"
+
+  # ---------------------------------------------------------------------------
+  # 11. Prohibited Behaviors (Absolute)
+  # ---------------------------------------------------------------------------
+  prohibited_behaviors:
+    - invent_signals
+    - assume_intent
+    - temporarily_ignore_violations
+    - optimize_before_topology_is_closed
+    - collapse_layers_for_convenience
+    - treat_green_CI_as_safety_proof
+
+  # ---------------------------------------------------------------------------
+  # 12. Output Discipline
+  # ---------------------------------------------------------------------------
+  output_discipline:
+    requirements:
+      - distinguish_fact_vs_interpretation
+      - label_phase_restricted_content
+      - avoid_speculative_language
+      - avoid_reassurance
+      - avoid_motivational_framing
+    principle: "Clarity over comfort."
+
+  # ---------------------------------------------------------------------------
+  # 13. Canonical Test (Self-Check)
+  # ---------------------------------------------------------------------------
+  canonical_self_test:
+    question: "Could another engineer, using only this output, independently reach the same conclusion?"
+    on_failure: response_is_invalid
+
+  # ---------------------------------------------------------------------------
+  # 14. One Line That Governs Everything
+  # ---------------------------------------------------------------------------
+  governing_principle: |
+    If the architecture cannot explicitly observe itself, governance does not exist.
+
+  # ---------------------------------------------------------------------------
+  # 15. Signal Circuit Enumerator (SCE) Automation
+  # ---------------------------------------------------------------------------
+  sce_automation:
+    name: Signal Circuit Enumerator
+    class: Forensic / Evidence Generator
+    phase_eligibility: PHASE_1_ONLY
+    authority: READ_ONLY
+    ci_blocking: FORBIDDEN
+
+    allowed_access:
+      - source_code: read
+      - metadata_annotations: read
+      - ast: parse
+      - import_graph: build
+      - call_graph_shallow: build
+      - ci_configs: read
+      - docs_contracts_playbooks: read
+
+    forbidden_actions:
+      - modify_code
+      - modify_CI
+      - enforce_rules
+      - block_builds
+      - rewrite_metadata
+      - assign_ownership
+      - infer_intent_beyond_metadata
+
+    blast_radius: |
+      Zero behavioral impact. Zero enforcement impact. Zero runtime impact.
+      If this worker breaks, nothing else must break.
+
+    output_classification: evidence_only
+
+    outputs:
+      - type: raw_evidence
+        path: docs/ci/scd/evidence/SCE_RUN_<timestamp>.json
+        mode: append_only
+      - type: boundary_summary
+        path: docs/ci/scd/SCE-L{X}-L{Y}-EVIDENCE.md
+        mode: generated
+      - type: registry_hints
+        path: docs/ci/scd/SCE_REGISTRY_HINTS.md
+        mode: non_authoritative
+
+    human_treatment:
+      - declared_not_observed: review_in_scd
+      - observed_not_declared: decide_relevance
+      - boundary_violation: record_gap
+      - implicit_signal: classify_risk
+      - missing_emission: mark_MISSING_EMITTER
+
+    sanity_test:
+      question: "If the worker produces zero output, does governance still function?"
+      expected_answer: "yes"
+      on_failure: "Worker is too powerful - kill it."
+
+    explicit_non_goals:
+      - prove_signals_fire
+      - prove_signals_are_complete
+      - prove_correctness
+      - replace_SCD
+      - replace_CI
+
+  # ---------------------------------------------------------------------------
+  # Reference Documents
+  # ---------------------------------------------------------------------------
+  reference:
+    - docs/memory-pins/PIN-262-signal-circuit-discovery-governance-clarification.md
+    - docs/ci/scd/INDEX.md
+    - docs/ci/CI_SIGNAL_REGISTRY.md
+    - docs/contracts/PRODUCT_DEVELOPMENT_CONTRACT_V3.md
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

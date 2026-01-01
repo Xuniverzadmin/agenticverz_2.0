@@ -172,9 +172,7 @@ class GuardWriteService:
         incident.status = IncidentStatus.RESOLVED.value
         incident.ended_at = utc_now()
         if incident.started_at:
-            incident.duration_seconds = int(
-                (incident.ended_at - incident.started_at).total_seconds()
-            )
+            incident.duration_seconds = int((incident.ended_at - incident.started_at).total_seconds())
         self.session.add(incident)
         self.session.commit()
         return incident

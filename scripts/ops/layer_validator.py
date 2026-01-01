@@ -29,7 +29,6 @@ Usage:
 """
 
 import argparse
-import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -55,50 +54,39 @@ LAYER_PATTERNS = {
     "backend/app/api/onboarding.py": "L2",
     "backend/app/api/predictions.py": "L2",
     "backend/app/api/": "L2",  # Default for API routes
-
     "backend/app/services/certificate.py": "L3",
     "backend/app/services/evidence_report.py": "L3",
     "backend/app/services/email_verification.py": "L3",
     "backend/app/services/prediction.py": "L3",
     "backend/app/services/policy_proposal.py": "L3",
-
     # Phase F-3: L3 Boundary Adapters (PIN-258)
     "backend/app/adapters/": "L3",
     "backend/app/adapters/runtime_adapter.py": "L3",
     "backend/app/adapters/workers_adapter.py": "L3",
     "backend/app/adapters/policy_adapter.py": "L3",
-
     "backend/app/services/pattern_detection.py": "L4",
     "backend/app/services/recovery_matcher.py": "L4",
     "backend/app/services/recovery_rule_engine.py": "L4",
     "backend/app/services/cost_anomaly_detector.py": "L4",
-
     # Phase E FIX-01: Reclassified from L5 to L4 (passed 10-point purity test)
     "backend/app/worker/simulate.py": "L4",
-
     # Phase E FIX-01: Extracted L4 domain engine from L5 failure_aggregation.py
     "backend/app/jobs/failure_classification_engine.py": "L4",
-
     # Phase E FIX-01: Graduation engine purity enforcement
     "backend/app/integrations/graduation_engine.py": "L4",
-
     # Phase E-4 Extraction #4: Claim decision domain engine
     "backend/app/services/claim_decision_engine.py": "L4",
-
     # Phase F-3: L4 Command Facades (PIN-258)
     "backend/app/commands/": "L4",
     "backend/app/commands/runtime_command.py": "L4",
     "backend/app/commands/worker_execution_command.py": "L4",
     "backend/app/commands/policy_command.py": "L4",
-
     "backend/app/worker/": "L5",
     "backend/app/workflow/": "L5",
-
     "backend/app/auth/": "L6",
     "backend/app/db/": "L6",
     "backend/app/models/": "L6",
     "backend/app/services/event_emitter.py": "L6",
-
     # Frontend
     "website/aos-console/console/src/products/ai-console/pages/": "L1",
     "website/aos-console/console/src/products/ai-console/app/": "L1",
@@ -106,7 +94,6 @@ LAYER_PATTERNS = {
     "website/aos-console/console/src/components/": "L6",  # Shared UI = Platform
     "website/aos-console/console/src/lib/": "L6",
     "website/aos-console/console/src/api/": "L2",
-
     # Scripts
     "scripts/": "L7",
 }
@@ -118,45 +105,35 @@ IMPORT_LAYER_HINTS = {
     "from app.api.customer_visibility": "L2",
     "from app.api.v1_killswitch": "L2",
     "from app.api.": "L2",
-
     "from app.services.certificate": "L3",
     "from app.services.evidence_report": "L3",
     "from app.services.email_verification": "L3",
     "from app.services.prediction": "L3",
     "from app.services.policy_proposal": "L3",
-
     # Phase F-3: L3 Boundary Adapters (PIN-258)
     "from app.adapters": "L3",
     "from app.adapters.runtime_adapter": "L3",
     "from app.adapters.workers_adapter": "L3",
     "from app.adapters.policy_adapter": "L3",
-
     "from app.services.pattern_detection": "L4",
     "from app.services.recovery_matcher": "L4",
     "from app.services.recovery_rule_engine": "L4",
     "from app.services.cost_anomaly_detector": "L4",
-
     # Phase E FIX-01: Reclassified from L5 to L4 (passed 10-point purity test)
     "from app.worker.simulate": "L4",
-
     # Phase E FIX-01: Extracted L4 domain engine from L5 failure_aggregation.py
     "from app.jobs.failure_classification_engine": "L4",
-
     # Phase E FIX-01: Graduation engine purity enforcement
     "from app.integrations.graduation_engine": "L4",
-
     # Phase E-4 Extraction #4: Claim decision domain engine
     "from app.services.claim_decision_engine": "L4",
-
     # Phase F-3: L4 Command Facades (PIN-258)
     "from app.commands": "L4",
     "from app.commands.runtime_command": "L4",
     "from app.commands.worker_execution_command": "L4",
     "from app.commands.policy_command": "L4",
-
     "from app.worker": "L5",
     "from app.workflow": "L5",
-
     "from app.auth": "L6",
     "from app.db": "L6",
     "from app.models": "L6",
@@ -167,12 +144,15 @@ IMPORT_LAYER_HINTS = {
 # Key = source layer, Value = set of allowed target layers
 # Same-layer imports are always allowed (peers)
 ALLOWED_IMPORTS = {
-    "L1": {"L1", "L2", "L3"},           # Frontend can call APIs and adapters
-    "L2": {"L2", "L3", "L4", "L6"},     # APIs can call adapters, domain, platform
-    "L3": {"L3", "L4", "L6"},           # Adapters can call domain, platform
-    "L4": {"L4", "L5", "L6"},           # Domain can call execution, platform
-    "L5": {"L4", "L5", "L6"},           # Workers can call domain, platform (and peers)
-    "L6": {"L6"},                       # Platform calls platform (peers)
+    "L1": {"L1", "L2", "L3"},  # Frontend can call APIs and adapters
+    "L2": {"L2", "L3", "L4", "L6"},  # APIs can call adapters, domain, platform
+    "L3": {"L3", "L4", "L6"},  # Adapters can call domain, platform
+    "L4": {"L4", "L5", "L6"},  # Domain can call execution, platform
+    # Phase R (PIN-263): L5→L4 FORBIDDEN — Workers execute, never decide
+    # Enforcement: Step 5 Wave-1 (2026-01-01)
+    # Escape: SIG-001 owner override via commit message
+    "L5": {"L5", "L6"},  # Workers can ONLY call platform (L6) and peers (L5)
+    "L6": {"L6"},  # Platform calls platform (peers)
     "L7": {"L1", "L2", "L3", "L4", "L5", "L6", "L7"},  # Ops can call anything
 }
 
@@ -180,6 +160,7 @@ ALLOWED_IMPORTS = {
 @dataclass
 class Violation:
     """Represents a layer violation."""
+
     file: str
     line_number: int
     import_statement: str
@@ -197,6 +178,7 @@ class Violation:
 @dataclass
 class ValidationResult:
     """Results from validation."""
+
     files_scanned: int = 0
     violations: List[Violation] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
@@ -258,13 +240,15 @@ def validate_file(file_path: Path, verbose: bool = False) -> List[Violation]:
             continue  # Can't classify import
 
         if check_violation(source_layer, target_layer):
-            violations.append(Violation(
-                file=rel_path,
-                line_number=line_num,
-                import_statement=import_stmt,
-                source_layer=source_layer,
-                target_layer=target_layer,
-            ))
+            violations.append(
+                Violation(
+                    file=rel_path,
+                    line_number=line_num,
+                    import_statement=import_stmt,
+                    source_layer=source_layer,
+                    target_layer=target_layer,
+                )
+            )
 
     return violations
 
@@ -272,7 +256,14 @@ def validate_file(file_path: Path, verbose: bool = False) -> List[Violation]:
 def validate_directory(
     root: Path,
     extensions: Set[str] = {".py"},
-    exclude_patterns: Set[str] = {"__pycache__", ".git", "node_modules", "dist", ".venv", "venv"},
+    exclude_patterns: Set[str] = {
+        "__pycache__",
+        ".git",
+        "node_modules",
+        "dist",
+        ".venv",
+        "venv",
+    },
     verbose: bool = False,
 ) -> ValidationResult:
     """Validate all files in a directory."""
@@ -317,11 +308,13 @@ Examples:
   %(prog)s                    # Validate all
   %(prog)s --backend          # Backend only
   %(prog)s --ci               # Exit 1 on violations
-        """
+        """,
     )
 
     parser.add_argument("--backend", action="store_true", help="Validate backend only")
-    parser.add_argument("--frontend", action="store_true", help="Validate frontend only")
+    parser.add_argument(
+        "--frontend", action="store_true", help="Validate frontend only"
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Show all imports")
     parser.add_argument("--ci", action="store_true", help="Exit 1 if violations found")
     parser.add_argument("--path", type=str, default=".", help="Root path to scan")
@@ -345,7 +338,7 @@ Examples:
         print(f"ERROR: Path not found: {scan_root}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Layer Validator (PIN-240)")
+    print("Layer Validator (PIN-240)")
     print(f"Scanning: {scan_root}")
     print("-" * 60)
 
@@ -371,7 +364,9 @@ Examples:
         print("Summary by type:")
         for vtype, count in sorted(violation_types.items(), key=lambda x: -x[1]):
             src, tgt = vtype.split(" -> ")
-            print(f"  {vtype}: {count} ({LAYERS.get(src, src)} imports {LAYERS.get(tgt, tgt)})")
+            print(
+                f"  {vtype}: {count} ({LAYERS.get(src, src)} imports {LAYERS.get(tgt, tgt)})"
+            )
 
         if args.ci:
             sys.exit(1)

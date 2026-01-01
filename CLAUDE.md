@@ -10,15 +10,32 @@
 **Effective:** 2025-12-27
 **Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`
 
-### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001)
+### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001, BL-BOOT-002)
 
 **Rule:** Memory decays. Contracts don't. Sessions must boot like systems, not humans.
 
-Before performing ANY work, Claude's first response must be:
+**Bootstrap Sequence (MANDATORY ORDER):**
+
+1. **Load Documents** - Read all mandatory governance documents
+2. **Run BLCA** - Execute `python3 scripts/ops/layer_validator.py --backend --ci`
+3. **Verify CLEAN** - BLCA must report 0 violations
+4. **Confirm Bootstrap** - Only then provide SESSION_BOOTSTRAP_CONFIRMATION
+
+**BL-BOOT-002 (BLCA Verification):** Bootstrap is INCOMPLETE without BLCA verification.
+A bootstrap confirmation without BLCA is governance-invalid per G-RULE-1.
+
+Before performing ANY work, Claude must:
+1. Run BLCA and verify CLEAN status
+2. Provide the bootstrap confirmation:
 
 ```
 SESSION_BOOTSTRAP_CONFIRMATION
-- playbook_version: 2.20
+- playbook_version: 2.21
+- blca_verification:
+    command_run: python3 scripts/ops/layer_validator.py --backend --ci
+    files_scanned: {count}
+    violations_found: 0
+    status: CLEAN
 - loaded_documents:
   - CLAUDE_BOOT_CONTRACT.md
   - behavior_library.yaml
@@ -51,8 +68,9 @@ SESSION_BOOTSTRAP_CONFIRMATION
 **Playbook:** `docs/playbooks/SESSION_PLAYBOOK.yaml`
 
 No work is allowed until bootstrap is complete. Partial loading is rejected.
+**BLCA verification is mandatory** - skipping BLCA invalidates the bootstrap.
 
-### Session Continuation from Summary (REQUIRED - BL-BOOT-002)
+### Session Continuation from Summary (REQUIRED - BL-BOOT-003)
 
 When a session is continued from a summarized context (indicated by phrases like
 "This session is being continued from a previous conversation" or "conversation that

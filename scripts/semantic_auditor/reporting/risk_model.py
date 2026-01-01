@@ -16,7 +16,7 @@ This is observational - it produces risk assessments, not verdicts.
 """
 
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List
 from dataclasses import dataclass
 
 from ..correlation.delta_engine import SemanticDelta, DeltaReport
@@ -25,10 +25,10 @@ from ..correlation.delta_engine import SemanticDelta, DeltaReport
 class RiskLevel(Enum):
     """Risk levels for semantic deltas."""
 
-    INFO = "INFO"           # Informational, no action needed
-    WARNING = "WARNING"     # Potential issue, should review
+    INFO = "INFO"  # Informational, no action needed
+    WARNING = "WARNING"  # Potential issue, should review
     HIGH_RISK = "HIGH_RISK"  # Likely issue, should address
-    CRITICAL = "CRITICAL"   # Severe issue, priority fix
+    CRITICAL = "CRITICAL"  # Severe issue, priority fix
 
 
 @dataclass

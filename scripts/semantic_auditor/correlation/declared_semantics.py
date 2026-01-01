@@ -74,7 +74,9 @@ class DeclaredSemantics:
         self._contracts: Dict[str, SemanticContract] = {}
         self._file_semantics: Dict[Path, FileSemantics] = {}
 
-    def load_from_file_header(self, file_path: Path, header_comments: List[str]) -> FileSemantics:
+    def load_from_file_header(
+        self, file_path: Path, header_comments: List[str]
+    ) -> FileSemantics:
         """
         Load semantics from a file's header comments.
 
@@ -153,11 +155,7 @@ class DeclaredSemantics:
 
     def get_frozen_domains(self) -> Set[str]:
         """Get set of frozen (locked) domains."""
-        return {
-            c.domain
-            for c in self._contracts.values()
-            if c.is_frozen and c.domain
-        }
+        return {c.domain for c in self._contracts.values() if c.is_frozen and c.domain}
 
     def load_contracts_from_docs(self) -> None:
         """Load contracts from documentation directory."""

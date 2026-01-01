@@ -17,7 +17,7 @@ Knows which contracts exist and which domains are frozen.
 
 from pathlib import Path
 from typing import Dict, List, Optional, Set
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import re
 
 
@@ -123,10 +123,7 @@ class SemanticContractIndex:
 
     def get_contracts_for_domain(self, domain: str) -> List[ContractEntry]:
         """Get all contracts for a domain."""
-        return [
-            c for c in self._contracts.values()
-            if c.domain == domain
-        ]
+        return [c for c in self._contracts.values() if c.domain == domain]
 
     def get_frozen_domains(self) -> Set[str]:
         """Get set of frozen domains."""
@@ -138,17 +135,11 @@ class SemanticContractIndex:
 
     def get_contracts_for_layer(self, layer: str) -> List[ContractEntry]:
         """Get all contracts for a layer."""
-        return [
-            c for c in self._contracts.values()
-            if c.layer == layer
-        ]
+        return [c for c in self._contracts.values() if c.layer == layer]
 
     def get_active_contracts(self) -> List[ContractEntry]:
         """Get all non-draft contracts."""
-        return [
-            c for c in self._contracts.values()
-            if not c.is_draft
-        ]
+        return [c for c in self._contracts.values() if not c.is_draft]
 
     def clear(self) -> None:
         """Clear the index."""

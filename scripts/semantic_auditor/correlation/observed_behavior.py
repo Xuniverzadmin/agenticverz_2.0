@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 
-from ..scanner.ast_loader import ASTLoader, ASTAnalysis
+from ..scanner.ast_loader import ASTLoader
 from ..scanner.file_classifier import FileClassifier, FileClassification
 from ..signals.affordance import AffordanceSignalDetector, AffordanceSignal
 from ..signals.execution import ExecutionSignalDetector, ExecutionSignal
@@ -148,9 +148,7 @@ class ObservedBehavior:
     def get_files_with_signals(self) -> List[Path]:
         """Get list of files that have any signals."""
         return [
-            path
-            for path, signals in self._file_signals.items()
-            if signals.has_signals
+            path for path, signals in self._file_signals.items() if signals.has_signals
         ]
 
     def get_signal_summary(self) -> Dict[str, int]:

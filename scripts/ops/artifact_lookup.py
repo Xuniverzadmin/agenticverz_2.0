@@ -18,7 +18,6 @@ Examples:
 """
 
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -29,7 +28,9 @@ except ImportError:
     print("ERROR: PyYAML required. Install with: pip install pyyaml")
     sys.exit(1)
 
-ARTIFACTS_DIR = Path(__file__).parent.parent.parent / "docs" / "codebase-registry" / "artifacts"
+ARTIFACTS_DIR = (
+    Path(__file__).parent.parent.parent / "docs" / "codebase-registry" / "artifacts"
+)
 
 
 def load_artifact(filepath: Path) -> Optional[dict]:
@@ -73,7 +74,8 @@ def search_by_id(artifacts: list[dict], artifact_id: str) -> list[dict]:
 def filter_by_product(artifacts: list[dict], product: str) -> list[dict]:
     """Filter artifacts by product."""
     return [
-        a for a in artifacts
+        a
+        for a in artifacts
         if a.get("traceability", {}).get("product", "").lower() == product.lower()
     ]
 
@@ -85,7 +87,11 @@ def filter_by_type(artifacts: list[dict], artifact_type: str) -> list[dict]:
 
 def filter_by_authority(artifacts: list[dict], authority: str) -> list[dict]:
     """Filter artifacts by authority level."""
-    return [a for a in artifacts if a.get("authority_level", "").lower() == authority.lower()]
+    return [
+        a
+        for a in artifacts
+        if a.get("authority_level", "").lower() == authority.lower()
+    ]
 
 
 def format_artifact(artifact: dict, verbose: bool = False) -> str:
@@ -123,14 +129,14 @@ def format_artifact(artifact: dict, verbose: bool = False) -> str:
         # Responsibility
         responsibility = artifact.get("responsibility", "")
         if responsibility:
-            lines.append(f"  Responsibility:")
+            lines.append("  Responsibility:")
             for line in responsibility.strip().split("\n"):
                 lines.append(f"    {line}")
 
         # Notes
         notes = artifact.get("notes", "")
         if notes:
-            lines.append(f"  Notes:")
+            lines.append("  Notes:")
             for line in str(notes).strip().split("\n"):
                 lines.append(f"    {line}")
 
@@ -148,7 +154,9 @@ def format_table(artifacts: list[dict]) -> str:
         return "No artifacts found."
 
     lines = []
-    lines.append(f"{'ID':<25} {'Name':<30} {'Type':<12} {'Authority':<10} {'Product':<15}")
+    lines.append(
+        f"{'ID':<25} {'Name':<30} {'Type':<12} {'Authority':<10} {'Product':<15}"
+    )
     lines.append("─" * 95)
 
     for a in artifacts:
@@ -157,7 +165,9 @@ def format_table(artifacts: list[dict]) -> str:
         artifact_type = a.get("type", "N/A")[:11]
         authority = a.get("authority_level", "N/A")[:9]
         product = a.get("traceability", {}).get("product", "N/A")[:14]
-        lines.append(f"{artifact_id:<25} {name:<30} {artifact_type:<12} {authority:<10} {product:<15}")
+        lines.append(
+            f"{artifact_id:<25} {name:<30} {artifact_type:<12} {authority:<10} {product:<15}"
+        )
 
     lines.append("─" * 95)
     lines.append(f"Total: {len(artifacts)} artifact(s)")
@@ -178,22 +188,50 @@ Examples:
   %(prog)s --authority mutate          # Filter by authority level
   %(prog)s --list                      # List all artifacts
   %(prog)s --product ai-console -v     # Verbose output
-        """
+        """,
     )
 
     parser.add_argument("search", nargs="?", help="Search term (matches artifact name)")
     parser.add_argument("--id", "-i", dest="artifact_id", help="Search by artifact ID")
-    parser.add_argument("--product", "-p", help="Filter by product (ai-console, system-wide, product-builder)")
-    parser.add_argument("--type", "-t", dest="artifact_type", help="Filter by type (api-route, service, worker, page, etc.)")
-    parser.add_argument("--authority", "-a", help="Filter by authority level (observe, advise, enforce, mutate)")
+    parser.add_argument(
+        "--product",
+        "-p",
+        help="Filter by product (ai-console, system-wide, product-builder)",
+    )
+    parser.add_argument(
+        "--type",
+        "-t",
+        dest="artifact_type",
+        help="Filter by type (api-route, service, worker, page, etc.)",
+    )
+    parser.add_argument(
+        "--authority",
+        "-a",
+        help="Filter by authority level (observe, advise, enforce, mutate)",
+    )
     parser.add_argument("--list", "-l", action="store_true", help="List all artifacts")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed information")
-    parser.add_argument("--table", action="store_true", help="Output as compact table (default for multiple results)")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Show detailed information"
+    )
+    parser.add_argument(
+        "--table",
+        action="store_true",
+        help="Output as compact table (default for multiple results)",
+    )
 
     args = parser.parse_args()
 
     # Require at least one search/filter option
-    if not any([args.search, args.artifact_id, args.product, args.artifact_type, args.authority, args.list]):
+    if not any(
+        [
+            args.search,
+            args.artifact_id,
+            args.product,
+            args.artifact_type,
+            args.authority,
+            args.list,
+        ]
+    ):
         parser.print_help()
         sys.exit(1)
 

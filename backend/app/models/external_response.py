@@ -25,11 +25,11 @@ Violations Resolved: VIOLATION-007, VIOLATION-008, VIOLATION-009, VIOLATION-010
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, Index, String, Text
+from sqlalchemy import Column, DateTime, Index, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.sql import func

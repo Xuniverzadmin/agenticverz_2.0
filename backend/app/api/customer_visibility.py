@@ -121,8 +121,7 @@ class PreRunDeclaration(BaseModel):
 
     # PIN-254 Phase C Fix: Estimation transparency
     estimation_methodology: EstimationMethodology = Field(
-        default_factory=EstimationMethodology,
-        description="Disclosure of how estimates were derived (PIN-254 C3 fix)"
+        default_factory=EstimationMethodology, description="Disclosure of how estimates were derived (PIN-254 C3 fix)"
     )
 
     # Acknowledgement required

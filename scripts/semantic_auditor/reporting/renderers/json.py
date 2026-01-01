@@ -64,17 +64,11 @@ class JSONRenderer:
                 "risk_scores": report.risk_scores,
             },
             "findings_by_type": {
-                delta_type: [
-                    self._delta_to_dict(delta)
-                    for delta in deltas
-                ]
+                delta_type: [self._delta_to_dict(delta) for delta in deltas]
                 for delta_type, deltas in report.by_type.items()
             },
             "findings_by_severity": {
-                severity: [
-                    self._delta_to_dict(delta)
-                    for delta in deltas
-                ]
+                severity: [self._delta_to_dict(delta) for delta in deltas]
                 for severity, deltas in report.by_severity.items()
                 if deltas  # Only include non-empty severity levels
             },
@@ -83,8 +77,7 @@ class JSONRenderer:
                     "count": domain_report.delta_count,
                     "high_risk_count": domain_report.high_risk_count,
                     "findings": [
-                        self._delta_to_dict(delta)
-                        for delta in domain_report.deltas
+                        self._delta_to_dict(delta) for delta in domain_report.deltas
                     ],
                 }
                 for domain, domain_report in report.by_domain.items()
@@ -94,8 +87,7 @@ class JSONRenderer:
                     "count": layer_report.delta_count,
                     "high_risk_count": layer_report.high_risk_count,
                     "findings": [
-                        self._delta_to_dict(delta)
-                        for delta in layer_report.deltas
+                        self._delta_to_dict(delta) for delta in layer_report.deltas
                     ],
                 }
                 for layer, layer_report in report.by_layer.items()

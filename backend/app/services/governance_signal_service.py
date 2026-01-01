@@ -32,7 +32,6 @@ Contract:
 
 from datetime import datetime, timezone
 from typing import Optional
-from uuid import UUID
 
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import Session
@@ -40,7 +39,6 @@ from sqlalchemy.orm import Session
 from app.models.governance import (
     GovernanceCheckResult,
     GovernanceSignal,
-    GovernanceSignalCreate,
     GovernanceSignalResponse,
 )
 
@@ -104,9 +102,7 @@ class GovernanceSignalService:
 
         return signal
 
-    def _supersede_existing_signals(
-        self, scope: str, signal_type: str, superseded_at: datetime
-    ) -> int:
+    def _supersede_existing_signals(self, scope: str, signal_type: str, superseded_at: datetime) -> int:
         """Mark existing active signals as superseded."""
         stmt = (
             update(GovernanceSignal)
@@ -195,9 +191,7 @@ class GovernanceSignalService:
             last_checked=now,
         )
 
-    def is_blocked(
-        self, scope: str, signal_type: Optional[str] = None
-    ) -> bool:
+    def is_blocked(self, scope: str, signal_type: Optional[str] = None) -> bool:
         """
         Quick check if scope is blocked (convenience method).
 
@@ -206,9 +200,7 @@ class GovernanceSignalService:
         result = self.check_governance(scope, signal_type)
         return result.is_blocked
 
-    def get_active_signals(
-        self, scope: str, signal_type: Optional[str] = None
-    ) -> list[GovernanceSignal]:
+    def get_active_signals(self, scope: str, signal_type: Optional[str] = None) -> list[GovernanceSignal]:
         """Get all active (non-superseded, non-expired) signals for a scope."""
         now = datetime.now(timezone.utc)
 
@@ -249,6 +241,7 @@ class GovernanceSignalService:
 
 
 # Convenience functions for use without instantiating service
+
 
 def check_governance_status(
     session: Session,

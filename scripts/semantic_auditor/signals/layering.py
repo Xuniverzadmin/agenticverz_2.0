@@ -20,7 +20,7 @@ Phase 1 MVP focuses on LAYER_IMPORT_VIOLATION.
 """
 
 from pathlib import Path
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Set, Optional
 from dataclasses import dataclass
 
 from ..scanner.ast_loader import ASTAnalysis, ImportInfo
@@ -66,27 +66,43 @@ class LayeringSignalDetector:
     # Lower layers should not import from higher layers
     ALLOWED_IMPORTS: Dict[LayerLevel, Set[LayerLevel]] = {
         LayerLevel.L1_STORAGE: {LayerLevel.L1_STORAGE},
-        LayerLevel.L2_DATA: {LayerLevel.L1_STORAGE, LayerLevel.L2_DATA, LayerLevel.L3_DOMAIN},
+        LayerLevel.L2_DATA: {
+            LayerLevel.L1_STORAGE,
+            LayerLevel.L2_DATA,
+            LayerLevel.L3_DOMAIN,
+        },
         LayerLevel.L3_DOMAIN: {LayerLevel.L3_DOMAIN},
         LayerLevel.L4_SERVICE: {
-            LayerLevel.L2_DATA, LayerLevel.L3_DOMAIN, LayerLevel.L4_SERVICE,
+            LayerLevel.L2_DATA,
+            LayerLevel.L3_DOMAIN,
+            LayerLevel.L4_SERVICE,
             LayerLevel.L6_INTEGRATION,
         },
         LayerLevel.L5_API: {
-            LayerLevel.L3_DOMAIN, LayerLevel.L4_SERVICE, LayerLevel.L5_API,
+            LayerLevel.L3_DOMAIN,
+            LayerLevel.L4_SERVICE,
+            LayerLevel.L5_API,
         },
         LayerLevel.L6_INTEGRATION: {
-            LayerLevel.L3_DOMAIN, LayerLevel.L6_INTEGRATION,
+            LayerLevel.L3_DOMAIN,
+            LayerLevel.L6_INTEGRATION,
         },
         LayerLevel.L7_WORKERS: {
-            LayerLevel.L3_DOMAIN, LayerLevel.L4_SERVICE, LayerLevel.L6_INTEGRATION,
+            LayerLevel.L3_DOMAIN,
+            LayerLevel.L4_SERVICE,
+            LayerLevel.L6_INTEGRATION,
             LayerLevel.L7_WORKERS,
         },
         LayerLevel.L8_META: {
             # Meta layer can import from anywhere
-            LayerLevel.L1_STORAGE, LayerLevel.L2_DATA, LayerLevel.L3_DOMAIN,
-            LayerLevel.L4_SERVICE, LayerLevel.L5_API, LayerLevel.L6_INTEGRATION,
-            LayerLevel.L7_WORKERS, LayerLevel.L8_META,
+            LayerLevel.L1_STORAGE,
+            LayerLevel.L2_DATA,
+            LayerLevel.L3_DOMAIN,
+            LayerLevel.L4_SERVICE,
+            LayerLevel.L5_API,
+            LayerLevel.L6_INTEGRATION,
+            LayerLevel.L7_WORKERS,
+            LayerLevel.L8_META,
         },
     }
 
@@ -194,12 +210,36 @@ class LayeringSignalDetector:
         """Check if a module is external (not part of the app)."""
         # Standard library and common packages
         external_prefixes = {
-            "os", "sys", "re", "json", "ast", "typing", "pathlib",
-            "collections", "dataclasses", "enum", "functools", "itertools",
-            "datetime", "time", "logging", "copy", "io", "abc",
-            "fastapi", "pydantic", "sqlalchemy", "starlette",
-            "celery", "redis", "httpx", "aiohttp", "requests",
-            "pytest", "unittest", "mock",
+            "os",
+            "sys",
+            "re",
+            "json",
+            "ast",
+            "typing",
+            "pathlib",
+            "collections",
+            "dataclasses",
+            "enum",
+            "functools",
+            "itertools",
+            "datetime",
+            "time",
+            "logging",
+            "copy",
+            "io",
+            "abc",
+            "fastapi",
+            "pydantic",
+            "sqlalchemy",
+            "starlette",
+            "celery",
+            "redis",
+            "httpx",
+            "aiohttp",
+            "requests",
+            "pytest",
+            "unittest",
+            "mock",
         }
 
         first_part = module.split(".")[0]

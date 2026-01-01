@@ -6,20 +6,18 @@
 # Role: Recovery claim processing orchestration (L5 execution wrapper)
 # Authority: Recovery candidate state mutation (unevaluated → claimed → processed)
 # Callers: Standalone process
-# Allowed Imports: L4, L6
-# Domain Engine: claim_decision_engine.py (L4)
-# Forbidden Imports: L1, L2, L3
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
 # Contract: EXECUTION_SEMANTIC_CONTRACT.md (L5 Worker Rules)
-# Reference: PIN-257 Phase E-4 Extraction #4
+# Reference: PIN-257 Phase R-4 (L5→L4 Violation Fix)
 #
 # GOVERNANCE NOTE: L5 owns all DB operations.
-# L4 claim_decision_engine.py provides pure domain logic:
-#   - is_candidate_claimable() - claim eligibility threshold
-#   - determine_claim_status() - status from evaluation result
-#   - get_result_confidence() - confidence extraction
+# Phase R-4 FIX: Removed L4 imports per layer model.
+# Configuration (threshold) comes from environment variables.
+# Result extraction (status, confidence) is done inline.
 # This L5 file:
 #   - Orchestrates batch claim processing
-#   - Calls L4 for domain decisions
+#   - Reads configuration from environment
 #   - Persists results TO database (L6)
 
 # app/worker/recovery_claim_worker.py
@@ -63,6 +61,13 @@ logger = logging.getLogger("nova.worker.recovery_claim")
 # Configuration
 DEFAULT_BATCH_SIZE = int(os.getenv("RECOVERY_WORKER_BATCH_SIZE", "50"))
 DEFAULT_POLL_INTERVAL = int(os.getenv("RECOVERY_WORKER_POLL_INTERVAL", "10"))
+
+# Phase R-4: Claim eligibility threshold from environment (dependency inversion)
+# L5 reads from config instead of importing from L4.
+# The L4 claim_decision_engine.py reads from the same env var for consistency.
+# Default 0.2 matches the L4 constant for semantic equivalence.
+# Reference: PIN-257 Phase R-4 (L5→L4 Violation Fix)
+CLAIM_ELIGIBILITY_THRESHOLD = float(os.getenv("RECOVERY_CLAIM_THRESHOLD", "0.2"))
 
 # Shutdown flag
 _shutdown_requested = False
@@ -142,9 +147,9 @@ class RecoveryClaimWorker:
         Returns:
             List of claimed candidate dicts
         """
-        # L4 domain decision: claim eligibility threshold
-        # Reference: PIN-257 Phase E-4 Extraction #4
-        from app.services.claim_decision_engine import CLAIM_ELIGIBILITY_THRESHOLD
+        # Phase R-4: Use local threshold constant (dependency inversion)
+        # Removed L4 import, using environment-configured threshold.
+        # Reference: PIN-257 Phase R-4 (L5→L4 Violation Fix)
 
         session = self._get_session()
         try:
@@ -263,15 +268,15 @@ class RecoveryClaimWorker:
             candidate_id: ID of candidate to update
             result: Evaluation result dict
         """
-        # L4 domain decisions: status and confidence extraction
-        # Reference: PIN-257 Phase E-4 Extraction #4
-        from app.services.claim_decision_engine import (
-            determine_claim_status,
-            get_result_confidence,
-        )
-
-        status = determine_claim_status(result)
-        confidence = get_result_confidence(result)
+        # Phase R-4: Inline status/confidence extraction (L4 import removed)
+        # These are simple data extractions, not domain decisions.
+        # The evaluation result already contains the values computed by L4.
+        # Reference: PIN-257 Phase R-4 (L5→L4 Violation Fix)
+        #
+        # Status: "failed" if error present, else "succeeded"
+        status = "failed" if result.get("error") is not None else "succeeded"
+        # Confidence: extract from result, default to threshold if not present
+        confidence = result.get("confidence", CLAIM_ELIGIBILITY_THRESHOLD)
 
         session = self._get_session()
         try:

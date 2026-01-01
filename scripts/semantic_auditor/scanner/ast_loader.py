@@ -20,7 +20,7 @@ Loads Python AST and extracts structural information:
 
 import ast
 from pathlib import Path
-from typing import Optional, List, Set, Tuple, NamedTuple
+from typing import Optional, List, Tuple, NamedTuple
 from dataclasses import dataclass, field
 
 
@@ -185,7 +185,11 @@ class ASTLoader:
             stripped = line.strip()
             if stripped.startswith("#"):
                 comments.append(stripped)
-            elif stripped and not stripped.startswith('"""') and not stripped.startswith("'''"):
+            elif (
+                stripped
+                and not stripped.startswith('"""')
+                and not stripped.startswith("'''")
+            ):
                 # Stop at first non-comment, non-empty line (unless it's a docstring)
                 break
             elif stripped.startswith('"""') or stripped.startswith("'''"):
@@ -206,9 +210,7 @@ class ASTLoader:
                 )
             )
 
-    def _process_import_from(
-        self, node: ast.ImportFrom, analysis: ASTAnalysis
-    ) -> None:
+    def _process_import_from(self, node: ast.ImportFrom, analysis: ASTAnalysis) -> None:
         """Process a from-import statement."""
         module = node.module or ""
         names = [alias.name for alias in node.names]
@@ -281,11 +283,7 @@ class ASTLoader:
         self, analysis: ASTAnalysis, module_prefix: str
     ) -> List[ImportInfo]:
         """Get all imports from a specific module prefix."""
-        return [
-            imp
-            for imp in analysis.imports
-            if imp.module.startswith(module_prefix)
-        ]
+        return [imp for imp in analysis.imports if imp.module.startswith(module_prefix)]
 
     def get_async_functions_with_call(
         self, analysis: ASTAnalysis, call_pattern: str

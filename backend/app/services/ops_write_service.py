@@ -21,7 +21,6 @@ Constraints (enforced by PIN-250):
 - Call-path relocation only
 """
 
-from typing import Optional
 
 from sqlalchemy import text
 from sqlmodel import Session

@@ -118,8 +118,10 @@ UNKNOWN_SKILL_COEFFICIENTS: Dict[str, float] = {
 # L4 Domain Authority: Drift Classification
 # =============================================================================
 
+
 class DriftVerdict(str, Enum):
     """Classification of drift between V1 and V2 simulation results."""
+
     MATCH = "MATCH"  # <= 5% drift
     MINOR_DRIFT = "MINOR_DRIFT"  # <= 15% drift
     MAJOR_DRIFT = "MAJOR_DRIFT"  # <= 30% drift
@@ -150,6 +152,7 @@ CONFIDENCE_DEGRADATION_VERY_LONG_PROMPT = 4000  # chars
 @dataclass
 class StepCostEstimate:
     """Enhanced step estimate with confidence (L4 domain output)."""
+
     step_index: int
     skill_id: str
     cost_cents: float
@@ -161,6 +164,7 @@ class StepCostEstimate:
 @dataclass
 class FeasibilityResult:
     """Result of feasibility check (L4 domain output)."""
+
     feasible: bool
     budget_sufficient: bool
     has_permissions: bool
@@ -172,6 +176,7 @@ class FeasibilityResult:
 @dataclass
 class DriftAnalysis:
     """Result of drift analysis between V1 and V2 (L4 domain output)."""
+
     verdict: DriftVerdict
     drift_score: float
     cost_delta_pct: float

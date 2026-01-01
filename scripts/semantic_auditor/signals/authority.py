@@ -126,9 +126,7 @@ class AuthoritySignalDetector:
 
         # Check all functions for write operations
         for func in analysis.functions:
-            signals.extend(
-                self._check_write_outside_write_service(analysis, func)
-            )
+            signals.extend(self._check_write_outside_write_service(analysis, func))
 
         return signals
 
@@ -191,8 +189,6 @@ class AuthoritySignalDetector:
 
         return False
 
-    def get_write_operations_in_function(
-        self, func: FunctionInfo
-    ) -> List[str]:
+    def get_write_operations_in_function(self, func: FunctionInfo) -> List[str]:
         """Get all write operations in a function."""
         return [call for call in func.calls if self._is_write_operation(call)]

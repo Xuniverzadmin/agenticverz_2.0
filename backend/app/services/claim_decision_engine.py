@@ -1,8 +1,13 @@
 # Layer: L4 — Domain Engine (System Truth)
 # Product: system-wide (NOT console-owned)
-# Callers: recovery_claim_worker.py (L5 worker)
-# Reference: PIN-257 Phase E-4 Extraction #4
+# Callers: L4 services (L5 no longer imports this module)
+# Reference: PIN-257 Phase R-4 (L5→L4 Violation Fix)
 # WARNING: If this logic is wrong, claim processing breaks.
+#
+# GOVERNANCE NOTE (Phase R-4):
+# L5 workers now read threshold from environment variable RECOVERY_CLAIM_THRESHOLD.
+# This L4 module reads from the same env var for consistency (dependency inversion).
+# L5 workers inline simple status/confidence extraction instead of calling L4.
 
 # M10 Claim Decision Engine
 """
@@ -12,28 +17,31 @@ This L4 engine defines the authoritative rules for:
 1. Claim eligibility - what candidates qualify for evaluation
 2. Status determination - how evaluation results map to status
 
-All claim decision semantics live here. L5 workers must call these functions,
-not implement their own decision logic.
+Phase R-4 Note:
+L5 workers no longer import this module. Configuration is shared via
+environment variables. Simple data extractions are inlined in L5.
 
-Reference: PIN-257 Phase E-4 Extraction #4
-Governance: DOMAIN_EXTRACTION_TEMPLATE.md
+Reference: PIN-257 Phase R-4
+Governance: PHASE_R_L5_L4_VIOLATIONS.md
 """
 
+import os
 from typing import Any, Dict, Optional
-
 
 # =============================================================================
 # L4 Domain Decision Thresholds
 # =============================================================================
 # These thresholds are the AUTHORITATIVE source for claim decisions.
-# L5 workers must call these functions, not implement their own thresholds.
-# Reference: PIN-257 Phase E-4 Extraction #4
+# Phase R-4: Read from environment variable (dependency inversion).
+# Both L4 and L5 read from the same env var for consistency.
+# Reference: PIN-257 Phase R-4 (L5→L4 Violation Fix)
 
 
 # Claim eligibility threshold (L4 domain rule)
 # Candidates with confidence at or below this threshold are eligible for claiming.
 # This defines what "unevaluated" means in the claim processing context.
-CLAIM_ELIGIBILITY_THRESHOLD: float = 0.2
+# Phase R-4: Read from environment, default 0.2 for backward compatibility.
+CLAIM_ELIGIBILITY_THRESHOLD: float = float(os.getenv("RECOVERY_CLAIM_THRESHOLD", "0.2"))
 
 
 def is_candidate_claimable(confidence: Optional[float]) -> bool:

@@ -20,9 +20,8 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .declared_semantics import DeclaredSemantics, FileSemantics
+from .declared_semantics import DeclaredSemantics
 from .observed_behavior import ObservedBehavior, FileSignals
-from ..scanner.file_classifier import FileClassification
 
 
 @dataclass
@@ -222,7 +221,4 @@ class DeltaEngine:
         self, report: DeltaReport, domain: str
     ) -> List[SemanticDelta]:
         """Get all deltas for a specific domain."""
-        return [
-            d for d in report.deltas
-            if domain in str(d.file_path)
-        ]
+        return [d for d in report.deltas if domain in str(d.file_path)]

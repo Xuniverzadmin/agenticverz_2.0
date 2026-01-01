@@ -201,7 +201,6 @@ def _get_skill_registry():
 # This is the authoritative source for skill metadata
 from app.commands.runtime_command import DEFAULT_SKILL_METADATA
 
-
 # =============================================================================
 # Endpoints
 # =============================================================================

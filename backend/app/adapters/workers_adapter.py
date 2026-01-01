@@ -37,7 +37,7 @@ This is a thin translation layer - no business logic, no state mutation.
 Reference: PIN-258 Phase F-3 Workers Cluster
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from app.commands.worker_execution_command import (
     ReplayResult,
@@ -47,7 +47,6 @@ from app.commands.worker_execution_command import (
     execute_worker,
     replay_execution,
 )
-
 
 # =============================================================================
 # L3 Adapter Class

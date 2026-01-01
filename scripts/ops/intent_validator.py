@@ -35,15 +35,17 @@ import argparse
 import subprocess
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Set
+from typing import Optional, List, Dict
 from enum import Enum
 
 # Import incident logger
 try:
     from architecture_incident_logger import log_incident
+
     INCIDENT_LOGGING_ENABLED = True
 except ImportError:
     INCIDENT_LOGGING_ENABLED = False
+
     def log_incident(*args, **kwargs):
         pass  # Fallback if logger not available
 
@@ -72,13 +74,19 @@ class ValidationResult:
     violations: List[Dict] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
 
-    def add_violation(self, violation_type: ViolationType, message: str,
-                      severity: ValidationSeverity = ValidationSeverity.BLOCKING):
-        self.violations.append({
-            "type": violation_type.value,
-            "message": message,
-            "severity": severity.value
-        })
+    def add_violation(
+        self,
+        violation_type: ViolationType,
+        message: str,
+        severity: ValidationSeverity = ValidationSeverity.BLOCKING,
+    ):
+        self.violations.append(
+            {
+                "type": violation_type.value,
+                "message": message,
+                "severity": severity.value,
+            }
+        )
         if severity == ValidationSeverity.BLOCKING:
             self.valid = False
 
@@ -86,6 +94,7 @@ class ValidationResult:
 @dataclass
 class IntentDeclaration:
     """Parsed intent declaration from ARTIFACT_INTENT.yaml or file header."""
+
     artifact_id: Optional[str] = None
     file_path: Optional[str] = None
     layer_declared: Optional[str] = None
@@ -127,8 +136,15 @@ VALIDATED_EXTENSIONS = {".py", ".ts", ".tsx", ".js", ".jsx", ".yaml", ".yml", ".
 
 # Directories to skip
 SKIP_DIRECTORIES = {
-    "__pycache__", "node_modules", ".git", ".venv", "venv",
-    "dist", "build", ".pytest_cache", ".mypy_cache"
+    "__pycache__",
+    "node_modules",
+    ".git",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    ".pytest_cache",
+    ".mypy_cache",
 }
 
 # Files to skip
@@ -153,7 +169,9 @@ class IntentValidator:
                             intent = self._parse_intent_yaml(data)
                             self.intent_registry[data["file_path"]] = intent
                 except Exception as e:
-                    print(f"Warning: Could not load {intent_file}: {e}", file=sys.stderr)
+                    print(
+                        f"Warning: Could not load {intent_file}: {e}", file=sys.stderr
+                    )
 
     def _parse_intent_yaml(self, data: Dict) -> IntentDeclaration:
         """Parse ARTIFACT_INTENT.yaml format into IntentDeclaration."""
@@ -187,7 +205,7 @@ class IntentValidator:
     def _parse_file_header(self, file_path: Path) -> Optional[IntentDeclaration]:
         """Extract intent declaration from file header comments."""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read(4096)  # Read first 4KB for header
         except Exception:
             return None
@@ -224,11 +242,15 @@ class IntentValidator:
             # Allowed/Forbidden imports
             allowed_match = re.search(r"#\s*Allowed Imports:\s*(.+)", content)
             if allowed_match:
-                intent.allowed_layers = [l.strip() for l in allowed_match.group(1).split(",")]
+                intent.allowed_layers = [
+                    l.strip() for l in allowed_match.group(1).split(",")
+                ]
 
             forbidden_match = re.search(r"#\s*Forbidden Imports:\s*(.+)", content)
             if forbidden_match:
-                intent.forbidden_layers = [l.strip() for l in forbidden_match.group(1).split(",")]
+                intent.forbidden_layers = [
+                    l.strip() for l in forbidden_match.group(1).split(",")
+                ]
 
         # TypeScript/JavaScript header pattern
         elif file_path.suffix in {".ts", ".tsx", ".js", ".jsx"}:
@@ -261,8 +283,7 @@ class IntentValidator:
     def validate_file(self, file_path: Path) -> ValidationResult:
         """Validate a single file for intent compliance."""
         result = ValidationResult(
-            file_path=str(file_path.relative_to(self.repo_root)),
-            valid=True
+            file_path=str(file_path.relative_to(self.repo_root)), valid=True
         )
 
         # Skip non-validated extensions
@@ -275,13 +296,15 @@ class IntentValidator:
 
         # Get intent from registry or file header
         rel_path = str(file_path.relative_to(self.repo_root))
-        intent = self.intent_registry.get(rel_path) or self._parse_file_header(file_path)
+        intent = self.intent_registry.get(rel_path) or self._parse_file_header(
+            file_path
+        )
 
         if intent is None:
             result.add_violation(
                 ViolationType.MISSING_INTENT,
-                f"No intent declaration found. Use ARTIFACT_INTENT.yaml or add file header.",
-                ValidationSeverity.BLOCKING
+                "No intent declaration found. Use ARTIFACT_INTENT.yaml or add file header.",
+                ValidationSeverity.BLOCKING,
             )
             return result
 
@@ -290,22 +313,25 @@ class IntentValidator:
             result.add_violation(
                 ViolationType.MISSING_LAYER,
                 "Layer declaration missing. Must be L1-L8.",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
         elif intent.layer_declared not in VALID_LAYERS:
             result.add_violation(
                 ViolationType.INVALID_LAYER,
                 f"Invalid layer '{intent.layer_declared}'. Must be one of: {VALID_LAYERS}",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
 
         # Validate confidence (PRE-BUILD-003)
-        if intent.layer_confidence and intent.layer_confidence.lower() not in VALID_CONFIDENCE:
+        if (
+            intent.layer_confidence
+            and intent.layer_confidence.lower() not in VALID_CONFIDENCE
+        ):
             if intent.layer_confidence.lower() == "low":
                 result.add_violation(
                     ViolationType.LOW_CONFIDENCE,
                     "Layer confidence is LOW. Cannot proceed without clarification.",
-                    ValidationSeverity.BLOCKING
+                    ValidationSeverity.BLOCKING,
                 )
 
         # Validate temporal declaration (PRE-BUILD-002)
@@ -313,26 +339,26 @@ class IntentValidator:
             result.add_violation(
                 ViolationType.MISSING_TEMPORAL,
                 "Temporal trigger missing. Must be: user|api|worker|scheduler|external",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
         elif intent.temporal_trigger not in VALID_TRIGGERS:
             result.add_violation(
                 ViolationType.MISSING_TEMPORAL,
                 f"Invalid trigger '{intent.temporal_trigger}'. Must be one of: {VALID_TRIGGERS}",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
 
         if not intent.temporal_execution:
             result.add_violation(
                 ViolationType.MISSING_TEMPORAL,
                 "Temporal execution mode missing. Must be: sync|async|deferred",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
         elif intent.temporal_execution not in VALID_EXECUTION:
             result.add_violation(
                 ViolationType.MISSING_TEMPORAL,
                 f"Invalid execution mode '{intent.temporal_execution}'. Must be one of: {VALID_EXECUTION}",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
 
         # Validate product owner (RUNTIME-003)
@@ -340,15 +366,18 @@ class IntentValidator:
             result.add_violation(
                 ViolationType.INCOMPLETE_INTENT,
                 "Product owner missing. Must be: ai-console|system-wide|product-builder",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
 
         # Validate role
-        if not intent.responsibility_role or intent.responsibility_role.upper() == "TODO":
+        if (
+            not intent.responsibility_role
+            or intent.responsibility_role.upper() == "TODO"
+        ):
             result.add_violation(
                 ViolationType.INCOMPLETE_INTENT,
                 "Responsibility role missing or set to TODO.",
-                ValidationSeverity.BLOCKING
+                ValidationSeverity.BLOCKING,
             )
 
         return result
@@ -378,7 +407,7 @@ class IntentValidator:
                 ["git", "diff", "--name-only", "HEAD"],
                 capture_output=True,
                 text=True,
-                cwd=self.repo_root
+                cwd=self.repo_root,
             )
             changed_files = result.stdout.strip().split("\n")
 
@@ -387,7 +416,7 @@ class IntentValidator:
                 ["git", "diff", "--name-only", "--cached"],
                 capture_output=True,
                 text=True,
-                cwd=self.repo_root
+                cwd=self.repo_root,
             )
             staged_files = result.stdout.strip().split("\n")
 
@@ -412,9 +441,7 @@ class IntentValidator:
         """Generate a compliance report."""
         total_files = len(results)
         blocking_violations = sum(
-            1 for r in results
-            for v in r.violations
-            if v["severity"] == "BLOCKING"
+            1 for r in results for v in r.violations if v["severity"] == "BLOCKING"
         )
 
         report = []
@@ -451,7 +478,9 @@ class IntentValidator:
 
         if blocking_violations > 0:
             report.append("RESULT: BLOCKED")
-            report.append(f"{blocking_violations} blocking violations must be resolved.")
+            report.append(
+                f"{blocking_violations} blocking violations must be resolved."
+            )
         else:
             report.append("RESULT: PASSED (with warnings)")
 
@@ -462,36 +491,20 @@ def main():
     parser = argparse.ArgumentParser(
         description="Validate artifact intent declarations"
     )
+    parser.add_argument("--check", type=Path, help="Check a single file")
+    parser.add_argument("--scan", type=Path, help="Scan a directory recursively")
     parser.add_argument(
-        "--check",
-        type=Path,
-        help="Check a single file"
+        "--diff", action="store_true", help="Check only changed files (git diff)"
     )
     parser.add_argument(
-        "--scan",
-        type=Path,
-        help="Scan a directory recursively"
+        "--report", action="store_true", help="Generate full compliance report"
     )
-    parser.add_argument(
-        "--diff",
-        action="store_true",
-        help="Check only changed files (git diff)"
-    )
-    parser.add_argument(
-        "--report",
-        action="store_true",
-        help="Generate full compliance report"
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output results as JSON"
-    )
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
     parser.add_argument(
         "--repo-root",
         type=Path,
         default=Path("/root/agenticverz2.0"),
-        help="Repository root directory"
+        help="Repository root directory",
     )
 
     args = parser.parse_args()
@@ -500,7 +513,9 @@ def main():
     results = []
 
     if args.check:
-        file_path = args.check if args.check.is_absolute() else args.repo_root / args.check
+        file_path = (
+            args.check if args.check.is_absolute() else args.repo_root / args.check
+        )
         result = validator.validate_file(file_path)
         results = [result] if result.violations else []
 
@@ -522,17 +537,16 @@ def main():
     # Output results
     if args.json:
         import json
+
         output = {
             "total_violations": len(results),
-            "blocking": sum(1 for r in results for v in r.violations if v["severity"] == "BLOCKING"),
+            "blocking": sum(
+                1 for r in results for v in r.violations if v["severity"] == "BLOCKING"
+            ),
             "results": [
-                {
-                    "file": r.file_path,
-                    "valid": r.valid,
-                    "violations": r.violations
-                }
+                {"file": r.file_path, "valid": r.valid, "violations": r.violations}
                 for r in results
-            ]
+            ],
         }
         print(json.dumps(output, indent=2))
     else:
@@ -540,11 +554,7 @@ def main():
         print(report)
 
     # Exit code and incident logging
-    blocking = any(
-        v["severity"] == "BLOCKING"
-        for r in results
-        for v in r.violations
-    )
+    blocking = any(v["severity"] == "BLOCKING" for r in results for v in r.violations)
 
     # Log incidents for blocking violations
     if blocking and INCIDENT_LOGGING_ENABLED:
@@ -568,7 +578,7 @@ def main():
                         file=r.file_path,
                         layer="unknown",  # Will be detected by validator
                         summary=v["message"],
-                        source="intent_validator"
+                        source="intent_validator",
                     )
 
     return 1 if blocking else 0

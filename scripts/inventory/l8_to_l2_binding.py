@@ -14,10 +14,8 @@ Searches for signal names referenced inside L2 APIs.
 Identifies orphaned signals (emitted but not consumed).
 """
 
-import ast
 import pathlib
 import re
-import sys
 
 # Signal concept hints (what L8 might emit)
 SIGNAL_CONCEPTS = [
@@ -111,14 +109,14 @@ def find_l2_to_store_bindings(repo_root: pathlib.Path):
 
     # Patterns indicating DB writes
     write_patterns = [
-        re.compile(r'session\.add\('),
-        re.compile(r'session\.execute\('),
-        re.compile(r'\.create\('),
-        re.compile(r'\.update\('),
-        re.compile(r'\.delete\('),
-        re.compile(r'INSERT\s+INTO', re.I),
-        re.compile(r'UPDATE\s+', re.I),
-        re.compile(r'DELETE\s+FROM', re.I),
+        re.compile(r"session\.add\("),
+        re.compile(r"session\.execute\("),
+        re.compile(r"\.create\("),
+        re.compile(r"\.update\("),
+        re.compile(r"\.delete\("),
+        re.compile(r"INSERT\s+INTO", re.I),
+        re.compile(r"UPDATE\s+", re.I),
+        re.compile(r"DELETE\s+FROM", re.I),
     ]
 
     for path in api_root.glob("*.py"):
@@ -180,7 +178,9 @@ def main():
 
         consumer_files = ", ".join(sorted(consumers.get(concept, set())))
 
-        print(f"| {concept} | {src_count} ({src_files or '-'}) | {consumer_count} ({consumer_files or '-'}) | {status} |")
+        print(
+            f"| {concept} | {src_count} ({src_files or '-'}) | {consumer_count} ({consumer_files or '-'}) | {status} |"
+        )
 
     print()
     print("## Binding Summary")

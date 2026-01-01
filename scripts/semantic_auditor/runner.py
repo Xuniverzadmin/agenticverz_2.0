@@ -37,8 +37,12 @@ class SemanticAuditor:
     # Default paths
     DEFAULT_APP_ROOT = Path("/root/agenticverz2.0/backend/app")
     DEFAULT_DOCS_ROOT = Path("/root/agenticverz2.0/docs")
-    DEFAULT_REPORT_PATH = Path("/root/agenticverz2.0/docs/reports/SEMANTIC_AUDIT_REPORT.md")
-    DEFAULT_JSON_REPORT_PATH = Path("/root/agenticverz2.0/docs/reports/semantic_audit_report.json")
+    DEFAULT_REPORT_PATH = Path(
+        "/root/agenticverz2.0/docs/reports/SEMANTIC_AUDIT_REPORT.md"
+    )
+    DEFAULT_JSON_REPORT_PATH = Path(
+        "/root/agenticverz2.0/docs/reports/semantic_audit_report.json"
+    )
 
     def __init__(
         self,
@@ -81,7 +85,9 @@ class SemanticAuditor:
         if domain:
             files = list(self.repo_walker.walk_domain(domain))
         elif changed_since:
-            files = list(self.repo_walker.walk_changed_since(changed_since, changed_files))
+            files = list(
+                self.repo_walker.walk_changed_since(changed_since, changed_files)
+            )
         else:
             files = list(self.repo_walker.walk())
 

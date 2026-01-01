@@ -24,8 +24,6 @@ Constraints (enforced by PIN-250):
 - Transaction boundaries preserved exactly
 """
 
-import json
-from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy import text
@@ -122,9 +120,7 @@ class RecoveryWriteService:
         row = result.fetchone()
         return (row[0], row[1], row[2])
 
-    def get_candidate_by_idempotency_key(
-        self, idempotency_key: str
-    ) -> Optional[Tuple[int, str]]:
+    def get_candidate_by_idempotency_key(self, idempotency_key: str) -> Optional[Tuple[int, str]]:
         """
         Get candidate by idempotency key (for conflict handling).
 

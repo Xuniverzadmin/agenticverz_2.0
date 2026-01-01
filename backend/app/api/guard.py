@@ -70,6 +70,9 @@ from app.services.certificate import (
     CertificateService,
 )
 
+# Phase 2B: Write service for DB operations
+from app.services.guard_write_service import GuardWriteService
+
 # M23: Import ReplayValidator for real determinism validation
 from app.services.replay_determinism import (
     DeterminismLevel,
@@ -81,9 +84,6 @@ from app.services.replay_determinism import (
 
 # Guard Cache for latency optimization (EU server -> Singapore DB)
 from app.utils.guard_cache import get_guard_cache
-
-# Phase 2B: Write service for DB operations
-from app.services.guard_write_service import GuardWriteService
 
 # =============================================================================
 # Router - GA Lock: Customer-only access (tenant-scoped)

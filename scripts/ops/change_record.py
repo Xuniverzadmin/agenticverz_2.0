@@ -45,7 +45,6 @@ Examples:
 """
 
 import argparse
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -56,8 +55,12 @@ except ImportError:
     print("ERROR: PyYAML required. Install with: pip install pyyaml")
     sys.exit(1)
 
-CHANGES_DIR = Path(__file__).parent.parent.parent / "docs" / "codebase-registry" / "changes"
-ARTIFACTS_DIR = Path(__file__).parent.parent.parent / "docs" / "codebase-registry" / "artifacts"
+CHANGES_DIR = (
+    Path(__file__).parent.parent.parent / "docs" / "codebase-registry" / "changes"
+)
+ARTIFACTS_DIR = (
+    Path(__file__).parent.parent.parent / "docs" / "codebase-registry" / "artifacts"
+)
 
 VALID_CHANGE_TYPES = [
     "bugfix",
@@ -145,7 +148,10 @@ def create_change_record(
         return None, f"Invalid risk_level: {risk_level}. Valid: {VALID_RISK_LEVELS}"
 
     if authority_change not in VALID_AUTHORITY_CHANGE:
-        return None, f"Invalid authority_change: {authority_change}. Valid: {VALID_AUTHORITY_CHANGE}"
+        return (
+            None,
+            f"Invalid authority_change: {authority_change}. Valid: {VALID_AUTHORITY_CHANGE}",
+        )
 
     for field, value in [
         ("behavior_change", behavior_change),
@@ -159,7 +165,10 @@ def create_change_record(
             return None, f"Invalid {field}: {value}. Valid: {VALID_YES_NO}"
 
     if manual_verification not in VALID_VERIFICATION:
-        return None, f"Invalid manual_verification: {manual_verification}. Valid: {VALID_VERIFICATION}"
+        return (
+            None,
+            f"Invalid manual_verification: {manual_verification}. Valid: {VALID_VERIFICATION}",
+        )
 
     # Validate artifacts exist
     valid, missing = validate_artifacts(artifacts)
@@ -225,7 +234,9 @@ def create_change_record(
 
     with open(filepath, "w") as f:
         f.write(header)
-        yaml.dump(record, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        yaml.dump(
+            record, f, default_flow_style=False, sort_keys=False, allow_unicode=True
+        )
 
     return change_id, str(filepath)
 
@@ -325,20 +336,24 @@ def format_change_detail(record: dict) -> str:
 
     # Impact
     impact = record.get("impact", {})
-    lines.append(f"  Impact:")
+    lines.append("  Impact:")
     lines.append(f"    Authority Change: {impact.get('authority_change', 'N/A')}")
     lines.append(f"    Behavior Change:  {impact.get('behavior_change', 'N/A')}")
     lines.append(f"    Interface Change: {impact.get('interface_change', 'N/A')}")
     lines.append(f"    Data Change:      {impact.get('data_change', 'N/A')}")
 
-    lines.append(f"  Backward Compatible: {record.get('backward_compatibility', 'N/A')}")
+    lines.append(
+        f"  Backward Compatible: {record.get('backward_compatibility', 'N/A')}"
+    )
 
     # Validation
     validation = record.get("validation", {})
-    lines.append(f"  Validation:")
+    lines.append("  Validation:")
     lines.append(f"    Tests Added:    {validation.get('tests_added', 'N/A')}")
     lines.append(f"    Tests Modified: {validation.get('tests_modified', 'N/A')}")
-    lines.append(f"    Manual Verification: {validation.get('manual_verification', 'N/A')}")
+    lines.append(
+        f"    Manual Verification: {validation.get('manual_verification', 'N/A')}"
+    )
 
     # Optional
     if record.get("related_pins"):
@@ -359,7 +374,7 @@ Examples:
   %(prog)s list                     # List all change records
   %(prog)s show CHANGE-2025-0001    # Show specific record
   %(prog)s create --purpose "Fix bug" --type bugfix --artifacts AOS-BE-API-INT-001
-        """
+        """,
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
@@ -378,35 +393,92 @@ Examples:
 
     # create command
     create_parser = subparsers.add_parser("create", help="Create a new change record")
-    create_parser.add_argument("--purpose", "-p", required=True, help="Purpose of the change")
-    create_parser.add_argument("--type", "-t", dest="change_type", required=True,
-                               choices=VALID_CHANGE_TYPES, help="Type of change")
-    create_parser.add_argument("--artifacts", "-a", nargs="+", required=True,
-                               help="Artifact IDs being modified")
-    create_parser.add_argument("--author", default="pair",
-                               choices=["human", "claude", "pair"], help="Author (default: pair)")
-    create_parser.add_argument("--risk", default="low",
-                               choices=VALID_RISK_LEVELS, help="Risk level (default: low)")
-    create_parser.add_argument("--authority-change", default="none",
-                               choices=VALID_AUTHORITY_CHANGE, help="Authority change (default: none)")
-    create_parser.add_argument("--behavior-change", default="no",
-                               choices=VALID_YES_NO, help="Behavior change (default: no)")
-    create_parser.add_argument("--interface-change", default="no",
-                               choices=VALID_YES_NO, help="Interface change (default: no)")
-    create_parser.add_argument("--data-change", default="no",
-                               choices=VALID_YES_NO, help="Data change (default: no)")
-    create_parser.add_argument("--backward-compat", default="yes",
-                               choices=VALID_YES_NO, help="Backward compatible (default: yes)")
-    create_parser.add_argument("--tests-added", default="no",
-                               choices=VALID_YES_NO, help="Tests added (default: no)")
-    create_parser.add_argument("--tests-modified", default="no",
-                               choices=VALID_YES_NO, help="Tests modified (default: no)")
-    create_parser.add_argument("--manual-verification", default="not_required",
-                               choices=VALID_VERIFICATION, help="Manual verification (default: not_required)")
+    create_parser.add_argument(
+        "--purpose", "-p", required=True, help="Purpose of the change"
+    )
+    create_parser.add_argument(
+        "--type",
+        "-t",
+        dest="change_type",
+        required=True,
+        choices=VALID_CHANGE_TYPES,
+        help="Type of change",
+    )
+    create_parser.add_argument(
+        "--artifacts",
+        "-a",
+        nargs="+",
+        required=True,
+        help="Artifact IDs being modified",
+    )
+    create_parser.add_argument(
+        "--author",
+        default="pair",
+        choices=["human", "claude", "pair"],
+        help="Author (default: pair)",
+    )
+    create_parser.add_argument(
+        "--risk",
+        default="low",
+        choices=VALID_RISK_LEVELS,
+        help="Risk level (default: low)",
+    )
+    create_parser.add_argument(
+        "--authority-change",
+        default="none",
+        choices=VALID_AUTHORITY_CHANGE,
+        help="Authority change (default: none)",
+    )
+    create_parser.add_argument(
+        "--behavior-change",
+        default="no",
+        choices=VALID_YES_NO,
+        help="Behavior change (default: no)",
+    )
+    create_parser.add_argument(
+        "--interface-change",
+        default="no",
+        choices=VALID_YES_NO,
+        help="Interface change (default: no)",
+    )
+    create_parser.add_argument(
+        "--data-change",
+        default="no",
+        choices=VALID_YES_NO,
+        help="Data change (default: no)",
+    )
+    create_parser.add_argument(
+        "--backward-compat",
+        default="yes",
+        choices=VALID_YES_NO,
+        help="Backward compatible (default: yes)",
+    )
+    create_parser.add_argument(
+        "--tests-added",
+        default="no",
+        choices=VALID_YES_NO,
+        help="Tests added (default: no)",
+    )
+    create_parser.add_argument(
+        "--tests-modified",
+        default="no",
+        choices=VALID_YES_NO,
+        help="Tests modified (default: no)",
+    )
+    create_parser.add_argument(
+        "--manual-verification",
+        default="not_required",
+        choices=VALID_VERIFICATION,
+        help="Manual verification (default: not_required)",
+    )
     create_parser.add_argument("--files-added", nargs="*", help="Files being added")
     create_parser.add_argument("--files-removed", nargs="*", help="Files being removed")
-    create_parser.add_argument("--files-renamed", nargs="*", metavar="FROM:TO",
-                               help="Files being renamed (format: old_path:new_path)")
+    create_parser.add_argument(
+        "--files-renamed",
+        nargs="*",
+        metavar="FROM:TO",
+        help="Files being renamed (format: old_path:new_path)",
+    )
     create_parser.add_argument("--related-pins", nargs="*", help="Related PIN numbers")
     create_parser.add_argument("--notes", help="Additional notes")
 
@@ -442,7 +514,10 @@ Examples:
             files_renamed = []
             for entry in args.files_renamed:
                 if ":" not in entry:
-                    print(f"ERROR: Invalid rename format '{entry}'. Use 'old_path:new_path'", file=sys.stderr)
+                    print(
+                        f"ERROR: Invalid rename format '{entry}'. Use 'old_path:new_path'",
+                        file=sys.stderr,
+                    )
                     sys.exit(1)
                 parts = entry.split(":", 1)
                 files_renamed.append((parts[0], parts[1]))
@@ -450,16 +525,24 @@ Examples:
         # For rename change type, enforce high-risk defaults
         if args.change_type == "rename":
             if args.risk == "low":
-                print("WARNING: Renames are HIGH-RISK. Setting risk_level to 'medium' (minimum).")
+                print(
+                    "WARNING: Renames are HIGH-RISK. Setting risk_level to 'medium' (minimum)."
+                )
                 args.risk = "medium"
             if args.interface_change == "no":
-                print("WARNING: Renames change import paths. Setting interface_change to 'yes'.")
+                print(
+                    "WARNING: Renames change import paths. Setting interface_change to 'yes'."
+                )
                 args.interface_change = "yes"
             if args.backward_compat == "yes":
-                print("WARNING: Renames break old imports. Setting backward_compatibility to 'no'.")
+                print(
+                    "WARNING: Renames break old imports. Setting backward_compatibility to 'no'."
+                )
                 args.backward_compat = "no"
             if args.manual_verification == "not_required":
-                print("WARNING: Renames require caller verification. Setting manual_verification to 'required'.")
+                print(
+                    "WARNING: Renames require caller verification. Setting manual_verification to 'required'."
+                )
                 args.manual_verification = "required"
 
         change_id, result = create_change_record(

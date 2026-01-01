@@ -25,7 +25,7 @@ import re
 import json
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 BASE_DIR = Path("/root/agenticverz2.0")
 
@@ -86,40 +86,41 @@ ARTIFACT_CLASSES = {
     "TEST": "Test files",
 }
 
+
 def should_skip(path: str) -> bool:
     return any(p in path for p in EXCLUDE_PATTERNS)
 
 
 def get_file_type(path: Path) -> str:
     ext = path.suffix.lower()
-    if ext in ['.py']:
-        return 'python'
-    elif ext in ['.ts', '.tsx']:
-        return 'typescript'
-    elif ext in ['.js', '.jsx']:
-        return 'javascript'
-    elif ext in ['.md']:
-        return 'markdown'
-    elif ext in ['.yaml', '.yml']:
-        return 'yaml'
-    elif ext in ['.json']:
-        return 'json'
-    elif ext in ['.sh']:
-        return 'shell'
-    elif ext in ['.sql']:
-        return 'sql'
-    elif ext in ['.css', '.scss']:
-        return 'css'
-    elif ext in ['.html']:
-        return 'html'
-    elif ext in ['.toml']:
-        return 'toml'
-    elif ext in ['.cfg', '.ini', '.conf']:
-        return 'config'
-    elif ext == '':
-        if path.name in ['Dockerfile', 'Makefile', 'Procfile']:
-            return 'config'
-    return 'other'
+    if ext in [".py"]:
+        return "python"
+    elif ext in [".ts", ".tsx"]:
+        return "typescript"
+    elif ext in [".js", ".jsx"]:
+        return "javascript"
+    elif ext in [".md"]:
+        return "markdown"
+    elif ext in [".yaml", ".yml"]:
+        return "yaml"
+    elif ext in [".json"]:
+        return "json"
+    elif ext in [".sh"]:
+        return "shell"
+    elif ext in [".sql"]:
+        return "sql"
+    elif ext in [".css", ".scss"]:
+        return "css"
+    elif ext in [".html"]:
+        return "html"
+    elif ext in [".toml"]:
+        return "toml"
+    elif ext in [".cfg", ".ini", ".conf"]:
+        return "config"
+    elif ext == "":
+        if path.name in ["Dockerfile", "Makefile", "Procfile"]:
+            return "config"
+    return "other"
 
 
 def get_artifact_class(path: Path, file_type: str) -> Tuple[str, bool]:
@@ -132,35 +133,42 @@ def get_artifact_class(path: Path, file_type: str) -> Tuple[str, bool]:
     # Non-executable artifact classes
 
     # STYLE: CSS/SCSS files
-    if file_type == 'css':
+    if file_type == "css":
         return "STYLE", False
 
     # DATA: JSON files in /data/ directories
-    if file_type == 'json' and '/data/' in path_str:
+    if file_type == "json" and "/data/" in path_str:
         return "DATA", False
 
     # CONFIG: YAML, INI, TOML, and config files
-    if file_type in ['yaml', 'config', 'toml']:
+    if file_type in ["yaml", "config", "toml"]:
         return "CONFIG", False
 
     # CONFIG: JSON config files (package.json, tsconfig.json, etc)
-    if file_type == 'json' and any(x in path.name for x in ['config', 'package', 'tsconfig', 'settings']):
+    if file_type == "json" and any(
+        x in path.name for x in ["config", "package", "tsconfig", "settings"]
+    ):
         return "CONFIG", False
 
     # DOC: Markdown files
-    if file_type == 'markdown':
+    if file_type == "markdown":
         return "DOC", False
 
     # TEST: Test files (code, but categorized separately)
-    if "tests/" in path_str or "test_" in path.name or "_test." in path.name or ".test." in path.name:
+    if (
+        "tests/" in path_str
+        or "test_" in path.name
+        or "_test." in path.name
+        or ".test." in path.name
+    ):
         return "TEST", True
 
     # Remaining JSON files that aren't data or config
-    if file_type == 'json':
+    if file_type == "json":
         return "DATA", False
 
     # Executable code files
-    if file_type in ['python', 'typescript', 'javascript', 'shell', 'sql', 'html']:
+    if file_type in ["python", "typescript", "javascript", "shell", "sql", "html"]:
         return "CODE", True
 
     return "CODE", True
@@ -177,11 +185,11 @@ def extract_header_info(content: str, file_type: str) -> Dict:
 
     first_2k = content[:2000]
 
-    if file_type == 'python':
+    if file_type == "python":
         layer_match = LAYER_PATTERN_PY.search(first_2k)
         product_match = PRODUCT_PATTERN_PY.search(first_2k)
         role_match = ROLE_PATTERN_PY.search(first_2k)
-    elif file_type in ['typescript', 'javascript']:
+    elif file_type in ["typescript", "javascript"]:
         layer_match = LAYER_PATTERN_TS.search(first_2k)
         product_match = PRODUCT_PATTERN_TS.search(first_2k)
         role_match = ROLE_PATTERN_TS.search(first_2k)
@@ -202,7 +210,9 @@ def extract_header_info(content: str, file_type: str) -> Dict:
     return info
 
 
-def infer_layer(path: Path, file_type: str, artifact_class: str) -> Tuple[str, str, str]:
+def infer_layer(
+    path: Path, file_type: str, artifact_class: str
+) -> Tuple[str, str, str]:
     """Returns (layer, confidence, reason)"""
     path_str = str(path)
 
@@ -277,7 +287,11 @@ def infer_layer(path: Path, file_type: str, artifact_class: str) -> Tuple[str, s
         return "L4", "medium", "agent"
     if "/costsim/" in path_str or "/blackboard/" in path_str:
         return "L4", "medium", "domain logic"
-    if "/learning/" in path_str or "/routing/" in path_str or "/optimization/" in path_str:
+    if (
+        "/learning/" in path_str
+        or "/routing/" in path_str
+        or "/optimization/" in path_str
+    ):
         return "L4", "medium", "domain logic"
     if "/sba/" in path_str or "/predictions/" in path_str:
         return "L4", "medium", "domain logic"
@@ -336,7 +350,7 @@ def scan_repository():
             "by_confidence": defaultdict(int),
             "by_product": defaultdict(int),
             "by_artifact_class": defaultdict(int),
-        }
+        },
     }
 
     for scan_dir in SCAN_DIRS:
@@ -355,11 +369,11 @@ def scan_repository():
                     continue
 
                 file_type = get_file_type(fpath)
-                if file_type == 'other':
+                if file_type == "other":
                     continue
 
                 try:
-                    content = fpath.read_text(errors='ignore')
+                    content = fpath.read_text(errors="ignore")
                 except:
                     continue
 
@@ -384,7 +398,9 @@ def scan_repository():
                     reason = "explicit header"
                     inventory["statistics"]["with_headers"] += 1
                 else:
-                    layer, confidence, reason = infer_layer(fpath, file_type, artifact_class)
+                    layer, confidence, reason = infer_layer(
+                        fpath, file_type, artifact_class
+                    )
                     inventory["statistics"]["without_headers"] += 1
 
                 # Build file entry
@@ -411,7 +427,7 @@ def scan_repository():
                 inventory["by_artifact_class"][artifact_class].append(entry)
 
                 # Index by directory
-                top_dir = rel_path.split('/')[0]
+                top_dir = rel_path.split("/")[0]
                 inventory["by_directory"][top_dir].append(entry)
 
                 # Index by product
@@ -425,7 +441,7 @@ def scan_repository():
 def print_summary(inventory):
     """Print formatted summary"""
     stats = inventory["statistics"]
-    total = stats['total_files']
+    total = stats["total_files"]
 
     print("=" * 80)
     print("CODEBASE INVENTORY vs LAYERED INVENTORY")
@@ -436,9 +452,15 @@ def print_summary(inventory):
     print("## OVERALL STATISTICS")
     print()
     print(f"Total Files Scanned: {stats['total_files']}")
-    print(f"  Executable (CODE/TEST):  {stats['executable']} ({100*stats['executable']/total:.1f}%)")
-    print(f"  Non-Executable:          {stats['non_executable']} ({100*stats['non_executable']/total:.1f}%)")
-    print(f"  With Headers:            {stats['with_headers']} ({100*stats['with_headers']/total:.1f}%)")
+    print(
+        f"  Executable (CODE/TEST):  {stats['executable']} ({100*stats['executable']/total:.1f}%)"
+    )
+    print(
+        f"  Non-Executable:          {stats['non_executable']} ({100*stats['non_executable']/total:.1f}%)"
+    )
+    print(
+        f"  With Headers:            {stats['with_headers']} ({100*stats['with_headers']/total:.1f}%)"
+    )
     print()
 
     # Artifact class distribution
@@ -447,7 +469,7 @@ def print_summary(inventory):
     print("| Class  | Description              | Count | % of Total |")
     print("|--------|--------------------------|-------|------------|")
     for cls in ["CODE", "TEST", "DOC", "CONFIG", "DATA", "STYLE"]:
-        count = stats['by_artifact_class'].get(cls, 0)
+        count = stats["by_artifact_class"].get(cls, 0)
         pct = 100 * count / total if total > 0 else 0
         desc = ARTIFACT_CLASSES.get(cls, "")
         print(f"| {cls:6} | {desc:24} | {count:5} | {pct:9.1f}% |")
@@ -460,7 +482,7 @@ def print_summary(inventory):
     print("|-------|----------------------|-------|------------|")
 
     for layer in ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "UNKNOWN"]:
-        count = stats['by_layer'].get(layer, 0)
+        count = stats["by_layer"].get(layer, 0)
         pct = 100 * count / total if total > 0 else 0
         name = LAYER_NAMES.get(layer, "Unknown")
         print(f"| {layer:5} | {name:20} | {count:5} | {pct:9.1f}% |")
@@ -472,7 +494,7 @@ def print_summary(inventory):
     print("| Confidence | Count | % of Total |")
     print("|------------|-------|------------|")
     for conf in ["high", "medium", "low"]:
-        count = stats['by_confidence'].get(conf, 0)
+        count = stats["by_confidence"].get(conf, 0)
         pct = 100 * count / total if total > 0 else 0
         print(f"| {conf:10} | {count:5} | {pct:9.1f}% |")
     print()
@@ -482,18 +504,18 @@ def print_summary(inventory):
     print()
     print("| Type       | Count |")
     print("|------------|-------|")
-    for ftype, count in sorted(inventory['by_file_type'].items(), key=lambda x: -x[1]):
+    for ftype, count in sorted(inventory["by_file_type"].items(), key=lambda x: -x[1]):
         print(f"| {ftype:10} | {count:5} |")
     print()
 
     # Directory breakdown
     print("## DIRECTORY → LAYER MAPPING")
     print()
-    for directory in sorted(inventory['by_directory'].keys()):
-        files = inventory['by_directory'][directory]
+    for directory in sorted(inventory["by_directory"].keys()):
+        files = inventory["by_directory"][directory]
         layer_counts = defaultdict(int)
         for f in files:
-            layer_counts[f['layer']] += 1
+            layer_counts[f["layer"]] += 1
 
         print(f"### {directory}/ ({len(files)} files)")
         for layer in ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "UNKNOWN"]:
@@ -502,7 +524,7 @@ def print_summary(inventory):
         print()
 
     # UNKNOWN files (if any)
-    unknown = inventory['by_layer'].get('UNKNOWN', [])
+    unknown = inventory["by_layer"].get("UNKNOWN", [])
     if unknown:
         print("## ⚠️ UNKNOWN FILES (need classification)")
         print()
@@ -528,7 +550,9 @@ def print_json(inventory):
             "with_headers": inventory["statistics"]["with_headers"],
             "without_headers": inventory["statistics"]["without_headers"],
             "layer_distribution": dict(inventory["statistics"]["by_layer"]),
-            "artifact_class_distribution": dict(inventory["statistics"]["by_artifact_class"]),
+            "artifact_class_distribution": dict(
+                inventory["statistics"]["by_artifact_class"]
+            ),
             "confidence_distribution": dict(inventory["statistics"]["by_confidence"]),
             "product_distribution": dict(inventory["statistics"]["by_product"]),
         },

@@ -19,7 +19,6 @@ What is NOT tested:
 """
 
 import pytest
-from fastapi.testclient import TestClient
 
 
 @pytest.mark.lit

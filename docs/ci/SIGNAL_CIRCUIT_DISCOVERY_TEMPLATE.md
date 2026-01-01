@@ -214,4 +214,3 @@ Check each rule. All must be YES to complete.
 | Date | Change |
 |------|--------|
 | {date} | Initial discovery for L{X}↔L{Y} |
-

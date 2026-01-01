@@ -37,7 +37,6 @@ Reference: PIN-258 Phase F-3 Workers Cluster
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-
 # =============================================================================
 # L4 Command Result Types
 # =============================================================================
@@ -46,6 +45,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class WorkerExecutionResult:
     """Result from worker execution command."""
+
     success: bool
     run_id: str
     status: str
@@ -65,6 +65,7 @@ class WorkerExecutionResult:
 @dataclass
 class ReplayResult:
     """Result from replay command."""
+
     success: bool
     run_id: str
     status: str

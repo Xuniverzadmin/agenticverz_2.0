@@ -216,6 +216,68 @@ jobs:
           echo ""
           echo "OK: All migrations committed"
 
+  # ============================================================================
+  # L5→L4 LAYER ENFORCEMENT (Phase R Wave-1) — MERGE BLOCKING
+  # ============================================================================
+  # Reference: PIN-263 (Phase R Structural Repair)
+  # Rule: L5 (Workers) may NOT import L4 (Domain Engines)
+  # Escape: Include "SIG-001" in commit message for owner override
+  layer-enforcement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: L5→L4 Layer Enforcement (Phase R Wave-1)
+        run: |
+          echo "=============================================="
+          echo "L5→L4 Layer Enforcement (Phase R Wave-1)"
+          echo "=============================================="
+          echo "INVARIANT: L5 (Workers) may NOT import L4 (Domain Engines)"
+          echo "Reference: PIN-263 (Phase R Structural Repair)"
+          echo "Baseline: 602 files, 0 violations (2026-01-01)"
+          echo ""
+
+          # Run BLCA
+          python3 scripts/ops/layer_validator.py --backend --ci 2>&1 | tee /tmp/blca-output.txt
+          BLCA_EXIT=${PIPESTATUS[0]}
+
+          if [ $BLCA_EXIT -ne 0 ]; then
+            # Check for escape hatch
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+            if echo "$COMMIT_MSG" | grep -q "SIG-001"; then
+              echo ""
+              echo "⚠️ SIG-001 escape hatch detected — violations allowed"
+              echo "WARNING: This bypasses L5→L4 enforcement. Requires owner approval."
+              echo ""
+              # Extract L5→L4 violations specifically
+              grep -E "L5 -> L4" /tmp/blca-output.txt || true
+              exit 0
+            else
+              echo ""
+              echo "::error::L5→L4 layer violation detected!"
+              echo ""
+              echo "This PR introduces L5 (Worker) → L4 (Domain) imports which are FORBIDDEN."
+              echo ""
+              echo "To fix:"
+              echo "  1. Move domain logic to L4 and have L5 receive decisions via DTOs"
+              echo "  2. Use environment variables for configuration (dependency inversion)"
+              echo "  3. See PIN-263 for examples of correct patterns"
+              echo ""
+              echo "To override (requires owner approval):"
+              echo "  Add 'SIG-001' to your commit message"
+              echo ""
+              exit 1
+            fi
+          fi
+
+          echo "✅ PASS: No L5→L4 violations detected"
+          echo "Layer architecture is clean."
+
   # M26: SQL Misuse Guard - blocks session.exec(text()) antipattern
   sql-misuse-guard:
     runs-on: ubuntu-latest
