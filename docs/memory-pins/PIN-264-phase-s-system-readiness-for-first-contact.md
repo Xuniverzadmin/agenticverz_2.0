@@ -330,6 +330,64 @@ ErrorEnvelope is **INFRASTRUCTURE-ONLY**:
 - `docs/governance/SEMANTIC_ARTIFACTS.md` — Emission rules + forbidden patterns
 - `docs/playbooks/SESSION_PLAYBOOK.yaml` — Section 16 (Phase-S Infrastructure Rule)
 
+### L4 Ops Domain Models ✅ COMPLETE (2026-01-01)
+
+**File Created:** `backend/app/services/ops_domain_models.py`
+
+**Publication Pipeline (Locked):**
+```
+L6  Infra Truth (ErrorEnvelope, DecisionSnapshot)
+ ↓   (never exposed)
+L4  Domain Interpretation (OpsIncident, OpsHealthSignal)
+ ↓
+L3  View Adapters (FounderOpsAdapter, PreflightOpsAdapter)
+ ↓
+L2  Ops APIs (read-only, aggregated)
+ ↓
+L1  Consoles (fops, preflight-fops)
+```
+
+**Core Models (6 types):**
+
+| Model | Purpose | Operator Question |
+|-------|---------|-------------------|
+| `OpsIncident` | Aggregated failure patterns | "Why did this fail?" |
+| `OpsHealthSignal` | Current component health | "Is the system OK now?" |
+| `OpsRiskFinding` | Preflight risk findings | "What breaks if users arrive?" |
+| `OpsTrendMetric` | Time-series trends | "Is this getting better or worse?" |
+| `OpsDecisionOutcome` | Decision summaries | "What decisions did the system make?" |
+| `OpsCorrelatedEvent` | Cross-component correlation | "What happened together?" |
+
+**Ops-Level Enums (distinct from infra):**
+- `OpsSeverity`: INFO → ATTENTION → ACTION → URGENT
+- `OpsIncidentCategory`: execution_failure, budget_exhaustion, policy_violation...
+- `OpsHealthStatus`: healthy, degraded, unhealthy, unknown
+- `OpsRiskLevel`: low, medium, high, critical
+
+**Key Constraint Verified:**
+- ✅ No L6 infra imports in L4 models
+- ✅ Models are pure dataclasses (no DB dependency)
+- ✅ BLCA: CLEAN (606 files, 0 violations)
+
+---
+
+## Progress Tracker
+
+| Track | Item | Status |
+|-------|------|--------|
+| 1.1 | Error Envelope Schema | ✅ COMPLETE |
+| 1.2 | Correlation IDs | ✅ COMPLETE |
+| 1.3 | Error Persistence | 📋 PENDING |
+| — | Semantic Lockdown | ✅ COMPLETE |
+| — | L4 Ops Domain Models | ✅ COMPLETE |
+| — | L3 View Adapters | 📋 PENDING |
+| — | L2 Ops APIs | 📋 PENDING |
+| — | L1 Console Wiring | 📋 PENDING |
+| 2.1 | Decision Snapshotting | 📋 PENDING |
+| 2.2 | Replay Mode | 📋 PENDING |
+| 3.1 | Synthetic Scenario Runner | 📋 PENDING |
+| 4.1 | Incident → Lesson Pipeline | 📋 PENDING |
+
 ---
 
 ## Reference
