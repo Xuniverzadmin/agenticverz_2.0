@@ -31,6 +31,30 @@ Required Fields (PIN-264):
 - input_hash: Hash of input data (not raw input)
 - error_class: Classification of error type
 - severity: Error severity level
+
+ARCHITECTURAL CONSTRAINT (MANDATORY):
+    ErrorEnvelope is INFRASTRUCTURE-ONLY.
+    It must NEVER be:
+    - Returned from L2 APIs to clients
+    - Rendered in UI components
+    - Used as a product contract or public schema
+    - Exposed to customers in any form
+
+    If users need error responses, that is a SEPARATE product error model
+    defined at L2/L3 boundary. This envelope is for forensics, not UX.
+
+EMISSION RULES BY LAYER:
+    | Layer | Allowed error_class prefixes |
+    |-------|------------------------------|
+    | L2    | infra.*, system.*            |
+    | L3    | infra.*, system.*            |
+    | L4    | domain.*, system.*           |
+    | L5    | infra.*, system.*            |
+    | L6    | infra.*, system.*            |
+
+    Workers (L5) should NOT emit domain.* errors.
+    Domain engines (L4) should NOT emit infra.* errors.
+    This preserves semantic integrity of error classification.
 """
 
 import hashlib

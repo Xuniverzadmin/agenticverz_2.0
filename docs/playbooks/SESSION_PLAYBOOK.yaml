@@ -5640,6 +5640,72 @@ claude_governance:
       - replace_CI
 
   # ---------------------------------------------------------------------------
+  # 16. Phase-S Infrastructure Rule (Mandatory)
+  # ---------------------------------------------------------------------------
+  phase_s_infrastructure:
+    name: Phase-S Infra Semantics
+    reference: PIN-264
+    effective: 2026-01-01
+
+    prime_directive: |
+      Phase-S systems are infrastructure diagnostics ONLY.
+      They live in L6/L7/L8, use `infra.*` semantics, and must NOT be exposed
+      to product APIs, UI, or customer contracts.
+      Any user-visible error system is a separate concern and must be modeled separately.
+
+    namespace_separation:
+      infra_namespace: "app.infra.*"
+      product_namespace: "app.{api,services,workers}.*"
+      rule: "infra.* never leaks into product.* responses"
+
+    error_envelope_constraints:
+      artifact: "app.infra.error_envelope.ErrorEnvelope"
+      layer: L6
+      exposure: FORBIDDEN_TO_CLIENTS
+      forbidden_uses:
+        - return_from_L2_APIs
+        - render_in_UI
+        - use_as_product_contract
+        - expose_to_customers
+
+    emission_rules_by_layer:
+      L2_API:
+        allowed: ["infra.*", "system.*"]
+        forbidden: ["domain.*"]
+      L3_Adapter:
+        allowed: ["infra.*", "system.*"]
+        forbidden: ["domain.*"]
+      L4_Domain:
+        allowed: ["domain.*", "system.*"]
+        forbidden: ["infra.*"]
+      L5_Worker:
+        allowed: ["infra.*", "system.*"]
+        forbidden: ["domain.*"]
+      L6_Platform:
+        allowed: ["infra.*", "system.*"]
+        forbidden: ["domain.*"]
+
+    rationale: |
+      Workers (L5) execute but do not interpret domain meaning.
+      Domain engines (L4) own business semantics, not infrastructure failures.
+      Mixing these collapses diagnostic value and creates semantic drift.
+
+    validation:
+      - check: "L2 never returns ErrorEnvelope"
+        type: AST_SCAN
+        severity: BLOCKING
+      - check: "L5 never emits domain.*"
+        type: RUNTIME_ASSERTION
+        severity: BLOCKING
+      - check: "L4 never emits infra.*"
+        type: RUNTIME_ASSERTION
+        severity: BLOCKING
+
+    related_docs:
+      - docs/governance/SEMANTIC_ARTIFACTS.md
+      - docs/memory-pins/PIN-264-phase-s-system-readiness-for-first-contact.md
+
+  # ---------------------------------------------------------------------------
   # Reference Documents
   # ---------------------------------------------------------------------------
   reference:

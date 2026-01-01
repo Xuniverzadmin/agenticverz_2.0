@@ -305,6 +305,31 @@ Violations found: 0
 Layer architecture is clean.
 ```
 
+### Semantic Lockdown ✅ COMPLETE (2026-01-01)
+
+**Risk 1: Error Classification Drift — LOCKED**
+
+| Layer | Allowed `error_class` | Forbidden |
+|-------|----------------------|-----------|
+| L2 (API) | `infra.*`, `system.*` | `domain.*` |
+| L3 (Adapter) | `infra.*`, `system.*` | `domain.*` |
+| L4 (Domain) | `domain.*`, `system.*` | `infra.*` |
+| L5 (Worker) | `infra.*`, `system.*` | `domain.*` |
+| L6 (Platform) | `infra.*`, `system.*` | `domain.*` |
+
+**Risk 2: Product API Leak — LOCKED**
+
+ErrorEnvelope is **INFRASTRUCTURE-ONLY**:
+- ❌ NEVER return from L2 APIs
+- ❌ NEVER render in UI
+- ❌ NEVER use as product contract
+- ❌ NEVER expose to customers
+
+**Governance Documents Updated:**
+- `backend/app/infra/error_envelope.py` — Constraints in docstring
+- `docs/governance/SEMANTIC_ARTIFACTS.md` — Emission rules + forbidden patterns
+- `docs/playbooks/SESSION_PLAYBOOK.yaml` — Section 16 (Phase-S Infrastructure Rule)
+
 ---
 
 ## Reference
