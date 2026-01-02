@@ -1,0 +1,31 @@
+{
+  "status": "CLEAN",
+  "generated": "2026-01-02",
+  "summary": {
+    "total_files": 326,
+    "total_routes": 336,
+    "layer_coverage_percent": 71.5,
+    "declared_files": 233
+  },
+  "issues": [],
+  "warnings": [
+    "31 routes without frontend category assignment",
+    "107 files without declared purpose/intent"
+  ],
+  "layer_breakdown": {
+    "L2": 34,
+    "L3": 27,
+    "L4": 165,
+    "L5": 24,
+    "L6": 76
+  },
+  "route_categories": {
+    "governance": 120,
+    "unassigned": 31,
+    "monitoring": 39,
+    "operations": 36,
+    "internal": 35,
+    "supporting": 30,
+    "core": 45
+  }
+}

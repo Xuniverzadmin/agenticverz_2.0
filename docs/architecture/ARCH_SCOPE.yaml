@@ -1,0 +1,87 @@
+# Architecture Extraction Scope
+# Generated: 2026-01-02
+# Purpose: Define boundaries for declarative architecture extraction
+# Reference: Phase G Steady-State Governance
+
+version: "1.0"
+status: FROZEN
+
+scope:
+  layers: [L2, L3, L4, L5, L6]
+  root_paths:
+    - backend/app/api/          # L2 - Product APIs
+    - backend/app/adapters/     # L3 - Boundary Adapters
+    - backend/app/services/     # L4 - Domain Engines
+    - backend/app/engines/      # L4 - Domain Engines
+    - backend/app/worker/       # L5 - Execution & Workers
+    - backend/app/db/           # L6 - Platform Substrate
+    - backend/app/stores/       # L6 - Platform Substrate
+    - backend/app/infra/        # L6 - Platform Substrate
+
+  exclude:
+    - backend/tests/
+    - scripts/ci/
+    - scripts/ops/
+    - migrations/obligations/
+    - docs/
+    - experimental/
+    - backend/app/schemas/      # Data definitions, not runtime
+    - backend/app/specs/        # Specifications, not code
+
+truth_sources:
+  # These are the ONLY sources Claude may use for extraction
+  - type: file_headers
+    description: "LAYER: and FEATURE_INTENT declarations in code"
+  - type: infra_registry
+    path: docs/infra/INFRA_REGISTRY.md
+    description: "Infrastructure state declarations"
+  - type: obligation_registry
+    path: docs/infra/INFRA_OBLIGATION_REGISTRY.yaml
+    description: "Retry, DLQ, and delivery obligations"
+  - type: route_definitions
+    path: backend/app/api/
+    description: "Actual FastAPI route registrations"
+  - type: layer_map
+    path: docs/governance/LAYER_MAP_BASELINE.yaml
+    description: "Frozen layer assignments"
+
+extraction_rules:
+  # What Claude MUST do
+  must:
+    - "Extract only from declared sources"
+    - "Respect LAYER headers as authoritative"
+    - "Use existing FEATURE_INTENT where present"
+    - "Mark undeclared components as UNKNOWN"
+    - "Preserve existing semantic classifications"
+
+  # What Claude MUST NOT do
+  must_not:
+    - "Infer purpose from filename alone"
+    - "Speculate on missing declarations"
+    - "Read tests as runtime behavior"
+    - "Suggest new APIs or components"
+    - "Refactor during extraction"
+    - "Add components not in source"
+
+output_artifacts:
+  - path: artifacts/architecture/component_inventory.json
+    purpose: "Complete component list by layer"
+  - path: docs/architecture/ARCH_GRAPH.md
+    purpose: "Component connection graph"
+  - path: docs/architecture/ARCH_DECLARATION.md
+    purpose: "Frozen architecture declaration"
+  - path: artifacts/apis/L2_API_INVENTORY.json
+    purpose: "L2 API surface for frontend"
+  - path: docs/apis/L2_API_CONTRACT.md
+    purpose: "Frontend-facing API contracts"
+  - path: artifacts/architecture/DRIFT_REPORT.md
+    purpose: "Reconciliation with repo state"
+
+validation:
+  pre_extraction:
+    - "BLCA must report 0 violations"
+    - "Layer map baseline must exist"
+  post_extraction:
+    - "Every component must have layer assignment"
+    - "Every L2 route must appear in inventory"
+    - "No UNKNOWN classifications in final output"

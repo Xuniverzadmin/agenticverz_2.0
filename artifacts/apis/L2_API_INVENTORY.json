@@ -1,0 +1,4966 @@
+{
+  "generated": "2026-01-02",
+  "total_routes": 336,
+  "by_category": {
+    "governance": 120,
+    "unassigned": 31,
+    "monitoring": 39,
+    "operations": 36,
+    "internal": 35,
+    "supporting": 30,
+    "core": 45
+  },
+  "routes": [
+    {
+      "method": "DELETE",
+      "path": "/api/v1/agents/agents/{instance_id}",
+      "domain": "agents",
+      "function": "deregister_agent",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "instance_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents",
+      "domain": "agents",
+      "function": "list_agents",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/activity/blockers",
+      "domain": "agents",
+      "function": "get_agent_activity_blockers",
+      "response_model": "ActivityBlockersResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/activity/costs",
+      "domain": "agents",
+      "function": "get_agent_activity_costs",
+      "response_model": "ActivityCostsResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/activity/retries",
+      "domain": "agents",
+      "function": "get_agent_activity_retries",
+      "response_model": "ActivityRetriesResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/activity/spending",
+      "domain": "agents",
+      "function": "get_agent_activity_spending",
+      "response_model": "SpendingDataResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/evolution",
+      "domain": "agents",
+      "function": "get_agent_evolution",
+      "response_model": "EvolutionReportResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/reputation",
+      "domain": "agents",
+      "function": "get_agent_reputation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/sla",
+      "domain": "agents",
+      "function": "get_agent_sla",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/strategy",
+      "domain": "agents",
+      "function": "get_agent_strategy",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{agent_id}/successors",
+      "domain": "agents",
+      "function": "get_agent_successors",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{instance_id}",
+      "domain": "agents",
+      "function": "get_agent",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "instance_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/agents/{instance_id}/messages",
+      "domain": "agents",
+      "function": "get_messages",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "instance_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/blackboard/{key}",
+      "domain": "agents",
+      "function": "get_blackboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "key"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/jobs/{job_id}",
+      "domain": "agents",
+      "function": "get_job",
+      "response_model": "JobResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "job_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/routing/stability",
+      "domain": "agents",
+      "function": "get_system_stability",
+      "response_model": "SystemStabilityResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/routing/stats",
+      "domain": "agents",
+      "function": "get_routing_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/sba",
+      "domain": "agents",
+      "function": "list_agents_sba",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/sba/fulfillment/aggregated",
+      "domain": "agents",
+      "function": "get_fulfillment_aggregated",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/sba/health",
+      "domain": "agents",
+      "function": "get_sba_health",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/sba/version",
+      "domain": "agents",
+      "function": "get_sba_version_info",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/sba/{agent_id}",
+      "domain": "agents",
+      "function": "get_agent_sba",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/agents/register",
+      "domain": "agents",
+      "function": "register_agent",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "onboarding"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/agents/{agent_id}/health/check",
+      "domain": "agents",
+      "function": "check_agent_health",
+      "response_model": "HealthCheckResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/agents/{agent_id}/strategy/update",
+      "domain": "agents",
+      "function": "update_agent_strategy",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/agents/{instance_id}/heartbeat",
+      "domain": "agents",
+      "function": "agent_heartbeat",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "instance_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/agents/{instance_id}/messages",
+      "domain": "agents",
+      "function": "send_message",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "instance_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/agents/{instance_id}/messages/{message_id}/read",
+      "domain": "agents",
+      "function": "mark_message_read",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "instance_id",
+        "message_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/blackboard/{key}/increment",
+      "domain": "agents",
+      "function": "increment_blackboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "key"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/blackboard/{key}/lock",
+      "domain": "agents",
+      "function": "lock_blackboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "key"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/invocations/respond",
+      "domain": "agents",
+      "function": "respond_to_invocation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/jobs",
+      "domain": "agents",
+      "function": "create_job",
+      "response_model": "JobResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/jobs/simulate",
+      "domain": "agents",
+      "function": "simulate_job",
+      "response_model": "SimulateJobResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/jobs/{job_id}/cancel",
+      "domain": "agents",
+      "function": "cancel_job",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "job_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/jobs/{job_id}/claim",
+      "domain": "agents",
+      "function": "claim_item",
+      "response_model": "ClaimItemResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "job_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/jobs/{job_id}/items/{item_id}/complete",
+      "domain": "agents",
+      "function": "complete_item",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "job_id",
+        "item_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/jobs/{job_id}/items/{item_id}/fail",
+      "domain": "agents",
+      "function": "fail_item",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "job_id",
+        "item_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/routing/batch-learning",
+      "domain": "agents",
+      "function": "trigger_batch_learning",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/routing/cascade-evaluate",
+      "domain": "agents",
+      "function": "cascade_evaluate",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/routing/dispatch",
+      "domain": "agents",
+      "function": "routing_dispatch",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/routing/explain/{request_id}",
+      "domain": "agents",
+      "function": "explain_routing_decision",
+      "response_model": "ExplainRoutingResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "request_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/routing/stability/freeze",
+      "domain": "agents",
+      "function": "freeze_system",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/routing/stability/unfreeze",
+      "domain": "agents",
+      "function": "unfreeze_system",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/sba/check-spawn",
+      "domain": "agents",
+      "function": "check_spawn_allowed",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/sba/generate",
+      "domain": "agents",
+      "function": "generate_sba_for_agent",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/sba/register",
+      "domain": "agents",
+      "function": "register_agent_with_sba",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "onboarding"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/sba/validate",
+      "domain": "agents",
+      "function": "validate_sba_endpoint",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/sba/version/negotiate",
+      "domain": "agents",
+      "function": "negotiate_sba_version",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/agents/blackboard/{key}",
+      "domain": "agents",
+      "function": "put_blackboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "key"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth-helpers/status",
+      "domain": "auth_helpers",
+      "function": "get_status",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-guard/explained",
+      "domain": "cost_guard",
+      "function": "get_cost_explained",
+      "response_model": "CustomerCostExplainedDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-guard/incidents",
+      "domain": "cost_guard",
+      "function": "get_cost_incidents",
+      "response_model": "CustomerCostIncidentListDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-guard/summary",
+      "domain": "cost_guard",
+      "function": "get_cost_summary",
+      "response_model": "CustomerCostSummaryDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/anomalies",
+      "domain": "cost_intelligence",
+      "function": "get_anomalies",
+      "response_model": "List[CostAnomalyResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/budgets",
+      "domain": "cost_intelligence",
+      "function": "list_budgets",
+      "response_model": "List[BudgetResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/by-feature",
+      "domain": "cost_intelligence",
+      "function": "get_costs_by_feature",
+      "response_model": "List[CostByFeature]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/by-model",
+      "domain": "cost_intelligence",
+      "function": "get_costs_by_model",
+      "response_model": "List[CostByModel]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/by-user",
+      "domain": "cost_intelligence",
+      "function": "get_costs_by_user",
+      "response_model": "List[CostByUser]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/dashboard",
+      "domain": "cost_intelligence",
+      "function": "get_cost_dashboard",
+      "response_model": "CostDashboard",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/features",
+      "domain": "cost_intelligence",
+      "function": "list_feature_tags",
+      "response_model": "List[FeatureTagResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/projection",
+      "domain": "cost_intelligence",
+      "function": "get_projection",
+      "response_model": "CostProjection",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-intelligence/summary",
+      "domain": "cost_intelligence",
+      "function": "get_cost_summary",
+      "response_model": "CostSummary",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cost-intelligence/anomalies/detect",
+      "domain": "cost_intelligence",
+      "function": "trigger_anomaly_detection",
+      "response_model": "AnomalyDetectionResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cost-intelligence/budgets",
+      "domain": "cost_intelligence",
+      "function": "create_or_update_budget",
+      "response_model": "BudgetResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cost-intelligence/features",
+      "domain": "cost_intelligence",
+      "function": "create_feature_tag",
+      "response_model": "FeatureTagResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cost-intelligence/record",
+      "domain": "cost_intelligence",
+      "function": "record_cost",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cost-intelligence/features/{tag}",
+      "domain": "cost_intelligence",
+      "function": "update_feature_tag",
+      "response_model": "FeatureTagResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "tag"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-ops/anomalies",
+      "domain": "cost_ops",
+      "function": "get_cost_anomalies",
+      "response_model": "FounderCostAnomalyListDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-ops/customers/{tenant_id}",
+      "domain": "cost_ops",
+      "function": "get_customer_cost_drilldown",
+      "response_model": "FounderCustomerCostDrilldownDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "tenant_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-ops/overview",
+      "domain": "cost_ops",
+      "function": "get_cost_overview",
+      "response_model": "FounderCostOverviewDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cost-ops/tenants",
+      "domain": "cost_ops",
+      "function": "get_cost_tenants",
+      "response_model": "FounderCostTenantListDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/costsim/canary/reports",
+      "domain": "costsim",
+      "function": "get_canary_reports",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/costsim/datasets",
+      "domain": "costsim",
+      "function": "list_datasets",
+      "response_model": "List[DatasetInfo]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/costsim/datasets/{dataset_id}",
+      "domain": "costsim",
+      "function": "get_dataset_info",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "dataset_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/costsim/divergence",
+      "domain": "costsim",
+      "function": "get_divergence_report",
+      "response_model": "DivergenceReportResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/costsim/v2/incidents",
+      "domain": "costsim",
+      "function": "get_incidents",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/costsim/v2/status",
+      "domain": "costsim",
+      "function": "get_sandbox_status",
+      "response_model": "SandboxStatusResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/costsim/canary/run",
+      "domain": "costsim",
+      "function": "trigger_canary_run",
+      "response_model": "CanaryRunResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/costsim/datasets/validate-all",
+      "domain": "costsim",
+      "function": "validate_all",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/costsim/datasets/{dataset_id}/validate",
+      "domain": "costsim",
+      "function": "validate_against_dataset",
+      "response_model": "ValidationResultResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "dataset_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/costsim/v2/reset",
+      "domain": "costsim",
+      "function": "reset_circuit_breaker",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/costsim/v2/simulate",
+      "domain": "costsim",
+      "function": "simulate_v2",
+      "response_model": "SandboxSimulateResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/customer-visibility/declaration/{declaration_id}",
+      "domain": "customer_visibility",
+      "function": "get_declaration",
+      "response_model": "PreRunDeclaration",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "declaration_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/customer-visibility/outcome/{run_id}",
+      "domain": "customer_visibility",
+      "function": "get_outcome_reconciliation",
+      "response_model": "OutcomeReconciliation",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/customer-visibility/acknowledge",
+      "domain": "customer_visibility",
+      "function": "acknowledge_declaration",
+      "response_model": "AcknowledgementResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/customer-visibility/pre-run",
+      "domain": "customer_visibility",
+      "function": "get_pre_run_declaration",
+      "response_model": "PreRunDeclaration",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/discovery/",
+      "domain": "discovery",
+      "function": "list_signals",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/discovery/stats",
+      "domain": "discovery",
+      "function": "signal_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/embedding/cache",
+      "domain": "embedding",
+      "function": "clear_embedding_cache",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/embedding/cache/stats",
+      "domain": "embedding",
+      "function": "embedding_cache_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/embedding/config",
+      "domain": "embedding",
+      "function": "get_embedding_config",
+      "response_model": "EmbeddingConfigResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/embedding/health",
+      "domain": "embedding",
+      "function": "embedding_health",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/embedding/iaec/instructions",
+      "domain": "embedding",
+      "function": "get_iaec_instructions",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/embedding/iaec/segment-info",
+      "domain": "embedding",
+      "function": "get_iaec_segment_info",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/embedding/quota",
+      "domain": "embedding",
+      "function": "get_embedding_quota",
+      "response_model": "EmbeddingQuotaResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/embedding/compose",
+      "domain": "embedding",
+      "function": "compose_embedding",
+      "response_model": "IAECComposeResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/embedding/decompose",
+      "domain": "embedding",
+      "function": "decompose_embedding",
+      "response_model": "IAECDecomposeResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/embedding/iaec/check-mismatch",
+      "domain": "embedding",
+      "function": "check_mismatch",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/feedback/stats/summary",
+      "domain": "feedback",
+      "function": "get_feedback_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/feedback/{feedback_id}",
+      "domain": "feedback",
+      "function": "get_feedback",
+      "response_model": "FeedbackDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "feedback_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founder-actions/audit",
+      "domain": "founder_actions",
+      "function": "get_audit_trail",
+      "response_model": "FounderActionListDTO,",
+      "summary": "Get founder action audit trail",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founder-actions/audit/{action_id}",
+      "domain": "founder_actions",
+      "function": "get_audit_record",
+      "response_model": "FounderAuditRecordDTO,",
+      "summary": "Get single audit record",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "action_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/founder-actions/freeze-api-key",
+      "domain": "founder_actions",
+      "function": "freeze_api_key",
+      "response_model": "FounderActionResponseDTO,",
+      "summary": "Freeze API key - immediately revoke",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/founder-actions/freeze-tenant",
+      "domain": "founder_actions",
+      "function": "freeze_tenant",
+      "response_model": "FounderActionResponseDTO,",
+      "summary": "Freeze tenant - block all API calls",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/founder-actions/override-incident",
+      "domain": "founder_actions",
+      "function": "override_incident",
+      "response_model": "FounderActionResponseDTO,",
+      "summary": "Override incident - mark as false positive",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/founder-actions/throttle-tenant",
+      "domain": "founder_actions",
+      "function": "throttle_tenant",
+      "response_model": "FounderActionResponseDTO,",
+      "summary": "Throttle tenant - reduce rate limit to 10%",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/founder-actions/unfreeze-api-key",
+      "domain": "founder_actions",
+      "function": "unfreeze_api_key",
+      "response_model": "FounderActionResponseDTO,",
+      "summary": "Unfreeze API key - restore access",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/founder-actions/unfreeze-tenant",
+      "domain": "founder_actions",
+      "function": "unfreeze_tenant",
+      "response_model": "FounderActionResponseDTO,",
+      "summary": "Unfreeze tenant - restore access",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/founder-actions/unthrottle-tenant",
+      "domain": "founder_actions",
+      "function": "unthrottle_tenant",
+      "response_model": "FounderActionResponseDTO,",
+      "summary": "Unthrottle tenant - restore rate limit",
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founder-timeline/count",
+      "domain": "founder_timeline",
+      "function": "count_decision_records",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founder-timeline/decisions",
+      "domain": "founder_timeline",
+      "function": "list_decision_records",
+      "response_model": "List[DecisionRecordView]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founder-timeline/decisions/{decision_id}",
+      "domain": "founder_timeline",
+      "function": "get_decision_record",
+      "response_model": "DecisionRecordView",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "decision_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founder-timeline/run/{run_id}",
+      "domain": "founder_timeline",
+      "function": "get_run_timeline",
+      "response_model": "RunTimeline",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/incidents",
+      "domain": "guard",
+      "function": "list_incidents",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/incidents/{incident_id}",
+      "domain": "guard",
+      "function": "get_incident_detail",
+      "response_model": "IncidentDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/incidents/{incident_id}/narrative",
+      "domain": "guard",
+      "function": "get_customer_incident_narrative",
+      "response_model": "CustomerIncidentNarrativeDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/incidents/{incident_id}/timeline",
+      "domain": "guard",
+      "function": "get_decision_timeline",
+      "response_model": "DecisionTimelineResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/keys",
+      "domain": "guard",
+      "function": "list_api_keys",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/settings",
+      "domain": "guard",
+      "function": "get_settings",
+      "response_model": "TenantSettings",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/snapshot/today",
+      "domain": "guard",
+      "function": "get_today_snapshot",
+      "response_model": "TodaySnapshot",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/guard/status",
+      "domain": "guard",
+      "function": "get_guard_status",
+      "response_model": "GuardStatus",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/incidents/search",
+      "domain": "guard",
+      "function": "search_incidents",
+      "response_model": "IncidentSearchResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/incidents/{incident_id}/acknowledge",
+      "domain": "guard",
+      "function": "acknowledge_incident",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/incidents/{incident_id}/export",
+      "domain": "guard",
+      "function": "export_incident_evidence",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/incidents/{incident_id}/resolve",
+      "domain": "guard",
+      "function": "resolve_incident",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/keys/{key_id}/freeze",
+      "domain": "guard",
+      "function": "freeze_api_key",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "key_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/keys/{key_id}/unfreeze",
+      "domain": "guard",
+      "function": "unfreeze_api_key",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "key_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/killswitch/activate",
+      "domain": "guard",
+      "function": "activate_killswitch",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/killswitch/deactivate",
+      "domain": "guard",
+      "function": "deactivate_killswitch",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/onboarding/verify",
+      "domain": "guard",
+      "function": "onboarding_verify",
+      "response_model": "OnboardingVerifyResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/guard/replay/{call_id}",
+      "domain": "guard",
+      "function": "replay_call",
+      "response_model": "ReplayResult",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "call_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/health",
+      "domain": "health",
+      "function": "health_check",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/health/adapters",
+      "domain": "health",
+      "function": "adapter_status",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/health/determinism",
+      "domain": "health",
+      "function": "determinism_status",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/health/ready",
+      "domain": "health",
+      "function": "readiness_check",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/health/skills",
+      "domain": "health",
+      "function": "skills_status",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/checkpoints",
+      "domain": "integration",
+      "function": "list_pending_checkpoints",
+      "response_model": "list[CheckpointResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/checkpoints/{checkpoint_id}",
+      "domain": "integration",
+      "function": "get_checkpoint",
+      "response_model": "CheckpointResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "checkpoint_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/graduation",
+      "domain": "integration",
+      "function": "get_graduation_status",
+      "response_model": "HardenedGraduationResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/loop/{incident_id}",
+      "domain": "integration",
+      "function": "get_loop_status",
+      "response_model": "LoopStatusResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/loop/{incident_id}/narrative",
+      "domain": "integration",
+      "function": "get_loop_narrative",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/loop/{incident_id}/stages",
+      "domain": "integration",
+      "function": "get_loop_stages",
+      "response_model": "list[StageDetail]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/loop/{incident_id}/stream",
+      "domain": "integration",
+      "function": "stream_loop_status",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/stats",
+      "domain": "integration",
+      "function": "get_integration_stats",
+      "response_model": "IntegrationStatsResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integration/timeline/{incident_id}",
+      "domain": "integration",
+      "function": "get_prevention_timeline",
+      "response_model": "PreventionTimelineResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/checkpoints/{checkpoint_id}/resolve",
+      "domain": "integration",
+      "function": "resolve_checkpoint",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "checkpoint_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/graduation/re-evaluate",
+      "domain": "integration",
+      "function": "trigger_graduation_re_evaluation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/graduation/record-view",
+      "domain": "integration",
+      "function": "record_timeline_view",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/graduation/simulate/prevention",
+      "domain": "integration",
+      "function": "simulate_prevention",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/graduation/simulate/regret",
+      "domain": "integration",
+      "function": "simulate_regret",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/graduation/simulate/timeline-view",
+      "domain": "integration",
+      "function": "simulate_timeline_view",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/loop/{incident_id}/retry",
+      "domain": "integration",
+      "function": "retry_loop_stage",
+      "response_model": "LoopStatusResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integration/loop/{incident_id}/revert",
+      "domain": "integration",
+      "function": "revert_loop",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "internal",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/legacy-routes/dashboard",
+      "domain": "legacy_routes",
+      "function": "legacy_dashboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/legacy-routes/operator",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/legacy-routes/operator/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/api/v1/operator",
+      "domain": "legacy_routes",
+      "function": "legacy_api_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/api/v1/operator/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_api_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/dashboard",
+      "domain": "legacy_routes",
+      "function": "legacy_dashboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/demo",
+      "domain": "legacy_routes",
+      "function": "legacy_demo",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/demo/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_demo",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/operator",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/operator/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/simulation",
+      "domain": "legacy_routes",
+      "function": "legacy_simulation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legacy-routes/simulation/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_simulation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/api/v1/operator/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_api_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/dashboard",
+      "domain": "legacy_routes",
+      "function": "legacy_dashboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/demo",
+      "domain": "legacy_routes",
+      "function": "legacy_demo",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/demo/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_demo",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/operator",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/operator/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/simulation",
+      "domain": "legacy_routes",
+      "function": "legacy_simulation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/legacy-routes/simulation/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_simulation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/legacy-routes/dashboard",
+      "domain": "legacy_routes",
+      "function": "legacy_dashboard",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/legacy-routes/operator",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/legacy-routes/operator/{path:path}",
+      "domain": "legacy_routes",
+      "function": "legacy_operator",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "path:path"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/memory-pins/pins/{key}",
+      "domain": "memory_pins",
+      "function": "delete_pin",
+      "response_model": "MemoryPinDeleteResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "key"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/memory-pins/pins",
+      "domain": "memory_pins",
+      "function": "list_pins",
+      "response_model": "MemoryPinListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/memory-pins/pins/{key}",
+      "domain": "memory_pins",
+      "function": "get_pin",
+      "response_model": "MemoryPinResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "key"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/memory-pins/pins",
+      "domain": "memory_pins",
+      "function": "create_or_upsert_pin",
+      "response_model": "MemoryPinResponse, status_code",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/memory-pins/pins/cleanup",
+      "domain": "memory_pins",
+      "function": "cleanup_expired_pins",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/onboarding/callback/azure",
+      "domain": "onboarding",
+      "function": "callback_azure",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/onboarding/callback/google",
+      "domain": "onboarding",
+      "function": "callback_google",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/onboarding/me",
+      "domain": "onboarding",
+      "function": "get_current_user",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/onboarding/providers",
+      "domain": "onboarding",
+      "function": "get_auth_providers",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/onboarding/login/azure",
+      "domain": "onboarding",
+      "function": "login_azure",
+      "response_model": "OAuthLoginResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "onboarding"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/onboarding/login/google",
+      "domain": "onboarding",
+      "function": "login_google",
+      "response_model": "OAuthLoginResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "onboarding"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/onboarding/logout",
+      "domain": "onboarding",
+      "function": "logout",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/onboarding/refresh",
+      "domain": "onboarding",
+      "function": "refresh_token",
+      "response_model": "AuthResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/onboarding/signup/email",
+      "domain": "onboarding",
+      "function": "signup_email",
+      "response_model": "EmailSignupResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "onboarding"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/onboarding/verify/email",
+      "domain": "onboarding",
+      "function": "verify_email",
+      "response_model": "AuthResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/customers",
+      "domain": "ops",
+      "function": "get_customer_segments",
+      "response_model": "List[CustomerSegment]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/customers/at-risk",
+      "domain": "ops",
+      "function": "get_customers_at_risk",
+      "response_model": "List[CustomerAtRisk]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/customers/{tenant_id}",
+      "domain": "ops",
+      "function": "get_customer_detail",
+      "response_model": "CustomerSegment",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "tenant_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/events",
+      "domain": "ops",
+      "function": "get_event_stream",
+      "response_model": "OpsEventListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/incidents",
+      "domain": "ops",
+      "function": "get_founder_incidents",
+      "response_model": "FounderIncidentListDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/incidents/infra-summary",
+      "domain": "ops",
+      "function": "get_infra_incident_summary",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/incidents/patterns",
+      "domain": "ops",
+      "function": "get_incident_patterns",
+      "response_model": "List[IncidentPattern]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/incidents/{incident_id}",
+      "domain": "ops",
+      "function": "get_founder_incident_detail",
+      "response_model": "FounderIncidentDetailDTO",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/infra",
+      "domain": "ops",
+      "function": "get_infra_limits",
+      "response_model": "InfraLimits",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/playbooks",
+      "domain": "ops",
+      "function": "get_founder_playbooks",
+      "response_model": "List[PlaybookDetail]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/playbooks/{playbook_id}",
+      "domain": "ops",
+      "function": "get_playbook_detail",
+      "response_model": "PlaybookDetail",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "playbook_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/pulse",
+      "domain": "ops",
+      "function": "get_system_pulse",
+      "response_model": "SystemPulse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/revenue",
+      "domain": "ops",
+      "function": "get_revenue_risk",
+      "response_model": "RevenueRisk",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ops/stickiness",
+      "domain": "ops",
+      "function": "get_stickiness_by_feature",
+      "response_model": "List[StickinessByFeature]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy/requests",
+      "domain": "policy",
+      "function": "list_approval_requests",
+      "response_model": "List[ApprovalStatusResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy/requests/{request_id}",
+      "domain": "policy",
+      "function": "get_approval_request",
+      "response_model": "ApprovalStatusResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "request_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy/eval",
+      "domain": "policy",
+      "function": "evaluate_policy",
+      "response_model": "PolicyEvalResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy/requests",
+      "domain": "policy",
+      "function": "create_approval_request",
+      "response_model": "ApprovalRequestResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy/requests/{request_id}/approve",
+      "domain": "policy",
+      "function": "approve_request",
+      "response_model": "ApprovalStatusResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "request_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy/requests/{request_id}/reject",
+      "domain": "policy",
+      "function": "reject_request",
+      "response_model": "ApprovalStatusResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "request_id"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/policy-layer/cooldowns/{agent_id}",
+      "domain": "policy_layer",
+      "function": "clear_cooldowns",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "agent_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/conflicts",
+      "domain": "policy_layer",
+      "function": "list_conflicts",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/cooldowns",
+      "domain": "policy_layer",
+      "function": "list_active_cooldowns",
+      "response_model": "List[CooldownInfo]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/dependencies",
+      "domain": "policy_layer",
+      "function": "get_dependency_graph",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/dependencies/dag/validate",
+      "domain": "policy_layer",
+      "function": "validate_dependency_dag",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/dependencies/evaluation-order",
+      "domain": "policy_layer",
+      "function": "get_evaluation_order",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/ethical-constraints",
+      "domain": "policy_layer",
+      "function": "list_ethical_constraints",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/metrics",
+      "domain": "policy_layer",
+      "function": "get_policy_metrics",
+      "response_model": "PolicyMetrics",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/risk-ceilings",
+      "domain": "policy_layer",
+      "function": "list_risk_ceilings",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/risk-ceilings/{ceiling_id}",
+      "domain": "policy_layer",
+      "function": "get_risk_ceiling",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "ceiling_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/safety-rules",
+      "domain": "policy_layer",
+      "function": "list_safety_rules",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/state",
+      "domain": "policy_layer",
+      "function": "get_policy_state",
+      "response_model": "PolicyState",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/temporal-metrics/storage-stats",
+      "domain": "policy_layer",
+      "function": "get_temporal_storage_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/temporal-policies",
+      "domain": "policy_layer",
+      "function": "list_temporal_policies",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/temporal-policies/{policy_id}/utilization",
+      "domain": "policy_layer",
+      "function": "get_temporal_utilization",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "policy_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/versions",
+      "domain": "policy_layer",
+      "function": "list_policy_versions",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/versions/current",
+      "domain": "policy_layer",
+      "function": "get_current_version",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/versions/{version_id}/provenance",
+      "domain": "policy_layer",
+      "function": "get_version_provenance",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "version_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/violations",
+      "domain": "policy_layer",
+      "function": "list_violations",
+      "response_model": "List[PolicyViolation]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-layer/violations/{violation_id}",
+      "domain": "policy_layer",
+      "function": "get_violation",
+      "response_model": "PolicyViolation",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "violation_id"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/policy-layer/risk-ceilings/{ceiling_id}",
+      "domain": "policy_layer",
+      "function": "update_risk_ceiling",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "ceiling_id"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/policy-layer/safety-rules/{rule_id}",
+      "domain": "policy_layer",
+      "function": "update_safety_rule",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "rule_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/conflicts/{conflict_id}/resolve",
+      "domain": "policy_layer",
+      "function": "resolve_conflict",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "conflict_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/dependencies/add",
+      "domain": "policy_layer",
+      "function": "add_dependency_with_dag_check",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/evaluate",
+      "domain": "policy_layer",
+      "function": "evaluate_action",
+      "response_model": "PolicyEvaluationResult",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/evaluate/batch",
+      "domain": "policy_layer",
+      "function": "evaluate_batch",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/evaluate/context-aware",
+      "domain": "policy_layer",
+      "function": "evaluate_with_context",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/reload",
+      "domain": "policy_layer",
+      "function": "reload_policies",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/risk-ceilings/{ceiling_id}/reset",
+      "domain": "policy_layer",
+      "function": "reset_risk_ceiling",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "ceiling_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/simulate",
+      "domain": "policy_layer",
+      "function": "simulate_evaluation",
+      "response_model": "PolicyEvaluationResult",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/temporal-metrics/prune",
+      "domain": "policy_layer",
+      "function": "prune_temporal_metrics",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/temporal-policies",
+      "domain": "policy_layer",
+      "function": "create_temporal_policy",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/versions",
+      "domain": "policy_layer",
+      "function": "create_policy_version",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/versions/activate",
+      "domain": "policy_layer",
+      "function": "activate_policy_version",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/versions/rollback",
+      "domain": "policy_layer",
+      "function": "rollback_to_version",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/versions/{version_id}/check",
+      "domain": "policy_layer",
+      "function": "check_version_integrity",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "version_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/policy-layer/violations/{violation_id}/acknowledge",
+      "domain": "policy_layer",
+      "function": "acknowledge_violation",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "violation_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-proposals/stats/summary",
+      "domain": "policy_proposals",
+      "function": "get_proposal_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-proposals/{proposal_id}",
+      "domain": "policy_proposals",
+      "function": "get_proposal",
+      "response_model": "ProposalDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "proposal_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/policy-proposals/{proposal_id}/versions",
+      "domain": "policy_proposals",
+      "function": "list_proposal_versions",
+      "response_model": "list[VersionResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "proposal_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/predictions/stats/summary",
+      "domain": "predictions",
+      "function": "get_prediction_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/predictions/subject/{subject_type}/{subject_id}",
+      "domain": "predictions",
+      "function": "get_predictions_for_subject",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "subject_type",
+        "subject_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/predictions/{prediction_id}",
+      "domain": "predictions",
+      "function": "get_prediction",
+      "response_model": "PredictionDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "prediction_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rbac-api/audit",
+      "domain": "rbac_api",
+      "function": "query_audit_logs",
+      "response_model": "AuditResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rbac-api/info",
+      "domain": "rbac_api",
+      "function": "get_policy_info",
+      "response_model": "PolicyInfoResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rbac-api/matrix",
+      "domain": "rbac_api",
+      "function": "get_permission_matrix",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rbac-api/audit/cleanup",
+      "domain": "rbac_api",
+      "function": "cleanup_audit_logs",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rbac-api/reload",
+      "domain": "rbac_api",
+      "function": "reload_policies",
+      "response_model": "ReloadResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "operations",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/recovery/candidates/{candidate_id}",
+      "domain": "recovery",
+      "function": "delete_candidate",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "candidate_id"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/recovery/scopes/{scope_id}",
+      "domain": "recovery",
+      "function": "revoke_scope",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "scope_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/recovery/actions",
+      "domain": "recovery",
+      "function": "list_actions",
+      "response_model": "ActionListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/recovery/candidates",
+      "domain": "recovery",
+      "function": "list_candidates",
+      "response_model": "CandidateListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/recovery/candidates/{candidate_id}",
+      "domain": "recovery",
+      "function": "get_candidate_detail",
+      "response_model": "CandidateDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "candidate_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/recovery/scopes/{incident_id}",
+      "domain": "recovery",
+      "function": "list_scopes",
+      "response_model": "ScopeListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/recovery/stats",
+      "domain": "recovery",
+      "function": "get_recovery_stats",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/recovery/candidates/{candidate_id}",
+      "domain": "recovery",
+      "function": "update_candidate",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "candidate_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recovery/approve",
+      "domain": "recovery",
+      "function": "approve_candidate",
+      "response_model": "CandidateResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recovery/candidates/{candidate_id}/scope-test",
+      "domain": "recovery",
+      "function": "test_recovery_scope",
+      "response_model": "ScopeTestResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "candidate_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recovery/evaluate",
+      "domain": "recovery",
+      "function": "evaluate_rules",
+      "response_model": "EvaluateResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recovery/execute",
+      "domain": "recovery",
+      "function": "execute_recovery",
+      "response_model": "ExecuteResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recovery/scope",
+      "domain": "recovery",
+      "function": "create_scope",
+      "response_model": "CreateScopeResponse, status_code",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recovery/suggest",
+      "domain": "recovery",
+      "function": "suggest_recovery",
+      "response_model": "SuggestResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recovery-ingest/ingest",
+      "domain": "recovery_ingest",
+      "function": null,
+      "response_model": "IngestResponse,",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/runtime/capabilities",
+      "domain": "runtime",
+      "function": "get_capabilities",
+      "response_model": "CapabilitiesResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/runtime/resource-contract/{resource_id}",
+      "domain": "runtime",
+      "function": "get_resource_contract",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "resource_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/runtime/skills",
+      "domain": "runtime",
+      "function": "list_available_skills",
+      "response_model": "SkillListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/runtime/skills/{skill_id}",
+      "domain": "runtime",
+      "function": "describe_skill",
+      "response_model": "SkillDescriptorResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "skill_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/runtime/traces",
+      "domain": "runtime",
+      "function": "list_traces",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/runtime/traces/{run_id}",
+      "domain": "runtime",
+      "function": "get_trace",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/runtime/query",
+      "domain": "runtime",
+      "function": "query_runtime",
+      "response_model": "QueryResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/runtime/replay/{run_id}",
+      "domain": "runtime",
+      "function": "replay_run",
+      "response_model": "ReplayResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/runtime/simulate",
+      "domain": "runtime",
+      "function": "simulate_plan",
+      "response_model": "SimulateResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/status-history/download/{export_id}",
+      "domain": "status_history",
+      "function": "download_export",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "export_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/status-history/entity/{entity_type}/{entity_id}",
+      "domain": "status_history",
+      "function": "get_entity_history",
+      "response_model": "StatusHistoryListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "entity_type",
+        "entity_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/status-history/stats",
+      "domain": "status_history",
+      "function": "get_stats",
+      "response_model": "StatsResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/status-history/export",
+      "domain": "status_history",
+      "function": "create_export",
+      "response_model": "ExportResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "monitoring",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/tenants/api-keys/{key_id}",
+      "domain": "tenants",
+      "function": "revoke_api_key",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "key_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/api-keys",
+      "domain": "tenants",
+      "function": "list_api_keys",
+      "response_model": "List[APIKeyResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/runs",
+      "domain": "tenants",
+      "function": "list_runs",
+      "response_model": "List[RunHistoryItem]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/tenant",
+      "domain": "tenants",
+      "function": "get_current_tenant",
+      "response_model": "TenantResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/tenant/health",
+      "domain": "tenants",
+      "function": "tenant_health",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/tenant/quota/runs",
+      "domain": "tenants",
+      "function": "check_run_quota",
+      "response_model": "QuotaCheckResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/tenant/quota/tokens",
+      "domain": "tenants",
+      "function": "check_token_quota",
+      "response_model": "QuotaCheckResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/tenant/usage",
+      "domain": "tenants",
+      "function": "get_tenant_usage",
+      "response_model": "UsageSummaryResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/workers",
+      "domain": "tenants",
+      "function": "list_workers",
+      "response_model": "List[WorkerSummaryResponse]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/workers/available",
+      "domain": "tenants",
+      "function": "list_available_workers_for_tenant",
+      "response_model": "List[dict]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/workers/{worker_id}",
+      "domain": "tenants",
+      "function": "get_worker_details",
+      "response_model": "WorkerDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "worker_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants/workers/{worker_id}/config",
+      "domain": "tenants",
+      "function": "get_worker_config",
+      "response_model": "WorkerConfigResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "worker_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tenants/api-keys",
+      "domain": "tenants",
+      "function": "create_api_key",
+      "response_model": "APIKeyCreatedResponse, status_code",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/tenants/workers/{worker_id}/config",
+      "domain": "tenants",
+      "function": "set_worker_config",
+      "response_model": "WorkerConfigResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "worker_id"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/traces/{run_id}",
+      "domain": "traces",
+      "function": "delete_trace",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/traces/by-hash/{root_hash}",
+      "domain": "traces",
+      "function": "get_trace_by_hash",
+      "response_model": "TraceDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "root_hash"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/traces/compare/{run_id1}/{run_id2}",
+      "domain": "traces",
+      "function": "compare_traces",
+      "response_model": "TraceCompareResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id1",
+        "run_id2"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/traces/idempotency/{idempotency_key}",
+      "domain": "traces",
+      "function": "check_idempotency",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "idempotency_key"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/traces/{run_id}",
+      "domain": "traces",
+      "function": "get_trace",
+      "response_model": "TraceDetailResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/traces/{trace_id}/mismatches",
+      "domain": "traces",
+      "function": "list_trace_mismatches",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "trace_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/traces/cleanup",
+      "domain": "traces",
+      "function": "cleanup_old_traces",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/traces/mismatches/bulk-report",
+      "domain": "traces",
+      "function": "bulk_report_mismatches",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/traces/{trace_id}/mismatch",
+      "domain": "traces",
+      "function": "report_mismatch",
+      "response_model": "MismatchResponse, status_code",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "trace_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/traces/{trace_id}/mismatches/{mismatch_id}/resolve",
+      "domain": "traces",
+      "function": "resolve_mismatch",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "supporting",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "trace_id",
+        "mismatch_id"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/v1-killswitch/killswitch/key",
+      "domain": "v1_killswitch",
+      "function": "unfreeze_key",
+      "response_model": "KillSwitchStatus",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/v1-killswitch/killswitch/tenant",
+      "domain": "v1_killswitch",
+      "function": "unfreeze_tenant",
+      "response_model": "KillSwitchStatus",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v1-killswitch/calls/{call_id}",
+      "domain": "v1_killswitch",
+      "function": "get_call",
+      "response_model": "ProxyCallDetail",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "call_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v1-killswitch/incidents",
+      "domain": "v1_killswitch",
+      "function": "list_incidents",
+      "response_model": "List[IncidentSummary]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v1-killswitch/incidents/{incident_id}",
+      "domain": "v1_killswitch",
+      "function": "get_incident",
+      "response_model": "IncidentDetail",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "incident_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v1-killswitch/killswitch/status",
+      "domain": "v1_killswitch",
+      "function": "get_killswitch_status",
+      "response_model": "Dict[str, Any]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v1-killswitch/policies/active",
+      "domain": "v1_killswitch",
+      "function": "get_active_policies",
+      "response_model": "List[GuardrailSummary]",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/v1-killswitch/killswitch/key",
+      "domain": "v1_killswitch",
+      "function": "freeze_key",
+      "response_model": "KillSwitchStatus",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/v1-killswitch/killswitch/tenant",
+      "domain": "v1_killswitch",
+      "function": "freeze_tenant",
+      "response_model": "KillSwitchStatus",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/v1-killswitch/replay/{call_id}",
+      "domain": "v1_killswitch",
+      "function": "replay_call",
+      "response_model": "ReplayResult",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "governance",
+        "journey_stage": "monitoring"
+      },
+      "path_params": [
+        "call_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/v1-proxy/status",
+      "domain": "v1_proxy",
+      "function": "proxy_status",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/v1-proxy/chat/completions",
+      "domain": "v1_proxy",
+      "function": "chat_completions",
+      "response_model": "ChatCompletionResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/v1-proxy/embeddings",
+      "domain": "v1_proxy",
+      "function": "embeddings",
+      "response_model": "EmbeddingResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "unassigned",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workers/runs/{run_id}",
+      "domain": "workers",
+      "function": "delete_run",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "action"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/events/{run_id}",
+      "domain": "workers",
+      "function": "get_run_events",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/health",
+      "domain": "workers",
+      "function": "worker_health",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/runs",
+      "domain": "workers",
+      "function": "list_runs",
+      "response_model": "RunListResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/runs/{run_id}",
+      "domain": "workers",
+      "function": "get_run",
+      "response_model": "WorkerRunResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/schema/brand",
+      "domain": "workers",
+      "function": "get_brand_schema",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/schema/run",
+      "domain": "workers",
+      "function": "get_run_schema",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/stream/{run_id}",
+      "domain": "workers",
+      "function": "stream_run_events",
+      "response_model": null,
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "detail"
+      },
+      "path_params": [
+        "run_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workers/replay",
+      "domain": "workers",
+      "function": "replay_execution_endpoint",
+      "response_model": "WorkerRunResponse, status_code",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workers/run",
+      "domain": "workers",
+      "function": "run_worker",
+      "response_model": "WorkerRunResponse, status_code",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workers/run-streaming",
+      "domain": "workers",
+      "function": "run_worker_streaming",
+      "response_model": "WorkerRunResponse, status_code",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "action"
+      },
+      "path_params": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workers/validate-brand",
+      "domain": "workers",
+      "function": "validate_brand",
+      "response_model": "BrandValidationResponse",
+      "summary": null,
+      "auth": "required",
+      "frontend_role": {
+        "category": "core",
+        "journey_stage": "monitoring"
+      },
+      "path_params": null
+    }
+  ]
+}
