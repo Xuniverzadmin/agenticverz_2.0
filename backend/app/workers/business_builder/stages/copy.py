@@ -36,9 +36,9 @@ class CopyStage:
 
     async def execute(
         self,
-        _positioning: str,
+        positioning: str,
         messaging_framework: Dict[str, str],
-        _tone_guidelines: Dict[str, Any],
+        tone_guidelines: Dict[str, Any],
         brand_name: str,
     ) -> CopyOutput:
         """Execute copy generation."""

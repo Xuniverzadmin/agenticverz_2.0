@@ -37,7 +37,7 @@ class StrategyStage:
 
     async def execute(
         self,
-        _market_report: Dict[str, Any],
+        market_report: Dict[str, Any],
         competitor_matrix: List[Dict[str, Any]],
         brand_context: Dict[str, Any],
     ) -> StrategyOutput:
