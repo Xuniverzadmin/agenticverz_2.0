@@ -16,6 +16,13 @@
 # GOVERNANCE NOTE: This engine OWNS all classification decisions.
 # L5 passes data. L4 returns decisions. No callbacks. No dependency injection.
 
+from app.infra import FeatureIntent
+
+# Phase-2.3: Feature Intent Declaration
+# Pure domain logic - computes signatures, aggregates patterns, returns decisions
+# No DB access, no filesystem, no network calls - purely computational
+FEATURE_INTENT = FeatureIntent.PURE_QUERY
+
 """
 Failure Classification Engine (L4)
 

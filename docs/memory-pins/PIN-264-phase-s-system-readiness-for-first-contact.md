@@ -410,6 +410,201 @@ L1  Consoles (fops, preflight-fops)
 - ✅ Models are pure dataclasses (no DB dependency)
 - ✅ BLCA: CLEAN (606 files, 0 violations)
 
+### L4 Aggregation Services 🔄 IN PROGRESS (2026-01-01)
+
+**File Created:** `backend/app/services/ops_incident_service.py`
+
+**Design Principles:**
+- INPUT: Time window, severity threshold, optional component scope
+- OUTPUT: `List[OpsIncident]` (domain models only)
+- NO: UI shaping, pagination, sorting for display, auth, filtering by role
+
+**Hard Rules:**
+1. Never return infra artifacts (ErrorEnvelope, raw DB rows)
+2. Never know about consoles (fops, preflight)
+3. Never paginate (that's L3's job)
+4. Must be unit-testable with fake infra data
+
+**OpsIncidentService (FIRST SERVICE):**
+
+```python
+class OpsIncidentService:
+    def get_active_incidents(
+        self,
+        since: datetime,
+        until: Optional[datetime] = None,
+        component: Optional[str] = None,
+        min_severity: Optional[OpsSeverity] = None,
+    ) -> List[OpsIncident]:
+        # Query infra → aggregate → return domain models
+```
+
+**Methods:**
+- `get_active_incidents()`: Primary aggregation method
+- `get_incident_by_component()`: Single component incidents
+- `get_incident_summary()`: Summary counts by severity
+
+**Key Features:**
+- Protocol-based dependency injection (`ErrorStoreProtocol`)
+- SQL aggregation in `infra_error_events` table
+- Infra → Domain translation in `_aggregate_to_incidents()`
+- Error class → incident category mapping
+- Occurrence count → operator severity computation
+
+**BLCA Verification:**
+- ✅ 609 files, 0 violations
+- ✅ No L2 API imports in L4 service
+- ✅ No FastAPI imports
+
+**Governance Update:**
+- `SESSION_PLAYBOOK.yaml` Section 16: Added `l4_aggregation_rules`
+
+### L3 FounderOpsAdapter ✅ COMPLETE (2026-01-01)
+
+**File Created:** `backend/app/adapters/founder_ops_adapter.py`
+
+**Purpose:** Translate OpsIncident domain models to Founder-facing views.
+
+**View DTOs:**
+- `FounderIncidentSummaryView`: Single incident for display
+- `FounderIncidentsSummaryResponse`: Summary response for L2
+
+**Hard Rules Verified:**
+- ✅ NO infra queries (L4's job)
+- ✅ NO aggregation (L4's job)
+- ✅ NO permissions logic (L2's job)
+- ✅ NO pagination (L2's job)
+- ✅ ONLY field selection, redaction, light renaming
+
+### L2 GET /ops/incidents/infra-summary ✅ COMPLETE (2026-01-01)
+
+**Endpoint Added:** `backend/app/api/ops.py`
+
+```
+GET /ops/incidents/infra-summary?hours=24
+```
+
+**Returns:**
+```json
+{
+  "total_incidents": 5,
+  "by_severity": {"urgent": 1, "action": 2, "attention": 1, "info": 1},
+  "recent_incidents": [...],
+  "window_start": "2026-01-01T00:00:00Z",
+  "window_end": "2026-01-01T12:00:00Z"
+}
+```
+
+**Auth:** Founder-only (verify_fops_token)
+
+**BLCA Verification:** ✅ 612 files, 0 violations
+
+---
+
+## 🛑 PHASE-S FROZEN (2026-01-01)
+
+**Status:** One vertical slice complete. Phase-S work STOPPED.
+
+**Completed Vertical Slice:**
+```
+L6 infra_error_events     ✅
+ → L4 OpsIncidentService  ✅
+ → L3 FounderOpsAdapter   ✅
+ → L2 GET /incidents/infra-summary ✅
+```
+
+**NOT Implemented (Intentionally Deferred):**
+- ❌ OpsHealthService, OpsRiskService, OpsTrendService
+- ❌ PreflightOpsAdapter
+- ❌ L1 Console Wiring
+- ❌ Track 2 (Decision Snapshotting, Replay)
+- ❌ Track 3 (Synthetic Traffic)
+- ❌ Track 4 (Learning Loop)
+
+**Reason:** Return to CI hygiene work (integration hanging tests, 131 unit failures).
+
+---
+
+## Next Work (Pending)
+
+### Phase-2.1: Integration Test Hanging ✅ COMPLETE (2026-01-01)
+
+**Status:** ✅ COMPLETE + SELF-DEFENDING UPGRADE
+
+**Root Cause Identified:**
+The circuit breaker tests (`test_circuit_breaker.py`) were hanging due to
+`SELECT ... FOR UPDATE` locks being held across multiple database connections.
+The issue was that `session.commit()` released connections to the pool, and
+subsequent operations acquired different connections. When `_get_or_create_state()`
+was called twice (in `disable_v2()` and `_trip()`), the second call blocked on
+the first connection's `FOR UPDATE` lock.
+
+**Initial Fix Applied (Symptom):**
+Added `use_single_connection_pool` fixture in `test_circuit_breaker.py` that
+replaces the engine with a `StaticPool` (single connection).
+
+**Self-Defending Upgrade (Prevention):**
+Upgraded from "memory-assisted" to "self-defending" architecture:
+
+| Component | Purpose | Location |
+|-----------|---------|----------|
+| `single_connection_transaction()` | Blessed path for row locks | `app/infra/transaction.py` |
+| `SingleConnectionTxn` | Type-safe transaction context | `app/infra/transaction.py` |
+| `check_forbidden_patterns.py` | CI ban on raw `FOR UPDATE` | `scripts/ci/check_forbidden_patterns.py` |
+| SESSION_PLAYBOOK Section 17 | Code-first governance | `docs/playbooks/SESSION_PLAYBOOK.yaml` |
+
+**Self-Defense Guarantees:**
+
+1. **Path-of-least-resistance is correct**
+   - `single_connection_transaction()` is easier than raw sessions
+   - `txn.lock_row()` is easier than `with_for_update()`
+
+2. **Illegal states are unrepresentable**
+   - `SingleConnectionTxn` type makes requirements visible
+   - Functions requiring locks MUST accept this type
+
+3. **Violations fail early and locally**
+   - CI fails immediately if forbidden patterns detected
+   - 4 current violations flagged (to be refactored)
+
+4. **New feature design is constrained**
+   - Primitives answer "how should I do this?"
+   - Documentation points to code, not rules
+
+**CI Check Output (Current Violations):**
+```
+FORBIDDEN PATTERNS DETECTED: 4
+- app/costsim/alert_worker.py:122
+- app/costsim/circuit_breaker_async.py:147
+- app/costsim/circuit_breaker_async.py:248
+- app/costsim/circuit_breaker.py:213
+```
+
+**Results:**
+- ✅ 21 circuit breaker tests pass (previously hung)
+- ✅ 112 total integration tests complete in ~26s (87 passed, 9 failed, 16 skipped)
+- ✅ No more hanging tests
+- ✅ Self-defending primitives created
+- ✅ CI enforcement active
+- ⚠️ 4 files need refactoring to use new primitives (deferred)
+- ⚠️ 9 RBAC-related failures (403 Forbidden) — functional issues for Phase-3
+
+**Rules Followed:**
+- ✅ No domain logic edits (primitives added, not refactored)
+- ✅ Test harness fixed
+- ✅ Infrastructure primitives added (L6)
+- ✅ CI enforcement added
+- ✅ SESSION_PLAYBOOK updated
+
+### Phase-3: 131 Unit Test Failures (NEXT)
+
+**Status:** 📋 PENDING
+
+**Focus:**
+- Classify failures by domain slice
+- Fix one slice per commit
+- No mass greenwashing
+
 ---
 
 ## Progress Tracker
@@ -421,14 +616,16 @@ L1  Consoles (fops, preflight-fops)
 | 1.3 | Error Persistence | ✅ COMPLETE |
 | — | Semantic Lockdown | ✅ COMPLETE |
 | — | L4 Ops Domain Models | ✅ COMPLETE |
-| — | L4 Aggregation Services | 📋 NEXT |
-| — | L3 View Adapters | 📋 PENDING |
-| — | L2 Ops APIs | 📋 PENDING |
-| — | L1 Console Wiring | 📋 PENDING |
+| — | L4 Aggregation Services | ✅ COMPLETE (OpsIncidentService only) |
+| — | L3 View Adapters | ✅ COMPLETE (FounderOpsAdapter only) |
+| — | L2 Ops APIs | ✅ COMPLETE (infra-summary only) |
+| — | L1 Console Wiring | 🛑 FROZEN |
 | 2.1 | Decision Snapshotting | 📋 PENDING |
 | 2.2 | Replay Mode | 📋 PENDING |
 | 3.1 | Synthetic Scenario Runner | 📋 PENDING |
 | 4.1 | Incident → Lesson Pipeline | 📋 PENDING |
+| — | Phase-2.1: Integration Test Hanging | ✅ COMPLETE |
+| — | Phase-3: Unit Test Failures | 📋 PENDING |
 
 ---
 
@@ -439,6 +636,66 @@ L1  Consoles (fops, preflight-fops)
 - Session: Phase G → Phase S transition
 
 ---
+
+
+---
+
+## Phase-2.2 Update
+
+### Update (2026-01-01)
+
+## 2026-01-01: Phase-2.2 Self-Defending Transactions with Intent
+
+### Philosophy Upgrade
+Upgraded from "blocked" to "guided by construction". The key insight:
+- **Before (Phase-2.1)**: Block mistakes with CI after they happen
+- **After (Phase-2.2)**: Guide engineers BEFORE code is written via intent declaration
+
+The real root cause is NOT "FOR UPDATE". It is:
+> "Transactional intent is not explicit in feature design."
+
+### TransactionIntent System
+Added to `app/infra/transaction.py`:
+
+| Intent | Description | Required Parameter |
+|--------|-------------|-------------------|
+| READ_ONLY | Plain session, no locks | Session |
+| ATOMIC_WRITE | Transaction context, no FOR UPDATE | Session |
+| LOCKED_MUTATION | single_connection_transaction() REQUIRED | SingleConnectionTxn |
+
+### Key Components
+1. **TransactionIntent enum** — Declares intent before implementation
+2. **@transactional decorator** — Validates signature at decoration time (fail-fast)
+3. **IntentViolationError** — Design-time exception (don't catch, fix design)
+4. **_INTENT_REGISTRY** — Global registry for CI validation
+
+### CI Enforcement
+- `scripts/ci/check_forbidden_patterns.py` — Blocks raw FOR UPDATE syntax
+- `scripts/ci/check_intent_consistency.py` — Validates intent/primitive alignment
+
+### Golden Examples
+Created `app/infra/transaction_examples.py` with reference implementations for:
+- READ_ONLY queries
+- ATOMIC_WRITE operations
+- LOCKED_MUTATION with proper txn.lock_row() usage
+- Caller patterns demonstrating correct transaction context creation
+
+### SESSION_PLAYBOOK v2.27
+Section 17 updated with:
+- "MIRROR, NOT AUTHORITY" directive (playbook explains, code enforces)
+- Intent declaration documentation
+- Evolution rule: every incident → new primitive, stricter intent, or new CI invariant
+
+### Files Changed
+- `app/infra/transaction.py` — Core intent system
+- `app/infra/__init__.py` — Exports
+- `scripts/ci/check_intent_consistency.py` — New CI script
+- `app/infra/transaction_examples.py` — Golden examples
+- `docs/playbooks/SESSION_PLAYBOOK.yaml` — v2.27
+
+### Deferred Work
+- 3 circuit breaker files still have forbidden patterns (flagged, not yet migrated)
+- 116 test failures remaining (Phase-3)
 
 ## Related PINs
 

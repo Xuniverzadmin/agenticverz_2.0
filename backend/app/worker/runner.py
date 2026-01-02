@@ -27,6 +27,8 @@ from typing import Optional
 
 from sqlmodel import Session
 
+from app.infra import FeatureIntent, RetryPolicy
+
 # Phase R-3: Budget enforcement decision emission moved to L4
 # The emit_budget_enforcement_decision call has been moved to L4
 # BudgetEnforcementEngine. L5 runner publishes run.halted events and
@@ -46,6 +48,11 @@ from ..skills.executor import (
     SkillExecutor,
 )
 from ..utils.budget_tracker import deduct_budget
+
+# Phase-2.3: Feature Intent Declaration
+# This worker executes runs with state checkpoints and must resume on crash
+FEATURE_INTENT = FeatureIntent.RECOVERABLE_OPERATION
+RETRY_POLICY = RetryPolicy.SAFE
 
 logger = logging.getLogger("nova.worker.runner")
 

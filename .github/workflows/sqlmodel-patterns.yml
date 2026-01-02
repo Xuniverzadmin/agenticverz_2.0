@@ -1,0 +1,59 @@
+# SQLModel Pattern Linter CI - Full Validation
+# PIN-269: Pre-commit = staged, CI = full
+#
+# This workflow runs the SQLModel pattern linter with CHECK_SCOPE=full,
+# which includes all rules (including CI-only rules like DETACH002).
+#
+# Pre-commit runs with CHECK_SCOPE=staged which only checks staged files
+# and skips global invariant checks.
+
+name: SQLModel Pattern Linter
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**/*.py'
+      - 'scripts/ops/lint_sqlmodel_patterns.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**/*.py'
+      - 'scripts/ops/lint_sqlmodel_patterns.py'
+
+jobs:
+  sqlmodel-lint:
+    name: SQLModel Pattern Lint (Full)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run SQLModel Pattern Linter (Full Scope)
+        env:
+          CHECK_SCOPE: full
+        run: |
+          echo "Running SQLModel Pattern Linter with CHECK_SCOPE=full"
+          echo "This includes CI-only rules: DETACH002, DETACH003, SCOPE001, CONC001, TEST001, CACHE001"
+          python scripts/ops/lint_sqlmodel_patterns.py backend/app/
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## SQLModel Pattern Linter Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ $? -eq 0 ]; then
+            echo "✅ No issues found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Issues found - see job output" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Scope" >> $GITHUB_STEP_SUMMARY
+          echo "- Mode: FULL (all rules including global invariants)" >> $GITHUB_STEP_SUMMARY
+          echo "- Reference: PIN-269 (Pre-Commit Locality Rule)" >> $GITHUB_STEP_SUMMARY

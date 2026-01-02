@@ -58,7 +58,7 @@ class TestPBS1ImmutabilityTrigger:
             run_id = result[0]
 
             # Attempt to mutate - this MUST fail
-            with pytest.raises(psycopg2.errors.RaiseException) as exc_info:
+            with pytest.raises(psycopg2.errors.RestrictViolation) as exc_info:
                 cur.execute(
                     f"""
                     UPDATE worker_runs
@@ -67,8 +67,8 @@ class TestPBS1ImmutabilityTrigger:
                 """
                 )
 
-            # Verify the error message contains PB-S1 VIOLATION
-            assert "PB-S1 VIOLATION" in str(exc_info.value)
+            # Verify the error message contains TRUTH_VIOLATION (PB-S1 enforcement)
+            assert "TRUTH_VIOLATION" in str(exc_info.value)
 
         finally:
             conn.rollback()
@@ -100,7 +100,7 @@ class TestPBS1ImmutabilityTrigger:
             run_id = result[0]
 
             # Attempt to mutate - this MUST fail
-            with pytest.raises(psycopg2.errors.RaiseException) as exc_info:
+            with pytest.raises(psycopg2.errors.RestrictViolation) as exc_info:
                 cur.execute(
                     f"""
                     UPDATE worker_runs
@@ -109,7 +109,8 @@ class TestPBS1ImmutabilityTrigger:
                 """
                 )
 
-            assert "PB-S1 VIOLATION" in str(exc_info.value)
+            # Verify the error message contains TRUTH_VIOLATION (PB-S1 enforcement)
+            assert "TRUTH_VIOLATION" in str(exc_info.value)
 
         finally:
             conn.rollback()
@@ -275,12 +276,17 @@ class TestPBS1EndpointBehavior:
         """
         import requests
 
-        # This test requires the backend to be running
+        # This test requires the backend to be running with proper auth
+        api_key = os.getenv("AOS_API_KEY")
+        # Skip if no key, or if using test stub key from conftest.py
+        if not api_key or api_key == "test-key-for-testing":
+            pytest.skip("Valid AOS_API_KEY not set - cannot test authenticated endpoint")
+
         try:
             response = requests.post(
                 "http://localhost:8000/admin/rerun",
                 json={"run_id": str(uuid.uuid4()), "reason": "test"},
-                headers={"X-AOS-Key": os.getenv("AOS_API_KEY", "test"), "X-Roles": "founder"},
+                headers={"X-AOS-Key": api_key, "X-Roles": "founder"},
                 timeout=5,
             )
         except requests.exceptions.ConnectionError:

@@ -1,3 +1,13 @@
+from __future__ import annotations
+
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# DB-backed circuit breaker state tracking with SELECT FOR UPDATE
+# State mutations are atomic and recoverable
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 # CostSim V2 Circuit Breaker (M6 - DB-backed)
 """
 DB-backed auto-disable circuit breaker for CostSim V2.
@@ -36,8 +46,6 @@ Usage:
     # Manual reset
     await cb.reset(reason="Fixed model coefficients", reset_by="admin")
 """
-
-from __future__ import annotations
 
 import asyncio
 import json

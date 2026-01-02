@@ -272,9 +272,9 @@ class TestOutboxE2E:
                 session.commit()
                 assert event_id is not None, "Should return event ID"
 
-                # Claim events
+                # Claim events (canonical signature: processor_id, batch_size)
                 result = session.execute(
-                    text("SELECT * FROM m10_recovery.claim_outbox_events(10, 'test-processor')"),
+                    text("SELECT * FROM m10_recovery.claim_outbox_events('test-processor', 10)"),
                 )
                 rows = result.fetchall()
                 session.commit()
@@ -282,9 +282,9 @@ class TestOutboxE2E:
                 claimed_ids = [r[0] for r in rows]
                 assert event_id in claimed_ids, "Published event should be claimed"
 
-                # Complete event
+                # Complete event (canonical signature: event_id, processor_id, success, error)
                 session.execute(
-                    text("SELECT m10_recovery.complete_outbox_event(:event_id, true, NULL, 'test-processor')"),
+                    text("SELECT m10_recovery.complete_outbox_event(:event_id, 'test-processor', true, NULL)"),
                     {"event_id": event_id},
                 )
                 session.commit()
@@ -324,15 +324,15 @@ class TestOutboxE2E:
                 event_id = result.scalar()
                 session.commit()
 
-                # Claim and fail
+                # Claim and fail (canonical signatures)
                 result = session.execute(
-                    text("SELECT * FROM m10_recovery.claim_outbox_events(10, 'test-processor')"),
+                    text("SELECT * FROM m10_recovery.claim_outbox_events('test-processor', 10)"),
                 )
                 session.commit()
 
                 session.execute(
                     text(
-                        "SELECT m10_recovery.complete_outbox_event(:event_id, false, 'Connection refused', 'test-processor')"
+                        "SELECT m10_recovery.complete_outbox_event(:event_id, 'test-processor', false, 'Connection refused')"
                     ),
                     {"event_id": event_id},
                 )
@@ -418,13 +418,13 @@ class TestArchiveAndTrimSafety:
 
         try:
             with Session(engine) as session:
-                # Archive a message
+                # Archive a message (canonical schema: dl_msg_id, not stream_msg_id)
                 session.execute(
                     text(
                         """
                         INSERT INTO m10_recovery.dead_letter_archive
-                        (stream_msg_id, stream_name, payload, reason)
-                        VALUES (:msg_id, 'm10:eval', '{"test": true}'::jsonb, 'test_archive')
+                        (dl_msg_id, payload, reason)
+                        VALUES (:msg_id, '{"test": true}'::jsonb, 'test_archive')
                     """
                     ),
                     {"msg_id": test_msg_id},
@@ -433,7 +433,7 @@ class TestArchiveAndTrimSafety:
 
                 # Verify archived
                 result = session.execute(
-                    text("SELECT payload, reason FROM m10_recovery.dead_letter_archive WHERE stream_msg_id = :msg_id"),
+                    text("SELECT payload, reason FROM m10_recovery.dead_letter_archive WHERE dl_msg_id = :msg_id"),
                     {"msg_id": test_msg_id},
                 )
                 row = result.fetchone()
@@ -443,9 +443,7 @@ class TestArchiveAndTrimSafety:
 
         finally:
             with Session(engine) as session:
-                session.execute(
-                    text("DELETE FROM m10_recovery.dead_letter_archive WHERE stream_msg_id LIKE 'test-msg-%'")
-                )
+                session.execute(text("DELETE FROM m10_recovery.dead_letter_archive WHERE dl_msg_id LIKE 'test-msg-%'"))
                 session.commit()
 
 
@@ -645,20 +643,24 @@ class TestScaleConcurrency:
 
     def test_concurrent_lock_operations(self):
         """Test many concurrent lock operations."""
-        num_locks = 50
-        num_threads = 10
+        num_locks = 20  # Reduced from 50 to avoid connection exhaustion
+        num_threads = 5  # Reduced from 10 to avoid connection exhaustion
         results = {"acquired": 0, "released": 0, "failed": 0}
         lock = threading.Lock()
+
+        # Shared engine with connection pool
+        from sqlmodel import create_engine
+
+        shared_engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=5, pool_pre_ping=True)
 
         def do_lock_cycle(lock_idx: int, thread_id: int):
             from sqlalchemy import text
             from sqlmodel import Session
 
-            engine = self.get_engine()
             lock_name = f"test:scale:{lock_idx}"
             holder_id = f"thread:{thread_id}"
 
-            with Session(engine) as session:
+            with Session(shared_engine) as session:
                 # Try acquire
                 result = session.execute(
                     text("SELECT m10_recovery.acquire_lock(:lock_name, :holder_id, :ttl)"),
@@ -708,10 +710,225 @@ class TestScaleConcurrency:
             from sqlalchemy import text
             from sqlmodel import Session
 
-            engine = self.get_engine()
-            with Session(engine) as session:
+            with Session(shared_engine) as session:
                 session.execute(text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name LIKE 'test:scale%'"))
                 session.commit()
+            shared_engine.dispose()
+
+
+class TestM10ContractSentinel:
+    """Regression sentinel tests for M10 contract invariants.
+
+    These are NOT functional tests — they are STRUCTURAL INVARIANT tests.
+    They exist to catch contract drift before it becomes production bugs.
+
+    Reference: PIN-276, docs/contracts/M10_OUTBOX_CONTRACT.md
+    """
+
+    def get_engine(self):
+        from sqlmodel import create_engine
+
+        return create_engine(DATABASE_URL, pool_pre_ping=True)
+
+    def test_exactly_one_claim_outbox_events_signature(self):
+        """INVARIANT: claim_outbox_events must have exactly ONE signature.
+
+        NO OVERLOADS rule from M10_OUTBOX_CONTRACT.md.
+        If this fails, someone created a function overload.
+        """
+        from sqlalchemy import text
+        from sqlmodel import Session
+
+        engine = self.get_engine()
+
+        with Session(engine) as session:
+            result = session.execute(
+                text(
+                    """
+                    SELECT COUNT(*) FROM pg_proc p
+                    JOIN pg_namespace n ON p.pronamespace = n.oid
+                    WHERE n.nspname = 'm10_recovery'
+                    AND p.proname = 'claim_outbox_events'
+                    """
+                )
+            )
+            count = result.scalar()
+
+            assert count == 1, (
+                f"CONTRACT VIOLATION: claim_outbox_events has {count} signatures, expected exactly 1. "
+                "This violates the NO OVERLOADS rule in M10_OUTBOX_CONTRACT.md. "
+                "Fix: Drop the extra overload, keep only the canonical signature."
+            )
+
+    def test_exactly_one_complete_outbox_event_signature(self):
+        """INVARIANT: complete_outbox_event must have exactly ONE signature.
+
+        NO OVERLOADS rule from M10_OUTBOX_CONTRACT.md.
+        If this fails, someone created a function overload.
+        """
+        from sqlalchemy import text
+        from sqlmodel import Session
+
+        engine = self.get_engine()
+
+        with Session(engine) as session:
+            result = session.execute(
+                text(
+                    """
+                    SELECT COUNT(*) FROM pg_proc p
+                    JOIN pg_namespace n ON p.pronamespace = n.oid
+                    WHERE n.nspname = 'm10_recovery'
+                    AND p.proname = 'complete_outbox_event'
+                    """
+                )
+            )
+            count = result.scalar()
+
+            assert count == 1, (
+                f"CONTRACT VIOLATION: complete_outbox_event has {count} signatures, expected exactly 1. "
+                "This violates the NO OVERLOADS rule in M10_OUTBOX_CONTRACT.md. "
+                "Fix: Drop the extra overload, keep only the canonical signature."
+            )
+
+    def test_canonical_claim_signature_matches_contract(self):
+        """INVARIANT: claim_outbox_events signature must be (TEXT, INTEGER).
+
+        Canonical signature from M10_OUTBOX_CONTRACT.md:
+        - p_processor_id TEXT (FIRST)
+        - p_batch_size INTEGER (SECOND)
+        """
+        from sqlalchemy import text
+        from sqlmodel import Session
+
+        engine = self.get_engine()
+
+        with Session(engine) as session:
+            result = session.execute(
+                text(
+                    """
+                    SELECT pg_catalog.pg_get_function_identity_arguments(p.oid) as signature
+                    FROM pg_proc p
+                    JOIN pg_namespace n ON p.pronamespace = n.oid
+                    WHERE n.nspname = 'm10_recovery'
+                    AND p.proname = 'claim_outbox_events'
+                    """
+                )
+            )
+            signature = result.scalar()
+
+            # Canonical: p_processor_id text, p_batch_size integer
+            assert signature is not None, "Function claim_outbox_events not found"
+            assert "text" in signature.lower(), f"CONTRACT VIOLATION: Expected TEXT for processor_id, got: {signature}"
+            assert (
+                "integer" in signature.lower()
+            ), f"CONTRACT VIOLATION: Expected INTEGER for batch_size, got: {signature}"
+            # Verify order: processor_id comes before batch_size
+            text_pos = signature.lower().find("text")
+            int_pos = signature.lower().find("integer")
+            assert text_pos < int_pos, (
+                f"CONTRACT VIOLATION: processor_id (TEXT) must come BEFORE batch_size (INTEGER). "
+                f"Got: {signature}. This violates canonical parameter order."
+            )
+
+    def test_canonical_complete_signature_matches_contract(self):
+        """INVARIANT: complete_outbox_event signature must be (BIGINT, TEXT, BOOLEAN, TEXT).
+
+        Canonical signature from M10_OUTBOX_CONTRACT.md:
+        - p_event_id BIGINT
+        - p_processor_id TEXT
+        - p_success BOOLEAN
+        - p_error TEXT DEFAULT NULL
+        """
+        from sqlalchemy import text
+        from sqlmodel import Session
+
+        engine = self.get_engine()
+
+        with Session(engine) as session:
+            result = session.execute(
+                text(
+                    """
+                    SELECT pg_catalog.pg_get_function_identity_arguments(p.oid) as signature
+                    FROM pg_proc p
+                    JOIN pg_namespace n ON p.pronamespace = n.oid
+                    WHERE n.nspname = 'm10_recovery'
+                    AND p.proname = 'complete_outbox_event'
+                    """
+                )
+            )
+            signature = result.scalar()
+
+            assert signature is not None, "Function complete_outbox_event not found"
+            # Canonical: p_event_id bigint, p_processor_id text, p_success boolean, p_error text
+            assert "bigint" in signature.lower(), f"CONTRACT VIOLATION: Expected BIGINT for event_id, got: {signature}"
+            assert "boolean" in signature.lower(), f"CONTRACT VIOLATION: Expected BOOLEAN for success, got: {signature}"
+
+    def test_process_after_is_sole_retry_authority(self):
+        """INVARIANT: process_after is the ONLY retry scheduling field.
+
+        Single retry authority from M10_OUTBOX_CONTRACT.md.
+        The column next_retry_at must NOT exist or must be deprecated.
+        complete_outbox_event must only update process_after for retry scheduling.
+        """
+        from sqlalchemy import text
+        from sqlmodel import Session
+
+        engine = self.get_engine()
+
+        with Session(engine) as session:
+            # Verify process_after column exists
+            result = session.execute(
+                text(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_schema = 'm10_recovery'
+                        AND table_name = 'outbox'
+                        AND column_name = 'process_after'
+                    )
+                    """
+                )
+            )
+            has_process_after = result.scalar()
+            assert has_process_after is True, (
+                "CONTRACT VIOLATION: process_after column missing from m10_recovery.outbox. "
+                "This is the sole retry authority field."
+            )
+
+            # Get the function source to verify it only uses process_after for retry
+            result = session.execute(
+                text(
+                    """
+                    SELECT pg_get_functiondef(p.oid) as source
+                    FROM pg_proc p
+                    JOIN pg_namespace n ON p.pronamespace = n.oid
+                    WHERE n.nspname = 'm10_recovery'
+                    AND p.proname = 'complete_outbox_event'
+                    """
+                )
+            )
+            source = result.scalar()
+
+            assert source is not None, "Function complete_outbox_event not found"
+            source_lower = source.lower()
+
+            # Verify process_after is set on failure
+            assert "process_after" in source_lower, (
+                "CONTRACT VIOLATION: complete_outbox_event does not reference process_after. "
+                "This violates the single retry authority rule."
+            )
+
+            # Verify next_retry_at is NOT being updated (parallel truth prevention)
+            # We check that next_retry_at is not in a SET clause
+            if "next_retry_at" in source_lower:
+                # Only fail if it's being SET, not just referenced
+                assert "set" not in source_lower.split("next_retry_at")[0][
+                    -50:
+                ] or "next_retry_at =" not in source_lower.replace(" ", ""), (
+                    "CONTRACT VIOLATION: complete_outbox_event updates next_retry_at. "
+                    "This violates the single retry authority rule (NO PARALLEL TRUTH). "
+                    "Only process_after should control retry scheduling."
+                )
 
 
 if __name__ == "__main__":

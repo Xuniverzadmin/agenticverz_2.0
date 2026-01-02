@@ -20,6 +20,7 @@ repos:
         files: ^backend/app/
 
   # Custom SQLModel pattern linting
+  # PIN-269: Pre-commit hooks run in STAGED mode (delta validation only)
   - repo: local
     hooks:
       - id: preflight-routes
@@ -31,11 +32,16 @@ repos:
         stages: [pre-commit]
 
       - id: sqlmodel-patterns
-        name: SQLModel Pattern Linter
-        entry: python scripts/ops/lint_sqlmodel_patterns.py backend/app/
+        name: SQLModel Pattern Linter (Staged)
+        # PIN-269: CHECK_SCOPE=staged enables delta validation
+        # - Only checks staged files (pass_filenames: true)
+        # - Skips CI-only rules (DETACH002, SCOPE001, etc.)
+        # Full validation runs in CI with CHECK_SCOPE=full
+        entry: env CHECK_SCOPE=staged python scripts/ops/lint_sqlmodel_patterns.py
         language: python
         types: [python]
-        pass_filenames: false
+        pass_filenames: true
+        files: ^backend/
 
       - id: api-endpoint-check
         name: API Endpoint Wiring Check

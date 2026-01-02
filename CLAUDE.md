@@ -1,14 +1,14 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2025-12-31
+**Last Updated:** 2026-01-02
 
 ---
 
 ## CLAUDE BEHAVIOR ENFORCEMENT (MANDATORY - READ FIRST)
 
 **Status:** ACTIVE
-**Effective:** 2025-12-27
-**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`
+**Effective:** 2026-01-02
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`
 
 ### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001, BL-BOOT-002)
 
@@ -38,6 +38,9 @@ SESSION_BOOTSTRAP_CONFIRMATION
     status: CLEAN
 - loaded_documents:
   - CLAUDE_BOOT_CONTRACT.md
+  - CLAUDE_ENGINEERING_AUTHORITY.md
+  - RBAC_AUTHORITY_SEPARATION_DESIGN.md
+  - PERMISSION_TAXONOMY_V1.md
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
@@ -57,6 +60,9 @@ SESSION_BOOTSTRAP_CONFIRMATION
 - database_contract_loaded: YES
 - console_constitution_loaded: YES
 - phase_g_governance_loaded: YES
+- engineering_authority_loaded: YES
+- rbac_architecture_loaded: YES
+- permission_taxonomy_loaded: YES
 - forbidden_assumptions_acknowledged: YES
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
@@ -209,6 +215,80 @@ SELF-AUDIT
 **If last three questions are YES without mitigation → response is INVALID, must redesign.**
 
 **Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` (upgraded_self_audit section)
+
+### Engineering Authority Self-Check (PIN-270)
+
+Before generating any code or recommendation, Claude must internally verify:
+
+```
+ENGINEERING AUTHORITY SELF-CHECK
+
+1. Am I fixing the architecture or just making tests pass?
+   → If making tests pass: STOP, identify real issue
+
+2. Does this contradict Layer Model (L1-L8)?
+   → If yes: STOP, fix the proposal
+
+3. Am I assuming infra exists without checking INFRA_REGISTRY?
+   → If yes: CHECK registry first
+
+4. Am I weakening an assertion to avoid a failure?
+   → If yes: STOP, classify the failure (A/B/C/D)
+
+5. Is this a shortcut that future-me will regret?
+   → If yes: STOP, design the invariant
+
+6. Would a new engineer understand this without asking?
+   → If no: ADD guidance (template, decorator, contract)
+
+7. Am I guessing instead of asking one precise question?
+   → If guessing: ASK instead
+```
+
+**Reference:** `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`
+
+### RBAC Architecture Directive (PIN-271) — MANDATORY
+
+**Objective:** Implement RBAC that is production-faithful, environment-agnostic, and system-guiding.
+
+#### Hard Rules (No Exceptions Without Founder Approval)
+
+| Rule | Requirement |
+|------|-------------|
+| **RBAC-D1** | ActorContext is the only auth input. No roles as `List[str]`, no JWT claims outside adapters. |
+| **RBAC-D2** | Identity ≠ Authorization. IdentityAdapters (L3) extract identity only. AuthorizationEngine (L4) decides permissions. |
+| **RBAC-D3** | No Fake Production. No stub JWTs, no magic headers. Dev uses DevIdentityAdapter, explicitly marked. |
+| **RBAC-D4** | System actors are real actors. CI, workers, replay use SystemIdentityAdapter with fixed permissions. |
+| **RBAC-D5** | Enterprise structure is first-class. account_id and team_id must be present where relevant. |
+| **RBAC-D6** | Same rules everywhere. Prod, CI, local, replay share AuthorizationEngine. Differences only via IdentityChain. |
+| **RBAC-D7** | Every new feature must declare: Required ActorType(s), Required permissions, Tenant/account scope. |
+| **RBAC-D8** | Tests follow architecture. Import from L4/L6 facades only. Infra absence → explicit skip. No passing via fake infra. |
+
+#### RBAC Self-Check (Run Before Auth-Related Code)
+
+```
+RBAC ARCHITECTURE SELF-CHECK
+
+1. Am I using ActorContext as the only auth input?
+   → If using raw roles/claims: STOP, refactor to ActorContext
+
+2. Am I parsing JWTs outside an IdentityAdapter?
+   → If yes: STOP, move to appropriate adapter
+
+3. Am I creating a stub that fakes production behavior?
+   → If yes: STOP, use SystemIdentityAdapter or DevIdentityAdapter
+
+4. Am I hardcoding permissions instead of using AuthorizationEngine?
+   → If yes: STOP, route through engine
+
+5. Is this permission declared in PERMISSION_TAXONOMY_V1.md?
+   → If no: STOP, add to taxonomy first
+
+6. Does this feature declare ActorType and required permissions?
+   → If no: STOP, complete the declaration
+```
+
+**Reference:** `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`
 
 ### Forbidden Actions (ABSOLUTE)
 

@@ -9,6 +9,14 @@
 # Forbidden Imports: L1, L2, L3, L4
 # Reference: M10 Optimization
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Coordinates optimization envelopes with conflict detection and preemption
+# All state transitions are atomic, audited, and safe to retry
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 # C4 Multi-Envelope Coordination Manager
 # Reference: C4_ENVELOPE_COORDINATION_CONTRACT.md (FROZEN), PIN-230
 #

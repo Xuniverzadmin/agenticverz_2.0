@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""SQLModel Pattern Linter v2.3 - Detect Unsafe Query Patterns
+"""SQLModel Pattern Linter v2.4 - Detect Unsafe Query Patterns
 
 Enhanced with PIN-120 Test Suite Stabilization Prevention Mechanisms.
+PIN-269: Pre-commit locality rule enforced via CHECK_SCOPE.
 
 Patterns Detected:
 1. DetachedInstanceError - ORM objects returned after session closes
@@ -19,22 +20,28 @@ Patterns Detected:
 13. Timezone-naive datetime operations (PREV-20)
 
 Usage:
-    python scripts/ops/lint_sqlmodel_patterns.py [path]
-    python scripts/ops/lint_sqlmodel_patterns.py backend/app/api/
-    python scripts/ops/lint_sqlmodel_patterns.py --scan-all  # Full codebase scan
+    # Pre-commit mode (staged files only, delta rules)
+    CHECK_SCOPE=staged python scripts/ops/lint_sqlmodel_patterns.py file1.py file2.py
+
+    # CI mode (full scan, all rules including global invariants)
+    CHECK_SCOPE=full python scripts/ops/lint_sqlmodel_patterns.py backend/app/
+
+    # Legacy mode (full scan, auto-detects)
+    python scripts/ops/lint_sqlmodel_patterns.py --scan-all
 
 Exit codes:
     0 - No issues found
     1 - Issues found
     2 - Critical issues found (blocking)
 
-RCA Reference: PIN-118 M24.2 Bug Fix, PIN-120 Test Suite Stabilization
+RCA Reference: PIN-118 M24.2 Bug Fix, PIN-120 Test Suite Stabilization, PIN-269 Pre-Commit Locality
 """
 
+import os
 import re
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Set
 from dataclasses import dataclass
 from enum import Enum
 
@@ -43,6 +50,28 @@ class Severity(Enum):
     WARNING = "warning"
     ERROR = "error"
     CRITICAL = "critical"
+
+
+class CheckScope(Enum):
+    """Execution scope for linting.
+
+    PIN-269: Pre-commit = delta validation, CI = global validation.
+    """
+
+    STAGED = "staged"  # Pre-commit: only check staged files, skip global invariants
+    FULL = "full"  # CI: full codebase scan, all rules including global invariants
+
+
+# Rules that should ONLY run in CI mode, not pre-commit
+# These are structural/global invariants that shouldn't block unrelated commits
+CI_ONLY_RULES: Set[str] = {
+    "DETACH002",  # Cross-file session return patterns - global invariant
+    "DETACH003",  # Refreshed object returns - requires context analysis
+    "SCOPE001",  # Session scope issues - multiline, context-dependent
+    "CONC001",  # Concurrent claim SQL - cross-file pattern
+    "TEST001",  # Test isolation - requires fixture analysis
+    "CACHE001",  # Cache initialization - class-level check
+}
 
 
 @dataclass
@@ -368,8 +397,16 @@ def check_with_session_block(content: str, match_start: int) -> bool:
     return last_with > last_def if last_with > 0 else False
 
 
-def lint_file(filepath: Path, verbose: bool = False) -> List[LintIssue]:
-    """Lint a single Python file for unsafe SQLModel patterns."""
+def lint_file(
+    filepath: Path, verbose: bool = False, scope: CheckScope = CheckScope.FULL
+) -> List[LintIssue]:
+    """Lint a single Python file for unsafe SQLModel patterns.
+
+    Args:
+        filepath: Path to the Python file to lint
+        verbose: Whether to print verbose output
+        scope: CheckScope.STAGED skips CI-only rules (PIN-269)
+    """
     issues = []
 
     try:
@@ -378,6 +415,11 @@ def lint_file(filepath: Path, verbose: bool = False) -> List[LintIssue]:
         return []
 
     for pattern_def in UNSAFE_PATTERNS:
+        rule_id = pattern_def.get("id", "")
+
+        # PIN-269: Skip CI-only rules in pre-commit mode
+        if scope == CheckScope.STAGED and rule_id in CI_ONLY_RULES:
+            continue
         regex = pattern_def["regex"]
         flags = re.MULTILINE
         if pattern_def.get("multiline"):
@@ -420,15 +462,50 @@ def lint_file(filepath: Path, verbose: bool = False) -> List[LintIssue]:
     return issues
 
 
-def lint_directory(path: Path, verbose: bool = False) -> List[LintIssue]:
-    """Lint all Python files in a directory."""
+def lint_directory(
+    path: Path, verbose: bool = False, scope: CheckScope = CheckScope.FULL
+) -> List[LintIssue]:
+    """Lint all Python files in a directory.
+
+    Args:
+        path: Directory path to scan
+        verbose: Whether to print verbose output
+        scope: CheckScope.STAGED skips CI-only rules (PIN-269)
+    """
     issues = []
 
     for filepath in path.rglob("*.py"):
         if any(skip in str(filepath) for skip in SKIP_PATHS):
             continue
 
-        file_issues = lint_file(filepath, verbose)
+        file_issues = lint_file(filepath, verbose, scope)
+        issues.extend(file_issues)
+
+        if verbose and file_issues:
+            print(f"  📂 {filepath}: {len(file_issues)} issue(s)")
+
+    return issues
+
+
+def lint_files(
+    files: List[Path], verbose: bool = False, scope: CheckScope = CheckScope.STAGED
+) -> List[LintIssue]:
+    """Lint specific files (for pre-commit mode).
+
+    Args:
+        files: List of file paths to lint
+        verbose: Whether to print verbose output
+        scope: Defaults to STAGED for pre-commit (PIN-269)
+    """
+    issues = []
+
+    for filepath in files:
+        if not filepath.exists():
+            continue
+        if any(skip in str(filepath) for skip in SKIP_PATHS):
+            continue
+
+        file_issues = lint_file(filepath, verbose, scope)
         issues.extend(file_issues)
 
         if verbose and file_issues:
@@ -453,20 +530,83 @@ def print_summary(issues: List[LintIssue]):
         print(f"  {rule} ({severity}): {len(rule_issues)} occurrence(s)")
 
 
+def get_scope() -> CheckScope:
+    """Determine check scope from environment.
+
+    PIN-269: Pre-commit = delta validation, CI = global validation.
+    """
+    scope_env = os.environ.get("CHECK_SCOPE", "").lower()
+
+    if scope_env == "staged":
+        return CheckScope.STAGED
+    elif scope_env == "full":
+        return CheckScope.FULL
+    else:
+        # Default: if files are passed as arguments, assume staged mode
+        # Otherwise, assume full scan (backward compatibility)
+        return CheckScope.FULL
+
+
 def main():
     verbose = "--verbose" in sys.argv or "-v" in sys.argv
     scan_all = "--scan-all" in sys.argv
 
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
 
+    # PIN-269: Determine scope from environment
+    scope = get_scope()
+
+    # If CHECK_SCOPE=staged and files are passed, use staged mode
+    # This is the pre-commit pattern
+    if os.environ.get("CHECK_SCOPE", "").lower() == "staged" and args:
+        files = [Path(a) for a in args if a.endswith(".py")]
+        if not files:
+            print("No Python files to check.")
+            sys.exit(0)
+
+        print("=" * 70)
+        print("SQLModel Pattern Linter v2.4 - Pre-Commit Mode (STAGED)")
+        print("  PIN-269: Checking staged files only, CI-only rules skipped")
+        print("=" * 70)
+        print(f"\nChecking {len(files)} staged file(s)...")
+
+        issues = lint_files(files, verbose, CheckScope.STAGED)
+
+        if not issues:
+            print("✅ No issues in staged files.")
+            sys.exit(0)
+
+        # Print issues and exit
+        print(f"\n⚠️  Found {len(issues)} issue(s) in staged files:")
+        for issue in issues:
+            severity_icon = {"critical": "🔴", "error": "🟠", "warning": "🟡"}[
+                issue.severity.value
+            ]
+            print(f"{severity_icon} [{issue.rule_id}] {issue.file}:{issue.line}")
+            print(f"   {issue.message}")
+            print(f"   → {issue.suggestion}")
+            print()
+
+        errors = [i for i in issues if i.severity == Severity.ERROR]
+        critical = [i for i in issues if i.severity == Severity.CRITICAL]
+        if critical:
+            sys.exit(2)
+        elif errors:
+            sys.exit(1)
+        else:
+            sys.exit(0)
+
+    # Full scan mode (CI or legacy)
     if scan_all:
         path = Path("backend")
     else:
         path = Path(args[0]) if args else Path("backend/app")
 
     print("=" * 70)
-    print("SQLModel Pattern Linter v2.2 - Detecting Unsafe Query Patterns")
+    print("SQLModel Pattern Linter v2.4 - Detecting Unsafe Query Patterns")
     print("  PIN-120 Test Suite Stabilization Prevention Mechanisms")
+    if scope == CheckScope.FULL:
+        print("  Mode: FULL (all rules including global invariants)")
     print("=" * 70)
     print()
     print("Rules enforced:")
@@ -486,10 +626,10 @@ def main():
     print()
 
     if path.is_file():
-        issues = lint_file(path, verbose)
+        issues = lint_file(path, verbose, scope)
     else:
         print(f"Scanning: {path}")
-        issues = lint_directory(path, verbose)
+        issues = lint_directory(path, verbose, scope)
 
     if not issues:
         print("\n✅ No unsafe SQLModel patterns detected!")

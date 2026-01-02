@@ -34,10 +34,17 @@ from sqlmodel import Session, select
 if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
+from app.infra import FeatureIntent, RetryPolicy
+
 from ..db import Run, engine
 from ..events import get_publisher
 from ..metrics import nova_worker_pool_size
 from .runner import RunRunner
+
+# Phase-2.3: Feature Intent Declaration
+# Thread pool state tracking, no distributed locks needed
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
 
 logger = logging.getLogger("nova.worker.pool")
 

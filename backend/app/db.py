@@ -51,12 +51,15 @@ def get_engine():
     global _engine
     if _engine is None:
         database_url = get_database_url()
-        # Connection pool configuration for concurrent load
+        # Connection pool configuration - can be reduced via env vars for testing
+        # PIN-276: Allow smaller pools in test environments to prevent exhaustion
+        pool_size = int(os.getenv("DB_POOL_SIZE", "20"))
+        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "30"))
         _engine = create_engine(
             database_url,
             echo=False,
-            pool_size=20,
-            max_overflow=30,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
             pool_timeout=30,
             pool_recycle=1800,
             pool_pre_ping=True,  # Verify connections before use
@@ -116,11 +119,14 @@ def get_async_engine():
         if needs_ssl:
             connect_args["ssl"] = "require"
 
+        # PIN-276: Allow smaller pools in test environments to prevent exhaustion
+        pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
+        max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "20"))
         _async_engine = create_async_engine(
             async_url,
             echo=False,
-            pool_size=10,
-            max_overflow=20,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
             pool_timeout=30,
             pool_recycle=1800,
             connect_args=connect_args,

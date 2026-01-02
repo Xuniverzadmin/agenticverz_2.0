@@ -9,6 +9,14 @@
 # Forbidden Imports: L2 (api), L3 (adapters)
 # Reference: PIN-250 Phase 2B Batch 4
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# DB write operations with atomic UPSERT via ON CONFLICT DO UPDATE
+# Transaction boundaries are explicit and safe to retry
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 """
 Recovery Write Service - DB write operations for Recovery APIs.
 
@@ -98,7 +106,7 @@ class RecoveryWriteService:
                     1,
                     now()
                 )
-                ON CONFLICT (failure_match_id, error_signature) DO UPDATE
+                ON CONFLICT (failure_match_id) DO UPDATE
                 SET
                     occurrence_count = recovery_candidates.occurrence_count + 1,
                     last_occurrence_at = now(),

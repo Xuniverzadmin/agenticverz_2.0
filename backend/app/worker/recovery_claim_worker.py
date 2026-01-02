@@ -20,6 +20,14 @@
 #   - Reads configuration from environment
 #   - Persists results TO database (L6)
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Worker claims and processes recovery candidates with FOR UPDATE SKIP LOCKED
+# Must resume on crash - claimed rows are released on shutdown
+FEATURE_INTENT = FeatureIntent.RECOVERABLE_OPERATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 # app/worker/recovery_claim_worker.py
 """
 M10 Recovery Claim Worker - Concurrent-safe batch processor

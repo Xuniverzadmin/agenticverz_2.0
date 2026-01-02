@@ -3,6 +3,10 @@
 #
 # Based on: PIN-063-m12.1-stabilization.md
 # Purpose: Validate FOR UPDATE SKIP LOCKED under production-like load
+#
+# NOTE: These tests require the 'agents' schema to be present in the database.
+# The schema is defined in PIN-062 and includes: agents.jobs, agents.job_items,
+# agents.instances, agents.messages. Tests are skipped if schema is missing.
 
 import os
 import random
@@ -20,6 +24,35 @@ os.environ.setdefault(
     "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
 )
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+
+# Test configuration
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+def _agents_schema_exists() -> bool:
+    """Check if the 'agents' schema exists in the database."""
+    try:
+        import psycopg2
+
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            return False
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        cur.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'agents'")
+        result = cur.fetchone()
+        conn.close()
+        return result is not None
+    except Exception:
+        return False
+
+
+# Skip all tests if agents schema doesn't exist
+AGENTS_SCHEMA_EXISTS = _agents_schema_exists()
+pytestmark = pytest.mark.skipif(
+    not DATABASE_URL or not AGENTS_SCHEMA_EXISTS,
+    reason="DATABASE_URL not set or agents schema not present (see PIN-062)",
+)
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker

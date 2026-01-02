@@ -31,39 +31,81 @@ from app.costsim.circuit_breaker import (
 from app.db import CostSimCBIncident, CostSimCBState, engine
 
 
-@pytest.fixture
-def db_session():
-    """Create a database session for testing."""
-    with Session(engine) as session:
-        yield session
+@pytest.fixture(autouse=True)
+def use_single_connection_pool():
+    """
+    Force a single-connection pool for circuit breaker tests.
 
+    This fixes hanging tests caused by SELECT FOR UPDATE locks being held
+    across multiple connections. The issue is that session.commit() may
+    release the connection to the pool, and subsequent operations get a
+    different connection. When _get_or_create_state() is called twice
+    (in disable_v2 and in _trip), the second call gets a different
+    connection that blocks on the first connection's FOR UPDATE lock.
 
-@pytest.fixture
-def clean_circuit_breaker_state(db_session):
-    """Reset circuit breaker state before each test."""
-    # Delete existing state
-    statement = select(CostSimCBState).where(CostSimCBState.name == CB_NAME)
-    result = db_session.exec(statement)
-    state = result.first()
-    if state:
-        db_session.delete(state)
-        db_session.commit()
+    By using a StaticPool with a single connection, all operations use
+    the same connection and the same transaction context.
 
-    # Delete existing incidents
-    statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == CB_NAME)
-    for incident in db_session.exec(statement):
-        db_session.delete(incident)
-    db_session.commit()
+    Phase-2.1: DB session lifecycle fix (PIN-264)
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    import app.db as db_module
+
+    # Save original engine
+    original_engine = db_module._engine
+
+    # Create a new engine with StaticPool (single connection, reused for all operations)
+    database_url = db_module.get_database_url()
+    db_module._engine = create_engine(
+        database_url,
+        echo=False,
+        poolclass=StaticPool,
+        connect_args={"options": "-c statement_timeout=30000"},  # 30s timeout
+    )
 
     yield
 
-    # Cleanup after test
-    statement = select(CostSimCBState).where(CostSimCBState.name == CB_NAME)
-    result = db_session.exec(statement)
-    state = result.first()
-    if state:
-        db_session.delete(state)
-        db_session.commit()
+    # Restore original engine
+    db_module._engine.dispose()
+    db_module._engine = original_engine
+
+
+@pytest.fixture
+def clean_circuit_breaker_state():
+    """Reset circuit breaker state before each test."""
+    # Use a fresh session for cleanup
+    with Session(engine) as session:
+        # Delete existing state
+        statement = select(CostSimCBState).where(CostSimCBState.name == CB_NAME)
+        result = session.exec(statement)
+        state = result.first()
+        if state:
+            session.delete(state)
+            session.commit()
+
+        # Delete existing incidents
+        statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == CB_NAME)
+        for incident in session.exec(statement):
+            session.delete(incident)
+        session.commit()
+
+    yield
+
+    # Cleanup after test with fresh session
+    with Session(engine) as session:
+        statement = select(CostSimCBState).where(CostSimCBState.name == CB_NAME)
+        result = session.exec(statement)
+        state = result.first()
+        if state:
+            session.delete(state)
+            session.commit()
+
+        statement = select(CostSimCBIncident).where(CostSimCBIncident.circuit_breaker_name == CB_NAME)
+        for incident in session.exec(statement):
+            session.delete(incident)
+        session.commit()
 
 
 @pytest.fixture

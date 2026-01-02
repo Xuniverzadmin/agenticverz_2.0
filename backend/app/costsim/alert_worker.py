@@ -1,5 +1,6 @@
-# CostSim Alert Worker - Reliable Alert Delivery
 """
+CostSim Alert Worker - Reliable Alert Delivery
+
 Background worker for reliable alert delivery.
 
 This worker processes the alert queue, sending alerts to Alertmanager
@@ -25,6 +26,14 @@ Usage:
 """
 
 from __future__ import annotations
+
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Sends alerts to Alertmanager - external HTTP calls are non-deterministic
+# Cannot safely retry without idempotency key (which Alertmanager may not support)
+FEATURE_INTENT = FeatureIntent.EXTERNAL_SIDE_EFFECT
+RETRY_POLICY = RetryPolicy.NEVER
 
 import asyncio
 import logging

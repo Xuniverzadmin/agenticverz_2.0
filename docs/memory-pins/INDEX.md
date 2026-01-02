@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-01 (PIN-264 Phase S — System Readiness for First Contact)
+**Last Updated:** 2026-01-02 (PIN-276 Bucket A/B Permanent Fix Design)
 
 ---
 
@@ -296,6 +296,17 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-262](PIN-262-signal-circuit-discovery-governance-clarification.md) | **Signal Circuit Discovery — Governance Clarification** | Governance / Phase 1 | **RATIFIED** | 2025-12-31 |
 | [PIN-263](PIN-263-phase-r-structural-repair-complete.md) | **Phase R — L5→L4 Structural Repair Complete** | Architecture / Layer Model | **🔒 ENFORCED** | 2026-01-01 |
 | [PIN-264](PIN-264-phase-s-system-readiness-for-first-contact.md) | **Phase S — System Readiness for First Contact** | Governance / Pre-Launch | **🏗️ ACTIVE** | 2026-01-01 |
+| [PIN-265](PIN-265-phase-c1-rbac-stub-implementation-complete.md) | **Phase C.1 RBAC Stub Implementation Complete** | CI / Infrastructure | **✅ COMPLETE** | 2026-01-01 |
+| [PIN-266](PIN-266-infra-registry-canonicalization.md) | **Infra Registry Canonicalization** | CI / Governance | **✅ COMPLETE** | 2026-01-01 |
+| [PIN-267](PIN-267-ci-logic-issue-tracker---10-surgical-fixes.md) | **CI Logic Issue Tracker - 10 Surgical Fixes** | CI / Test Repair | ✅ COMPLETE | 2026-01-02 |
+| [PIN-269](PIN-269-pre-commit-locality-rule.md) | **Pre-Commit Locality Rule** | CI / Governance | **🔒 ENFORCED** | 2026-01-02 |
+| [PIN-270](PIN-270-engineering-authority-codification.md) | **Engineering Authority Codification** | Governance / Claude Discipline | **🔒 ENFORCED** | 2026-01-02 |
+| [PIN-271](PIN-271-rbac-authority-separation.md) | **RBAC Authority Separation** | Architecture / Security / RBAC | **🔒 ENFORCED** | 2026-01-02 |
+| [PIN-272](PIN-272-applicability-policy-governance.md) | **Applicability Policy Governance** | Architecture / Authorization / Visibility | **🔒 ENFORCED** | 2026-01-02 |
+| [PIN-273](PIN-273-rbac-authority-core-phase1-complete.md) | **RBAC Authority Core (Phase 1) Complete** | Architecture / Authorization | **ACTIVE** | 2026-01-02 |
+| [PIN-274](PIN-274-rbac-promotion-neon-synthetic-load.md) | **RBACv2 Promotion via Neon + Synthetic Load** | Authorization / Promotion Gate | **ACTIVE** | 2026-01-02 |
+| [PIN-275](PIN-275-rbac-track-a-promotion-status.md) | **RBAC Track A Promotion Status** | Security / RBAC | **PROMOTION READY** | 2026-01-02 |
+| [PIN-276](PIN-276-bucket-ab-permanent-fix-design.md) | **Bucket A/B Permanent Fix Design** | CI / Infrastructure | **DESIGN APPROVED** | 2026-01-02 |
 
 ---
 
@@ -1065,6 +1076,18 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-02 | **PIN-276 Bucket A/B Permanent Fix Design** - System-level fixes for test isolation (transaction rollback per test) and infra state (A→B→C promotion model). No more patching tests - change the rules. TEST_ISOLATION_RULE and INFRA_REGISTRY enforcement. |
+| 2026-01-02 | **PIN-275 RBAC Track A Promotion Status** - Track A complete: 900k stress test passed (18,959 req/sec, 0.053ms latency, 0 errors). v2_more_permissive=0. All discrepancies=expected_tightening. Manual checklist (30 min) remains. RBACv2 is production-grade. |
+| 2026-01-02 | **PIN-274 RBACv2 Promotion via Neon + Synthetic Load** - Defines path from engineering complete to operationally proven. Three hard proofs: synthetic traffic at scale, Neon DB with real tenancy, full discrepancy classification. Parallel tracks: Track A (RBAC Promotion) + Track B (CI Closure). Time is proxy, coverage is invariant. |
+| 2026-01-02 | **PIN-273 RBAC Authority Core Phase 1 Complete** - ActorContext, AuthorizationEngine, IdentityChain implemented. RBACv2 Reference Mode live. 71 new tests. Promotion path: Reference → Assert → Enforce. Terminology locked: RBACv1 (Enforcement Authority) / RBACv2 (Reference Authority). |
+| 2026-01-02 | **PIN-272 Applicability Policy Governance** - Access gated at request time. No historical re-authorization. No data partitioning. |
+| 2026-01-02 | **PIN-271 RBAC Authority Separation** - Identity is not authorization. Clerk is identity provider, AuthorizationEngine owns rules. Same auth path everywhere. |
+| 2026-01-02 | **PIN-270 Engineering Authority Codification** - Architecture-first, production-truthful engineering principles. Self-check mechanism added. |
+| 2026-01-02 | **PIN-269 Pre-Commit Locality Rule** - Pre-commit must only validate staged files. CI-only rules separated. |
+| 2026-01-02 | **PIN-267 CI Logic Issue Tracker - 10 Surgical Fixes** - Created via memory_trail. Marked COMPLETE. |
+| 2026-01-01 | **PIN-266 Infra Registry Canonicalization** - Created via memory_trail. |
+| 2026-01-01 | **PIN-265 Phase C.1 RBAC Stub Implementation Complete** - Created via memory_trail. |
+| 2026-01-01 | **PIN-264 Phase S — System Readiness for First Contact** - Updated: Phase-2.2 Update |
 | 2026-01-01 | **PIN-264 Phase S — System Readiness for First Contact** - Created via memory_trail. |
 | 2026-01-01 | **PIN-263 Phase R Step 5 ENFORCED** - L5→L4 CI merge-blocking enabled. layer-enforcement job added to ci.yml. Escape hatch: SIG-001 in commit message. Baseline: 602 files, 0 violations. |
 | 2026-01-01 | **PIN-263 Phase R Step 4 COMPLETE** - E2E Stabilization done. 6/6 E2E tests passing, 17/17 recovery tests passing. BLCA CLEAN (602 files, 0 violations). Fixed Phase R expectations in tests. Ready for Step 5 enforcement. |

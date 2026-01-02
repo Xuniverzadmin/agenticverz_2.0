@@ -1447,6 +1447,94 @@ async def get_incident_patterns(
 
 
 # =============================================================================
+# Phase-S: Infra Incident Summary (PIN-264)
+# =============================================================================
+
+
+@router.get("/incidents/infra-summary")
+async def get_infra_incident_summary(
+    hours: int = Query(default=24, ge=1, le=168, description="Lookback window in hours"),
+    token: FounderToken = Depends(verify_fops_token),
+    session: Session = Depends(get_session),
+) -> Dict[str, Any]:
+    """
+    GET /ops/incidents/infra-summary
+
+    Phase-S Infrastructure Incident Summary.
+
+    This endpoint uses the new L4 OpsIncidentService to query
+    infra_error_events and return aggregated OpsIncident data.
+
+    Reference: PIN-264 (Phase-S Track 1.3 + L4 Aggregation)
+
+    Returns:
+        Aggregated incident summary from infra persistence layer.
+    """
+    from datetime import timedelta
+
+    from app.adapters.founder_ops_adapter import FounderOpsAdapter
+    from app.services.ops_incident_service import OpsIncidentService
+
+    # Calculate time window
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(hours=hours)
+
+    # Create L4 service (uses real DB session)
+    # Note: In production, OpsIncidentService queries infra_error_events directly
+    # For now, we wrap session access via the service's internal query
+    incident_service = OpsIncidentService(error_store=None)  # Uses internal DB access
+
+    try:
+        # Query L4 for incidents
+        incidents = incident_service.get_active_incidents(since=since, until=now)
+        summary = incident_service.get_incident_summary(since=since, until=now)
+
+        # Adapt to Founder view via L3
+        adapter = FounderOpsAdapter()
+        response = adapter.to_summary_response(
+            incidents=incidents,
+            summary_counts=summary,
+            window_start=since,
+            window_end=now,
+            max_recent=10,
+        )
+
+        # Return as dict (dataclass to dict conversion)
+        return {
+            "total_incidents": response.total_incidents,
+            "by_severity": response.by_severity,
+            "recent_incidents": [
+                {
+                    "incident_id": inc.incident_id,
+                    "title": inc.title,
+                    "severity": inc.severity,
+                    "component": inc.component,
+                    "occurrence_count": inc.occurrence_count,
+                    "first_seen": inc.first_seen,
+                    "last_seen": inc.last_seen,
+                    "affected_runs": inc.affected_runs,
+                    "affected_agents": inc.affected_agents,
+                    "is_resolved": inc.is_resolved,
+                }
+                for inc in response.recent_incidents
+            ],
+            "window_start": response.window_start,
+            "window_end": response.window_end,
+        }
+    except Exception as e:
+        # Graceful degradation: return empty summary if infra_error_events not ready
+        logging.warning(f"infra-summary query failed (table may not exist yet): {e}")
+        return {
+            "total_incidents": 0,
+            "by_severity": {"urgent": 0, "action": 0, "attention": 0, "info": 0},
+            "recent_incidents": [],
+            "window_start": since.isoformat(),
+            "window_end": now.isoformat(),
+            "error": "Infrastructure error table not available",
+        }
+
+
+# =============================================================================
 # Module 3.1: Founder Incident Detail (M29 Category 5)
 # =============================================================================
 

@@ -19,6 +19,14 @@
 #   - Persists results to database (L6)
 #   - Does NOT make domain decisions
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# L5 executor for recovery actions - participates in recovery orchestration
+# Uses atomic UPDATE with exactly-once side-effect guarantee
+FEATURE_INTENT = FeatureIntent.RECOVERABLE_OPERATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 # M10 Recovery Executor (L5 Pure Execution)
 """
 L5 Executor for recovery actions.

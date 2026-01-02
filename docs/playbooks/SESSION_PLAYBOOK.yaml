@@ -15,11 +15,64 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.25"
+session_playbook_version: "2.32"
 created: "2025-12-27"
-last_updated: "2025-12-31"
+last_updated: "2026-01-02"
 
 # Changelog:
+#   2.32 - DECISION GUARDRAILS (Section 25.1, PIN-276 REDO).
+#          Adds decision_guardrails section preventing contract drift.
+#          Layer 1: Fix classification required before any code change.
+#          Layer 2: System-guided design detection (overload/parallel field patterns).
+#          Layer 3: Hard stop conditions for structural violations.
+#          Core principle: One contract, one signature, one truth.
+#          Prevents function overloading and parallel state fields.
+#          Reference: PIN-276 (Contract Authority Enforcement)
+#   2.31 - INFRA REALITY INVARIANT (infra_truth_rule extension, PIN-276).
+#          Added infra_reality_invariant subsection enforcing schema/code alignment.
+#          Core principle: If code assumes it, schema must enforce it.
+#          Added M10-specific enforcement rules and isolation fixtures.
+#          Prevents future debt from placeholder skips.
+#          Reference: PIN-276 (Test Isolation)
+#   2.30 - INFRA TRUTH RULE (Section 33, PIN-266).
+#          Added infra_truth_rule section enforcing registry-derived CI behavior.
+#          Core principle: CI behavior must be derived from INFRA_REGISTRY.md.
+#          Adds infra state taxonomy (A/B/C) with locked definitions.
+#          Adds CI auto-alignment rules for @requires_infra decorator.
+#          Adds ground truth authority chain (registry → enforcement → governance).
+#          Adds Claude behavior rules for infra reasoning.
+#          Prevents silent skips and infra assumption without registry entry.
+#          Reference: PIN-266 (Infra Registry Canonicalization)
+#   2.29 - CLAUDE_AUTHORITY.md SUPREMACY (PIN-269).
+#          Added CLAUDE_AUTHORITY.md to mandatory_load as HIGHEST non-human authority.
+#          Added governance_relationship section mapping playbook to authority sections.
+#          Establishes: CLAUDE_AUTHORITY.md is principle; SESSION_PLAYBOOK is procedure.
+#          If conflict exists, CLAUDE_AUTHORITY.md wins without exception.
+#          Reference: PIN-269, CLAUDE_AUTHORITY.md
+#   2.28 - FEATURE INTENT SYSTEM (Section 17 upgrade to full hierarchy).
+#          Phase-2.3: Extends intent from function-level to feature-level.
+#          Adds FeatureIntent enum: PURE_QUERY, STATE_MUTATION, EXTERNAL_SIDE_EFFECT, RECOVERABLE_OPERATION
+#          Adds RetryPolicy enum: NEVER, SAFE, DANGEROUS
+#          Adds @feature decorator for feature-level intent consistency
+#          Adds INTENT_CONSISTENCY_MATRIX enforcing feature→function→primitive alignment
+#          Adds scripts/ci/check_feature_intent.py for module-level enforcement
+#          Adds app/infra/feature_intent_examples.py with all valid combinations
+#          Reference: PIN-264 (Phase-2.3 Feature Intent System)
+#   2.27 - TRANSACTION INTENT SYSTEM (Section 17 upgrade).
+#          Phase-2.2: Upgrades from "blocked" to "guided by construction".
+#          Adds TransactionIntent enum: READ_ONLY, ATOMIC_WRITE, LOCKED_MUTATION
+#          Adds @transactional decorator for intent declaration (fail-fast validation)
+#          Adds scripts/ci/check_intent_consistency.py for intent/primitive alignment
+#          Adds app/infra/transaction_examples.py as golden reference
+#          Section 17 is now "mirror, not authority" — code enforces, playbook explains
+#          Reference: PIN-264 (Phase-2.2 Self-Defense with Intent)
+#   2.26 - TRANSACTION SAFETY PRIMITIVES (Section 17).
+#          Added self-defending transaction architecture.
+#          Introduces single_connection_transaction() as the ONLY blessed path
+#          for row locks (SELECT ... FOR UPDATE).
+#          CI check: scripts/ci/check_forbidden_patterns.py
+#          Makes cross-connection deadlocks STRUCTURALLY IMPOSSIBLE.
+#          Reference: PIN-264 (Phase-2.1 Self-Defense)
 #   2.25 - CLAUDE GOVERNANCE INSTRUCTION SET (Section 32).
 #          Comprehensive phase-aware, SCD-compatible governance rules.
 #          Adds: Operating mode, phase awareness, signal definition, SCD rules,
@@ -241,6 +294,19 @@ last_updated: "2025-12-31"
 # Order matters - load in this sequence.
 
 mandatory_load:
+  # Claude Authority Spine (HIGHEST NON-HUMAN AUTHORITY)
+  # Reference: PIN-269
+  - path: CLAUDE_AUTHORITY.md
+    purpose: Absolute authority hierarchy, pre-flight requirements, behavioral principles
+    required: true
+    frozen: true
+    ci_guard: claude-authority-guard
+    supremacy_note: |
+      This document takes precedence over SESSION_PLAYBOOK.yaml.
+      If any conflict exists between CLAUDE_AUTHORITY.md and this playbook,
+      CLAUDE_AUTHORITY.md wins. This playbook is procedural implementation;
+      CLAUDE_AUTHORITY.md is governing principle.
+
   # Core Boot Contract (defines Claude's operating rules)
   - path: CLAUDE_BOOT_CONTRACT.md
     purpose: Boot sequence and forbidden actions
@@ -311,6 +377,14 @@ mandatory_load:
     scope: console.agenticverz.com
     frozen: true
     version: v1
+
+  # Priority-5 Feature Intent (Phase-3 Batch-1 frozen)
+  - path: docs/ci/PRIORITY5_INTENT_CANONICAL.md
+    purpose: Priority-5 intents are frozen; changes require founder ratification
+    required: true
+    frozen: true
+    ci_guard: priority5-intent-guard
+    reference: PIN-265
 
   # Codebase Registry (artifact registration and purpose tracking)
   - path: docs/codebase-registry/schema-v1.yaml
@@ -413,6 +487,94 @@ blca_verification:
     step_2: Run BLCA verification
     step_3: Only if BLCA is CLEAN → provide SESSION_BOOTSTRAP_CONFIRMATION
     step_4: If BLCA has violations → BLOCK and report (do NOT say "ready")
+
+# =============================================================================
+# GOVERNANCE RELATIONSHIP: CLAUDE_AUTHORITY.md → SESSION_PLAYBOOK
+# =============================================================================
+# CLAUDE_AUTHORITY.md is the governing PRINCIPLE document.
+# SESSION_PLAYBOOK.yaml is the PROCEDURAL implementation.
+#
+# When conflicts exist: CLAUDE_AUTHORITY.md always wins.
+# When procedures are unclear: Refer to CLAUDE_AUTHORITY.md principles.
+#
+# Reference: PIN-269 (Claude Authority Spine)
+
+governance_relationship:
+  authority_document: CLAUDE_AUTHORITY.md
+  implementation_document: SESSION_PLAYBOOK.yaml
+  supremacy: CLAUDE_AUTHORITY.md wins on conflict
+
+  section_mapping:
+    # §1 Order of Precedence → Implicit in mandatory_load order
+    authority_section_1:
+      name: Order of Precedence
+      playbook_implementation: mandatory_load order + supremacy_note
+      note: Human > CLAUDE_AUTHORITY > SESSION_PLAYBOOK > PINs > CI > Tests > Code
+
+    # §2 Pre-Flight → pre_build_guards, ARTIFACT_INTENT.yaml
+    authority_section_2:
+      name: Mandatory Pre-Flight
+      playbook_implementation: Section 22 (Architecture Governor)
+      templates:
+        - docs/templates/NEW_FEATURE_SKELETON.md
+        - docs/templates/ARTIFACT_INTENT.yaml
+
+    # §3 Classification → Bucket A/B/C system
+    authority_section_3:
+      name: Classification Before Fixing
+      playbook_implementation: CI bucket markers (@pytest.mark.ci_bucket)
+      reference: GU-002 in PIN-268
+
+    # §4 Intent → Section 17 (Transaction Safety), FeatureIntent
+    authority_section_4:
+      name: Intent Is Not Optional
+      playbook_implementation: Section 17 (Transaction Safety + Feature Intent)
+      templates:
+        - docs/templates/INTENT_BOILERPLATE.md
+
+    # §5 Invariants → invariant tests, docs/invariants/
+    authority_section_5:
+      name: Invariants Are Sacred
+      playbook_implementation: tests/invariants/, docs/invariants/
+      enforcement: "@pytest.mark.invariant tests cannot be weakened"
+
+    # §6 Guidance → GU-004 Danger Fences
+    authority_section_6:
+      name: Guidance Over Punishment
+      playbook_implementation: app/infra/danger_fences.py
+      reference: GU-004 in PIN-268
+
+    # §7 Artifacts → on_task_completion, artifact hygiene
+    authority_section_7:
+      name: Artifact Accountability
+      playbook_implementation: Section 23 (Artifact Hygiene)
+      required_output: Artifacts Created/Modified/Deleted/Governance Updated
+
+    # §8 Freezing → frozen documents, CI guards
+    authority_section_8:
+      name: Change Freezing & Ratification
+      playbook_implementation: frozen fields in mandatory_load, CI guards
+      examples:
+        - "CLAUDE_AUTHORITY.md (frozen: true, ci_guard: claude-authority-guard)"
+        - "PRIORITY5_INTENT_CANONICAL.md (frozen: true)"
+
+    # §9 Evolution → PIN creation, CI guard creation
+    authority_section_9:
+      name: Evolution Rule
+      playbook_implementation: memory_trail.py, CI guard addition
+      rule: Every incident produces at least one artifact
+
+    # §10 Final Principle → governance_qualifier section
+    authority_section_10:
+      name: Final Governing Principle
+      playbook_implementation: Section 27 (Governance Qualifier)
+      note: Clarity over cleverness, declared intent over inference
+
+  deduplication_note: |
+    SESSION_PLAYBOOK sections should not REPEAT CLAUDE_AUTHORITY.md principles.
+    SESSION_PLAYBOOK sections should IMPLEMENT or REFERENCE those principles.
+    If a playbook section says "X is required", but CLAUDE_AUTHORITY.md says
+    "X is not required", CLAUDE_AUTHORITY.md wins.
 
 # =============================================================================
 # FORBIDDEN ACTIONS (Before Bootstrap)
@@ -5701,9 +5863,314 @@ claude_governance:
         type: RUNTIME_ASSERTION
         severity: BLOCKING
 
+    l4_aggregation_rules:
+      name: L4 Ops Aggregation Service Constraints
+      reference: PIN-264 (Track 1.3 + L4 Aggregation)
+      effective: 2026-01-01
+
+      prime_directive: |
+        L4 Aggregation Services translate infra truth into operator understanding.
+        They query L6 infra persistence and return L4 domain models ONLY.
+        No UI shaping, no pagination, no adapters, no APIs.
+
+      service_design:
+        input: "Time window, severity threshold, optional component scope"
+        output: "List[OpsIncident] or similar L4 domain model"
+        forbidden:
+          - return_infra_artifacts_like_ErrorEnvelope
+          - know_about_consoles_like_fops_or_preflight
+          - paginate_results_for_display
+          - sort_for_ui_presentation
+          - filter_by_user_role
+
+      publication_pipeline:
+        L6_Infra_Truth: "ErrorEnvelope, DecisionSnapshot — NEVER exposed"
+        L4_Domain_Interpretation: "OpsIncident, OpsHealthSignal — meaning + grouping"
+        L3_View_Adapters: "FounderOpsAdapter, PreflightOpsAdapter — shape + permission"
+        L2_Ops_APIs: "read-only, aggregated, role-filtered"
+        L1_Consoles: "fops, preflight-fops — curated views only"
+
+      hard_rules:
+        HR_001: "Never return infra artifacts (ErrorEnvelope, raw DB rows)"
+        HR_002: "Never know about consoles (fops, preflight)"
+        HR_003: "Never paginate (that's L3's job)"
+        HR_004: "Must be unit-testable with fake infra data"
+        HR_005: "Use Protocol for dependency injection"
+
+      testability:
+        pattern: "Protocol-based dependency injection"
+        example: |
+          class ErrorStoreProtocol(Protocol):
+              def get_errors_by_component(...) -> List[Dict[str, Any]]: ...
+
+          class OpsIncidentService:
+              def __init__(self, error_store: ErrorStoreProtocol): ...
+
+      current_services:
+        - name: OpsIncidentService
+          location: app.services.ops_incident_service
+          status: IMPLEMENTED
+          answers: "What incidents are happening?"
+
     related_docs:
       - docs/governance/SEMANTIC_ARTIFACTS.md
       - docs/memory-pins/PIN-264-phase-s-system-readiness-for-first-contact.md
+
+  # ---------------------------------------------------------------------------
+  # 17. Transaction Safety Primitives (Self-Defending Architecture)
+  # ---------------------------------------------------------------------------
+  # MIRROR, NOT AUTHORITY:
+  # This section EXPLAINS why the system works. The code ENFORCES it.
+  # If this section and the code disagree, the code is right.
+  # Modify the code to change behavior, not this document.
+  # ---------------------------------------------------------------------------
+  transaction_safety_primitives:
+    name: Self-Defending Transaction Architecture
+    reference: PIN-264 (Phase-2.2 Self-Defense with Intent)
+    effective: 2026-01-01
+    incident_origin: "2026-01-01 circuit breaker deadlock"
+
+    mirror_not_authority: |
+      This section is a MIRROR explaining "why" — not an AUTHORITY enforcing "how".
+      The enforcement happens in:
+        - app/infra/transaction.py (primitives, @transactional decorator)
+        - scripts/ci/check_forbidden_patterns.py (syntax ban)
+        - scripts/ci/check_intent_consistency.py (intent validation)
+
+      If you want to change how transactions work, modify the code above.
+      This playbook will automatically become correct by describing what is.
+
+    prime_directive: |
+      Row locks (SELECT ... FOR UPDATE) are STRUCTURALLY DANGEROUS with ORMs.
+      session.commit() may release the connection to the pool, and subsequent
+      operations may get a DIFFERENT connection. The new connection blocks on
+      the lock held by the old connection, causing DEADLOCK.
+
+      The system prevents this BY CONSTRUCTION, not by documentation.
+
+    root_cause_class: |
+      The real root cause is NOT "FOR UPDATE". It is:
+        "Transactional intent is not explicit in feature design."
+
+      Phase-2.2 addresses this by requiring engineers to DECLARE intent
+      before they can write implementation. See: TransactionIntent enum.
+
+    blessed_path:
+      primitive: "single_connection_transaction()"
+      location: "app/infra/transaction.py"
+      usage: |
+        from app.infra import single_connection_transaction
+
+        with single_connection_transaction() as txn:
+            row = txn.lock_row(MyTable, MyTable.id == row_id)
+            row.field = new_value
+            txn.commit()
+
+      guarantees:
+        - Single connection for entire scope
+        - Auto-rollback on error
+        - Auto-close on exit
+        - Lock timeout enforcement
+        - Type-safe contract (SingleConnectionTxn)
+
+    intent_declaration:
+      purpose: |
+        Phase-2.2 introduces TransactionIntent: a required declaration before
+        any function can use transaction primitives. This GUIDES engineers into
+        correct design by making intent explicit and machine-checkable.
+
+      enum: TransactionIntent
+      location: "app/infra/transaction.py"
+
+      intents:
+        READ_ONLY:
+          description: "Plain session, no locks"
+          allowed_primitives: ["session.exec()", "select()"]
+          required_param: "Session"
+
+        ATOMIC_WRITE:
+          description: "Transaction context, no FOR UPDATE"
+          allowed_primitives: ["session.add()", "session.commit()"]
+          required_param: "Session"
+
+        LOCKED_MUTATION:
+          description: "single_connection_transaction() REQUIRED"
+          allowed_primitives: ["txn.lock_row()", "txn.commit()"]
+          required_param: "SingleConnectionTxn"
+
+      decorator: "@transactional(intent=TransactionIntent.X)"
+      usage: |
+        from app.infra import transactional, TransactionIntent, SingleConnectionTxn
+
+        @transactional(intent=TransactionIntent.LOCKED_MUTATION)
+        def trip_circuit(txn: SingleConnectionTxn, state_id: str):
+            state = txn.lock_row(CostSimCBState, CostSimCBState.id == state_id)
+            state.disabled = True
+            txn.commit()
+
+      ci_enforcement:
+        script: "scripts/ci/check_intent_consistency.py"
+        validates:
+          - "LOCKED_MUTATION intent has SingleConnectionTxn as first parameter"
+          - "Async functions cannot have LOCKED_MUTATION intent"
+          - "Intent is registered for every decorated function"
+
+    golden_examples:
+      transaction_examples: "app/infra/transaction_examples.py"
+      feature_examples: "app/infra/feature_intent_examples.py"
+      purpose: |
+        Reference implementations demonstrating correct intent patterns.
+        Use these as templates when implementing new features.
+
+    # -------------------------------------------------------------------------
+    # FEATURE INTENT HIERARCHY (Phase-2.3)
+    # -------------------------------------------------------------------------
+    feature_intent_system:
+      purpose: |
+        Phase-2.3 extends intent from function-level to feature-level.
+
+        TransactionIntent answers: "How does this function interact with the DB?"
+        FeatureIntent answers: "What does this feature DO to system state?"
+
+        A fully self-defending system requires BOTH.
+
+      hierarchy: |
+        FeatureIntent (module-level)
+             ↓ constrains
+        TransactionIntent (function-level)
+             ↓ constrains
+        Primitive (implementation-level)
+
+      feature_intents:
+        PURE_QUERY:
+          description: "Read-only, no state changes"
+          allowed_transaction_intents: ["READ_ONLY"]
+          retry_policy: "any (reads are always safe)"
+
+        STATE_MUTATION:
+          description: "Changes system state (DB writes)"
+          allowed_transaction_intents: ["ATOMIC_WRITE", "LOCKED_MUTATION"]
+          retry_policy: "any (depends on idempotency)"
+
+        EXTERNAL_SIDE_EFFECT:
+          description: "Calls external services (APIs, webhooks)"
+          allowed_transaction_intents: ["ATOMIC_WRITE"]
+          retry_policy: "NEVER required (side effects can't be safely retried)"
+
+        RECOVERABLE_OPERATION:
+          description: "Must be idempotent and resumable"
+          allowed_transaction_intents: ["LOCKED_MUTATION"]
+          retry_policy: "SAFE required (must support restart)"
+
+      retry_policies:
+        NEVER: "Retries are forbidden (side-effects, non-idempotent)"
+        SAFE: "Retries are safe (idempotent operations)"
+        DANGEROUS: "Retries possible but require manual review"
+
+      module_declaration: |
+        Every state-touching module must declare at module level:
+
+            from app.infra import FeatureIntent, RetryPolicy
+
+            FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+            RETRY_POLICY = RetryPolicy.SAFE
+
+      ci_enforcement:
+        script: "scripts/ci/check_feature_intent.py"
+        checks:
+          - "Module uses persistence but has no FEATURE_INTENT → FAIL"
+          - "TransactionIntent not in allowed set for FeatureIntent → FAIL"
+          - "EXTERNAL_SIDE_EFFECT without RETRY_POLICY.NEVER → FAIL"
+          - "RECOVERABLE_OPERATION without RETRY_POLICY.SAFE → FAIL"
+
+    forbidden_patterns:
+      - pattern: ".with_for_update()"
+        allowed_in: ["app/infra/transaction.py"]
+        ci_check: "scripts/ci/check_forbidden_patterns.py"
+        severity: BLOCKING
+
+      - pattern: "FOR UPDATE in raw SQL"
+        allowed_in: ["app/infra/transaction.py"]
+        ci_check: "scripts/ci/check_forbidden_patterns.py"
+        severity: BLOCKING
+
+    type_safety_rule: |
+      If a function requires lock continuity, it MUST accept SingleConnectionTxn.
+      This makes the requirement VISIBLE in the function signature and ENFORCEABLE.
+
+      Example:
+        def trip_circuit(txn: SingleConnectionTxn, state_id: str):
+            state = txn.lock_row(CostSimCBState, CostSimCBState.id == state_id)
+            state.disabled = True
+            txn.commit()
+
+    ci_enforcement:
+      scripts:
+        - name: "Forbidden Patterns Check"
+          script: "scripts/ci/check_forbidden_patterns.py"
+          purpose: "Blocks raw FOR UPDATE usage outside blessed primitives"
+
+        - name: "Intent Consistency Check"
+          script: "scripts/ci/check_intent_consistency.py"
+          purpose: "Validates @transactional decorator usage and intent/primitive alignment"
+
+      exit_codes:
+        0: "No violations"
+        1: "Violations found (BLOCKING)"
+        2: "Script error"
+
+      integration: |
+        Add to CI pipeline:
+          - name: Check Forbidden Patterns
+            run: python scripts/ci/check_forbidden_patterns.py app
+
+          - name: Check Intent Consistency
+            run: python scripts/ci/check_intent_consistency.py app
+
+          - name: Check Feature Intent
+            run: python scripts/ci/check_feature_intent.py app
+
+    self_defense_checklist:
+      - question: "Does this require transactional continuity?"
+        enforced_by: "Function signature (SingleConnectionTxn type)"
+      - question: "Does this require locking?"
+        enforced_by: "Must use txn.lock_row(), no raw FOR UPDATE"
+      - question: "Does this span multiple steps?"
+        enforced_by: "Transaction context scope"
+      - question: "Can this block?"
+        enforced_by: "Lock timeout (default 30s)"
+
+    incident_to_invariant_loop:
+      incident: "Cross-connection row locks causing deadlock"
+      invariant: "Lock scope == Connection scope (ALWAYS)"
+      primitive: "single_connection_transaction()"
+      result: "Mistake is now structurally impossible"
+
+    architecture_not_documentation: |
+      This is the key difference between "memory-assisted" and "self-defending":
+      - Documentation tells engineers what to remember
+      - Architecture makes wrong behavior impossible
+
+      Phase-2.2 adds a new distinction between "blocked" and "guided":
+      - Blocked: System prevents mistakes AFTER they happen (CI failures)
+      - Guided: System guides engineers BEFORE code is written (intent declaration)
+
+      The @transactional(intent=...) decorator is the key innovation:
+      - Engineers MUST declare intent before writing implementation
+      - Intent is machine-checkable at decoration time (fail fast)
+      - CI validates intent/primitive alignment
+      - Wrong designs fail at compile time, not runtime
+
+      If you need to use FOR UPDATE and the primitives don't support your use case,
+      EXTEND THE PRIMITIVES — don't bypass them.
+
+    evolution_rule: |
+      Every incident class must result in either:
+      - A new primitive
+      - A stricter intent
+      - A new CI invariant
+
+      If not, the system has NOT learned.
 
   # ---------------------------------------------------------------------------
   # Reference Documents
@@ -5713,6 +6180,644 @@ claude_governance:
     - docs/ci/scd/INDEX.md
     - docs/ci/CI_SIGNAL_REGISTRY.md
     - docs/contracts/PRODUCT_DEVELOPMENT_CONTRACT_V3.md
+
+# =============================================================================
+# Section 33: INFRA TRUTH RULE (PIN-266)
+# =============================================================================
+#
+# Purpose: CI behavior must be derived from INFRA_REGISTRY.md.
+#          No test may assume infra presence implicitly.
+#
+# Created: 2026-01-01
+# Reference: PIN-266 (Infra Registry Canonicalization)
+# =============================================================================
+
+infra_truth_rule:
+  status: ENFORCED
+  effective: "2026-01-01"
+  reference: "PIN-266"
+
+  # ---------------------------------------------------------------------------
+  # The Rule
+  # ---------------------------------------------------------------------------
+  core_principle: |
+    CI behavior must be derived from INFRA_REGISTRY.md.
+    No test may assume infra presence implicitly.
+
+  invariant: |
+    If an infrastructure item is not listed in INFRA_REGISTRY.md,
+    it MUST NOT be assumed to exist.
+
+  # ---------------------------------------------------------------------------
+  # Infra State Taxonomy (Locked)
+  # ---------------------------------------------------------------------------
+  infra_states:
+    A:
+      name: "Absent (Conceptual)"
+      meaning: "Selected for production, not wired locally"
+      ci_behavior: "SKIP with explicit reason"
+      stub_required: false
+    B:
+      name: "Stubbed (Local Substitute)"
+      meaning: "Deterministic fake available for CI"
+      ci_behavior: "RUN with stub"
+      stub_required: true
+    C:
+      name: "Real (Fully Wired)"
+      meaning: "Production-grade, required for correctness"
+      ci_behavior: "FAIL if missing"
+      stub_required: false
+
+  # ---------------------------------------------------------------------------
+  # CI Auto-Alignment Rules
+  # ---------------------------------------------------------------------------
+  ci_alignment:
+    decorator: "@requires_infra(name, state=None)"
+    location: "tests/helpers/infra.py"
+
+    behavior_matrix:
+      - state: A
+        infra_missing: SKIP
+        reason_required: true
+        bucket_required: true  # B1 or B2
+      - state: B
+        infra_missing: SKIP
+        stub_available: RUN
+        reason_required: true
+      - state: C
+        infra_missing: FAIL
+        reason_required: false  # Blocking failure
+
+    no_silent_skips: |
+      Every skipped test must have:
+        1. @requires_infra marker OR explicit pytest.mark.skip
+        2. Documented reason referencing infra name
+        3. Bucket classification (B1 = must fix, B2 = intentional)
+
+  # ---------------------------------------------------------------------------
+  # Ground Truth Authority
+  # ---------------------------------------------------------------------------
+  authority:
+    canonical_source: "docs/infra/INFRA_REGISTRY.md"
+    enforcement: "tests/helpers/infra.py"
+
+    derivation_order:
+      1: "INFRA_REGISTRY.md (ground truth)"
+      2: "CI_NORTH_STAR.md (invariants)"
+      3: "tests/helpers/infra.py (mechanical enforcement)"
+      4: "SESSION_PLAYBOOK.yaml (Claude governance)"
+      5: "CI_REDISCOVERY_MASTER_ROADMAP.md (progress tracking)"
+
+    anti_drift_rule: |
+      No artifact may define infra state independently of INFRA_REGISTRY.md.
+      If a test skips for infra → it must use @requires_infra.
+      If Claude reasons about infra → it must check INFRA_REGISTRY.md first.
+
+  # ---------------------------------------------------------------------------
+  # Claude Behavior
+  # ---------------------------------------------------------------------------
+  claude_behavior:
+    before_reasoning_about_infra:
+      - "Check INFRA_REGISTRY.md for infra state"
+      - "Do NOT assume infra exists without registry entry"
+      - "Do NOT propose infra changes without human approval"
+
+    when_test_fails_for_infra:
+      - "Classify: Bucket A (test wrong), B (infra missing), C (real bug)"
+      - "If Bucket B: Check INFRA_REGISTRY.md for state"
+      - "If State A: Recommend @requires_infra marker"
+      - "If State B: Check if stub is available"
+      - "If State C: This is a blocking CI failure"
+
+  # ---------------------------------------------------------------------------
+  # Validation
+  # ---------------------------------------------------------------------------
+  self_check:
+    - question: "Is the infra listed in INFRA_REGISTRY.md?"
+      if_no: "STOP - cannot assume infra exists"
+    - question: "What is the infra state (A/B/C)?"
+      if_unknown: "CHECK INFRA_REGISTRY.md"
+    - question: "Is a stub available for State B infra?"
+      if_no: "Test must skip with @requires_infra"
+    - question: "Is this a State C infra that's missing?"
+      if_yes: "CI FAILURE - not a skip"
+
+  # ---------------------------------------------------------------------------
+  # INFRA_REALITY_INVARIANT (PIN-276)
+  # ---------------------------------------------------------------------------
+  # Added: 2026-01-02
+  # Rule: If code assumes it, schema must enforce it.
+  # This prevents future debt from "placeholder" skips.
+  #
+  infra_reality_invariant:
+    status: LOCKED
+    effective: "2026-01-02"
+    reference: "PIN-276"
+
+    principle: |
+      If code assumes a schema, table, or constraint exists,
+      that structure MUST be enforced by a canonical migration.
+      No test hacks. No stubs. No future debt.
+
+    enforcement:
+      - rule: "SCHEMA_EXISTS"
+        description: "Schema must exist before code imports it"
+        migration_required: true
+        skip_forbidden: true
+
+      - rule: "CONSTRAINT_MATCHES_ASSUMPTION"
+        description: "Unique/FK constraints in code must exist in DB"
+        migration_required: true
+        mismatch_is_bug: true
+
+      - rule: "FUNCTION_SIGNATURE_STABLE"
+        description: "PL/pgSQL function signatures must match call sites"
+        migration_required: true
+        signature_mismatch_is_blocker: true
+
+    m10_specific:
+      schema: "m10_recovery"
+      migration: "002_m10_recovery_outbox.py"
+      status: "State B - Local Compatible"
+      invariant_tests:
+        - "tests/invariants/test_m10_invariants.py"
+      isolation_fixtures:
+        - "clean_m10_tables"
+        - "clean_recovery_candidates"
+
+    violation_response: |
+      If code assumes schema that doesn't exist:
+      1. DO NOT add skip markers
+      2. DO NOT stub the schema
+      3. DO create a canonical migration
+      4. DO run tests to verify
+
+# =============================================================================
+# SECTION 25: ENGINEERING AUTHORITY (PIN-270)
+# =============================================================================
+# Claude operates as Architecture Governor with explicit authority hierarchy.
+# The system must never lie. Green CI that diverges from production is a defect.
+#
+# Reference: PIN-270 (Engineering Authority Codification)
+# Reference: docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md
+
+engineering_authority:
+
+  status: ENFORCED
+  version: v1
+  effective_date: 2026-01-02
+
+  # ---------------------------------------------------------------------------
+  # Prime Directive
+  # ---------------------------------------------------------------------------
+  prime_directive: |
+    The system must never lie.
+    Green CI that diverges from production behavior is a defect, not progress.
+    Claude's job is not to make things pass.
+    Claude's job is to make the architecture correct.
+
+  # ---------------------------------------------------------------------------
+  # Authority Hierarchy (Immutable)
+  # ---------------------------------------------------------------------------
+  authority_hierarchy:
+    - priority: 1
+      authority: "Layer Model (L1-L8)"
+      status: immutable
+
+    - priority: 2
+      authority: "Domain boundaries - L4 owns meaning"
+      status: immutable
+
+    - priority: 3
+      authority: "Infrastructure conformance truth"
+      status: enforced
+
+    - priority: 4
+      authority: "Session Playbook"
+      status: enforced
+
+    - priority: 5
+      authority: "Memory PINs"
+      status: enforced
+
+    - priority: 6
+      authority: "Tests"
+      status: derived
+
+    - priority: 7
+      authority: "CI tooling"
+      status: derived
+
+  # ---------------------------------------------------------------------------
+  # Self-Check (Run Before Every Response)
+  # ---------------------------------------------------------------------------
+  self_check:
+    - check: "Am I fixing the architecture or just making tests pass?"
+      if_fail: "STOP, identify real issue"
+
+    - check: "Does this contradict Layer Model (L1-L8)?"
+      if_fail: "STOP, fix the proposal"
+
+    - check: "Am I assuming infra exists without checking INFRA_REGISTRY?"
+      if_fail: "CHECK registry first"
+
+    - check: "Am I weakening an assertion to avoid a failure?"
+      if_fail: "STOP, classify the failure (A/B/C/D)"
+
+    - check: "Is this a shortcut that future-me will regret?"
+      if_fail: "STOP, design the invariant"
+
+    - check: "Would a new engineer understand this without asking?"
+      if_fail: "ADD guidance (template, decorator, contract)"
+
+    - check: "Am I guessing instead of asking one precise question?"
+      if_fail: "ASK instead"
+
+  # ---------------------------------------------------------------------------
+  # Reference Files
+  # ---------------------------------------------------------------------------
+  reference_files:
+    pin: docs/memory-pins/PIN-270-engineering-authority-codification.md
+    full_document: docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md
+    claude_md: CLAUDE.md
+
+# =============================================================================
+# SECTION 25.1: DECISION GUARDRAILS (PIN-276 REDO)
+# =============================================================================
+# Prevention system for contract drift, function overloading, and parallel truth.
+#
+# Core Principle: One contract, one signature, one truth.
+#
+# This section exists because Claude introduced:
+# - Function overloads to satisfy both tests AND production
+# - Parallel retry fields (process_after AND next_retry_at)
+# - Tests dictating production semantics (inverted authority)
+#
+# These are STRUCTURAL FAILURES that bypass test suites.
+#
+# Reference: PIN-276 (Contract Authority Enforcement)
+
+decision_guardrails:
+
+  status: ENFORCED
+  version: v1
+  effective_date: 2026-01-02
+  reference: PIN-276
+
+  # ---------------------------------------------------------------------------
+  # Layer 1: Fix Classification (REQUIRED before any code change)
+  # ---------------------------------------------------------------------------
+  fix_classification_required:
+    principle: |
+      Before writing ANY code change, classify the fix type.
+      Different fix types have different correct resolutions.
+
+    fix_classes:
+      - class: A
+        name: "Schema/Migration Gap"
+        symptom: "Test assumes structure that doesn't exist"
+        correct_resolution: "Add migration, NOT test workaround"
+
+      - class: B
+        name: "Contract Mismatch"
+        symptom: "Caller uses wrong signature"
+        correct_resolution: "Fix ALL callers to match contract, NOT add overload"
+
+      - class: C
+        name: "Semantic Drift"
+        symptom: "Same operation has multiple meanings"
+        correct_resolution: "Pick ONE meaning, update all usages"
+
+      - class: D
+        name: "Test Bug"
+        symptom: "Test expectation is wrong"
+        correct_resolution: "Fix test, NOT production code"
+
+  # ---------------------------------------------------------------------------
+  # Fix Class Priority (IMMUTABLE)
+  # ---------------------------------------------------------------------------
+  fix_class_priority:
+    rule: |
+      When multiple fix classes seem applicable,
+      apply the LOWEST letter (highest authority).
+
+    order:
+      - A: "Schema fixes outrank everything"
+      - B: "Contract fixes outrank semantic/test fixes"
+      - C: "Semantic fixes outrank test fixes"
+      - D: "Test fixes are last resort"
+
+    never_acceptable:
+      - "Adding function overloads to satisfy multiple callers"
+      - "Creating parallel fields for same semantic concept"
+      - "Changing production to match test expectations"
+      - "Using 'both' when 'one' is required"
+
+  # ---------------------------------------------------------------------------
+  # Layer 2: Suspicious Patterns (SYSTEM MUST FLAG)
+  # ---------------------------------------------------------------------------
+  suspicious_patterns:
+
+    - pattern: "CREATE.*OVERLOAD|CREATE.*FUNCTION.*same_name"
+      signal: "Function overloading detected"
+      required_action: "STOP - ask which signature is canonical"
+
+    - pattern: "UPDATE.*SET.*field_a.*field_b.*WHERE"
+      signal: "Multiple fields updated for same semantic"
+      required_action: "STOP - ask which field is the authority"
+
+    - pattern: "test.*expects|test.*calls.*different"
+      signal: "Test signature differs from production"
+      required_action: "STOP - production wins, fix test"
+
+    - pattern: "for.*tests|overload.*for.*tests"
+      signal: "Creating code specifically for tests"
+      required_action: "STOP - tests conform to production, not reverse"
+
+  # ---------------------------------------------------------------------------
+  # Layer 3: Hard Stop Conditions (BLOCKING)
+  # ---------------------------------------------------------------------------
+  hard_stop_conditions:
+
+    - condition: "About to create second signature for existing function"
+      action: "HARD STOP"
+      resolution: "Pick ONE signature. Fix ALL callers."
+
+    - condition: "About to add field that duplicates existing field's semantic"
+      action: "HARD STOP"
+      resolution: "Use existing field. Remove duplicate."
+
+    - condition: "About to change production code to match test expectation"
+      action: "HARD STOP"
+      resolution: "Verify contract first. Test may be wrong."
+
+    - condition: "About to use 'and' where 'or' is architecturally correct"
+      action: "HARD STOP"
+      resolution: "Pick one. Document why."
+
+  # ---------------------------------------------------------------------------
+  # Self-Audit Extension (Add to existing SELF-AUDIT)
+  # ---------------------------------------------------------------------------
+  self_audit_extension:
+    - question: "Did I create ANY function overload?"
+      if_yes: "STOP - pick one canonical signature"
+
+    - question: "Did I update MULTIPLE fields for the same semantic?"
+      if_yes: "STOP - pick one authority field"
+
+    - question: "Did I change production code to satisfy a test?"
+      if_yes: "STOP - verify which is wrong"
+
+    - question: "Did I use 'both' when the architecture requires 'one'?"
+      if_yes: "STOP - pick one, remove other"
+
+  # ---------------------------------------------------------------------------
+  # Reference
+  # ---------------------------------------------------------------------------
+  reference_files:
+    pin: docs/memory-pins/PIN-276-bucket-ab-permanent-fix.md
+    incident: "M10 function overload incident (2026-01-02)"
+
+# =============================================================================
+# SECTION 26: PRE-COMMIT LOCALITY RULES (PIN-269)
+# =============================================================================
+# Pre-commit hooks must only evaluate what the commit is responsible for.
+# Surfacing unrelated violations trains developers to skip hooks.
+#
+# Reference: PIN-269 (Pre-Commit Locality Rule)
+
+pre_commit_rules:
+
+  scope: staged_only
+  status: ENFORCED
+  version: v1
+  effective_date: 2026-01-02
+
+  # ---------------------------------------------------------------------------
+  # Core Principle
+  # ---------------------------------------------------------------------------
+  principle: |
+    Pre-commit = delta validation (staged files only)
+    CI = global validation (entire repository)
+    These are NOT interchangeable.
+
+  # ---------------------------------------------------------------------------
+  # Environment Variable
+  # ---------------------------------------------------------------------------
+  execution_context:
+    env_variable: CHECK_SCOPE
+    values:
+      staged: "Pre-commit mode - only staged files, skip global invariants"
+      full: "CI mode - full codebase scan, all rules"
+
+  # ---------------------------------------------------------------------------
+  # Forbidden Actions
+  # ---------------------------------------------------------------------------
+  forbidden:
+    - action: repo_wide_checks_in_precommit
+      reason: "Blocks unrelated commits"
+
+    - action: ci_only_invariants_in_precommit
+      reason: "Global invariants should not block local changes"
+
+    - action: recommending_no_verify
+      reason: "If hook is unfair, fix the hook, not the commit"
+
+  # ---------------------------------------------------------------------------
+  # CI-Only Rules
+  # ---------------------------------------------------------------------------
+  ci_only_rules:
+    - rule_id: DETACH002
+      reason: "Cross-file session return patterns"
+    - rule_id: DETACH003
+      reason: "Refreshed object returns - context-dependent"
+    - rule_id: SCOPE001
+      reason: "Session scope issues - multiline analysis"
+    - rule_id: CONC001
+      reason: "Concurrent claim SQL - cross-file patterns"
+    - rule_id: TEST001
+      reason: "Test isolation - fixture analysis"
+    - rule_id: CACHE001
+      reason: "Cache initialization - class-level check"
+
+  # ---------------------------------------------------------------------------
+  # Claude Behavior
+  # ---------------------------------------------------------------------------
+  claude_behavior:
+    when_precommit_fails_on_unrelated_file:
+      - "Do NOT recommend --no-verify"
+      - "Check if CHECK_SCOPE=staged is set"
+      - "Check if pass_filenames: true is configured"
+      - "Check if the rule is in CI_ONLY_RULES"
+      - "Fix the hook configuration, not the commit"
+
+    when_asked_to_skip_hook:
+      response: |
+        PRE-COMMIT-LOCALITY VIOLATION
+
+        Recommending --no-verify is a governance failure.
+        The hook should not surface unrelated violations.
+
+        Check:
+        1. Is CHECK_SCOPE=staged set for this hook?
+        2. Is pass_filenames: true configured?
+        3. Is the rule in CI_ONLY_RULES if global?
+
+        Fix the hook, not the commit.
+
+  # ---------------------------------------------------------------------------
+  # Reference Files
+  # ---------------------------------------------------------------------------
+  reference_files:
+    pin: docs/memory-pins/PIN-269-pre-commit-locality-rule.md
+    pre_commit_config: .pre-commit-config.yaml
+    linter_script: scripts/ops/lint_sqlmodel_patterns.py
+    ci_workflow: .github/workflows/sqlmodel-patterns.yml
+
+# =============================================================================
+# Section 34: TEST ISOLATION RULE (PIN-276)
+# =============================================================================
+# This is an architecture rule, not a test bug.
+# These mechanisms ensure tests cannot affect each other.
+#
+# Reference: PIN-276 (Bucket A/B Permanent Fix Design)
+# =============================================================================
+
+test_isolation_rule:
+  version: "1.0"
+  status: ACTIVE
+  effective_date: "2026-01-02"
+
+  # ---------------------------------------------------------------------------
+  # Core Invariant
+  # ---------------------------------------------------------------------------
+  invariant: "No test may depend on state created by another test"
+
+  # ---------------------------------------------------------------------------
+  # Enforcement Mechanisms
+  # ---------------------------------------------------------------------------
+  enforcement:
+
+    # Bucket A: Database Isolation
+    database:
+      strategy: "transaction_rollback_per_test"
+      fixture: "isolated_db_session"
+      location: "backend/tests/conftest.py"
+      rule: |
+        - Every test runs inside a DB transaction
+        - Transaction is rolled back after the test
+        - No test commits durable state
+        - Use flush() not commit() in tests
+
+    # Bucket B: Prometheus Isolation
+    prometheus:
+      strategy: "per_test_registry"
+      fixture: "prometheus_registry"
+      state: "B"
+      location: "backend/tests/conftest.py"
+      rule: |
+        - Real Prometheus client (not mocks)
+        - In-process CollectorRegistry per test
+        - No external server required
+        - Metrics available synchronously
+
+    # Verification
+    verification:
+      command: "pytest --random-order"
+      ci_check: true
+      rule: |
+        - Running pytest --random-order never changes results
+        - Running pytest -n auto never changes results
+        - Any test can be run in isolation OR suite with same result
+
+  # ---------------------------------------------------------------------------
+  # Fixtures Reference
+  # ---------------------------------------------------------------------------
+  fixtures:
+    isolated_db_session:
+      scope: function
+      purpose: "Database session with automatic rollback"
+      invariant: "Any DB changes are automatically rolled back"
+      usage: |
+        def test_something(isolated_db_session):
+            isolated_db_session.add(MyModel(name="test"))
+            isolated_db_session.flush()  # NOT commit()
+            # After test: automatic rollback
+
+    isolated_async_session:
+      scope: function
+      purpose: "Async database session with automatic rollback"
+      invariant: "Any DB changes are automatically rolled back"
+      usage: |
+        async def test_something(isolated_async_session):
+            async with isolated_async_session() as session:
+                session.add(MyModel(name="test"))
+                await session.flush()
+            # After test: automatic rollback
+
+    prometheus_registry:
+      scope: function
+      purpose: "Per-test isolated Prometheus registry"
+      invariant: "Metrics from other tests never appear"
+      usage: |
+        def test_metrics(prometheus_registry):
+            counter = Counter('test_counter', 'Test', registry=prometheus_registry)
+            counter.inc()
+            assert prometheus_registry.get_sample_value('test_counter_total') == 1.0
+
+    metrics_factory:
+      scope: function
+      purpose: "Factory for creating isolated metrics"
+      invariant: "All metrics created are test-isolated"
+      usage: |
+        def test_something(metrics_factory):
+            counter = metrics_factory.counter('requests_total', 'Request count')
+            counter.inc()
+            value = metrics_factory.get_value('requests_total')
+
+  # ---------------------------------------------------------------------------
+  # Violation Classification
+  # ---------------------------------------------------------------------------
+  violations:
+    test_order_dependence:
+      classification: "Architecture bug"
+      not_classification: "Flaky test"
+      resolution: "Fix state leak, not test"
+
+    metrics_collision:
+      classification: "Missing isolation"
+      not_classification: "Duplicated timeseries error"
+      resolution: "Use prometheus_registry fixture"
+
+    database_state_bleed:
+      classification: "Missing rollback"
+      not_classification: "Dirty database"
+      resolution: "Use isolated_db_session fixture"
+
+  # ---------------------------------------------------------------------------
+  # Hard Stop Rules
+  # ---------------------------------------------------------------------------
+  hard_stop_rules:
+    - condition: "Test fails due to isolation"
+      classification: "BUG"
+      action: "Fix state leak"
+
+    - condition: "Test fails due to missing infra"
+      classification: "Infra not done"
+      action: "Promote infra to State B"
+
+    - condition: "Test is skipped"
+      classification: "Governance violation"
+      action: "Justify or remove skip"
+
+  # ---------------------------------------------------------------------------
+  # Reference
+  # ---------------------------------------------------------------------------
+  reference:
+    pin: PIN-276
+    design_doc: docs/memory-pins/PIN-276-bucket-ab-permanent-fix-design.md
+    verification_tests: backend/tests/unit/test_isolation_mechanism.py
+    conftest: backend/tests/conftest.py
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

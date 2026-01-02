@@ -1,7 +1,7 @@
 {
-  "version": "1.1.0",
-  "description": "Ops API Contract Snapshot - M29 Categories 4-7 Updated",
-  "endpoint_count": 28,
+  "version": "1.2.0",
+  "description": "Ops API Contract Snapshot - Phase-S infra-summary added, jobs endpoints removed",
+  "endpoint_count": 27,
   "contracts": {
     "GET /ops/actions/audit": {
       "response_model": "FounderActionListDTO",
@@ -46,6 +46,10 @@
     "GET /ops/incidents": {
       "response_model": "FounderIncidentListDTO",
       "operation_id": "get_founder_incidents_ops_incidents_get"
+    },
+    "GET /ops/incidents/infra-summary": {
+      "response_model": "untyped",
+      "operation_id": "get_infra_incident_summary_ops_incidents_infra_summary_get"
     },
     "GET /ops/incidents/patterns": {
       "response_model": "untyped",
@@ -106,14 +110,6 @@
     "POST /ops/actions/unthrottle-tenant": {
       "response_model": "FounderActionResponseDTO",
       "operation_id": "unthrottle_tenant_ops_actions_unthrottle_tenant_post"
-    },
-    "POST /ops/jobs/compute-stickiness": {
-      "response_model": "OpsJobResult",
-      "operation_id": "compute_stickiness_ops_jobs_compute_stickiness_post"
-    },
-    "POST /ops/jobs/detect-silent-churn": {
-      "response_model": "OpsJobResult",
-      "operation_id": "detect_silent_churn_ops_jobs_detect_silent_churn_post"
     }
   }
 }

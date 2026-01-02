@@ -190,7 +190,7 @@ class TestOscillationStress:
 
         # Agent B slightly better initially
         should_switch, _ = await hysteresis.should_switch(
-            current_agent=agent_a,
+            _current_agent=agent_a,
             candidate_agent=agent_b,
             current_score=0.7,
             candidate_score=0.75,  # Only 5% better
@@ -199,7 +199,7 @@ class TestOscillationStress:
 
         # Now A is slightly better
         should_switch, _ = await hysteresis.should_switch(
-            current_agent=agent_b,
+            _current_agent=agent_b,
             candidate_agent=agent_a,
             current_score=0.75,
             candidate_score=0.78,  # Only 3% better
@@ -357,7 +357,7 @@ class TestHysteresisVsDrift:
 
         # First check - small difference, blocked by hysteresis
         should_switch, reason = await hysteresis.should_switch(
-            current_agent=current_agent,
+            _current_agent=current_agent,
             candidate_agent=candidate_agent,
             current_score=0.6,
             candidate_score=0.65,
@@ -366,7 +366,7 @@ class TestHysteresisVsDrift:
 
         # After severe degradation, larger difference
         should_switch, reason = await hysteresis.should_switch(
-            current_agent=current_agent,
+            _current_agent=current_agent,
             candidate_agent=candidate_agent,
             current_score=0.3,  # Dropped significantly
             candidate_score=0.65,  # 35% better now

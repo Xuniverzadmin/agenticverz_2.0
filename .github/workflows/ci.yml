@@ -540,6 +540,141 @@ jobs:
           fi
 
   # ============================================================================
+  # CLAUDE AUTHORITY GUARD (PIN-269) - Protects governance spine
+  # ============================================================================
+  claude-authority-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify CLAUDE_AUTHORITY.md exists
+        run: |
+          echo "=== Claude Authority Guard (PIN-269) ==="
+          if [ ! -f "CLAUDE_AUTHORITY.md" ]; then
+            echo "::error::CLAUDE_AUTHORITY.md is missing!"
+            echo "This file is the highest non-human authority document."
+            echo "It must exist in the repository root."
+            exit 1
+          fi
+          echo "✅ CLAUDE_AUTHORITY.md exists"
+
+      - name: Verify CLAUDE_AUTHORITY.md integrity
+        run: |
+          # Ratified hash from PIN-270 (2026-01-01) - Added §3.5 Infrastructure State Declaration
+          RATIFIED_HASH="a1e84ff3d2e050470d30086d1d877b1bd6b13fccfc243c06ac33107941b53a8f"
+          ACTUAL_HASH=$(sha256sum CLAUDE_AUTHORITY.md | cut -d' ' -f1)
+
+          echo "Ratified hash: $RATIFIED_HASH"
+          echo "Actual hash:   $ACTUAL_HASH"
+
+          if [ "$ACTUAL_HASH" != "$RATIFIED_HASH" ]; then
+            # Check for AUTHORITY_RATIFIED flag in commit message
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+            if echo "$COMMIT_MSG" | grep -q "AUTHORITY_RATIFIED"; then
+              echo "⚠️ AUTHORITY_RATIFIED flag detected"
+              echo "CLAUDE_AUTHORITY.md has been modified with human ratification."
+              echo ""
+              echo "ACTION REQUIRED: Update the ratified hash in this CI job"
+              echo "New hash: $ACTUAL_HASH"
+            else
+              echo "::error::CLAUDE_AUTHORITY.md modified without ratification!"
+              echo ""
+              echo "This file is FROZEN per PIN-269."
+              echo "To modify, add 'AUTHORITY_RATIFIED' to your commit message."
+              echo "Changes require explicit human approval in session."
+              exit 1
+            fi
+          else
+            echo "✅ CLAUDE_AUTHORITY.md integrity verified"
+          fi
+
+  # ============================================================================
+  # PRIORITY-5 FEATURE INTENT GUARD (PIN-265) - Blocks regressions
+  # ============================================================================
+  priority5-intent-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Priority-5 Feature Intent Guard
+        run: |
+          cd backend
+          echo "=== Priority-5 Feature Intent Guard ==="
+          echo "Checking 12 CRITICAL blast radius files for intent declarations..."
+          echo ""
+          python3 scripts/ci/check_priority5_intent.py --verbose
+          echo ""
+          echo "See: PIN-265 (Phase-3 Intent-Driven Refactoring)"
+
+  # ============================================================================
+  # PRIORITY-4 FEATURE INTENT GUARD (PIN-265) - Blocks regressions
+  # ============================================================================
+  priority4-intent-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Priority-4 Feature Intent Guard
+        run: |
+          cd backend
+          echo "=== Priority-4 Feature Intent Guard ==="
+          echo "Checking 7 HIGH blast radius files for intent declarations..."
+          echo ""
+          python3 scripts/ci/check_priority4_intent.py --verbose
+          echo ""
+          echo "See: PIN-265 (Phase-3 Intent-Driven Refactoring)"
+
+  # ============================================================================
+  # FEATURE INTENT GUARD (PIN-268 GU-003) - Non-blocking initially
+  # ============================================================================
+  feature-intent-guard:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking while fixing 21 service violations
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Feature Intent Guard
+        id: intent_check
+        run: |
+          cd backend
+          echo "=== Feature Intent Guard (PIN-268 GU-003) ==="
+          echo "Checking critical directories for intent declarations..."
+          echo ""
+
+          # Check workers (should be clean)
+          echo "--- Checking app/worker/ ---"
+          python3 scripts/ci/check_feature_intent.py app/worker/ --warn-only || true
+
+          # Check jobs (should be clean)
+          echo ""
+          echo "--- Checking app/jobs/ ---"
+          python3 scripts/ci/check_feature_intent.py app/jobs/ --warn-only || true
+
+          # Check services (has 21 violations being remediated)
+          echo ""
+          echo "--- Checking app/services/ ---"
+          python3 scripts/ci/check_feature_intent.py app/services/ --warn-only || true
+
+          echo ""
+          echo "See: PIN-268 (GU-003 Intent Boilerplate)"
+          echo "Templates: docs/templates/INTENT_BOILERPLATE.md"
+
+  # ============================================================================
   # MYPY TYPE CHECKING (PIN-121 PREV-14) - Non-blocking, tracks regressions
   # ============================================================================
   mypy-check:

@@ -1,3 +1,13 @@
+from __future__ import annotations
+
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Async DB-backed circuit breaker state tracking with SELECT FOR UPDATE
+# State mutations are atomic and recoverable
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 # CostSim V2 Circuit Breaker - Async Implementation
 """
 Fully async DB-backed circuit breaker for CostSim V2.
@@ -32,8 +42,6 @@ Usage:
     await disable_v2(reason="Maintenance", disabled_by="admin")
     await enable_v2(enabled_by="admin", reason="Maintenance complete")
 """
-
-from __future__ import annotations
 
 import json
 import logging

@@ -9,6 +9,14 @@
 # Domain Engine: failure_classification_engine.py (L4)
 # Reference: M9 Failure System, PIN-256 Phase E FIX-01
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Uploads aggregated patterns to Cloudflare R2 and sends alerts
+# External cloud storage calls are non-deterministic
+FEATURE_INTENT = FeatureIntent.EXTERNAL_SIDE_EFFECT
+RETRY_POLICY = RetryPolicy.NEVER
+
 #!/usr/bin/env python3
 """
 M9: Failure Pattern Aggregation Job

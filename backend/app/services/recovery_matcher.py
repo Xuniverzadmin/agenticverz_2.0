@@ -4,6 +4,14 @@
 # Reference: PIN-240
 # WARNING: If this logic is wrong, ALL products break.
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Escalates to LLM for recovery suggestions - external HTTP calls are non-deterministic
+# LLM responses cannot be safely retried without semantic duplication
+FEATURE_INTENT = FeatureIntent.EXTERNAL_SIDE_EFFECT
+RETRY_POLICY = RetryPolicy.NEVER
+
 # app/services/recovery_matcher.py
 """
 M10 Recovery Suggestion Engine - Matcher Service

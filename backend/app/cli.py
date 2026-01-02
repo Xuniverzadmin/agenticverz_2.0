@@ -52,9 +52,9 @@ def _get_db_imports():
     return Session, select, Agent, Run, engine, init_db, get_planner, RunRunner, get_publisher
 
 
-# These don't require database
-from .observability.cost_tracker import get_cost_tracker
-from .skills import list_skills, load_all_skills
+# These don't require database - use absolute imports for CLI compatibility
+from app.observability.cost_tracker import get_cost_tracker
+from app.skills import list_skills, load_all_skills
 
 
 # Setup logging (doesn't need DB)

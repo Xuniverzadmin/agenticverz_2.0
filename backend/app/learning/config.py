@@ -106,7 +106,7 @@ def require_learning_enabled(func: F) -> F:
                 "learning_disabled_skip",
                 extra={
                     "function": func.__name__,
-                    "module": func.__module__,
+                    "func_module": func.__module__,  # Renamed to avoid LogRecord conflict
                 },
             )
             return None

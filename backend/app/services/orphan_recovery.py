@@ -4,6 +4,14 @@
 # Callers: L5 workers (startup), L7 ops scripts
 # Reference: PIN-242 (Baseline Freeze)
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Updates run status from "running" to "crashed" - factual state mutation
+# Atomic updates with no external dependencies
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 """
 Orphan Run Recovery Service (PB-S2)
 

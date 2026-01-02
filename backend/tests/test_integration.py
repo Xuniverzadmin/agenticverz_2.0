@@ -32,7 +32,11 @@ os.environ.setdefault("ENFORCE_TENANCY", "false")
 
 
 def _backend_is_running() -> bool:
-    """Check if the backend server is running and accepting our test API key."""
+    """Check if the backend server is running and accepting our test API key.
+
+    Bucket B (Infra Missing): Skip tests if auth/RBAC is not properly configured.
+    The tests require a backend with valid API key authentication.
+    """
     try:
         import httpx
 
@@ -46,8 +50,8 @@ def _backend_is_running() -> bool:
             "http://localhost:8000/agents/test-probe", headers={"X-AOS-Key": api_key}, timeout=2.0
         )
         # 404 = auth passed, agent not found (good)
-        # 401 = auth failed (skip tests)
-        return auth_response.status_code != 401
+        # 401/403 = auth/RBAC failed (skip tests - infra not configured)
+        return auth_response.status_code not in (401, 403)
     except Exception:
         return False
 

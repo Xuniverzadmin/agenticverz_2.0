@@ -182,7 +182,7 @@ class TestHysteresisStability:
         manager = HysteresisManager(redis_url="redis://invalid:9999/0")
 
         should_switch, reason = await manager.should_switch(
-            current_agent="agent1",
+            _current_agent="agent1",
             candidate_agent="agent2",
             current_score=0.80,
             candidate_score=0.82,  # Only 2% difference
@@ -199,7 +199,7 @@ class TestHysteresisStability:
         manager = HysteresisManager(redis_url="redis://invalid:9999/0")
 
         should_switch, reason = await manager.should_switch(
-            current_agent="agent1",
+            _current_agent="agent1",
             candidate_agent="agent2",
             current_score=0.60,
             candidate_score=0.85,  # 25% difference
@@ -217,7 +217,7 @@ class TestHysteresisStability:
 
         # First check - no history
         should_switch, reason = await manager.should_switch(
-            current_agent="agent1",
+            _current_agent="agent1",
             candidate_agent="agent2",
             current_score=0.50,
             candidate_score=0.90,

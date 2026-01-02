@@ -9,6 +9,13 @@
 # Forbidden Imports: L1, L2, L3, L4
 # Reference: M10 Metrics
 
+from app.infra import FeatureIntent
+
+# Phase-2.3: Feature Intent Declaration
+# Reads from Redis and DB, updates in-memory Prometheus gauges
+# Purely observational - no state mutations, no external writes
+FEATURE_INTENT = FeatureIntent.PURE_QUERY
+
 # app/tasks/m10_metrics_collector.py
 """
 Periodic metrics collector for M10 Recovery System.

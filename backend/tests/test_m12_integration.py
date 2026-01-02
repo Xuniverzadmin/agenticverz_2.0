@@ -1,5 +1,10 @@
 # M12 Multi-Agent System Integration Tests
 # Tests for DoD validation - 100-item jobs, concurrent claiming, credits
+#
+# NOTE: These tests require the 'agents' schema to be present in the database.
+# The schema is defined in PIN-062 and includes: agents.jobs, agents.job_items,
+# agents.instances, agents.messages. Tests are skipped if schema is missing.
+
 import os
 import threading
 import time
@@ -15,8 +20,30 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 
-# Skip if DB not available
-pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="DATABASE_URL not set")
+def _agents_schema_exists() -> bool:
+    """Check if the 'agents' schema exists in the database."""
+    try:
+        import psycopg2
+
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            return False
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        cur.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'agents'")
+        result = cur.fetchone()
+        conn.close()
+        return result is not None
+    except Exception:
+        return False
+
+
+# Skip all tests if agents schema doesn't exist
+AGENTS_SCHEMA_EXISTS = _agents_schema_exists()
+pytestmark = pytest.mark.skipif(
+    not DATABASE_URL or not AGENTS_SCHEMA_EXISTS,
+    reason="DATABASE_URL not set or agents schema not present (see PIN-062)",
+)
 
 
 class TestDOD1_100ItemJob:

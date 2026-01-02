@@ -9,6 +9,14 @@
 # Forbidden Imports: L1, L2, L3, L4
 # Reference: M10 Recovery
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Redis Streams with consumer groups for durable message processing
+# XCLAIM for stalled message recovery, dead-letter for poison messages
+FEATURE_INTENT = FeatureIntent.RECOVERABLE_OPERATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 # app/tasks/recovery_queue_stream.py
 """
 Durable Redis Streams queue for M10 Recovery evaluation.

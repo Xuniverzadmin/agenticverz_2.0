@@ -47,6 +47,13 @@ import httpx
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Outbox pattern enables recoverable delivery - external dispatch is idempotent
+FEATURE_INTENT = FeatureIntent.RECOVERABLE_OPERATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 logger = logging.getLogger("nova.worker.outbox")
 
 # Configuration

@@ -9,6 +9,14 @@
 # Forbidden Imports: L1, L2, L3, L4, L5
 # Reference: M10 Optimization
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Append-only INSERT operations to coordination_audit_records
+# Non-blocking failures, replay-safe, atomic operations
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 # C4 Coordination Audit Persistence
 # Reference: C4_COORDINATION_AUDIT_SCHEMA.md
 #

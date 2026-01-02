@@ -17,6 +17,14 @@
 #   - Calls L4 engine.compute() to get decisions
 #   - Persists results TO database (L6)
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Reads evidence from DB, computes graduation decisions, writes back atomically
+# All DB operations are atomic and safe to retry
+FEATURE_INTENT = FeatureIntent.STATE_MUTATION
+RETRY_POLICY = RetryPolicy.SAFE
+
 """
 M25 Graduation Status Periodic Evaluator
 

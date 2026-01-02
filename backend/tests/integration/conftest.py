@@ -117,18 +117,124 @@ def auto_mock_alertmanager():
         yield
 
 
-# ========== Database Fixtures ==========
+# ========== Database Fixtures (PIN-276 Bucket A) ==========
+# Transaction rollback per test ensures zero state bleed.
+
+
+def _reset_db_engines():
+    """
+    Reset all database engine singletons and dispose connections.
+
+    This is critical for preventing pool exhaustion during test runs.
+    PIN-276: Test isolation requires complete engine cleanup.
+    """
+    import app.db as db_module
+
+    # Dispose sync engine
+    if db_module._engine is not None:
+        try:
+            db_module._engine.dispose()
+        except Exception:
+            pass
+        db_module._engine = None
+
+    # Dispose async engine
+    if db_module._async_engine is not None:
+        try:
+            # For async engine, we need to run dispose in an event loop
+            import asyncio
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                # Can't await in sync context, just nullify
+                pass
+            else:
+                # No running loop, safe to create one for cleanup
+                try:
+                    asyncio.run(db_module._async_engine.dispose())
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        db_module._async_engine = None
+
+    # Reset async session factory
+    db_module._async_session_local = None
+
+    # Also reset db_async module if it exists
+    try:
+        import app.db_async as db_async_module
+
+        if hasattr(db_async_module, "async_engine") and db_async_module.async_engine is not None:
+            try:
+                import asyncio
+
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop is None or not loop.is_running():
+                    asyncio.run(db_async_module.async_engine.dispose())
+            except Exception:
+                pass
+    except ImportError:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def cleanup_db_connections():
+    """
+    Ensure DB connections are properly cleaned up after each test.
+
+    This fixes hanging tests caused by SELECT FOR UPDATE locks not being
+    released properly between tests. The engine.dispose() forces all
+    connections back to the pool and releases any lingering locks.
+
+    Phase-2.1: DB session lifecycle fix (PIN-264)
+    PIN-276: Enhanced to reset engine singletons and prevent pool exhaustion.
+    """
+    yield
+    # After each test, dispose all connections and reset engines
+    _reset_db_engines()
 
 
 @pytest.fixture
 def db_session():
-    """Create a database session for testing."""
+    """
+    Database session with automatic rollback - NEVER commits to DB.
+
+    PIN-276 Bucket A: Transaction rollback per test.
+
+    INVARIANT: Any DB changes made during the test are automatically rolled back.
+    This ensures tests cannot affect each other through database state.
+
+    Note: Use flush() instead of commit() during tests.
+    """
     from sqlmodel import Session
 
-    from app.db import engine
+    from app.db import get_engine
 
-    with Session(engine) as session:
+    engine = get_engine()
+
+    # Begin a transaction
+    connection = engine.connect()
+    transaction = connection.begin()
+
+    # Create session bound to this transaction
+    session = Session(bind=connection)
+
+    try:
         yield session
+    finally:
+        # ALWAYS rollback - this is the key to isolation
+        session.close()
+        transaction.rollback()
+        connection.close()
 
 
 # ========== Circuit Breaker Fixtures ==========

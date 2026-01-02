@@ -145,10 +145,10 @@ class TestPBS5FailurePrediction:
                 """
                 INSERT INTO prediction_events
                 (tenant_id, prediction_type, subject_type, subject_id,
-                 confidence_score, prediction_value, contributing_factors, is_advisory)
+                 confidence_score, prediction_value, contributing_factors, is_advisory, expires_at)
                 VALUES
                 ('test-tenant-001', 'failure_likelihood', 'worker', 'test-worker',
-                 0.8, '{"predicted_outcome": "high_failure"}'::jsonb, '[]'::jsonb, true)
+                 0.8, '{"predicted_outcome": "high_failure"}'::jsonb, '[]'::jsonb, true, NOW() + INTERVAL '1 day')
                 RETURNING is_advisory;
             """
             )
@@ -196,10 +196,10 @@ class TestPBS5CostPrediction:
                 """
                 INSERT INTO prediction_events
                 (tenant_id, prediction_type, subject_type, subject_id,
-                 confidence_score, prediction_value, contributing_factors, is_advisory)
+                 confidence_score, prediction_value, contributing_factors, is_advisory, expires_at)
                 VALUES
                 ('test-tenant-001', 'cost_overrun', 'worker', 'test-worker-cost',
-                 0.7, '{"projected_cost_cents": 500}'::jsonb, '[]'::jsonb, true)
+                 0.7, '{"projected_cost_cents": 500}'::jsonb, '[]'::jsonb, true, NOW() + INTERVAL '1 day')
                 RETURNING id;
             """
             )
@@ -245,10 +245,10 @@ class TestPBS5ImmutabilityGuarantee:
                 """
                 INSERT INTO prediction_events
                 (tenant_id, prediction_type, subject_type, subject_id,
-                 confidence_score, prediction_value, contributing_factors, is_advisory)
+                 confidence_score, prediction_value, contributing_factors, is_advisory, expires_at)
                 VALUES
                 ('test-tenant-001', 'failure_likelihood', 'worker', 'immutability-test',
-                 0.9, '{"test": true}'::jsonb, '[]'::jsonb, true)
+                 0.9, '{"test": true}'::jsonb, '[]'::jsonb, true, NOW() + INTERVAL '1 day')
                 RETURNING id;
             """
             )
@@ -288,10 +288,10 @@ class TestPBS5ImmutabilityGuarantee:
                 """
                 INSERT INTO prediction_events
                 (tenant_id, prediction_type, subject_type, subject_id,
-                 confidence_score, prediction_value, contributing_factors, is_advisory)
+                 confidence_score, prediction_value, contributing_factors, is_advisory, expires_at)
                 VALUES
                 ('test-tenant-001', 'failure_likelihood', 'worker', 'retry-test',
-                 0.99, '{"predicted_outcome": "certain_failure"}'::jsonb, '[]'::jsonb, true)
+                 0.99, '{"predicted_outcome": "certain_failure"}'::jsonb, '[]'::jsonb, true, NOW() + INTERVAL '1 day')
                 RETURNING id;
             """
             )

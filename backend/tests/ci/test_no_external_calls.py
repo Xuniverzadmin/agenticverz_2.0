@@ -119,7 +119,9 @@ class TestGoldenTestIsolation:
 
         import asyncio
 
-        result = asyncio.get_event_loop().run_until_complete(engine.run(spec, run_id="ci-test-run", seed=42))
+        # Use asyncio.run() instead of get_event_loop() to avoid issues with
+        # closed event loops from previous async tests in the suite
+        result = asyncio.run(engine.run(spec, run_id="ci-test-run", seed=42))
 
         assert result.status == "completed"
         assert result.step_results[0].output["result"] == 3

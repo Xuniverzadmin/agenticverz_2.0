@@ -9,6 +9,14 @@
 # Forbidden Imports: L1, L2, L3, L4
 # Reference: Storage System
 
+from app.infra import FeatureIntent, RetryPolicy
+
+# Phase-2.3: Feature Intent Declaration
+# Uploads files to Cloudflare R2 with exponential backoff
+# External cloud storage calls are non-deterministic
+FEATURE_INTENT = FeatureIntent.EXTERNAL_SIDE_EFFECT
+RETRY_POLICY = RetryPolicy.NEVER
+
 """
 R2 Object Storage Helper for Failure Pattern Aggregation
 

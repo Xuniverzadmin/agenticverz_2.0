@@ -10,12 +10,16 @@ Tests:
 5. Silent churn detection
 """
 
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import text
+
+# Set FOPS test authentication before imports
+os.environ.setdefault("AOS_FOPS_KEY", "test_fops_key_m24_ops_console")
 
 from app.services.event_emitter import (
     EntityType,
@@ -340,12 +344,14 @@ class TestSilentChurnDetection:
 # Fixtures
 @pytest.fixture
 def client():
-    """Create test client."""
+    """Create test client with FOPS authentication."""
     from fastapi.testclient import TestClient
 
     from app.main import app
 
-    return TestClient(app)
+    # Use X-API-Key header with FOPS key for authentication
+    fops_key = os.environ.get("AOS_FOPS_KEY", "test_fops_key_m24_ops_console")
+    return TestClient(app, headers={"X-API-Key": fops_key})
 
 
 @pytest.fixture

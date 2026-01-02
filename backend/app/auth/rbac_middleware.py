@@ -55,6 +55,31 @@ from .shadow_audit import (
     shadow_audit,
 )
 
+# =============================================================================
+# PIN-271/273: RBACv1 ↔ RBACv2 Coexistence
+# =============================================================================
+#
+# TERMINOLOGY (LOCKED - PIN-273):
+# - RBACv1: This middleware (Enforcement Authority)
+# - RBACv2: ActorContext + AuthorizationEngine (Reference Authority)
+#
+# COEXISTENCE INVARIANTS (MANDATORY):
+# 1. RBACv2 MUST NEVER enforce while RBACv1 is active
+# 2. RBACv2 MUST ALWAYS run when shadow mode is enabled
+# 3. Any discrepancy MUST be observable (log + metric)
+# 4. No endpoint may bypass the integration layer
+# 5. Promotion is a HUMAN-GOVERNED action, not a code flag
+# 6. RBACv1 and RBACv2 MUST NEVER co-decide (no hybrid decisions)
+#
+# PROMOTION INVARIANT (CRITICAL):
+# RBACv2 may only become stricter than RBACv1 during promotion, never more permissive.
+# Any v2_more_permissive discrepancy is a security risk requiring immediate investigation.
+#
+# =============================================================================
+RBAC_V2_SHADOW_ENABLED = os.getenv("NEW_AUTH_SHADOW_ENABLED", "true").lower() == "true"
+# Backward compat alias
+NEW_AUTH_ENABLED = RBAC_V2_SHADOW_ENABLED
+
 logger = logging.getLogger("nova.auth.rbac_middleware")
 
 # Configuration
@@ -70,6 +95,21 @@ RBAC_DECISIONS = get_or_create_counter(
 RBAC_LATENCY = get_or_create_histogram(
     "rbac_latency_seconds", "RBAC decision latency", buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1]
 )
+
+# PIN-271/273: RBACv1 ↔ RBACv2 comparison metrics
+RBAC_V1_V2_COMPARISON = get_or_create_counter(
+    "rbac_v1_v2_comparison_total",
+    "Comparison between RBACv1 and RBACv2 decisions",
+    ["resource", "action", "match", "discrepancy_type", "actor_type"],
+)
+RBAC_V2_LATENCY = get_or_create_histogram(
+    "rbac_v2_latency_seconds",
+    "RBACv2 AuthorizationEngine decision latency",
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1],
+)
+# Backward compat aliases
+AUTH_COMPARISON = RBAC_V1_V2_COMPARISON
+NEW_AUTH_LATENCY = RBAC_V2_LATENCY
 
 
 # ============================================================================
@@ -807,6 +847,101 @@ class RBACMiddleware(BaseHTTPMiddleware):
             decision="allowed" if decision.allowed else "denied",
             would_block=would_block,
         )
+
+        # =====================================================================
+        # PIN-271/273: RBACv1 ↔ RBACv2 REFERENCE MODE COMPARISON
+        #
+        # INVARIANTS (enforced here):
+        # - RBACv1 (this block above) is Enforcement Authority
+        # - RBACv2 (this block) is Reference Authority only
+        # - RBACv2 result is NEVER used for enforcement decisions
+        # - All discrepancies are logged + metriced
+        # - v2_more_permissive is a security alert
+        # =====================================================================
+        if RBAC_V2_SHADOW_ENABLED:
+            try:
+                v2_start = time.time()
+
+                # Import here to avoid circular imports
+                from .rbac_integration import (
+                    authorize_with_v2_engine,
+                    build_fallback_actor_from_v1_roles,
+                    compare_decisions,
+                    extract_actor_from_request,
+                    log_decision_comparison,
+                )
+
+                # Extract actor using RBACv2 identity chain
+                actor = await extract_actor_from_request(request)
+
+                # Fallback: use RBACv1 roles if RBACv2 chain didn't extract
+                if actor is None and decision.roles:
+                    actor = build_fallback_actor_from_v1_roles(decision.roles, request)
+                    if actor:
+                        from .authorization import get_authorization_engine
+
+                        engine = get_authorization_engine()
+                        actor = engine.compute_permissions(actor)
+
+                # Get RBACv2 authorization decision (Reference Mode only)
+                v2_result = authorize_with_v2_engine(actor, policy)
+                v2_latency_ms = (time.time() - v2_start) * 1000
+
+                # Compare RBACv1 vs RBACv2 decisions
+                comparison = compare_decisions(decision, v2_result, policy)
+
+                # Log comparison for analysis
+                log_decision_comparison(comparison, path, method)
+
+                # Get actor type for metrics
+                actor_type = actor.actor_type.value if actor else "anonymous"
+
+                # Record comparison metrics
+                RBAC_V1_V2_COMPARISON.labels(
+                    resource=policy.resource,
+                    action=policy.action,
+                    match="yes" if comparison.match else "no",
+                    discrepancy_type=comparison.discrepancy_type or "none",
+                    actor_type=actor_type,
+                ).inc()
+                RBAC_V2_LATENCY.observe(v2_latency_ms / 1000)
+
+                # Log detailed comparison for mismatch debugging
+                # CRITICAL: v2_more_permissive is a security risk
+                if not comparison.match:
+                    log_level = logging.WARNING if comparison.discrepancy_type == "v2_more_permissive" else logging.INFO
+                    logger.log(
+                        log_level,
+                        "rbac_v1_v2_discrepancy",
+                        extra={
+                            "path": path,
+                            "method": method,
+                            "v1_allowed": comparison.v1_allowed,
+                            "v2_allowed": comparison.v2_allowed,
+                            "v1_reason": comparison.v1_reason,
+                            "v2_reason": comparison.v2_reason,
+                            "discrepancy_type": comparison.discrepancy_type,
+                            "actor_id": comparison.actor_id,
+                            "actor_type": actor_type,
+                            "resource": comparison.resource,
+                            "action": comparison.action,
+                            "roles": decision.roles,
+                            # Security flag for v2_more_permissive
+                            "security_alert": comparison.discrepancy_type == "v2_more_permissive",
+                        },
+                    )
+
+            except Exception as e:
+                # RBACv2 errors must not affect RBACv1 enforcement flow
+                logger.warning(
+                    "rbac_v2_shadow_error",
+                    extra={
+                        "path": path,
+                        "method": method,
+                        "error": str(e),
+                    },
+                    exc_info=True,
+                )
 
         # =====================================================================
         # ENFORCEMENT - Only if RBAC_ENFORCE=true

@@ -2,7 +2,12 @@
 Auth module for AOS.
 
 Provides RBAC integration, Clerk auth (M8+), OIDC/Keycloak (legacy),
-and authentication utilities.
+RBAC stub for CI/development, and authentication utilities.
+
+Auth Provider Hierarchy (per docs/infra/RBAC_STUB_DESIGN.md):
+1. Production: Clerk (CLERK_ENABLED=true)
+2. Staging: Clerk + stub fallback (CLERK_ENABLED=true, AUTH_STUB_ENABLED=true)
+3. CI/Development: Stub only (CLERK_ENABLED=false, AUTH_STUB_ENABLED=true)
 """
 
 import os
@@ -72,6 +77,20 @@ from .shadow_audit import (
     shadow_audit,
 )
 
+# RBAC Stub for CI/Development (PIN-271)
+from .stub import (
+    AUTH_STUB_ENABLED,
+    STUB_ROLES,
+    StubClaims,
+    get_stub_token_for_role,
+    is_stub_token,
+    parse_stub_token,
+    stub_claims_to_dict,
+    stub_has_permission,
+    stub_has_role,
+    validate_stub_or_skip,
+)
+
 # M21 Tenant Auth - DISABLED for beta stage
 # from .tenant_auth import (
 #     TenantContext,
@@ -103,6 +122,17 @@ async def verify_api_key(x_aos_key: str = Header(..., alias="X-AOS-Key")):
 
 
 __all__ = [
+    # RBAC Stub (CI/Development - PIN-271)
+    "AUTH_STUB_ENABLED",
+    "STUB_ROLES",
+    "StubClaims",
+    "parse_stub_token",
+    "is_stub_token",
+    "get_stub_token_for_role",
+    "stub_claims_to_dict",
+    "stub_has_permission",
+    "stub_has_role",
+    "validate_stub_or_skip",
     # RBAC
     "ApprovalLevel",
     "RBACError",

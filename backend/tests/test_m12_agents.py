@@ -1,5 +1,9 @@
 # M12 Multi-Agent System Unit Tests
 # Tests for job service, worker service, blackboard, and registry
+#
+# NOTE: These tests require the 'agents' schema to be present in the database.
+# The schema is defined in PIN-062 and includes: agents.jobs, agents.job_items,
+# agents.instances, agents.messages. Tests are skipped if schema is missing.
 
 import os
 import time
@@ -14,6 +18,32 @@ os.environ.setdefault(
     "postgresql://neondb_owner:npg_cVfk6XMYdt4G@ep-long-surf-a1n0hv91-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
 )
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+
+
+def _agents_schema_exists() -> bool:
+    """Check if the 'agents' schema exists in the database."""
+    try:
+        import psycopg2
+
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            return False
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        cur.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'agents'")
+        result = cur.fetchone()
+        conn.close()
+        return result is not None
+    except Exception:
+        return False
+
+
+# Skip all tests requiring agents schema if it doesn't exist
+AGENTS_SCHEMA_EXISTS = _agents_schema_exists()
+requires_agents_schema = pytest.mark.skipif(
+    not AGENTS_SCHEMA_EXISTS,
+    reason="agents schema not present in database (see PIN-062 for schema definition)",
+)
 
 from app.agents.services.blackboard_service import get_blackboard_service
 from app.agents.services.credit_service import CREDIT_COSTS, get_credit_service
@@ -105,8 +135,9 @@ class TestCreditService:
 # =====================
 
 
+@requires_agents_schema
 class TestJobService:
-    """Tests for job service."""
+    """Tests for job service (requires agents.jobs table)."""
 
     def test_create_job_success(self, job_service):
         """Test successful job creation."""
@@ -198,8 +229,9 @@ class TestJobService:
 # =====================
 
 
+@requires_agents_schema
 class TestWorkerService:
-    """Tests for worker service (SKIP LOCKED pattern)."""
+    """Tests for worker service (SKIP LOCKED pattern, requires agents.job_items table)."""
 
     def test_claim_item_success(self, job_service, worker_service):
         """Test successful item claim."""
@@ -393,6 +425,7 @@ class TestBlackboardService:
 # =====================
 
 
+@requires_agents_schema
 class TestRegistryService:
     """Tests for agent registry."""
 
@@ -450,6 +483,7 @@ class TestRegistryService:
 # =====================
 
 
+@requires_agents_schema
 class TestMessageService:
     """Tests for P2P messaging."""
 
@@ -499,6 +533,7 @@ class TestMessageService:
 # =====================
 
 
+@requires_agents_schema
 class TestAgentSpawnSkill:
     """Tests for agent_spawn skill."""
 
@@ -610,6 +645,7 @@ class TestBlackboardSkills:
 # =====================
 
 
+@requires_agents_schema
 class TestJobWorkflow:
     """Integration tests for complete job workflow."""
 

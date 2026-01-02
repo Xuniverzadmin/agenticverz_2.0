@@ -30,8 +30,8 @@ class TestAuthWiringShape:
 
     def test_missing_auth_returns_401_or_403(self):
         """Protected endpoints reject missing auth."""
-        # No auth headers
-        response = self.client.get("/api/v1/runs")
+        # No auth headers - use existing endpoint (not /api/v1/runs which doesn't exist)
+        response = self.client.get("/api/v1/runtime/capabilities")
 
         # Should be 401 (unauthenticated) or 403 (forbidden)
         # NOT 500 (server error from null auth)
@@ -40,7 +40,7 @@ class TestAuthWiringShape:
     def test_invalid_auth_returns_401_or_403(self):
         """Protected endpoints reject invalid auth."""
         response = self.client.get(
-            "/api/v1/runs",
+            "/api/v1/runtime/capabilities",
             headers={"X-AOS-Key": "definitely-invalid-key"},
         )
 
@@ -49,7 +49,7 @@ class TestAuthWiringShape:
 
     def test_auth_error_response_shape(self):
         """Auth errors have consistent shape."""
-        response = self.client.get("/api/v1/runs")
+        response = self.client.get("/api/v1/runtime/capabilities")
 
         if response.status_code in (401, 403):
             data = response.json()

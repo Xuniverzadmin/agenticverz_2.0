@@ -1,0 +1,324 @@
+{
+  "title": "RBAC v1 ↔ v2 Comparison (Promotion Gate)",
+  "uid": "rbac-v1-v2-comparison",
+  "version": 1,
+  "schemaVersion": 38,
+  "description": "PIN-273: RBACv1 ↔ RBACv2 coexistence dashboard. This is the PROMOTION GATE - do not promote until metrics are clean.",
+  "tags": ["rbac", "auth", "promotion-gate", "pin-273"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "🎯 Match Rate (Target: >99%)",
+      "description": "Percentage of decisions where RBACv1 and RBACv2 agree",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total{match=\"yes\"}) / sum(rbac_v1_v2_comparison_total) * 100",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 95 },
+              { "color": "green", "value": 99 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "⚠️ Total Discrepancies",
+      "description": "Total number of v1/v2 mismatches",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total{match=\"no\"})",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "🔴 v2_more_permissive (SECURITY)",
+      "description": "CRITICAL: RBACv2 allows what RBACv1 denies. Must be 0 for promotion.",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total{discrepancy_type=\"v2_more_permissive\"})",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "🟡 v2_more_restrictive",
+      "description": "RBACv2 denies what RBACv1 allows. May break clients but not security risk.",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total{discrepancy_type=\"v2_more_restrictive\"})",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "⏱️ RBACv2 p95 Latency",
+      "description": "95th percentile latency of RBACv2 AuthorizationEngine",
+      "gridPos": { "x": 0, "y": 4, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(rbac_v2_latency_seconds_bucket[5m])) by (le)) * 1000",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "📊 Total Comparisons",
+      "description": "Total RBACv1 ↔ RBACv2 comparisons",
+      "gridPos": { "x": 6, "y": 4, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total)",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Match vs Discrepancy Rate Over Time",
+      "description": "Track trending of match rate",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(rbac_v1_v2_comparison_total{match=\"yes\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "Matches"
+        },
+        {
+          "expr": "sum(rate(rbac_v1_v2_comparison_total{match=\"no\"}[5m]))",
+          "refId": "B",
+          "legendFormat": "Discrepancies"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Matches" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" }}]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Discrepancies" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" }}]
+          }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Discrepancy Types Over Time",
+      "description": "Track v2_more_restrictive vs v2_more_permissive",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(rbac_v1_v2_comparison_total{discrepancy_type=\"v2_more_restrictive\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "v2_more_restrictive"
+        },
+        {
+          "expr": "sum(rate(rbac_v1_v2_comparison_total{discrepancy_type=\"v2_more_permissive\"}[5m]))",
+          "refId": "B",
+          "legendFormat": "v2_more_permissive (SECURITY)"
+        }
+      ],
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "v2_more_restrictive" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" }}]
+          },
+          {
+            "matcher": { "id": "byName", "options": "v2_more_permissive (SECURITY)" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" }}]
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "type": "piechart",
+      "title": "Discrepancies by Actor Type",
+      "description": "Which actor types are causing mismatches?",
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 8 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total{match=\"no\"}) by (actor_type)",
+        "refId": "A",
+        "legendFormat": "{{actor_type}}"
+      }],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right" }
+      }
+    },
+    {
+      "id": 10,
+      "type": "piechart",
+      "title": "Discrepancies by Resource",
+      "description": "Which resources have the most mismatches?",
+      "gridPos": { "x": 8, "y": 16, "w": 8, "h": 8 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total{match=\"no\"}) by (resource)",
+        "refId": "A",
+        "legendFormat": "{{resource}}"
+      }],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right" }
+      }
+    },
+    {
+      "id": 11,
+      "type": "piechart",
+      "title": "Discrepancies by Action",
+      "description": "Which actions have the most mismatches?",
+      "gridPos": { "x": 16, "y": 16, "w": 8, "h": 8 },
+      "targets": [{
+        "expr": "sum(rbac_v1_v2_comparison_total{match=\"no\"}) by (action)",
+        "refId": "A",
+        "legendFormat": "{{action}}"
+      }],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right" }
+      }
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "Top Discrepancies (Resource + Action + Actor Type)",
+      "description": "Detailed breakdown of mismatches for classification",
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+      "targets": [{
+        "expr": "topk(20, sum(rbac_v1_v2_comparison_total{match=\"no\"}) by (resource, action, actor_type, discrepancy_type))",
+        "refId": "A",
+        "format": "table",
+        "instant": true
+      }],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "resource": "Resource",
+              "action": "Action",
+              "actor_type": "Actor Type",
+              "discrepancy_type": "Discrepancy Type",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Match Rate by Actor Type (7 Day Trend)",
+      "description": "Track per-actor-type match rate for promotion readiness",
+      "gridPos": { "x": 0, "y": 32, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(rbac_v1_v2_comparison_total{match=\"yes\"}[1h])) by (actor_type) / sum(rate(rbac_v1_v2_comparison_total[1h])) by (actor_type) * 100",
+          "refId": "A",
+          "legendFormat": "{{actor_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "text",
+      "title": "Promotion Readiness Checklist",
+      "gridPos": { "x": 0, "y": 40, "w": 24, "h": 6 },
+      "options": {
+        "mode": "markdown",
+        "content": "## RBACv2 Promotion Readiness\n\n| Condition | Threshold | Status |\n|-----------|-----------|--------|\n| Match rate | > 99% for 7 days | Check 🎯 Match Rate panel |\n| v2_more_permissive | = 0 | Check 🔴 panel (MUST BE GREEN) |\n| All discrepancies classified | 100% | Manual check required |\n| Rollback tested | YES | Manual verification |\n| Human approval | REQUIRED | Governance gate |\n\n### Discrepancy Classification\n- **expected_tightening**: RBACv2 is correct, RBACv1 was too loose → Accept\n- **expected_loosening**: RBACv1 was over-restrictive → Accept\n- **bug**: RBACv2 is wrong → Fix before promotion\n- **spec_gap**: Policy not defined → Define first\n\n⚠️ **CRITICAL**: Any `v2_more_permissive` is a security risk requiring immediate investigation."
+      }
+    }
+  ],
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": false,
+        "iconColor": "blue",
+        "type": "dashboard"
+      }
+    ]
+  }
+}

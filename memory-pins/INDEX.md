@@ -1,6 +1,6 @@
 # AgenticVerz 2.0 Memory Pins Index
 
-> Last Updated: 2025-12-07
+> Last Updated: 2025-12-31
 > Current Milestone: M8 Demo + SDK + Auth (⏳ IN PROGRESS)
 
 ## Memory Pin Files
@@ -10,7 +10,9 @@
 | [CLAUDE.md](./CLAUDE.md) | Main memory pin - project overview, milestones, architecture | Active |
 | [M0_FINALIZATION.md](./M0_FINALIZATION.md) | M0 completion report and deliverables | Complete |
 | [PIN-009-EXTERNAL-ROLLOUT-PENDING.md](./PIN-009-EXTERNAL-ROLLOUT-PENDING.md) | Pending items for external/production rollout | Active |
-| **[PIN-036-EXTERNAL-SERVICES.md](../docs/memory-pins/PIN-036-EXTERNAL-SERVICES.md)** | **External services (Neon, Clerk, etc.) credentials & integration** | **NEW** |
+| **[PIN-036-EXTERNAL-SERVICES.md](../docs/memory-pins/PIN-036-EXTERNAL-SERVICES.md)** | **External services (Neon, Clerk, etc.) credentials & integration** | Active |
+| **[PIN-264-phase-2-3-feature-intent-system.md](./PIN-264-phase-2-3-feature-intent-system.md)** | **Phase-2.3 Feature Intent System (FeatureIntent + RetryPolicy)** | **COMPLETE** |
+| **[PIN-265-phase-3-intent-driven-refactoring.md](./PIN-265-phase-3-intent-driven-refactoring.md)** | **Phase-3 Intent-Driven Refactoring (128 violations by blast radius)** | **IN_PROGRESS** |
 
 **Primary Reference:** `docs/memory-pins/INDEX.md` (authoritative)
 
@@ -173,6 +175,14 @@ docker logs nova_agent_manager --tail 50
 
 | Date | Change |
 |------|--------|
+| 2025-12-31 | **Phase-3 Refactoring Plan** - PIN-265 created |
+| 2025-12-31 | Clustered 128 violations by feature group and blast radius |
+| 2025-12-31 | Priority tiers: CRITICAL (12), HIGH (8), MEDIUM (37), LOW (27), MINIMAL (44) |
+| 2025-12-31 | **Phase-2.3 Feature Intent System** - PIN-264 created |
+| 2025-12-31 | Added FeatureIntent enum, RetryPolicy, @feature decorator |
+| 2025-12-31 | Added CI enforcement: check_feature_intent.py |
+| 2025-12-31 | Added golden examples: feature_intent_examples.py |
+| 2025-12-31 | Updated SESSION_PLAYBOOK to v2.28 with intent hierarchy |
 | 2025-12-07 | **External Services Configured** - PIN-036 created |
 | 2025-12-07 | Credentials stored: Neon, Clerk, Resend, PostHog, Trigger.dev, Cloudflare |
 | 2025-12-07 | Secrets directory secured with load_all.sh helper |

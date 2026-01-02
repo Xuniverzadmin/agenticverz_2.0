@@ -49,6 +49,7 @@ class TestPBS1BypassDetection:
         allowed_paths = [
             "alembic/versions",
             "tests/test_pb_s1",
+            "tests/test_pb_s2",  # Tests that verify trigger rejection
         ]
 
         # Pattern for suspicious mutations (FROM terminal states)

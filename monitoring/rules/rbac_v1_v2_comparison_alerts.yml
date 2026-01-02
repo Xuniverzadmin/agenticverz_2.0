@@ -1,0 +1,173 @@
+# =============================================================================
+# PIN-273: RBACv1 ↔ RBACv2 Comparison Alerts
+# =============================================================================
+# Prometheus alert rules for RBACv2 Reference Mode comparison
+# These alerts support the promotion readiness process
+#
+# TERMINOLOGY (LOCKED):
+# - RBACv1: Enforcement Authority (current)
+# - RBACv2: Reference Authority (shadow mode)
+#
+# Install: Copy to Prometheus rules directory and reload
+# =============================================================================
+
+groups:
+  - name: rbac_v1_v2_comparison
+    rules:
+      # =========================================================================
+      # CRITICAL: Security Alerts
+      # =========================================================================
+
+      # CRITICAL: v2_more_permissive is a security risk
+      # RBACv2 allows what RBACv1 denies - potential privilege escalation
+      - alert: RBACv2MorePermissive
+        expr: |
+          increase(rbac_v1_v2_comparison_total{discrepancy_type="v2_more_permissive"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: rbac
+          security: "true"
+        annotations:
+          summary: "SECURITY: RBACv2 is more permissive than RBACv1"
+          description: |
+            RBACv2 allowed a request that RBACv1 denied.
+            This is a potential privilege escalation bug in RBACv2.
+            Resource={{ $labels.resource }}, Action={{ $labels.action }}, ActorType={{ $labels.actor_type }}
+
+            IMMEDIATE ACTION REQUIRED:
+            1. Check logs for rbac_v1_v2_discrepancy with security_alert=true
+            2. Classify as bug or spec_gap
+            3. Do NOT promote RBACv2 until resolved
+          runbook_url: "https://docs.agenticverz.com/runbooks/rbac-v2-permissive"
+
+      # =========================================================================
+      # Warning: Operational Alerts
+      # =========================================================================
+
+      # Warning: Discrepancy rate too high for promotion
+      - alert: RBACv2DiscrepancyRateHigh
+        expr: |
+          (
+            sum(rate(rbac_v1_v2_comparison_total{match="no"}[1h]))
+            /
+            sum(rate(rbac_v1_v2_comparison_total[1h]))
+          ) * 100 > 1
+        for: 30m
+        labels:
+          severity: warning
+          component: rbac
+        annotations:
+          summary: "RBACv2 discrepancy rate above promotion threshold"
+          description: |
+            RBACv1 ↔ RBACv2 discrepancy rate is {{ $value | printf "%.2f" }}%.
+            Promotion threshold is <1% for 7 days.
+
+            Check the discrepancy dashboard to classify mismatches.
+          runbook_url: "https://docs.agenticverz.com/runbooks/rbac-v2-discrepancy"
+
+      # Warning: v2_more_restrictive may break clients
+      - alert: RBACv2MoreRestrictive
+        expr: |
+          increase(rbac_v1_v2_comparison_total{discrepancy_type="v2_more_restrictive"}[15m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: rbac
+        annotations:
+          summary: "RBACv2 is more restrictive than RBACv1"
+          description: |
+            RBACv2 denied {{ $value | printf "%.0f" }} requests that RBACv1 allowed.
+            This may break clients after promotion.
+            Resource={{ $labels.resource }}, Action={{ $labels.action }}, ActorType={{ $labels.actor_type }}
+
+            ACTION: Classify as expected_tightening or bug.
+          runbook_url: "https://docs.agenticverz.com/runbooks/rbac-v2-restrictive"
+
+      # Warning: RBACv2 shadow mode errors
+      - alert: RBACv2ShadowErrors
+        expr: |
+          increase(rbac_v2_shadow_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: rbac
+        annotations:
+          summary: "RBACv2 shadow mode experiencing errors"
+          description: |
+            RBACv2 AuthorizationEngine is throwing errors.
+            This does not affect RBACv1 enforcement but blocks promotion.
+
+            Check logs for rbac_v2_shadow_error.
+          runbook_url: "https://docs.agenticverz.com/runbooks/rbac-v2-errors"
+
+      # =========================================================================
+      # Info: Operational Awareness
+      # =========================================================================
+
+      # Info: RBACv2 shadow mode is disabled
+      - alert: RBACv2ShadowDisabled
+        expr: |
+          absent(rbac_v1_v2_comparison_total) == 1
+        for: 10m
+        labels:
+          severity: info
+          component: rbac
+        annotations:
+          summary: "RBACv2 shadow mode is not running"
+          description: |
+            No RBACv1 ↔ RBACv2 comparison metrics detected.
+            Either shadow mode is disabled (NEW_AUTH_SHADOW_ENABLED=false)
+            or no requests have been processed.
+
+            Shadow mode is required for promotion readiness.
+
+      # Info: RBACv2 latency high (may affect request latency)
+      - alert: RBACv2LatencyHigh
+        expr: |
+          histogram_quantile(0.95, sum(rate(rbac_v2_latency_seconds_bucket[5m])) by (le)) > 0.05
+        for: 10m
+        labels:
+          severity: info
+          component: rbac
+        annotations:
+          summary: "RBACv2 AuthorizationEngine latency is high"
+          description: |
+            RBACv2 p95 latency is {{ $value | printf "%.3f" }}s (threshold: 50ms).
+            This adds latency to every request while shadow mode is enabled.
+
+            Consider optimizing AuthorizationEngine if this persists.
+
+  # =========================================================================
+  # Promotion Readiness Recording Rules
+  # =========================================================================
+  - name: rbac_v1_v2_recording
+    rules:
+      # Pre-compute match rate for dashboard efficiency
+      - record: rbac_v1_v2:match_rate:1h
+        expr: |
+          sum(rate(rbac_v1_v2_comparison_total{match="yes"}[1h]))
+          /
+          sum(rate(rbac_v1_v2_comparison_total[1h]))
+          * 100
+
+      # Pre-compute discrepancy rate
+      - record: rbac_v1_v2:discrepancy_rate:1h
+        expr: |
+          sum(rate(rbac_v1_v2_comparison_total{match="no"}[1h]))
+          /
+          sum(rate(rbac_v1_v2_comparison_total[1h]))
+          * 100
+
+      # Pre-compute v2_more_permissive count (for promotion gate)
+      - record: rbac_v1_v2:permissive_count:total
+        expr: |
+          sum(rbac_v1_v2_comparison_total{discrepancy_type="v2_more_permissive"})
+
+      # Pre-compute match rate by actor type
+      - record: rbac_v1_v2:match_rate_by_actor:1h
+        expr: |
+          sum(rate(rbac_v1_v2_comparison_total{match="yes"}[1h])) by (actor_type)
+          /
+          sum(rate(rbac_v1_v2_comparison_total[1h])) by (actor_type)
+          * 100

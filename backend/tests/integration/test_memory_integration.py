@@ -236,7 +236,7 @@ class TestMemoryPostUpdateEffects:
             # Pre-seed memory
             import asyncio
 
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 mock_memory_service.set(
                     tenant_id,
                     "costsim:history",
@@ -250,7 +250,7 @@ class TestMemoryPostUpdateEffects:
             )
 
             # Now the memory exists - verify it can be retrieved
-            result = asyncio.get_event_loop().run_until_complete(mock_memory_service.get(tenant_id, "costsim:history"))
+            result = asyncio.run(mock_memory_service.get(tenant_id, "costsim:history"))
 
             assert result.success is True
             assert result.entry is not None
@@ -389,7 +389,7 @@ class TestMemoryServiceIntegration:
         # Test set operation
         import asyncio
 
-        result = asyncio.get_event_loop().run_until_complete(service.set("test-tenant", "test-key", {"data": "value"}))
+        result = asyncio.run(service.set("test-tenant", "test-key", {"data": "value"}))
 
         assert result.success is True
         assert result.entry is not None
