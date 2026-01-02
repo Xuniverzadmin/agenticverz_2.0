@@ -431,7 +431,14 @@ class TestReplayEngine:
 
     @pytest.mark.asyncio
     async def test_replay_creates_new_trace(self, replay_engine, trace_store):
-        """Replay should create a new trace with different run_id."""
+        """Replay should create a new trace with different run_id.
+
+        S6 COMPLIANCE: Replay is observational by default (emit_traces=False).
+        The trace is built in memory and returned in result.trace, NOT persisted
+        to the trace store. This is correct behavior per PIN-198.
+
+        To test persistence, pass emit_traces=True (see test_replay_persists_when_requested).
+        """
         # Create original trace
         original_run_id = generate_run_id()
         await trace_store.start_trace(
@@ -443,7 +450,7 @@ class TestReplayEngine:
         )
         await trace_store.complete_trace(original_run_id, "completed")
 
-        # Replay
+        # Replay (default: emit_traces=False, S6 compliance)
         result = await replay_engine.replay_run(
             run_id=original_run_id,
             dry_run=True,
@@ -452,10 +459,13 @@ class TestReplayEngine:
         assert result.run_id != original_run_id
         assert result.original_run_id == original_run_id
 
-        # New trace should exist
-        new_trace = await trace_store.get_trace(result.run_id)
-        assert new_trace is not None
-        assert new_trace.metadata.get("replay_of") == original_run_id
+        # In-memory trace should exist in result (S6: not persisted by default)
+        assert result.trace is not None
+        assert result.trace.metadata.get("replay_of") == original_run_id
+
+        # Verify NOT persisted (S6 compliance - replay is observational)
+        persisted_trace = await trace_store.get_trace(result.run_id)
+        assert persisted_trace is None, "S6: Replay should not persist by default"
 
 
 class TestDeterminismValidation:
