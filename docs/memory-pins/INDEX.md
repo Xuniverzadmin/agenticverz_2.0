@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-02 (PIN-276 Bucket A/B Permanent Fix Design)
+**Last Updated:** 2026-01-02 (PIN-277 M10 Test Suite Completion - Layer-Governed Fixes - Skipped Tests Policy)
 
 ---
 
@@ -307,6 +307,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-274](PIN-274-rbac-promotion-neon-synthetic-load.md) | **RBACv2 Promotion via Neon + Synthetic Load** | Authorization / Promotion Gate | **ACTIVE** | 2026-01-02 |
 | [PIN-275](PIN-275-rbac-track-a-promotion-status.md) | **RBAC Track A Promotion Status** | Security / RBAC | **PROMOTION READY** | 2026-01-02 |
 | [PIN-276](PIN-276-bucket-ab-permanent-fix-design.md) | **Bucket A/B Permanent Fix Design** | CI / Infrastructure | **DESIGN APPROVED** | 2026-01-02 |
+| [PIN-277](PIN-277-m10-test-suite-completion---layer-governed-fixes.md) | **M10 Test Suite Completion - Layer-Governed Fixes** | Testing / M10 Recovery | **✅ COMPLETE** | 2026-01-02 |
 
 ---
 
@@ -1076,6 +1077,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-02 | **PIN-277 M10 Test Suite Completion - Layer-Governed Fixes** - Updated: Skipped Tests Policy |
+| 2026-01-02 | **PIN-277 M10 Test Suite Completion - Layer-Governed Fixes** - Created via memory_trail. |
 | 2026-01-02 | **PIN-276 Bucket A/B Permanent Fix Design** - System-level fixes for test isolation (transaction rollback per test) and infra state (A→B→C promotion model). No more patching tests - change the rules. TEST_ISOLATION_RULE and INFRA_REGISTRY enforcement. |
 | 2026-01-02 | **PIN-275 RBAC Track A Promotion Status** - Track A complete: 900k stress test passed (18,959 req/sec, 0.053ms latency, 0 errors). v2_more_permissive=0. All discrepancies=expected_tightening. Manual checklist (30 min) remains. RBACv2 is production-grade. |
 | 2026-01-02 | **PIN-274 RBACv2 Promotion via Neon + Synthetic Load** - Defines path from engineering complete to operationally proven. Three hard proofs: synthetic traffic at scale, Neon DB with real tenancy, full discrepancy classification. Parallel tracks: Track A (RBAC Promotion) + Track B (CI Closure). Time is proxy, coverage is invariant. |

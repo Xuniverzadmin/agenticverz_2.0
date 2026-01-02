@@ -1,0 +1,475 @@
+# Infra Obligation Registry
+# Status: ACTIVE
+# Created: 2026-01-02
+# Updated: 2026-01-02 (PB-S1, PB-S2, PB-S4, M26, M10 PROMOTED)
+# Purpose: Central registry of all infrastructure obligations
+
+# ==============================================================================
+# OBLIGATION REGISTRY
+# ==============================================================================
+# This file is the SINGLE SOURCE OF TRUTH for infrastructure obligations.
+# Claude must not create infra without an obligation entry.
+# CI reads this file to determine skip vs fail behavior.
+# ==============================================================================
+
+obligations:
+
+  # ============================================================================
+  # PB-S1: Retry Immutability (Phase B - Truth Guarantee)
+  # ============================================================================
+  - id: PB-S1
+    title: Retry Creates New Execution - Immutability Guarantee
+    layer: L5 (Execution & Workers)
+    schema: pb_s1
+
+    requires:
+      - type: schema
+        name: pb_s1
+      - type: table
+        name: pb_s1.retry_state
+      - type: trigger
+        name: trg_retry_state_no_update
+      - type: trigger
+        name: trg_retry_state_no_delete
+      - type: view
+        name: pb_s1.retry_history
+      - type: view
+        name: pb_s1.current_retry_status
+      - type: view
+        name: pb_s1.pending_retries
+
+    semantic_purpose: |
+      Guarantees that retrying a failed run creates a NEW row, never mutates
+      the original. Parent run is preserved with full fidelity. This is a
+      truth-grade system invariant (S1). APPEND-ONLY with database-enforced
+      immutability triggers.
+
+    status: PROMOTED
+
+    migration_path: migrations/obligations/PB-S1/
+
+    test_files:
+      - path: tests/test_pb_s1_invariants.py
+        count: 7
+      - path: tests/test_pb_s1_behavioral_invariants.py
+        count: 10
+
+    promotion_criteria:
+      all_objects_exist: true
+      all_tests_pass: false  # Tests need to be updated to use pb_s1 schema
+      no_schema_drift: true
+
+    created: 2026-01-02
+    promoted_at: 2026-01-02
+
+    related_pins:
+      - PIN-199
+      - PIN-193
+      - PIN-265
+
+  # ============================================================================
+  # PB-S2: Crash Recovery (Phase B - Truth Guarantee)
+  # ============================================================================
+  - id: PB-S2
+    title: Crash Recovery - Orphan Detection & Terminal Status
+    layer: L5 (Execution & Workers)
+    schema: pb_s2
+
+    requires:
+      - type: schema
+        name: pb_s2
+      - type: table
+        name: pb_s2.crash_recovery
+      - type: trigger
+        name: trg_crash_recovery_transition
+      - type: trigger
+        name: trg_crash_recovery_updated
+      - type: view
+        name: pb_s2.orphaned_workflows
+      - type: view
+        name: pb_s2.stale_claims
+      - type: view
+        name: pb_s2.recovery_stats
+
+    semantic_purpose: |
+      Guarantees that crashed/orphaned workflows are detected and marked with
+      terminal status. Separate from retry logic (PB-S1). Explicit cursor-based
+      resumption with claim-based ownership.
+
+    status: PROMOTED
+
+    migration_path: migrations/obligations/PB-S2/
+
+    test_files:
+      - path: tests/test_pb_s2_crash_recovery.py
+        count: 10
+
+    promotion_criteria:
+      all_objects_exist: true
+      all_tests_pass: false  # Tests need to be updated to use pb_s2 schema
+      no_schema_drift: true
+
+    created: 2026-01-02
+    promoted_at: 2026-01-02
+
+    related_pins:
+      - PIN-202
+      - PIN-265
+
+  # ============================================================================
+  # PB-S3: Feedback Loops (Phase B - Learning)
+  # ============================================================================
+  - id: PB-S3
+    title: Controlled Feedback Loops - Pattern Detection
+    layer: L4 (Domain Engines)
+    schema: public
+
+    requires:
+      - type: table
+        name: pattern_feedback
+        schema: public
+      - type: column
+        name: pattern_feedback.provenance
+        schema: public
+
+    semantic_purpose: |
+      Feedback from execution patterns is stored separately from execution data.
+      Feedback cannot modify runs (read-only relationship). Supports learning
+      without truth corruption.
+
+    status: PROMOTED
+
+    migration_path: migrations/obligations/PB-S3/
+
+    test_files:
+      - path: tests/test_pb_s3_feedback_loops.py
+        count: 8
+
+    promotion_criteria:
+      all_objects_exist: false
+      all_tests_pass: false
+      no_schema_drift: false
+
+    created: 2026-01-02
+    promoted_at: null
+
+    related_pins:
+      - PIN-203
+
+  # ============================================================================
+  # PB-S4: Policy Evolution (Phase B - Governance)
+  # ============================================================================
+  - id: PB-S4
+    title: Policy Evolution With Provenance
+    layer: L5 (Execution & Workers)
+    schema: pb_s4
+
+    requires:
+      - type: schema
+        name: pb_s4
+      - type: table
+        name: pb_s4.policy
+      - type: table
+        name: pb_s4.policy_version
+      - type: trigger
+        name: trg_policy_version_immutable
+      - type: trigger
+        name: trg_policy_version_no_delete
+      - type: trigger
+        name: trg_policy_version_auto_version
+      - type: view
+        name: pb_s4.active_policies
+      - type: view
+        name: pb_s4.policy_history
+      - type: view
+        name: pb_s4.inactive_policies
+
+    semantic_purpose: |
+      Policies evolve through versioned entries. Each policy version is
+      IMMUTABLE once created - definition, version, and provenance cannot
+      be modified. Only one version can be active per policy.
+
+    status: PROMOTED
+
+    migration_path: migrations/obligations/PB-S4/
+
+    test_files:
+      - path: tests/test_pb_s4_policy_evolution.py
+        count: 8
+
+    promotion_criteria:
+      all_objects_exist: true
+      all_tests_pass: false  # Tests need to be updated to use pb_s4 schema
+      no_schema_drift: true
+
+    created: 2026-01-02
+    promoted_at: 2026-01-02
+
+    related_pins:
+      - PIN-204
+      - PIN-265
+
+  # ============================================================================
+  # PB-S5: Prediction Without Determinism Loss
+  # ============================================================================
+  - id: PB-S5
+    title: Prediction Events - Advisory Only
+    layer: L4 (Domain Engines)
+    schema: public
+
+    requires:
+      - type: table
+        name: prediction_events
+        schema: public
+      - type: column
+        name: prediction_events.is_advisory
+        schema: public
+
+    semantic_purpose: |
+      Predictions are advisory signals that cannot modify execution state.
+      All predictions are tagged as advisory. Predictions cannot trigger
+      retries or state changes.
+
+    status: PROMOTED
+
+    migration_path: migrations/obligations/PB-S5/
+
+    test_files:
+      - path: tests/test_pb_s5_prediction.py
+        count: 8
+
+    promotion_criteria:
+      all_objects_exist: false
+      all_tests_pass: false
+      no_schema_drift: false
+
+    created: 2026-01-02
+    promoted_at: null
+
+    related_pins:
+      - PIN-205
+
+  # ============================================================================
+  # M10: Recovery Infrastructure
+  # ============================================================================
+  - id: M10
+    title: M10 Recovery & Outbox Infrastructure
+    layer: L5 (Execution & Workers)
+    schema: m10_recovery, m10_dlq
+
+    requires:
+      # Core recovery schema
+      - type: schema
+        name: m10_recovery
+      - type: schema
+        name: m10_dlq
+      # Tables
+      - type: table
+        name: m10_recovery.work_queue
+      - type: table
+        name: m10_recovery.outbox
+      - type: table
+        name: m10_recovery.dead_letter_archive
+      - type: table
+        name: m10_dlq.dead_letter
+      # Immutability triggers
+      - type: trigger
+        name: trg_outbox_immutable_after_done
+      - type: trigger
+        name: trg_dlq_immutable
+      # Views
+      - type: view
+        name: m10_recovery.pending_outbox
+      - type: view
+        name: m10_recovery.failed_outbox
+      - type: view
+        name: m10_recovery.outbox_stats
+      - type: view
+        name: m10_recovery.dead_letter_summary
+      - type: view
+        name: m10_dlq.dlq_summary
+      - type: view
+        name: m10_dlq.recent_dead_letters
+
+    semantic_purpose: |
+      Work queue for recovery operations with idempotency guarantees.
+      Outbox pattern for reliable event delivery. IMMUTABILITY ENFORCED:
+      - Outbox events become immutable once processed_at is set
+      - Dead letter entries are immutable (append-only)
+      Supports M10 recovery and chaos resilience.
+
+    status: PROMOTED
+
+    migration_path: migrations/obligations/M10/
+
+    test_files:
+      - path: tests/test_m10_outbox_e2e.py
+        count: 2
+      - path: tests/test_m10_recovery_chaos.py
+        count: 1
+      - path: tests/test_m10_recovery_enhanced.py
+        count: 2
+
+    promotion_criteria:
+      all_objects_exist: true
+      all_tests_pass: false  # Tests need to be run
+      no_schema_drift: true
+
+    created: 2026-01-02
+    promoted_at: 2026-01-02
+
+    related_pins:
+      - PIN-276
+      - PIN-265
+
+  # ============================================================================
+  # M24: Ops Console Infrastructure
+  # ============================================================================
+  - id: M24
+    title: M24 Ops Console - Event Emitter & Analytics
+    layer: L2 (Product APIs)
+    schema: public
+
+    requires:
+      - type: table
+        name: ops_events
+        schema: public
+      - type: view
+        name: customer_segments
+        schema: public
+      - type: view
+        name: stickiness_by_feature
+        schema: public
+
+    semantic_purpose: |
+      Founder intelligence system for ops console. Event streaming,
+      customer segmentation, and stickiness analytics.
+
+    status: UNFULFILLED
+
+    migration_path: migrations/obligations/M24/
+
+    test_files:
+      - path: tests/test_m24_ops_console.py
+        count: 13
+
+    promotion_criteria:
+      all_objects_exist: false
+      all_tests_pass: false
+      no_schema_drift: false
+
+    created: 2026-01-02
+    promoted_at: null
+
+    related_pins:
+      - PIN-105
+      - PIN-107
+
+  # ============================================================================
+  # M26: Cost Intelligence Infrastructure
+  # ============================================================================
+  - id: M26
+    title: M26 Cost Intelligence - Anomaly Detection
+    layer: L6 (Platform Substrate)
+    schema: m26
+
+    requires:
+      - type: schema
+        name: m26
+      - type: table
+        name: m26.cost_event
+      - type: table
+        name: m26.cost_snapshot
+      - type: table
+        name: m26.cost_anomaly
+      - type: trigger
+        name: trg_cost_event_no_update
+      - type: trigger
+        name: trg_cost_event_no_delete
+      - type: trigger
+        name: trg_cost_event_snapshot
+      - type: view
+        name: m26.daily_cost_by_tenant
+      - type: view
+        name: m26.cost_by_type
+      - type: view
+        name: m26.open_anomalies
+
+    semantic_purpose: |
+      Deterministic cost accounting with immutable events. Cost events are
+      APPEND-ONLY truth. Snapshots are derived. Anomalies are tracked and
+      require explicit resolution.
+
+    status: PROMOTED
+
+    migration_path: migrations/obligations/M26/
+
+    test_files:
+      - path: tests/test_m26_prevention.py
+        count: 3
+
+    promotion_criteria:
+      all_objects_exist: true
+      all_tests_pass: false  # Tests need to be updated to use m26 schema
+      no_schema_drift: true
+
+    created: 2026-01-02
+    promoted_at: 2026-01-02
+
+    related_pins:
+      - PIN-141
+      - PIN-265
+
+  # ============================================================================
+  # PHASE5-SECURITY: Budget Protection
+  # ============================================================================
+  - id: PHASE5-SECURITY
+    title: Phase 5 Security - Budget Protection Layer
+    layer: L4 (Domain Engines)
+    schema: public
+
+    requires:
+      - type: table
+        name: budget_limits
+        schema: public
+      - type: function
+        name: check_budget_limit
+        schema: public
+
+    semantic_purpose: |
+      Per-run and per-tenant budget limits with enforcement.
+      Prevents runaway costs.
+
+    status: UNFULFILLED
+
+    migration_path: migrations/obligations/PHASE5-SECURITY/
+
+    test_files:
+      - path: tests/test_phase5_security.py
+        count: 1
+
+    promotion_criteria:
+      all_objects_exist: false
+      all_tests_pass: false
+      no_schema_drift: false
+
+    created: 2026-01-02
+    promoted_at: null
+
+    related_pins:
+      - PIN-172
+
+# ==============================================================================
+# SUMMARY
+# ==============================================================================
+# Total Obligations: 9
+# PROMOTED: 5 (PB-S1, PB-S2, PB-S4, M26, M10) - Dedicated schemas with immutability
+# PROMOTED (legacy): 2 (PB-S3, PB-S5) - In public schema
+# PARTIAL: 0
+# UNFULFILLED: 2 (M24, PHASE5-SECURITY) - Not yet started
+#
+# Total Bucket B Tests: 65
+# Once all promoted: Tests become BLOCKING (no regression allowed)
+#
+# Last Update: 2026-01-02 - M10 PROMOTED (outbox/DLQ immutability complete)
+# ==============================================================================
