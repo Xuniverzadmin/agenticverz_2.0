@@ -287,7 +287,7 @@ class TestAggregationJob:
 
     def test_compute_signature(self):
         """Test error signature computation."""
-        from app.jobs.failure_aggregation import compute_signature
+        from app.domain.failure_intelligence import compute_signature
 
         sig1 = compute_signature("TIMEOUT", "Connection timed out")
         sig2 = compute_signature("TIMEOUT", "Connection timed out")
@@ -300,7 +300,7 @@ class TestAggregationJob:
 
     def test_compute_signature_normalization(self):
         """Test signature normalization."""
-        from app.jobs.failure_aggregation import compute_signature
+        from app.domain.failure_intelligence import compute_signature
 
         sig1 = compute_signature("timeout", "message")
         sig2 = compute_signature("TIMEOUT", "MESSAGE")
@@ -310,7 +310,7 @@ class TestAggregationJob:
 
     def test_suggest_category(self):
         """Test category suggestion."""
-        from app.jobs.failure_aggregation import suggest_category
+        from app.domain.failure_intelligence import suggest_category
 
         assert suggest_category(["TIMEOUT"]) == "TRANSIENT"
         assert suggest_category(["PERMISSION_DENIED"]) == "PERMISSION"
@@ -320,7 +320,7 @@ class TestAggregationJob:
 
     def test_suggest_recovery(self):
         """Test recovery suggestion."""
-        from app.jobs.failure_aggregation import suggest_recovery
+        from app.domain.failure_intelligence import suggest_recovery
 
         assert suggest_recovery(["TIMEOUT"]) == "RETRY_EXPONENTIAL"
         assert suggest_recovery(["RATE_LIMITED"]) == "RETRY_WITH_JITTER"
@@ -329,7 +329,7 @@ class TestAggregationJob:
 
     def test_aggregate_patterns(self):
         """Test pattern aggregation."""
-        from app.jobs.failure_aggregation import aggregate_patterns
+        from app.domain.failure_intelligence import aggregate_patterns
 
         raw_patterns = [
             {
@@ -359,7 +359,7 @@ class TestAggregationJob:
 
     def test_get_summary_stats(self):
         """Test summary statistics generation."""
-        from app.jobs.failure_aggregation import get_summary_stats
+        from app.domain.failure_intelligence import get_summary_stats
 
         patterns = [
             {
