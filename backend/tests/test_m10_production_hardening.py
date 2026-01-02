@@ -28,6 +28,77 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="DATABASE_URL not set")
 
 
+def _clean_test_outbox():
+    """
+    Clean ALL pending outbox events to ensure tests start with a clean slate.
+
+    This is critical for E2E test isolation because:
+    1. claim_outbox_events uses FIFO ordering
+    2. Old pending events block new test events from being claimed
+    3. Without cleanup, tests time out waiting for their events
+
+    Reference: PIN-276 (M10 Test Isolation)
+    """
+    if not DATABASE_URL:
+        return
+
+    from sqlalchemy import text
+    from sqlmodel import Session, create_engine
+
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
+    with Session(engine) as session:
+        try:
+            # Delete ALL test-related outbox events (aggregate_type starting with 'test')
+            result = session.execute(text("DELETE FROM m10_recovery.outbox WHERE aggregate_type LIKE 'test%'"))
+            _test_deleted = result.rowcount
+
+            # Also clean up old pending events that might block the FIFO queue
+            # Only delete events older than 1 hour with no processing (stale/orphaned)
+            result = session.execute(
+                text(
+                    """
+                    DELETE FROM m10_recovery.outbox
+                    WHERE processed_at IS NULL
+                    AND created_at < now() - interval '1 hour'
+                """
+                )
+            )
+            _stale_deleted = result.rowcount
+
+            # Release any stale locks from previous test runs
+            session.execute(
+                text(
+                    "DELETE FROM m10_recovery.distributed_locks WHERE lock_name LIKE 'm10:%' OR lock_name LIKE 'test:%'"
+                )
+            )
+
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            import logging
+
+            logging.getLogger("nova.test").warning(f"Outbox cleanup failed: {e}")
+
+
+@pytest.fixture(scope="module", autouse=True)
+def clean_outbox_module():
+    """
+    Module-level fixture to clean outbox ONCE at module start.
+
+    This ensures a clean FIFO queue for all tests in the module.
+    Autouse=True means it runs for all tests in this module.
+    """
+    # Clean at module start
+    _clean_test_outbox()
+
+    yield
+
+    # Clean at module end
+    _clean_test_outbox()
+
+
 class TestLeaderElectionChaos:
     """Test leader election under various failure scenarios."""
 

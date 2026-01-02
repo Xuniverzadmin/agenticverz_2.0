@@ -118,6 +118,58 @@ class IdempotencyTrackingHandler(BaseHTTPRequestHandler):
             cls.failure_mode = "none"
 
 
+def _clean_test_outbox(engine):
+    """
+    Clean ALL pending outbox events to ensure tests start with a clean slate.
+
+    This is critical for E2E test isolation because:
+    1. claim_outbox_events uses FIFO ordering
+    2. Old pending events block new test events from being claimed
+    3. Without cleanup, tests time out waiting for their events
+
+    Reference: PIN-276 (M10 Test Isolation)
+    """
+    from sqlalchemy import text
+    from sqlmodel import Session
+
+    with Session(engine) as session:
+        try:
+            # Delete ALL test-related outbox events (aggregate_type starting with 'test')
+            result = session.execute(text("DELETE FROM m10_recovery.outbox WHERE aggregate_type LIKE 'test%'"))
+            test_deleted = result.rowcount
+
+            # Also clean up old pending events that might block the FIFO queue
+            # Only delete events older than 1 hour with no processing (stale/orphaned)
+            result = session.execute(
+                text(
+                    """
+                    DELETE FROM m10_recovery.outbox
+                    WHERE processed_at IS NULL
+                    AND created_at < now() - interval '1 hour'
+                """
+                )
+            )
+            stale_deleted = result.rowcount
+
+            # Release any stale locks from previous test runs
+            session.execute(text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name LIKE 'm10:%'"))
+
+            session.commit()
+
+            if test_deleted > 0 or stale_deleted > 0:
+                import logging
+
+                logging.getLogger("nova.test").info(
+                    f"Cleaned outbox: {test_deleted} test events, {stale_deleted} stale events"
+                )
+
+        except Exception as e:
+            session.rollback()
+            import logging
+
+            logging.getLogger("nova.test").warning(f"Outbox cleanup failed: {e}")
+
+
 @pytest.fixture(scope="module")
 def mock_server():
     """Start a mock HTTP server for testing outbox deliveries."""
@@ -134,8 +186,31 @@ def mock_server():
     server.shutdown()
 
 
+@pytest.fixture(scope="module")
+def clean_outbox_module(request):
+    """
+    Module-level fixture to clean outbox ONCE at module start.
+
+    This ensures a clean FIFO queue for all tests in the module.
+    """
+    if not DATABASE_URL:
+        return
+
+    from sqlmodel import create_engine
+
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
+    # Clean at module start
+    _clean_test_outbox(engine)
+
+    yield
+
+    # Clean at module end
+    _clean_test_outbox(engine)
+
+
 @pytest.fixture
-def db_session():
+def db_session(clean_outbox_module):
     """Create database session for tests."""
     if not DATABASE_URL:
         pytest.skip("DATABASE_URL not set")
@@ -151,10 +226,9 @@ def db_session():
         except Exception:
             pytest.skip("m10_recovery.outbox table not found - run migration 022")
 
-        # Clean up outbox table before each test to avoid interference
+        # Per-test cleanup: delete test events and release locks
         try:
-            session.execute(text("DELETE FROM m10_recovery.outbox WHERE aggregate_type = 'test'"))
-            # Also release any stale locks from previous test runs
+            session.execute(text("DELETE FROM m10_recovery.outbox WHERE aggregate_type LIKE 'test%'"))
             session.execute(text("DELETE FROM m10_recovery.distributed_locks WHERE lock_name = 'm10:outbox_processor'"))
             session.commit()
         except Exception:
@@ -164,7 +238,7 @@ def db_session():
 
         # Cleanup after test
         try:
-            session.execute(text("DELETE FROM m10_recovery.outbox WHERE aggregate_type = 'test'"))
+            session.execute(text("DELETE FROM m10_recovery.outbox WHERE aggregate_type LIKE 'test%'"))
             session.commit()
         except Exception:
             session.rollback()
@@ -327,7 +401,7 @@ class TestOutboxIdempotency:
         processor = OutboxProcessor(DATABASE_URL)
         asyncio.run(processor.run(once=True, batch_size=10))
 
-        first_count = IdempotencyTrackingHandler.request_count
+        _first_count = IdempotencyTrackingHandler.request_count
 
         # Force event back to pending (simulating partial failure)
         db_session.execute(
@@ -469,7 +543,7 @@ class TestOutboxFailureHandling:
         # Pre-populate idempotency key (simulating prior delivery)
         # Generate the same key the processor would generate
         key_parts = ["1", "test", event_id, "http:webhook"]  # Approximate key generation
-        pre_key = hashlib.sha256(":".join(key_parts).encode()).hexdigest()[:32]
+        _pre_key = hashlib.sha256(":".join(key_parts).encode()).hexdigest()[:32]
 
         # Note: We can't easily pre-populate the exact key without knowing the DB ID
         # So we'll test by processing twice

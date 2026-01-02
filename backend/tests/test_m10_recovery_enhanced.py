@@ -1161,7 +1161,7 @@ class TestRedisFailureFallback:
             try:
                 # Ensure work_queue function exists
                 try:
-                    result = await _enqueue_evaluation_async(
+                    _result = await _enqueue_evaluation_async(
                         candidate_id=candidate_id,
                         failure_match_id=failure_match_id,
                         idempotency_key=str(uuid4()),
@@ -1346,10 +1346,10 @@ class TestRedisStreamsIntegration:
             items = await consume_batch(batch_size=10, block_ms=1000)
 
             # Find our test message
-            found = False
+            _found = False
             for mid, task in items:
                 if task.get("candidate_id") == test_candidate_id:
-                    found = True
+                    _found = True
                     # Acknowledge
                     ack_result = await ack_message(mid)
                     assert ack_result, "Should acknowledge successfully"
@@ -1733,10 +1733,8 @@ class TestRedisOutageScenarios:
 
         try:
             from app.tasks.recovery_queue_stream import (
-                DEAD_LETTER_STREAM,
                 get_dead_letter_count,
                 move_to_dead_letter,
-                replay_dead_letter,
             )
 
             # Move a test message to dead-letter
@@ -1847,8 +1845,6 @@ class TestMetricsCollection:
             mock.return_value = {"error": "Redis not available"}
 
             try:
-                from app.tasks.m10_metrics_collector import collect_redis_stream_metrics
-
                 # Should handle error gracefully
                 result = await mock()
 
@@ -1901,42 +1897,25 @@ class TestUpsertConcurrency:
         lock = threading.Lock()
 
         def do_upsert(i: int) -> dict:
-            """Perform single upsert operation."""
+            """Perform single upsert operation using L6 advisory-locked function."""
             session = Session(engine)
             try:
+                # Use the proper L6 function with advisory locking for concurrency safety
+                # This serializes access to the same (failure_match_id, error_signature) key
                 result = session.execute(
                     text(
                         """
-                        INSERT INTO recovery_candidates (
-                            failure_match_id,
-                            suggestion,
-                            confidence,
-                            explain,
-                            error_code,
-                            error_signature,
-                            source,
-                            created_by,
-                            occurrence_count,
-                            last_occurrence_at
-                        ) VALUES (
-                            CAST(:failure_match_id AS uuid),
-                            :suggestion,
-                            0.2,
-                            '{"test": true}'::jsonb,
-                            :error_code,
-                            :error_signature,
-                            'test',
-                            'upsert_test',
-                            1,
-                            now()
+                        SELECT * FROM upsert_recovery_candidate(
+                            p_failure_match_id := CAST(:failure_match_id AS uuid),
+                            p_suggestion := :suggestion,
+                            p_confidence := 0.2,
+                            p_explain := '{"test": true}'::jsonb,
+                            p_error_code := :error_code,
+                            p_error_signature := :error_signature,
+                            p_source := 'test',
+                            p_created_by := 'upsert_test'
                         )
-                        ON CONFLICT (failure_match_id) DO UPDATE
-                        SET
-                            occurrence_count = recovery_candidates.occurrence_count + 1,
-                            last_occurrence_at = now(),
-                            updated_at = now()
-                        RETURNING id, (xmax = 0) AS is_insert, occurrence_count
-                    """
+                        """
                     ),
                     {
                         "failure_match_id": failure_match_id,
