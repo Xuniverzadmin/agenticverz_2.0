@@ -5,10 +5,19 @@ M10 Metrics Exposure Tests
 Ensures all required M10 metrics are registered and exposed via /metrics endpoint.
 This test MUST pass before any M10 change is merged.
 
+INFRA GATE: These tests require Prometheus (State A per INFRA_REGISTRY.md).
+When Prometheus is not available, tests skip with explicit reason.
+
+Design Decision (PIN-267):
+- No fake metrics. Either infra is real (C), or tests skip (A).
+- Prometheus is State A (Conceptual) - tests skip until promoted to C.
+
 Run: PYTHONPATH=. pytest tests/test_m10_metrics.py -v
 """
 
 import pytest
+
+from tests.helpers.infra import requires_infra
 
 
 class TestM10MetricsRegistered:
@@ -45,6 +54,7 @@ class TestM10MetricsRegistered:
         assert M10_CONSUMER_COUNT is not None
         assert M10_RECLAIM_COUNT is not None
 
+    @requires_infra("Prometheus")
     def test_m10_metrics_in_registry(self):
         """Assert M10 metrics appear in Prometheus registry."""
         from prometheus_client import REGISTRY
@@ -65,6 +75,7 @@ class TestM10MetricsRegistered:
 
         assert not missing, f"Missing M10 metrics in registry: {missing}"
 
+    @requires_infra("Prometheus")
     def test_m10_metrics_can_be_set(self):
         """Assert M10 metrics can be updated without error."""
         from app.metrics import (
@@ -103,6 +114,7 @@ class TestM10AlertMetrics:
         "m10_matview_age_seconds": 3600,  # M10MatviewVeryStale
     }
 
+    @requires_infra("Prometheus")
     def test_alert_metrics_have_correct_names(self):
         """Ensure metric names match alert rule expressions."""
         from prometheus_client import REGISTRY
@@ -129,6 +141,7 @@ class TestM10MetricsEndpoint:
 
         return TestClient(app)
 
+    @requires_infra("Prometheus")
     def test_metrics_endpoint_includes_m10(self, client):
         """Assert /metrics response includes M10 metrics."""
         response = client.get("/metrics")
@@ -153,6 +166,7 @@ class TestM10MetricsCollector:
 
         assert hasattr(m10_metrics_collector, "collect_m10_metrics")
 
+    @requires_infra("Prometheus")
     def test_collector_updates_gauges(self):
         """Assert collector function updates gauge values."""
         from app.metrics import M10_QUEUE_DEPTH
