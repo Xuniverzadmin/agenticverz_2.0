@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-02 (PIN-277 M10 Test Suite Completion - Layer-Governed Fixes - Skipped Tests Policy)
+**Last Updated:** 2026-01-02 (PIN-278 Architecture Extraction & L2 API Declaration)
 
 ---
 
@@ -308,6 +308,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-275](PIN-275-rbac-track-a-promotion-status.md) | **RBAC Track A Promotion Status** | Security / RBAC | **PROMOTION READY** | 2026-01-02 |
 | [PIN-276](PIN-276-bucket-ab-permanent-fix-design.md) | **Bucket A/B Permanent Fix Design** | CI / Infrastructure | **DESIGN APPROVED** | 2026-01-02 |
 | [PIN-277](PIN-277-m10-test-suite-completion---layer-governed-fixes.md) | **M10 Test Suite Completion - Layer-Governed Fixes** | Testing / M10 Recovery | **✅ COMPLETE** | 2026-01-02 |
+| [PIN-278](PIN-278-architecture-extraction-l2-api-declaration.md) | **Architecture Extraction & L2 API Declaration** | Architecture / Declaration | **✅ COMPLETE** | 2026-01-02 |
 
 ---
 
@@ -1077,6 +1078,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-02 | **PIN-278 Architecture Extraction & L2 API Declaration** - Created via memory_trail. |
 | 2026-01-02 | **PIN-277 M10 Test Suite Completion - Layer-Governed Fixes** - Updated: Skipped Tests Policy |
 | 2026-01-02 | **PIN-277 M10 Test Suite Completion - Layer-Governed Fixes** - Created via memory_trail. |
 | 2026-01-02 | **PIN-276 Bucket A/B Permanent Fix Design** - System-level fixes for test isolation (transaction rollback per test) and infra state (A→B→C promotion model). No more patching tests - change the rules. TEST_ISOLATION_RULE and INFRA_REGISTRY enforcement. |
