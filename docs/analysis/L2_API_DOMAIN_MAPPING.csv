@@ -1,0 +1,34 @@
+Domain,Subdomain,Topic,Order 1 (Summary),O1 Details,O1 Wiring,Order 2 (List),O2 Details,O2 Wiring,Order 3 (Detail),O3 Details,O3 Wiring,Order 4 (Context),O4 Details,O4 Wiring,Order 5 (Action/Proof),O5 Details,O5 Wiring
+Overview,System Health,Protection Status,YES,GET /guard/status - Returns: is_frozen; incidents_blocked_24h; active_guardrails; last_incident_time; mode,WIRED: OverviewPage.tsx:113,NO,—,—,NO,—,—,NO,—,—,NO,—,—
+Overview,System Health,Today Snapshot,YES,GET /guard/snapshot/today - Returns: requests_today; spend_today_cents; incidents_prevented; cost_avoided_cents,WIRED: OverviewPage.tsx:114,NO,—,—,NO,—,—,NO,—,—,NO,—,—
+Overview,Emergency Controls,Kill Switch Activate,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/killswitch/activate - Terminal action: freezes all traffic,CLIENT ONLY: guard.ts:260 (no UI button found)
+Overview,Emergency Controls,Kill Switch Deactivate,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/killswitch/deactivate - Terminal action: resumes traffic,CLIENT ONLY: guard.ts:266 (no UI button found)
+Activity,Executions,Execution List,NO,—,—,YES,GET /api/v1/runs - Returns: run_id; status; skill_name; started_at; ended_at; cost_cents; error_message,NOT WIRED: ActivityPage.tsx:101 uses demo data (comment indicates future API),NO,—,—,NO,—,—,NO,—,—
+Activity,Executions,Execution Detail,NO,—,—,NO,—,—,YES,Inline panel showing: pre_run summary; constraints; cost estimate vs actual; outcome reason,NOT WIRED: Demo data only (ActivityPage.tsx:332-498),NO,—,—,NO,—,—
+Activity,Strategy,Strategy Health,YES,GET /api/v1/sba/health - Returns: total_agents; healthy_count; approaching_bounds_count; exceeded_count; status,CLIENT ONLY: guard.ts:425 (no page usage found),NO,—,—,NO,—,—,NO,—,—,NO,—,—
+Incidents,Incident Management,Incident List,NO,—,—,YES,GET /guard/incidents - Returns: id; title; severity; status; trigger_type; action_taken; cost_avoided_cents; calls_affected,WIRED: IncidentsPage.tsx:99,NO,—,—,NO,—,—,NO,—,—
+Incidents,Incident Management,Incident Search,NO,—,—,YES,POST /guard/incidents/search - Filters: query; user_id; severity; policy_status; time_from; time_to; model,WIRED: IncidentsPage.tsx:91,NO,—,—,NO,—,—,NO,—,—
+Incidents,Incident Management,Incident Detail,NO,—,—,NO,—,—,YES,GET /guard/incidents/{id} - Returns: incident object + timeline events,WIRED: guard.ts:285 (IncidentDetailPage uses timeline endpoint),NO,—,—,NO,—,—
+Incidents,Incident Management,Decision Timeline,NO,—,—,NO,—,—,YES,GET /guard/incidents/{id}/timeline - Returns: events[]; policy_evaluations[]; root_cause; root_cause_badge,WIRED: IncidentDetailPage.tsx:203,NO,—,—,NO,—,—
+Incidents,Incident Management,Incident Narrative,NO,—,—,NO,—,—,YES,GET /guard/incidents/{id}/narrative - M29 calm vocabulary narrative,CLIENT ONLY: guard.py endpoint exists (no frontend method found),NO,—,—,NO,—,—
+Incidents,Incident Actions,Acknowledge Incident,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/incidents/{id}/acknowledge - Marks incident as acknowledged,CLIENT ONLY: guard.ts:292 (no UI button found)
+Incidents,Incident Actions,Resolve Incident,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/incidents/{id}/resolve - Marks incident as resolved,CLIENT ONLY: guard.ts:298 (no UI button found)
+Incidents,Verification,Replay Execution,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/replay/{callId} - Returns: match_level; policy_match; model_drift_detected,WIRED: IncidentDetailPage.tsx:216
+Incidents,Verification,Export Evidence,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/incidents/{id}/export - Returns: PDF blob (legal-grade evidence report),WIRED: IncidentDetailPage.tsx:240
+Incidents,Demo,Seed Demo Incident,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/demo/seed-incident - Creates demo incident for 7-minute flow,WIRED: IncidentsPage.tsx:109
+Policies,Constraints,Budget Limits,YES,Budget: limit_cents; used_cents; period; resets_at; mode (enforced/advisory),NOT WIRED: PoliciesPage.tsx:132 uses demo data,NO,—,—,NO,—,—,NO,—,—,NO,—,—
+Policies,Constraints,Rate Limits,YES,Rate: limit_per_minute; current_per_minute; limit_per_day; current_per_day,NOT WIRED: PoliciesPage.tsx:132 uses demo data,NO,—,—,NO,—,—,NO,—,—,NO,—,—
+Policies,Constraints,Cost Per Request,YES,Cost: max_cost_per_request_cents; avg_cost_per_request_cents,NOT WIRED: PoliciesPage.tsx:132 uses demo data,NO,—,—,NO,—,—,NO,—,—,NO,—,—
+Policies,Settings,Tenant Settings,NO,—,—,NO,—,—,YES,GET /guard/settings - Returns: tenant_id; tenant_name; plan; guardrails[]; budget config; notification settings,CLIENT ONLY: guard.ts:333 (no page usage found),NO,—,—,NO,—,—
+Policies,Approval Workflow,Approval Request List,NO,—,—,YES,GET /api/v1/policy/requests - Returns list of pending approval requests,CLIENT ONLY: policy.py endpoint (no frontend client found),NO,—,—,NO,—,—,NO,—,—
+Policies,Approval Workflow,Approval Request Detail,NO,—,—,NO,—,—,YES,GET /api/v1/policy/requests/{id} - Returns approval request details,CLIENT ONLY: policy.py endpoint (no frontend client found),NO,—,—,NO,—,—
+Policies,Approval Workflow,Approve Request,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /api/v1/policy/requests/{id}/approve - Approves the request,CLIENT ONLY: policy.py endpoint (no frontend client found)
+Policies,Approval Workflow,Reject Request,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /api/v1/policy/requests/{id}/reject - Rejects the request,CLIENT ONLY: policy.py endpoint (no frontend client found)
+Policies,Evaluation,Policy Eval (Sandbox),NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /api/v1/policy/eval - Sandbox policy evaluation (PREVENT tier),CLIENT ONLY: policy.py endpoint (no frontend client found)
+Logs,Audit Trail,Log List,NO,—,—,YES,GET /api/v1/logs - Returns: id; timestamp; level; category; message; metadata; run_id; trace_id,NOT WIRED: LogsPage.tsx:89 uses demo data,NO,—,—,NO,—,—,NO,—,—
+Logs,Audit Trail,Log Detail,NO,—,—,NO,—,—,YES,Inline panel showing: full timestamp; message; references (run_id; trace_id); metadata JSON,NOT WIRED: Demo data only (LogsPage.tsx:413-506),NO,—,—,NO,—,—
+Logs,Export,Export Logs,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,Export button exists in UI but no API endpoint wired,NOT WIRED: LogsPage.tsx:243 (button exists; no API call)
+Connectivity,API Keys,Key List,NO,—,—,YES,GET /guard/keys - Returns: id; name; prefix; status; created_at; last_seen_at; requests_today; spend_today_cents,CLIENT ONLY: guard.ts:313 (no KeysPage found),NO,—,—,NO,—,—,NO,—,—
+Connectivity,API Keys,Freeze Key,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/keys/{keyId}/freeze - Freezes API key,CLIENT ONLY: guard.ts:320 (no page found)
+Connectivity,API Keys,Unfreeze Key,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/keys/{keyId}/unfreeze - Unfreezes API key,CLIENT ONLY: guard.ts:326 (no page found)
+Connectivity,Onboarding,Verify Onboarding,NO,—,—,NO,—,—,NO,—,—,NO,—,—,YES,POST /guard/onboarding/verify - Real safety test for onboarding,CLIENT ONLY: guard.py endpoint (no frontend usage found)
