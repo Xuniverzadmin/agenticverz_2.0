@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-02 (PIN-278 Architecture Extraction & L2 API Declaration)
+**Last Updated:** 2026-01-04 (PIN-285 Part-2 CRM Workflow Enforcement - Static CI Guards)
 
 ---
 
@@ -309,6 +309,13 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-276](PIN-276-bucket-ab-permanent-fix-design.md) | **Bucket A/B Permanent Fix Design** | CI / Infrastructure | **DESIGN APPROVED** | 2026-01-02 |
 | [PIN-277](PIN-277-m10-test-suite-completion---layer-governed-fixes.md) | **M10 Test Suite Completion - Layer-Governed Fixes** | Testing / M10 Recovery | **✅ COMPLETE** | 2026-01-02 |
 | [PIN-278](PIN-278-architecture-extraction-l2-api-declaration.md) | **Architecture Extraction & L2 API Declaration** | Architecture / Declaration | **✅ COMPLETE** | 2026-01-02 |
+| [PIN-279](PIN-279-coupled-layer-distillation---l2-completeness-audit.md) | **PIN-279: Coupled Layer Distillation — L2 Completeness Audit** | Architecture / L2 API Audit | **✅ COMPLETE** | 2026-01-03 |
+| [PIN-280](PIN-280-l2-promotion-governance---layer-respecting-promotion-guide.md) | **PIN-280: L2 Promotion Governance — Layer-Respecting Promotion Guide** | Architecture / Promotion Governance | **🏗️ ACTIVE** | 2026-01-03 |
+| [PIN-281](PIN-281-claude-task-todo---layered-promotion-and-l2-completeness.md) | **PIN-281: Claude Task TODO — Layered Promotion & L2 Completeness** | Governance / Claude Playbook | **🏗️ ACTIVE** | 2026-01-03 |
+| [PIN-282](PIN-282-pin-281-l2-promotion-governance-completion.md) | **PIN-281 L2 Promotion Governance Completion** | Architecture / L2 Promotion | **✅ COMPLETE** | 2026-01-04 |
+| [PIN-283](PIN-283-lifecycle-derived-from-qualifier-governance-rule.md) | **LIFECYCLE-DERIVED-FROM-QUALIFIER Governance Rule** | Governance / Capability Lifecycle | **🏗️ ACTIVE** | 2026-01-04 |
+| [PIN-284](PIN-284-l8-l1-platform-monitoring-system---signal-inventory-and-health-service.md) | **L8-L1 Platform Monitoring System - Signal Inventory and Health Service** | Architecture / Platform Monitoring | **🏗️ IN_PROGRESS** | 2026-01-04 |
+| [PIN-285](PIN-285-part-2-crm-workflow-enforcement---static-ci-guards.md) | **Part-2 CRM Workflow Enforcement - Static CI Guards** | Governance / Part-2 Enforcement | **✅ COMPLETE** | 2026-01-04 |
 
 ---
 
@@ -1078,6 +1085,14 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-04 | **PIN-285 Part-2 CRM Workflow Enforcement - Static CI Guards** - Created via memory_trail. |
+| 2026-01-04 | **PIN-284 L8-L1 Platform Monitoring System - Signal Inventory and Health Service** - Created via memory_trail. |
+| 2026-01-04 | **PIN-283 LIFECYCLE-DERIVED-FROM-QUALIFIER Governance Rule** - Created via memory_trail. |
+| 2026-01-04 | **PIN-282 PIN-281 L2 Promotion Governance Completion** - Updated: Cross-Domain Attestation |
+| 2026-01-04 | **PIN-282 PIN-281 L2 Promotion Governance Completion** - Created via memory_trail. |
+| 2026-01-03 | **PIN-281 PIN-281: Claude Task TODO — Layered Promotion & L2 Completeness** - Created via memory_trail. |
+| 2026-01-03 | **PIN-280 PIN-280: L2 Promotion Governance — Layer-Respecting Promotion Guide** - Created via memory_trail. |
+| 2026-01-03 | **PIN-279 PIN-279: Coupled Layer Distillation — L2 Completeness Audit** - Created via memory_trail. |
 | 2026-01-02 | **PIN-278 Architecture Extraction & L2 API Declaration** - Created via memory_trail. |
 | 2026-01-02 | **PIN-277 M10 Test Suite Completion - Layer-Governed Fixes** - Updated: Skipped Tests Policy |
 | 2026-01-02 | **PIN-277 M10 Test Suite Completion - Layer-Governed Fixes** - Created via memory_trail. |
