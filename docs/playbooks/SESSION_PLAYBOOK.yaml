@@ -956,6 +956,36 @@ system_state:
     - G-RULE-1 through G-RULE-10 are HARD rules with no exceptions
     - BLCA supremacy is absolute - violations block all work
 
+  # Subsystem Closures: Constitutional subsystems with phase-locked invariants
+  # Any change touching these systems must reference their closure tag.
+  subsystem_closures:
+    platform_health_v1:
+      pin: PIN-284
+      tag: platform-health-v1
+      closed: "2026-01-04"
+      status: PHASE_1_CLOSED
+      scope: "Founder-only Platform Health Monitoring"
+      invariants:
+        - HEALTH-IS-AUTHORITY
+        - HEALTH-LIFECYCLE-COHERENCE
+        - HEALTH-DETERMINISM
+        - NO-PHANTOM-HEALTH
+        - DOMINANCE-ORDER
+      frozen_files:
+        - backend/app/services/platform/platform_health_service.py
+        - backend/app/adapters/platform_eligibility_adapter.py
+        - backend/app/api/platform.py
+        - scripts/ci/health_lifecycle_coherence_guard.py
+        - scripts/ci/backend_structure_guard.py
+        - backend/tests/invariants/test_platform_health_determinism.py
+      reference:
+        - docs/governance/PHASE_1_CLOSURE_NOTE.md
+        - docs/governance/BACKEND_STRUCTURE_FREEZE.yaml
+      rule: >
+        Any change touching health, lifecycle, or governance signals
+        must explicitly reference tag platform-health-v1 and declare
+        whether it EXTENDS, AMENDS, or VIOLATES Phase-1 guarantees.
+
 # =============================================================================
 # SECTION 10: AUTHORITATIVE ENVIRONMENT (GLOBAL)
 # =============================================================================
@@ -6818,6 +6848,163 @@ test_isolation_rule:
     design_doc: docs/memory-pins/PIN-276-bucket-ab-permanent-fix-design.md
     verification_tests: backend/tests/unit/test_isolation_mechanism.py
     conftest: backend/tests/conftest.py
+
+# =============================================================================
+# GOVERNANCE QUALIFIERS (MANDATORY)
+# =============================================================================
+#
+# Status: ENFORCED
+# Effective: 2026-01-03
+# Reference: docs/governance/GOVERNANCE_QUALIFIERS.yaml
+#           docs/governance/QUALIFIER_EVALUATION.yaml
+#           PIN-281 (L7→L2 Structural Closure)
+#
+# A Governance Qualifier is a MACHINE-EVALUABLE VERDICT that answers:
+#   "Is this capability allowed to be treated as a product-level truth surface?"
+#
+# It is NOT a status label, registry note, or human approval.
+# It is a DERIVED QUALIFICATION, computed from structural evidence.
+#
+# =============================================================================
+
+governance_qualifiers:
+
+  # ---------------------------------------------------------------------------
+  # Primary Qualifier: GQ-L2-CONTRACT-READY
+  # ---------------------------------------------------------------------------
+  primary_qualifier: GQ-L2-CONTRACT-READY
+
+  qualifier_states:
+    QUALIFIED:
+      description: "All requirements met. L2 testing and claims permitted."
+      permits:
+        - l2_testing
+        - frontend_wiring
+        - product_claims
+        - status_complete
+
+    CONDITIONALLY_QUALIFIED:
+      description: "Core structure exists but not all validators pass."
+      permits:
+        - structural_work
+        - integration_testing
+      forbids:
+        - l2_testing
+        - product_claims
+        - status_complete
+
+    DISQUALIFIED:
+      description: "Fundamental structural requirements not met."
+      permits:
+        - structural_repair
+        - investigation
+        - planning
+      forbids:
+        - l2_testing
+        - frontend_wiring
+        - product_claims
+        - status_complete
+        - integration_testing
+
+  # ---------------------------------------------------------------------------
+  # Claude Behavioral Constraints
+  # ---------------------------------------------------------------------------
+  claude_constraints:
+
+    pre_claim_check:
+      rule: |
+        Claude MUST evaluate GQ-L2-CONTRACT-READY before making any claim
+        about readiness, testing, or exposure.
+      enforcement: BLOCKING
+
+    if_not_qualified:
+      actions:
+        - refuse_testing
+        - refuse_promotion_language
+        - recommend_structural_repair_only
+
+    forbidden_language_if_not_qualified:
+      - "ready"
+      - "complete"
+      - "promoted"
+      - "can be tested"
+      - "production ready"
+      - "all done"
+      - "finished"
+      - "go ahead and test"
+
+    forbidden_actions_if_not_qualified:
+      - l2_testing
+      - frontend_claims
+      - product_signoff
+      - status_promotion
+
+  # ---------------------------------------------------------------------------
+  # Evaluation Command
+  # ---------------------------------------------------------------------------
+  evaluation:
+    command: "python scripts/ops/evaluate_qualifiers.py"
+    options:
+      - "--generate: Generate QUALIFIER_EVALUATION.yaml"
+      - "--check <CAP>: Check specific capability"
+      - "--qualified-only: List only QUALIFIED capabilities"
+      - "--ci: CI mode (exit 1 if any not QUALIFIED)"
+
+  # ---------------------------------------------------------------------------
+  # Bootstrap Integration
+  # ---------------------------------------------------------------------------
+  bootstrap_integration:
+    when: SESSION_START
+    action: |
+      Before any L2-related work, run:
+        python scripts/ops/evaluate_qualifiers.py --check <capability>
+
+      If state != QUALIFIED:
+        - DO NOT proceed with L2 testing
+        - DO NOT use promotion language
+        - ONLY recommend structural repair steps
+
+  # ---------------------------------------------------------------------------
+  # Claude Self-Check (Required)
+  # ---------------------------------------------------------------------------
+  claude_qualifier_self_check:
+    trigger: "Before any claim about capability readiness"
+    questions:
+      - "Have I evaluated GQ-L2-CONTRACT-READY for this capability?"
+      - "Is the qualifier state QUALIFIED?"
+      - "If not QUALIFIED, am I avoiding forbidden language/actions?"
+    on_failure: "Response is INVALID. Evaluate qualifier first."
+
+  # ---------------------------------------------------------------------------
+  # Preflight Integration
+  # ---------------------------------------------------------------------------
+  preflight_integration:
+    file: scripts/ops/preflight.py
+    check: "from scripts.ops.evaluate_qualifiers import check_all_qualified"
+    fail_condition: "any capability referenced in L2 tests is not QUALIFIED"
+
+  # ---------------------------------------------------------------------------
+  # CI Integration
+  # ---------------------------------------------------------------------------
+  ci_integration:
+    workflow: ".github/workflows/governance-qualifier.yml"
+    job: "qualifier-check"
+    blocking: true
+    fail_conditions:
+      - "capability referenced in L2 tests is not QUALIFIED"
+      - "registry claims PROMOTED but qualifier != QUALIFIED"
+
+  # ---------------------------------------------------------------------------
+  # No Override Rule
+  # ---------------------------------------------------------------------------
+  no_override:
+    rule: |
+      No human or AI override is permitted for governance qualifiers.
+      The evaluation is mechanical and non-negotiable.
+      There is no "almost qualified" state.
+      There is no "close enough" exception.
+      There is no "temporary bypass".
+    enforcement: ABSOLUTE
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

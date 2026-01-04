@@ -1,14 +1,31 @@
 # Pre-commit hooks for Agenticverz 2.0
 # Install: pip install pre-commit && pre-commit install
+#
+# GOVERNANCE-SAFE COMMIT MODE (PIN-284)
+# =====================================
+# Pre-commit hooks must NEVER mutate files.
+# All mutation happens EXPLICITLY before staging via `make lint-fix`.
+#
+# Why: Constitutional code requires audit-clean diffs. Auto-fix during
+# commit causes stash conflicts and corrupts governance commits.
+#
+# Workflow:
+#   1. Write code
+#   2. Run: make lint-fix (explicit mutation)
+#   3. Stage: git add <files>
+#   4. Commit: git commit (check-only hooks verify)
+#
+# Reference: PIN-284 Phase-1 Closure Note, platform-health-v1 tag
 
 repos:
-  # Standard Python linting
+  # Standard Python linting (CHECK-ONLY - no auto-fix)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.6
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--no-fix]  # CHECK ONLY - run `make lint-fix` to fix
       - id: ruff-format
+        args: [--check]   # CHECK ONLY - run `make lint-fix` to format
 
   # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy

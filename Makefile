@@ -1,4 +1,4 @@
-.PHONY: up down logs rebuild shell clean test help
+.PHONY: up down logs rebuild shell clean test help lint-fix lint-check
 
 # Default API key for development
 export AOS_API_KEY ?= nova-dev-key-change-me
@@ -6,6 +6,8 @@ export AOS_API_KEY ?= nova-dev-key-change-me
 help:
 	@echo "NOVA Agent Manager - Available Commands"
 	@echo "========================================"
+	@echo ""
+	@echo "Services:"
 	@echo "  make up       - Build and start all services"
 	@echo "  make down     - Stop all services"
 	@echo "  make logs     - Tail logs from all services"
@@ -13,6 +15,16 @@ help:
 	@echo "  make shell    - Open shell in backend container"
 	@echo "  make clean    - Stop and remove all containers, volumes"
 	@echo "  make test     - Run curl test suite"
+	@echo ""
+	@echo "Code Quality (Governance-Safe Commit Mode):"
+	@echo "  make lint-fix   - Auto-fix lint errors and format code"
+	@echo "  make lint-check - Check lint errors without fixing"
+	@echo ""
+	@echo "Governance-Safe Workflow:"
+	@echo "  1. Write code"
+	@echo "  2. make lint-fix    (explicit mutation)"
+	@echo "  3. git add <files>  (stage changes)"
+	@echo "  4. git commit       (check-only hooks verify)"
 	@echo ""
 	@echo "Environment Variables:"
 	@echo "  AOS_API_KEY   - API key for authentication (default: nova-dev-key-change-me)"
@@ -48,6 +60,30 @@ clean:
 	@echo "Cleaning up all containers and volumes..."
 	docker compose down -v --remove-orphans
 	@echo "Cleanup complete."
+
+# =============================================================================
+# CODE QUALITY (Governance-Safe Commit Mode - PIN-284)
+# =============================================================================
+# Pre-commit hooks are CHECK-ONLY. Auto-fix must be explicit.
+# This prevents stash conflicts during constitutional commits.
+
+lint-fix:
+	@echo "Running lint auto-fix (explicit mutation)..."
+	@echo "============================================="
+	ruff check . --fix
+	ruff format .
+	@echo ""
+	@echo "Done. Now stage changes with: git add <files>"
+
+lint-check:
+	@echo "Running lint check (no auto-fix)..."
+	@echo "===================================="
+	ruff check .
+	ruff format --check .
+
+# =============================================================================
+# TESTING
+# =============================================================================
 
 test:
 	@echo "Running NOVA API Test Suite"
