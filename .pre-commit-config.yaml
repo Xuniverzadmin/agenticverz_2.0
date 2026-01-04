@@ -95,14 +95,44 @@ repos:
             website/.*|node_modules/.*
           )$
 
-  # Standard pre-commit hooks
+  # Standard pre-commit hooks (CHECK-ONLY - no auto-fix)
+  # PIN-290: Non-Mutating Tooling Invariant
+  # Auto-fix hooks (trailing-whitespace, end-of-file-fixer) are REMOVED.
+  # Use: make lint-fix for explicit mutation.
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
+      # REMOVED: trailing-whitespace (auto-fixes)
+      # REMOVED: end-of-file-fixer (auto-fixes)
       - id: check-yaml
       - id: check-json
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ['--maxkb=1000']
+
+  # Check-only hooks for whitespace/EOF (replaces auto-fix versions)
+  # PIN-290: Non-Mutating Tooling Invariant
+  - repo: local
+    hooks:
+      - id: check-trailing-whitespace
+        name: Check trailing whitespace (no auto-fix)
+        entry: >-
+          bash -c 'files=$(git diff --cached --name-only --diff-filter=ACM |
+          grep -E "\.(py|ts|tsx|js|jsx|md|yaml|yml|json|sh)$" |
+          xargs -I{} grep -l "[[:blank:]]$" {} 2>/dev/null || true);
+          if [ -n "$files" ]; then
+          echo "Trailing whitespace found in:"; echo "$files";
+          echo "Fix with: make lint-fix"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      - id: check-eof-newline
+        name: Check EOF newline (no auto-fix)
+        entry: >-
+          bash -c 'files=$(git diff --cached --name-only --diff-filter=ACM |
+          grep -E "\.(py|ts|tsx|js|jsx|md|yaml|yml|json|sh)$");
+          for f in $files; do
+          if [ -f "$f" ] && [ -s "$f" ] && [ "$(tail -c1 "$f" | wc -l)" -eq 0 ]; then
+          echo "Missing newline at EOF: $f"; exit 1; fi; done'
+        language: system
+        pass_filenames: false

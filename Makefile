@@ -62,15 +62,26 @@ clean:
 	@echo "Cleanup complete."
 
 # =============================================================================
-# CODE QUALITY (Governance-Safe Commit Mode - PIN-284)
+# CODE QUALITY (Governance-Safe Commit Mode - PIN-290)
 # =============================================================================
-# Pre-commit hooks are CHECK-ONLY. Auto-fix must be explicit.
-# This prevents stash conflicts during constitutional commits.
+# Non-Mutating Tooling Invariant:
+# - Pre-commit hooks are CHECK-ONLY (no auto-fix)
+# - All mutation happens EXPLICITLY via lint-fix
+# - This prevents stash conflicts during constitutional commits
+#
+# Reference: PIN-290 (Non-Mutating Tooling Invariant)
 
 lint-fix:
 	@echo "Running lint auto-fix (explicit mutation)..."
 	@echo "============================================="
-	ruff check . --fix
+	@echo ""
+	@echo "[1/4] Fixing trailing whitespace..."
+	@find backend sdk scripts -name "*.py" -o -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.sh" 2>/dev/null | xargs -I{} sed -i 's/[[:blank:]]*$$//' {} 2>/dev/null || true
+	@echo "[2/4] Fixing EOF newlines..."
+	@find backend sdk scripts -name "*.py" -o -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.sh" 2>/dev/null | while read f; do if [ -f "$$f" ] && [ -s "$$f" ]; then sed -i -e '$$a\' "$$f" 2>/dev/null || true; fi; done
+	@echo "[3/4] Fixing lint errors..."
+	ruff check . --fix || true
+	@echo "[4/4] Formatting code..."
 	ruff format .
 	@echo ""
 	@echo "Done. Now stage changes with: git add <files>"
