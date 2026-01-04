@@ -1,0 +1,133 @@
+# =============================================================================
+# BACKEND STRUCTURE FREEZE
+# =============================================================================
+# Frozen: 2026-01-04
+# Authority: PIN-284 (Platform Monitoring System)
+# Purpose: Prevent accidental erosion of backend structure
+#
+# RULES:
+# 1. No files may be added to frozen directories without explicit approval
+# 2. No files may be renamed in frozen directories without migration plan
+# 3. No files may be deleted from frozen directories without deprecation period
+# 4. All changes to frozen structure require governance checklist
+#
+# ENFORCEMENT:
+# - CI guard: scripts/ci/backend_structure_guard.py
+# - Bootstrap check: session_start.sh (if implemented)
+# =============================================================================
+
+version: "1.0"
+frozen_at: "2026-01-04"
+authority: "PIN-284"
+
+# =============================================================================
+# FROZEN DIRECTORIES
+# =============================================================================
+# These directories have a defined structure that must not change without
+# explicit governance approval.
+
+frozen_directories:
+  # Platform Monitoring System (PIN-284)
+  platform_services:
+    path: "backend/app/services/platform"
+    layer: L4
+    files:
+      - __init__.py
+      - platform_health_service.py
+    rules:
+      - "No new files without PIN approval"
+      - "No refactoring without governance checklist"
+      - "Service is the ONLY health authority (HEALTH-IS-AUTHORITY)"
+
+  # Platform Adapters
+  platform_adapters:
+    path: "backend/app/adapters"
+    layer: L3
+    frozen_files:
+      - platform_eligibility_adapter.py
+    rules:
+      - "Adapters must be < 200 LOC"
+      - "No business logic in adapters"
+
+  # Platform APIs
+  platform_apis:
+    path: "backend/app/api"
+    layer: L2
+    frozen_files:
+      - platform.py
+    rules:
+      - "APIs must use L3 adapters"
+      - "No direct L4 access from L2"
+
+  # CI Guards
+  ci_guards:
+    path: "scripts/ci"
+    layer: L8
+    frozen_files:
+      - health_lifecycle_coherence_guard.py
+      - lifecycle_qualifier_guard.py
+    rules:
+      - "Guards must be self-contained (no L1-L7 imports)"
+      - "Guards must exit with code 0 (pass) or 1 (fail)"
+      - "Guards must print clear violation messages"
+
+  # Invariant Tests
+  invariant_tests:
+    path: "backend/tests/invariants"
+    layer: L8
+    frozen_files:
+      - test_platform_health_determinism.py
+    rules:
+      - "Invariant tests must not be weakened"
+      - "Skips require explicit governance approval"
+      - "New invariants require documentation"
+
+# =============================================================================
+# FROZEN CONTRACTS
+# =============================================================================
+# These contracts define the behavior guarantees that must not be violated.
+
+frozen_contracts:
+  health_authority:
+    id: HEALTH-IS-AUTHORITY
+    description: "PlatformHealthService is the ONLY source of health state"
+    enforced_by:
+      - backend/app/services/platform/platform_health_service.py
+      - scripts/ci/health_lifecycle_coherence_guard.py
+    tests:
+      - backend/tests/invariants/test_platform_health_determinism.py
+
+  health_lifecycle_coherence:
+    id: HEALTH-LIFECYCLE-COHERENCE
+    description: "BLOCKED health state cannot coexist with COMPLETE lifecycle"
+    enforced_by:
+      - scripts/ci/health_lifecycle_coherence_guard.py
+      - scripts/ops/session_start.sh
+    invariant: "IF health(cap) == BLOCKED THEN status(cap) != COMPLETE"
+
+  health_determinism:
+    id: HEALTH-DETERMINISM
+    description: "Health evaluation is deterministic"
+    invariants:
+      - "Idempotence: Same signals produce same verdict"
+      - "Order independence: Signal order does not affect verdict"
+      - "Dominance: BLOCKED > DEGRADED > HEALTHY"
+      - "No phantom health: No signals means HEALTHY"
+    tests:
+      - backend/tests/invariants/test_platform_health_determinism.py
+
+# =============================================================================
+# DEPRECATION RULES
+# =============================================================================
+# How to deprecate frozen items
+
+deprecation:
+  notice_period_days: 7
+  required_artifacts:
+    - Deprecation PIN with rationale
+    - Migration plan for callers
+    - Test coverage for replacements
+  forbidden:
+    - Deleting without deprecation
+    - Renaming without redirect
+    - Breaking API contracts

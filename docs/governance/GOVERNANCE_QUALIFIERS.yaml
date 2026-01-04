@@ -1,0 +1,249 @@
+# Governance Qualifiers Registry
+# Reference: PIN-281 (L7→L2 Structural Closure)
+# Purpose: Machine-evaluable verdicts for capability qualification
+# Rule: No capability may be treated as product-truth without qualification
+# Created: 2026-01-03
+
+schema_version: "1.0"
+last_updated: "2026-01-03"
+
+# ==============================================================================
+# WHAT IS A GOVERNANCE QUALIFIER?
+# ==============================================================================
+#
+# A Governance Qualifier is a MACHINE-EVALUABLE VERDICT that answers:
+#
+#   "Is this capability allowed to be treated as a product-level truth surface?"
+#
+# It is NOT:
+#   - A status label
+#   - A registry note
+#   - A human approval
+#
+# It is a DERIVED QUALIFICATION, computed from structural evidence.
+#
+# ==============================================================================
+
+# ==============================================================================
+# QUALIFIER DEFINITIONS
+# ==============================================================================
+
+qualifiers:
+
+  GQ-L2-CONTRACT-READY:
+    description: |
+      Determines whether a capability may be treated as a truthful,
+      testable L2 product contract. This is the primary qualifier for
+      customer-facing capabilities.
+
+    purpose: |
+      Controls whether:
+      - L2 testing is permitted
+      - Frontend can wire the endpoint
+      - Product claims can be made
+      - Status can be marked COMPLETE
+
+    inputs:
+      l7_authority:
+        description: "L7 (Ops) authority exists (migration, systemd, etc.)"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-5"
+        required: true
+
+      l6_persistence:
+        description: "L6 (Platform) persistence exists and is managed"
+        source: "CAPABILITY_LIFECYCLE.yaml artifacts.L6"
+        required: true
+
+      l5_executor_or_read_justification:
+        description: "L5 executor exists for WRITE, or bounded-read proof for READ"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-4"
+        required: true
+
+      l4_service:
+        description: "L4 (Domain Engine) service exists with explicit responsibility"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-3"
+        required: true
+
+      l3_adapter:
+        description: "L3 (Boundary Adapter) exists and imports L4 only"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-1, GATE-2"
+        required: true
+
+      l2_endpoint:
+        description: "L2 (Product API) endpoint exists and imports L3 only"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-1"
+        required: true
+
+      blca_passes:
+        description: "BLCA (Bidirectional Layer Consistency Auditor) passes"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-6"
+        required: true
+
+      ci_guards_active:
+        description: "CI guards exist and enforce layer compliance"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-7"
+        required: true
+
+      contract_tests_pass:
+        description: "Contract tests exist and pass"
+        source: "CAPABILITY_LIFECYCLE.yaml gates.GATE-8"
+        required: true
+
+    states:
+      QUALIFIED:
+        description: "All requirements met. L2 testing and claims permitted."
+        requires_all: true
+        permits:
+          - l2_testing
+          - frontend_wiring
+          - product_claims
+          - status_complete
+
+      CONDITIONALLY_QUALIFIED:
+        description: "Core structure exists but not all validators pass."
+        requires:
+          - l2_endpoint
+          - l3_adapter
+          - l4_service
+        missing_permitted:
+          - ci_guards_active
+          - contract_tests_pass
+        forbids:
+          - l2_testing
+          - product_claims
+          - status_complete
+        permits:
+          - structural_work
+          - integration_testing
+
+      DISQUALIFIED:
+        description: "Fundamental structural requirements not met."
+        default: true
+        forbids:
+          - l2_testing
+          - frontend_wiring
+          - product_claims
+          - status_complete
+          - integration_testing
+        permits:
+          - structural_repair
+          - investigation
+          - planning
+
+    disqualification_triggers:
+      - trigger: "L2 bypasses L3"
+        check: "GATE-1 != PASS"
+        severity: BLOCKING
+
+      - trigger: "L3 bypasses L4"
+        check: "GATE-2 != PASS"
+        severity: BLOCKING
+
+      - trigger: "L4 service is UNKNOWN"
+        check: "GATE-3 != PASS"
+        severity: BLOCKING
+
+      - trigger: "Registry status contradicts survey"
+        check: "status == PROMOTED AND qualifier != QUALIFIED"
+        severity: BLOCKING
+
+      - trigger: "Adapter touches L6 directly"
+        check: "L3 imports app.db or sqlalchemy"
+        severity: BLOCKING
+
+      - trigger: "BLCA fails"
+        check: "GATE-6 != PASS"
+        severity: BLOCKING
+
+      - trigger: "Capability marked PROMOTED without evidence"
+        check: "status == PROMOTED AND gates incomplete"
+        severity: BLOCKING
+
+# ==============================================================================
+# EVALUATION RULES
+# ==============================================================================
+
+evaluation_rules:
+
+  gate_to_input_mapping:
+    GATE-1: l2_endpoint, l3_adapter
+    GATE-2: l3_adapter
+    GATE-3: l4_service
+    GATE-4: l5_executor_or_read_justification
+    GATE-5: l7_authority
+    GATE-6: blca_passes
+    GATE-7: ci_guards_active
+    GATE-8: contract_tests_pass
+
+  qualification_formula: |
+    QUALIFIED iff:
+      GATE-1 == PASS AND
+      GATE-2 == PASS AND
+      GATE-3 == PASS AND
+      GATE-4 == PASS AND
+      GATE-5 == PASS AND
+      GATE-6 == PASS AND
+      GATE-7 == PASS AND
+      GATE-8 == PASS
+
+    CONDITIONALLY_QUALIFIED iff:
+      GATE-1 == PASS AND
+      GATE-2 == PASS AND
+      GATE-3 == PASS AND
+      (GATE-7 != PASS OR GATE-8 != PASS)
+
+    DISQUALIFIED otherwise
+
+  no_human_override: true
+  no_almost_qualified: true
+  no_deferred_qualification: true
+
+# ==============================================================================
+# ENFORCEMENT POINTS
+# ==============================================================================
+
+enforcement:
+
+  session_playbook:
+    file: "docs/playbooks/SESSION_PLAYBOOK.yaml"
+    rule: |
+      Claude must evaluate GQ-L2-CONTRACT-READY before making any claim
+      about readiness, testing, or exposure.
+    forbidden_language_if_not_qualified:
+      - "ready"
+      - "complete"
+      - "promoted"
+      - "can be tested"
+      - "production ready"
+    forbidden_actions_if_not_qualified:
+      - l2_testing
+      - frontend_claims
+      - product_signoff
+      - status_promotion
+
+  preflight:
+    file: "scripts/ops/preflight.py"
+    check: "evaluate_qualifiers('GQ-L2-CONTRACT-READY')"
+    fail_condition: "any capability referenced in L2 tests is not QUALIFIED"
+
+  ci_gate:
+    workflow: ".github/workflows/governance-qualifier.yml"
+    job: "qualifier-check"
+    blocking: true
+    fail_conditions:
+      - "capability referenced in L2 tests is not QUALIFIED"
+      - "registry claims PROMOTED but qualifier != QUALIFIED"
+
+# ==============================================================================
+# WHAT THIS GIVES YOU
+# ==============================================================================
+#
+# Once this is in place:
+#   - "Go ahead, do all" becomes SAFE
+#   - Claude cannot hallucinate readiness
+#   - Frontend cannot wire unqualified APIs
+#   - L2 testing becomes legally and technically justified
+#   - System gains a SINGLE SOURCE of governance truth
+#
+# This is the missing keystone.
+#

@@ -1,0 +1,238 @@
+# Platform Health Governance Contracts
+# Reference: PIN-284 (Platform Monitoring System)
+# Created: 2026-01-04
+#
+# These contracts define the relationships between:
+# - Platform Health Service (L4)
+# - Qualifier Evaluation (L8)
+# - Capability Lifecycle (governance artifact)
+#
+# RULE: Health is observable consequence, not manual status.
+# Health states are computed, not assigned.
+
+schema_version: "1.0"
+created_at: "2026-01-04"
+reference: "PIN-284"
+
+# ==============================================================================
+# CONTRACT 1: HEALTH-TO-QUALIFIER BINDING
+# ==============================================================================
+#
+# Defines how platform health influences qualifier eligibility.
+#
+# When platform health is BLOCKED:
+# - Affected capabilities should be marked DISQUALIFIED
+# - This is an OBSERVATIONAL relationship, not causal
+#
+# The qualifier evaluation reads health signals and incorporates them.
+
+contracts:
+
+  HEALTH_TO_QUALIFIER:
+    name: "Health-to-Qualifier Binding"
+    description: |
+      Platform health signals influence qualifier evaluation.
+      When a capability's health is BLOCKED, the qualifier evaluation
+      should reflect this in its DISQUALIFIED state.
+
+    source: "PlatformHealthService (L4)"
+    target: "QUALIFIER_EVALUATION.yaml"
+    binding_type: "OBSERVATIONAL"
+
+    rules:
+      - id: HQ-001
+        condition: "capability.health == BLOCKED"
+        consequence: "qualifier.state should be DISQUALIFIED"
+        enforcement: "Advisory - health is one input to qualification"
+
+      - id: HQ-002
+        condition: "capability.health == DEGRADED"
+        consequence: "qualifier.state may be CONDITIONALLY_QUALIFIED"
+        enforcement: "Advisory - degradation is a warning"
+
+      - id: HQ-003
+        condition: "capability.health == HEALTHY"
+        consequence: "No health-related disqualification"
+        enforcement: "Health does not guarantee QUALIFIED"
+
+    integration:
+      signal_type: "QUALIFIER_STATUS"
+      recorded_by: "QUALIFIER_EVAL"
+      consumed_by: "PlatformHealthService.get_capability_health()"
+
+# ==============================================================================
+# CONTRACT 2: HEALTH-TO-LIFECYCLE BINDING
+# ==============================================================================
+#
+# Defines how platform health relates to capability lifecycle.
+#
+# Lifecycle status (COMPLETE, PARTIAL) is a structural classification.
+# Health status (HEALTHY, DEGRADED, BLOCKED) is runtime state.
+#
+# A capability can be:
+# - COMPLETE (structurally sound) but BLOCKED (runtime issue)
+# - PARTIAL (structurally incomplete) but HEALTHY (no runtime issues)
+#
+# These are orthogonal dimensions.
+
+  HEALTH_TO_LIFECYCLE:
+    name: "Health-to-Lifecycle Relationship"
+    description: |
+      Platform health and lifecycle status are orthogonal dimensions.
+      Lifecycle is structural (code gates), Health is runtime (signals).
+      They inform each other but don't determine each other.
+
+    relationship: "ORTHOGONAL"
+
+    dimensions:
+      lifecycle:
+        definition: "Structural completeness of capability"
+        states: ["COMPLETE", "PARTIAL", "L3_WIRED", "UNKNOWN"]
+        source: "CAPABILITY_LIFECYCLE.yaml"
+        mutable_by: "Structural changes only"
+
+      health:
+        definition: "Runtime operational state of capability"
+        states: ["HEALTHY", "DEGRADED", "BLOCKED"]
+        source: "PlatformHealthService (L4)"
+        mutable_by: "Runtime signals only"
+
+    valid_combinations:
+      - lifecycle: COMPLETE
+        health: HEALTHY
+        meaning: "Fully operational capability"
+
+      - lifecycle: COMPLETE
+        health: DEGRADED
+        meaning: "Structurally sound but experiencing issues"
+
+      - lifecycle: COMPLETE
+        health: BLOCKED
+        meaning: "Structurally sound but blocked by runtime issue"
+
+      - lifecycle: PARTIAL
+        health: HEALTHY
+        meaning: "Incomplete structure but no runtime issues"
+
+      - lifecycle: PARTIAL
+        health: BLOCKED
+        meaning: "Incomplete structure AND blocked by runtime issue"
+
+# ==============================================================================
+# CONTRACT 3: BOOTSTRAP COHERENCE
+# ==============================================================================
+#
+# At session bootstrap, platform health must be computed fresh.
+# Health is never cached across sessions.
+
+  BOOTSTRAP_COHERENCE:
+    name: "Bootstrap Coherence Contract"
+    description: |
+      At session start, platform health is recomputed from current signals.
+      Stale health data is never trusted.
+
+    enforcement_point: "scripts/ops/session_start.sh"
+
+    requirements:
+      - id: BC-001
+        rule: "BLCA must run and record signal before session proceeds"
+        signal: "BLCA_STATUS"
+
+      - id: BC-002
+        rule: "Lifecycle coherence must be verified and recorded"
+        signal: "LIFECYCLE_QUALIFIER_COHERENCE"
+
+      - id: BC-003
+        rule: "If BLCA is BLOCKED, session is blocked"
+        consequence: "No work permitted until resolved"
+
+# ==============================================================================
+# CONTRACT 4: CI COHERENCE
+# ==============================================================================
+#
+# CI pipelines must record governance signals that affect health.
+
+  CI_COHERENCE:
+    name: "CI Coherence Contract"
+    description: |
+      CI pipelines record signals that PlatformHealthService consumes.
+      Failed CI should result in BLOCKED or DEGRADED health.
+
+    enforcement_point: "CI workflows"
+
+    signals:
+      - type: "CI_STATUS"
+        recorded_by: "CI"
+        values: ["CLEAN", "BLOCKED", "WARN"]
+
+      - type: "CONTRACT_STATUS"
+        recorded_by: "CI"
+        values: ["PASS", "FAIL"]
+
+# ==============================================================================
+# SIGNAL FLOW DIAGRAM
+# ==============================================================================
+#
+# ┌─────────────────┐     ┌───────────────────────────────────────────────────┐
+# │ L8: BLCA        │────►│ governance_signals (L6)                           │
+# │ L8: CI          │────►│   - BLCA_STATUS                                   │
+# │ L8: Lifecycle   │────►│   - CI_STATUS                                     │
+# │ L8: Qualifier   │────►│   - LIFECYCLE_QUALIFIER_COHERENCE                 │
+# └─────────────────┘     │   - QUALIFIER_STATUS (per capability)             │
+#                         └──────────────────────────────────────────────────┬──┘
+#                                                                            │
+#                         ┌──────────────────────────────────────────────────▼──┐
+#                         │ L4: PlatformHealthService                           │
+#                         │   - get_system_health()                             │
+#                         │   - get_domain_health(domain)                       │
+#                         │   - get_capability_health(cap)                      │
+#                         │   - is_capability_eligible(cap)                     │
+#                         └──────────────────────────────────────────────────┬──┘
+#                                                                            │
+#                         ┌──────────────────────────────────────────────────▼──┐
+#                         │ L3: PlatformEligibilityAdapter (future)             │
+#                         │   - Translates health → eligibility for L2         │
+#                         └──────────────────────────────────────────────────┬──┘
+#                                                                            │
+#                         ┌──────────────────────────────────────────────────▼──┐
+#                         │ L2: /platform/health, /platform/capabilities        │
+#                         │   - Exposes health to Founder Console              │
+#                         └─────────────────────────────────────────────────────┘
+
+# ==============================================================================
+# ENFORCEMENT SUMMARY
+# ==============================================================================
+
+enforcement:
+  bootstrap:
+    script: "scripts/ops/session_start.sh"
+    signals_recorded:
+      - "BLCA_STATUS"
+      - "LIFECYCLE_QUALIFIER_COHERENCE"
+    blocking: true
+
+  ci:
+    workflow: ".github/workflows/l2-layer-guard.yml"
+    signals_recorded:
+      - "CI_STATUS"
+      - "CONTRACT_STATUS"
+    blocking: true
+
+  qualifier_eval:
+    script: "scripts/ops/evaluate_qualifiers.py --record-signals"
+    signals_recorded:
+      - "QUALIFIER_STATUS (per capability)"
+    blocking: false  # Advisory
+
+  health_service:
+    module: "backend/app/services/platform/platform_health_service.py"
+    reads:
+      - "BLCA_STATUS"
+      - "LIFECYCLE_QUALIFIER_COHERENCE"
+      - "QUALIFIER_STATUS"
+      - "CI_STATUS"
+      - "CONTRACT_STATUS"
+    produces:
+      - "SystemHealth"
+      - "DomainHealth"
+      - "CapabilityHealth"

@@ -1,0 +1,206 @@
+schema_version: '1.0'
+generated_at: '2026-01-04T13:50:45.627821+00:00'
+generator: scripts/ops/evaluate_qualifiers.py
+qualifier: GQ-L2-CONTRACT-READY
+source: docs/governance/CAPABILITY_LIFECYCLE.yaml
+summary:
+  total: 17
+  qualified: 16
+  conditionally_qualified: 0
+  disqualified: 1
+capabilities:
+  ACTIVITY_DETAIL:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  ACTIVITY_LIST:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  GUARDRAIL_DETAIL:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  INCIDENTS_DETAIL:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  INCIDENTS_LIST:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  INCIDENT_ACKNOWLEDGE:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  INCIDENT_RESOLVE:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  KEYS_FREEZE:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  KEYS_LIST:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  KEYS_UNFREEZE:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  KILLSWITCH_ACTIVATE:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  KILLSWITCH_DEACTIVATE:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  KILLSWITCH_STATUS:
+    state: DISQUALIFIED
+    passed_gates:
+    - GATE-2 (N/A)
+    - GATE-5
+    - GATE-6
+    failed_gates:
+    - GATE-1
+    - GATE-7
+    - GATE-8
+    pending_gates:
+    - GATE-3
+    - GATE-4
+    disqualification_reasons:
+    - GATE-1 failed
+    - GATE-3 pending
+    - GATE-4 pending
+    - GATE-7 failed
+    - GATE-8 failed
+  LOGS_DETAIL:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  LOGS_EXPORT:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  LOGS_LIST:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
+  POLICY_CONSTRAINTS:
+    state: QUALIFIED
+    passed_gates:
+    - GATE-1
+    - GATE-2
+    - GATE-3
+    - GATE-4
+    - GATE-5
+    - GATE-6
+    - GATE-7
+    - GATE-8
