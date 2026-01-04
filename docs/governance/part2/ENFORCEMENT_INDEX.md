@@ -17,18 +17,18 @@ not just detectable after the fact.
 
 ## Gate → Guard Mapping
 
-| Gate | Risk | Guard | Type |
-|------|------|-------|------|
-| GATE-1 | Jobs without contracts | `part2_workflow_structure_guard.py` | Static |
-| GATE-2 | UI mutates system | `part2_authority_boundary_guard.py` | Static |
-| GATE-3 | Mutable contracts | `part2_workflow_structure_guard.py` | Static |
-| GATE-4 | Override eligibility | Bootstrap + Test | Runtime |
-| GATE-5 | Jobs bypass governance | `part2_authority_boundary_guard.py` | Static |
-| GATE-6 | Manipulate health | `part2_health_supremacy_guard.py` | Static |
-| GATE-7 | Rollout without audit | Test contract | Semantic |
-| GATE-8 | Unaudited customer view | Test contract | Semantic |
-| GATE-9 | Silent execution | Test contract | Semantic |
-| GATE-10 | Design drift | `part2_design_freeze_guard.py` | Static |
+| Gate | Risk | Guard | Type | Status |
+|------|------|-------|------|--------|
+| GATE-1 | Jobs without contracts | `part2_workflow_structure_guard.py` | Static | ✅ Pass 1 |
+| GATE-2 | UI mutates system | `part2_authority_boundary_guard.py` | Static | ✅ Pass 1 |
+| GATE-3 | Mutable contracts | `part2_workflow_structure_guard.py` | Static | ✅ Pass 1 |
+| GATE-4 | Override eligibility | `part2_contract_activation_guard.py` | Bootstrap | ✅ Pass 2 |
+| GATE-5 | Jobs bypass governance | `part2_job_start_guard.py` | Bootstrap | ✅ Pass 2 |
+| GATE-6 | Manipulate health | `part2_health_supremacy_guard.py` | Static | ✅ Pass 1 |
+| GATE-7 | Rollout without audit | `part2_semantic_contracts.py` | Semantic | ✅ Pass 2 |
+| GATE-8 | Unaudited customer view | `part2_semantic_contracts.py` | Semantic | ✅ Pass 2 |
+| GATE-9 | Silent execution | `part2_semantic_contracts.py` | Semantic | ✅ Pass 2 |
+| GATE-10 | Design drift | `part2_design_freeze_guard.py` | Static | ✅ Pass 1 |
 
 ---
 
@@ -103,61 +103,83 @@ not just detectable after the fact.
 
 ---
 
-## Bootstrap Guards (Runtime)
+## Bootstrap Guards (Runtime) — Pass 2
 
-*To be implemented when implementation begins*
-
-### Contract Activation Guard
+### part2_contract_activation_guard.py
 
 **Purpose:** Refuse to activate contracts without eligibility proof
 
 **Enforces:** GATE-4
 
-**Check:** `contract.eligibility_verdict.decision == MAY`
+**Prerequisites:**
+- `eligibility_verdict.decision == MAY`
+- `approved_by IS NOT NULL`
+- `approved_at IS NOT NULL`
+- `NOW() >= activation_window_start`
+
+**Bypass patterns detected:**
+- Direct ACTIVE assignment without eligibility check
+- Force/bypass functions
+- Explicit bypass comments
+
+**Run:** `python scripts/ci/part2_contract_activation_guard.py`
 
 ---
 
-### Job Start Guard
+### part2_job_start_guard.py
 
 **Purpose:** Refuse to start jobs for non-ACTIVE contracts
 
-**Enforces:** GATE-1, GATE-5
+**Enforces:** GATE-5
 
-**Check:** `contract.status == ACTIVE`
+**Prerequisites:**
+- `job.contract_id IS NOT NULL`
+- `contract.status == ACTIVE`
+- `job.scope ⊆ contract.affected_capabilities`
+- `system_health != UNHEALTHY`
 
----
+**Bypass patterns detected:**
+- Execution without contract check
+- Job RUNNING without contract status check
+- Orphan job creation
 
-## Test Contracts (Semantic)
-
-*To be implemented when implementation begins*
-
-### Audit Rollout Contract
-
-**Purpose:** No rollout without audit PASS
-
-**Enforces:** GATE-7
-
-**Test:** Reject rollout if `audit.verdict != PASS`
+**Run:** `python scripts/ci/part2_job_start_guard.py`
 
 ---
 
-### Customer View Contract
+## Semantic Contract Tests — Pass 2
 
-**Purpose:** Customers see only ROLLED_OUT states
+### part2_semantic_contracts.py
 
-**Enforces:** GATE-8
+**Purpose:** Define and verify behavioral contracts
 
-**Test:** Customer API filters by rollout status
+**Enforces:** GATE-7, GATE-8, GATE-9
+
+**Contracts defined:**
+
+#### GATE-7: Rollout Requires Audit PASS
+
+**Invariant:** `rollout_status = DEPLOYED` requires `audit.verdict == PASS`
+
+**Violation:** Deployment occurs without audit PASS
 
 ---
 
-### Evidence Contract
+#### GATE-8: Customer View Only COMPLETED
 
-**Purpose:** Terminal states emit evidence
+**Invariant:** Customer APIs only return contracts with `status == COMPLETED`
 
-**Enforces:** GATE-9
+**Violation:** Customer sees DRAFT, ACTIVE, or any intermediate state
 
-**Test:** COMPLETED/FAILED contracts have evidence records
+---
+
+#### GATE-9: Terminal States Emit Evidence
+
+**Invariant:** COMPLETED/FAILED contracts must have evidence records
+
+**Violation:** Terminal state without evidence (silent execution)
+
+**Run:** `python scripts/ci/part2_semantic_contracts.py`
 
 ---
 
@@ -173,6 +195,7 @@ part2-enforcement:
       with:
         fetch-depth: 0  # Need tags
 
+    # Pass 1: Static Guards
     - name: Part-2 Design Freeze Guard
       run: python scripts/ci/part2_design_freeze_guard.py
 
@@ -184,31 +207,47 @@ part2-enforcement:
 
     - name: Part-2 Health Supremacy Guard
       run: python scripts/ci/part2_health_supremacy_guard.py
+
+    # Pass 2: Bootstrap Guards
+    - name: Part-2 Contract Activation Guard
+      run: python scripts/ci/part2_contract_activation_guard.py
+
+    - name: Part-2 Job Start Guard
+      run: python scripts/ci/part2_job_start_guard.py
+
+    # Pass 2: Semantic Contracts
+    - name: Part-2 Semantic Contracts
+      run: python scripts/ci/part2_semantic_contracts.py
 ```
 
 ---
 
 ## Enforcement Phases
 
-### Phase 1: Static Guards (CURRENT)
+### Pass 1: Static Guards ✅ COMPLETE
 
-- Design freeze ✓
-- Import boundaries ✓
-- Workflow structure ✓
-- Health supremacy ✓
+- Design freeze ✅
+- Import boundaries ✅
+- Workflow structure ✅
+- Health supremacy ✅
 
-### Phase 2: Bootstrap Guards (FUTURE)
+### Pass 2: Bootstrap + Semantic ✅ COMPLETE
 
-- Contract activation
-- Job start authorization
-- Eligibility proof
+- Contract activation guard ✅
+- Job start guard ✅
+- Audit rollout contract ✅
+- Customer view contract ✅
+- Evidence contract ✅
 
-### Phase 3: Semantic Tests (FUTURE)
+### Implementation Phase: UNLOCKED
 
-- State transition tests
-- Audit rollout contract
-- Customer view contract
-- Evidence contract
+With Pass 1 and Pass 2 complete, implementation may begin:
+- CRM Event Schema (L8)
+- Contract models
+- Governance services
+- Founder review UI
+
+All implementation must satisfy the guards defined above.
 
 ---
 
