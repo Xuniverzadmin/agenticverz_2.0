@@ -4,6 +4,9 @@
 #
 # STATUS: DRAFT — Awaiting Founder Review
 # RISK PROFILE: Tier-2 (constraint definition vs optimization/effectiveness boundary)
+#
+# SCOPE NOTE: Prohibitions in this intent are SURFACE-SCOPED.
+# Interpretation/analytics may exist in a separate domain (not here).
 
 intent_id: L2-GUARD-POLICIES
 status: DRAFT  # DRAFT | APPROVED | FROZEN
@@ -23,15 +26,16 @@ question_answered: >
   - DETAIL: What is the configuration of a specific guardrail?
 
 non_goals:
-  - effectiveness_measurement  # "Is this policy working?" is never answered
-  - optimization_suggestion  # No "you should increase your limit"
+  # NOTE: These are non-goals FOR THIS SURFACE. Analytics domain may address some.
+  - effectiveness_measurement  # Not answered HERE (may exist in Analytics)
+  - optimization_suggestion  # Not provided HERE
   - causal_explanation  # "Why was this blocked?" is Incidents, not Policies
-  - best_practices_guidance  # No "recommended settings"
+  - best_practices_guidance  # Not provided HERE
   - threshold_exposure  # Internal trigger values are not customer-visible
-  - cross_tenant_comparison  # No "your policy is stricter than average"
-  - policy_creation  # Defining new policies is a separate control surface
-  - policy_modification  # Changing policies is a separate control surface
-  - incident_linkage  # No "this policy caused that incident"
+  - cross_tenant_comparison  # Not provided HERE
+  - policy_creation  # Separate control surface
+  - policy_modification  # Separate control surface
+  - incident_linkage  # Not shown HERE (Analytics may correlate)
 
 # =============================================================================
 # 2. DOMAIN PLACEMENT
@@ -57,12 +61,13 @@ mutates_state: false
 human_action_required: false  # This surface is read-only
 
 explicitly_forbidden:
+  # NOTE: Forbidden AT THIS SURFACE. Some may be permitted in Analytics domain.
   - mutation  # Policy creation/modification is separate control surface
   - threshold_exposure  # Internal trigger values are implementation detail
-  - effectiveness_scoring  # No "policy health" or "coverage" metrics
-  - optimization_advice  # No "you should..." recommendations
-  - incident_correlation  # No linking policies to specific incidents
-  - comparison  # No cross-tenant or cross-time policy comparison
+  - effectiveness_scoring  # Not at this surface (Analytics may provide)
+  - optimization_advice  # Not at this surface
+  - incident_correlation  # Not at this surface (Analytics may correlate)
+  - comparison  # Not at this surface (Analytics may compare)
 
 endpoints:
   - path: GET /guard/policies
@@ -142,45 +147,49 @@ ui_allowed:
   - O5_proof  # Raw constraint values for audit
 
 ui_forbidden:
-  - effectiveness_dashboard  # No "policy health" or "coverage" visualizations
-  - optimization_panel  # No "recommended adjustments" UI
-  - trend_charts  # No "usage over time" graphs
-  - comparison_view  # No "vs recommended" or "vs other tenants"
-  - incident_linkage  # No "incidents triggered by this policy"
-  - threshold_display  # Internal trigger values must not be shown
-  - ranking  # No "most triggered" or "least effective"
-  - forecasting  # No "you will hit limit in X days"
-  - narrative_explanation  # No "this policy protects against..."
-  - inferred_relationships  # No implicit linking between policies
+  # NOTE: Forbidden in L1 consumption of THIS surface. Analytics UI is separate.
+  - effectiveness_dashboard  # Not here (Analytics may have)
+  - optimization_panel  # Not here
+  - trend_charts  # Not here (Analytics may have)
+  - comparison_view  # Not here (Analytics may have)
+  - incident_linkage  # Not here (Analytics may correlate)
+  - threshold_display  # Internal trigger values must not be shown anywhere
+  - ranking  # Not here (Analytics may rank)
+  - forecasting  # Not here (Analytics may forecast)
+  - narrative_explanation  # Not here
+  - inferred_relationships  # Not here (Analytics may infer)
 
 vocabulary_rules:
+  # NOTE: These rules apply to THIS surface's L1 consumption only.
   - Use "constraint" not "rule" (constraint is factual, rule implies authority)
   - Use "defined" not "configured" (defined is static, configured implies tuning)
   - Use "limit" not "threshold" (limit is visible boundary, threshold is internal)
-  - Never use "effective" or "effectiveness" in policy context
-  - Never use "recommended" or "optimal" in policy context
-  - Never use "should" in policy descriptions
+  - Avoid "effective" or "effectiveness" at this surface (Analytics may use)
+  - Avoid "recommended" or "optimal" at this surface
+  - Avoid "should" in policy descriptions at this surface
 
 # =============================================================================
 # 7. INVARIANTS & FORBIDDEN ASSUMPTIONS
 # =============================================================================
 
 forbidden_assumptions:
-  - policy_explains_incident  # Policies define constraints, not explain events
-  - policy_is_optimal  # No judgment on policy quality
-  - policy_is_effective  # Effectiveness is not measurable here
-  - higher_limit_is_better  # Limits have no quality gradient
-  - triggered_is_bad  # A triggered guardrail is not inherently negative
-  - usage_indicates_need  # High usage does not indicate need for adjustment
-  - absence_is_risk  # Missing policy does not indicate vulnerability
-  - policy_caused_failure  # Policies define constraints, not cause outcomes
+  # NOTE: Forbidden at THIS surface. Analytics may make some of these claims.
+  - policy_explains_incident  # Not claimed here (Analytics may correlate)
+  - policy_is_optimal  # Not claimed here (Analytics may advise)
+  - policy_is_effective  # Not claimed here (Analytics may measure)
+  - higher_limit_is_better  # Not claimed here
+  - triggered_is_bad  # Not claimed here
+  - usage_indicates_need  # Not claimed here (Analytics may interpret)
+  - absence_is_risk  # Not claimed here
+  - policy_caused_failure  # Not claimed here (Analytics may correlate)
 
 invariants:
-  - tenant_isolation_absolute  # Enforced at L3 adapter
-  - constraints_are_definitions  # Policies show what is, not what should be
-  - no_effectiveness_metrics  # No scoring or measurement of policy quality
-  - no_threshold_exposure  # Internal trigger values never shown
-  - no_incident_correlation  # Policies do not link to incidents
+  # NOTE: These invariants apply to THIS surface.
+  - tenant_isolation_absolute  # Enforced at L3 adapter (global)
+  - constraints_are_definitions  # At this surface: what is, not what should be
+  - no_effectiveness_metrics_here  # Not at this surface (Analytics may measure)
+  - no_threshold_exposure  # Internal trigger values never shown (global)
+  - no_incident_correlation_here  # Not at this surface (Analytics may correlate)
   - read_only_at_this_surface  # Mutation is separate control surface
 
 # =============================================================================
@@ -207,6 +216,11 @@ promotion_decision:
        (Recommend: SHOW as fact - customer needs to know what happens)
     3. Policy CRUD: Separate surface or add to this intent later?
        (Recommend: SEPARATE surface - mutation has different authority semantics)
+
+    SCOPE ACKNOWLEDGMENT:
+    This intent explicitly allows Analytics domain to exist separately.
+    Analytics may interpret, correlate, trend, and advise - but not HERE.
+    Analytics will require its own intent declaration (ANALYTICS_INTENT.yaml).
 
   once_approved:
     edits_require: new_intent_version
