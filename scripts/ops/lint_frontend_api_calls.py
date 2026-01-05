@@ -23,26 +23,24 @@ from pathlib import Path
 from typing import List, Tuple
 
 # ID type patterns with their expected contexts
+#
+# PIN-314: Updated to reflect actual API contracts
+#
+# REPLAY API VERSIONS:
+#   - NEW (H1 Replay UX): /replay/{incident_id}/slice, /summary, /timeline - uses incident_id
+#   - LEGACY: /guard/replay/{call_id}, /v1/replay/{call_id} - uses call_id
+#
+# The frontend uses NEW H1 endpoints, so incident.id is CORRECT for replay URLs.
+#
 ID_TYPE_PATTERNS = [
+    # REMOVED: incident_id_in_replay - H1 Replay UX correctly uses incident_id
+    # REMOVED: incident_id_in_replay_url - H1 Replay UX correctly uses incident_id
+    # REMOVED: hardcoded_inc_prefix_in_replay - H1 Replay UX correctly uses incident_id
     {
-        "name": "incident_id_in_replay",
-        "description": "incident.id used in replay context (should be call_id)",
-        "regex": r"(?:onReplay|replay|Replay)\s*\(\s*(?:incident|inc)\.id\s*\)",
-        "suggestion": "Use incident.call_id instead of incident.id for replay",
-        "severity": "error",
-    },
-    {
-        "name": "incident_id_in_replay_url",
-        "description": "incident.id interpolated in replay URL",
-        "regex": r"/replay/\$\{(?:incident|inc)\.id\}",
-        "suggestion": "Use ${incident.call_id} for replay URLs",
-        "severity": "error",
-    },
-    {
-        "name": "hardcoded_inc_prefix_in_replay",
-        "description": "Hardcoded inc_ prefix in replay URL (should be call_)",
-        "regex": r"/replay/inc_",
-        "suggestion": "Replay endpoints expect call_id (call_xxx), not incident_id (inc_xxx)",
+        "name": "call_id_in_h1_replay",
+        "description": "call_id used in H1 replay URL (H1 expects incident_id)",
+        "regex": r"/replay/\$\{.*call.*\}/(slice|summary|timeline)",
+        "suggestion": "H1 Replay UX endpoints expect incident_id, not call_id",
         "severity": "error",
     },
     {
@@ -62,13 +60,26 @@ ID_TYPE_PATTERNS = [
 ]
 
 # API endpoint patterns and their expected ID types
+#
+# PIN-314: Updated endpoint contracts
+#
 ENDPOINT_ID_CONTRACTS = {
-    "/replay/": "call_id",
+    # H1 Replay UX (NEW) - uses incident_id
+    "/replay/{id}/slice": "incident_id",
+    "/replay/{id}/summary": "incident_id",
+    "/replay/{id}/timeline": "incident_id",
+    "/replay/{id}/explain/": "incident_id",
+    # Legacy replay - uses call_id
+    "/guard/replay/{id}": "call_id",
+    "/v1/replay/{id}": "call_id",
+    "/operator/replay/{id}": "call_id",
+    # Incident endpoints - uses incident_id
     "/incidents/{id}": "incident_id",
     "/incidents/{id}/acknowledge": "incident_id",
     "/incidents/{id}/resolve": "incident_id",
     "/incidents/{id}/export": "incident_id",
     "/incidents/{id}/timeline": "incident_id",
+    # Key endpoints - uses key_id
     "/keys/{id}": "key_id",
 }
 
@@ -132,21 +143,48 @@ def lint_directory(path: Path) -> List[Tuple[str, int, str, str, str, str]]:
     return all_issues
 
 
+def lint_files(filepaths: List[str]) -> List[Tuple[str, int, str, str, str, str]]:
+    """Lint specific files for ID type mismatches."""
+    all_issues = []
+    for fp in filepaths:
+        filepath = Path(fp)
+        if filepath.suffix in EXTENSIONS and filepath.exists():
+            # Skip node_modules and dist
+            if "node_modules" in str(filepath) or "/dist/" in str(filepath):
+                continue
+            all_issues.extend(lint_file(filepath))
+    return all_issues
+
+
 def main():
-    path = (
-        Path(sys.argv[1])
-        if len(sys.argv) > 1
-        else Path("website/aos-console/console/src")
-    )
+    # Support --files flag for git-scoped checking
+    if len(sys.argv) > 1 and sys.argv[1] == "--files":
+        # Read file list from remaining args or stdin
+        if len(sys.argv) > 2:
+            files = sys.argv[2:]
+        else:
+            files = [line.strip() for line in sys.stdin if line.strip()]
 
-    if not path.exists():
-        print(f"Error: Path not found: {path}", file=sys.stderr)
-        sys.exit(1)
+        if not files:
+            print("✅ No frontend files in scope - skipping check")
+            sys.exit(0)
 
-    if path.is_file():
-        issues = lint_file(path)
+        issues = lint_files(files)
     else:
-        issues = lint_directory(path)
+        path = (
+            Path(sys.argv[1])
+            if len(sys.argv) > 1
+            else Path("website/aos-console/console/src")
+        )
+
+        if not path.exists():
+            print(f"Error: Path not found: {path}", file=sys.stderr)
+            sys.exit(1)
+
+        if path.is_file():
+            issues = lint_file(path)
+        else:
+            issues = lint_directory(path)
 
     # Group by severity
     errors = [i for i in issues if i[5] == "error"]

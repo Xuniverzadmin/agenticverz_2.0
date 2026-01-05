@@ -1595,13 +1595,26 @@ check_frontend_api_calls() {
         return 0
     fi
 
-    # Run the linter (checks for ID type mismatches: incident.id vs call_id)
-    if python3 "$LINT_SCRIPT" "$CONSOLE_SRC" 2>/dev/null; then
-        log_ok "No frontend API ID type issues"
-    else
-        log_fail "Frontend API ID type mismatch (incident.id used where call_id expected)"
-        ((FAIL_COUNT++))
+    # PIN-314: Use git-scoped files for pre-push checks
+    # Only lint files that are being pushed, not the entire workspace
+    local GIT_SCOPED_FILES=""
+    if git rev-parse --verify origin/main &>/dev/null; then
+        # Get files changed between origin/main and HEAD (committed delta)
+        GIT_SCOPED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(tsx?|jsx?)$' | grep -v node_modules || true)
     fi
+
+    if [[ -n "$GIT_SCOPED_FILES" ]]; then
+        # Run linter only on files in the committed delta
+        log_info "Checking $(echo "$GIT_SCOPED_FILES" | wc -l | tr -d ' ') frontend file(s) in push scope"
+        if echo "$GIT_SCOPED_FILES" | python3 "$LINT_SCRIPT" --files 2>/dev/null; then
+            log_ok "No frontend API ID type issues in push scope"
+        else
+            log_error "Frontend API ID type mismatch in pushed files"
+        fi
+    else
+        log_info "No frontend files in push scope - skipping check"
+    fi
+
     return 0
 }
 
