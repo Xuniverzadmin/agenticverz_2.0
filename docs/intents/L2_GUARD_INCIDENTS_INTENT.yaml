@@ -3,9 +3,10 @@
 # Surface: /guard/incidents, /guard/incidents/{id}, /guard/incidents/{id}/acknowledge, /guard/incidents/{id}/resolve
 #
 # STATUS: DRAFT — Awaiting Founder Review
+# GOLD REFERENCE: First L2 intent to reach approval becomes pattern for all others
 
-intent_id: L2-INTENT-001
-status: DRAFT
+intent_id: L2-GUARD-INCIDENTS
+status: DRAFT  # DRAFT | APPROVED | FROZEN
 owner: governance
 reviewed_by: []
 
@@ -14,21 +15,24 @@ reviewed_by: []
 # =============================================================================
 
 question_answered: >
-  What went wrong in my system, and what is the current state of each incident?
+  Which incident records exist for this tenant, and what is the current
+  lifecycle state of each?
 
   Specifically:
-  - LIST: What incidents exist for my tenant, filtered by status/severity/date?
-  - DETAIL: What is the full timeline of a specific incident?
-  - ACKNOWLEDGE: Record that I have seen this incident
-  - RESOLVE: Record that this incident is no longer active
+  - LIST: Which incident records exist, filtered by status/severity/date?
+  - DETAIL: What is the full timeline of a specific incident record?
+  - ACKNOWLEDGE: Record that customer has seen this incident
+  - RESOLVE: Record that customer marks incident as no longer active
 
 non_goals:
-  - Does NOT answer "why did this happen" (root cause is internal)
-  - Does NOT recommend actions to take
-  - Does NOT predict future incidents
-  - Does NOT aggregate across tenants
-  - Does NOT expose internal debug data (correlation_id, trace_ids, replay_data)
-  - Does NOT surface internal notes or analysis
+  - root_cause_analysis  # "Why did this happen?" is internal only
+  - automated_recommendations  # No "you should..." suggestions
+  - incident_prioritization  # No ranking beyond severity enum
+  - future_prediction  # No "this might happen again"
+  - cross_tenant_aggregation  # Each tenant sees only their own
+  - internal_debug_exposure  # correlation_id, trace_ids, replay_data hidden
+  - business_impact_estimation  # No cost/revenue impact claims
+  - blame_attribution  # No "who caused this" narratives
 
 # =============================================================================
 # 2. DOMAIN PLACEMENT
@@ -36,19 +40,20 @@ non_goals:
 
 domain: Incidents  # Frozen domain per CUSTOMER_CONSOLE_V1_CONSTITUTION.md
 subdomain: Customer Incidents
-topic: Incident Lifecycle (list, detail, acknowledge, resolve)
+topic: Incident Record  # Singular - depth handled by Order, not topic naming
 
 justification: >
-  Incidents domain answers "What went wrong?" — this is the exact question
-  these endpoints answer. The domain is frozen per v1 constitution and
-  cannot be merged with Activity, Policies, or Logs.
+  Incidents represent recorded deviations from expected system behavior
+  and are a primary operational truth surface. The domain is frozen per
+  v1 constitution and cannot be merged with Activity, Policies, or Logs.
 
 # =============================================================================
 # 3. AUTHORITY SEMANTICS
 # =============================================================================
 
-authority_type: control  # Customer can acknowledge and resolve
-mutates_state: true
+# Surface-level authority (mixed: projection + control)
+authority_type: mixed
+mutates_state: true  # Some endpoints mutate
 
 human_action_required: >
   Yes. Customer explicitly clicks "Acknowledge" or "Resolve" button.
@@ -58,20 +63,30 @@ endpoints:
   - path: GET /guard/incidents
     authority: projection
     mutates: false
+    explicitly_forbidden:
+      - resolution
+      - suppression
+      - override
 
   - path: GET /guard/incidents/{id}
     authority: projection
     mutates: false
+    explicitly_forbidden:
+      - resolution
+      - suppression
+      - override
 
   - path: POST /guard/incidents/{id}/acknowledge
     authority: control
     mutates: true
     action: Customer acknowledges they have seen the incident
+    reversible: false  # Cannot un-acknowledge
 
   - path: POST /guard/incidents/{id}/resolve
     authority: control
     mutates: true
     action: Customer marks incident as resolved
+    reversible: false  # Cannot un-resolve (create new incident instead)
 
 # =============================================================================
 # 4. SOURCE OF TRUTH
@@ -83,9 +98,14 @@ primary_sources:
   - L6: Incident table (via L4 only, no direct access)
   - L6: IncidentEvent table (via L4 only)
 
+secondary_sources:
+  - AuditLog  # Supporting evidence only, not authoritative
+
 derived: false  # Data comes directly from stored incidents
 
 derivation_rules:
+  - Incident records are authoritative
+  - Audit logs provide supporting evidence only
   - No inference from other data
   - No aggregation across tenants
   - No computation beyond enum translation (severity/status vocabulary)
@@ -96,13 +116,22 @@ derivation_rules:
 # =============================================================================
 
 visible_to_roles:
-  - viewer (read-only: list, detail)
-  - admin (read + write: list, detail, acknowledge, resolve)
-  - owner (read + write: list, detail, acknowledge, resolve)
+  viewer:
+    access: read_only
+    endpoints: [list, detail]
+  developer:
+    access: read_only
+    endpoints: [list, detail]
+    note: Can view for debugging, cannot manage
+  admin:
+    access: read_write
+    endpoints: [list, detail, acknowledge, resolve]
+  owner:
+    access: read_write
+    endpoints: [list, detail, acknowledge, resolve]
 
 hidden_from:
-  - developer (per PERMISSION_TAXONOMY_V1.md, developers cannot manage incidents)
-  - machine (API tokens cannot acknowledge/resolve)
+  - machine  # API tokens cannot acknowledge/resolve
 
 cross_tenant: forbidden  # Customer sees only their own tenant's incidents
 
@@ -116,18 +145,19 @@ tenant_isolation:
 # =============================================================================
 
 ui_allowed:
-  - summary  # Show incident count badge, severity breakdown
-  - list  # Paginated table with id, title, severity, status, trigger_type, started_at
-  - detail  # Full incident view with timeline of events
-  - proof  # Display exact timestamps, event sequence (audit trail)
+  - O2_list  # Paginated table with id, title, severity, status, trigger_type, started_at
+  - O3_detail  # Full incident view with timeline of events
+  - O4_context  # Related runs, affected agents
+  - O5_proof  # Display exact timestamps, event sequence (audit trail)
 
 ui_forbidden:
-  - recommendation  # "You should..." suggestions
-  - scoring  # Risk scores, priority rankings, urgency calculations
-  - ranking  # "Most important" ordering beyond severity
-  - narrative_explanation  # "This happened because..." text
-  - aggregation  # Cross-incident statistics or trends
-  - prediction  # "This might happen again" language
+  - summary_scoring  # No incident "health score" or dashboard number
+  - ranking  # No "most important" ordering beyond severity
+  - recommendation  # No "you should..." suggestions
+  - narrative_explanation  # No "this happened because..." text
+  - aggregation  # No cross-incident statistics or trends
+  - prediction  # No "this might happen again" language
+  - blame_ui  # No "caused by" attribution
 
 vocabulary_rules:
   - Use "urgent" not "critical" (calm vocabulary per M29)
@@ -143,9 +173,12 @@ forbidden_assumptions:
   - system_decided  # Incidents are facts, not decisions
   - best_action  # No recommendations
   - likely_cause  # Root cause is internal only
+  - root_cause_known  # Even if we know, we don't claim to know
   - similar_incidents  # No correlation shown to customer
   - auto_resolved  # Resolution requires explicit human action
-  - hidden  # All tenant incidents are visible (no filtering by internal priority)
+  - hidden  # All tenant incidents are visible (no internal priority filtering)
+  - incident_prevented  # No "we saved you from X" claims
+  - incident_cost_exact  # cost_avoided_cents is estimate, not fact
 
 invariants:
   - tenant_isolation_absolute  # Enforced at L3 adapter
@@ -153,6 +186,8 @@ invariants:
   - status_translation_deterministic  # open/active->open, resolved/closed->resolved
   - timeline_ordered_ascending  # Events ordered by timestamp ascending
   - no_internal_fields_exposed  # root_cause, internal_notes, debug_data, correlation_id
+  - acknowledgment_irreversible  # Once acknowledged, cannot be un-acknowledged
+  - resolution_irreversible  # Once resolved, cannot be un-resolved
 
 # =============================================================================
 # 8. PROMOTION DECISION
@@ -161,6 +196,7 @@ invariants:
 promotion_decision:
   approved: false
   approved_on: null
+  approved_by: null
   notes: >
     DRAFT: Awaiting founder review.
 
@@ -169,9 +205,18 @@ promotion_decision:
     - L4 services exist (read + write)
     - Customer-safe DTOs defined (no internal fields)
     - Calm vocabulary translation implemented
-    - Wired in main.py (lines 507)
+    - Wired in main.py (line 507)
 
     Open questions for founder:
-    1. Should developers be able to view incidents (read-only)?
-    2. Should we expose cost_avoided_cents to customer or hide it?
-    3. Is "resolution_notes" from customer stored or discarded?
+    1. Developer visibility: Allow read-only access? (Recommended: YES)
+    2. cost_avoided_cents: Expose as "informational estimate" or hide? (Recommended: HIDE unless clearly labeled)
+    3. resolution_notes: Store as annotation (non-authoritative) or discard? (Recommended: STORE as annotation)
+
+  once_approved:
+    edits_require: new_intent_version
+    frozen_fields:
+      - question_answered
+      - domain
+      - authority_type
+      - cross_tenant
+      - forbidden_assumptions
