@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-05 (PIN-301 L2 Intent Declaration Progress - Semantic Promotion Gate)
+**Last Updated:** 2026-01-05 (PIN-313 Governance Hardening & Gap Closure)
 
 ---
 
@@ -321,6 +321,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-299](PIN-299-tech-debt-clearance---forensic-inventory-governed-actions.md) | **Tech Debt Clearance - Forensic Inventory & Governed Actions** | Governance / Tech Debt | **🏗️ IN_PROGRESS** | 2026-01-05 |
 | [PIN-300](PIN-300-semantic-promotion-gate---l2-intent-declaration-requirement.md) | **Semantic Promotion Gate - L2 Intent Declaration Requirement** | Governance / Promotion | **🏗️ CONSTITUTIONAL** | 2026-01-05 |
 | [PIN-301](PIN-301-l2-intent-declaration-progress---semantic-promotion-gate.md) | **L2 Intent Declaration Progress - Semantic Promotion Gate** | Governance / L2 Promotion | **🏗️ IN_PROGRESS** | 2026-01-05 |
+| [PIN-307](PIN-307-cap-006-authentication-gateway-closure.md) | **CAP-006 Authentication Gateway Closure** | Capability Registry / Authentication | **✅ COMPLETE** | 2026-01-05 |
+| [PIN-308](PIN-308-authority-closure---replay-and-prediction-capabilities.md) | **Authority Closure - Replay and Prediction Capabilities** | Capability Registry / Authority | **✅ COMPLETE** | 2026-01-05 |
+| [PIN-311](PIN-311-system-resurvey-registry-aligned.md) | **System Resurvey Registry-Aligned** | Governance / Survey | **✅ COMPLETE** | 2026-01-05 |
+| [PIN-312](PIN-312-cap018-approval-registry-stable.md) | **CAP-018 Approval & Registry Stable** | Capability Registry / Approval | **✅ COMPLETE** | 2026-01-05 |
+| [PIN-313](PIN-313-governance-hardening-gap-closure.md) | **Governance Hardening & Gap Closure** | Governance / Gap Closure | **✅ COMPLETE** | 2026-01-05 |
 
 ---
 
@@ -1090,6 +1095,13 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-05 | **PIN-313 Governance Hardening & Gap Closure** - Completed all 14 tasks, 0 blocking gaps remaining. |
+| 2026-01-05 | **PIN-312 CAP-018 Approval & Registry Stable** - M25 Integration Platform promoted to CLOSED. |
+| 2026-01-05 | **PIN-311 System Resurvey Registry-Aligned** - Created via memory_trail. |
+| 2026-01-05 | **PIN-310 Fast-Track M7 Closure (Authority Exhaustion)** - Updated: Final Cleanup |
+| 2026-01-05 | **PIN-310 Fast-Track M7 Closure (Authority Exhaustion)** - Updated: Completion Summary |
+| 2026-01-05 | **PIN-308 Authority Closure - Replay and Prediction Capabilities** - Created via memory_trail. |
+| 2026-01-05 | **PIN-307 CAP-006 Authentication Gateway Closure** - Created via memory_trail. |
 | 2026-01-05 | **PIN-301 L2 Intent Declaration Progress - Semantic Promotion Gate** - Created via memory_trail. |
 | 2026-01-05 | **PIN-300 Semantic Promotion Gate - L2 Intent Declaration Requirement** - Created via memory_trail. |
 | 2026-01-05 | **PIN-299 Tech Debt Clearance - Forensic Inventory & Governed Actions** - Created via memory_trail. |
