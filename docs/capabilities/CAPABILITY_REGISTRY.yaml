@@ -1,0 +1,883 @@
+# =============================================================================
+# CAPABILITY REGISTRY — Single Source of Truth
+# =============================================================================
+#
+# Reference: PIN-306 (Capability Registry Governance)
+# Created: 2026-01-05
+# Version: 1.0.0
+#
+# INVARIANTS:
+#   - No capability exists unless registered here
+#   - No UI expansion without governance.ui_expansion_allowed = true
+#   - No lifecycle promotion without closure_requirements met
+#   - No code without capability_id linkage
+#
+# =============================================================================
+
+registry_version: "1.0.0"
+schema_version: "1.0.0"
+last_updated: "2026-01-05"
+updated_by: "claude+founder"
+
+# =============================================================================
+# SECTION 1: ALLOWED ENUMS (LOCKED VOCABULARY)
+# =============================================================================
+
+enums:
+  lifecycle_states:
+    - PLANNED        # Intent declared, no code
+    - PARTIAL        # Code exists, not all planes complete
+    - READ_ONLY      # Can read/query, cannot mutate
+    - CLOSED         # All planes complete, all requirements met
+    - FROZEN         # Closed + no changes without founder approval
+    - QUARANTINED    # Disabled, pending decision (delete or fix)
+
+  capability_planes:
+    - engine         # L4 domain logic exists
+    - l2_api         # L2 API endpoints exist
+    - client         # Frontend API client exists
+    - ui             # Frontend UI pages exist
+    - authority      # Governance/permission wiring exists
+    - audit_replay   # Audit trail and replay support exists
+
+  gap_types:
+    - UNREGISTERED_CODE      # Code exists without registry entry
+    - PLANE_ASYMMETRY        # Some planes true, others false
+    - LIFECYCLE_INCOMPLETE   # Closure requirements not met
+    - MISSING_AUTHORITY      # UI/API exists without governance wiring
+    - MISSING_AUDIT          # Mutations without audit trail
+    - STUBBED_INFRA          # Infrastructure code exists but not wired
+    - INTENTIONALLY_ABSENT   # Explicitly not implemented (by design)
+
+# =============================================================================
+# SECTION 2: CAPABILITY ENTRIES
+# =============================================================================
+
+capabilities:
+
+  # ---------------------------------------------------------------------------
+  # CAP-001: REPLAY
+  # ---------------------------------------------------------------------------
+  replay:
+    capability_id: CAP-001
+    name: "Execution Replay"
+    description: "Replay past executions for audit and debugging"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/traces/replay.py
+      l2_api: true           # POST /guard/replay/{call_id}, POST /runtime/replay/{run_id}
+      client: false          # No dedicated API client
+      ui: true               # ReplayResultsModal.tsx in Incidents
+      authority: false       # No governance gate on replay access
+      audit_replay: true     # Replay itself is the audit mechanism
+
+    lifecycle:
+      state: PARTIAL
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false
+        ui_complete: true
+        authority_wired: false
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by:
+        - "authority plane missing"
+        - "client plane missing"
+      founder_approval_required: true
+
+    evidence:
+      engine: "/backend/app/traces/replay.py"
+      l2_api:
+        - "/backend/app/api/guard.py:replay_call"
+        - "/backend/app/api/runtime.py:replay_run"
+      ui: "/website/aos-console/console/src/components/ReplayResultsModal.tsx"
+
+    gaps:
+      - type: PLANE_ASYMMETRY
+        detail: "UI exists but authority plane missing"
+      - type: MISSING_AUTHORITY
+        detail: "No RBAC check on replay execution"
+
+  # ---------------------------------------------------------------------------
+  # CAP-002: COST SIMULATION
+  # ---------------------------------------------------------------------------
+  cost_simulation:
+    capability_id: CAP-002
+    name: "Cost Simulation V2"
+    description: "Simulate execution costs before running"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/costsim/
+      l2_api: true           # POST /costsim/v2/simulate, GET /costsim/divergence
+      client: true           # /website/aos-console/console/src/api/costsim.ts
+      ui: false              # No UI page found
+      authority: true        # Circuit breaker governance
+      audit_replay: false    # No audit trail for simulations
+
+    lifecycle:
+      state: PARTIAL
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: true
+        ui_complete: false
+        authority_wired: true
+        audit_enabled: false
+
+    governance:
+      ui_expansion_allowed: true   # Ready for UI
+      promotion_blocked_by:
+        - "ui plane missing"
+        - "audit_replay missing"
+      founder_approval_required: false
+
+    evidence:
+      engine: "/backend/app/costsim/"
+      l2_api: "/backend/app/api/costsim.py"
+      client: "/website/aos-console/console/src/api/costsim.ts"
+
+    gaps:
+      - type: PLANE_ASYMMETRY
+        detail: "Client exists but UI page missing"
+      - type: MISSING_AUDIT
+        detail: "Simulations not audited"
+
+  # ---------------------------------------------------------------------------
+  # CAP-003: POLICY PROPOSALS
+  # ---------------------------------------------------------------------------
+  policy_proposals:
+    capability_id: CAP-003
+    name: "Policy Proposals"
+    description: "View and manage policy change proposals"
+    owner: platform
+
+    planes:
+      engine: true           # Policy proposal logic exists
+      l2_api: true           # GET /api/v1/policy-proposals/
+      client: false          # No API client
+      ui: false              # No UI found
+      authority: true        # Read-only authority
+      audit_replay: false    # No audit trail
+
+    lifecycle:
+      state: READ_ONLY
+      closure_requirements:
+        engine_complete: true
+        api_complete: true   # But read-only
+        client_complete: false
+        ui_complete: false
+        authority_wired: true
+        audit_enabled: false
+
+    governance:
+      ui_expansion_allowed: true
+      promotion_blocked_by:
+        - "No creation endpoints (POST)"
+        - "No UI for proposal workflow"
+      founder_approval_required: true
+
+    evidence:
+      engine: "/backend/app/services/policy/"
+      l2_api: "/backend/app/api/policy_proposals.py"
+
+    gaps:
+      - type: LIFECYCLE_INCOMPLETE
+        detail: "Read-only API, no creation flow"
+      - type: PLANE_ASYMMETRY
+        detail: "Engine exists but no client/UI"
+
+  # ---------------------------------------------------------------------------
+  # CAP-004: PREDICTION PLANE (C2)
+  # ---------------------------------------------------------------------------
+  prediction_plane:
+    capability_id: CAP-004
+    name: "C2 Prediction Plane"
+    description: "ML predictions for cost, risk, optimization"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/predictions/
+      l2_api: true           # GET /predictions/
+      client: false          # No API client
+      ui: false              # No UI found
+      authority: false       # No governance gate
+      audit_replay: false    # Predictions not audited
+
+    lifecycle:
+      state: PARTIAL
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false
+        ui_complete: false
+        authority_wired: false
+        audit_enabled: false
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by:
+        - "authority plane missing"
+        - "no client/UI"
+        - "predictions should be read-only advisory"
+      founder_approval_required: true
+
+    evidence:
+      engine: "/backend/app/predictions/"
+      l2_api: "/backend/app/api/predictions.py"
+
+    gaps:
+      - type: PLANE_ASYMMETRY
+        detail: "Engine/API exist but no client/UI"
+      - type: MISSING_AUTHORITY
+        detail: "No RBAC on prediction access"
+
+  # ---------------------------------------------------------------------------
+  # CAP-005: FOUNDER CONSOLE
+  # ---------------------------------------------------------------------------
+  founder_console:
+    capability_id: CAP-005
+    name: "Founder Console"
+    description: "Founder-only operations and timeline"
+    owner: founder
+
+    planes:
+      engine: true           # Founder actions, timeline services
+      l2_api: true           # /founder/*, /ops/*
+      client: true           # /api/ops.ts exists
+      ui: true               # 5 pages in /pages/founder/ and /pages/ops/
+      authority: true        # Founder-only RBAC
+      audit_replay: true     # Founder actions audited
+
+    lifecycle:
+      state: PARTIAL
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: true
+        ui_complete: true
+        authority_wired: true
+        audit_enabled: true
+        routing_wired: false   # Extra: are routes wired in app?
+
+    governance:
+      ui_expansion_allowed: true
+      promotion_blocked_by:
+        - "routing_wired status unknown"
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/api/founder_actions.py"
+        - "/backend/app/api/founder_review.py"
+        - "/backend/app/api/founder_timeline.py"
+      l2_api: "/backend/app/api/ops.py"
+      client: "/website/aos-console/console/src/api/ops.ts"
+      ui:
+        - "/website/aos-console/console/src/pages/founder/FounderControlsPage.tsx"
+        - "/website/aos-console/console/src/pages/founder/FounderTimelinePage.tsx"
+        - "/website/aos-console/console/src/pages/ops/FounderOpsConsole.tsx"
+        - "/website/aos-console/console/src/pages/ops/FounderPulsePage.tsx"
+        - "/website/aos-console/console/src/pages/ops/OpsConsoleEntry.tsx"
+
+    gaps:
+      - type: LIFECYCLE_INCOMPLETE
+        detail: "Routing wiring status unverified"
+
+  # ---------------------------------------------------------------------------
+  # CAP-006: AUTHENTICATION (Clerk + JWT)
+  # ---------------------------------------------------------------------------
+  authentication:
+    capability_id: CAP-006
+    name: "Authentication"
+    description: "User authentication via Clerk and JWT"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/auth/
+      l2_api: true           # Auth middleware wired
+      client: false          # No frontend auth client
+      ui: false              # No login UI (delegated to Clerk)
+      authority: true        # Identity chain exists
+      audit_replay: true     # Auth events logged
+
+    lifecycle:
+      state: PARTIAL
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false
+        ui_complete: false   # N/A - delegated to Clerk
+        authority_wired: true
+        audit_enabled: true
+        clerk_wired: false   # CRITICAL: Clerk not wired to main.py
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by:
+        - "Clerk integration STUBBED"
+        - "clerk_provider.py exists but not wired in main.py"
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/auth/clerk_provider.py"
+        - "/backend/app/auth/jwt_auth.py"
+        - "/backend/app/auth/identity_chain.py"
+      l2_api: "/backend/app/auth/rbac_middleware.py"
+
+    gaps:
+      - type: STUBBED_INFRA
+        detail: "clerk_provider.py exists but not wired in main.py"
+      - type: PLANE_ASYMMETRY
+        detail: "Engine exists but no client integration"
+
+  # ---------------------------------------------------------------------------
+  # CAP-007: AUTHORIZATION (M28 RBAC v2)
+  # ---------------------------------------------------------------------------
+  authorization:
+    capability_id: CAP-007
+    name: "Authorization (RBAC v2)"
+    description: "Role-based access control and permission taxonomy"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/auth/rbac*.py
+      l2_api: true           # RBAC middleware on all routes
+      client: false          # No dedicated client
+      ui: false              # No RBAC management UI
+      authority: true        # Self-referential (is the authority)
+      audit_replay: true     # shadow_audit.py
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false   # N/A for RBAC
+        ui_complete: false       # N/A for RBAC
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/auth/rbac.py"
+        - "/backend/app/auth/rbac_engine.py"
+        - "/backend/app/auth/authorization.py"
+      l2_api: "/backend/app/auth/rbac_middleware.py"
+      audit: "/backend/app/auth/shadow_audit.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-008: M12 MULTI-AGENT ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  multi_agent:
+    capability_id: CAP-008
+    name: "M12 Multi-Agent Orchestration"
+    description: "Agent job execution, blackboard, credits, messaging"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/agents/
+      l2_api: true           # /api/agents.py
+      client: false          # No dedicated client
+      ui: false              # No multi-agent UI
+      authority: true        # governance_service.py
+      audit_replay: true     # invoke_audit_service.py
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false   # Internal capability
+        ui_complete: false       # Internal capability
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/agents/services/job_service.py"
+        - "/backend/app/agents/services/worker_service.py"
+        - "/backend/app/agents/services/blackboard_service.py"
+        - "/backend/app/agents/services/credit_service.py"
+        - "/backend/app/agents/services/message_service.py"
+        - "/backend/app/agents/services/registry_service.py"
+        - "/backend/app/agents/services/governance_service.py"
+        - "/backend/app/agents/services/invoke_audit_service.py"
+      l2_api: "/backend/app/api/agents.py"
+      skills:
+        - "/backend/app/agents/skills/agent_invoke.py"
+        - "/backend/app/agents/skills/agent_spawn.py"
+        - "/backend/app/agents/skills/blackboard_ops.py"
+        - "/backend/app/agents/skills/llm_invoke_governed.py"
+
+    gaps: []  # No gaps - CLOSED (internal capability)
+
+  # ---------------------------------------------------------------------------
+  # CAP-009: M19 POLICY ENGINE
+  # ---------------------------------------------------------------------------
+  policy_engine:
+    capability_id: CAP-009
+    name: "M19 Policy Engine"
+    description: "Constitutional policy evaluation and enforcement"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/policy/
+      l2_api: true           # /api/policy.py, /api/policy_layer.py
+      client: false          # No dedicated client
+      ui: false              # Policies shown in Guard, no dedicated UI
+      authority: true        # Self-referential (is the authority)
+      audit_replay: true     # Policy decisions recorded
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false   # API consumed by other services
+        ui_complete: false       # Guard UI shows policies
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: true
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine: "/backend/app/policy/"
+      l2_api:
+        - "/backend/app/api/policy.py"
+        - "/backend/app/api/policy_layer.py"
+        - "/backend/app/api/guard_policies.py"
+      adapters: "/backend/app/adapters/policy_adapter.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-010: M17 CARE-L ROUTING
+  # ---------------------------------------------------------------------------
+  care_routing:
+    capability_id: CAP-010
+    name: "M17 CARE-L Routing"
+    description: "Cascade-aware agent routing with learning"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/routing/
+      l2_api: false          # Internal routing, no direct API
+      client: false          # N/A
+      ui: false              # N/A
+      authority: true        # Governor controls routing
+      audit_replay: true     # Routing decisions recorded
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: false  # Internal capability
+        client_complete: false
+        ui_complete: false
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/routing/care.py"
+        - "/backend/app/routing/governor.py"
+        - "/backend/app/routing/learning.py"
+        - "/backend/app/routing/feedback.py"
+        - "/backend/app/routing/probes.py"
+
+    gaps: []  # No gaps - CLOSED (internal capability)
+
+  # ---------------------------------------------------------------------------
+  # CAP-011: M28 GOVERNANCE ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  governance_orchestration:
+    capability_id: CAP-011
+    name: "M28 Governance Orchestration"
+    description: "Contract execution, audit workflows, eligibility"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/services/governance/
+      l2_api: true           # /api/founder_review.py, /api/founder_actions.py
+      client: false          # Founder console uses ops.ts
+      ui: true               # Founder console pages
+      authority: true        # Founder-only
+      audit_replay: true     # Audit service
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: true  # Via ops.ts
+        ui_complete: true      # Via founder console
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: true
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/services/governance/governance_orchestrator.py"
+        - "/backend/app/services/governance/contract_service.py"
+        - "/backend/app/services/governance/audit_service.py"
+        - "/backend/app/services/governance/validator_service.py"
+        - "/backend/app/services/governance/job_executor.py"
+        - "/backend/app/services/governance/eligibility_engine.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-012: M4 WORKFLOW ENGINE
+  # ---------------------------------------------------------------------------
+  workflow_engine:
+    capability_id: CAP-012
+    name: "M4 Workflow Engine"
+    description: "Deterministic workflow execution with checkpointing"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/workflow/
+      l2_api: true           # Runtime APIs use workflow
+      client: false          # Internal capability
+      ui: false              # No dedicated UI
+      authority: true        # Workflow policies enforced
+      audit_replay: true     # Golden file testing, replay
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false  # Internal
+        ui_complete: false      # Internal
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/workflow/engine.py"
+        - "/backend/app/workflow/checkpoint.py"
+        - "/backend/app/workflow/golden.py"
+        - "/backend/app/workflow/policies.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-013: M5 LEARNING PIPELINE
+  # ---------------------------------------------------------------------------
+  learning_pipeline:
+    capability_id: CAP-013
+    name: "M5 Learning Pipeline"
+    description: "Learning from rollback, optimization suggestions"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/learning/
+      l2_api: false          # Internal processing
+      client: false          # Internal
+      ui: false              # No UI
+      authority: true        # Learning is governed
+      audit_replay: true     # Learning decisions recorded
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: false  # Internal
+        client_complete: false
+        ui_complete: false
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/learning/s1_rollback.py"
+        - "/backend/app/learning/suggestions.py"
+        - "/backend/app/learning/config.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-014: M7 MEMORY SYSTEM
+  # ---------------------------------------------------------------------------
+  memory_system:
+    capability_id: CAP-014
+    name: "M7 Memory System"
+    description: "Agent memory, vector storage, drift detection"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/memory/
+      l2_api: true           # /api/memory_pins.py
+      client: false          # No dedicated client
+      ui: false              # No dedicated UI
+      authority: true        # Memory updates governed
+      audit_replay: true     # Memory changes audited
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false
+        ui_complete: false
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: true
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/memory/memory_service.py"
+        - "/backend/app/memory/store.py"
+        - "/backend/app/memory/vector_store.py"
+        - "/backend/app/memory/drift_detector.py"
+      l2_api: "/backend/app/api/memory_pins.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-015: M22 OPTIMIZATION ENGINE
+  # ---------------------------------------------------------------------------
+  optimization_engine:
+    capability_id: CAP-015
+    name: "M22 Optimization Engine"
+    description: "Multi-envelope optimization with killswitch"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/optimization/
+      l2_api: false          # Internal processing
+      client: false          # Internal
+      ui: false              # No UI
+      authority: true        # Optimization governed
+      audit_replay: true     # Optimization decisions audited
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: false  # Internal
+        client_complete: false
+        ui_complete: false
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/optimization/coordinator.py"
+        - "/backend/app/optimization/manager.py"
+        - "/backend/app/optimization/envelope.py"
+        - "/backend/app/optimization/killswitch.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-016: SKILL SYSTEM (M2/M3)
+  # ---------------------------------------------------------------------------
+  skill_system:
+    capability_id: CAP-016
+    name: "Skill System (M2/M3)"
+    description: "Skill registration, execution, LLM adapters"
+    owner: platform
+
+    planes:
+      engine: true           # /backend/app/skills/
+      l2_api: true           # Skills exposed via runtime API
+      client: false          # SDK consumes skills
+      ui: false              # No skill management UI
+      authority: true        # Skill execution governed
+      audit_replay: true     # Skill calls audited
+
+    lifecycle:
+      state: CLOSED
+      closure_requirements:
+        engine_complete: true
+        api_complete: true
+        client_complete: false  # SDK handles
+        ui_complete: false
+        authority_wired: true
+        audit_enabled: true
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by: []
+      founder_approval_required: true
+
+    evidence:
+      engine:
+        - "/backend/app/skills/base.py"
+        - "/backend/app/skills/registry.py"
+        - "/backend/app/skills/executor.py"
+        - "/backend/app/skills/llm_invoke.py"
+        - "/backend/app/skills/http_call.py"
+        - "/backend/app/skills/json_transform.py"
+      adapters:
+        - "/backend/app/skills/adapters/claude_adapter.py"
+        - "/backend/app/skills/adapters/openai_adapter.py"
+
+    gaps: []  # No gaps - CLOSED
+
+  # ---------------------------------------------------------------------------
+  # CAP-017: CROSS-PROJECT AGGREGATION
+  # ---------------------------------------------------------------------------
+  cross_project:
+    capability_id: CAP-017
+    name: "Cross-Project Aggregation"
+    description: "Aggregate data across multiple projects"
+    owner: platform
+
+    planes:
+      engine: false
+      l2_api: false
+      client: false
+      ui: false
+      authority: false
+      audit_replay: false
+
+    lifecycle:
+      state: PLANNED
+      closure_requirements:
+        engine_complete: false
+        api_complete: false
+        client_complete: false
+        ui_complete: false
+        authority_wired: false
+        audit_enabled: false
+
+    governance:
+      ui_expansion_allowed: false
+      promotion_blocked_by:
+        - "By design: NOT PRESENT in customer paths"
+        - "Founder-only if implemented"
+      founder_approval_required: true
+
+    evidence: {}
+
+    gaps:
+      - type: INTENTIONALLY_ABSENT
+        detail: "Cross-project aggregation NOT PRESENT by design in customer console"
+
+# =============================================================================
+# SECTION 3: GAP SUMMARY (DERIVED)
+# =============================================================================
+
+gap_summary:
+  total_capabilities: 17
+  by_state:
+    PLANNED: 1      # cross_project
+    PARTIAL: 5      # replay, cost_simulation, prediction_plane, founder_console, authentication
+    READ_ONLY: 1    # policy_proposals
+    CLOSED: 10      # authorization, multi_agent, policy_engine, care_routing, governance_orchestration, workflow_engine, learning_pipeline, memory_system, optimization_engine, skill_system
+    FROZEN: 0
+    QUARANTINED: 0
+
+  blocking_gaps:
+    - capability: authentication
+      gap: STUBBED_INFRA
+      detail: "Clerk not wired to main.py"
+    - capability: replay
+      gap: MISSING_AUTHORITY
+      detail: "No RBAC on replay execution"
+    - capability: prediction_plane
+      gap: MISSING_AUTHORITY
+      detail: "No governance gate on predictions"
+    - capability: cost_simulation
+      gap: PLANE_ASYMMETRY
+      detail: "Client exists but no UI page"
+    - capability: policy_proposals
+      gap: LIFECYCLE_INCOMPLETE
+      detail: "Read-only API, no creation flow"
+    - capability: founder_console
+      gap: LIFECYCLE_INCOMPLETE
+      detail: "Routing wiring unverified"
+
+  ui_expansion_blocked:
+    - replay              # Missing authority
+    - authentication      # Stubbed infra
+    - prediction_plane    # Missing authority
+    - cross_project       # PLANNED only
+    - care_routing        # Internal capability
+    - authorization       # Internal capability
+    - workflow_engine     # Internal capability
+    - learning_pipeline   # Internal capability
+    - optimization_engine # Internal capability
+    - skill_system        # Internal capability
+
+  ui_expansion_allowed:
+    - cost_simulation     # Ready for UI
+    - policy_proposals    # Ready for UI
+    - founder_console     # Ready (routing check needed)
+    - memory_system       # Ready for UI
+    - policy_engine       # Ready for UI
+    - governance_orchestration  # Ready for expansion
+
+# =============================================================================
+# SECTION 4: ENFORCEMENT METADATA
+# =============================================================================
+
+enforcement:
+  registry_is_source_of_truth: true
+  code_requires_capability_id: true
+  ui_expansion_requires_governance_flag: true
+  promotion_requires_closure: true
+
+  ci_checks:
+    - name: "capability-linkage"
+      path: ".github/workflows/capability-registry.yml"
+      status: NOT_IMPLEMENTED
+    - name: "ui-expansion-guard"
+      path: ".github/workflows/ui-expansion-guard.yml"
+      status: NOT_IMPLEMENTED
+
+# =============================================================================
+# END OF REGISTRY
+# =============================================================================
