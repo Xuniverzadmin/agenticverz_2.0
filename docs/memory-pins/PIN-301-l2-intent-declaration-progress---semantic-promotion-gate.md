@@ -40,7 +40,7 @@ This triangulation prevents performance theater, causal storytelling, and "AI de
 
 | Surface | Intent File | Status | Notes |
 |---------|-------------|--------|-------|
-| `/guard/policies` | L2_GUARD_POLICIES_INTENT.yaml | 📋 DRAFT | Awaiting founder review |
+| `/guard/policies` | L2_GUARD_POLICIES_INTENT.yaml | ✅ APPROVED | Frozen 2026-01-05 |
 | `/guard/keys` | L2_GUARD_KEYS_INTENT.yaml | ⏳ PENDING | Next after policies frozen |
 
 ### Tier-3 Surfaces (NOT STARTED)
@@ -71,9 +71,10 @@ This triangulation prevents performance theater, causal storytelling, and "AI de
 - `explicitly_forbidden`: mutation, rerun, cancellation, interpretation, aggregation, scoring
 - `forbidden_assumptions`: fast_is_good, success_is_health, failure_is_incident
 
-### Policies (Tier-2 Draft)
+### Policies (Tier-2 Approved)
 - `explicitly_forbidden`: mutation, threshold_exposure, effectiveness_scoring, optimization_advice
 - `forbidden_assumptions`: policy_explains_incident, policy_is_effective, triggered_is_bad
+- Surface-scoped prohibitions (Analytics domain may interpret, correlate, trend separately)
 
 ## Files
 
@@ -81,7 +82,7 @@ This triangulation prevents performance theater, causal storytelling, and "AI de
 - `docs/intents/L2_GUARD_INCIDENTS_INTENT.yaml` — Gold reference
 - `docs/intents/L2_GUARD_LOGS_INTENT.yaml` — APPROVED
 - `docs/intents/L2_GUARD_ACTIVITY_INTENT.yaml` — APPROVED
-- `docs/intents/L2_GUARD_POLICIES_INTENT.yaml` — DRAFT
+- `docs/intents/L2_GUARD_POLICIES_INTENT.yaml` — APPROVED
 
 ## References
 

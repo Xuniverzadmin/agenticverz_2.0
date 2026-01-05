@@ -2,16 +2,16 @@
 # Reference: PIN-300 (Semantic Promotion Gate)
 # Surface: /guard/policies, /guard/policies/guardrails/{id}
 #
-# STATUS: DRAFT — Awaiting Founder Review
+# STATUS: APPROVED — Founder Reviewed 2026-01-05
 # RISK PROFILE: Tier-2 (constraint definition vs optimization/effectiveness boundary)
 #
 # SCOPE NOTE: Prohibitions in this intent are SURFACE-SCOPED.
 # Interpretation/analytics may exist in a separate domain (not here).
 
 intent_id: L2-GUARD-POLICIES
-status: DRAFT  # DRAFT | APPROVED | FROZEN
+status: APPROVED  # DRAFT | APPROVED | FROZEN
 owner: governance
-reviewed_by: []
+reviewed_by: [founder]
 
 # =============================================================================
 # 1. SEMANTIC PURPOSE
@@ -197,11 +197,11 @@ invariants:
 # =============================================================================
 
 promotion_decision:
-  approved: false
-  approved_on: null
-  approved_by: null
+  approved: true
+  approved_on: 2026-01-05
+  approved_by: founder
   notes: >
-    DRAFT: Awaiting founder review.
+    APPROVED: Founder reviewed and approved.
 
     Evidence of readiness:
     - L3 adapter exists (CustomerPoliciesAdapter) and enforces tenant isolation
@@ -209,13 +209,11 @@ promotion_decision:
     - Customer-safe DTOs defined (no internal thresholds)
     - Wired in main.py
 
-    Open questions for founder:
-    1. percentage_used display: Show as fact or hide to prevent optimization mindset?
-       (Recommend: SHOW as neutral fact, add vocabulary rule against "running low")
-    2. action_on_trigger: Show (block/warn/log) or abstract to "protection level"?
-       (Recommend: SHOW as fact - customer needs to know what happens)
-    3. Policy CRUD: Separate surface or add to this intent later?
-       (Recommend: SEPARATE surface - mutation has different authority semantics)
+    Founder decisions on open questions:
+    1. percentage_used display: SHOW as neutral fact (freeze-safe)
+    2. action_on_trigger: SHOW RAW (block/warn/log) - customer needs to know
+    3. Policy CRUD: SEPARATE surface (non-negotiable - mutation has different
+       authority semantics)
 
     SCOPE ACKNOWLEDGMENT:
     This intent explicitly allows Analytics domain to exist separately.
