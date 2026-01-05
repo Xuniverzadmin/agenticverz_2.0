@@ -2,13 +2,13 @@
 # Reference: PIN-300 (Semantic Promotion Gate)
 # Surface: /guard/logs, /guard/logs/{id}
 #
-# STATUS: DRAFT — Awaiting Founder Review
+# STATUS: APPROVED — Founder Reviewed 2026-01-05
 # RISK PROFILE: Tier-1 Highest (raw truth vs interpretation boundary)
 
 intent_id: L2-GUARD-LOGS
-status: DRAFT  # DRAFT | APPROVED | FROZEN
+status: APPROVED  # DRAFT | APPROVED | FROZEN
 owner: governance
-reviewed_by: []
+reviewed_by: [founder]
 
 # =============================================================================
 # 1. SEMANTIC PURPOSE
@@ -145,6 +145,7 @@ ui_forbidden:
   - narrative_explanation  # No "this log shows..."
   - correlation_view  # No "related logs" suggestions
   - filtering_by_importance  # No smart filtering
+  - inferred_relationships  # No implicit linking between logs
 
 vocabulary_rules:
   - Use "log record" not "event" (events imply meaning)
@@ -178,11 +179,11 @@ invariants:
 # =============================================================================
 
 promotion_decision:
-  approved: false
-  approved_on: null
-  approved_by: null
+  approved: true
+  approved_on: 2026-01-05
+  approved_by: founder
   notes: >
-    DRAFT: Awaiting founder review.
+    APPROVED: Founder reviewed and approved.
 
     Evidence of readiness:
     - L3 adapter exists and enforces tenant isolation
@@ -190,13 +191,10 @@ promotion_decision:
     - Customer-safe DTOs defined (no internal correlation_ids)
     - Wired in main.py
 
-    Open questions for founder:
-    1. Time-range limits: Should intent explicitly cap max queryable range?
-       (Semantic vs operational - recommend: operational concern, not intent)
-    2. Field-level redaction: Is redaction allowed before logs reach this surface?
-       (Recommend: YES at ingestion, NO at this surface)
-    3. Exportability: Are logs view-only or can customer export as raw proof?
-       (Recommend: ALLOW export - proof is a legitimate use case)
+    Founder decisions on open questions:
+    1. Time-range limits: Operational concern, not semantic - NOT in intent
+    2. Field-level redaction: At ingestion only, not at this surface
+    3. Exportability: ALLOWED - proof is legitimate use case
 
   once_approved:
     edits_require: new_intent_version
