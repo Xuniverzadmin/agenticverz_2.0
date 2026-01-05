@@ -136,3 +136,14 @@ repos:
           echo "Missing newline at EOF: $f"; exit 1; fi; done'
         language: system
         pass_filenames: false
+
+      # Scope Diff Guard — L8 Enforcement for Closure Commits
+      # PIN-290: Prevents closure-tagged commits from mutating frozen scope
+      # Reference: POST_CLOSURE_HYGIENE_NOTE.md
+      - id: scope-diff-guard
+        name: Scope Diff Guard (Closure Commits)
+        entry: python scripts/ops/scope_diff_guard.py --verbose
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
