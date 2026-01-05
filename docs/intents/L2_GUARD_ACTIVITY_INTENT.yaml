@@ -1,0 +1,219 @@
+# L2 Intent Declaration: Guard Activity
+# Reference: PIN-300 (Semantic Promotion Gate)
+# Surface: /api/v1/customer/activity, /api/v1/customer/activity/{run_id}
+#
+# STATUS: DRAFT — Awaiting Founder Review
+# RISK PROFILE: Tier-1 High (execution facts vs performance narrative boundary)
+
+intent_id: L2-GUARD-ACTIVITY
+status: DRAFT  # DRAFT | APPROVED | FROZEN
+owner: governance
+reviewed_by: []
+
+# =============================================================================
+# 1. SEMANTIC PURPOSE
+# =============================================================================
+
+question_answered: >
+  Which execution records exist for this tenant, and what is their current
+  state?
+
+  Specifically:
+  - LIST: Which execution records exist, filtered by status/worker/time?
+  - DETAIL: What are the facts of a specific execution record?
+
+non_goals:
+  - performance_analysis  # "Is this run slow?" is never answered
+  - success_rate_computation  # No "X% of runs succeeded"
+  - error_diagnosis  # "Why did this fail?" is internal only
+  - trend_detection  # No "runs are getting slower" insights
+  - comparison  # No "this run was worse than average"
+  - health_scoring  # Execution facts do not produce scores
+  - complexity_assessment  # Step count does not measure complexity
+  - narrative_construction  # No "here's what happened" stories
+  - causality_claims  # Execution order does not imply cause
+
+# =============================================================================
+# 2. DOMAIN PLACEMENT
+# =============================================================================
+
+domain: Activity  # Frozen domain per CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+subdomain: Execution Records
+topic: Execution Record  # Singular - depth handled by Order, not topic naming
+
+justification: >
+  Activity represents recorded execution facts and forms one of five frozen
+  customer console lenses. The domain answers "What ran / is running?" per
+  v1 constitution and cannot be merged with Incidents, Logs, or Policies.
+
+# =============================================================================
+# 3. AUTHORITY SEMANTICS
+# =============================================================================
+
+authority_type: projection
+mutates_state: false
+
+human_action_required: false  # Activity is read-only, no customer actions
+
+explicitly_forbidden:
+  - mutation  # Execution records are immutable
+  - rerun  # No "retry this run" at this surface
+  - cancellation  # No "stop this run" at this surface
+  - interpretation  # No explaining what executions mean
+  - aggregation  # No computing across executions
+  - scoring  # No deriving quality metrics
+
+endpoints:
+  - path: GET /api/v1/customer/activity
+    authority: projection
+    mutates: false
+    explicitly_forbidden:
+      - aggregation
+      - ranking
+      - filtering_by_success
+      - performance_sorting
+
+  - path: GET /api/v1/customer/activity/{run_id}
+    authority: projection
+    mutates: false
+    explicitly_forbidden:
+      - diagnosis
+      - root_cause_injection
+      - performance_comparison
+      - related_run_suggestion
+
+# =============================================================================
+# 4. SOURCE OF TRUTH
+# =============================================================================
+
+primary_sources:
+  - L4: CustomerActivityReadService (list, detail)
+  - L6: WorkerRun table (via L4 only, no direct access)
+
+secondary_sources:
+  - AuditLog  # Supporting chronology only
+
+derived: false  # Activity records are stored facts, not computed
+
+derivation_rules:
+  - Records are stored, not inferred
+  - Ordering is timestamp-based only
+  - No cross-record computation
+  - No success rate calculation
+  - No duration averaging or ranking
+  - No step count comparison
+
+# =============================================================================
+# 5. RBAC & VISIBILITY
+# =============================================================================
+
+visible_to_roles:
+  viewer:
+    access: read_only
+    endpoints: [list, detail]
+  developer:
+    access: read_only
+    endpoints: [list, detail]
+    note: Primary consumer for debugging
+  admin:
+    access: read_only
+    endpoints: [list, detail]
+  owner:
+    access: read_only
+    endpoints: [list, detail]
+
+hidden_from:
+  - machine  # API tokens should not bulk-export activity
+
+cross_tenant: forbidden  # Customer sees only their own tenant's activity
+
+tenant_isolation:
+  enforced_by: L3 adapter (CustomerActivityAdapter)
+  mechanism: tenant_id parameter required on all methods
+  failure_mode: returns None/empty, never exposes other tenant data
+
+# =============================================================================
+# 6. L1 CONSUMPTION CONTRACT
+# =============================================================================
+
+ui_allowed:
+  - O2_list  # Paginated list with run_id, worker, status, timestamps
+  - O3_detail  # Full execution record view
+  - O5_proof  # Raw execution data for audit/debugging
+
+ui_forbidden:
+  - summary_scoring  # No "health score" or "success rate"
+  - performance_charts  # No duration graphs or trend lines
+  - ranking  # No "slowest runs" or "most complex"
+  - comparison  # No "vs previous run" displays
+  - aggregation  # No counts, groupings, or rollups
+  - narrative_explanation  # No "this run shows..."
+  - related_runs  # No "similar runs" suggestions
+  - error_diagnosis_ui  # No "root cause" panels
+  - success_filtering  # No "show only failed" as primary view
+  - performance_indicators  # No color-coding by duration
+
+vocabulary_rules:
+  - Use "execution record" not "run" in UI labels (neutral language)
+  - Use "completed" not "finished" or "done" (state, not outcome)
+  - Use "recorded" not "observed" (factual language)
+  - Never use "performance" in execution context
+  - Never use "health" to describe execution state
+
+# =============================================================================
+# 7. INVARIANTS & FORBIDDEN ASSUMPTIONS
+# =============================================================================
+
+forbidden_assumptions:
+  - fast_is_good  # Duration does not indicate quality
+  - many_steps_is_bad  # Step count does not indicate complexity
+  - success_is_health  # Boolean success is not system health
+  - failure_is_incident  # Failed execution is not automatically incident
+  - recoveries_indicate_fragility  # Recovery count is neutral fact
+  - policy_violations_indicate_severity  # Violation count is neutral fact
+  - error_summary_explains_cause  # Redacted errors do not diagnose
+  - recent_is_representative  # Latest execution is not baseline
+  - absence_implies_no_activity  # Missing records do not mean idle
+
+invariants:
+  - tenant_isolation_absolute  # Enforced at L3 adapter
+  - records_are_immutable  # No modification after completion
+  - ordering_is_timestamp_only  # No semantic ordering
+  - no_aggregation_at_l2  # Aggregation happens elsewhere or not at all
+  - no_cross_run_comparison  # Each execution is independent
+  - internal_fields_hidden  # cost_cents, replay_token, input_json hidden
+
+# =============================================================================
+# 8. PROMOTION DECISION
+# =============================================================================
+
+promotion_decision:
+  approved: false
+  approved_on: null
+  approved_by: null
+  notes: >
+    DRAFT: Awaiting founder review.
+
+    Evidence of readiness:
+    - L3 adapter exists (CustomerActivityAdapter) and enforces tenant isolation
+    - L4 service exists (CustomerActivityReadService, read-only)
+    - Customer-safe DTOs defined (no cost_cents, replay_token, input_json)
+    - Wired in main.py
+
+    Open questions for founder:
+    1. Route prefix: Current is /api/v1/customer/activity, not /guard/activity.
+       Should unify with /guard/* pattern? (Cosmetic, not semantic)
+    2. error_summary exposure: Currently redacted (first line, 500 chars).
+       Keep or remove entirely? (Recommend: KEEP, clearly redacted)
+    3. recoveries/policy_violations counts: Expose as neutral facts or hide?
+       (Recommend: EXPOSE as facts, add vocabulary rules to prevent interpretation)
+
+  once_approved:
+    edits_require: new_intent_version
+    frozen_fields:
+      - question_answered
+      - domain
+      - authority_type
+      - mutates_state
+      - explicitly_forbidden
+      - forbidden_assumptions
