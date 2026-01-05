@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-05 (PIN-297 Scope Diff Guard - Closure Commit Enforcement)
+**Last Updated:** 2026-01-05 (PIN-300 Semantic Promotion Gate - L2 Intent Declaration Requirement)
 
 ---
 
@@ -317,6 +317,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-284](PIN-284-l8-l1-platform-monitoring-system---signal-inventory-and-health-service.md) | **L8-L1 Platform Monitoring System - Signal Inventory and Health Service** | Architecture / Platform Monitoring | **🏗️ IN_PROGRESS** | 2026-01-04 |
 | [PIN-285](PIN-285-part-2-crm-workflow-enforcement---static-ci-guards.md) | **Part-2 CRM Workflow Enforcement - Static CI Guards** | Governance / Part-2 Enforcement | **✅ COMPLETE** | 2026-01-04 |
 | [PIN-297](PIN-297-scope-diff-guard---closure-commit-enforcement.md) | **Scope Diff Guard - Closure Commit Enforcement** | Governance / Enforcement | **🏗️ ACTIVE** | 2026-01-05 |
+| [PIN-298](PIN-298-frontend-constitution-alignment-survey---ground-truth-extraction.md) | **Frontend Constitution Alignment Survey - Ground Truth Extraction** | Governance / Survey | **✅ COMPLETE** | 2026-01-05 |
+| [PIN-299](PIN-299-tech-debt-clearance---forensic-inventory-governed-actions.md) | **Tech Debt Clearance - Forensic Inventory & Governed Actions** | Governance / Tech Debt | **🏗️ IN_PROGRESS** | 2026-01-05 |
+| [PIN-300](PIN-300-semantic-promotion-gate---l2-intent-declaration-requirement.md) | **Semantic Promotion Gate - L2 Intent Declaration Requirement** | Governance / Promotion | **🏗️ CONSTITUTIONAL** | 2026-01-05 |
 
 ---
 
@@ -1086,6 +1089,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-05 | **PIN-300 Semantic Promotion Gate - L2 Intent Declaration Requirement** - Created via memory_trail. |
+| 2026-01-05 | **PIN-299 Tech Debt Clearance - Forensic Inventory & Governed Actions** - Created via memory_trail. |
+| 2026-01-05 | **PIN-298 Frontend Constitution Alignment Survey - Ground Truth Extraction** - Created via memory_trail. |
 | 2026-01-05 | **PIN-297 Scope Diff Guard - Closure Commit Enforcement** - Created via memory_trail. |
 | 2026-01-04 | **PIN-285 Part-2 CRM Workflow Enforcement - Static CI Guards** - Created via memory_trail. |
 | 2026-01-04 | **PIN-284 L8-L1 Platform Monitoring System - Signal Inventory and Health Service** - Created via memory_trail. |

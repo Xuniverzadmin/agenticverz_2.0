@@ -1,0 +1,115 @@
+# L2 Intent Declaration Template
+# Reference: PIN-300 (Semantic Promotion Gate)
+#
+# PURPOSE:
+#   This is the single source of semantic truth between backend and frontend.
+#   No L2 surface may be consumed by L1 without an approved intent declaration.
+#
+# USAGE:
+#   Copy this template to: docs/intents/L2_<surface_name>_INTENT.yaml
+#   Fill all required fields
+#   Submit for founder review
+#
+# INVARIANT:
+#   Nothing is "promoted" unless its intent is declared, reviewable,
+#   and consumable by L1 without inference.
+
+intent_id: L2-INTENT-XXX
+status: DRAFT  # DRAFT | APPROVED | REJECTED
+owner: governance
+reviewed_by: []
+
+# =============================================================================
+# 1. SEMANTIC PURPOSE
+# =============================================================================
+
+question_answered: >
+  (Plain language)
+  What exact question does this API answer?
+
+non_goals:
+  - What this explicitly does NOT try to answer
+  - What it must never infer or recommend
+
+# =============================================================================
+# 2. DOMAIN PLACEMENT
+# =============================================================================
+
+domain: null  # Overview | Activity | Incidents | Policies | Logs
+subdomain: null
+topic: null
+
+justification: >
+  Why this belongs here and nowhere else
+
+# =============================================================================
+# 3. AUTHORITY SEMANTICS
+# =============================================================================
+
+authority_type: null  # projection | control | approval | audit
+mutates_state: false
+
+# If mutates_state: true
+human_action_required: null  # Explicit human action required? (who)
+
+# =============================================================================
+# 4. SOURCE OF TRUTH
+# =============================================================================
+
+primary_sources:
+  - null  # L4 service / table / object
+
+derived: false
+
+# If derived: true
+derivation_rules:
+  - No inference
+  - No cross-tenant aggregation
+  - Deterministic only
+
+# =============================================================================
+# 5. RBAC & VISIBILITY
+# =============================================================================
+
+visible_to_roles:
+  - viewer
+  - admin
+  - founder
+
+hidden_from: []
+
+cross_tenant: forbidden  # allowed | forbidden
+
+# =============================================================================
+# 6. L1 CONSUMPTION CONTRACT
+# =============================================================================
+
+ui_allowed:
+  - summary
+  - list
+  - detail
+  - proof
+
+ui_forbidden:
+  - recommendation
+  - scoring
+  - ranking
+  - narrative explanation
+
+# =============================================================================
+# 7. INVARIANTS & FORBIDDEN ASSUMPTIONS
+# =============================================================================
+
+forbidden_assumptions:
+  - "system decided"
+  - "best action"
+  - "likely cause unless proven"
+
+# =============================================================================
+# 8. PROMOTION DECISION
+# =============================================================================
+
+promotion_decision:
+  approved: false
+  approved_on: null
+  notes: null  # Founder rationale
