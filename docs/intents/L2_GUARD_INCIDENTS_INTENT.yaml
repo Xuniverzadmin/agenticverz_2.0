@@ -2,13 +2,13 @@
 # Reference: PIN-300 (Semantic Promotion Gate)
 # Surface: /guard/incidents, /guard/incidents/{id}, /guard/incidents/{id}/acknowledge, /guard/incidents/{id}/resolve
 #
-# STATUS: DRAFT — Awaiting Founder Review
-# GOLD REFERENCE: First L2 intent to reach approval becomes pattern for all others
+# STATUS: APPROVED — Founder Reviewed 2026-01-05
+# GOLD REFERENCE: First L2 intent to reach approval — pattern for all others
 
 intent_id: L2-GUARD-INCIDENTS
-status: DRAFT  # DRAFT | APPROVED | FROZEN
+status: APPROVED  # DRAFT | APPROVED | FROZEN
 owner: governance
-reviewed_by: []
+reviewed_by: [founder]
 
 # =============================================================================
 # 1. SEMANTIC PURPOSE
@@ -194,11 +194,11 @@ invariants:
 # =============================================================================
 
 promotion_decision:
-  approved: false
-  approved_on: null
-  approved_by: null
+  approved: true
+  approved_on: 2026-01-05
+  approved_by: founder
   notes: >
-    DRAFT: Awaiting founder review.
+    APPROVED: Founder reviewed and approved as GOLD REFERENCE.
 
     Evidence of readiness:
     - L3 adapter exists and enforces tenant isolation
@@ -207,10 +207,10 @@ promotion_decision:
     - Calm vocabulary translation implemented
     - Wired in main.py (line 507)
 
-    Open questions for founder:
-    1. Developer visibility: Allow read-only access? (Recommended: YES)
-    2. cost_avoided_cents: Expose as "informational estimate" or hide? (Recommended: HIDE unless clearly labeled)
-    3. resolution_notes: Store as annotation (non-authoritative) or discard? (Recommended: STORE as annotation)
+    Founder decisions on open questions:
+    1. Developer visibility: YES - read-only access allowed
+    2. cost_avoided_cents: HIDE unless clearly labeled as estimate
+    3. resolution_notes: STORE as annotation (non-authoritative)
 
   once_approved:
     edits_require: new_intent_version
@@ -218,5 +218,7 @@ promotion_decision:
       - question_answered
       - domain
       - authority_type
+      - mutates_state
       - cross_tenant
+      - explicitly_forbidden
       - forbidden_assumptions
