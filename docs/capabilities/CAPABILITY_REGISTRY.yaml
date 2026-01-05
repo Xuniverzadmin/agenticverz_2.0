@@ -873,10 +873,20 @@ enforcement:
   ci_checks:
     - name: "capability-linkage"
       path: ".github/workflows/capability-registry.yml"
-      status: NOT_IMPLEMENTED
+      status: IMPLEMENTED
     - name: "ui-expansion-guard"
-      path: ".github/workflows/ui-expansion-guard.yml"
-      status: NOT_IMPLEMENTED
+      path: ".github/workflows/capability-registry.yml"
+      status: IMPLEMENTED
+    - name: "registry-validation"
+      path: ".github/workflows/capability-registry.yml"
+      status: IMPLEMENTED
+    - name: "gap-heatmap-update"
+      path: ".github/workflows/capability-registry.yml"
+      status: IMPLEMENTED
+
+  scripts:
+    enforcer: "scripts/ops/capability_registry_enforcer.py"
+    heatmap_output: "docs/capabilities/GAP_HEATMAP.md"
 
 # =============================================================================
 # END OF REGISTRY

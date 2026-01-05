@@ -243,12 +243,92 @@ Claude MUST NOT:
 
 ---
 
-## Next Steps (BLOCKED UNTIL ASKED)
+## Implementation (COMPLETE)
 
-1. **CI Enforcement** — Implement capability-linkage workflow
-2. **UI Expansion Guard** — Implement PR check for ui_expansion_allowed
-3. **Auto-Registration** — Generate entries from code scan
-4. **Gap Heatmap** — Visualize capability gaps
+All enforcement mechanisms have been implemented:
+
+### Enforcement Script
+
+**Path:** `scripts/ops/capability_registry_enforcer.py`
+
+**Commands:**
+
+```bash
+# Validate registry structure
+python scripts/ops/capability_registry_enforcer.py validate-registry
+
+# Check PR files for capability linkage (CI)
+python scripts/ops/capability_registry_enforcer.py check-pr --files file1.py file2.py
+
+# Check UI expansion rules (CI)
+python scripts/ops/capability_registry_enforcer.py ui-guard --files page.tsx
+
+# Scan for unregistered capabilities
+python scripts/ops/capability_registry_enforcer.py scan-unregistered --generate-drafts
+
+# Generate gap heatmap
+python scripts/ops/capability_registry_enforcer.py heatmap --format md --output docs/capabilities/GAP_HEATMAP.md
+```
+
+### GitHub Actions Workflow
+
+**Path:** `.github/workflows/capability-registry.yml`
+
+**Jobs:**
+
+| Job | Trigger | Purpose |
+|-----|---------|---------|
+| capability-linkage | PR | Verify capability_id in code or PR body |
+| ui-expansion-guard | PR | Block UI changes for blocked capabilities |
+| validate-registry | PR | Validate registry YAML structure |
+| update-heatmap | Push to main | Auto-generate GAP_HEATMAP.md |
+| full-scan | Manual | Detect unregistered capabilities |
+
+### Gap Heatmap
+
+**Path:** `docs/capabilities/GAP_HEATMAP.md`
+
+Auto-generated on every push to main. Shows:
+- Capability state distribution
+- Missing planes matrix
+- Gap types per capability
+- UI expansion status (blocked/allowed)
+
+### Capability Annotation Standard
+
+Every code file touching a capability must include:
+
+**Option A (file comment):**
+```python
+# capability_id: CAP-XXX
+```
+
+**Option B (PR description):**
+```
+capability_id: CAP-XXX
+```
+
+### UI Non-Expansion Exception
+
+For bug fixes or CSS-only changes to blocked capabilities:
+- Add PR label: `ui-non-expansion`
+- CI will pass with warning instead of failure
+
+---
+
+## Files
+
+- `/docs/capabilities/CAPABILITY_REGISTRY.yaml` — Registry (source of truth)
+- `/docs/capabilities/GAP_HEATMAP.md` — Auto-generated gap visualization
+- `/.github/workflows/capability-registry.yml` — CI enforcement
+- `/scripts/ops/capability_registry_enforcer.py` — Enforcement script
+- This PIN — Governance rules
+
+## References
+
+- PIN-303 — Frontend Constitution Survey (superseded by registry)
+- PIN-304 — M12 Gap Correction (incorporated into registry)
+- PIN-305 — System-Complete Survey (registry-aligned)
 
 ---
 

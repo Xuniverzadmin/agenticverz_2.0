@@ -1,0 +1,243 @@
+# =============================================================================
+# CAPABILITY REGISTRY ENFORCEMENT
+# =============================================================================
+#
+# Reference: PIN-306 (Capability Registry Governance)
+#
+# This workflow enforces:
+#   T1: Capability Linkage - Every code change must link to registered capability
+#   T2: UI Expansion Guard - UI changes require ui_expansion_allowed flag
+#
+# INVARIANTS:
+#   - No code without capability_id
+#   - No UI expansion without governance flag
+#   - No changes to QUARANTINED capabilities
+#   - PLANNED capabilities only allow docs
+#
+# =============================================================================
+
+name: Capability Registry
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'website/**'
+      - 'console/**'
+      - 'services/**'
+      - 'workers/**'
+
+  # Manual trigger for full scan
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Run full unregistered capability scan'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # T1: Capability Linkage Check
+  # ---------------------------------------------------------------------------
+  capability-linkage:
+    name: Capability Linkage Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            backend/**/*.py
+            frontend/**/*.{ts,tsx,js,jsx}
+            website/**/*.{ts,tsx,js,jsx}
+            services/**/*.py
+            workers/**/*.py
+
+      - name: Check capability linkage
+        if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "Checking capability linkage for changed files..."
+          echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+
+          python scripts/ops/capability_registry_enforcer.py check-pr \
+            --files ${{ steps.changed-files.outputs.all_changed_files }} \
+            --pr-body "$PR_BODY" \
+            --format github
+
+      - name: No code files changed
+        if: steps.changed-files.outputs.any_changed != 'true'
+        run: echo "No code files changed - skipping capability linkage check"
+
+  # ---------------------------------------------------------------------------
+  # T2: UI Expansion Guard
+  # ---------------------------------------------------------------------------
+  ui-expansion-guard:
+    name: UI Expansion Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Get changed UI files
+        id: ui-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            frontend/**/*.{tsx,jsx,vue,svelte}
+            website/**/*.{tsx,jsx,vue,svelte}
+            console/**/*.{tsx,jsx,vue,svelte}
+            **/pages/**/*.{tsx,jsx}
+            **/components/**/*.{tsx,jsx}
+
+      - name: Check for non-expansion label
+        id: check-label
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ui-non-expansion') }}" == "true" ]]; then
+            echo "has_label=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_label=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run UI expansion guard
+        if: steps.ui-files.outputs.any_changed == 'true'
+        env:
+          HAS_NON_EXPANSION_LABEL: ${{ steps.check-label.outputs.has_label }}
+        run: |
+          echo "Checking UI expansion rules..."
+          echo "UI files changed: ${{ steps.ui-files.outputs.all_changed_files }}"
+          echo "Has non-expansion label: $HAS_NON_EXPANSION_LABEL"
+
+          if [ "$HAS_NON_EXPANSION_LABEL" = "true" ]; then
+            python scripts/ops/capability_registry_enforcer.py ui-guard \
+              --files ${{ steps.ui-files.outputs.all_changed_files }} \
+              --has-non-expansion-label \
+              --format github
+          else
+            python scripts/ops/capability_registry_enforcer.py ui-guard \
+              --files ${{ steps.ui-files.outputs.all_changed_files }} \
+              --format github
+          fi
+
+      - name: No UI files changed
+        if: steps.ui-files.outputs.any_changed != 'true'
+        run: echo "No UI files changed - skipping UI expansion guard"
+
+  # ---------------------------------------------------------------------------
+  # T3: Registry Validation
+  # ---------------------------------------------------------------------------
+  validate-registry:
+    name: Validate Registry
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Validate registry structure
+        run: |
+          echo "Validating capability registry..."
+          python scripts/ops/capability_registry_enforcer.py validate-registry
+
+  # ---------------------------------------------------------------------------
+  # T4: Gap Heatmap (on main only)
+  # ---------------------------------------------------------------------------
+  update-heatmap:
+    name: Update Gap Heatmap
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Generate heatmap
+        run: |
+          python scripts/ops/capability_registry_enforcer.py heatmap \
+            --format md \
+            --output docs/capabilities/GAP_HEATMAP.md
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet docs/capabilities/GAP_HEATMAP.md || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit heatmap
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs/capabilities/GAP_HEATMAP.md
+          git commit -m "Update capability gap heatmap [skip ci]"
+          git push
+
+  # ---------------------------------------------------------------------------
+  # Full Scan (manual trigger)
+  # ---------------------------------------------------------------------------
+  full-scan:
+    name: Full Unregistered Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.full_scan == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Scan for unregistered capabilities
+        run: |
+          echo "Scanning for unregistered capabilities..."
+          python scripts/ops/capability_registry_enforcer.py scan-unregistered --generate-drafts
