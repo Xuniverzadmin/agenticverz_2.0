@@ -1,0 +1,209 @@
+# L2 Intent Declaration: Guard Logs
+# Reference: PIN-300 (Semantic Promotion Gate)
+# Surface: /guard/logs, /guard/logs/{id}
+#
+# STATUS: DRAFT — Awaiting Founder Review
+# RISK PROFILE: Tier-1 Highest (raw truth vs interpretation boundary)
+
+intent_id: L2-GUARD-LOGS
+status: DRAFT  # DRAFT | APPROVED | FROZEN
+owner: governance
+reviewed_by: []
+
+# =============================================================================
+# 1. SEMANTIC PURPOSE
+# =============================================================================
+
+question_answered: >
+  Which raw log records exist for this tenant within an explicitly requested
+  scope and time range?
+
+  Specifically:
+  - LIST: Which log records exist, filtered by level/source/time?
+  - DETAIL: What is the raw content of a specific log record?
+
+non_goals:
+  - root_cause_analysis  # "Why did this happen?" is never answered by logs
+  - error_explanation  # Logs do not explain, they record
+  - log_summarization  # No "here's what happened" narratives
+  - pattern_detection  # No "this keeps happening" insights
+  - severity_classification  # Logs do not rank importance
+  - incident_inference  # Logs must never become incidents
+  - completeness_claims  # Never imply "all logs shown"
+  - causal_attribution  # Log order does not imply causality
+
+# =============================================================================
+# 2. DOMAIN PLACEMENT
+# =============================================================================
+
+domain: Logs  # Frozen domain per CUSTOMER_CONSOLE_V1_CONSTITUTION.md
+subdomain: Raw Logs
+topic: Log Record  # Singular - depth handled by Order, not topic naming
+
+justification: >
+  Logs represent immutable, raw system emissions and form the lowest-level
+  truth surface. The domain is frozen per v1 constitution and cannot be
+  merged with Activity, Incidents, or Policies.
+
+# =============================================================================
+# 3. AUTHORITY SEMANTICS
+# =============================================================================
+
+authority_type: projection
+mutates_state: false
+
+human_action_required: false  # Logs are read-only, no customer actions
+
+explicitly_forbidden:
+  - mutation  # Logs are immutable
+  - redaction  # No hiding of log content at this surface
+  - enrichment  # No adding metadata or context
+  - correlation  # No linking logs to form narratives
+  - interpretation  # No explaining what logs mean
+
+endpoints:
+  - path: GET /guard/logs
+    authority: projection
+    mutates: false
+    explicitly_forbidden:
+      - aggregation
+      - summarization
+      - filtering_by_importance
+
+  - path: GET /guard/logs/{id}
+    authority: projection
+    mutates: false
+    explicitly_forbidden:
+      - enrichment
+      - context_injection
+      - related_log_suggestion
+
+# =============================================================================
+# 4. SOURCE OF TRUTH
+# =============================================================================
+
+primary_sources:
+  - L4: LogsReadService (list, detail)
+  - L6: Trace table (via L4 only, no direct access)
+
+secondary_sources:
+  - AuditLog  # Supporting chronology only
+
+derived: false  # Logs are raw emissions, not computed
+
+derivation_rules:
+  - Records are emitted, not inferred
+  - Ordering is timestamp-based only
+  - No cross-record interpretation
+  - No aggregation or counting
+  - No gap detection or completeness inference
+
+# =============================================================================
+# 5. RBAC & VISIBILITY
+# =============================================================================
+
+visible_to_roles:
+  viewer:
+    access: read_only
+    endpoints: [list, detail]
+  developer:
+    access: read_only
+    endpoints: [list, detail]
+    note: Primary consumer for debugging
+  admin:
+    access: read_only
+    endpoints: [list, detail]
+  owner:
+    access: read_only
+    endpoints: [list, detail]
+
+hidden_from:
+  - machine  # API tokens should not bulk-export logs
+
+cross_tenant: forbidden  # Customer sees only their own tenant's logs
+
+tenant_isolation:
+  enforced_by: L3 adapter (CustomerLogsAdapter)
+  mechanism: tenant_id parameter required on all methods
+  failure_mode: returns None/empty, never exposes other tenant data
+
+# =============================================================================
+# 6. L1 CONSUMPTION CONTRACT
+# =============================================================================
+
+ui_allowed:
+  - O2_list  # Paginated list with timestamp, level, source, message preview
+  - O3_detail  # Full log record view
+  - O5_proof  # Raw log content for audit/debugging
+
+ui_forbidden:
+  - summary  # No "X errors in the last hour"
+  - aggregation  # No counts, groupings, or rollups
+  - trend  # No "errors are increasing" charts
+  - ranking  # No "most important logs"
+  - heatmap  # No visual intensity mapping
+  - narrative_explanation  # No "this log shows..."
+  - correlation_view  # No "related logs" suggestions
+  - filtering_by_importance  # No smart filtering
+
+vocabulary_rules:
+  - Use "log record" not "event" (events imply meaning)
+  - Use "emitted" not "generated" (generation implies intent)
+  - Use "timestamp" not "when it happened" (neutral language)
+  - Never use "error" as a category for display priority
+
+# =============================================================================
+# 7. INVARIANTS & FORBIDDEN ASSUMPTIONS
+# =============================================================================
+
+forbidden_assumptions:
+  - this_log_explains_incident  # Logs record, they do not explain
+  - this_log_is_important  # All logs have equal semantic weight
+  - absence_implies_no_event  # Missing logs do not mean nothing happened
+  - logs_are_complete  # Never claim completeness
+  - logs_represent_intent  # Logs are emissions, not decisions
+  - log_order_is_causal  # Timestamp order is not causality
+  - more_logs_is_worse  # Volume is not severity
+
+invariants:
+  - tenant_isolation_absolute  # Enforced at L3 adapter
+  - logs_are_immutable  # No modification after emission
+  - ordering_is_timestamp_only  # No semantic ordering
+  - no_aggregation_at_l2  # Aggregation happens elsewhere or not at all
+  - no_cross_log_linking  # Each log is independent
+  - raw_content_preserved  # No sanitization or summarization
+
+# =============================================================================
+# 8. PROMOTION DECISION
+# =============================================================================
+
+promotion_decision:
+  approved: false
+  approved_on: null
+  approved_by: null
+  notes: >
+    DRAFT: Awaiting founder review.
+
+    Evidence of readiness:
+    - L3 adapter exists and enforces tenant isolation
+    - L4 service exists (read-only)
+    - Customer-safe DTOs defined (no internal correlation_ids)
+    - Wired in main.py
+
+    Open questions for founder:
+    1. Time-range limits: Should intent explicitly cap max queryable range?
+       (Semantic vs operational - recommend: operational concern, not intent)
+    2. Field-level redaction: Is redaction allowed before logs reach this surface?
+       (Recommend: YES at ingestion, NO at this surface)
+    3. Exportability: Are logs view-only or can customer export as raw proof?
+       (Recommend: ALLOW export - proof is a legitimate use case)
+
+  once_approved:
+    edits_require: new_intent_version
+    frozen_fields:
+      - question_answered
+      - domain
+      - authority_type
+      - mutates_state
+      - explicitly_forbidden
+      - forbidden_assumptions
