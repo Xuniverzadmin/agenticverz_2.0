@@ -92,15 +92,28 @@ GOVERNED PROMOTION
 
 ---
 
+## Visibility Invariant (Critical)
+
+> **If an L2 endpoint exists without an APPROVED intent file, it is considered semantically invisible to L1.**
+
+This ensures:
+- No "half-promoted" surfaces
+- No accidental frontend usage
+- Clean audit trails
+- Rollback possible via intent history
+
+---
+
 ## Blocking Rules
 
 | Rule | Condition | Response |
 |------|-----------|----------|
-| SEM-001 | Missing intent file | BLOCK promotion |
+| SEM-001 | Missing intent file | BLOCK promotion, L1 INVISIBLE |
 | SEM-002 | Incomplete intent | BLOCK promotion |
 | SEM-003 | L2/L4 authority mismatch | BLOCK promotion |
 | SEM-004 | L1 would require inference | BLOCK promotion |
 | SEM-005 | Cross-domain leakage | BLOCK promotion |
+| SEM-006 | Intent not APPROVED | L1 INVISIBLE (DRAFT/REJECTED) |
 
 ---
 
