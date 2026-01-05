@@ -1,6 +1,6 @@
 # PIN-301: L2 Intent Declaration Progress - Semantic Promotion Gate
 
-**Status:** 🏗️ IN_PROGRESS
+**Status:** ✅ TIER-2 COMPLETE
 **Created:** 2026-01-05
 **Category:** Governance / L2 Promotion
 **Milestone:** Tech Debt Clearance
@@ -9,7 +9,7 @@
 
 ## Summary
 
-Tracks L2 surface intent declarations per PIN-300. Tier-1 triangle complete (Logs, Activity, Incidents). Tier-2 in progress (Policies, Keys).
+Tracks L2 surface intent declarations per PIN-300. Tier-1 triangle complete (Logs, Activity, Incidents). Tier-2 complete (Policies, AI Console Keys). Analytics domain not yet started.
 
 ---
 
@@ -36,12 +36,12 @@ This PIN tracks the systematic declaration of L2 intent files per PIN-300 (Seman
 
 This triangulation prevents performance theater, causal storytelling, and "AI decided" narratives.
 
-### Tier-2 Surfaces (IN PROGRESS)
+### Tier-2 Surfaces (COMPLETE)
 
 | Surface | Intent File | Status | Notes |
 |---------|-------------|--------|-------|
 | `/guard/policies` | L2_GUARD_POLICIES_INTENT.yaml | ✅ APPROVED | Frozen 2026-01-05 |
-| `/guard/keys` | L2_GUARD_KEYS_INTENT.yaml | ⏳ PENDING | Next after policies frozen |
+| `/guard/keys` | L2_GUARD_AICONSOLE_KEYS_INTENT.yaml | ✅ FROZEN | Frozen 2026-01-05, AI Console Keys |
 
 ### Tier-3 Surfaces (NOT STARTED)
 
@@ -76,6 +76,14 @@ This triangulation prevents performance theater, causal storytelling, and "AI de
 - `forbidden_assumptions`: policy_explains_incident, policy_is_effective, triggered_is_bad
 - Surface-scoped prohibitions (Analytics domain may interpret, correlate, trend separately)
 
+### AI Console Keys (Tier-2 Frozen)
+- `explicitly_forbidden`: automated_lifecycle, usage_interpretation, risk_scoring, rotation_advice
+- `forbidden_assumptions`: key_is_secure, key_should_rotate, usage_indicates_risk, this_is_provider_key
+- `terminology_rules`: "AI Console Key" only (never "LLM key", "provider key", "secret")
+- Object identity: Platform-issued credentials (NOT third-party LLM keys, NOT secrets vault)
+- Authority: Control surface with manual-only lifecycle (create/revoke/rotate)
+- Founder decisions: Metadata only visibility, Terminal revocation, Manual-only rotation
+
 ## Files
 
 - `docs/intents/L2_INTENT_TEMPLATE.yaml` — Canonical template
@@ -83,6 +91,7 @@ This triangulation prevents performance theater, causal storytelling, and "AI de
 - `docs/intents/L2_GUARD_LOGS_INTENT.yaml` — APPROVED
 - `docs/intents/L2_GUARD_ACTIVITY_INTENT.yaml` — APPROVED
 - `docs/intents/L2_GUARD_POLICIES_INTENT.yaml` — APPROVED
+- `docs/intents/L2_GUARD_AICONSOLE_KEYS_INTENT.yaml` — FROZEN
 
 ## References
 

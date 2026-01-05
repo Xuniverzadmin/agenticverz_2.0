@@ -1,0 +1,268 @@
+# L2 Intent Declaration: AI Console Keys
+# Reference: PIN-300 (Semantic Promotion Gate)
+# Surface: /guard/keys, /guard/keys/{id}
+#
+# STATUS: FROZEN — Founder Approved 2026-01-05
+# RISK PROFILE: Tier-2 (operational authority, credential lifecycle)
+#
+# TERMINOLOGY NOTE: These are PLATFORM-ISSUED credentials for accessing
+# AI Console / Agenticverz services. NOT third-party LLM provider keys.
+# NOT a secrets vault or credential escrow.
+#
+# SCOPE NOTE: Prohibitions in this intent are SURFACE-SCOPED.
+# Analytics may interpret usage patterns separately (not here).
+
+intent_id: L2-GUARD-AICONSOLE-KEYS
+status: FROZEN  # DRAFT | APPROVED | FROZEN
+owner: governance
+reviewed_by: [founder]
+
+# =============================================================================
+# 1. SEMANTIC PURPOSE
+# =============================================================================
+
+question_answered: >
+  Which AI Console access keys issued by this platform exist for this tenant,
+  what access scope they grant, and what their current lifecycle state is?
+
+  Specifically:
+  - LIST: Which platform-issued keys exist for this tenant?
+  - DETAIL: What scope and state does a specific key have?
+  - CREATE: Issue a new AI Console key with defined scope
+  - REVOKE: Terminate a key's access permanently
+  - ROTATE: Replace a key with a new one (manual action only)
+
+non_goals:
+  # NOTE: These are non-goals FOR THIS SURFACE.
+  - third_party_key_storage  # No storage of LLM provider keys (OpenAI, Anthropic, etc.)
+  - secrets_vault  # No general credential escrow functionality
+  - provider_key_monitoring  # No monitoring of external API keys
+  - usage_analysis  # Not answered HERE (Analytics may interpret usage separately)
+  - risk_scoring  # Not answered HERE (Analytics may score separately)
+  - rotation_recommendation  # Not answered HERE (Analytics may advise separately)
+  - security_assessment  # Not answered HERE
+  - cross_tenant_key_visibility  # Never
+  - automated_rotation  # Rotation requires explicit human action
+  - automated_revocation  # Revocation requires explicit human action
+
+# =============================================================================
+# 2. DOMAIN PLACEMENT
+# =============================================================================
+
+domain: Connectivity  # Per sidebar structure - API Keys under Connectivity
+subdomain: Platform Credentials
+topic: AI Console Key  # Singular - depth handled by Order, not topic naming
+
+justification: >
+  AI Console Keys are platform-issued credentials that grant access to
+  Agenticverz services. They are operational authority objects, not
+  epistemic facts. This domain answers "What access exists?" and enables
+  lifecycle management. Cannot be merged with Policies (constraints) or
+  Logs (emissions).
+
+# =============================================================================
+# 3. AUTHORITY SEMANTICS
+# =============================================================================
+
+# This is an AUTHORITY surface - it mutates state
+authority_type: control
+mutates_state: true
+
+human_action_required: >
+  Yes. Every mutation (create, revoke, rotate) requires explicit human action.
+  No automated key lifecycle. No scheduled rotation. No auto-revocation.
+  The system acts only when a human clicks.
+
+explicitly_forbidden:
+  # NOTE: Forbidden AT THIS SURFACE. Analytics may provide some separately.
+  - automated_lifecycle  # No auto-create, auto-revoke, auto-rotate
+  - usage_interpretation  # Not at this surface (Analytics may interpret)
+  - risk_scoring  # Not at this surface (Analytics may score)
+  - rotation_advice  # Not at this surface (Analytics may advise)
+  - security_assessment  # Not at this surface
+  - cross_tenant_visibility  # Never - absolute
+  - provider_key_storage  # This is NOT a secrets vault
+
+endpoints:
+  - path: GET /guard/keys
+    authority: projection
+    mutates: false
+    explicitly_forbidden:
+      - usage_aggregation
+      - risk_ranking
+      - rotation_recommendations
+
+  - path: GET /guard/keys/{id}
+    authority: projection
+    mutates: false
+    explicitly_forbidden:
+      - usage_analysis
+      - security_score
+      - rotation_suggestion
+
+  - path: POST /guard/keys
+    authority: control
+    mutates: true
+    action: Create new AI Console key with defined scope
+    reversible: false  # Created keys exist until revoked
+
+  - path: POST /guard/keys/{id}/revoke
+    authority: control
+    mutates: true
+    action: Permanently terminate key's access
+    reversible: false  # Revocation is terminal (see open question #2)
+
+  - path: POST /guard/keys/{id}/rotate
+    authority: control
+    mutates: true
+    action: Replace key with new one, invalidate old
+    reversible: false  # Old key is invalidated
+    note: Manual action only, no automation
+
+# =============================================================================
+# 4. SOURCE OF TRUTH
+# =============================================================================
+
+primary_sources:
+  - L4: CustomerKeyManagementService (list, detail, create, revoke, rotate)
+  - L6: APIKey table (via L4 only, no direct access)
+
+secondary_sources:
+  - AuditLog  # Supporting chronology only
+
+derived: false  # Keys are stored objects, not computed
+
+derivation_rules:
+  - Keys are stored, not inferred
+  - Scope is declared at creation, not computed
+  - Status is current state, not historical analysis
+  - No usage computation at this surface
+  - No cross-key correlation
+
+# =============================================================================
+# 5. RBAC & VISIBILITY
+# =============================================================================
+
+visible_to_roles:
+  viewer:
+    access: read_only
+    endpoints: [list, detail]
+    note: Can see key metadata, not secret values
+  developer:
+    access: read_only
+    endpoints: [list, detail]
+    note: Can see key metadata for debugging (see open question #1)
+  admin:
+    access: read_write
+    endpoints: [list, detail, create, revoke, rotate]
+  owner:
+    access: read_write
+    endpoints: [list, detail, create, revoke, rotate]
+
+hidden_from:
+  - machine  # API tokens cannot self-manage keys
+
+cross_tenant: forbidden  # Customer sees only their own tenant's keys
+
+tenant_isolation:
+  enforced_by: L3 adapter (CustomerKeysAdapter)
+  mechanism: tenant_id parameter required on all methods
+  failure_mode: returns None/empty, never exposes other tenant data
+
+# =============================================================================
+# 6. L1 CONSUMPTION CONTRACT
+# =============================================================================
+
+ui_allowed:
+  - O2_list  # List of keys with id, name, scope, status, created_at
+  - O3_detail  # Full key metadata view (not secret value)
+  - O5_proof  # Audit trail of key lifecycle events
+
+ui_forbidden:
+  # NOTE: Forbidden in L1 consumption of THIS surface. Analytics UI is separate.
+  - risk_score  # Not here (Analytics may score)
+  - usage_dashboard  # Not here (Analytics may show)
+  - rotation_recommendation  # Not here (Analytics may advise)
+  - security_assessment  # Not here
+  - usage_trend_chart  # Not here (Analytics may trend)
+  - comparison_view  # Not here
+  - ranking  # Not here
+  - forecasting  # Not here
+
+terminology_rules:
+  # NOTE: These rules apply to THIS surface's L1 consumption only.
+  - Use "AI Console Key" not "API key" or "access key" (platform-specific naming)
+  - Use "scope" not "permissions" (scope is declared, permissions is RBAC)
+  - Never use "LLM key" or "provider key" (those are external, not managed here)
+  - Never use "secret" as object name (this is not a secrets vault)
+  - Use "revoked" not "deleted" (revocation is explicit termination)
+  - Use "active" not "valid" (state, not judgment)
+
+# =============================================================================
+# 7. INVARIANTS & FORBIDDEN ASSUMPTIONS
+# =============================================================================
+
+forbidden_assumptions:
+  # NOTE: Forbidden at THIS surface. Analytics may make some claims separately.
+  - key_is_secure  # Not claimed here (security assessment elsewhere)
+  - key_should_rotate  # Not claimed here (Analytics may advise)
+  - usage_indicates_risk  # Not claimed here (Analytics may interpret)
+  - inactive_is_bad  # Not claimed here
+  - many_keys_is_bad  # Not claimed here
+  - old_key_is_risky  # Not claimed here (Analytics may assess)
+  - this_is_provider_key  # Platform keys only, never external credentials
+
+invariants:
+  # NOTE: These invariants apply to THIS surface.
+  - tenant_isolation_absolute  # Enforced at L3 adapter (global)
+  - keys_are_platform_issued  # Only AI Console keys, never external
+  - revocation_requires_human  # No automated revocation
+  - rotation_requires_human  # No automated rotation
+  - creation_requires_human  # No automated creation
+  - secret_value_shown_once  # Key value visible only at creation time
+  - no_usage_interpretation_here  # Analytics may interpret separately
+  - no_security_scoring_here  # Analytics may score separately
+
+# =============================================================================
+# 8. PROMOTION DECISION
+# =============================================================================
+
+promotion_decision:
+  approved: true
+  approved_on: 2026-01-05
+  approved_by: founder
+  notes: >
+    FROZEN: Founder reviewed and approved.
+
+    Evidence of readiness:
+    - L3 adapter exists (CustomerKeysAdapter) and enforces tenant isolation
+    - L4 service exists (CustomerKeyManagementService)
+    - Platform-issued keys only (not external credentials)
+    - Wired in main.py
+
+    Founder decisions (final):
+    1. Developer visibility: METADATA ONLY (name, scope, status, timestamps)
+    2. Revocation semantics: TERMINAL (revoked means dead; new key required)
+    3. Rotation: MANUAL ONLY (no suggestions, no automation)
+
+    TERMINOLOGY ASSERTION (FROZEN):
+    This surface manages PLATFORM-ISSUED AI Console keys.
+    It does NOT store or monitor third-party LLM provider keys.
+    It is NOT a secrets vault or credential escrow.
+    This distinction is frozen and cannot be modified.
+
+    SCOPE ACKNOWLEDGMENT:
+    This intent explicitly allows Analytics domain to exist separately.
+    Analytics may interpret usage, assess risk, and advise - but not HERE.
+    Analytics will require its own intent declaration (ANALYTICS_INTENT.yaml).
+
+  once_approved:
+    edits_require: new_intent_version
+    frozen_fields:
+      - question_answered
+      - domain
+      - authority_type
+      - mutates_state
+      - explicitly_forbidden
+      - forbidden_assumptions
+      - terminology_rules
