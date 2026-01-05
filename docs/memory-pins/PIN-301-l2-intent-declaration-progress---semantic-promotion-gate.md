@@ -104,6 +104,7 @@ This triangulation prevents performance theater, causal storytelling, and "AI de
 
 ## Related PINs
 
-- [PIN-300](PIN-300-.md)
-- [PIN-298](PIN-298-.md)
-- [PIN-299](PIN-299-.md)
+- [PIN-300](PIN-300-.md) — Semantic Promotion Gate (Constitutional)
+- [PIN-298](PIN-298-.md) — Frontend Constitution Survey
+- [PIN-299](PIN-299-.md) — Tech Debt Clearance
+- [PIN-302](PIN-302-tier-2-semantic-closure---policies-and-ai-console-keys.md) — Tier-2 Closure (continuation)
