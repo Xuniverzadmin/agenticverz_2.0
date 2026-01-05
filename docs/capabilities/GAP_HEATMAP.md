@@ -1,8 +1,8 @@
 # Capability Gap Heatmap
 
-**Generated:** 2026-01-05 14:42:20
+**Generated:** 2026-01-05 20:38:52
 **Registry Version:** 1.0.0
-**Total Capabilities:** 17
+**Total Capabilities:** 18
 
 ---
 
@@ -11,9 +11,8 @@
 | State | Count | Capabilities |
 |-------|-------|--------------|
 | PLANNED | 1 | cross_project |
-| PARTIAL | 5 | replay, cost_simulation, prediction_plane, founder_console, authentication |
-| READ_ONLY | 1 | policy_proposals |
-| CLOSED | 10 | authorization, multi_agent, policy_engine, care_routing, governance_orchestration, workflow_engine, learning_pipeline, memory_system, optimization_engine, skill_system |
+| READ_ONLY | 2 | policy_proposals, prediction_plane |
+| CLOSED | 15 | replay, cost_simulation, founder_console, authentication, authorization, multi_agent, policy_engine, care_routing, governance_orchestration, workflow_engine, learning_pipeline, memory_system, optimization_engine, skill_system, integration_platform |
 
 ---
 
@@ -21,21 +20,22 @@
 
 | Capability | ID | State | Missing Planes | Gap Types | UI Allowed | Blocking |
 |------------|-----|-------|----------------|-----------|------------|----------|
-| authentication | CAP-006 | PARTIAL | client, ui | STUBBED_INFRA, PLANE_ASYMMETRY | ❌ | 🔴 |
-| cost_simulation | CAP-002 | PARTIAL | ui, audit_replay | PLANE_ASYMMETRY, MISSING_AUDIT | ✅ | 🔴 |
-| founder_console | CAP-005 | PARTIAL | - | LIFECYCLE_INCOMPLETE | ✅ | 🔴 |
-| prediction_plane | CAP-004 | PARTIAL | client, ui, authority, audit_replay | PLANE_ASYMMETRY, MISSING_AUTHORITY | ❌ | 🔴 |
-| replay | CAP-001 | PARTIAL | client, authority | PLANE_ASYMMETRY, MISSING_AUTHORITY | ❌ | 🔴 |
-| policy_proposals | CAP-003 | READ_ONLY | client, ui, audit_replay | LIFECYCLE_INCOMPLETE, PLANE_ASYMMETRY | ✅ | 🔴 |
+| policy_proposals | CAP-003 | READ_ONLY | client, ui | - | ✅ | 🔴 |
+| prediction_plane | CAP-004 | READ_ONLY | client, ui | - | ✅ | 🔴 |
 | cross_project | CAP-017 | PLANNED | engine, l2_api, client, ui, authority, audit_replay | INTENTIONALLY_ABSENT | ❌ | 🔴 |
+| authentication | CAP-006 | CLOSED | client, ui | - | ❌ | 🟢 |
 | authorization | CAP-007 | CLOSED | client, ui | - | ❌ | 🟢 |
 | care_routing | CAP-010 | CLOSED | l2_api, client, ui | - | ❌ | 🟢 |
+| cost_simulation | CAP-002 | CLOSED | ui | - | ✅ | 🟢 |
+| founder_console | CAP-005 | CLOSED | - | - | ✅ | 🟢 |
 | governance_orchestration | CAP-011 | CLOSED | client | - | ✅ | 🟢 |
+| integration_platform | CAP-018 | CLOSED | client, ui | - | ❌ | 🟢 |
 | learning_pipeline | CAP-013 | CLOSED | l2_api, client, ui | - | ❌ | 🟢 |
 | memory_system | CAP-014 | CLOSED | client, ui | - | ✅ | 🟢 |
 | multi_agent | CAP-008 | CLOSED | client, ui | - | ❌ | 🟢 |
 | optimization_engine | CAP-015 | CLOSED | l2_api, client, ui | - | ❌ | 🟢 |
 | policy_engine | CAP-009 | CLOSED | client, ui | - | ✅ | 🟢 |
+| replay | CAP-001 | CLOSED | - | - | ✅ | 🟢 |
 | skill_system | CAP-016 | CLOSED | client, ui | - | ❌ | 🟢 |
 | workflow_engine | CAP-012 | CLOSED | client, ui | - | ❌ | 🟢 |
 
@@ -50,41 +50,6 @@
 
 ## Blocking Gaps Detail
 
-### replay (CAP-001)
-
-- **State:** PARTIAL
-- **Gap:** PLANE_ASYMMETRY
-- **Gap:** MISSING_AUTHORITY
-
-### cost_simulation (CAP-002)
-
-- **State:** PARTIAL
-- **Gap:** PLANE_ASYMMETRY
-- **Gap:** MISSING_AUDIT
-
-### policy_proposals (CAP-003)
-
-- **State:** READ_ONLY
-- **Gap:** LIFECYCLE_INCOMPLETE
-- **Gap:** PLANE_ASYMMETRY
-
-### prediction_plane (CAP-004)
-
-- **State:** PARTIAL
-- **Gap:** PLANE_ASYMMETRY
-- **Gap:** MISSING_AUTHORITY
-
-### founder_console (CAP-005)
-
-- **State:** PARTIAL
-- **Gap:** LIFECYCLE_INCOMPLETE
-
-### authentication (CAP-006)
-
-- **State:** PARTIAL
-- **Gap:** STUBBED_INFRA
-- **Gap:** PLANE_ASYMMETRY
-
 ### cross_project (CAP-017)
 
 - **State:** PLANNED
@@ -95,9 +60,7 @@
 
 ## UI Expansion Status
 
-### Blocked (11):
-- replay
-- prediction_plane
+### Blocked (10):
 - authentication
 - authorization
 - multi_agent
@@ -107,10 +70,13 @@
 - optimization_engine
 - skill_system
 - cross_project
+- integration_platform
 
-### Allowed (6):
+### Allowed (8):
+- replay
 - cost_simulation
 - policy_proposals
+- prediction_plane
 - founder_console
 - policy_engine
 - governance_orchestration

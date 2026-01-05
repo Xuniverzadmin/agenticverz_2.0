@@ -7,6 +7,7 @@
 # Authority: WRITE checkpoint resolutions, graduation records (API self-authority)
 # Callers: Ops Console, Customer Console, SDK
 # Reference: M25 Integration System
+# capability_id: CAP-018
 
 """
 M25 Integration API

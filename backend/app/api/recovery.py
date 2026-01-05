@@ -1,4 +1,5 @@
 # app/api/recovery.py
+# capability_id: CAP-018
 """
 M10 Recovery Suggestion Engine API Endpoints (Enhanced)
 

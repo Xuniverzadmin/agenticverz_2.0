@@ -15,9 +15,9 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.32"
+session_playbook_version: "2.33"
 created: "2025-12-27"
-last_updated: "2026-01-02"
+last_updated: "2026-01-05"
 
 # Changelog:
 #   2.32 - DECISION GUARDRAILS (Section 25.1, PIN-276 REDO).
@@ -485,8 +485,17 @@ blca_verification:
   bootstrap_sequence:
     step_1: Load all mandatory_load documents
     step_2: Run BLCA verification
-    step_3: Only if BLCA is CLEAN → provide SESSION_BOOTSTRAP_CONFIRMATION
-    step_4: If BLCA has violations → BLOCK and report (do NOT say "ready")
+    step_3: Run Capability Registry validation (validate-registry + heatmap)
+    step_4: Only if BLCA is CLEAN AND registry is valid → provide SESSION_BOOTSTRAP_CONFIRMATION
+    step_5: If BLCA has violations OR registry invalid → BLOCK and report (do NOT say "ready")
+
+  # PIN-313: Capability Surveyor Gate (added 2026-01-05)
+  capability_registry_gate:
+    commands:
+      - python3 scripts/ops/capability_registry_enforcer.py validate-registry
+      - python3 scripts/ops/capability_registry_enforcer.py heatmap
+    on_failure: BLOCK bootstrap
+    on_gaps_exist: Claude must acknowledge gaps before proceeding to feature work
 
 # =============================================================================
 # GOVERNANCE RELATIONSHIP: CLAUDE_AUTHORITY.md → SESSION_PLAYBOOK
@@ -635,6 +644,11 @@ bootstrap_confirmation_format: |
       files_scanned: {count}
       violations_found: 0
       status: CLEAN
+  - capability_registry_verification:
+      registry_valid: YES
+      total_capabilities: {count}
+      closed_capabilities: {count}
+      gaps_acknowledged: YES
   - visibility_lifecycle_loaded: YES
   - discovery_ledger_loaded: YES
   - database_contract_loaded: YES
@@ -7005,6 +7019,152 @@ governance_qualifiers:
       There is no "close enough" exception.
       There is no "temporary bypass".
     enforcement: ABSOLUTE
+
+# =============================================================================
+# SECTION 35: CAPABILITY REGISTRY GOVERNANCE (PIN-313)
+# =============================================================================
+# Added: 2026-01-05
+# Reference: PIN-313 (Governance Hardening & Gap Closure)
+# Purpose: Prevent regression, enforce capability truth at runtime
+
+capability_registry_governance:
+
+  # ---------------------------------------------------------------------------
+  # Unregistered Code Response Matrix
+  # ---------------------------------------------------------------------------
+  unregistered_code_response:
+    description: |
+      When Claude detects unregistered code via scan-unregistered,
+      it MUST follow this matrix exactly. No bypass allowed.
+
+    response_matrix:
+      owns_domain_logic:
+        action: REGISTER as new capability
+        example: "New engine directory with business rules"
+        required: capability_id, planes, lifecycle, evidence
+
+      routing_or_glue:
+        action: Mark NON_OWNING or QUARANTINED
+        example: "Adapter file, dispatcher, thin wrapper"
+        required: Add to platform_infrastructure or legacy_routes section
+
+      deprecated_code:
+        action: Mark LEGACY + schedule deletion
+        example: "Old API version, superseded endpoint"
+        required: Add DEPRECATED comment, create removal ticket
+
+      intent_unclear:
+        action: STOP and ask founder
+        example: "Code with no clear ownership or purpose"
+        required: Do NOT proceed without human clarification
+
+    enforcement: BLOCKING
+    no_bypass: true
+
+  # ---------------------------------------------------------------------------
+  # Promotion Gate Rules
+  # ---------------------------------------------------------------------------
+  promotion_gate:
+    description: |
+      Before ANY lifecycle promotion (to CLOSED or FROZEN),
+      these conditions MUST be met. Failure = STOP.
+
+    required_conditions:
+      - capability_surveyor_passes: true
+      - no_plane_asymmetry: true
+      - no_missing_authority: true
+      - no_stubbed_infra: true
+      - all_evidence_paths_exist: true
+      - all_closure_requirements_met: true
+
+    on_any_fail: STOP promotion immediately
+    enforcement: BLOCKING
+
+    commands:
+      validate: python3 scripts/ops/capability_registry_enforcer.py validate-registry
+      check_gaps: python3 scripts/ops/capability_registry_enforcer.py heatmap
+      scan: python3 scripts/ops/capability_registry_enforcer.py scan-unregistered
+
+  # ---------------------------------------------------------------------------
+  # Session Start Registry Gate
+  # ---------------------------------------------------------------------------
+  session_registry_gate:
+    description: |
+      At session start, Claude MUST execute registry validation.
+      If gaps exist, Claude must acknowledge them before feature work.
+
+    commands:
+      - python3 scripts/ops/capability_registry_enforcer.py validate-registry
+      - python3 scripts/ops/capability_registry_enforcer.py heatmap
+
+    on_gaps_exist:
+      action: ACKNOWLEDGE gaps in bootstrap confirmation
+      blocked_activities:
+        - Feature work on capabilities with gaps
+        - UI expansion for blocked capabilities
+        - Lifecycle promotion
+
+    on_validation_fail:
+      action: BLOCK session start
+      response: |
+        CAPABILITY REGISTRY VALIDATION FAILED
+        Cannot proceed until registry is valid.
+        Run: python3 scripts/ops/capability_registry_enforcer.py validate-registry
+
+  # ---------------------------------------------------------------------------
+  # Advisory vs Control vs Audit Separation
+  # ---------------------------------------------------------------------------
+  semantic_separation:
+    description: |
+      Claude MUST separate advisory, control, and audit semantics.
+      No mixing allowed.
+
+    advisory_plane:
+      allowed: READ, QUERY, REPORT
+      forbidden: MUTATE, ENFORCE, WRITE
+      examples: predictions, cost_simulation results, policy proposals
+
+    control_plane:
+      allowed: ENFORCE, GATE, BLOCK
+      forbidden: None (full authority)
+      examples: RBAC, rate limits, policy enforcement
+
+    audit_plane:
+      allowed: RECORD, PERSIST, REPLAY
+      forbidden: MUTATE historical records
+      examples: traces, audit logs, simulation runs
+
+    invariant: |
+      An advisory capability MUST NOT gain mutation paths.
+      If mutation is required, it becomes a control capability.
+
+  # ---------------------------------------------------------------------------
+  # Gap Type Semantics
+  # ---------------------------------------------------------------------------
+  gap_type_semantics:
+    PLANE_ASYMMETRY:
+      meaning: "Some planes present, others missing"
+      resolution: "Add missing planes OR document as intentional"
+
+    MISSING_AUTHORITY:
+      meaning: "Exposed to users without governance gate"
+      resolution: "Add RBAC/visibility rules"
+
+    MISSING_AUDIT:
+      meaning: "Mutations occur without audit trail"
+      resolution: "Add audit capture before state changes"
+
+    LIFECYCLE_INCOMPLETE:
+      meaning: "Closure requirements not met"
+      resolution: "Complete requirements OR stay in PARTIAL/READ_ONLY"
+
+    STUBBED_INFRA:
+      meaning: "Infrastructure code present but not wired"
+      resolution: "Wire to runtime OR remove"
+
+    INTENTIONALLY_ABSENT:
+      meaning: "Explicitly not implemented (PLANNED state)"
+      resolution: "No action required until implementation begins"
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

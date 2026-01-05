@@ -1,4 +1,5 @@
 # app/api/recovery_ingest.py
+# capability_id: CAP-018
 """
 M10 Recovery Ingest Endpoint - Idempotent failure ingestion
 

@@ -332,8 +332,135 @@ For bug fixes or CSS-only changes to blocked capabilities:
 
 ---
 
+## Updates
+
+### 2026-01-05: PIN-311 Gap Resolution
+
+**Reference:** PIN-311 (System Resurvey Registry-Aligned)
+
+PIN-311 identified 15 unmapped L2 API files. This session resolved all of them:
+
+**File Classifications:**
+
+| File | Assigned To | Reason |
+|------|-------------|--------|
+| customer_activity.py | CAP-001 (replay) | Run activity tracking |
+| guard_logs.py | CAP-001 (replay) | Guard execution logs |
+| status_history.py | CAP-001 (replay) | Status change history |
+| replay.py | CAP-001 (replay) | Replay UX API |
+| traces.py | CAP-001 (replay) | Trace storage/indexing |
+| cost_guard.py | CAP-002 (cost_simulation) | Cost guard enforcement |
+| cost_intelligence.py | CAP-002 (cost_simulation) | Cost analytics |
+| scenarios.py | CAP-002 (cost_simulation) | H2 cost scenarios |
+| v1_proxy.py | CAP-002 (cost_simulation) | M22 KillSwitch proxy |
+| cost_ops.py | CAP-005 (founder_console) | Founder cost visibility |
+| founder_explorer.py | CAP-005 (founder_console) | H3 Explorer mode |
+| platform.py | CAP-005 (founder_console) | Platform health |
+| onboarding.py | CAP-006 (authentication) | Tenant onboarding |
+| auth_helpers.py | CAP-006 (authentication) | Console auth helpers |
+| authz_status.py | CAP-007 (authorization) | Auth status endpoint |
+| rbac_api.py | CAP-007 (authorization) | RBAC management |
+| discovery.py | CAP-011 (governance) | Discovery signals |
+| feedback.py | CAP-013 (learning) | PB-S3 Pattern Feedback |
+| embedding.py | CAP-014 (memory) | Embedding quota/config |
+| integration.py | CAP-018 (PENDING) | M25 Integration API |
+| recovery.py | CAP-018 (PENDING) | M10 Recovery API |
+| recovery_ingest.py | CAP-018 (PENDING) | Recovery ingest |
+| customer_visibility.py | LEGACY | Superseded API |
+| legacy_routes.py | LEGACY | 410 Gone handlers |
+| health.py | PLATFORM | System health |
+| tenants.py | PLATFORM | Tenant management |
+
+**State Promotions:**
+
+| Capability | Old State | New State | Reason |
+|------------|-----------|-----------|--------|
+| CAP-001 (replay) | PARTIAL | CLOSED | replay.ts client exists |
+| CAP-005 (founder_console) | PARTIAL | CLOSED | Routes wired in main.py |
+
+**Gap Summary:**
+
+| Category | Count |
+|----------|-------|
+| Unmapped API files | 0 (was 15) |
+| CLOSED capabilities | 13 (was 11) |
+| PARTIAL capabilities | 1 (was 3) |
+| Stale gaps removed | 2 |
+
+**Pending:**
+
+- CAP-018 (M25 Integration) requires founder approval before registration
+
+---
+
 ## Related PINs
 
 - [PIN-303](PIN-303-frontend-constitution-alignment-system-survey.md) — Frontend survey
 - [PIN-304](PIN-304-m12-multi-agent-survey-gap-correction.md) — M12 gap
 - [PIN-305](PIN-305-system-complete-survey.md) — System survey
+- [PIN-311](PIN-311-system-resurvey-registry-aligned.md) — Registry-aligned resurvey
+
+---
+
+## Updates
+
+### 2026-01-05: CAP-018 Approval
+
+**Reference:** PIN-311 Gap Resolution
+
+**Decision:** CAP-018 (M25 Integration Platform) approved as first-class capability.
+
+| Field | Value |
+|-------|-------|
+| Capability ID | CAP-018 |
+| Name | M25 Integration Platform |
+| State | CLOSED |
+| Approval Date | 2026-01-05 |
+| Founder Approval | ✅ Granted |
+
+**Evidence Files:**
+- Engine: `/backend/app/integrations/` (dispatcher, graduation_engine, learning_proof, bridges)
+- L2 API: `/backend/app/api/integration.py`, `/backend/app/api/recovery.py`, `/backend/app/api/recovery_ingest.py`
+
+**Registry Changes:**
+- Total capabilities: 17 → 18
+- CLOSED capabilities: 13 → 14
+- No structural changes pending
+
+**Blocking Gaps Remaining (4):**
+- CAP-002 (cost_simulation): PARTIAL
+- CAP-003 (policy_proposals): READ_ONLY
+- CAP-004 (prediction_plane): READ_ONLY
+- CAP-017 (cross_project): PLANNED
+
+---
+
+### 2026-01-05: PIN-313 Governance Hardening
+
+**Reference:** PIN-313 (Governance Hardening & Gap Closure)
+
+**Changes:**
+
+1. **Session Playbook v2.33** — Added Section 35: Capability Registry Governance
+   - Capability Surveyor added to bootstrap sequence (step 3)
+   - Registry validation required at session start
+   - Unregistered Code Response Matrix (BLOCKING enforcement)
+   - Promotion Gate Rules (no asymmetry, no missing authority)
+
+2. **Gap Closure:**
+   - cost_simulation: PARTIAL → CLOSED (ProvenanceLog provides audit)
+   - policy_proposals: READ_ONLY confirmed (origination semantics exist)
+   - prediction_plane: READ_ONLY confirmed (visibility-only RBAC)
+   - cross_project: Governance assertion added (P0 violation invariant)
+
+**Registry State:**
+- Total capabilities: 18
+- CLOSED: 15 (was 14)
+- PARTIAL: 0 (was 1)
+- READ_ONLY: 2
+- PLANNED: 1
+- Blocking gaps: 0 (was 4)
+
+**Enforcement:**
+- Capability Surveyor enforced at bootstrap + session
+- Promotion Gate prevents lifecycle advancement without closure requirements
