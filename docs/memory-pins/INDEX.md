@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-05 (PIN-300 Semantic Promotion Gate - L2 Intent Declaration Requirement)
+**Last Updated:** 2026-01-05 (PIN-301 L2 Intent Declaration Progress - Semantic Promotion Gate)
 
 ---
 
@@ -320,6 +320,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-298](PIN-298-frontend-constitution-alignment-survey---ground-truth-extraction.md) | **Frontend Constitution Alignment Survey - Ground Truth Extraction** | Governance / Survey | **✅ COMPLETE** | 2026-01-05 |
 | [PIN-299](PIN-299-tech-debt-clearance---forensic-inventory-governed-actions.md) | **Tech Debt Clearance - Forensic Inventory & Governed Actions** | Governance / Tech Debt | **🏗️ IN_PROGRESS** | 2026-01-05 |
 | [PIN-300](PIN-300-semantic-promotion-gate---l2-intent-declaration-requirement.md) | **Semantic Promotion Gate - L2 Intent Declaration Requirement** | Governance / Promotion | **🏗️ CONSTITUTIONAL** | 2026-01-05 |
+| [PIN-301](PIN-301-l2-intent-declaration-progress---semantic-promotion-gate.md) | **L2 Intent Declaration Progress - Semantic Promotion Gate** | Governance / L2 Promotion | **🏗️ IN_PROGRESS** | 2026-01-05 |
 
 ---
 
@@ -1089,6 +1090,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-05 | **PIN-301 L2 Intent Declaration Progress - Semantic Promotion Gate** - Created via memory_trail. |
 | 2026-01-05 | **PIN-300 Semantic Promotion Gate - L2 Intent Declaration Requirement** - Created via memory_trail. |
 | 2026-01-05 | **PIN-299 Tech Debt Clearance - Forensic Inventory & Governed Actions** - Created via memory_trail. |
 | 2026-01-05 | **PIN-298 Frontend Constitution Alignment Survey - Ground Truth Extraction** - Created via memory_trail. |
