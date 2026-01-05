@@ -2,13 +2,13 @@
 # Reference: PIN-300 (Semantic Promotion Gate)
 # Surface: /api/v1/customer/activity, /api/v1/customer/activity/{run_id}
 #
-# STATUS: DRAFT — Awaiting Founder Review
+# STATUS: APPROVED — Founder Reviewed 2026-01-05
 # RISK PROFILE: Tier-1 High (execution facts vs performance narrative boundary)
 
 intent_id: L2-GUARD-ACTIVITY
-status: DRAFT  # DRAFT | APPROVED | FROZEN
+status: APPROVED  # DRAFT | APPROVED | FROZEN
 owner: governance
-reviewed_by: []
+reviewed_by: [founder]
 
 # =============================================================================
 # 1. SEMANTIC PURPOSE
@@ -62,6 +62,7 @@ explicitly_forbidden:
   - interpretation  # No explaining what executions mean
   - aggregation  # No computing across executions
   - scoring  # No deriving quality metrics
+  - optimization_suggestion  # No "you should..." recommendations
 
 endpoints:
   - path: GET /api/v1/customer/activity
@@ -152,6 +153,7 @@ ui_forbidden:
   - error_diagnosis_ui  # No "root cause" panels
   - success_filtering  # No "show only failed" as primary view
   - performance_indicators  # No color-coding by duration
+  - inferred_relationships  # No implicit linking between executions
 
 vocabulary_rules:
   - Use "execution record" not "run" in UI labels (neutral language)
@@ -188,11 +190,11 @@ invariants:
 # =============================================================================
 
 promotion_decision:
-  approved: false
-  approved_on: null
-  approved_by: null
+  approved: true
+  approved_on: 2026-01-05
+  approved_by: founder
   notes: >
-    DRAFT: Awaiting founder review.
+    APPROVED: Founder reviewed and approved.
 
     Evidence of readiness:
     - L3 adapter exists (CustomerActivityAdapter) and enforces tenant isolation
@@ -200,13 +202,11 @@ promotion_decision:
     - Customer-safe DTOs defined (no cost_cents, replay_token, input_json)
     - Wired in main.py
 
-    Open questions for founder:
-    1. Route prefix: Current is /api/v1/customer/activity, not /guard/activity.
-       Should unify with /guard/* pattern? (Cosmetic, not semantic)
-    2. error_summary exposure: Currently redacted (first line, 500 chars).
-       Keep or remove entirely? (Recommend: KEEP, clearly redacted)
-    3. recoveries/policy_violations counts: Expose as neutral facts or hide?
-       (Recommend: EXPOSE as facts, add vocabulary rules to prevent interpretation)
+    Founder decisions on open questions:
+    1. Route prefix: Cosmetic concern - unify when convenient, not blocking
+    2. error_summary: KEEP as redacted emission, clearly labeled
+    3. recoveries/policy_violations: EXPOSE as neutral facts (no thresholds,
+       no color coding, no trend arrows, no scoring)
 
   once_approved:
     edits_require: new_intent_version
