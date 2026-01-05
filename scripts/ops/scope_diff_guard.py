@@ -75,6 +75,7 @@ ALLOWED_PATHS = [
     "docs/contracts/",
     "docs/playbooks/",
     "docs/templates/",
+    "docs/intents/",  # L2 intent declarations (PIN-300)
     "scripts/ci/",
     "scripts/ops/scope_diff_guard.py",  # Allow self-modification
     ".github/workflows/",
