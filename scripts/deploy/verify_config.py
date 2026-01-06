@@ -116,7 +116,7 @@ class ConfigValidator:
 
     def validate_console_build(self) -> bool:
         """Validate console is built"""
-        dist_path = PROJECT_ROOT / "website/aos-console/console/dist"
+        dist_path = PROJECT_ROOT / "website/app-shell/dist"
         if not dist_path.exists():
             self.errors.append("Console not built - run 'npm run build'")
             return False
@@ -162,14 +162,12 @@ class ConfigValidator:
 
         # Console env files
         self.validate_env_file(
-            PROJECT_ROOT / "website/aos-console/console/.env.production",
+            PROJECT_ROOT / "website/app-shell/.env.production",
             ["VITE_API_BASE", "VITE_APP_NAME"],
         )
 
         # No localhost in production
-        self.validate_no_localhost(
-            PROJECT_ROOT / "website/aos-console/console/.env.production"
-        )
+        self.validate_no_localhost(PROJECT_ROOT / "website/app-shell/.env.production")
 
         # Apache config
         self.validate_apache_config(

@@ -561,7 +561,7 @@ Cross-layer code must identify integration seams and include appropriate tests:
 | L1 (UI pages) | BIT test |
 
 **LIT:** `backend/tests/lit/`
-**BIT:** `website/aos-console/console/tests/bit/`
+**BIT:** `website/app-shell/tests/bit/`
 
 #### Artifact Class Rules (ARCH-GOV-006)
 

@@ -143,16 +143,16 @@ check_backend() {
 }
 
 check_frontend() {
-    local console_dir="$PROJECT_ROOT/website/aos-console/console"
-    if [ ! -d "$console_dir/src" ]; then
+    local app_shell_dir="$PROJECT_ROOT/website/app-shell"
+    if [ ! -d "$app_shell_dir/src" ]; then
         return 0  # No frontend to check
     fi
 
-    local current_hash=$(calc_hash_js "$console_dir/src")
+    local current_hash=$(calc_hash_js "$app_shell_dir/src")
     local stored_hash=$(get_stored_hash "$FRONTEND_HASH_FILE")
 
     if [ "$current_hash" != "$stored_hash" ]; then
-        log_warning "Console frontend code changed since last sync"
+        log_warning "App shell frontend code changed since last sync"
         return 1
     fi
 
@@ -225,13 +225,13 @@ rebuild_backend() {
 }
 
 rebuild_frontend() {
-    local console_dir="$PROJECT_ROOT/website/aos-console/console"
-    if [ ! -d "$console_dir" ]; then
+    local app_shell_dir="$PROJECT_ROOT/website/app-shell"
+    if [ ! -d "$app_shell_dir" ]; then
         return 0
     fi
 
-    log_action "Rebuilding console frontend..."
-    cd "$console_dir"
+    log_action "Rebuilding app shell frontend..."
+    cd "$app_shell_dir"
 
     # Install deps if needed
     if [ ! -d "node_modules" ]; then
@@ -243,7 +243,7 @@ rebuild_frontend() {
         log_success "Frontend build complete"
 
         # Update hash
-        local new_hash=$(calc_hash_js "$console_dir/src")
+        local new_hash=$(calc_hash_js "$app_shell_dir/src")
         store_hash "$FRONTEND_HASH_FILE" "$new_hash"
         return 0
     else
@@ -352,7 +352,7 @@ do_sync() {
 
 watch_mode() {
     log_info "Starting watch mode (Ctrl+C to stop)..."
-    log_info "Watching: backend/, website/aos-console/console/src/, website/landing/src/"
+    log_info "Watching: backend/, website/app-shell/src/, website/landing/src/"
     echo ""
 
     # Initial sync
@@ -363,7 +363,7 @@ watch_mode() {
         while true; do
             inotifywait -r -e modify,create,delete \
                 "$PROJECT_ROOT/backend" \
-                "$PROJECT_ROOT/website/aos-console/console/src" \
+                "$PROJECT_ROOT/website/app-shell/src" \
                 "$PROJECT_ROOT/website/landing/src" \
                 2>/dev/null || true
 

@@ -17,14 +17,18 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
+# PIN-318: Phase 1.2 Authority Hardening - Add founder auth
+from ..auth.console_auth import verify_fops_token
+
 logger = logging.getLogger("nova.api.founder_timeline")
 
-router = APIRouter(prefix="/founder/timeline", tags=["founder-timeline"])
+# PIN-318: Router-level auth - all endpoints require founder token (aud="fops")
+router = APIRouter(prefix="/founder/timeline", tags=["founder-timeline"], dependencies=[Depends(verify_fops_token)])
 
 
 # =============================================================================

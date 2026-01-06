@@ -32,15 +32,29 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+# PIN-318: Phase 1.2 Authority Hardening - Replace query param auth with proper token auth
+from ..auth.console_auth import FounderToken, verify_fops_token
 
-# Simple tenant/user helpers for integration endpoints
+
+def get_tenant_id_from_token(token: FounderToken = Depends(verify_fops_token)) -> str:
+    """Get tenant ID from founder token - PIN-318 secure implementation."""
+    # Founders have cross-tenant access, use "system" as default
+    return "system"
+
+
+def get_current_user_from_token(token: FounderToken = Depends(verify_fops_token)) -> dict:
+    """Get current user from founder token - PIN-318 secure implementation."""
+    return {"sub": token.sub, "role": token.role.value if hasattr(token.role, "value") else str(token.role)}
+
+
+# Legacy query param helpers (DEPRECATED - kept for backwards compat during migration)
 def get_tenant_id(tenant_id: str = Query(..., description="Tenant ID")) -> str:
-    """Get tenant ID from query parameter."""
+    """DEPRECATED: Get tenant ID from query parameter. Use get_tenant_id_from_token instead."""
     return tenant_id
 
 
 def get_current_user(user_id: Optional[str] = Query(None, description="User ID")) -> Optional[dict]:
-    """Get current user from query parameter (optional)."""
+    """DEPRECATED: Get current user from query parameter. Use get_current_user_from_token instead."""
     if user_id:
         return {"id": user_id}
     return None
@@ -52,7 +66,8 @@ from app.integrations.events import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/integration", tags=["integration"])
+# PIN-318: Router-level auth - all endpoints require founder token (aud="fops")
+router = APIRouter(prefix="/integration", tags=["integration"], dependencies=[Depends(verify_fops_token)])
 
 
 # =============================================================================
@@ -301,7 +316,7 @@ async def retry_loop_stage(
         raise HTTPException(status_code=400, detail=f"Invalid stage: {request.stage}")
 
     try:
-        result = await dispatcher.retry_failed_stage(incident_id, stage, tenant_id)
+        await dispatcher.retry_failed_stage(incident_id, stage, tenant_id)
         status = await dispatcher.get_loop_status(incident_id)
 
         return LoopStatusResponse(

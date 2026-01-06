@@ -90,9 +90,9 @@ class FileAnalysis:
 # Layer classification by directory path
 LAYER_PATH_PATTERNS = {
     # L1: Frontend/UI
-    "website/aos-console/console/src/products": "L1",
-    "website/aos-console/console/src/pages": "L1",
-    "website/aos-console/console/src/components": "L1",
+    "website/app-shell/src/products": "L1",
+    "website/app-shell/src/pages": "L1",
+    "website/app-shell/src/components": "L1",
     # L2: API routes
     "backend/app/api": "L2",
     "backend/app/routes": "L2",

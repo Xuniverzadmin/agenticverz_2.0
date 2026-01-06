@@ -14,7 +14,7 @@ SCAN_DIRS = [
     "sdk/python",
     "sdk/js",
     "scripts",
-    "website/aos-console/console/src",
+    "website/app-shell/src",
 ]
 
 EXCLUDE_PATTERNS = [
@@ -139,7 +139,7 @@ def scan_directory(scan_dir: str):
 
             try:
                 content = fpath.read_text(errors="ignore")
-            except:
+            except Exception:
                 continue
 
             # Check if has header (using correct format for file type)

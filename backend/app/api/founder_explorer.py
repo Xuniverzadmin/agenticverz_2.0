@@ -46,7 +46,8 @@ from ..db import get_session
 
 logger = logging.getLogger("nova.api.founder_explorer")
 
-router = APIRouter(prefix="/explorer", tags=["explorer"])
+# PIN-318: Router-level auth - all endpoints require founder token (aud="fops")
+router = APIRouter(prefix="/explorer", tags=["explorer"], dependencies=[Depends(verify_fops_token)])
 
 
 # =============================================================================

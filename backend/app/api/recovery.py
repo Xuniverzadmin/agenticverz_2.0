@@ -24,13 +24,16 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
+# PIN-318: Phase 1.2 Authority Hardening - Add founder auth
+from app.auth.console_auth import verify_fops_token
 from app.middleware.rate_limit import rate_limit_dependency
 from app.services.recovery_matcher import RecoveryMatcher
 from app.services.recovery_write_service import RecoveryWriteService
 
 logger = logging.getLogger("nova.api.recovery")
 
-router = APIRouter(prefix="/api/v1/recovery", tags=["recovery"])
+# PIN-318: Router-level auth - all endpoints require founder token (aud="fops")
+router = APIRouter(prefix="/api/v1/recovery", tags=["recovery"], dependencies=[Depends(verify_fops_token)])
 
 
 # =============================================================================

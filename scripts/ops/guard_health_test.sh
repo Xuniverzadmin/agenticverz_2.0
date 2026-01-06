@@ -228,10 +228,10 @@ echo "8. FRONTEND FILES CHECK"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 frontend_files=(
-    "/root/agenticverz2.0/website/aos-console/console/src/lib/healthCheck.ts"
-    "/root/agenticverz2.0/website/aos-console/console/src/components/ErrorBoundary.tsx"
-    "/root/agenticverz2.0/website/aos-console/console/src/components/HealthIndicator.tsx"
-    "/root/agenticverz2.0/website/aos-console/console/src/pages/guard/GuardDashboard.tsx"
+    "/root/agenticverz2.0/website/app-shell/src/lib/healthCheck.ts"
+    "/root/agenticverz2.0/website/app-shell/src/components/ErrorBoundary.tsx"
+    "/root/agenticverz2.0/website/app-shell/src/components/HealthIndicator.tsx"
+    "/root/agenticverz2.0/website/app-shell/src/pages/guard/GuardDashboard.tsx"
 )
 
 for file in "${frontend_files[@]}"; do
@@ -354,22 +354,22 @@ echo "12. FRONTEND INITIALIZATION CHECK"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Check that health check waits for auth
-if grep -q "isAuthenticated" /root/agenticverz2.0/website/aos-console/console/src/pages/guard/GuardLayout.tsx 2>/dev/null; then
+if grep -q "isAuthenticated" /root/agenticverz2.0/website/app-shell/src/pages/guard/GuardLayout.tsx 2>/dev/null; then
     pass "GuardLayout checks authentication before health monitor"
 else
     fail "GuardLayout may start health monitor before auth (causes circuit breaker errors!)"
 fi
 
 # Check for timing delays in health monitor startup
-if grep -q "setTimeout\|delay" /root/agenticverz2.0/website/aos-console/console/src/pages/guard/GuardLayout.tsx 2>/dev/null; then
+if grep -q "setTimeout\|delay" /root/agenticverz2.0/website/app-shell/src/pages/guard/GuardLayout.tsx 2>/dev/null; then
     pass "Health monitor has startup delay for auth propagation"
 else
     warn "No explicit delay in health monitor startup (potential race condition)"
 fi
 
 # Check for duplicate health monitor starts
-dashboard_health=$(grep -c "startPeriodicCheck" /root/agenticverz2.0/website/aos-console/console/src/pages/guard/GuardDashboard.tsx 2>/dev/null | head -1 || echo "0")
-layout_health=$(grep -c "startPeriodicCheck" /root/agenticverz2.0/website/aos-console/console/src/pages/guard/GuardLayout.tsx 2>/dev/null | head -1 || echo "0")
+dashboard_health=$(grep -c "startPeriodicCheck" /root/agenticverz2.0/website/app-shell/src/pages/guard/GuardDashboard.tsx 2>/dev/null | head -1 || echo "0")
+layout_health=$(grep -c "startPeriodicCheck" /root/agenticverz2.0/website/app-shell/src/pages/guard/GuardLayout.tsx 2>/dev/null | head -1 || echo "0")
 
 # Ensure we have valid integers
 dashboard_health=${dashboard_health:-0}
@@ -384,7 +384,7 @@ else
 fi
 
 # Check API client has auth interceptor
-if grep -q "X-API-Key\|Authorization" /root/agenticverz2.0/website/aos-console/console/src/api/client.ts 2>/dev/null; then
+if grep -q "X-API-Key\|Authorization" /root/agenticverz2.0/website/app-shell/src/api/client.ts 2>/dev/null; then
     pass "API client has authentication interceptor"
 else
     fail "API client missing authentication interceptor (browser requests will be unauthenticated!)"

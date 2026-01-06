@@ -46,7 +46,7 @@ Every L1 page must load without:
 | Network 5xx | BUILD FAILS |
 | Network 4xx (except 401/403) | WARNING |
 
-**Enforcement:** BIT tests in `website/aos-console/console/tests/bit/`
+**Enforcement:** BIT tests in `website/app-shell/tests/bit/`
 
 ### Obligation 3: Pre-Build Gate
 

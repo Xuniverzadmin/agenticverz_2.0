@@ -54,14 +54,8 @@ from app.adapters.customer_policies_adapter import (
     CustomerRateLimit,
     get_customer_policies_adapter,
 )
-from app.adapters.founder_review_adapter import (
-    FounderContractDetailView,
-    FounderContractSummaryView,
-    FounderReviewAdapter,
-    FounderReviewDecision,
-    FounderReviewQueueResponse,
-    FounderReviewResult,
-)
+
+# QUARANTINE (PIN-317): founder_review_adapter moved to quarantine - no frontend consumer
 from app.adapters.platform_eligibility_adapter import (
     CapabilityEligibilityView,
     CapabilityHealthView,

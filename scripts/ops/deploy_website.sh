@@ -16,7 +16,7 @@ CONSOLE_DIST="/opt/agenticverz/apps/console/dist"
 
 # Source directories
 LANDING_SRC="$PROJECT_ROOT/website/landing"
-CONSOLE_SRC="$PROJECT_ROOT/website/aos-console/console"
+CONSOLE_SRC="$PROJECT_ROOT/website/app-shell"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

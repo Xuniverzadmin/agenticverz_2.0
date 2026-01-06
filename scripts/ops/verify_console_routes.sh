@@ -14,8 +14,8 @@
 #
 
 BASE_URL="${BASE_URL:-https://agenticverz.com}"
-BUILD_DIR="/root/agenticverz2.0/website/aos-console/console/dist"
-ROUTES_FILE="/root/agenticverz2.0/website/aos-console/console/src/routes/index.tsx"
+BUILD_DIR="/root/agenticverz2.0/website/app-shell/dist"
+ROUTES_FILE="/root/agenticverz2.0/website/app-shell/src/routes/index.tsx"
 PASS=0
 FAIL=0
 
@@ -81,7 +81,7 @@ if ls "$BUILD_DIR/assets/" 2>/dev/null | grep -q "GuardConsoleEntry"; then
     PASS=$((PASS + 1))
 else
     echo -e "${RED}[FAIL]${NC} GuardConsoleEntry chunk NOT found in build"
-    echo "       Run: cd website/aos-console/console && npm run build"
+    echo "       Run: cd website/app-shell && npm run build"
     FAIL=$((FAIL + 1))
 fi
 
@@ -91,7 +91,7 @@ if ls "$BUILD_DIR/assets/" 2>/dev/null | grep -q "OpsConsoleEntry"; then
     PASS=$((PASS + 1))
 else
     echo -e "${RED}[FAIL]${NC} OpsConsoleEntry chunk NOT found in build"
-    echo "       Run: cd website/aos-console/console && npm run build"
+    echo "       Run: cd website/app-shell && npm run build"
     FAIL=$((FAIL + 1))
 fi
 
@@ -130,16 +130,16 @@ if [ $FAIL -gt 0 ]; then
     echo ""
     echo -e "${YELLOW}PREVENTION CHECKLIST:${NC}"
     echo ""
-    echo "1. Verify routes in website/aos-console/console/src/routes/index.tsx"
+    echo "1. Verify routes in website/app-shell/src/routes/index.tsx"
     echo "   - /guard and /ops should be PUBLIC routes (outside ProtectedRoute)"
     echo "   - They should use GuardConsoleEntry and OpsConsoleEntry components"
     echo ""
     echo "2. Verify entry components exist:"
-    echo "   - website/aos-console/console/src/pages/guard/GuardConsoleEntry.tsx"
-    echo "   - website/aos-console/console/src/pages/ops/OpsConsoleEntry.tsx"
+    echo "   - website/app-shell/src/pages/guard/GuardConsoleEntry.tsx"
+    echo "   - website/app-shell/src/pages/ops/OpsConsoleEntry.tsx"
     echo ""
     echo "3. Rebuild and deploy:"
-    echo "   cd website/aos-console/console && npm run build"
+    echo "   cd website/app-shell && npm run build"
     echo "   sudo cp -r dist/* /opt/agenticverz/apps/console/dist/"
     echo ""
     exit 1

@@ -88,12 +88,12 @@ LAYER_PATTERNS = {
     "backend/app/models/": "L6",
     "backend/app/services/event_emitter.py": "L6",
     # Frontend
-    "website/aos-console/console/src/products/ai-console/pages/": "L1",
-    "website/aos-console/console/src/products/ai-console/app/": "L1",
-    "website/aos-console/console/src/products/": "L1",
-    "website/aos-console/console/src/components/": "L6",  # Shared UI = Platform
-    "website/aos-console/console/src/lib/": "L6",
-    "website/aos-console/console/src/api/": "L2",
+    "website/app-shell/src/products/ai-console/pages/": "L1",
+    "website/app-shell/src/products/ai-console/app/": "L1",
+    "website/app-shell/src/products/": "L1",
+    "website/app-shell/src/components/": "L6",  # Shared UI = Platform
+    "website/app-shell/src/lib/": "L6",
+    "website/app-shell/src/api/": "L2",
     # Scripts
     "scripts/": "L7",
 }

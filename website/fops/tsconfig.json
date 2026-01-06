@@ -1,0 +1,23 @@
+{
+  "extends": "../app-shell/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "paths": {
+      "@/*": ["../app-shell/src/*"],
+      "@ai-console/*": ["../app-shell/src/products/ai-console/*"],
+      "@fops/*": ["./src/*"],
+      "@onboarding/*": ["../onboarding/src/*"],
+      "react": ["../app-shell/node_modules/@types/react"],
+      "react-dom": ["../app-shell/node_modules/@types/react-dom"],
+      "react-router-dom": ["../app-shell/node_modules/react-router-dom"],
+      "lucide-react": ["../app-shell/node_modules/lucide-react"],
+      "clsx": ["../app-shell/node_modules/clsx"],
+      "@tanstack/react-query": ["../app-shell/node_modules/@tanstack/react-query"],
+      "axios": ["../app-shell/node_modules/axios"]
+    },
+    "typeRoots": ["../app-shell/node_modules/@types", "../app-shell/node_modules"]
+  },
+  "include": ["src"],
+  "references": []
+}

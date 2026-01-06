@@ -37,7 +37,7 @@ SCAN_DIRS = [
     "sdk/python",
     "sdk/js",
     "scripts",
-    "website/aos-console/console/src",
+    "website/app-shell/src",
     "docs",
     "monitoring",
     "config",
@@ -374,7 +374,7 @@ def scan_repository():
 
                 try:
                     content = fpath.read_text(errors="ignore")
-                except:
+                except Exception:
                     continue
 
                 inventory["statistics"]["total_files"] += 1

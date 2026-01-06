@@ -1,0 +1,52 @@
+{
+  "name": "aos-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "node scripts/ui-hygiene-check.cjs && node scripts/import-boundary-check.cjs",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "hygiene": "node scripts/ui-hygiene-check.cjs",
+    "hygiene:ci": "node scripts/ui-hygiene-check.cjs --ci",
+    "hygiene:strict": "node scripts/ui-hygiene-check.cjs --strict",
+    "hygiene:baseline": "node scripts/ui-hygiene-check.cjs --update-baseline",
+    "boundary": "node scripts/import-boundary-check.cjs",
+    "boundary:ci": "node scripts/import-boundary-check.cjs",
+    "ownership": "node scripts/directory-ownership-check.cjs",
+    "routes": "node scripts/route-namespace-check.cjs",
+    "guards": "npm run boundary && npm run ownership && npm run routes"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-dropdown-menu": "^2.0.6",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@radix-ui/react-tooltip": "^1.0.7",
+    "@radix-ui/react-visually-hidden": "^1.2.4",
+    "@tanstack/react-query": "^5.8.0",
+    "axios": "^1.6.2",
+    "clsx": "^2.0.0",
+    "dayjs": "^1.11.10",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "recharts": "^2.10.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.54.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0"
+  }
+}

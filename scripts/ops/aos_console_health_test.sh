@@ -379,7 +379,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "11. FRONTEND FILES CHECK"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-frontend_dir="/root/agenticverz2.0/website/aos-console/console/src"
+frontend_dir="/root/agenticverz2.0/website/app-shell/src"
 
 frontend_files=(
     "pages/dashboard/DashboardPage.tsx"

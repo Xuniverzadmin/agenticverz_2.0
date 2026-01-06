@@ -37,12 +37,16 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+
+# PIN-318: Phase 1.2 Authority Hardening - Add founder auth
+from ..auth.console_auth import verify_fops_token
 
 logger = logging.getLogger("nova.api.scenarios")
 
-router = APIRouter(prefix="/scenarios", tags=["scenarios"])
+# PIN-318: Router-level auth - all endpoints require founder token (aud="fops")
+router = APIRouter(prefix="/scenarios", tags=["scenarios"], dependencies=[Depends(verify_fops_token)])
 
 # In-memory scenario storage for v1 (no database persistence for scenarios)
 # This ensures READ-ONLY semantics - scenarios are session-ephemeral

@@ -1,19 +1,20 @@
 #!/bin/bash
-# AOS Console Production Deployment Script
-# Target: agenticverz.com/console
+# AOS App Shell Production Deployment Script
+# Target: agenticverz.com
+# Note: app-shell is the routing + auth handoff layer only
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-CONSOLE_DIR="$PROJECT_ROOT/website/aos-console/console"
+APP_SHELL_DIR="$PROJECT_ROOT/website/app-shell"
 DEPLOY_TARGET="/opt/agenticverz/apps/console"
 
 echo "=========================================="
-echo "  AOS Console Production Deployment"
+echo "  AOS App Shell Production Deployment"
 echo "=========================================="
 echo "Project Root: $PROJECT_ROOT"
-echo "Console Dir:  $CONSOLE_DIR"
+echo "App Shell:    $APP_SHELL_DIR"
 echo "Deploy Target: $DEPLOY_TARGET"
 echo ""
 

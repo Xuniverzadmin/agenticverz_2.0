@@ -468,6 +468,8 @@ from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota
 # M29 Category 6: Founder Action Paths
 from .api.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
 from .api.founder_explorer import router as explorer_router  # H3 Founder Explorer (cross-tenant READ-ONLY)
+
+# QUARANTINE (PIN-317): founder_review_router moved to quarantine - no frontend consumer
 from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
@@ -538,6 +540,7 @@ app.include_router(customer_activity_router)  # ACTIVITY Domain Qualification: /
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 app.include_router(platform_router)  # /platform/* - PIN-284 Platform Health (founder-only)
 app.include_router(founder_timeline_router)  # Phase 4C-1 Founder Timeline (decision records)
+# QUARANTINE (PIN-317): founder_review_router quarantined - no frontend consumer
 app.include_router(customer_visibility_router)  # Phase 4C-2 Customer Visibility (predictability)
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
 app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop

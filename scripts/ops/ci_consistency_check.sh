@@ -1078,7 +1078,7 @@ check_m13_console_ui() {
 
     # Check multiple possible locations
     for console_path in \
-        "$REPO_ROOT/website/aos-console" \
+        "$REPO_ROOT/website/app-shell" \
         "$REPO_ROOT/console" \
         "$REPO_ROOT/apps/console" \
         "$REPO_ROOT/ui" \
@@ -1211,7 +1211,7 @@ check_m16_governance_console() {
 
     # Console SBA pages (multiple locations)
     for sba_path in \
-        "$REPO_ROOT/website/aos-console/console/src/pages/sba" \
+        "$REPO_ROOT/website/app-shell/src/pages/sba" \
         "$REPO_ROOT/console/src/pages/sba" \
         "$REPO_ROOT/ui/pages/sba"; do
         if [[ -d "$sba_path" ]]; then
@@ -1578,15 +1578,15 @@ check_frontend_api_calls() {
     header "Frontend API ID Type Check"
 
     local LINT_SCRIPT="$REPO_ROOT/scripts/ops/lint_frontend_api_calls.py"
-    local CONSOLE_SRC="$REPO_ROOT/website/aos-console/console/src"
+    local APP_SHELL_SRC="$REPO_ROOT/website/app-shell/src"
 
     if [[ ! -f "$LINT_SCRIPT" ]]; then
         log_info "Frontend API linter not found (optional)"
         return 0
     fi
 
-    if [[ ! -d "$CONSOLE_SRC" ]]; then
-        log_info "Console source not found (optional)"
+    if [[ ! -d "$APP_SHELL_SRC" ]]; then
+        log_info "App shell source not found (optional)"
         return 0
     fi
 

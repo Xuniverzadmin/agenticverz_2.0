@@ -709,7 +709,7 @@ triggers:
 requires:
   step_1:
     action: "Run build verification"
-    command: "cd website/aos-console/console && npm run build"
+    command: "cd website/app-shell && npm run build"
     condition: "Build succeeds without errors"
     reason: "Catches import errors and TypeScript issues"
   step_2:

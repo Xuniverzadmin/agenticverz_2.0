@@ -14,7 +14,7 @@ Fix pattern: Use incident.call_id for replay endpoints
 
 Usage:
     python scripts/ops/lint_frontend_api_calls.py [path]
-    python scripts/ops/lint_frontend_api_calls.py website/aos-console/console/src/
+    python scripts/ops/lint_frontend_api_calls.py website/app-shell/src/
 """
 
 import re
@@ -171,11 +171,7 @@ def main():
 
         issues = lint_files(files)
     else:
-        path = (
-            Path(sys.argv[1])
-            if len(sys.argv) > 1
-            else Path("website/aos-console/console/src")
-        )
+        path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("website/app-shell/src")
 
         if not path.exists():
             print(f"Error: Path not found: {path}", file=sys.stderr)

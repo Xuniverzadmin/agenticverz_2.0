@@ -799,15 +799,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install console dependencies
+      - name: Install app-shell dependencies
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           npm ci
 
       - name: Run UI Hygiene Check (CI mode)
         id: hygiene
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           echo "🔍 Running UI Hygiene Check v2.0 (CI mode)"
           echo ""
           echo "CI mode enforces:"
@@ -859,8 +859,8 @@ jobs:
         with:
           name: ui-hygiene-report
           path: |
-            website/aos-console/console/hygiene-report.json
-            website/aos-console/console/hygiene-output.txt
+            website/app-shell/hygiene-report.json
+            website/app-shell/hygiene-output.txt
           if-no-files-found: ignore
 
   # Fast unit tests (no external deps)

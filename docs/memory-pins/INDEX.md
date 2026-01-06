@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-05 (PIN-313 Governance Hardening & Gap Closure)
+**Last Updated:** 2026-01-06 (PIN-319 Frontend Realignment - App Shell Architecture - Hardening)
 
 ---
 
@@ -326,6 +326,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-311](PIN-311-system-resurvey-registry-aligned.md) | **System Resurvey Registry-Aligned** | Governance / Survey | **✅ COMPLETE** | 2026-01-05 |
 | [PIN-312](PIN-312-cap018-approval-registry-stable.md) | **CAP-018 Approval & Registry Stable** | Capability Registry / Approval | **✅ COMPLETE** | 2026-01-05 |
 | [PIN-313](PIN-313-governance-hardening-gap-closure.md) | **Governance Hardening & Gap Closure** | Governance / Gap Closure | **✅ COMPLETE** | 2026-01-05 |
+| [PIN-319](PIN-319-frontend-realignment---app-shell-architecture.md) | **Frontend Realignment - App Shell Architecture** | Frontend / Architecture | **✅ COMPLETE** | 2026-01-06 |
 
 ---
 
@@ -1095,6 +1096,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-06 | **PIN-319 Frontend Realignment - App Shell Architecture** - Updated: Hardening |
+| 2026-01-06 | **PIN-319 Frontend Realignment - App Shell Architecture** - Created via memory_trail. |
 | 2026-01-05 | **PIN-313 Governance Hardening & Gap Closure** - Completed all 14 tasks, 0 blocking gaps remaining. |
 | 2026-01-05 | **PIN-312 CAP-018 Approval & Registry Stable** - M25 Integration Platform promoted to CLOSED. |
 | 2026-01-05 | **PIN-311 System Resurvey Registry-Aligned** - Created via memory_trail. |

@@ -144,17 +144,17 @@ jobs:
 
       - name: Install frontend dependencies
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           npm ci
 
       - name: Install Playwright
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           npx playwright install --with-deps chromium
 
       - name: Install js-yaml for BIT
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           npm install js-yaml @types/js-yaml
 
       - name: Wait for PostgreSQL
@@ -190,12 +190,12 @@ jobs:
 
       - name: Build frontend
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           npm run build
 
       - name: Start frontend preview server
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           nohup npx vite preview --port 5173 > preview.log 2>&1 &
           echo "Waiting for frontend..."
           for i in {1..15}; do
@@ -210,7 +210,7 @@ jobs:
       - name: Run BIT tests
         id: bit
         run: |
-          cd website/aos-console/console
+          cd website/app-shell
           echo "🔍 Running Browser Integration Tests..."
           echo ""
           echo "BIT validates:"
@@ -259,8 +259,8 @@ jobs:
         with:
           name: bit-results
           path: |
-            website/aos-console/console/tests/bit/bit-results.json
-            website/aos-console/console/tests/bit/playwright-report/
+            website/app-shell/tests/bit/bit-results.json
+            website/app-shell/tests/bit/playwright-report/
             /tmp/bit-output.txt
           if-no-files-found: ignore
 
@@ -271,7 +271,7 @@ jobs:
           name: bit-server-logs
           path: |
             backend/server.log
-            website/aos-console/console/preview.log
+            website/app-shell/preview.log
           if-no-files-found: ignore
 
   # ============================================================================
