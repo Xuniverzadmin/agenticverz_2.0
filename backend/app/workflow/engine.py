@@ -320,8 +320,7 @@ class WorkflowResult:
 class SkillRegistry(Protocol):
     """Protocol for skill registry access."""
 
-    def get(self, skill_id: str) -> Optional[Any]:
-        ...
+    def get(self, skill_id: str) -> Optional[Any]: ...
 
 
 class WorkflowEngine:

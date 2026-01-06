@@ -21,6 +21,7 @@ L5/L2 consumers read L4's interpretation, never interpret raw data.
 Reference: PIN-256, PHASE_E_FIX_DESIGN.md
 Violations Resolved: VIOLATION-007, VIOLATION-008, VIOLATION-009, VIOLATION-010
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 

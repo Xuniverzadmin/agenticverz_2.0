@@ -843,9 +843,9 @@ class TestCrossDomainIsolation:
             for field_name, field_type in hints.items():
                 type_name = getattr(field_type, "__name__", str(field_type))
 
-                assert (
-                    type_name not in founder_dto_names
-                ), f"{dto.__name__}.{field_name} uses Founder DTO type: {type_name}"
+                assert type_name not in founder_dto_names, (
+                    f"{dto.__name__}.{field_name} uses Founder DTO type: {type_name}"
+                )
 
     def test_guard_router_uses_only_guard_dtos(self):
         """guard.py router should only use DTOs from guard contracts."""

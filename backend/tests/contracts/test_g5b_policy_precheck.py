@@ -649,9 +649,9 @@ class TestG5B10FounderTimelineReconstruction:
         if len(decisions) > 0:
             first = decisions[0]
             # Pre-check should be among the first decisions
-            assert (
-                first["decision_type"] == "policy_pre_check" or first["causal_role"] == "pre_run"
-            ), "Pre-run decisions should appear first"
+            assert first["decision_type"] == "policy_pre_check" or first["causal_role"] == "pre_run", (
+                "Pre-run decisions should appear first"
+            )
 
 
 # =============================================================================

@@ -935,9 +935,9 @@ class FounderActionTargetDTO(BaseModel):
 class FounderActionReasonDTO(BaseModel):
     """Reason for a founder action - required for audit trail."""
 
-    code: Literal[
-        "COST_ANOMALY", "POLICY_VIOLATION", "RETRY_LOOP", "ABUSE_SUSPECTED", "FALSE_POSITIVE", "OTHER"
-    ] = Field(description="Reason code for the action")
+    code: Literal["COST_ANOMALY", "POLICY_VIOLATION", "RETRY_LOOP", "ABUSE_SUSPECTED", "FALSE_POSITIVE", "OTHER"] = (
+        Field(description="Reason code for the action")
+    )
     note: Optional[str] = Field(
         default=None, max_length=500, description="Optional free-text explanation (max 500 chars)"
     )

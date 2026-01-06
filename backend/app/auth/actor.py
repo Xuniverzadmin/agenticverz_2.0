@@ -178,10 +178,7 @@ class ActorContext:
 
     def __repr__(self) -> str:
         """Concise representation for logging."""
-        return (
-            f"Actor({self.actor_id}, type={self.actor_type.value}, "
-            f"tenant={self.tenant_id}, roles={set(self.roles)})"
-        )
+        return f"Actor({self.actor_id}, type={self.actor_type.value}, tenant={self.tenant_id}, roles={set(self.roles)})"
 
 
 # =============================================================================

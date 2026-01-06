@@ -1987,7 +1987,9 @@ class TestUpsertConcurrency:
             # Assertions
             assert len(results["errors"]) == 0, f"Errors occurred: {results['errors']}"
             assert results["inserted"] == 1, f"Expected 1 insert, got {results['inserted']}"
-            assert results["updated"] == CONCURRENCY - 1, f"Expected {CONCURRENCY-1} updates, got {results['updated']}"
+            assert results["updated"] == CONCURRENCY - 1, (
+                f"Expected {CONCURRENCY - 1} updates, got {results['updated']}"
+            )
             assert final_count == CONCURRENCY, f"Expected occurrence_count={CONCURRENCY}, got {final_count}"
 
         finally:

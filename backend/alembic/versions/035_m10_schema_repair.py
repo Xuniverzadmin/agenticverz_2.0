@@ -21,6 +21,7 @@ This migration repairs schema drift discovered in the Neon parent branch:
 
 This migration is fully idempotent and safe to run on any state.
 """
+
 from sqlalchemy import text
 
 from alembic import op

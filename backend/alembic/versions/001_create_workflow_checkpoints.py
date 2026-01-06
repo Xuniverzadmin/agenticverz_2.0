@@ -11,6 +11,7 @@ This migration creates the workflow_checkpoints table with:
 - Debugging fields: started_at, ended_at
 - Size guard: max_step_outputs_bytes constraint
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

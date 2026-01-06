@@ -26,7 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from ..auth import verify_api_key
+from ..auth.authority import AuthorityResult, emit_authority_audit, require_predictions_read
 from ..db import get_async_session
 from ..models.prediction import PredictionEvent
 
@@ -98,7 +98,7 @@ async def list_predictions(
     include_expired: bool = Query(False, description="Include expired predictions"),
     limit: int = Query(50, ge=1, le=200, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    _: str = Depends(verify_api_key),
+    auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
     List prediction events (PB-S5).
@@ -107,6 +107,9 @@ async def list_predictions(
     No execution data is modified by this query.
     All predictions are ADVISORY only.
     """
+    # Emit authority audit for capability access
+    await emit_authority_audit(auth, "predictions", subject_id="list")
+
     now = datetime.utcnow()
 
     async with get_async_session() as session:
@@ -171,7 +174,7 @@ async def list_predictions(
 @router.get("/{prediction_id}", response_model=PredictionDetailResponse)
 async def get_prediction(
     prediction_id: str,
-    _: str = Depends(verify_api_key),
+    auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
     Get detailed prediction by ID (PB-S5).
@@ -180,6 +183,9 @@ async def get_prediction(
     No execution data is modified by this query.
     This prediction is ADVISORY only.
     """
+    # Emit authority audit for capability access
+    await emit_authority_audit(auth, "predictions", subject_id=prediction_id)
+
     try:
         prediction_uuid = UUID(prediction_id)
     except ValueError:
@@ -217,7 +223,7 @@ async def get_predictions_for_subject(
     subject_id: str,
     include_expired: bool = Query(False, description="Include expired predictions"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
-    _: str = Depends(verify_api_key),
+    auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
     Get all predictions for a specific subject (PB-S5).
@@ -225,6 +231,9 @@ async def get_predictions_for_subject(
     READ-ONLY: This endpoint only reads data.
     Returns all advisory predictions for a worker/run/tenant.
     """
+    # Emit authority audit for capability access
+    await emit_authority_audit(auth, "predictions", subject_id=f"{subject_type}:{subject_id}")
+
     now = datetime.utcnow()
 
     async with get_async_session() as session:
@@ -269,7 +278,7 @@ async def get_predictions_for_subject(
 async def get_prediction_stats(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
     include_expired: bool = Query(False, description="Include expired predictions"),
-    _: str = Depends(verify_api_key),
+    auth: AuthorityResult = Depends(require_predictions_read),
 ):
     """
     Get prediction statistics (PB-S5).
@@ -277,6 +286,9 @@ async def get_prediction_stats(
     READ-ONLY: This endpoint only reads aggregated data.
     No execution data is modified by this query.
     """
+    # Emit authority audit for capability access
+    await emit_authority_audit(auth, "predictions", subject_id="stats")
+
     now = datetime.utcnow()
 
     async with get_async_session() as session:

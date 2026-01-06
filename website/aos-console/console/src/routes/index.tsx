@@ -51,6 +51,16 @@ const FounderTimelinePage = lazy(() => import('@/pages/founder/FounderTimelinePa
 // Phase 5E-2: Kill-Switch Controls (FOUNDER)
 const FounderControlsPage = lazy(() => import('@/pages/founder/FounderControlsPage'));
 
+// Phase H1: Replay UX Enablement (FOUNDER - READ-ONLY)
+const ReplayIndexPage = lazy(() => import('@/pages/founder/ReplayIndexPage'));
+const ReplaySliceViewer = lazy(() => import('@/pages/founder/ReplaySliceViewer'));
+
+// Phase H2: Cost Simulation v1 (FOUNDER - Advisory Only)
+const ScenarioBuilderPage = lazy(() => import('@/pages/founder/ScenarioBuilderPage'));
+
+// Phase H3: Founder Explorer (FOUNDER - READ-ONLY Cross-Tenant)
+const FounderExplorerPage = lazy(() => import('@/pages/founder/FounderExplorerPage'));
+
 // =============================================================================
 // ONBOARDING PAGES (Shared - pre-console assignment)
 // =============================================================================
@@ -174,6 +184,16 @@ export function AppRoutes() {
 
           {/* Phase 5E-2: Kill-Switch Controls (FOUNDER) */}
           <Route path="founder/controls" element={<FounderControlsPage />} />
+
+          {/* Phase H1: Replay UX Enablement (FOUNDER - READ-ONLY) */}
+          <Route path="founder/replay" element={<ReplayIndexPage />} />
+          <Route path="founder/replay/:incidentId" element={<ReplaySliceViewer />} />
+
+          {/* Phase H2: Cost Simulation v1 (FOUNDER - Advisory Only) */}
+          <Route path="founder/scenarios" element={<ScenarioBuilderPage />} />
+
+          {/* Phase H3: Founder Explorer (FOUNDER - READ-ONLY Cross-Tenant) */}
+          <Route path="founder/explorer" element={<FounderExplorerPage />} />
 
           {/* Governance (FOUNDER) */}
           <Route path="sba" element={<SBAInspectorPage />} />

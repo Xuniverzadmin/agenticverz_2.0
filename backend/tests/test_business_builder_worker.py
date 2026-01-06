@@ -10,7 +10,6 @@ Test suite verifying:
 7. Golden replay (M4)
 """
 
-
 import pytest
 
 from app.workers.business_builder import (

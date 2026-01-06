@@ -60,22 +60,19 @@ class ErrorStoreProtocol(Protocol):
         component: str,
         since: Optional[datetime] = None,
         limit: int = 100,
-    ) -> List[Dict[str, Any]]:
-        ...
+    ) -> List[Dict[str, Any]]: ...
 
     def get_error_counts_by_class(
         self,
         since: datetime,
         until: Optional[datetime] = None,
-    ) -> Dict[str, int]:
-        ...
+    ) -> Dict[str, int]: ...
 
     def get_error_counts_by_component(
         self,
         since: datetime,
         until: Optional[datetime] = None,
-    ) -> Dict[str, int]:
-        ...
+    ) -> Dict[str, int]: ...
 
 
 # =============================================================================

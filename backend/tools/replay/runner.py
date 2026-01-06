@@ -352,7 +352,7 @@ class WorkflowRunner:
                                 "original_result": op.result,
                                 "replay_result": replay_result,
                             }
-                        output_lines.append(f"[FAIL] op_index={op.op_index} {op.op_type} " f"(hash mismatch)")
+                        output_lines.append(f"[FAIL] op_index={op.op_index} {op.op_type} (hash mismatch)")
 
             except Exception as e:
                 ops_failed += 1

@@ -890,9 +890,9 @@ class TestM10ContractSentinel:
             # Canonical: p_processor_id text, p_batch_size integer
             assert signature is not None, "Function claim_outbox_events not found"
             assert "text" in signature.lower(), f"CONTRACT VIOLATION: Expected TEXT for processor_id, got: {signature}"
-            assert (
-                "integer" in signature.lower()
-            ), f"CONTRACT VIOLATION: Expected INTEGER for batch_size, got: {signature}"
+            assert "integer" in signature.lower(), (
+                f"CONTRACT VIOLATION: Expected INTEGER for batch_size, got: {signature}"
+            )
             # Verify order: processor_id comes before batch_size
             text_pos = signature.lower().find("text")
             int_pos = signature.lower().find("integer")

@@ -276,9 +276,9 @@ class TestM12HighConcurrency:
         # Assertions
         assert summary["double_claims"] == 0, f"Double claims detected: {summary['double_claims']}"
         assert summary["claims"] == LOAD_TEST_ITEMS, f"Not all items claimed: {summary['claims']}/{LOAD_TEST_ITEMS}"
-        assert (
-            summary["completions"] == LOAD_TEST_ITEMS
-        ), f"Not all items completed: {summary['completions']}/{LOAD_TEST_ITEMS}"
+        assert summary["completions"] == LOAD_TEST_ITEMS, (
+            f"Not all items completed: {summary['completions']}/{LOAD_TEST_ITEMS}"
+        )
 
         error_rate = summary["errors"] / max(summary["claims"], 1)
         assert error_rate < 0.01, f"Error rate too high: {error_rate:.2%}"
@@ -287,9 +287,9 @@ class TestM12HighConcurrency:
         job = job_service.get_job(job_id)
         assert job is not None
         # Job should be completed
-        assert (
-            job.progress.completed == LOAD_TEST_ITEMS
-        ), f"Job completed mismatch: {job.progress.completed}/{LOAD_TEST_ITEMS}"
+        assert job.progress.completed == LOAD_TEST_ITEMS, (
+            f"Job completed mismatch: {job.progress.completed}/{LOAD_TEST_ITEMS}"
+        )
 
         print("\n[LOAD TEST] ✓ PASSED - No double claims, all items processed")
 

@@ -102,9 +102,9 @@ class TestIncidentContrastRules:
             if get_origin(field_type) is Literal:
                 values = set(field_type.__args__)
                 # All values should be calm
-                assert values.issubset(
-                    self.CALM_VOCABULARY | {"no"}
-                ), f"CustomerIncidentImpactDTO.{field_name} uses non-calm values: {values}"
+                assert values.issubset(self.CALM_VOCABULARY | {"no"}), (
+                    f"CustomerIncidentImpactDTO.{field_name} uses non-calm values: {values}"
+                )
 
     def test_customer_resolution_uses_calm_vocabulary(self):
         """CustomerIncidentResolutionDTO must use calm vocabulary."""
@@ -147,9 +147,9 @@ class TestIncidentContrastRules:
                 "BUDGET_EXCEEDED",
                 "UNKNOWN",
             }
-            assert (
-                values == expected_causes
-            ), f"FounderRootCauseDTO.derived_cause should be {expected_causes}, got {values}"
+            assert values == expected_causes, (
+                f"FounderRootCauseDTO.derived_cause should be {expected_causes}, got {values}"
+            )
 
     def test_customer_dto_has_no_derived_cause(self):
         """Customer DTOs must not expose derived_cause."""

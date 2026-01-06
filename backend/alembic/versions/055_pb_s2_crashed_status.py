@@ -16,7 +16,6 @@ Create Date: 2025-12-27
 FROZEN: This migration extends PB-S1 truth guarantees to include PB-S2 crash recovery.
 """
 
-
 from alembic import op
 
 # revision identifiers

@@ -7,6 +7,7 @@ L4/L5 can query governance state before proceeding.
 Reference: PIN-256, PHASE_E_FIX_DESIGN.md
 Violations Resolved: VIOLATION-004, VIOLATION-005
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 

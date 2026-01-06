@@ -40,12 +40,12 @@ HARD RULE:
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List, Dict, Any
-
+from typing import Any, Dict, List, Optional
 
 # =============================================================================
 # Enums (Ops-level, NOT infra-level)
 # =============================================================================
+
 
 class OpsSeverity(str, Enum):
     """
@@ -54,10 +54,11 @@ class OpsSeverity(str, Enum):
     Distinct from ErrorSeverity (infra) — this is about
     operator action priority, not technical classification.
     """
-    INFO = "info"           # Awareness only
-    ATTENTION = "attention" # Should review soon
-    ACTION = "action"       # Requires operator action
-    URGENT = "urgent"       # Requires immediate attention
+
+    INFO = "info"  # Awareness only
+    ATTENTION = "attention"  # Should review soon
+    ACTION = "action"  # Requires operator action
+    URGENT = "urgent"  # Requires immediate attention
 
 
 class OpsIncidentCategory(str, Enum):
@@ -69,39 +70,43 @@ class OpsIncidentCategory(str, Enum):
     - "What component is struggling?"
     - "Is this a pattern or one-off?"
     """
-    EXECUTION_FAILURE = "execution_failure"     # Run/workflow failed
-    BUDGET_EXHAUSTION = "budget_exhaustion"     # Budget limits hit
-    POLICY_VIOLATION = "policy_violation"       # Policy rules triggered
-    RECOVERY_FAILURE = "recovery_failure"       # Recovery couldn't fix
-    EXTERNAL_DEPENDENCY = "external_dependency" # External service issue
-    CONFIGURATION = "configuration"             # Misconfiguration detected
-    RATE_LIMIT = "rate_limit"                   # Rate limits triggered
-    UNKNOWN = "unknown"                         # Needs investigation
+
+    EXECUTION_FAILURE = "execution_failure"  # Run/workflow failed
+    BUDGET_EXHAUSTION = "budget_exhaustion"  # Budget limits hit
+    POLICY_VIOLATION = "policy_violation"  # Policy rules triggered
+    RECOVERY_FAILURE = "recovery_failure"  # Recovery couldn't fix
+    EXTERNAL_DEPENDENCY = "external_dependency"  # External service issue
+    CONFIGURATION = "configuration"  # Misconfiguration detected
+    RATE_LIMIT = "rate_limit"  # Rate limits triggered
+    UNKNOWN = "unknown"  # Needs investigation
 
 
 class OpsHealthStatus(str, Enum):
     """
     System health states for operators.
     """
-    HEALTHY = "healthy"       # All good
-    DEGRADED = "degraded"     # Partial issues
-    UNHEALTHY = "unhealthy"   # Significant problems
-    UNKNOWN = "unknown"       # Cannot determine
+
+    HEALTHY = "healthy"  # All good
+    DEGRADED = "degraded"  # Partial issues
+    UNHEALTHY = "unhealthy"  # Significant problems
+    UNKNOWN = "unknown"  # Cannot determine
 
 
 class OpsRiskLevel(str, Enum):
     """
     Risk levels for preflight findings.
     """
-    LOW = "low"           # Minor concern
-    MEDIUM = "medium"     # Should address before launch
-    HIGH = "high"         # Must address before launch
-    CRITICAL = "critical" # Blocking issue
+
+    LOW = "low"  # Minor concern
+    MEDIUM = "medium"  # Should address before launch
+    HIGH = "high"  # Must address before launch
+    CRITICAL = "critical"  # Blocking issue
 
 
 # =============================================================================
 # Core Ops Domain Models
 # =============================================================================
+
 
 @dataclass(frozen=True)
 class OpsIncident:
@@ -115,21 +120,22 @@ class OpsIncident:
         "12 budget exhaustion failures in workflow-runner
          between 14:00-15:00, affecting 3 runs"
     """
-    incident_id: str              # ops_inc_<uuid>
+
+    incident_id: str  # ops_inc_<uuid>
     category: OpsIncidentCategory
     severity: OpsSeverity
-    title: str                    # Human-readable summary
-    description: str              # What happened
+    title: str  # Human-readable summary
+    description: str  # What happened
 
     # Scope
-    component: str                # Affected component
-    affected_runs: int            # How many runs impacted
-    affected_agents: int          # How many agents impacted
+    component: str  # Affected component
+    affected_runs: int  # How many runs impacted
+    affected_agents: int  # How many agents impacted
 
     # Time window
     first_seen: datetime
     last_seen: datetime
-    occurrence_count: int         # How many times
+    occurrence_count: int  # How many times
 
     # Correlation (opaque to UI)
     sample_correlation_id: Optional[str] = None  # For drill-down
@@ -149,8 +155,9 @@ class OpsHealthSignal:
 
     Operators use this to answer: "Is the system OK right now?"
     """
-    signal_id: str              # ops_health_<component>
-    component: str              # What component
+
+    signal_id: str  # ops_health_<component>
+    component: str  # What component
     status: OpsHealthStatus
     last_checked: datetime
 
@@ -160,7 +167,7 @@ class OpsHealthSignal:
     active_incidents: int = 0
 
     # Human-readable
-    summary: str = ""           # "Budget engine healthy, 99.2% success"
+    summary: str = ""  # "Budget engine healthy, 99.2% success"
 
     # Trend
     trend: Optional[str] = None  # "improving" | "stable" | "degrading"
@@ -173,18 +180,19 @@ class OpsRiskFinding:
 
     Operators use this to answer: "What would break if users arrive now?"
     """
-    finding_id: str             # ops_risk_<uuid>
+
+    finding_id: str  # ops_risk_<uuid>
     risk_level: OpsRiskLevel
-    category: str               # "observability" | "recovery" | "capacity"
-    title: str                  # "No error persistence configured"
-    description: str            # Why this is a risk
+    category: str  # "observability" | "recovery" | "capacity"
+    title: str  # "No error persistence configured"
+    description: str  # Why this is a risk
 
     # Impact
-    impact: str                 # What happens if not addressed
+    impact: str  # What happens if not addressed
     affected_components: List[str]
 
     # Recommendation
-    recommendation: str         # What to do about it
+    recommendation: str  # What to do about it
     documentation_link: Optional[str] = None
 
     # Status
@@ -200,22 +208,23 @@ class OpsTrendMetric:
 
     Not raw metrics — interpreted trends with meaning.
     """
-    metric_id: str              # ops_trend_<name>
-    name: str                   # "Budget Exhaustion Rate"
+
+    metric_id: str  # ops_trend_<name>
+    name: str  # "Budget Exhaustion Rate"
     description: str
 
     # Current value
     current_value: float
-    unit: str                   # "per_hour" | "percentage" | "count"
+    unit: str  # "per_hour" | "percentage" | "count"
 
     # Trend
-    trend_direction: str        # "up" | "down" | "stable"
-    change_pct: float           # +15.2% from previous period
+    trend_direction: str  # "up" | "down" | "stable"
+    change_pct: float  # +15.2% from previous period
 
     # Time context
     period_start: datetime
     period_end: datetime
-    comparison_period: str      # "previous_hour" | "previous_day"
+    comparison_period: str  # "previous_hour" | "previous_day"
 
     # Thresholds (for alerting context)
     warning_threshold: Optional[float] = None
@@ -231,22 +240,23 @@ class OpsDecisionOutcome:
 
     Operators use this to answer: "What decisions did the system make?"
     """
-    outcome_id: str             # ops_decision_<uuid>
-    decision_type: str          # "budget_halt" | "recovery_action" | "policy_block"
-    component: str              # Which engine made it
+
+    outcome_id: str  # ops_decision_<uuid>
+    decision_type: str  # "budget_halt" | "recovery_action" | "policy_block"
+    component: str  # Which engine made it
     timestamp: datetime
 
     # Decision details (interpreted, not raw)
-    summary: str                # "Halted run due to budget exhaustion"
-    input_summary: str          # Redacted/summarized input context
-    outcome: str                # "halt" | "allow" | "escalate"
+    summary: str  # "Halted run due to budget exhaustion"
+    input_summary: str  # Redacted/summarized input context
+    outcome: str  # "halt" | "allow" | "escalate"
 
     # Impact
     affected_run_id: Optional[str] = None
     affected_agent_id: Optional[str] = None
 
     # For audit trail
-    decision_version: str       # Engine version that made it
+    decision_version: str  # Engine version that made it
 
 
 @dataclass(frozen=True)
@@ -256,21 +266,22 @@ class OpsCorrelatedEvent:
 
     Shows operators: "These things happened together"
     """
-    correlation_id: str         # The correlation ID linking events
-    event_count: int            # How many events share this ID
-    time_span_seconds: float    # Duration of correlated activity
+
+    correlation_id: str  # The correlation ID linking events
+    event_count: int  # How many events share this ID
+    time_span_seconds: float  # Duration of correlated activity
 
     # Components involved
     components: List[str]
-    layers: List[str]           # ["L2", "L4", "L5"]
+    layers: List[str]  # ["L2", "L4", "L5"]
 
     # Timeline
     first_event: datetime
     last_event: datetime
 
     # Summary
-    summary: str                # "Request traversed API → Budget → Worker"
+    summary: str  # "Request traversed API → Budget → Worker"
 
     # Outcome
-    final_outcome: str          # "success" | "failure" | "partial"
+    final_outcome: str  # "success" | "failure" | "partial"
     failure_point: Optional[str] = None  # Where it broke, if any

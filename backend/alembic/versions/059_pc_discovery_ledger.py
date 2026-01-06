@@ -15,6 +15,7 @@ This is internal development tooling, not customer governance.
 Reference: Phase C Discovery Ledger design
 Truth anchor: "Discovery Ledger records curiosity, not decisions."
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 

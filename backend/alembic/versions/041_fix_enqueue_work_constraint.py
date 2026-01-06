@@ -14,6 +14,7 @@ Fix: Replace the function to use proper partial unique index conflict syntax.
 
 See also: PIN-120 (RC-11: Migration Index vs Constraint Mismatch)
 """
+
 from sqlalchemy import text
 
 from alembic import op

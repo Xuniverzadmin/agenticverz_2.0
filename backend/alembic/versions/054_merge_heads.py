@@ -15,7 +15,6 @@ LESSON: Migration 051 skipped 049/050 creating a fork.
         Future migrations MUST verify single head before creation.
 """
 
-
 # revision identifiers
 revision = "054_merge_heads"
 down_revision = ("050_dr_causal_binding", "053_pb_s1_retry")

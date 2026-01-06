@@ -1,5 +1,5 @@
 """
-RBAC Management API - M7 Implementation
+RBAC Management API
 
 Provides endpoints for managing RBAC policies:
 - GET /api/v1/rbac/info - Get current policy info
@@ -8,6 +8,9 @@ Provides endpoints for managing RBAC policies:
 - GET /api/v1/rbac/audit - Query audit logs
 
 Requires RBAC permission: rbac:read or rbac:reload
+
+NOTE (PIN-310): Authorization now routes through M28 via authorization_choke.py.
+Policy introspection (info, matrix, reload) still uses rbac_engine for admin functions.
 """
 
 import logging
@@ -18,7 +21,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from ..auth.rbac_engine import check_permission, get_rbac_engine
+from ..auth.authorization_choke import check_permission_request
+from ..auth.rbac_engine import get_rbac_engine
 from ..db import get_session as get_db_session
 
 logger = logging.getLogger("nova.api.rbac")
@@ -95,8 +99,8 @@ async def get_policy_info(request: Request):
     """
     import os
 
-    # Check permission
-    decision = check_permission("rbac", "read", request)
+    # Check permission (routed through M28 via authorization_choke)
+    decision = await check_permission_request("rbac", "read", request)
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 
@@ -124,8 +128,8 @@ async def reload_policies(request: Request):
 
     Requires RBAC permission: rbac:reload
     """
-    # Check permission
-    decision = check_permission("rbac", "reload", request)
+    # Check permission (routed through M28 via authorization_choke)
+    decision = await check_permission_request("rbac", "reload", request)
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 
@@ -173,8 +177,8 @@ async def get_permission_matrix(request: Request) -> Dict[str, Any]:
 
     Requires RBAC permission: rbac:read
     """
-    # Check permission
-    decision = check_permission("rbac", "read", request)
+    # Check permission (routed through M28 via authorization_choke)
+    decision = await check_permission_request("rbac", "read", request)
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 
@@ -207,8 +211,8 @@ async def query_audit_logs(
 
     Requires RBAC permission: rbac:read
     """
-    # Check permission
-    decision = check_permission("rbac", "read", request)
+    # Check permission (routed through M28 via authorization_choke)
+    decision = await check_permission_request("rbac", "read", request)
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 
@@ -298,8 +302,8 @@ async def cleanup_audit_logs(
 
     Requires RBAC permission: rbac:reload (admin action)
     """
-    # Check permission
-    decision = check_permission("rbac", "reload", request)
+    # Check permission (routed through M28 via authorization_choke)
+    decision = await check_permission_request("rbac", "reload", request)
     if not decision.allowed:
         raise HTTPException(status_code=403, detail=decision.reason)
 

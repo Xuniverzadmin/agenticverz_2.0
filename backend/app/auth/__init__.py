@@ -14,6 +14,20 @@ import os
 
 from fastapi import Header, HTTPException, status
 
+# Authorization Choke Point (PIN-271, I-AUTH-001)
+# This is the SINGLE entry point for all authorization decisions
+from .authorization_choke import (
+    M7_LEGACY_RESOURCES,
+    M28_NATIVE_RESOURCES,
+    AuthorizationDecision,
+    AuthorizationSource,
+    AuthzPhase,
+    authorize_action,
+    can_access,
+    get_authz_phase,
+    is_strict_mode,
+    require_permission,
+)
 from .clerk_provider import (
     ClerkAuthError,
     ClerkAuthProvider,
@@ -122,6 +136,18 @@ async def verify_api_key(x_aos_key: str = Header(..., alias="X-AOS-Key")):
 
 
 __all__ = [
+    # Authorization Choke Point (PIN-271, I-AUTH-001)
+    # This is the SINGLE entry point for all authorization decisions
+    "AuthorizationDecision",
+    "AuthorizationSource",
+    "AuthzPhase",
+    "M7_LEGACY_RESOURCES",
+    "M28_NATIVE_RESOURCES",
+    "authorize_action",
+    "can_access",
+    "get_authz_phase",
+    "is_strict_mode",
+    "require_permission",
     # RBAC Stub (CI/Development - PIN-271)
     "AUTH_STUB_ENABLED",
     "STUB_ROLES",

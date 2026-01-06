@@ -9,6 +9,7 @@ This migration adds the approval_requests table for:
 2. Transactional state machine for approval workflow
 3. Webhook retry tracking
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

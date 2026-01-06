@@ -247,9 +247,9 @@ class TestDOD2_NoDuplicateClaims:
 
         # Check for duplicates
         unique_claims = set(all_claims)
-        assert len(all_claims) == len(
-            unique_claims
-        ), f"Duplicate claims detected: {len(all_claims)} claims, {len(unique_claims)} unique"
+        assert len(all_claims) == len(unique_claims), (
+            f"Duplicate claims detected: {len(all_claims)} claims, {len(unique_claims)} unique"
+        )
 
         # All items should be claimed
         assert len(unique_claims) == 50, f"Expected 50 items claimed, got {len(unique_claims)}"

@@ -601,9 +601,9 @@ class TestG5C09FounderTimelineRecovery:
         # Will FAIL until Phase 5C is implemented
         recovery_decisions = [d for d in decisions if d.get("decision_type") == "recovery_evaluation"]
         assert len(recovery_decisions) >= 1, "Recovery must appear in timeline"
-        assert all(
-            d["causal_role"] == "post_run" for d in recovery_decisions
-        ), "All recovery decisions must be post_run"
+        assert all(d["causal_role"] == "post_run" for d in recovery_decisions), (
+            "All recovery decisions must be post_run"
+        )
 
 
 # =============================================================================

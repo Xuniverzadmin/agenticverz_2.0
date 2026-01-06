@@ -18,6 +18,7 @@ Test Isolation (PIN-276):
 - Prometheus metrics use per-test isolated registries
 - No test may depend on state created by another test
 """
+
 import os
 import sys
 from pathlib import Path

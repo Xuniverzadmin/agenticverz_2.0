@@ -125,7 +125,7 @@ class TestM10AlertMetrics:
 
         for metric_name in self.ALERT_METRIC_THRESHOLDS.keys():
             assert metric_name in registered_names, (
-                f"Alert metric '{metric_name}' not found. " f"Alert rules in m10_recovery_alerts.yml will fail."
+                f"Alert metric '{metric_name}' not found. Alert rules in m10_recovery_alerts.yml will fail."
             )
 
 
@@ -153,7 +153,7 @@ class TestM10MetricsEndpoint:
         m10_metrics_found = [line for line in content.split("\n") if line.startswith("m10_")]
 
         assert len(m10_metrics_found) > 0, (
-            "No M10 metrics found in /metrics output. " "Ensure M10 metrics are registered before app startup."
+            "No M10 metrics found in /metrics output. Ensure M10 metrics are registered before app startup."
         )
 
 

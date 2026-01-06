@@ -7,7 +7,6 @@ This is the most important safety test for the M25 graduation system.
 If policies start blocking unrelated requests, the system is unsafe.
 """
 
-
 import pytest
 
 from app.integrations.bridges import (
@@ -107,7 +106,7 @@ class TestPolicyOverreach:
         should_auto = ConfidenceCalculator.should_auto_apply(confidence, occurrence_count=1)
 
         assert should_auto is False, (
-            f"Weak match (confidence={confidence}) should NOT auto-apply. " f"Version={version}, details={details}"
+            f"Weak match (confidence={confidence}) should NOT auto-apply. Version={version}, details={details}"
         )
 
     def test_confidence_calculator_requires_3_occurrences_for_auto_apply(self):
@@ -149,7 +148,7 @@ class TestPolicyOverreach:
         # Shadow mode should not block
         should_block = policy.mode == PolicyMode.ACTIVE
 
-        assert should_block is False, "SHADOW mode policy must NOT block requests. " "Only ACTIVE policies can enforce."
+        assert should_block is False, "SHADOW mode policy must NOT block requests. Only ACTIVE policies can enforce."
 
     def test_policy_with_high_regret_is_disabled(self):
         """
@@ -173,7 +172,7 @@ class TestPolicyOverreach:
         policy.record_regret()
 
         assert policy.mode == PolicyMode.DISABLED, (
-            f"Policy with regret_count={policy.regret_count} should be DISABLED. " f"Current mode: {policy.mode.value}"
+            f"Policy with regret_count={policy.regret_count} should be DISABLED. Current mode: {policy.mode.value}"
         )
 
     def test_loop_event_failure_state_blocks_next_stage(self):

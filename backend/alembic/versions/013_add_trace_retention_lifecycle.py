@@ -6,6 +6,7 @@ Create Date: 2025-12-06
 
 M8 Deliverable: Trace retention policy with automatic archival and deletion
 """
+
 import sqlalchemy as sa
 
 from alembic import op

@@ -47,6 +47,7 @@ from sqlalchemy import select
 
 # Absolute imports (import hygiene - no relative imports)
 from app.auth import verify_api_key
+from app.auth.authority import AuthorityResult, emit_authority_audit, require_replay_execute
 
 # Phase 5B: Policy Pre-Check Integration
 from app.contracts.decisions import emit_policy_precheck_decision
@@ -1000,7 +1001,7 @@ async def run_worker(
 @router.post("/replay", response_model=WorkerRunResponse, status_code=202)
 async def replay_execution_endpoint(
     request: ReplayRequest,
-    _: str = Depends(verify_api_key),
+    auth: AuthorityResult = Depends(require_replay_execute),
 ):
     """
     Replay a previous execution using Golden Replay (M4).
@@ -1010,6 +1011,9 @@ async def replay_execution_endpoint(
     Phase F-3: Uses L3 adapter instead of direct L5 worker import.
     F-W-RULE-4: L3 Adapter Is the Only Entry.
     """
+    # Emit authority audit for capability access
+    await emit_authority_audit(auth, "replay", subject_id=request.replay_token)
+
     run_id = str(uuid.uuid4())
     adapter = _get_workers_adapter()
 

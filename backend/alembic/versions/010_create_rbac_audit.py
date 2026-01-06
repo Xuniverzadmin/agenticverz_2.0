@@ -8,7 +8,6 @@ Revises: 009_mem_pins
 Create Date: 2025-12-04
 """
 
-
 from alembic import op
 
 # revision identifiers

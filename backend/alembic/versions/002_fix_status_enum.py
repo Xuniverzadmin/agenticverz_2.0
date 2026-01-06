@@ -17,6 +17,7 @@ used by the workflow engine:
 - policy_violation: Workflow stopped due to policy violation
 - sandbox_rejected: Workflow rejected by planner sandbox
 """
+
 from typing import Sequence, Union
 
 from alembic import op

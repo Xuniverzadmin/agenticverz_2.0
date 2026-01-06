@@ -190,9 +190,9 @@ class TestM11FiveStepWorkflow:
         for model, expected_dims in models:
             result = await voyage_embed_skill.execute({"input": "Test embedding", "model": model})
 
-            assert (
-                result["result"]["dimensions"] == expected_dims
-            ), f"Model {model} expected {expected_dims} dims, got {result['result']['dimensions']}"
+            assert result["result"]["dimensions"] == expected_dims, (
+                f"Model {model} expected {expected_dims} dims, got {result['result']['dimensions']}"
+            )
 
     @pytest.mark.asyncio
     async def test_workflow_kv_operations(self, kv_store_skill):

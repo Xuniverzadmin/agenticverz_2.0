@@ -86,7 +86,7 @@ class TestCostChainInvariant:
             current_parent_cost = cur.fetchone()[0]
 
             assert current_parent_cost == parent_cost, (
-                f"Parent run {parent_id} cost changed! " f"Expected {parent_cost}, got {current_parent_cost}"
+                f"Parent run {parent_id} cost changed! Expected {parent_cost}, got {current_parent_cost}"
             )
 
         finally:
@@ -187,7 +187,7 @@ class TestCostChainInvariant:
                 # Lineage total must be computable
                 expected_total = (root_cost or 0) + retry_sum
                 assert lineage_total == expected_total, (
-                    f"Lineage cost mismatch for {root_id}: " f"computed {lineage_total}, expected {expected_total}"
+                    f"Lineage cost mismatch for {root_id}: computed {lineage_total}, expected {expected_total}"
                 )
 
                 # Log for documentation
@@ -282,7 +282,7 @@ class TestAttemptMonotonicityInvariant:
             )
             violations = cur.fetchall()
 
-            assert len(violations) == 0, f"Found {len(violations)} original runs with attempt != 1: " f"{violations}"
+            assert len(violations) == 0, f"Found {len(violations)} original runs with attempt != 1: {violations}"
 
         finally:
             conn.close()
@@ -459,7 +459,7 @@ class TestAttemptMonotonicityInvariant:
                 # Verify sequence is 1, 2, 3, ...
                 expected = list(range(1, len(attempts) + 1))
                 assert list(attempts) == expected, (
-                    f"Lineage {root_id} has invalid attempt sequence: " f"got {list(attempts)}, expected {expected}"
+                    f"Lineage {root_id} has invalid attempt sequence: got {list(attempts)}, expected {expected}"
                 )
 
                 print(f"\nLineage {root_id}: attempts={list(attempts)} (valid)")

@@ -7,6 +7,23 @@ async sessions. These models mirror the SQLModel definitions in db.py
 but are designed for async operations.
 """
 
+from app.models.contract import (
+    TERMINAL_STATES,
+    VALID_TRANSITIONS,
+    AuditVerdict,
+    ContractApproval,
+    ContractCreate,
+    ContractImmutableError,
+    ContractRejection,
+    ContractResponse,
+    ContractSource,
+    ContractStatus,
+    InvalidTransitionError,
+    MayNotVerdictError,
+    ProposedChangeType,
+    RiskLevel,
+    SystemContract,
+)
 from app.models.costsim_cb import (
     Base,
     CostSimAlertQueueModel,
@@ -27,6 +44,22 @@ from app.models.governance import (
     GovernanceSignalCreate,
     GovernanceSignalQuery,
     GovernanceSignalResponse,
+)
+from app.models.governance_job import (
+    JOB_TERMINAL_STATES,
+    JOB_VALID_TRANSITIONS,
+    GovernanceJob,
+    HealthSnapshot,
+    InvalidJobTransitionError,
+    JobCreate,
+    JobImmutableError,
+    JobResponse,
+    JobStatus,
+    JobStep,
+    JobTransitionRecord,
+    OrphanJobError,
+    StepResult,
+    StepStatus,
 )
 from app.models.tenant import (
     PLAN_QUOTAS,
@@ -72,4 +105,35 @@ __all__ = [
     "WorkerRun",
     "AuditLog",
     "PLAN_QUOTAS",
+    # Contract models (Part-2 PIN-291)
+    "SystemContract",
+    "ContractStatus",
+    "ContractSource",
+    "AuditVerdict",
+    "RiskLevel",
+    "ProposedChangeType",
+    "ContractCreate",
+    "ContractResponse",
+    "ContractApproval",
+    "ContractRejection",
+    "InvalidTransitionError",
+    "ContractImmutableError",
+    "MayNotVerdictError",
+    "TERMINAL_STATES",
+    "VALID_TRANSITIONS",
+    # Governance Job models (Part-2 PIN-292)
+    "GovernanceJob",
+    "JobStatus",
+    "StepStatus",
+    "JobStep",
+    "StepResult",
+    "HealthSnapshot",
+    "JobCreate",
+    "JobResponse",
+    "JobTransitionRecord",
+    "JOB_TERMINAL_STATES",
+    "JOB_VALID_TRANSITIONS",
+    "InvalidJobTransitionError",
+    "JobImmutableError",
+    "OrphanJobError",
 ]

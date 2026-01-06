@@ -544,9 +544,9 @@ class TestSuggestionTextGeneration:
 
             for suggestion in result:
                 # Verify text passes validation
-                assert validate_suggestion_text(
-                    suggestion.suggestion_text
-                ), f"Text should use observational language: {suggestion.suggestion_text}"
+                assert validate_suggestion_text(suggestion.suggestion_text), (
+                    f"Text should use observational language: {suggestion.suggestion_text}"
+                )
         finally:
             set_learning_enabled(False)
             del os.environ["LEARNING_ENABLED"]

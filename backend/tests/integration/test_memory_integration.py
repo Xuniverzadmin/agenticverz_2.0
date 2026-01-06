@@ -140,9 +140,9 @@ class TestBaselineMemoryParity:
 
         # V1 results should be identical (V1 doesn't use memory)
         assert baseline_v1_cost == mem_v1_cost, f"V1 cost mismatch: baseline={baseline_v1_cost}, memory={mem_v1_cost}"
-        assert (
-            baseline_v1_feasible == mem_v1_feasible
-        ), f"V1 feasibility mismatch: baseline={baseline_v1_feasible}, memory={mem_v1_feasible}"
+        assert baseline_v1_feasible == mem_v1_feasible, (
+            f"V1 feasibility mismatch: baseline={baseline_v1_feasible}, memory={mem_v1_feasible}"
+        )
 
         # Memory context keys should be empty or None (no memory pins exist)
         memory_keys = mem_result.get("memory_context_keys")
@@ -175,9 +175,9 @@ class TestBaselineMemoryParity:
         drift_score = result.get("drift_score", 0.0)
 
         # Either drift_detected is False/None or drift_score is 0
-        assert (
-            not drift_detected or drift_score == 0.0
-        ), f"Unexpected drift with empty memory: detected={drift_detected}, score={drift_score}"
+        assert not drift_detected or drift_score == 0.0, (
+            f"Unexpected drift with empty memory: detected={drift_detected}, score={drift_score}"
+        )
 
 
 class TestMemoryPostUpdateEffects:
@@ -216,9 +216,9 @@ class TestMemoryPostUpdateEffects:
         # Check memory_updates_applied field exists
         # Note: This will be 0 if the underlying simulation doesn't trigger V2
         updates_applied = result.get("memory_updates_applied")
-        assert (
-            updates_applied is not None or result.get("v2_result") is None
-        ), "memory_updates_applied should be present when V2 runs"
+        assert updates_applied is not None or result.get("v2_result") is None, (
+            "memory_updates_applied should be present when V2 runs"
+        )
 
     def test_subsequent_runs_see_memory_changes(self, client, mock_memory_service):
         """

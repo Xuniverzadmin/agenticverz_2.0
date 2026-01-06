@@ -234,11 +234,11 @@ def validate_retry_policy(
     if feature_intent in required:
         if retry_policy != required[feature_intent]:
             violations.append(
-                f"FeatureIntent.{feature_intent} requires " f"RETRY_POLICY = RetryPolicy.{required[feature_intent]}"
+                f"FeatureIntent.{feature_intent} requires RETRY_POLICY = RetryPolicy.{required[feature_intent]}"
             )
 
     if (feature_intent, retry_policy) in forbidden:
-        violations.append(f"RetryPolicy.{retry_policy} is forbidden for " f"FeatureIntent.{feature_intent}")
+        violations.append(f"RetryPolicy.{retry_policy} is forbidden for FeatureIntent.{feature_intent}")
 
     return violations
 
@@ -308,9 +308,7 @@ def check_file(file_path: Path, verbose: bool = False) -> List[FeatureIntentViol
                     file=file_path,
                     line_num=1,
                     violation_type="MISSING_RETRY_POLICY",
-                    description=(
-                        f"FeatureIntent.{analysis.feature_intent_value} requires " f"RETRY_POLICY declaration"
-                    ),
+                    description=(f"FeatureIntent.{analysis.feature_intent_value} requires RETRY_POLICY declaration"),
                     fix_hint=(
                         "Add at module level:\n"
                         "  from app.infra import RetryPolicy\n"
@@ -367,9 +365,9 @@ def check_directory(root: Path, verbose: bool = False) -> List[FeatureIntentViol
 
 def print_violation(v: FeatureIntentViolation) -> None:
     """Print a single violation."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"FEATURE INTENT VIOLATION: {v.violation_type}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"File: {v.file}:{v.line_num}")
     print(f"\n{v.description}")
     print(f"\nFix:\n{v.fix_hint}")
@@ -412,16 +410,16 @@ def main() -> int:
     violations = check_directory(root, args.verbose)
 
     if violations:
-        print(f"\n{'#'*70}")
+        print(f"\n{'#' * 70}")
         print(f"# FEATURE INTENT VIOLATIONS: {len(violations)}")
-        print(f"{'#'*70}")
+        print(f"{'#' * 70}")
 
         for v in violations:
             print_violation(v)
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print("SUMMARY")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         print(f"Total violations: {len(violations)}")
         print()
         print("Feature intent declarations ensure:")

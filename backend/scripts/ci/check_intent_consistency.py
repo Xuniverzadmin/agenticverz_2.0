@@ -99,7 +99,7 @@ class IntentAnalyzer(ast.NodeVisitor):
                     line_num=node.lineno,
                     violation_type="ASYNC_LOCKED_MUTATION",
                     description=f"Async function '{node.name}' has LOCKED_MUTATION intent",
-                    fix_hint="LOCKED_MUTATION requires synchronous execution. " "Use sync functions for row locking.",
+                    fix_hint="LOCKED_MUTATION requires synchronous execution. Use sync functions for row locking.",
                 )
             )
         self.generic_visit(node)
@@ -266,9 +266,9 @@ def check_directory(root: Path, verbose: bool = False) -> list[IntentViolation]:
 
 def print_violation(v: IntentViolation) -> None:
     """Print a single violation."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"INTENT VIOLATION: {v.violation_type}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"File: {v.file}:{v.line_num}")
     print(f"\n{v.description}")
     print(f"\nFix: {v.fix_hint}")
@@ -306,16 +306,16 @@ def main() -> int:
     violations = check_directory(root, args.verbose)
 
     if violations:
-        print(f"\n{'#'*70}")
+        print(f"\n{'#' * 70}")
         print(f"# INTENT/PRIMITIVE MISMATCHES: {len(violations)}")
-        print(f"{'#'*70}")
+        print(f"{'#' * 70}")
 
         for v in violations:
             print_violation(v)
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print("SUMMARY")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         print(f"Total violations: {len(violations)}")
         print()
         print("Intent declarations must match primitive usage.")

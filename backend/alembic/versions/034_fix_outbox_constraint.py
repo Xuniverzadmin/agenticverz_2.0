@@ -12,6 +12,7 @@ an actual named constraint.
 
 Fix: Replace the function to use proper partial unique index conflict syntax.
 """
+
 from sqlalchemy import text
 
 from alembic import op

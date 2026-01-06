@@ -5,6 +5,7 @@ Registry Snapshot Test
 Ensures skills from the committed snapshot are still registered.
 Prevents silent deletion of skills.
 """
+
 import json
 from pathlib import Path
 

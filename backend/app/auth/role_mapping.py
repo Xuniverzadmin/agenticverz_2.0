@@ -388,6 +388,131 @@ def build_auth_context(
 
 
 # ============================================================================
+# M7 Legacy Functions (Extracted during M7 Closure - PIN-310)
+# ============================================================================
+
+# Approval levels for policy approval workflows
+ROLE_APPROVAL_LEVELS: Dict[str, int] = {
+    # Level 5 - Full administrative access
+    "owner": 5,
+    "admin": 5,
+    "realm-admin": 5,
+    "aos-admin": 5,
+    "founder": 5,
+    "operator": 5,
+    # Level 4 - Policy and management access
+    "manager": 4,
+    "policy_admin": 4,
+    "director": 4,
+    "team_admin": 4,
+    # Level 3 - Team leadership access
+    "team_lead": 3,
+    "senior_engineer": 3,
+    "tech_lead": 3,
+    # Level 2 - Standard member access
+    "team_member": 2,
+    "engineer": 2,
+    "developer": 2,
+    "dev": 2,
+    # Level 1 - Minimal access
+    "guest": 1,
+    "viewer": 1,
+    "readonly": 1,
+}
+
+# External provider role → AOS role mapping
+EXTERNAL_TO_AOS_ROLE_MAP: Dict[str, str] = {
+    # Admin roles
+    "admin": "admin",
+    "realm-admin": "admin",
+    "aos-admin": "admin",
+    "founder": "founder",
+    "operator": "operator",
+    # Infrastructure roles
+    "infra": "infra",
+    "infrastructure": "infra",
+    "platform": "infra",
+    # Developer roles
+    "developer": "developer",
+    "dev": "dev",
+    "engineer": "developer",
+    # Machine/service roles
+    "machine": "machine",
+    "service": "machine",
+    "service-account": "machine",
+    "automation": "automation",
+    "ci": "ci",
+    "worker": "worker",
+    # Readonly roles
+    "readonly": "viewer",
+    "viewer": "viewer",
+    "guest": "viewer",
+}
+
+
+def get_role_approval_level(role: str) -> int:
+    """
+    Get approval level for a role.
+    Extracted from M7 (rbac_engine.py) during M7 closure.
+
+    Args:
+        role: Role name (case-insensitive)
+
+    Returns:
+        Approval level (1-5), defaults to 1 for unknown roles
+    """
+    return ROLE_APPROVAL_LEVELS.get(role.lower(), 1)
+
+
+def get_max_approval_level(roles: List[str]) -> int:
+    """
+    Get maximum approval level from a list of roles.
+    Extracted from M7 (rbac_engine.py) during M7 closure.
+
+    Args:
+        roles: List of role names
+
+    Returns:
+        Maximum approval level (1-5)
+    """
+    if not roles:
+        return 1
+    return max(get_role_approval_level(role) for role in roles)
+
+
+def map_external_role_to_aos(external_role: str) -> str:
+    """
+    Map external provider role to AOS internal role.
+    Extracted from M7 (rbac_engine.py) during M7 closure.
+
+    Args:
+        external_role: Role from external provider (Keycloak, Clerk, etc.)
+
+    Returns:
+        AOS internal role name
+    """
+    role_lower = external_role.lower()
+    return EXTERNAL_TO_AOS_ROLE_MAP.get(role_lower, role_lower)
+
+
+def map_external_roles_to_aos(external_roles: List[str]) -> List[str]:
+    """
+    Map list of external roles to AOS internal roles.
+    Extracted from M7 (rbac_engine.py) during M7 closure.
+
+    Args:
+        external_roles: List of roles from external provider
+
+    Returns:
+        List of AOS internal roles (deduplicated)
+    """
+    aos_roles = set()
+    for role in external_roles:
+        aos_roles.add(map_external_role_to_aos(role))
+    return list(aos_roles)
+
+
+# ============================================================================
 # Exports
 # ============================================================================
 
@@ -415,4 +540,11 @@ __all__ = [
     # Hierarchy
     "get_role_hierarchy",
     "role_subsumes",
+    # M7 Legacy Functions (PIN-310)
+    "get_role_approval_level",
+    "get_max_approval_level",
+    "map_external_role_to_aos",
+    "map_external_roles_to_aos",
+    "ROLE_APPROVAL_LEVELS",
+    "EXTERNAL_TO_AOS_ROLE_MAP",
 ]

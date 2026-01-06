@@ -12,6 +12,9 @@ import {
   Power,
   Link2,
   Wallet,
+  Play,
+  Calculator,
+  Compass,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
@@ -56,6 +59,9 @@ const MAIN_NAV = [
 const FOUNDER_ITEMS = [
   { icon: Clock, label: 'Timeline', href: '/founder/timeline' },
   { icon: Power, label: 'Controls', href: '/founder/controls' },
+  { icon: Play, label: 'Replay', href: '/founder/replay' },
+  { icon: Calculator, label: 'Scenarios', href: '/founder/scenarios' },
+  { icon: Compass, label: 'Explorer', href: '/founder/explorer' },
 ];
 
 const EXECUTION_ITEMS = [

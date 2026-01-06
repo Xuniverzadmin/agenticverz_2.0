@@ -413,6 +413,25 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("route_validation_complete", extra={"issues": 0, "status": "pass"})
 
+    # =========================================================================
+    # CAP-006: Auth Gateway Initialization
+    # =========================================================================
+    # Initialize the auth gateway with dependencies (session store, API key service)
+    try:
+        from .auth.gateway_config import AUTH_GATEWAY_ENABLED, configure_auth_gateway
+
+        if AUTH_GATEWAY_ENABLED:
+            gateway = await configure_auth_gateway()
+            app.state.auth_gateway = gateway
+            logger.info("auth_gateway_initialized")
+        else:
+            logger.info("auth_gateway_skipped", extra={"reason": "AUTH_GATEWAY_ENABLED=false"})
+    except Exception as e:
+        logger.error(f"auth_gateway_init_error: {e}", exc_info=True)
+        # Gateway init failure should not block startup in non-production
+        if os.getenv("AUTH_GATEWAY_REQUIRED", "false").lower() == "true":
+            raise
+
     yield
     # Cleanup on shutdown
     task.cancel()
@@ -433,6 +452,7 @@ app = FastAPI(
 
 # Include API routers
 from .api.agents import router as agents_router  # M12 Multi-Agent System
+from .api.authz_status import router as authz_status_router  # T5: Internal authz status
 from .api.cost_guard import router as cost_guard_router  # /guard/costs/* - Customer cost visibility
 
 # M26 Cost Intelligence - Token attribution, anomaly detection, budget enforcement
@@ -441,15 +461,19 @@ from .api.cost_intelligence import router as cost_intelligence_router
 # M29 Category 4: Cost Intelligence Completion
 from .api.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
 from .api.costsim import router as costsim_router
+from .api.customer_activity import router as customer_activity_router  # ACTIVITY Domain Qualification (L2→L3→L4)
 from .api.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
 
 # M29 Category 6: Founder Action Paths
 from .api.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
+from .api.founder_explorer import router as explorer_router  # H3 Founder Explorer (cross-tenant READ-ONLY)
 from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
+from .api.guard_logs import router as guard_logs_router  # PIN-281: Customer Logs (/guard/logs/*)
+from .api.guard_policies import router as guard_policies_router  # PIN-281: Customer Policies (/guard/policies/*)
 from .api.health import router as health_router
 
 # M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
@@ -462,12 +486,15 @@ from .api.onboarding import router as onboarding_router  # M24 Customer Onboardi
 
 # M28: operator_router removed (PIN-145) - redundant with /ops/*
 from .api.ops import router as ops_router  # M24 Ops Console (founder intelligence)
+from .api.platform import router as platform_router  # PIN-284 Platform Health (founder-only)
 from .api.policy import router as policy_router
 from .api.policy_layer import router as policy_layer_router  # M19 Policy Layer
 from .api.rbac_api import router as rbac_router
 from .api.recovery import router as recovery_router
 from .api.recovery_ingest import router as recovery_ingest_router
+from .api.replay import router as replay_router  # H1 Replay UX (READ-ONLY slice/timeline)
 from .api.runtime import router as runtime_router
+from .api.scenarios import router as scenarios_router  # H2 Scenario-based Cost Simulation (advisory)
 from .api.status_history import router as status_history_router
 from .api.traces import router as traces_router
 from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
@@ -486,6 +513,9 @@ app.include_router(costsim_router)
 app.include_router(memory_pins_router)
 app.include_router(rbac_router)
 app.include_router(traces_router, prefix="/api/v1")
+app.include_router(replay_router, prefix="/api/v1")  # H1 Replay UX (READ-ONLY)
+app.include_router(scenarios_router, prefix="/api/v1")  # H2 Scenarios (advisory simulation)
+app.include_router(explorer_router, prefix="/api/v1")  # H3 Explorer (founder cross-tenant READ-ONLY)
 # M28: failures_router removed (PIN-145)
 app.include_router(recovery_router)  # M10 Recovery Suggestion Engine
 app.include_router(recovery_ingest_router)  # M10 Recovery Ingest (idempotent)
@@ -501,8 +531,12 @@ app.include_router(v1_killswitch_router)  # /v1/killswitch/*, /v1/policies/*, /v
 
 # M22.1 UI Console - Dual-console architecture
 app.include_router(guard_router)  # /guard/* - Customer Console (trust + control)
+app.include_router(guard_logs_router)  # PIN-281: /guard/logs/* - Customer Logs (L4→L3→L2)
+app.include_router(guard_policies_router)  # PIN-281: /guard/policies/* - Customer Policy Constraints
+app.include_router(customer_activity_router)  # ACTIVITY Domain Qualification: /api/v1/customer/activity/* (L2→L3→L4)
 # M28: operator_router removed (PIN-145) - merged into /ops/*
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
+app.include_router(platform_router)  # /platform/* - PIN-284 Platform Health (founder-only)
 app.include_router(founder_timeline_router)  # Phase 4C-1 Founder Timeline (decision records)
 app.include_router(customer_visibility_router)  # Phase 4C-2 Customer Visibility (predictability)
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
@@ -512,6 +546,9 @@ app.include_router(cost_intelligence_router)  # /cost/* - M26 Cost Intelligence
 # M29 Category 4: Cost Intelligence Completion - Domain-separated cost visibility
 app.include_router(cost_ops_router)  # /ops/cost/* - Founder cost overview (FOPS auth)
 app.include_router(cost_guard_router)  # /guard/costs/* - Customer cost summary (Console auth)
+
+# T5: Authorization Status (internal visibility)
+app.include_router(authz_status_router)  # /internal/authz/* - M28/M7 status
 
 # C2 Prediction Plane (advisory only, no control influence)
 app.include_router(c2_predictions_router)  # /api/v1/c2/predictions - C2 Prediction Plane
@@ -550,6 +587,14 @@ app.add_middleware(TenantMiddleware)
 # RBAC enforcement middleware (M7)
 # Evaluates PolicyObject patterns for protected paths
 app.add_middleware(RBACMiddleware)
+
+# Auth Gateway middleware (CAP-006)
+# Central authentication entry point - JWT XOR API Key, session revocation
+# Must run BEFORE RBAC so auth context is available
+from .auth.gateway_config import AUTH_GATEWAY_ENABLED, setup_auth_middleware
+
+if AUTH_GATEWAY_ENABLED:
+    setup_auth_middleware(app)
 
 
 @app.middleware("http")

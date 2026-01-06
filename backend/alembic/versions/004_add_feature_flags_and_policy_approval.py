@@ -10,6 +10,7 @@ This migration adds:
 
 These tables support M5 capability enforcement and policy-driven autonomy.
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

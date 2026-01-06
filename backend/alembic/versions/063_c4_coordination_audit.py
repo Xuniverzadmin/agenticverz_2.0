@@ -6,6 +6,7 @@ Does NOT change C4 coordination behavior.
 
 Reference: C4_COORDINATION_AUDIT_SCHEMA.md, PIN-232
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 

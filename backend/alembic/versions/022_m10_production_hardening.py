@@ -11,6 +11,7 @@ M10 Production Hardening:
 - Adds outbox table for transactional external side-effects
 - Adds reclaim_attempts_gc table for tracking TTL cleanup
 """
+
 from sqlalchemy import text
 
 from alembic import op

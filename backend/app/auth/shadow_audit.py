@@ -224,9 +224,7 @@ class ShadowAuditLogger:
                 f"resource={resource} action={action} roles={roles} reason={reason}"
             )
         else:
-            logger.debug(
-                f"SHADOW_AUDIT [allowed] {method} {path} - " f"resource={resource} action={action} roles={roles}"
-            )
+            logger.debug(f"SHADOW_AUDIT [allowed] {method} {path} - resource={resource} action={action} roles={roles}")
 
     def log_role_mapping(
         self,
@@ -268,7 +266,7 @@ class ShadowAuditLogger:
                 f"tenant_id={tenant_id} - SECURITY VIOLATION WOULD OCCUR"
             )
         else:
-            logger.debug(f"SHADOW_AUDIT [founder_isolation_pass] principal={principal_id} " f"tenant_id={tenant_id}")
+            logger.debug(f"SHADOW_AUDIT [founder_isolation_pass] principal={principal_id} tenant_id={tenant_id}")
 
 
 # ============================================================================

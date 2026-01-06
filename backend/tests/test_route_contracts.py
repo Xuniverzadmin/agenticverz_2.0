@@ -35,9 +35,9 @@ class TestOpsRouteContracts:
                 break
 
         assert at_risk_route is not None, "Route /ops/customers/at-risk not found"
-        assert (
-            at_risk_route.endpoint.__name__ == "get_customers_at_risk"
-        ), f"Wrong handler: expected 'get_customers_at_risk', got '{at_risk_route.endpoint.__name__}'"
+        assert at_risk_route.endpoint.__name__ == "get_customers_at_risk", (
+            f"Wrong handler: expected 'get_customers_at_risk', got '{at_risk_route.endpoint.__name__}'"
+        )
 
     def test_customers_tenant_id_is_param_route(self):
         """Verify /customers/{tenant_id} is registered as parameter route."""
@@ -370,7 +370,7 @@ class TestOpsAPIHygiene:
 
         assert events_route is not None, "Route /ops/events not found"
         assert events_route.response_model is OpsEventListResponse, (
-            f"/ops/events must use response_model=OpsEventListResponse, " f"got {events_route.response_model}"
+            f"/ops/events must use response_model=OpsEventListResponse, got {events_route.response_model}"
         )
 
     def test_ops_job_endpoints_have_correct_response_model(self):

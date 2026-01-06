@@ -12,6 +12,27 @@
 """
 Enhanced RBAC Engine - M7 Implementation
 
+=============================================================================
+INVARIANT: M7 IS LEGACY - TRANSLATION LAYER ONLY (I-AUTH-002, I-AUTH-003)
+=============================================================================
+This module is a TEMPORARY TRANSLATION LAYER scheduled for removal.
+
+ALL authorization decisions MUST originate from M28 (authorization.py).
+M7 is READ-ONLY and must not be extended.
+
+DO NOT:
+- Add new roles or permissions to this module
+- Create new routes that use this module directly
+- Import this module in any new code
+
+INSTEAD:
+- Use authorize() from app.auth.authorization
+- Add new permissions to AuthorizationEngine.ROLE_PERMISSIONS
+- Use authority.py dependencies for FastAPI routes
+
+Reference: docs/invariants/AUTHZ_AUTHORITY.md
+=============================================================================
+
 Provides PolicyObject-based authorization with:
 - Hot-reloadable policies from JSON file
 - Prometheus metrics
@@ -19,6 +40,7 @@ Provides PolicyObject-based authorization with:
 - Fail-open/fail-closed modes
 
 Usage:
+    # DEPRECATED - Use M28 instead
     from app.auth.rbac_engine import RBACEngine, PolicyObject
 
     engine = RBACEngine()

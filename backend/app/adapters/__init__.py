@@ -17,6 +17,61 @@ Adapters must:
 - Be thin (<200 LOC typically)
 """
 
+from app.adapters.customer_incidents_adapter import (
+    CustomerIncidentDetail,
+    CustomerIncidentEvent,
+    CustomerIncidentListResponse,
+    CustomerIncidentsAdapter,
+    CustomerIncidentSummary,
+    get_customer_incidents_adapter,
+)
+from app.adapters.customer_keys_adapter import (
+    CustomerKeyAction,
+    CustomerKeyInfo,
+    CustomerKeyListResponse,
+    CustomerKeysAdapter,
+    get_customer_keys_adapter,
+)
+from app.adapters.customer_killswitch_adapter import (
+    CustomerKillswitchAction,
+    CustomerKillswitchAdapter,
+    CustomerKillswitchStatus,
+    get_customer_killswitch_adapter,
+)
+from app.adapters.customer_logs_adapter import (
+    CustomerLogDetail,
+    CustomerLogListResponse,
+    CustomerLogsAdapter,
+    CustomerLogStep,
+    CustomerLogSummary,
+    get_customer_logs_adapter,
+)
+from app.adapters.customer_policies_adapter import (
+    CustomerBudgetConstraint,
+    CustomerGuardrail,
+    CustomerPoliciesAdapter,
+    CustomerPolicyConstraints,
+    CustomerRateLimit,
+    get_customer_policies_adapter,
+)
+from app.adapters.founder_review_adapter import (
+    FounderContractDetailView,
+    FounderContractSummaryView,
+    FounderReviewAdapter,
+    FounderReviewDecision,
+    FounderReviewQueueResponse,
+    FounderReviewResult,
+)
+from app.adapters.platform_eligibility_adapter import (
+    CapabilityEligibilityView,
+    CapabilityHealthView,
+    DomainHealthView,
+    HealthReasonView,
+    PlatformEligibilityAdapter,
+    PlatformEligibilityResponse,
+    SystemHealthView,
+    get_platform_eligibility_adapter,
+)
 from app.adapters.policy_adapter import (
     PolicyAdapter,
     PolicyEvaluationResult,
@@ -45,4 +100,52 @@ __all__ = [
     "get_policy_adapter",
     "PolicyEvaluationResult",
     "PolicyViolation",
+    # Customer logs adapter (PIN-281)
+    "CustomerLogsAdapter",
+    "get_customer_logs_adapter",
+    "CustomerLogSummary",
+    "CustomerLogStep",
+    "CustomerLogDetail",
+    "CustomerLogListResponse",
+    # Customer policies adapter (PIN-281)
+    "CustomerPoliciesAdapter",
+    "get_customer_policies_adapter",
+    "CustomerBudgetConstraint",
+    "CustomerRateLimit",
+    "CustomerGuardrail",
+    "CustomerPolicyConstraints",
+    # Customer incidents adapter (PIN-281)
+    "CustomerIncidentsAdapter",
+    "get_customer_incidents_adapter",
+    "CustomerIncidentSummary",
+    "CustomerIncidentEvent",
+    "CustomerIncidentDetail",
+    "CustomerIncidentListResponse",
+    # Customer keys adapter (PIN-281)
+    "CustomerKeysAdapter",
+    "get_customer_keys_adapter",
+    "CustomerKeyInfo",
+    "CustomerKeyListResponse",
+    "CustomerKeyAction",
+    # Customer killswitch adapter (PIN-281)
+    "CustomerKillswitchAdapter",
+    "get_customer_killswitch_adapter",
+    "CustomerKillswitchStatus",
+    "CustomerKillswitchAction",
+    # Platform eligibility adapter (PIN-284)
+    "PlatformEligibilityAdapter",
+    "get_platform_eligibility_adapter",
+    "HealthReasonView",
+    "CapabilityHealthView",
+    "DomainHealthView",
+    "SystemHealthView",
+    "CapabilityEligibilityView",
+    "PlatformEligibilityResponse",
+    # Founder Review adapter (PIN-293)
+    "FounderReviewAdapter",
+    "FounderContractSummaryView",
+    "FounderContractDetailView",
+    "FounderReviewQueueResponse",
+    "FounderReviewDecision",
+    "FounderReviewResult",
 ]

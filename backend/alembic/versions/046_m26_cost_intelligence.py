@@ -15,6 +15,7 @@ Tables:
 - cost_budgets: Per-tenant and per-feature budget limits
 - cost_daily_aggregates: Pre-aggregated for fast dashboard reads
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 

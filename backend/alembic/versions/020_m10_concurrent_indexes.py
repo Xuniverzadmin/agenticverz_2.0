@@ -18,6 +18,7 @@ Heavy indexes for production performance:
 - idx_fm_error_code_created: For failure_matches lookup
 - idx_sp_suggestion_created: For provenance queries
 """
+
 from sqlalchemy import text
 
 from alembic import op

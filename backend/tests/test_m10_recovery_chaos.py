@@ -275,7 +275,7 @@ class TestExponentialBackoff:
         # Each backoff should be roughly 2x the previous (up to max)
         for i in range(1, len(backoffs)):
             if backoffs[i] < RECLAIM_MAX_BACKOFF_MS:
-                assert backoffs[i] >= backoffs[i - 1], f"Backoff should increase: {backoffs[i-1]} -> {backoffs[i]}"
+                assert backoffs[i] >= backoffs[i - 1], f"Backoff should increase: {backoffs[i - 1]} -> {backoffs[i]}"
 
         # Should eventually hit max
         assert calculate_backoff_ms(100) == RECLAIM_MAX_BACKOFF_MS
@@ -573,11 +573,11 @@ class TestHighVolumeIngest:
 
         print("\n=== Load Test Results ===")
         print(f"Total time: {total_time:.2f}s")
-        print(f"Throughput: {1000/total_time:.1f} req/s")
+        print(f"Throughput: {1000 / total_time:.1f} req/s")
         print(f"Successes: {len(successes)}")
         print(f"Errors: {len(errors)}")
         if durations:
-            print(f"Avg latency: {sum(durations)/len(durations):.2f}ms")
+            print(f"Avg latency: {sum(durations) / len(durations):.2f}ms")
             print(f"Max latency: {max(durations):.2f}ms")
             print(f"Min latency: {min(durations):.2f}ms")
 
@@ -616,9 +616,9 @@ class TestHighVolumeIngest:
             print(f"Non-capacity errors: {len(non_capacity_errors)}")
 
             # Allow capacity errors (honest rejection), fail on real bugs
-            assert (
-                len(non_capacity_errors) == 0
-            ), f"Got {len(non_capacity_errors)} non-capacity errors (real bugs): {non_capacity_errors[:3]}"
+            assert len(non_capacity_errors) == 0, (
+                f"Got {len(non_capacity_errors)} non-capacity errors (real bugs): {non_capacity_errors[:3]}"
+            )
 
         print(f"✓ Load test passed: {success_rate:.1%} success rate within capacity bounds")
 

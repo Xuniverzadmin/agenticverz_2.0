@@ -22,6 +22,7 @@ Related Invariants (LESSONS_ENFORCED.md):
 - #14 Replay Is Observational
 - #15 First Truth Wins
 """
+
 import sqlalchemy as sa
 
 from alembic import op

@@ -281,6 +281,40 @@ else
 fi
 
 # ============================================================================
+# CHECK 10: Governance Qualifier Gate (PIN-281 - System Gate)
+# ============================================================================
+echo ""
+echo -e "${YELLOW}[CHECK 10] Governance Qualifier Gate (GQ-L2-CONTRACT-READY)${NC}"
+
+QUALIFIER_SCRIPT="/root/agenticverz2.0/scripts/ops/evaluate_qualifiers.py"
+if [[ -f "$QUALIFIER_SCRIPT" ]]; then
+    # Run qualifier evaluation and capture output
+    QUALIFIER_OUTPUT=$(python3 "$QUALIFIER_SCRIPT" 2>&1)
+    QUALIFIER_EXIT=$?
+
+    # Extract counts from output
+    QUALIFIED_COUNT=$(echo "$QUALIFIER_OUTPUT" | grep -oP 'QUALIFIED:\s+\K\d+' | head -1 || echo "0")
+    DISQUALIFIED_COUNT=$(echo "$QUALIFIER_OUTPUT" | grep -oP 'DISQUALIFIED:\s+\K\d+' | head -1 || echo "0")
+
+    if [[ "$DISQUALIFIED_COUNT" -gt 0 ]]; then
+        echo -e "  ${YELLOW}INFO: $DISQUALIFIED_COUNT capabilities are DISQUALIFIED${NC}"
+        echo "       These capabilities cannot be used for L2 testing or product claims"
+        echo "       Run: python3 $QUALIFIER_SCRIPT --verbose for details"
+    fi
+
+    if [[ "$QUALIFIED_COUNT" -gt 0 ]]; then
+        echo -e "  ${GREEN}PASS: $QUALIFIED_COUNT capabilities are QUALIFIED${NC}"
+        echo "       L2 testing and product claims permitted for qualified capabilities"
+    else
+        echo -e "  ${YELLOW}WARN: No capabilities currently QUALIFIED${NC}"
+    fi
+
+    echo "       Ref: docs/governance/QUALIFIER_EVALUATION.yaml"
+else
+    echo -e "  ${YELLOW}SKIP: evaluate_qualifiers.py not found${NC}"
+fi
+
+# ============================================================================
 # FINAL VERDICT
 # ============================================================================
 echo ""

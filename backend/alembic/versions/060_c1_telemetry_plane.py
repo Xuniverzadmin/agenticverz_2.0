@@ -19,6 +19,7 @@ INVARIANT (PIN-210):
 Reference: PIN-210-c1-telemetry-plane.md
 Truth anchor: "Telemetry observes reality without rewriting it."
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 

@@ -50,9 +50,9 @@ class TestDeterminismInvariant:
         trace_dict = trace.to_dict()
 
         assert "schema_version" in trace_dict, "Trace must include schema_version"
-        assert (
-            trace_dict["schema_version"] == TraceRecord.SCHEMA_VERSION
-        ), f"Schema version mismatch: {trace_dict['schema_version']} != {TraceRecord.SCHEMA_VERSION}"
+        assert trace_dict["schema_version"] == TraceRecord.SCHEMA_VERSION, (
+            f"Schema version mismatch: {trace_dict['schema_version']} != {TraceRecord.SCHEMA_VERSION}"
+        )
 
     def test_frozen_trace_has_checksum(self):
         """
@@ -141,10 +141,7 @@ class TestDeterminismInvariant:
         hash2 = step.determinism_hash()
 
         assert hash1 == hash2, (
-            f"Float normalization failed:\n"
-            f"Hash 1: {hash1}\n"
-            f"Hash 2: {hash2}\n"
-            "Float params must produce stable hashes."
+            f"Float normalization failed:\nHash 1: {hash1}\nHash 2: {hash2}\nFloat params must produce stable hashes."
         )
 
     def test_signature_is_stable_across_step_order(self):
@@ -185,9 +182,9 @@ class TestDeterminismDriftDetection:
         result = compare_traces(trace1, trace2)
 
         assert not result.is_parity, "Different step counts must fail parity"
-        assert (
-            "step count" in (result.divergence_reason or "").lower()
-        ), f"Divergence reason must mention step count, got: {result.divergence_reason}"
+        assert "step count" in (result.divergence_reason or "").lower(), (
+            f"Divergence reason must mention step count, got: {result.divergence_reason}"
+        )
 
     def test_detect_status_divergence(self):
         """
@@ -220,9 +217,9 @@ class TestDeterminismDriftDetection:
 
         assert not result.is_parity, "Different params must fail parity"
         assert result.divergence_step == 0, "Divergence must be at step 0"
-        assert (
-            "params" in (result.divergence_reason or "").lower()
-        ), f"Divergence reason must mention params, got: {result.divergence_reason}"
+        assert "params" in (result.divergence_reason or "").lower(), (
+            f"Divergence reason must mention params, got: {result.divergence_reason}"
+        )
 
 
 class TestSchemaVersioning:

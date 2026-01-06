@@ -257,12 +257,12 @@ class TestGraduationDowngrade:
         degraded_status = new_engine.compute(degraded_evidence, previous)
 
         # Capabilities should be blocked at DEGRADED level
-        assert not CapabilityGates.can_auto_apply_recovery(
-            degraded_status
-        ), "DEGRADED should not have auto_apply_recovery"
-        assert not CapabilityGates.can_auto_activate_policy(
-            degraded_status
-        ), "DEGRADED should not have auto_activate_policy"
+        assert not CapabilityGates.can_auto_apply_recovery(degraded_status), (
+            "DEGRADED should not have auto_apply_recovery"
+        )
+        assert not CapabilityGates.can_auto_activate_policy(degraded_status), (
+            "DEGRADED should not have auto_activate_policy"
+        )
         assert not CapabilityGates.can_full_auto_routing(degraded_status), "DEGRADED should not have full_auto_routing"
 
     # =========================================================================

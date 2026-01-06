@@ -325,7 +325,7 @@ async def reconcile_once(dry_run: bool = False) -> Dict[str, int]:
         stats["duplicates_found"] = len(duplicates)
 
         if not duplicates:
-            logger.info(f"No duplicates found. Pending: {stats['pending_count']}, " f"DL: {stats['dl_count']}")
+            logger.info(f"No duplicates found. Pending: {stats['pending_count']}, DL: {stats['dl_count']}")
             return stats
 
         logger.warning(f"Found {len(duplicates)} duplicates (in both pending and DL)")

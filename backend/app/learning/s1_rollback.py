@@ -285,7 +285,7 @@ class RollbackObserver:
             )
             # Generate safe fallback text
             suggestion_text = (
-                f"Rollback frequency observed for {stats.envelope_class} class. " f"Rate: {stats.rollback_rate:.1%}."
+                f"Rollback frequency observed for {stats.envelope_class} class. Rate: {stats.rollback_rate:.1%}."
             )
 
         observation = RollbackObservation(

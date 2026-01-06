@@ -12,7 +12,6 @@ THE INVARIANT:
     Every loop completion reduces future cost risk.
 """
 
-
 import pytest
 
 # =============================================================================

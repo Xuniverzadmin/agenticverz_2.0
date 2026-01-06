@@ -15,6 +15,7 @@ M10 Recovery Enhancement Migration:
 
 Safe, additive migration - does not alter existing table structures.
 """
+
 from sqlalchemy import text
 
 from alembic import op

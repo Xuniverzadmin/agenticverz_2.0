@@ -2,6 +2,7 @@
 Rate Limit Integration Tests
 M8 Deliverable: Verify rate limiting works correctly with Redis
 """
+
 import os
 from unittest.mock import AsyncMock, patch
 

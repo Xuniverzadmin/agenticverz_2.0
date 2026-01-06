@@ -6,6 +6,7 @@ Create Date: 2025-12-06
 
 M8 Deliverable: Trace storage with PostgreSQL for production deployment
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 

@@ -470,12 +470,12 @@ class TestOutboxConcurrency:
         asyncio.run(process_all())
 
         # All events should be processed exactly once
-        assert (
-            len(IdempotencyTrackingHandler.received_events) == 10
-        ), f"Expected 10 events, got {len(IdempotencyTrackingHandler.received_events)}"
-        assert (
-            IdempotencyTrackingHandler.duplicate_count == 0
-        ), f"Expected 0 duplicates, got {IdempotencyTrackingHandler.duplicate_count}"
+        assert len(IdempotencyTrackingHandler.received_events) == 10, (
+            f"Expected 10 events, got {len(IdempotencyTrackingHandler.received_events)}"
+        )
+        assert IdempotencyTrackingHandler.duplicate_count == 0, (
+            f"Expected 0 duplicates, got {IdempotencyTrackingHandler.duplicate_count}"
+        )
 
         # Verify unique idempotency keys
         keys = IdempotencyTrackingHandler.received_keys

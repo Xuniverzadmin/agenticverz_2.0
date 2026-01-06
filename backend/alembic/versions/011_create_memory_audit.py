@@ -8,7 +8,6 @@ Revises: 010_create_rbac_audit
 Create Date: 2025-12-04
 """
 
-
 from alembic import op
 
 # revision identifiers

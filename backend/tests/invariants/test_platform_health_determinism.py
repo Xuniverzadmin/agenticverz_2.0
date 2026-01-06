@@ -76,7 +76,7 @@ def _check_required_tables(session: Session) -> tuple[bool, list[str]]:
 
         for table in required_tables:
             result = session.execute(
-                text(f"SELECT EXISTS (SELECT FROM information_schema.tables " f"WHERE table_name = '{table}')")
+                text(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{table}')")
             )
             if not result.scalar():
                 missing.append(table)
@@ -165,7 +165,7 @@ def skip_if_no_governance_signals(isolated_db_session):
     """Skip test if required tables don't exist."""
     present, missing = _check_required_tables(isolated_db_session)
     if not present:
-        pytest.skip(f"Required tables missing: {missing}. " f"Run: cd backend && alembic upgrade head")
+        pytest.skip(f"Required tables missing: {missing}. Run: cd backend && alembic upgrade head")
 
 
 # ==============================================================================
@@ -191,7 +191,7 @@ class TestHealthIdempotence:
         health2 = service.get_system_health()
 
         assert health1.state == health2.state, (
-            f"Idempotence violated: " f"First call: {health1.state}, " f"Second call: {health2.state}"
+            f"Idempotence violated: First call: {health1.state}, Second call: {health2.state}"
         )
         assert health1.blca_status == health2.blca_status
         assert health1.lifecycle_coherence == health2.lifecycle_coherence
@@ -206,7 +206,7 @@ class TestHealthIdempotence:
             health2 = service.get_domain_health(domain_name)
 
             assert health1.state == health2.state, (
-                f"Domain {domain_name} idempotence violated: " f"First: {health1.state}, Second: {health2.state}"
+                f"Domain {domain_name} idempotence violated: First: {health1.state}, Second: {health2.state}"
             )
             assert health1.healthy_count == health2.healthy_count
             assert health1.degraded_count == health2.degraded_count
@@ -222,7 +222,7 @@ class TestHealthIdempotence:
                 health2 = service.get_capability_health(cap_name)
 
                 assert health1.state == health2.state, (
-                    f"Capability {cap_name} idempotence violated: " f"First: {health1.state}, Second: {health2.state}"
+                    f"Capability {cap_name} idempotence violated: First: {health1.state}, Second: {health2.state}"
                 )
                 assert health1.is_eligible() == health2.is_eligible()
 
@@ -303,7 +303,7 @@ class TestHealthOrderIndependence:
         health_ba = service.get_capability_health("LOGS_LIST")
 
         assert health_ab.state == health_ba.state, (
-            f"Order independence violated: " f"A then B: {health_ab.state}, B then A: {health_ba.state}"
+            f"Order independence violated: A then B: {health_ab.state}, B then A: {health_ba.state}"
         )
 
     def test_mixed_signal_order_irrelevant(self, isolated_db_session):
@@ -409,9 +409,9 @@ class TestHealthDominance:
         # Note: POLICY_CONSTRAINTS may have existing signals, so check relative change
         # The key assertion is that WARN creates DEGRADED state
         if health_before.state == HealthState.HEALTHY:
-            assert (
-                health_after.state == HealthState.DEGRADED
-            ), f"Degraded dominance violated: Expected DEGRADED, got {health_after.state}"
+            assert health_after.state == HealthState.DEGRADED, (
+                f"Degraded dominance violated: Expected DEGRADED, got {health_after.state}"
+            )
 
     def test_healthy_is_default(self, isolated_db_session):
         """No signals → HEALTHY (not UNKNOWN or DEGRADED)."""
@@ -446,9 +446,9 @@ class TestHealthDominance:
 
         health = service.get_system_health()
 
-        assert (
-            health.state == HealthState.BLOCKED
-        ), f"System dominance violated: BLCA BLOCKED but system is {health.state}"
+        assert health.state == HealthState.BLOCKED, (
+            f"System dominance violated: BLCA BLOCKED but system is {health.state}"
+        )
         assert health.blca_status == "BLOCKED"
 
 
@@ -485,9 +485,9 @@ class TestHealthScopeAggregation:
         assert domain_health.blocked_count >= 1, "Should have at least one blocked capability"
         # If not all blocked, domain should be DEGRADED
         if domain_health.blocked_count < len(service.DOMAIN_CAPABILITIES["LOGS"]):
-            assert (
-                domain_health.state == HealthState.DEGRADED
-            ), f"Aggregation violated: Expected DEGRADED, got {domain_health.state}"
+            assert domain_health.state == HealthState.DEGRADED, (
+                f"Aggregation violated: Expected DEGRADED, got {domain_health.state}"
+            )
 
     def test_all_capabilities_blocked_blocks_domain(self, isolated_db_session):
         """All capabilities in domain BLOCKED → Domain BLOCKED."""
@@ -504,9 +504,9 @@ class TestHealthScopeAggregation:
 
         domain_health = service.get_domain_health("KILLSWITCH")
 
-        assert (
-            domain_health.state == HealthState.BLOCKED
-        ), f"All-blocked aggregation violated: Expected BLOCKED, got {domain_health.state}"
+        assert domain_health.state == HealthState.BLOCKED, (
+            f"All-blocked aggregation violated: Expected BLOCKED, got {domain_health.state}"
+        )
 
     def test_domain_degraded_degrades_system(self, isolated_db_session):
         """Domain DEGRADED → System DEGRADED."""
@@ -552,18 +552,18 @@ class TestHealthScopeAggregation:
                 elif cap.state == HealthState.BLOCKED:
                     blocked += 1
 
-        assert (
-            system_health.total_capabilities == total
-        ), f"Total count mismatch: {system_health.total_capabilities} != {total}"
-        assert (
-            system_health.healthy_capabilities == healthy
-        ), f"Healthy count mismatch: {system_health.healthy_capabilities} != {healthy}"
-        assert (
-            system_health.degraded_capabilities == degraded
-        ), f"Degraded count mismatch: {system_health.degraded_capabilities} != {degraded}"
-        assert (
-            system_health.blocked_capabilities == blocked
-        ), f"Blocked count mismatch: {system_health.blocked_capabilities} != {blocked}"
+        assert system_health.total_capabilities == total, (
+            f"Total count mismatch: {system_health.total_capabilities} != {total}"
+        )
+        assert system_health.healthy_capabilities == healthy, (
+            f"Healthy count mismatch: {system_health.healthy_capabilities} != {healthy}"
+        )
+        assert system_health.degraded_capabilities == degraded, (
+            f"Degraded count mismatch: {system_health.degraded_capabilities} != {degraded}"
+        )
+        assert system_health.blocked_capabilities == blocked, (
+            f"Blocked count mismatch: {system_health.blocked_capabilities} != {blocked}"
+        )
 
 
 # ==============================================================================
@@ -716,7 +716,7 @@ class TestEligibilityConsistency:
                 in_list = cap_name in eligible_list
 
                 assert individual_check == in_list, (
-                    f"Eligibility mismatch for {cap_name}: " f"individual={individual_check}, in_list={in_list}"
+                    f"Eligibility mismatch for {cap_name}: individual={individual_check}, in_list={in_list}"
                 )
 
 

@@ -44,6 +44,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from app.auth.authority import AuthorityResult, require_replay_execute
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.middleware.rate_limit import rate_limit_dependency
@@ -576,11 +577,13 @@ async def replay_run(
     _rate_limited: bool = Depends(rate_limit_dependency),
     ctx: TenantContext = Depends(get_tenant_context),
     _tier: None = Depends(requires_feature("evidence.replay")),
+    auth: AuthorityResult = Depends(require_replay_execute),
 ):
     """
     Replay a stored plan and optionally verify determinism parity.
 
     **Tier: PREVENT ($199)** - Replay for evidence and compliance verification.
+    **Authority: execute:replay** - RBAC v2 enforced.
 
     M6 Deliverable: Re-execute stored plans without re-planning.
 
@@ -604,7 +607,11 @@ async def replay_run(
         ReplayResponse with parity check result
     """
     try:
+        # Emit authority audit
+        from app.auth.authority import emit_authority_audit
         from app.runtime.replay import replay_run as do_replay
+
+        await emit_authority_audit(auth, "replay", subject_id=run_id)
 
         result = await do_replay(
             run_id=run_id,

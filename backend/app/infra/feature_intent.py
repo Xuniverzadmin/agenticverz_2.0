@@ -236,15 +236,13 @@ def validate_retry_policy(
     """
     # Check forbidden combinations
     if (feature_intent, retry_policy) in FORBIDDEN_RETRY_COMBINATIONS:
-        raise RetryPolicyError(
-            f"RetryPolicy.{retry_policy.name} is forbidden for " f"FeatureIntent.{feature_intent.name}"
-        )
+        raise RetryPolicyError(f"RetryPolicy.{retry_policy.name} is forbidden for FeatureIntent.{feature_intent.name}")
 
     # Check required policies
     required = REQUIRED_RETRY_POLICY.get(feature_intent)
     if required and retry_policy != required:
         raise RetryPolicyError(
-            f"FeatureIntent.{feature_intent.name} requires " f"RetryPolicy.{required.name}, got {retry_policy.name}"
+            f"FeatureIntent.{feature_intent.name} requires RetryPolicy.{required.name}, got {retry_policy.name}"
         )
 
 
@@ -400,8 +398,7 @@ def validate_module_intent(module_globals: Dict[str, Any]) -> None:
     # Check for FEATURE_INTENT
     if "FEATURE_INTENT" not in module_globals:
         raise ValueError(
-            f"Module {module_name} touches persistence but has no FEATURE_INTENT. "
-            f"Add: FEATURE_INTENT = FeatureIntent.X"
+            f"Module {module_name} touches persistence but has no FEATURE_INTENT. Add: FEATURE_INTENT = FeatureIntent.X"
         )
 
     feature_intent = module_globals["FEATURE_INTENT"]

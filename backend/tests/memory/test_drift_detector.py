@@ -7,7 +7,6 @@ Run with:
     pytest tests/memory/test_drift_detector.py -v
 """
 
-
 import pytest
 
 # Import drift detector components

@@ -259,9 +259,9 @@ class TestGoldenFileArchival:
         # Verify signatures still valid after archive
         archive_recorder = GoldenRecorder(dirpath=archive_dir, secret=secret)
         for archived_file in archived_files:
-            assert archive_recorder.verify_golden(
-                str(archived_file)
-            ), f"Signature invalid for archived file: {archived_file.name}"
+            assert archive_recorder.verify_golden(str(archived_file)), (
+                f"Signature invalid for archived file: {archived_file.name}"
+            )
 
 
 class TestGoldenFileResign:
@@ -409,9 +409,9 @@ class TestGoldenReplay:
         replay_events = replay_recorder.load_golden(replay_path)
 
         # Compare event counts
-        assert len(original_events) == len(
-            replay_events
-        ), f"Event count mismatch: {len(original_events)} vs {len(replay_events)}"
+        assert len(original_events) == len(replay_events), (
+            f"Event count mismatch: {len(original_events)} vs {len(replay_events)}"
+        )
 
         # Compare deterministic parts of events
         for i, (orig, repl) in enumerate(zip(original_events, replay_events)):

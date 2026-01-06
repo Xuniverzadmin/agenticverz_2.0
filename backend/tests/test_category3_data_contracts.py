@@ -159,9 +159,9 @@ class TestGuardContractInvariants:
         id_field = IncidentSummaryDTO.model_fields["id"]
         description = id_field.description or ""
 
-        assert (
-            "inc_" in description.lower() or id_field.annotation == str
-        ), "id field should document the inc_ prefix convention"
+        assert "inc_" in description.lower() or id_field.annotation == str, (
+            "id field should document the inc_ prefix convention"
+        )
 
     def test_guard_no_founder_only_fields(self):
         """

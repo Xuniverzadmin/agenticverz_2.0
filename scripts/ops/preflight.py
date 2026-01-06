@@ -316,6 +316,94 @@ class PreflightChecker:
         self.routes: List[RouteInfo] = []
 
     # =========================================================================
+    # GOVERNANCE QUALIFIER CHECK (PIN-281 - System Gate)
+    # =========================================================================
+
+    def check_governance_qualifiers(self, capabilities: List[str] = None) -> List[Issue]:
+        """
+        Evaluate governance qualifiers for L2 contract readiness.
+
+        This is a SYSTEM GATE, not advice. If any capability referenced in
+        L2 tests or product claims is not QUALIFIED, this check BLOCKS.
+
+        Reference: GOVERNANCE_QUALIFIERS.yaml, SESSION_PLAYBOOK.yaml governance_qualifiers
+        """
+        issues = []
+
+        # Import the qualifier evaluator
+        try:
+            sys.path.insert(0, str(self.root / "scripts" / "ops"))
+            from evaluate_qualifiers import (
+                evaluate_all_capabilities,
+                QualifierState,
+            )
+        except ImportError as e:
+            issues.append(
+                Issue(
+                    severity="error",
+                    category="qualifier",
+                    message=f"Cannot import evaluate_qualifiers: {e}",
+                    file="scripts/ops/evaluate_qualifiers.py",
+                    suggestion="Ensure evaluate_qualifiers.py exists and is valid",
+                )
+            )
+            return issues
+
+        try:
+            results = evaluate_all_capabilities(self.root)
+        except FileNotFoundError as e:
+            issues.append(
+                Issue(
+                    severity="error",
+                    category="qualifier",
+                    message=f"CAPABILITY_LIFECYCLE.yaml not found: {e}",
+                    file="docs/governance/CAPABILITY_LIFECYCLE.yaml",
+                    suggestion="Run: python scripts/ops/evaluate_qualifiers.py --generate",
+                )
+            )
+            return issues
+
+        # If specific capabilities provided, check only those
+        if capabilities:
+            for cap in capabilities:
+                if cap not in results:
+                    issues.append(
+                        Issue(
+                            severity="error",
+                            category="qualifier",
+                            message=f"Unknown capability: {cap}",
+                            file="docs/governance/CAPABILITY_LIFECYCLE.yaml",
+                        )
+                    )
+                elif results[cap].state != QualifierState.QUALIFIED:
+                    issues.append(
+                        Issue(
+                            severity="error",
+                            category="qualifier",
+                            message=f"GQ-L2-CONTRACT-READY FAILED: {cap} is {results[cap].state.value}",
+                            file="docs/governance/QUALIFIER_EVALUATION.yaml",
+                            suggestion=f"Cannot proceed with L2 testing. Fix gates: {', '.join(results[cap].failed_gates + results[cap].pending_gates)}",
+                        )
+                    )
+        else:
+            # Report summary of all qualifiers
+            qualified = sum(1 for r in results.values() if r.state == QualifierState.QUALIFIED)
+            disqualified = [r for r in results.values() if r.state == QualifierState.DISQUALIFIED]
+
+            if disqualified:
+                for r in disqualified:
+                    issues.append(
+                        Issue(
+                            severity="warning",
+                            category="qualifier",
+                            message=f"DISQUALIFIED: {r.capability} - {', '.join(r.disqualification_reasons[:2])}",
+                            file="docs/governance/QUALIFIER_EVALUATION.yaml",
+                        )
+                    )
+
+        return issues
+
+    # =========================================================================
     # ROUTE ANALYSIS - AST-based extraction + semantic collision detection
     # =========================================================================
 
@@ -613,7 +701,7 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
     # FULL PREFLIGHT
     # =========================================================================
 
-    def full_preflight(self) -> Dict:
+    def full_preflight(self, check_qualifiers: bool = True) -> Dict:
         """Run full preflight check on the project."""
         results = {
             "routes": [],
@@ -621,6 +709,7 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
             "untyped_issues": [],
             "import_issues": [],
             "sdk_issues": [],
+            "qualifier_issues": [],
             "summary": {},
         }
 
@@ -645,15 +734,24 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
         # SDK build freshness check (PIN-125 PREV-18)
         results["sdk_issues"] = self.check_sdk_build_freshness()
 
+        # Governance qualifier check (PIN-281 - System Gate)
+        if check_qualifiers:
+            results["qualifier_issues"] = self.check_governance_qualifiers()
+
         # Summary
         all_issues = route_issues + results["sdk_issues"]
-        errors = [i for i in all_issues if i.severity == "error"]
+        qualifier_errors = [i for i in results.get("qualifier_issues", []) if i.severity == "error"]
+        errors = [i for i in all_issues if i.severity == "error"] + qualifier_errors
         warnings = [i for i in all_issues if i.severity == "warning"]
+        qualifier_warnings = [i for i in results.get("qualifier_issues", []) if i.severity == "warning"]
+
         results["summary"] = {
             "total_routes": len(routes),
             "errors": len(errors),
-            "warnings": len(warnings) + len(results["untyped_issues"]),
+            "warnings": len(warnings) + len(results["untyped_issues"]) + len(qualifier_warnings),
             "sdk_issues": len(results["sdk_issues"]),
+            "qualifier_errors": len(qualifier_errors),
+            "qualifier_warnings": len(qualifier_warnings),
             "pass": len(errors) == 0,
         }
 
@@ -722,12 +820,32 @@ def _paths_can_collide(path1: str, path2: str) -> bool:
                     if issue.suggestion:
                         print(f"    → {issue.suggestion}")
 
+        # Governance Qualifier issues (PIN-281 - System Gate)
+        qualifier_issues = results.get("qualifier_issues", [])
+        if qualifier_issues:
+            qual_errors = [i for i in qualifier_issues if i.severity == "error"]
+            qual_warnings = [i for i in qualifier_issues if i.severity == "warning"]
+            if qual_errors:
+                print(f"\n🚫 GOVERNANCE QUALIFIER GATE FAILED ({len(qual_errors)}):")
+                for issue in qual_errors:
+                    print(f"  [{issue.category}] {issue.message}")
+                    if issue.suggestion:
+                        print(f"    → {issue.suggestion}")
+            if qual_warnings:
+                print(f"\n⚠️  GOVERNANCE QUALIFIER WARNINGS ({len(qual_warnings)}):")
+                for issue in qual_warnings:
+                    print(f"  {issue.message}")
+        else:
+            print("\n✅ Governance qualifiers: No errors")
+
         # Summary
         summary = results.get("summary", {})
         print("\n" + "-" * 60)
         print(f"  Routes analyzed: {summary.get('total_routes', 0)}")
         print(f"  Errors: {summary.get('errors', 0)}")
         print(f"  Warnings: {summary.get('warnings', 0)}")
+        if summary.get('qualifier_errors', 0) > 0 or summary.get('qualifier_warnings', 0) > 0:
+            print(f"  Qualifier issues: {summary.get('qualifier_errors', 0)} errors, {summary.get('qualifier_warnings', 0)} warnings")
         print(f"  Status: {'✅ PASS' if summary.get('pass') else '❌ FAIL'}")
         print("=" * 60 + "\n")
 
@@ -752,6 +870,18 @@ def main():
         "--generate-hook", action="store_true", help="Generate runtime validation hook"
     )
     parser.add_argument("--root", default=".", help="Project root directory")
+    parser.add_argument(
+        "--qualifiers", "-q",
+        nargs="*",
+        metavar="CAP",
+        help="Check governance qualifiers (GQ-L2-CONTRACT-READY). "
+             "No args = check all, with args = check specific capabilities"
+    )
+    parser.add_argument(
+        "--no-qualifiers",
+        action="store_true",
+        help="Skip governance qualifier checks in --full mode"
+    )
 
     args = parser.parse_args()
 
@@ -761,11 +891,43 @@ def main():
         print(checker.generate_runtime_hook())
         return
 
+    # Handle --qualifiers mode (standalone qualifier check)
+    if args.qualifiers is not None:
+        capabilities = args.qualifiers if args.qualifiers else None
+        issues = checker.check_governance_qualifiers(capabilities)
+
+        print("\n" + "=" * 60)
+        print("  GOVERNANCE QUALIFIER CHECK (GQ-L2-CONTRACT-READY)")
+        print("=" * 60)
+
+        errors = [i for i in issues if i.severity == "error"]
+        warnings = [i for i in issues if i.severity == "warning"]
+
+        if errors:
+            print(f"\n🚫 BLOCKED ({len(errors)} errors):")
+            for issue in errors:
+                print(f"  ✗ {issue.message}")
+                if issue.suggestion:
+                    print(f"    → {issue.suggestion}")
+        elif warnings:
+            print(f"\n⚠️  WARNINGS ({len(warnings)}):")
+            for issue in warnings:
+                print(f"  {issue.message}")
+        else:
+            print("\n✅ All specified capabilities are QUALIFIED")
+            print("   L2 testing and product claims are PERMITTED")
+
+        print("\n" + "=" * 60)
+        print(f"  Status: {'❌ FAIL' if errors else '✅ PASS'}")
+        print("=" * 60 + "\n")
+
+        sys.exit(1 if errors else 0)
+
     if args.full:
-        results = checker.full_preflight()
+        results = checker.full_preflight(check_qualifiers=not args.no_qualifiers)
         if args.json:
             # Convert Issue objects to dicts for JSON
-            for key in ["route_issues", "untyped_issues", "import_issues"]:
+            for key in ["route_issues", "untyped_issues", "import_issues", "qualifier_issues", "sdk_issues"]:
                 if key in results:
                     results[key] = [
                         {

@@ -17,7 +17,6 @@ Create Date: 2025-12-28
 CRITICAL: These constraints are C2 LAW. Do not weaken or remove them.
 """
 
-
 from alembic import op
 
 # revision identifiers

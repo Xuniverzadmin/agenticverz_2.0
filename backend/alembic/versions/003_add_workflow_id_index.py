@@ -10,6 +10,7 @@ by workflow type. Common patterns:
 - Aggregate metrics by workflow
 - Debug workflow-specific issues
 """
+
 from typing import Sequence, Union
 
 from alembic import op

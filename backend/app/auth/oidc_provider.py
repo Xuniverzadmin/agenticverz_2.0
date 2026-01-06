@@ -278,6 +278,6 @@ def map_keycloak_roles_to_aos(keycloak_roles: List[str]) -> List[str]:
     Returns:
         Mapped AOS roles
     """
-    from app.auth.rbac_engine import map_external_roles_to_aos
+    from app.auth.role_mapping import map_external_roles_to_aos
 
     return map_external_roles_to_aos(keycloak_roles)

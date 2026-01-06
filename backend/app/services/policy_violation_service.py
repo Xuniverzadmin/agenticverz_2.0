@@ -156,8 +156,7 @@ class PolicyViolationService:
 
         violation.persisted = True
         logger.info(
-            f"Persisted violation fact: id={violation.id}, "
-            f"policy={violation.policy_id}, rule={violation.violated_rule}"
+            f"Persisted violation fact: id={violation.id}, policy={violation.policy_id}, rule={violation.violated_rule}"
         )
 
         return violation.id
@@ -322,7 +321,7 @@ class PolicyViolationService:
             incident_id = incident.id
 
         logger.info(
-            f"Created incident from violation: incident={incident_id}, " f"violation={violation.id}, is_new={is_new}"
+            f"Created incident from violation: incident={incident_id}, violation={violation.id}, is_new={is_new}"
         )
 
         return incident_id
@@ -347,9 +346,7 @@ class PolicyViolationService:
         )
 
         if existing_incident:
-            logger.info(
-                f"Idempotent: incident already exists for run={violation.run_id}, " f"policy={violation.policy_id}"
-            )
+            logger.info(f"Idempotent: incident already exists for run={violation.run_id}, policy={violation.policy_id}")
             return ViolationIncident(
                 incident_id=existing_incident,
                 violation_id=violation.id,
@@ -376,7 +373,7 @@ class PolicyViolationService:
         elif VERIFICATION_MODE:
             # In verification mode, evidence is mandatory
             raise RuntimeError(
-                f"INCIDENT_WITHOUT_EVIDENCE: " f"Evidence required but not provided for violation {violation.id}"
+                f"INCIDENT_WITHOUT_EVIDENCE: Evidence required but not provided for violation {violation.id}"
             )
 
         return ViolationIncident(

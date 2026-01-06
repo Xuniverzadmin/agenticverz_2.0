@@ -95,7 +95,7 @@ def get_publisher() -> BasePublisher:
         return _publisher_instance
 
     # Unknown adapter - fail fast
-    raise RuntimeError(f"Unknown EVENT_PUBLISHER={adapter}. " f"Valid options: redis, nats, logging")
+    raise RuntimeError(f"Unknown EVENT_PUBLISHER={adapter}. Valid options: redis, nats, logging")
 
 
 def reset_publisher() -> None:

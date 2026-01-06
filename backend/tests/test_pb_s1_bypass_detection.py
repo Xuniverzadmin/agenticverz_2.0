@@ -178,9 +178,9 @@ class TestPBS1BypassDetection:
         retry_code = match.group(0)
 
         # Verify it creates new row
-        assert (
-            "WorkerRun(" in retry_code or "worker_run = WorkerRun" in content
-        ), "PB-S1 VIOLATION: /admin/retry must create NEW WorkerRun, not update"
+        assert "WorkerRun(" in retry_code or "worker_run = WorkerRun" in content, (
+            "PB-S1 VIOLATION: /admin/retry must create NEW WorkerRun, not update"
+        )
 
         # Verify parent linkage
         assert "parent_run_id" in retry_code, "PB-S1 VIOLATION: /admin/retry must set parent_run_id"
@@ -194,9 +194,9 @@ class TestPBS1BypassDetection:
 
         # Check for rerun endpoint with 410
         if "/admin/rerun" in content:
-            assert (
-                "410" in content or "status_code=410" in content
-            ), "PB-S1 VIOLATION: /admin/rerun must return 410 Gone"
+            assert "410" in content or "status_code=410" in content, (
+                "PB-S1 VIOLATION: /admin/rerun must return 410 Gone"
+            )
 
 
 class TestPBS1TableConfusion:

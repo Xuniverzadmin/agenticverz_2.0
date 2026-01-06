@@ -31,12 +31,12 @@ HARD RULES:
 """
 
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
-from sqlmodel import Session, select, col
-from sqlalchemy import text
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from typing import Any, Dict, List, Optional
 
-from app.infra.error_envelope import ErrorEnvelope, ErrorClass, ErrorSeverity
+from sqlalchemy import text
+from sqlmodel import Session
+
+from app.infra.error_envelope import ErrorClass, ErrorEnvelope
 
 
 def persist_error(session: Session, envelope: ErrorEnvelope) -> bool:
@@ -97,26 +97,29 @@ def persist_error(session: Session, envelope: ErrorEnvelope) -> bool:
         RETURNING error_id
     """)
 
-    result = session.execute(stmt, {
-        "error_id": envelope.error_id,
-        "timestamp": envelope.timestamp,
-        "layer": envelope.layer,
-        "component": envelope.component,
-        "error_class": envelope.error_class.value,
-        "severity": envelope.severity.value,
-        "message": envelope.message,
-        "correlation_id": envelope.correlation_id,
-        "decision_id": envelope.decision_id,
-        "run_id": envelope.run_id,
-        "agent_id": envelope.agent_id,
-        "tenant_id": envelope.tenant_id,
-        "input_hash": envelope.input_hash,
-        "exception_type": envelope.exception_type,
-        "exception_chain": envelope.exception_chain,
-        "context": envelope.context,
-        "envelope_version": envelope.version,
-        "created_at": datetime.now(timezone.utc),
-    })
+    result = session.execute(
+        stmt,
+        {
+            "error_id": envelope.error_id,
+            "timestamp": envelope.timestamp,
+            "layer": envelope.layer,
+            "component": envelope.component,
+            "error_class": envelope.error_class.value,
+            "severity": envelope.severity.value,
+            "message": envelope.message,
+            "correlation_id": envelope.correlation_id,
+            "decision_id": envelope.decision_id,
+            "run_id": envelope.run_id,
+            "agent_id": envelope.agent_id,
+            "tenant_id": envelope.tenant_id,
+            "input_hash": envelope.input_hash,
+            "exception_type": envelope.exception_type,
+            "exception_chain": envelope.exception_chain,
+            "context": envelope.context,
+            "envelope_version": envelope.version,
+            "created_at": datetime.now(timezone.utc),
+        },
+    )
 
     # Check if insert happened (RETURNING gives us the error_id if inserted)
     row = result.fetchone()
@@ -164,9 +167,7 @@ def persist_errors_batch(session: Session, envelopes: List[ErrorEnvelope]) -> in
     ]
 
     # Count before insert
-    count_before = session.execute(
-        text("SELECT COUNT(*) FROM infra_error_events")
-    ).scalar() or 0
+    count_before = session.execute(text("SELECT COUNT(*) FROM infra_error_events")).scalar() or 0
 
     # Bulk insert
     stmt = text("""
@@ -192,12 +193,11 @@ def persist_errors_batch(session: Session, envelopes: List[ErrorEnvelope]) -> in
     """)
 
     import json
+
     session.execute(stmt, {"values": json.dumps(values, default=str)})
 
     # Count after insert
-    count_after = session.execute(
-        text("SELECT COUNT(*) FROM infra_error_events")
-    ).scalar() or 0
+    count_after = session.execute(text("SELECT COUNT(*) FROM infra_error_events")).scalar() or 0
 
     return count_after - count_before
 
@@ -205,6 +205,7 @@ def persist_errors_batch(session: Session, envelopes: List[ErrorEnvelope]) -> in
 # =============================================================================
 # Query Functions (Read-Only, for L4 Aggregation Services)
 # =============================================================================
+
 
 def get_errors_by_correlation(
     session: Session,
@@ -249,11 +250,14 @@ def get_errors_by_component(
         LIMIT :limit
     """)
 
-    result = session.execute(stmt, {
-        "component": component,
-        "since": since,
-        "limit": limit,
-    })
+    result = session.execute(
+        stmt,
+        {
+            "component": component,
+            "since": since,
+            "limit": limit,
+        },
+    )
     return [dict(row._mapping) for row in result.fetchall()]
 
 
@@ -280,11 +284,14 @@ def get_errors_by_class(
         LIMIT :limit
     """)
 
-    result = session.execute(stmt, {
-        "error_class": error_class.value,
-        "since": since,
-        "limit": limit,
-    })
+    result = session.execute(
+        stmt,
+        {
+            "error_class": error_class.value,
+            "since": since,
+            "limit": limit,
+        },
+    )
     return [dict(row._mapping) for row in result.fetchall()]
 
 
@@ -364,16 +371,20 @@ def get_error_timeline(
         ORDER BY bucket ASC
     """)
 
-    result = session.execute(stmt, {
-        "since": since,
-        "bucket": bucket_minutes,
-    })
+    result = session.execute(
+        stmt,
+        {
+            "since": since,
+            "bucket": bucket_minutes,
+        },
+    )
     return [dict(row._mapping) for row in result.fetchall()]
 
 
 # =============================================================================
 # Retention (L7 Ops Tool, Not L4)
 # =============================================================================
+
 
 def cleanup_old_errors(
     session: Session,
@@ -392,9 +403,7 @@ def cleanup_old_errors(
     Returns:
         Number of rows deleted
     """
-    cutoff = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    cutoff = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     cutoff = cutoff.replace(day=cutoff.day - retention_days)
 
     stmt = text("""

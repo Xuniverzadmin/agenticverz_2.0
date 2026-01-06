@@ -455,9 +455,9 @@ class TestAuthBoundaryStructure:
             source = f.read()
 
         assert "verify_fops_token" in source, "cost_ops.py must use verify_fops_token"
-        assert (
-            "aud=fops" in source or 'aud="fops"' in source or "FOPS" in source
-        ), "cost_ops.py must reference FOPS audience"
+        assert "aud=fops" in source or 'aud="fops"' in source or "FOPS" in source, (
+            "cost_ops.py must reference FOPS audience"
+        )
 
     def test_cost_guard_uses_console_auth(self):
         """cost_guard router must use verify_console_token dependency."""
@@ -668,9 +668,9 @@ class TestAnomalyRulesAlignment:
 
         for dto in customer_dtos:
             fields = set(dto.model_fields.keys())
-            assert (
-                "derived_cause" not in fields
-            ), f"{dto.__name__} should not have derived_cause (use cause_explanation instead)"
+            assert "derived_cause" not in fields, (
+                f"{dto.__name__} should not have derived_cause (use cause_explanation instead)"
+            )
 
 
 # =============================================================================
@@ -898,9 +898,9 @@ class TestCustomerCostDrilldown:
             source = f.read()
 
         # Check for the endpoint pattern
-        assert (
-            "/customers/{tenant_id}" in source or "/customers/{id}" in source
-        ), "Customer cost drilldown endpoint not found in cost_ops.py"
+        assert "/customers/{tenant_id}" in source or "/customers/{id}" in source, (
+            "Customer cost drilldown endpoint not found in cost_ops.py"
+        )
         assert "FounderCustomerCostDrilldownDTO" in source, "FounderCustomerCostDrilldownDTO not used in cost_ops.py"
 
 

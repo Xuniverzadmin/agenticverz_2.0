@@ -37,12 +37,26 @@ from pydantic import BaseModel
 from sqlalchemy import and_, desc, func, select
 from sqlmodel import Session
 
+# =============================================================================
+# L3 Adapters (PIN-281: L2→L3 Wiring)
+# =============================================================================
+from app.adapters.customer_incidents_adapter import (
+    get_customer_incidents_adapter,
+)
+from app.adapters.customer_keys_adapter import (
+    get_customer_keys_adapter,
+)
+from app.adapters.customer_killswitch_adapter import (
+    get_customer_killswitch_adapter,
+)
+
 # Category 2 Auth: Domain-separated authentication for Customer Console
 # Uses verify_console_token which enforces:
 # - aud = "console" (strict)
 # - org_id exists
 # - role in [OWNER, ADMIN, DEV, VIEWER]
 # - All rejections logged to audit
+from app.auth.authority import AuthorityResult, emit_authority_audit, require_replay_execute
 from app.auth.console_auth import CustomerToken, verify_console_token
 
 # M29 Category 5: Customer Incident Narrative DTOs (calm vocabulary)
@@ -58,12 +72,10 @@ from app.models.killswitch import (
     Incident,
     IncidentEvent,
     IncidentSeverity,
-    IncidentStatus,
     KillSwitchState,
     ProxyCall,
-    TriggerType,
 )
-from app.models.tenant import APIKey, Tenant
+from app.models.tenant import Tenant
 
 # M23: Import CertificateService for cryptographic proof of replay
 from app.services.certificate import (
@@ -428,34 +440,24 @@ async def activate_killswitch(
     Stop all traffic - Emergency kill switch.
 
     Immediate. All requests blocked until manually resumed.
+
+    PIN-281: Uses L3 CustomerKillswitchAdapter for tenant-scoped operations.
     """
     # Verify tenant exists
     _tenant = get_tenant_from_auth(session, tenant_id)
 
-    # Phase 2B: Use write service for DB operations
-    guard_service = GuardWriteService(session)
-    state, _ = guard_service.get_or_create_killswitch_state(
-        entity_type="tenant",
-        entity_id=tenant_id,
-        tenant_id=tenant_id,
-    )
-
-    if state.is_frozen:
-        raise HTTPException(status_code=409, detail="Traffic is already stopped")
-
-    guard_service.freeze_killswitch(
-        state=state,
-        by="customer",
-        reason="Manual kill switch activated via Customer Console",
-        auto=False,
-        trigger=TriggerType.MANUAL.value,
-    )
+    # PIN-281: Use L3 adapter for tenant-scoped killswitch operations
+    adapter = get_customer_killswitch_adapter(session)
+    try:
+        result = adapter.activate(tenant_id)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
     # Invalidate cache on mutation
     cache = get_guard_cache()
     await cache.invalidate_tenant(tenant_id)
 
-    return {"status": "frozen", "message": "All traffic stopped"}
+    return {"status": result.status, "message": result.message}
 
 
 @router.post("/killswitch/deactivate")
@@ -467,25 +469,21 @@ async def deactivate_killswitch(
     Resume traffic - Deactivate kill switch.
 
     Guardrails will continue protecting.
+
+    PIN-281: Uses L3 CustomerKillswitchAdapter for tenant-scoped operations.
     """
-    # Phase 2B: Use write service for DB operations
-    guard_service = GuardWriteService(session)
-    state, _ = guard_service.get_or_create_killswitch_state(
-        entity_type="tenant",
-        entity_id=tenant_id,
-        tenant_id=tenant_id,
-    )
-
-    if not state.is_frozen:
-        raise HTTPException(status_code=400, detail="Traffic is not stopped")
-
-    guard_service.unfreeze_killswitch(state=state, by="customer")
+    # PIN-281: Use L3 adapter for tenant-scoped killswitch operations
+    adapter = get_customer_killswitch_adapter(session)
+    try:
+        result = adapter.deactivate(tenant_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Invalidate cache on mutation
     cache = get_guard_cache()
     await cache.invalidate_tenant(tenant_id)
 
-    return {"status": "active", "message": "Traffic resumed"}
+    return {"status": result.status, "message": result.message}
 
 
 # =============================================================================
@@ -504,101 +502,76 @@ async def list_incidents(
     List incidents - "What did you stop for me?"
 
     Human narrative, not logs.
+
+    PIN-281: Uses L3 CustomerIncidentsAdapter for tenant-scoped operations.
     """
-    stmt = (
-        select(Incident)
-        .where(Incident.tenant_id == tenant_id)
-        .order_by(desc(Incident.created_at))
-        .offset(offset)
-        .limit(limit)
-    )
+    # PIN-281: Use L3 adapter for tenant-scoped incident operations
+    adapter = get_customer_incidents_adapter(session)
+    result = adapter.list_incidents(tenant_id, limit=limit, offset=offset)
 
-    result = session.exec(stmt)
-    incident_rows = result.all()
-
-    # Count total
-    count_stmt = select(func.count(Incident.id)).where(Incident.tenant_id == tenant_id)
-    row = session.exec(count_stmt).first()
-    total = row[0] if row else 0
-
-    # Extract Incident from each row (SQLModel may return Row objects or model instances)
-    items = []
-    for r in incident_rows:
-        if hasattr(r, "id"):
-            i = r
-        elif hasattr(r, "__getitem__"):
-            i = r[0]
-        else:
-            i = r
-        # Get first related call_id for replay
-        related_calls = i.get_related_call_ids() if hasattr(i, "get_related_call_ids") else []
-        first_call_id = related_calls[0] if related_calls else None
-        items.append(
-            IncidentSummary(
-                id=i.id,
-                title=i.title,
-                severity=i.severity,
-                status=i.status,
-                trigger_type=i.trigger_type,
-                trigger_value=i.trigger_value,
-                action_taken=i.auto_action,
-                cost_avoided_cents=int(i.cost_delta_cents * 100) if i.cost_delta_cents else 0,
-                calls_affected=i.calls_affected,
-                started_at=i.started_at.isoformat() if i.started_at else i.created_at.isoformat(),
-                ended_at=i.ended_at.isoformat() if i.ended_at else None,
-                duration_seconds=i.duration_seconds,
-                call_id=first_call_id,
-            )
+    # Convert adapter response to existing API format for backward compat
+    items = [
+        IncidentSummary(
+            id=inc.id,
+            title=inc.title,
+            severity=inc.severity,
+            status=inc.status,
+            trigger_type=inc.trigger_type,
+            trigger_value=None,  # Adapter doesn't expose this
+            action_taken=inc.action_taken,
+            cost_avoided_cents=inc.cost_avoided_cents,
+            calls_affected=inc.calls_affected,
+            started_at=inc.started_at,
+            ended_at=inc.ended_at,
+            duration_seconds=None,  # Adapter doesn't expose this
+            call_id=None,  # Adapter doesn't expose replay call_id
         )
+        for inc in result.items
+    ]
 
     return {
         "items": items,
-        "total": total,
-        "page": offset // limit + 1,
-        "page_size": limit,
+        "total": result.total,
+        "page": result.page,
+        "page_size": result.page_size,
     }
 
 
 @router.get("/incidents/{incident_id}", response_model=IncidentDetailResponse)
 async def get_incident_detail(
     incident_id: str,
+    tenant_id: str = Query(..., description="Tenant ID"),
     session: Session = Depends(get_session),
 ):
     """
     Get incident detail with timeline.
 
     One-screen explanation readable at 2am.
-    """
-    stmt = select(Incident).where(Incident.id == incident_id)
-    row = session.exec(stmt).first()
-    incident = row[0] if row else None
 
-    if not incident:
+    PIN-281: Uses L3 CustomerIncidentsAdapter with tenant isolation.
+    """
+    # PIN-281: Use L3 adapter for tenant-scoped incident operations
+    adapter = get_customer_incidents_adapter(session)
+    result = adapter.get_incident(incident_id, tenant_id)
+
+    if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    # Get timeline events
-    stmt = select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
-    event_rows = session.exec(stmt).all()
-    events = [r[0] if isinstance(r, tuple) else r for r in event_rows]
-
-    # Get first related call_id for replay
-    related_calls = incident.get_related_call_ids() if hasattr(incident, "get_related_call_ids") else []
-    first_call_id = related_calls[0] if related_calls else None
-
+    # Convert adapter response to existing API format for backward compat
     incident_summary = IncidentSummary(
-        id=incident.id,
-        title=incident.title,
-        severity=incident.severity,
-        status=incident.status,
-        trigger_type=incident.trigger_type,
-        trigger_value=incident.trigger_value,
-        action_taken=incident.auto_action,
-        cost_avoided_cents=int(incident.cost_delta_cents * 100) if incident.cost_delta_cents else 0,
-        calls_affected=incident.calls_affected,
-        started_at=incident.started_at.isoformat() if incident.started_at else incident.created_at.isoformat(),
-        ended_at=incident.ended_at.isoformat() if incident.ended_at else None,
-        duration_seconds=incident.duration_seconds,
-        call_id=first_call_id,
+        id=result.incident.id,
+        title=result.incident.title,
+        severity=result.incident.severity,
+        status=result.incident.status,
+        trigger_type=result.incident.trigger_type,
+        trigger_value=None,  # Adapter doesn't expose this
+        action_taken=result.incident.action_taken,
+        cost_avoided_cents=result.incident.cost_avoided_cents,
+        calls_affected=result.incident.calls_affected,
+        started_at=result.incident.started_at,
+        ended_at=result.incident.ended_at,
+        duration_seconds=None,  # Adapter doesn't expose this
+        call_id=None,  # Adapter doesn't expose replay call_id
     )
 
     timeline = [
@@ -606,10 +579,10 @@ async def get_incident_detail(
             id=e.id,
             event_type=e.event_type,
             description=e.description,
-            created_at=e.created_at.isoformat(),
-            data=e.get_data() if hasattr(e, "get_data") else None,
+            created_at=e.timestamp,
+            data=None,  # Adapter doesn't expose internal data
         )
-        for e in events
+        for e in result.timeline
     ]
 
     return IncidentDetailResponse(
@@ -621,44 +594,43 @@ async def get_incident_detail(
 @router.post("/incidents/{incident_id}/acknowledge")
 async def acknowledge_incident(
     incident_id: str,
+    tenant_id: str = Query(..., description="Tenant ID"),
     session: Session = Depends(get_session),
 ):
-    """Acknowledge an incident."""
-    stmt = select(Incident).where(Incident.id == incident_id)
-    row = session.exec(stmt).first()
-    incident = row[0] if row else None
+    """
+    Acknowledge an incident.
 
-    if not incident:
+    PIN-281: Uses L3 CustomerIncidentsAdapter with tenant isolation.
+    """
+    # PIN-281: Use L3 adapter for tenant-scoped incident operations
+    adapter = get_customer_incidents_adapter(session)
+    result = adapter.acknowledge_incident(incident_id, tenant_id)
+
+    if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    if incident.status == IncidentStatus.RESOLVED.value:
-        raise HTTPException(status_code=400, detail="Incident is already resolved")
-
-    # Phase 2B: Use write service for DB operations
-    guard_service = GuardWriteService(session)
-    guard_service.acknowledge_incident(incident)
-
-    return {"status": "acknowledged"}
+    return {"status": result.status}
 
 
 @router.post("/incidents/{incident_id}/resolve")
 async def resolve_incident(
     incident_id: str,
+    tenant_id: str = Query(..., description="Tenant ID"),
     session: Session = Depends(get_session),
 ):
-    """Resolve an incident."""
-    stmt = select(Incident).where(Incident.id == incident_id)
-    row = session.exec(stmt).first()
-    incident = row[0] if row else None
+    """
+    Resolve an incident.
 
-    if not incident:
+    PIN-281: Uses L3 CustomerIncidentsAdapter with tenant isolation.
+    """
+    # PIN-281: Use L3 adapter for tenant-scoped incident operations
+    adapter = get_customer_incidents_adapter(session)
+    result = adapter.resolve_incident(incident_id, tenant_id)
+
+    if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    # Phase 2B: Use write service for DB operations
-    guard_service = GuardWriteService(session)
-    guard_service.resolve_incident(incident)
-
-    return {"status": "resolved"}
+    return {"status": result.status}
 
 
 # =============================================================================
@@ -893,6 +865,7 @@ async def replay_call(
     call_id: str,
     level: str = Query("logical", description="Determinism level: strict, logical, or semantic"),
     session: Session = Depends(get_session),
+    auth: AuthorityResult = Depends(require_replay_execute),
 ):
     """
     Replay a call - Trust builder.
@@ -910,6 +883,9 @@ async def replay_call(
     - Policy decisions (same/different)
     - Model drift detection
     """
+    # Emit authority audit for capability access
+    await emit_authority_audit(auth, "replay", subject_id=call_id)
+
     stmt = select(ProxyCall).where(ProxyCall.id == call_id)
     row = session.exec(stmt).first()
     original_call = row[0] if row else None
@@ -1107,76 +1083,31 @@ async def list_api_keys(
     List API keys with status.
 
     Customer can freeze/unfreeze individual keys.
+
+    PIN-281: Uses L3 CustomerKeysAdapter for tenant-scoped operations.
     """
-    stmt = select(APIKey).where(APIKey.tenant_id == tenant_id)
-    result = session.exec(stmt)
-    key_rows = result.all()
+    # PIN-281: Use L3 adapter for tenant-scoped key operations
+    adapter = get_customer_keys_adapter(session)
+    result = adapter.list_keys(tenant_id)
 
-    today_start = utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-    items = []
-    for row in key_rows:
-        # Extract APIKey from row (SQLModel may return Row objects or model instances)
-        if hasattr(row, "id"):
-            key = row
-        elif hasattr(row, "__getitem__"):
-            key = row[0]
-        else:
-            key = row
-        # Get key freeze state
-        stmt = select(KillSwitchState).where(
-            and_(
-                KillSwitchState.entity_type == "key",
-                KillSwitchState.entity_id == key.id,
-            )
+    # Convert adapter response to API response format
+    items = [
+        ApiKeyResponse(
+            id=key.id,
+            name=key.name,
+            prefix=key.prefix,
+            status=key.status,
+            created_at=key.created_at,
+            last_seen_at=key.last_seen_at,
+            requests_today=key.requests_today,
+            spend_today_cents=key.spend_today_cents,
         )
-        state_row = session.exec(stmt).first()
-        state = state_row[0] if state_row else None
-
-        # Count requests today for this key
-        stmt = select(func.count(ProxyCall.id)).where(
-            and_(
-                ProxyCall.api_key_id == key.id,
-                ProxyCall.created_at >= today_start,
-            )
-        )
-        row = session.exec(stmt).first()
-        requests_today = row[0] if row else 0
-
-        # Sum spend today for this key
-        stmt = select(func.coalesce(func.sum(ProxyCall.cost_cents), 0)).where(
-            and_(
-                ProxyCall.api_key_id == key.id,
-                ProxyCall.created_at >= today_start,
-            )
-        )
-        row = session.exec(stmt).first()
-        spend_today = row[0] if row else 0
-
-        # Determine status
-        if key.revoked_at:
-            status = "revoked"
-        elif state and state.is_frozen:
-            status = "frozen"
-        else:
-            status = "active"
-
-        items.append(
-            ApiKeyResponse(
-                id=key.id,
-                name=key.name or f"Key {key.id[:8]}",
-                prefix=key.key_prefix or key.id[:8],
-                status=status,
-                created_at=key.created_at.isoformat(),
-                last_seen_at=key.last_used_at.isoformat() if key.last_used_at else None,
-                requests_today=requests_today,
-                spend_today_cents=int(spend_today),
-            )
-        )
+        for key in result.items
+    ]
 
     return {
         "items": items,
-        "total": len(items),
+        "total": result.total,
         "page": 1,
         "page_size": len(items),
     }
@@ -1185,61 +1116,43 @@ async def list_api_keys(
 @router.post("/keys/{key_id}/freeze")
 async def freeze_api_key(
     key_id: str,
+    tenant_id: str = Query(..., description="Tenant ID"),
     session: Session = Depends(get_session),
 ):
-    """Freeze an API key."""
-    stmt = select(APIKey).where(APIKey.id == key_id)
-    row = session.exec(stmt).first()
-    key = row[0] if row else None
+    """
+    Freeze an API key.
 
-    if not key:
+    PIN-281: Uses L3 CustomerKeysAdapter with tenant isolation.
+    """
+    # PIN-281: Use L3 adapter for tenant-scoped key operations
+    adapter = get_customer_keys_adapter(session)
+    result = adapter.freeze_key(key_id, tenant_id)
+
+    if result is None:
         raise HTTPException(status_code=404, detail="API key not found")
 
-    # Phase 2B: Use write service for DB operations
-    guard_service = GuardWriteService(session)
-    state, _ = guard_service.get_or_create_killswitch_state(
-        entity_type="key",
-        entity_id=key_id,
-        tenant_id=key.tenant_id,
-    )
-
-    if state.is_frozen:
-        raise HTTPException(status_code=409, detail="Key is already frozen")
-
-    guard_service.freeze_killswitch(
-        state=state,
-        by="customer",
-        reason="Frozen via Customer Console",
-        auto=False,
-        trigger=TriggerType.MANUAL.value,
-    )
-
-    return {"status": "frozen", "key_id": key_id}
+    return {"status": result.status, "key_id": result.id, "message": result.message}
 
 
 @router.post("/keys/{key_id}/unfreeze")
 async def unfreeze_api_key(
     key_id: str,
+    tenant_id: str = Query(..., description="Tenant ID"),
     session: Session = Depends(get_session),
 ):
-    """Unfreeze an API key."""
-    stmt = select(KillSwitchState).where(
-        and_(
-            KillSwitchState.entity_type == "key",
-            KillSwitchState.entity_id == key_id,
-        )
-    )
-    row = session.exec(stmt).first()
-    state = row[0] if row else None
+    """
+    Unfreeze an API key.
 
-    if not state or not state.is_frozen:
-        raise HTTPException(status_code=400, detail="Key is not frozen")
+    PIN-281: Uses L3 CustomerKeysAdapter with tenant isolation.
+    """
+    # PIN-281: Use L3 adapter for tenant-scoped key operations
+    adapter = get_customer_keys_adapter(session)
+    result = adapter.unfreeze_key(key_id, tenant_id)
 
-    # Phase 2B: Use write service for DB operations
-    guard_service = GuardWriteService(session)
-    guard_service.unfreeze_killswitch(state=state, by="customer")
+    if result is None:
+        raise HTTPException(status_code=404, detail="API key not found")
 
-    return {"status": "active", "key_id": key_id}
+    return {"status": result.status, "key_id": result.id, "message": result.message}
 
 
 # =============================================================================

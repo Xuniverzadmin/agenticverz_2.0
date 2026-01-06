@@ -8,7 +8,6 @@ Test suite for M20 Runtime:
 - Governance validation
 """
 
-
 import pytest
 
 from app.policy.compiler.grammar import ActionType

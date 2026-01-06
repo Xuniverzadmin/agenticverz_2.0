@@ -12,6 +12,7 @@ Run with: pytest tests/test_phase4_e2e.py -v
 For server-based tests (requires docker compose up):
     pytest tests/test_phase4_e2e.py -v -m e2e
 """
+
 import os
 import uuid
 

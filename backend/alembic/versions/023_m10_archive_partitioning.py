@@ -86,8 +86,8 @@ def upgrade():
             f"""
         CREATE TABLE IF NOT EXISTS m10_recovery.{partition_name}
         PARTITION OF m10_recovery.dead_letter_archive
-        FOR VALUES FROM ('{month_start.strftime('%Y-%m-%d')}')
-        TO ('{month_end.strftime('%Y-%m-%d')}');
+        FOR VALUES FROM ('{month_start.strftime("%Y-%m-%d")}')
+        TO ('{month_end.strftime("%Y-%m-%d")}');
         """
         )
 
@@ -276,8 +276,8 @@ def upgrade():
             f"""
         CREATE TABLE IF NOT EXISTS m10_recovery.{partition_name}
         PARTITION OF m10_recovery.replay_log
-        FOR VALUES FROM ('{month_start.strftime('%Y-%m-%d')}')
-        TO ('{month_end.strftime('%Y-%m-%d')}');
+        FOR VALUES FROM ('{month_start.strftime("%Y-%m-%d")}')
+        TO ('{month_end.strftime("%Y-%m-%d")}');
         """
         )
 

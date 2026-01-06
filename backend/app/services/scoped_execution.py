@@ -564,8 +564,7 @@ async def execute_with_scope(
 
     # Execute action (placeholder - actual execution would go here)
     logger.info(
-        f"Executing action '{action}' within scope {scope_id} "
-        f"(attempt {scope.attempts_used + 1}/{scope.max_attempts})"
+        f"Executing action '{action}' within scope {scope_id} (attempt {scope.attempts_used + 1}/{scope.max_attempts})"
     )
 
     # Consume scope

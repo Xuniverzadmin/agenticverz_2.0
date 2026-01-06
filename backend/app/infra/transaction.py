@@ -185,7 +185,7 @@ def transactional(intent: TransactionIntent) -> Callable:
             # LOCKED_MUTATION requires SingleConnectionTxn as first param
             if not params:
                 raise IntentViolationError(
-                    f"{full_name}: LOCKED_MUTATION intent requires " f"SingleConnectionTxn as first parameter"
+                    f"{full_name}: LOCKED_MUTATION intent requires SingleConnectionTxn as first parameter"
                 )
             first_param = params[0]
             # Check annotation if present
@@ -193,7 +193,7 @@ def transactional(intent: TransactionIntent) -> Callable:
                 annotation_name = getattr(first_param.annotation, "__name__", str(first_param.annotation))
                 if "SingleConnectionTxn" not in annotation_name:
                     raise IntentViolationError(
-                        f"{full_name}: LOCKED_MUTATION intent requires " f"SingleConnectionTxn, got {annotation_name}"
+                        f"{full_name}: LOCKED_MUTATION intent requires SingleConnectionTxn, got {annotation_name}"
                     )
 
         @functools.wraps(func)
@@ -254,8 +254,7 @@ def require_intent(intent: TransactionIntent) -> Callable:
         if hasattr(caller_func, "_transaction_intent"):
             if caller_func._transaction_intent != intent:
                 raise IntentViolationError(
-                    f"Primitive requires {intent.value} intent, "
-                    f"but caller has {caller_func._transaction_intent.value}"
+                    f"Primitive requires {intent.value} intent, but caller has {caller_func._transaction_intent.value}"
                 )
     # Note: We don't fail if we can't find intent - that's CI's job
     return lambda x: x  # No-op if validation passes

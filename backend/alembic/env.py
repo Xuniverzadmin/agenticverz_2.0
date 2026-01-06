@@ -1,4 +1,5 @@
 """Alembic environment configuration for AOS."""
+
 import os
 from logging.config import fileConfig
 

@@ -74,9 +74,9 @@ def cmd_inspect(args):
     Usage: aos workflow inspect --run <run_id>
     """
     run_id = args.run
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  WORKFLOW INSPECTION: {run_id}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # 1. Load checkpoint from database
     print("## Checkpoint State\n")
@@ -250,9 +250,9 @@ def cmd_list_running(args):
 
     Usage: aos workflow list-running
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("  RUNNING WORKFLOWS")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     try:
         conn = get_db_connection()
@@ -274,7 +274,7 @@ def cmd_list_running(args):
         if rows:
             print(f"  Found {len(rows)} running workflow(s):\n")
             print(f"  {'RUN_ID':<40} {'WORKFLOW_ID':<20} {'STEP':<6} {'STARTED':<20}")
-            print(f"  {'-'*40} {'-'*20} {'-'*6} {'-'*20}")
+            print(f"  {'-' * 40} {'-' * 20} {'-' * 6} {'-' * 20}")
 
             for row in rows:
                 run_id, workflow_id, tenant_id, step_idx, started_at, updated_at, version = row
@@ -304,9 +304,9 @@ def cmd_golden_tail(args):
     run_id = args.run
     lines_count = args.lines or 20
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  GOLDEN TAIL: {run_id} (last {lines_count} lines)")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     golden_dir = os.getenv("GOLDEN_DIR", "/tmp/golden")
     golden_path = os.path.join(golden_dir, f"{run_id}.steps.jsonl")
@@ -346,9 +346,9 @@ def cmd_stats(args):
     """
     spec_id = args.spec
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  WORKFLOW STATS: {spec_id}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     try:
         conn = get_db_connection()
@@ -423,9 +423,9 @@ def cmd_replay_local(args):
     """
     run_id = args.run
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  LOCAL REPLAY: {run_id}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     golden_dir = os.getenv("GOLDEN_DIR", "/tmp/golden")
     golden_path = os.path.join(golden_dir, f"{run_id}.steps.jsonl")
@@ -477,7 +477,7 @@ def cmd_replay_local(args):
         status = "OK" if success else "FAIL"
         error_code = data.get("error_code", "") if not success else ""
 
-        print(f"    [{i+1}] {step_id:<20} ({skill_id:<15}) [{status}] hash={output_hash}")
+        print(f"    [{i + 1}] {step_id:<20} ({skill_id:<15}) [{status}] hash={output_hash}")
         if error_code:
             print(f"        Error: {error_code}")
 

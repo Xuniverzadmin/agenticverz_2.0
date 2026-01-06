@@ -25,6 +25,7 @@ The only allowed DELETE is retention cleanup (90 days default).
 
 Reference: PIN-264 (Phase-S System Readiness)
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 

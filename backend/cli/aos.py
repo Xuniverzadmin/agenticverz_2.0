@@ -383,7 +383,7 @@ def cmd_skill(args):
             code = fm.get("code", "UNKNOWN")
             category = fm.get("category", "UNKNOWN")
             prob = fm.get("probability", 0)
-            print(f"      {code:<25} [{category}] {int(prob*100)}% probability")
+            print(f"      {code:<25} [{category}] {int(prob * 100)}% probability")
         print()
 
     # Composition hints
@@ -501,7 +501,7 @@ def cmd_recovery_candidates(args):
     print(f"  Total: {result.get('total', len(candidates))} (showing {len(candidates)})")
     print()
     print(f"  {'ID':<6} {'CONF':>6} {'STATUS':<10} {'ERROR_CODE':<20} {'SUGGESTION':<40}")
-    print(f"  {'-'*6} {'-'*6} {'-'*10} {'-'*20} {'-'*40}")
+    print(f"  {'-' * 6} {'-' * 6} {'-' * 10} {'-' * 20} {'-' * 40}")
 
     for c in candidates:
         conf = f"{c['confidence']:.2f}"

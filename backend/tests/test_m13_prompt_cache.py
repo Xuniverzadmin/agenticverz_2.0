@@ -438,13 +438,15 @@ class TestLLMInvokeCacheIntegration:
     @pytest.fixture
     def mock_metrics(self):
         """Mock Prometheus metrics to avoid label errors in tests."""
-        with patch("app.skills.llm_invoke.nova_llm_invocations_total") as m1, patch(
-            "app.skills.llm_invoke.nova_llm_duration_seconds"
-        ) as m2, patch("app.skills.llm_invoke.nova_llm_tokens_total") as m3, patch(
-            "app.skills.llm_invoke.nova_llm_cost_cents_total"
-        ) as m4, patch("app.skills.llm_invoke.llm_cache_hits_total") as m5, patch(
-            "app.skills.llm_invoke.llm_cache_misses_total"
-        ) as m6, patch("app.skills.llm_invoke.llm_cache_savings_cents") as m7:
+        with (
+            patch("app.skills.llm_invoke.nova_llm_invocations_total") as m1,
+            patch("app.skills.llm_invoke.nova_llm_duration_seconds") as m2,
+            patch("app.skills.llm_invoke.nova_llm_tokens_total") as m3,
+            patch("app.skills.llm_invoke.nova_llm_cost_cents_total") as m4,
+            patch("app.skills.llm_invoke.llm_cache_hits_total") as m5,
+            patch("app.skills.llm_invoke.llm_cache_misses_total") as m6,
+            patch("app.skills.llm_invoke.llm_cache_savings_cents") as m7,
+        ):
             # Setup mock labels
             for m in [m1, m2, m3, m4, m5, m6, m7]:
                 m.labels.return_value.inc = MagicMock()

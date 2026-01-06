@@ -252,9 +252,9 @@ class TestPBS2CrashedImmutability:
 
             # Verify the error message contains TRUTH_VIOLATION
             error_msg = str(exc_info.value)
-            assert (
-                "TRUTH_VIOLATION" in error_msg or "PB-S1 VIOLATION" in error_msg
-            ), f"Expected TRUTH_VIOLATION or PB-S1 VIOLATION in error: {error_msg}"
+            assert "TRUTH_VIOLATION" in error_msg or "PB-S1 VIOLATION" in error_msg, (
+                f"Expected TRUTH_VIOLATION or PB-S1 VIOLATION in error: {error_msg}"
+            )
 
             print(f"Mutation of crashed run {run_id} correctly rejected")
 

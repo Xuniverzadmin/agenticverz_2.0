@@ -13,6 +13,7 @@ Revision ID: 048_m29_anomaly_rules
 Revises: 047_m27_cost_snapshots
 Create Date: 2025-12-24
 """
+
 import sqlalchemy as sa
 
 from alembic import op

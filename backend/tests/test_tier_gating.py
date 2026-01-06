@@ -10,7 +10,6 @@ Tests:
 - check_tier_access function
 """
 
-
 import pytest
 
 from app.auth.tier_gating import (

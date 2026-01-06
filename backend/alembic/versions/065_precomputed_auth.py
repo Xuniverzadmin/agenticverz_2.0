@@ -20,6 +20,7 @@ Authorization is computed at submission time (L2 → L4) and persisted in L6.
 Reference: PIN-256, PHASE_E_FIX_DESIGN.md
 Violations Resolved: VIOLATION-002 (remaining), VIOLATION-003
 """
+
 import sqlalchemy as sa
 
 from alembic import op

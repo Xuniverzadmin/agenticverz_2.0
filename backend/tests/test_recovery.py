@@ -304,9 +304,9 @@ class TestAcceptanceCriteria:
             confidences.append(conf)
 
         # Verify variance exists
-        assert (
-            len(set([round(c, 2) for c in confidences])) > 1
-        ), f"Expected varying confidence scores, got: {confidences}"
+        assert len(set([round(c, 2) for c in confidences])) > 1, (
+            f"Expected varying confidence scores, got: {confidences}"
+        )
 
 
 # =============================================================================

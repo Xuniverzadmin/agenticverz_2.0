@@ -37,6 +37,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, desc, select
 from sqlmodel import Session
 
+from app.auth.authority import AuthorityResult, emit_authority_audit, require_replay_execute
 from app.auth.tenant_auth import TenantContext, get_tenant_context
 from app.auth.tier_gating import requires_feature
 from app.db import get_session
@@ -489,6 +490,7 @@ async def replay_call(
     session: Session = Depends(get_session),
     ctx: TenantContext = Depends(get_tenant_context),
     _tier: None = Depends(requires_feature("evidence.replay")),
+    auth: AuthorityResult = Depends(require_replay_execute),
 ):
     """
     REPLAY PROVES ENFORCEMENT
@@ -506,6 +508,9 @@ async def replay_call(
 
     Returns comparison showing enforcement consistency.
     """
+    # Emit authority audit for capability access
+    await emit_authority_audit(auth, "replay", subject_id=call_id)
+
     if request is None:
         request = ReplayRequest(dry_run=False)
 

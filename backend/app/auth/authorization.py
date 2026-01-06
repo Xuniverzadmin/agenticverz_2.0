@@ -120,6 +120,9 @@ class AuthorizationEngine:
             "admin:members",
             "read:billing:account",
             "write:billing:account",
+            # Capability admin (CAP-001, CAP-004)
+            "admin:replay",
+            "admin:predictions",
         },
         "team_admin": {
             "read:*",
@@ -133,10 +136,18 @@ class AuthorizationEngine:
             "write:agents",
             "write:skills",
             "execute:*",
+            # Capability execute (CAP-001, CAP-004)
+            "execute:replay",
+            "execute:predictions",
         },
         "viewer": {
             "read:*",
             "audit:*",
+            # Read-only capability access (CAP-001, CAP-004)
+            "read:replay",
+            "read:predictions",
+            "audit:replay",
+            "audit:predictions",
         },
         # System roles
         "machine": {
@@ -145,6 +156,9 @@ class AuthorizationEngine:
             "write:traces",
             "write:metrics",
             "execute:*",
+            # Machine capability access (CAP-001, CAP-004)
+            "execute:replay",
+            "execute:predictions",
         },
         "ci": {
             "read:*",
@@ -154,6 +168,10 @@ class AuthorizationEngine:
         "replay": {
             "read:*",
             "execute:replay",
+        },
+        "predictions": {
+            "read:*",
+            "execute:predictions",
         },
         "automation": {
             "read:*",
@@ -444,5 +462,17 @@ def authorize(
     Convenience function for authorization checks.
 
     Equivalent to: get_authorization_engine().authorize(...)
+
+    ==========================================================================
+    INVARIANT: SINGLE AUTHORIZATION AUTHORITY (I-AUTH-001)
+    ==========================================================================
+    This function is the SINGLE ENTRY POINT for all authorization decisions.
+
+    All authorization decisions MUST originate from M28 (this engine).
+    M7 (rbac_engine.py) is a temporary translation layer only.
+    No new capability may depend on M7.
+
+    Reference: docs/invariants/AUTHZ_AUTHORITY.md
+    ==========================================================================
     """
     return get_authorization_engine().authorize(actor, resource, action, tenant_id)

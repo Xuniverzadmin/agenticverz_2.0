@@ -10,6 +10,7 @@ M10 Durability Enhancements:
 - Adds matview_refresh_log for freshness monitoring
 - Safe, additive migration - does not alter existing constraints
 """
+
 from sqlalchemy import text
 
 from alembic import op

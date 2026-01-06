@@ -231,7 +231,7 @@ class ClerkAuthProvider:
         B03 FIX: Delegates to L4 RBACEngine for domain authority.
         L3 no longer contains role-to-level mapping logic.
         """
-        from app.auth.rbac_engine import get_max_approval_level
+        from app.auth.role_mapping import get_max_approval_level
 
         return get_max_approval_level(roles)
 

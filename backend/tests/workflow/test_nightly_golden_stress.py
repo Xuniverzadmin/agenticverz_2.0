@@ -259,8 +259,7 @@ class TestNightlyGoldenStress:
                 )
 
         assert not mismatches, (
-            f"Determinism failure in io_heavy: "
-            f"{len(mismatches)}/{STRESS_ITERATIONS} iterations had different hashes."
+            f"Determinism failure in io_heavy: {len(mismatches)}/{STRESS_ITERATIONS} iterations had different hashes."
         )
 
     @pytest.mark.asyncio
@@ -309,9 +308,9 @@ class TestNightlyGoldenStress:
             results.append(result["workflow_hash"])
 
         unique_hashes = len(set(results))
-        assert (
-            unique_hashes >= len(seeds) - 1
-        ), f"Expected mostly unique hashes for different seeds, got {unique_hashes}/{len(seeds)}"
+        assert unique_hashes >= len(seeds) - 1, (
+            f"Expected mostly unique hashes for different seeds, got {unique_hashes}/{len(seeds)}"
+        )
 
     @pytest.mark.asyncio
     async def test_concurrent_execution_determinism(self, registry: MockSkillRegistry):
@@ -347,9 +346,9 @@ class TestNightlyGoldenStress:
 
             for i in range(iterations):
                 result = await run_workflow_once(workflow, registry, seed)
-                assert (
-                    result["workflow_hash"] == reference["workflow_hash"]
-                ), f"Mismatch in {workflow.name} at iteration {i}"
+                assert result["workflow_hash"] == reference["workflow_hash"], (
+                    f"Mismatch in {workflow.name} at iteration {i}"
+                )
 
     @pytest.mark.asyncio
     async def test_memory_stability(self, registry: MockSkillRegistry):

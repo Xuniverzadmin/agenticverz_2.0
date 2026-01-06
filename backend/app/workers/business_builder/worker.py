@@ -54,8 +54,7 @@ from typing import Any, Dict, List, Optional, Protocol, Tuple
 class EventEmitter(Protocol):
     """Protocol for event emission - allows worker to emit events."""
 
-    async def emit(self, run_id: str, event_type: str, data: Dict[str, Any]) -> None:
-        ...
+    async def emit(self, run_id: str, event_type: str, data: Dict[str, Any]) -> None: ...
 
 
 from .agents import WORKER_AGENTS, register_all_agents

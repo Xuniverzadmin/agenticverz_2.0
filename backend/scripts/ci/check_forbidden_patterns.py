@@ -228,9 +228,9 @@ def check_directory(root: Path, verbose: bool = False) -> list[Violation]:
 
 def print_violation(v: Violation) -> None:
     """Print a single violation."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"FORBIDDEN PATTERN: {v.pattern}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"File: {v.file}:{v.line_num}")
     print(f"Line: {v.line_content}")
     print(f"\nReason: {v.reason}")
@@ -279,16 +279,16 @@ def main() -> int:
     violations = check_directory(root, args.verbose)
 
     if violations:
-        print(f"\n{'#'*70}")
+        print(f"\n{'#' * 70}")
         print(f"# FORBIDDEN PATTERNS DETECTED: {len(violations)}")
-        print(f"{'#'*70}")
+        print(f"{'#' * 70}")
 
         for v in violations:
             print_violation(v)
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print("SUMMARY")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         print(f"Total violations: {len(violations)}")
         print()
         print("These patterns are forbidden because they can cause:")

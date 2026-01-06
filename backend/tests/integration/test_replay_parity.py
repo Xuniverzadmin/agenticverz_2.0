@@ -122,9 +122,9 @@ class TestReplayParity:
         baseline = self._run_live_trace(trace, enable_memory=False)
         with_memory = self._run_live_trace(trace, enable_memory=True)
 
-        assert (
-            baseline["final_state"] == with_memory["final_state"]
-        ), "Determinism drift detected between baseline and memory-enabled traces"
+        assert baseline["final_state"] == with_memory["final_state"], (
+            "Determinism drift detected between baseline and memory-enabled traces"
+        )
 
     @staticmethod
     def _canonical_hash(data: Dict[str, Any], exclude_keys: Optional[List[str]] = None) -> str:

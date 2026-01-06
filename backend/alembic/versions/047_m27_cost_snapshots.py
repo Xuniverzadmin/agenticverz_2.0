@@ -28,6 +28,7 @@ Tables:
   - cost_snapshot_aggregates: Per-entity aggregates within a snapshot
   - cost_snapshot_baselines: Rolling averages for anomaly thresholds
 """
+
 import sqlalchemy as sa
 
 from alembic import op

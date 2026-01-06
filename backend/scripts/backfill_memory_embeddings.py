@@ -316,7 +316,7 @@ async def run_backfill(
                 await asyncio.sleep(delay_seconds)
 
         # Final summary
-        logger.info(f"Backfill complete: {total_success} success, {total_failed} failed. " f"Pending: {pending}")
+        logger.info(f"Backfill complete: {total_success} success, {total_failed} failed. Pending: {pending}")
 
 
 def main():

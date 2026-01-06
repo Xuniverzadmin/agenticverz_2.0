@@ -14,6 +14,7 @@ Revision ID: 036_m21_tenant_auth
 Revises: 035_m10_schema_repair
 Create Date: 2024-12-16
 """
+
 import sqlalchemy as sa
 
 from alembic import op

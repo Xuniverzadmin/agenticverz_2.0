@@ -121,7 +121,7 @@ async def check_redis_config() -> Tuple[Dict[str, any], List[str], List[str]]:
 
             if isinstance(expected_options, list):
                 if actual not in expected_options:
-                    warnings.append(f"RECOMMENDED: {key} = '{actual}' " f"(recommended: {expected_options})")
+                    warnings.append(f"RECOMMENDED: {key} = '{actual}' (recommended: {expected_options})")
             elif actual != expected_options:
                 warnings.append(f"RECOMMENDED: {key} = '{actual}' (recommended '{expected_options}')")
 
