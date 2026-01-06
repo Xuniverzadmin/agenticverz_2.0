@@ -15,11 +15,19 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.33"
+session_playbook_version: "2.34"
 created: "2025-12-27"
-last_updated: "2026-01-05"
+last_updated: "2026-01-06"
 
 # Changelog:
+#   2.34 - INTENT LOCK SYSTEM (Section 35, PIN-319 Governance Fix).
+#          Added intent_lock section for clean push by construction.
+#          Requires INTENT_DECLARATION.yaml at session start.
+#          Adds worktree_sanity_check.py continuous enforcement.
+#          Adds --no-verify formalized policy.
+#          Root cause fix: detect mixed intent at session start, not commit time.
+#          Reference: PIN-319 (Frontend Realignment - Governance Hardening)
+#   2.33 - Previous version (no changes from 2.32)
 #   2.32 - DECISION GUARDRAILS (Section 25.1, PIN-276 REDO).
 #          Adds decision_guardrails section preventing contract drift.
 #          Layer 1: Fix classification required before any code change.
@@ -7165,6 +7173,189 @@ capability_registry_governance:
     INTENTIONALLY_ABSENT:
       meaning: "Explicitly not implemented (PLANNED state)"
       resolution: "No action required until implementation begins"
+
+# =============================================================================
+# SECTION 35: INTENT LOCK SYSTEM (PIN-319 Governance Fix)
+# =============================================================================
+#
+# Purpose: Ensure clean push by construction through intent-scoped worktrees.
+# Root cause fix: Detect mixed intent at session start, not at commit time.
+#
+# Problem solved:
+#   Before: Mixed work accumulates silently, enforcement fires late (at push),
+#           causing noisy failures and forcing --no-verify workarounds.
+#   After: Intent declared at session start, worktree sanity checked continuously,
+#          pushes are clean by construction.
+
+intent_lock:
+  # ---------------------------------------------------------------------------
+  # Intent Declaration Requirement
+  # ---------------------------------------------------------------------------
+  intent_declaration:
+    required: true
+    schema_file: docs/governance/INTENT_DECLARATION_SCHEMA.yaml
+    instance_file: INTENT_DECLARATION.yaml
+
+    validation_rules:
+      # V1: PIN must exist
+      - id: V1
+        rule: "Referenced PIN must exist in docs/memory-pins/"
+        enforcement: BLOCKING
+
+      # V2: Scope must be defined
+      - id: V2
+        rule: "allowed_paths must have at least one entry"
+        enforcement: BLOCKING
+
+      # V3: No wildcard-only scopes (except exploratory mode)
+      - id: V3
+        rule: "Cannot use '**' alone in exclusive mode"
+        enforcement: BLOCKING
+
+    on_missing_intent:
+      action: WARN
+      message: |
+        No INTENT_DECLARATION.yaml found.
+        Create one to enable worktree sanity enforcement.
+        Template: docs/governance/INTENT_DECLARATION_SCHEMA.yaml
+
+  # ---------------------------------------------------------------------------
+  # Worktree Sanity Enforcement
+  # ---------------------------------------------------------------------------
+  worktree_sanity:
+    enabled: true
+    script: scripts/ops/worktree_sanity_check.py
+
+    triggers:
+      - session_bootstrap         # At session start
+      - pre_commit                # Before git commit
+      - pre_push                  # Before git push
+      - periodic: 50              # Every N tool invocations
+
+    behavior:
+      exclusive_mode:
+        on_violation: BLOCK
+        message: |
+          Files modified outside declared intent scope.
+          Remediation:
+          1. git stash the out-of-scope changes
+          2. Update INTENT_DECLARATION.yaml to include these paths
+          3. Create separate branch for this work
+
+      exploratory_mode:
+        on_violation: WARN
+        message: |
+          Exploratory mode: violation logged but not blocking.
+
+      hotfix_mode:
+        on_violation: LOG
+        message: |
+          Hotfix mode: violation logged only.
+
+  # ---------------------------------------------------------------------------
+  # Intent-Aware Commit Hook
+  # ---------------------------------------------------------------------------
+  commit_hook:
+    enabled: true
+    behavior:
+      # Extract PIN from commit message
+      extract_pin: true
+      pin_pattern: "PIN-[0-9]+"
+
+      # Validate staged files against intent
+      validate_scope: true
+
+      on_scope_violation:
+        action: BLOCK
+        message: |
+          Staged files outside declared intent scope.
+          PIN in message: {pin}
+          Violations: {violations}
+          Fix: Update INTENT_DECLARATION.yaml or use separate commit.
+
+  # ---------------------------------------------------------------------------
+  # --no-verify Policy (FORMALIZED)
+  # ---------------------------------------------------------------------------
+  no_verify_policy:
+    description: |
+      --no-verify is allowed but regulated.
+      It is NOT banned, but usage must be justified.
+
+    allowed_when:
+      - hook_failure_reason == "scope_pollution"
+      - intent_documented == true
+      - pin_updated == true
+      - formatting_only_violation == true  # ruff false positives
+
+    forbidden_when:
+      - test_failures_present == true
+      - semantic_violation == true
+      - security_guard_failure == true
+      - missing_intent_declaration == true
+
+    required_justification:
+      format: |
+        # --no-verify justification:
+        # Reason: {reason}
+        # Intent: PIN-{number}
+        # Files bypassed: {files}
+
+    audit:
+      log_usage: true
+      include_in_commit_message: false  # Not required but recommended
+
+  # ---------------------------------------------------------------------------
+  # Session Workflow Integration
+  # ---------------------------------------------------------------------------
+  session_workflow:
+    on_session_start:
+      - Load INTENT_DECLARATION.yaml
+      - Validate against schema
+      - Run worktree_sanity_check.py
+      - Report scope violations before work begins
+
+    on_tool_invocation:
+      - Check if file operation is within scope
+      - Warn if outside allowed_paths
+      - Block if in forbidden_paths (exclusive mode)
+
+    on_commit:
+      - Run worktree_sanity_check.py --staged
+      - Validate commit message PIN matches intent
+      - Report violations with remediation
+
+    on_push:
+      - Run full worktree_sanity_check.py
+      - Verify no scope pollution accumulated
+      - Clean push guaranteed
+
+  # ---------------------------------------------------------------------------
+  # Intent Lock Rules (Summary)
+  # ---------------------------------------------------------------------------
+  rules:
+    - id: INTENT-001
+      name: Intent Declaration Required
+      description: INTENT_DECLARATION.yaml should exist for worktree sanity
+      enforcement: WARNING  # Not blocking, but encouraged
+      script: worktree_sanity_check.py
+
+    - id: INTENT-002
+      name: Working Tree Must Match Scope
+      description: All modified files must be within allowed_paths
+      enforcement: BLOCKING (exclusive) / WARNING (exploratory)
+      script: worktree_sanity_check.py
+
+    - id: INTENT-003
+      name: Forbidden Paths Absolute
+      description: Files in forbidden_paths cannot be modified regardless of mode
+      enforcement: BLOCKING
+      script: worktree_sanity_check.py
+
+    - id: INTENT-004
+      name: --no-verify Requires Justification
+      description: Cannot use --no-verify for test/semantic/security failures
+      enforcement: BLOCKING (manual review)
+      audit: Logged if used
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

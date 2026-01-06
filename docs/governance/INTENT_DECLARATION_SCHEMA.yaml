@@ -1,0 +1,246 @@
+# Intent Declaration Schema v1.0
+# Reference: PIN-319 Governance Fix - Clean Push By Construction
+#
+# This schema defines how sessions declare their intent at bootstrap.
+# Intent must be declared BEFORE any work begins.
+# The worktree_sanity_check.py script enforces this continuously.
+
+schema:
+  version: "1.0"
+  description: |
+    Intent declarations bound a session to specific work scope.
+    This prevents mixed intent pollution that causes late enforcement failures.
+
+# =============================================================================
+# INTENT DECLARATION FORMAT
+# =============================================================================
+
+intent:
+  # Required: The PIN this session is working on
+  id:
+    type: string
+    pattern: "^PIN-[0-9]+$"
+    required: true
+    example: "PIN-319"
+
+  # Required: Human-readable title
+  title:
+    type: string
+    required: true
+    max_length: 100
+    example: "Frontend Realignment - App Shell Architecture"
+
+  # Required: Category of work
+  type:
+    type: enum
+    values:
+      - frontend-architecture
+      - backend-architecture
+      - api-change
+      - database-migration
+      - infrastructure
+      - documentation
+      - bugfix
+      - security
+      - testing
+      - governance
+      - exploratory
+    required: true
+
+  # Required: Explicit scope boundaries
+  scope:
+    allowed_paths:
+      type: array
+      items:
+        type: string  # glob patterns
+      required: true
+      min_items: 1
+      description: |
+        Files matching these patterns may be modified.
+        Use glob syntax: ** for recursive, * for single level.
+      example:
+        - "website/app-shell/**"
+        - "website/fops/**"
+        - "website/onboarding/**"
+        - "docs/memory-pins/PIN-319*.md"
+        - "docs/PHASE_STATUS.md"
+
+    forbidden_paths:
+      type: array
+      items:
+        type: string  # glob patterns
+      required: false
+      default: []
+      description: |
+        Files matching these patterns must NOT be modified.
+        Takes precedence over allowed_paths.
+      example:
+        - "backend/**"
+        - ".github/workflows/**"
+
+    exceptions:
+      type: array
+      items:
+        type: string  # glob patterns
+      required: false
+      default: []
+      description: |
+        Specific files allowed even if in forbidden_paths.
+        Use sparingly and document why.
+      example:
+        - "backend/app/main.py"  # Only to update router imports
+
+  # Required: Session mode
+  mode:
+    type: enum
+    values:
+      - exclusive    # Only this intent, strict enforcement
+      - exploratory  # Learning mode, warnings only
+      - hotfix       # Emergency fix, relaxed scope
+    required: true
+    default: exclusive
+
+  # Optional: Related intents that may overlap
+  related_intents:
+    type: array
+    items:
+      type: string  # PIN IDs
+    required: false
+    description: |
+      Other PINs whose work may be in progress.
+      Used to detect conflicts, not to allow mixing.
+
+  # Optional: Session metadata
+  session:
+    started_at:
+      type: string
+      format: datetime
+      required: false
+    expires_at:
+      type: string
+      format: datetime
+      required: false
+      description: |
+        Intent expires after this time.
+        Forces re-declaration to prevent stale intents.
+
+# =============================================================================
+# VALIDATION RULES
+# =============================================================================
+
+validation_rules:
+  # Rule V1: Intent must reference existing PIN
+  - id: V1
+    name: pin_exists
+    rule: "PIN file must exist in docs/memory-pins/"
+    enforcement: BLOCKING
+
+  # Rule V2: Allowed paths must be non-empty
+  - id: V2
+    name: scope_defined
+    rule: "allowed_paths must have at least one entry"
+    enforcement: BLOCKING
+
+  # Rule V3: No wildcard-only scopes
+  - id: V3
+    name: no_global_scope
+    rule: "Cannot use '**' alone as allowed_path"
+    enforcement: BLOCKING
+
+  # Rule V4: Exclusive mode requires narrow scope
+  - id: V4
+    name: exclusive_scope_limit
+    rule: "Exclusive mode: max 5 top-level directories"
+    enforcement: WARNING
+
+  # Rule V5: Hotfix mode requires justification
+  - id: V5
+    name: hotfix_justification
+    rule: "Hotfix mode requires 'justification' field"
+    enforcement: BLOCKING
+
+# =============================================================================
+# ENFORCEMENT POINTS
+# =============================================================================
+
+enforcement:
+  # When enforcement runs
+  triggers:
+    - session_bootstrap      # At session start
+    - tool_invocation        # Before any tool use (Read, Write, Edit, Bash)
+    - pre_commit             # Before git commit
+    - pre_push               # Before git push
+    - periodic               # Every N commands (configurable)
+
+  # What happens on violation
+  actions:
+    violation_detected:
+      - log_violation
+      - display_warning
+      - block_operation  # If mode == exclusive
+      - suggest_remediation
+
+  # Remediation options presented to user
+  remediation_options:
+    - "git stash the out-of-scope changes"
+    - "Update INTENT_DECLARATION.yaml to include this path"
+    - "Create a separate branch for this work"
+    - "End session and start new session with different intent"
+
+# =============================================================================
+# EXAMPLE DECLARATIONS
+# =============================================================================
+
+examples:
+  - name: "Frontend Realignment"
+    file: |
+      intent:
+        id: PIN-319
+        title: "Frontend Realignment - App Shell Architecture"
+        type: frontend-architecture
+        scope:
+          allowed_paths:
+            - "website/app-shell/**"
+            - "website/fops/**"
+            - "website/onboarding/**"
+            - "docs/memory-pins/PIN-319*.md"
+            - "docs/PHASE_STATUS.md"
+            - "docs/inventories/FRONTEND_*.md"
+            - "docs/contracts/ONBOARDING_*.md"
+          forbidden_paths:
+            - "backend/**"
+            - ".github/workflows/**"
+        mode: exclusive
+
+  - name: "Backend Auth (CAP-006)"
+    file: |
+      intent:
+        id: PIN-315
+        title: "CAP-006 Authentication Gateway"
+        type: backend-architecture
+        scope:
+          allowed_paths:
+            - "backend/app/auth/**"
+            - "backend/app/api/**"
+            - "backend/tests/auth/**"
+            - "docs/memory-pins/PIN-315*.md"
+          forbidden_paths:
+            - "website/**"
+            - "sdk/**"
+        mode: exclusive
+
+  - name: "Exploratory Investigation"
+    file: |
+      intent:
+        id: PIN-320
+        title: "Investigating Memory Leak"
+        type: exploratory
+        scope:
+          allowed_paths:
+            - "**"  # Allowed in exploratory mode
+          forbidden_paths:
+            - ".env*"
+            - "**/*.key"
+        mode: exploratory
+        session:
+          expires_at: "2026-01-06T18:00:00Z"

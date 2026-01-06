@@ -1,0 +1,36 @@
+# Intent Declaration for Current Session
+# Reference: docs/governance/INTENT_DECLARATION_SCHEMA.yaml
+#
+# This file declares the intent for the current session.
+# It is validated by worktree_sanity_check.py continuously.
+# Update this file when switching work focus.
+
+intent:
+  id: PIN-319
+  title: "Frontend Realignment - Governance Hardening"
+  type: governance
+  scope:
+    allowed_paths:
+      # Governance infrastructure
+      - "docs/governance/**"
+      - "docs/playbooks/**"
+      - "scripts/ops/**"
+      - ".pre-commit-config.yaml"
+      - "*pre-commit-config.yaml"  # Match with or without leading dot
+      # Documentation
+      - "docs/memory-pins/PIN-319*.md"
+      - "docs/PHASE_STATUS.md"
+      - "INTENT_DECLARATION.yaml"
+      # Any linting/formatting fixes (auto-generated)
+      - "**/*.py"  # ruff may touch these
+    forbidden_paths:
+      # Frontend work is complete, locked
+      - "website/app-shell/src/**"
+      - "website/fops/**"
+      - "website/onboarding/**"
+      # Backend auth is separate intent
+      - "backend/app/auth/**"
+    exceptions: []
+  mode: exclusive
+  session:
+    started_at: "2026-01-06T12:00:00Z"

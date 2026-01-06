@@ -147,3 +147,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
         always_run: true
+
+      # Intent-Aware Worktree Sanity Check
+      # PIN-319: Clean Push By Construction governance fix
+      # Validates staged files against INTENT_DECLARATION.yaml scope
+      # Reference: SESSION_PLAYBOOK.yaml Section 35 (Intent Lock System)
+      - id: worktree-sanity
+        name: Worktree Sanity Check (Intent Scope)
+        entry: python scripts/ops/worktree_sanity_check.py --staged --quiet
+        language: python
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
