@@ -1,0 +1,234 @@
+# L2 Promotion Register
+# Reference: PIN-281 (Claude Task TODO)
+# Purpose: Track capability promotion through layers L7→L6→L5→L4→L3→L2
+# Rule: No promotion without registry entry
+# Created: 2026-01-03
+
+schema_version: "1.0"
+last_updated: "2026-01-03"
+
+# ==============================================================================
+# CAPABILITY REGISTRY
+# ==============================================================================
+
+capabilities:
+
+  # ---------------------------------------------------------------------------
+  # LOGS DOMAIN
+  # ---------------------------------------------------------------------------
+  LOGS_LIST:
+    description: "Customer log list view - audit trail"
+    current_max_layer: L4  # Exists as internal ops service
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: READ
+    risk_class: MEDIUM
+    gaps:
+      - L3: "Missing customer_logs_adapter.py"
+      - L2: "Missing /guard/logs endpoint"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  LOGS_DETAIL:
+    description: "Customer log detail view - single entry"
+    current_max_layer: L4
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: READ
+    risk_class: MEDIUM
+    gaps:
+      - L3: "Missing customer_logs_adapter.py"
+      - L2: "Missing /guard/logs/{id} endpoint"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  LOGS_EXPORT:
+    description: "Customer log export - bulk download"
+    current_max_layer: L4
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: READ
+    risk_class: MEDIUM
+    gaps:
+      - L3: "Missing export adapter"
+      - L2: "Missing /guard/logs/export endpoint"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  # ---------------------------------------------------------------------------
+  # ACTIVITY DOMAIN
+  # ---------------------------------------------------------------------------
+  ACTIVITY_LIST:
+    description: "Customer execution list - what ran/is running"
+    current_max_layer: L2  # /api/v1/runs exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: READ
+    risk_class: LOW
+    gaps:
+      - L1: "ActivityPage.tsx uses demo data, needs wiring"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  ACTIVITY_DETAIL:
+    description: "Customer execution detail - single run"
+    current_max_layer: L2  # /api/v1/runs/{id} exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: READ
+    risk_class: LOW
+    gaps:
+      - L1: "ActivityPage.tsx detail panel uses demo data"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  # ---------------------------------------------------------------------------
+  # POLICIES DOMAIN
+  # ---------------------------------------------------------------------------
+  POLICY_CONSTRAINTS:
+    description: "Customer policy constraints view - budget/rate limits"
+    current_max_layer: L4  # Exists as internal service
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: READ
+    risk_class: MEDIUM
+    gaps:
+      - L3: "Missing customer_policies_adapter.py"
+      - L2: "Missing /guard/policies endpoint"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  # ---------------------------------------------------------------------------
+  # KEYS DOMAIN
+  # ---------------------------------------------------------------------------
+  KEYS_LIST:
+    description: "Customer API key list"
+    current_max_layer: L2  # /guard/keys exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: READ
+    risk_class: MEDIUM
+    gaps:
+      - L1: "Missing KeysPage.tsx"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  KEYS_FREEZE:
+    description: "Freeze API key"
+    current_max_layer: L2  # /guard/keys/{id}/freeze exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: CONTROL
+    risk_class: MEDIUM
+    gaps:
+      - L1: "Missing UI button in KeysPage"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  KEYS_UNFREEZE:
+    description: "Unfreeze API key"
+    current_max_layer: L2  # /guard/keys/{id}/unfreeze exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: CONTROL
+    risk_class: MEDIUM
+    gaps:
+      - L1: "Missing UI button in KeysPage"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  # ---------------------------------------------------------------------------
+  # INCIDENT ACTIONS DOMAIN
+  # ---------------------------------------------------------------------------
+  INCIDENT_ACKNOWLEDGE:
+    description: "Acknowledge incident"
+    current_max_layer: L2  # /guard/incidents/{id}/acknowledge exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: WRITE
+    risk_class: MEDIUM
+    gaps:
+      - L1: "Missing Acknowledge button in IncidentDetailPage"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  INCIDENT_RESOLVE:
+    description: "Resolve incident"
+    current_max_layer: L2  # /guard/incidents/{id}/resolve exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: WRITE
+    risk_class: MEDIUM
+    gaps:
+      - L1: "Missing Resolve button in IncidentDetailPage"
+    approval:
+      required: true
+      owner: HUMAN
+    status: DRAFT
+
+  # ---------------------------------------------------------------------------
+  # KILLSWITCH DOMAIN (HIGH RISK)
+  # ---------------------------------------------------------------------------
+  KILLSWITCH_ACTIVATE:
+    description: "Emergency kill switch - freeze all traffic"
+    current_max_layer: L2  # /guard/killswitch/activate exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: CONTROL
+    risk_class: HIGH
+    gaps:
+      - L1: "Missing emergency button in OverviewPage"
+      - GOVERNANCE: "Requires explicit product decision on UI exposure"
+    approval:
+      required: true
+      owner: HUMAN
+    status: BLOCKED_GOVERNANCE
+
+  KILLSWITCH_DEACTIVATE:
+    description: "Deactivate kill switch - resume traffic"
+    current_max_layer: L2  # /guard/killswitch/deactivate exists
+    target_layer: L2
+    audience: CUSTOMER
+    mutation_type: CONTROL
+    risk_class: HIGH
+    gaps:
+      - L1: "Missing UI button"
+      - GOVERNANCE: "Requires explicit product decision on UI exposure"
+    approval:
+      required: true
+      owner: HUMAN
+    status: BLOCKED_GOVERNANCE
+
+# ==============================================================================
+# PROMOTION TRACKING
+# ==============================================================================
+
+promotion_log: []
+  # Format:
+  # - capability_id: LOGS_LIST
+  #   from_layer: L4
+  #   to_layer: L3
+  #   date: 2026-01-03
+  #   pr: PR-XXX
+  #   artifacts_created:
+  #     - backend/app/adapters/customer_logs_adapter.py

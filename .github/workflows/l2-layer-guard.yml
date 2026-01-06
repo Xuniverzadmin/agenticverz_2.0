@@ -1,0 +1,87 @@
+# Layer: L8 — Catalyst / Meta
+# Product: system-wide
+# Temporal:
+#   Trigger: github-event (PR, push)
+#   Execution: async (CI runner)
+# Role: CI guard for L2→L3→L4 import chain compliance (GATE-7)
+# Reference: PIN-280 (L2 Promotion Governance), PIN-281 (L3 Adapter Closure)
+#
+# This workflow enforces GATE-7 from CAPABILITY_LIFECYCLE.yaml.
+# All customer-facing L2 endpoints must follow L2→L3→L4 chains.
+
+name: L2 Layer Guard (GATE-7)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/api/**'
+      - 'backend/app/adapters/**'
+      - 'backend/app/services/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/api/**'
+      - 'backend/app/adapters/**'
+      - 'backend/app/services/**'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  layer-guard:
+    name: L2→L3→L4 Layer Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run L2→L3→L4 Guard
+        run: |
+          echo "========================================"
+          echo "Running GATE-7: L2→L3→L4 Layer Guard"
+          echo "========================================"
+          python scripts/ci/l2_l3_l4_guard.py --verbose
+
+      - name: Run Full BLCA
+        run: |
+          echo "========================================"
+          echo "Running GATE-6: Full BLCA Check"
+          echo "========================================"
+          python scripts/ops/layer_validator.py --backend --ci
+
+      - name: Upload Guard Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layer-guard-results
+          path: |
+            scripts/ci/l2_l3_l4_guard.py
+          retention-days: 30
+
+  gate-summary:
+    name: Gate Summary
+    runs-on: ubuntu-latest
+    needs: layer-guard
+    if: always()
+
+    steps:
+      - name: Gate Status
+        run: |
+          echo "========================================"
+          echo "CAPABILITY LIFECYCLE GATE STATUS"
+          echo "========================================"
+          echo ""
+          echo "GATE-6 (BLCA): ${{ needs.layer-guard.result == 'success' && 'PASS' || 'FAIL' }}"
+          echo "GATE-7 (CI Guard): ${{ needs.layer-guard.result == 'success' && 'PASS' || 'FAIL' }}"
+          echo ""
+          if [ "${{ needs.layer-guard.result }}" != "success" ]; then
+            echo "BLOCKING: Layer violations detected."
+            echo "Fix all violations before merge."
+            exit 1
+          fi
+          echo "All layer gates passed."

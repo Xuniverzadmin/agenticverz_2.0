@@ -1,0 +1,142 @@
+# Layer: L8 — Catalyst / Meta
+# Product: system-wide
+# Temporal:
+#   Trigger: github-event (PR, push)
+#   Execution: async (CI runner)
+# Role: Governance Qualifier enforcement (GQ-L2-CONTRACT-READY)
+# Reference: docs/governance/GOVERNANCE_QUALIFIERS.yaml, PIN-281
+#
+# This workflow enforces the Governance Qualifier system.
+# No capability may be treated as product-truth without qualification.
+
+name: Governance Qualifier Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/**'
+      - 'docs/governance/**'
+      - 'scripts/ops/evaluate_qualifiers.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/app/**'
+      - 'docs/governance/**'
+      - 'scripts/ops/evaluate_qualifiers.py'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  qualifier-check:
+    name: GQ-L2-CONTRACT-READY Evaluation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+
+      - name: Evaluate Governance Qualifiers
+        id: evaluate
+        run: |
+          echo "========================================"
+          echo "GOVERNANCE QUALIFIER EVALUATION"
+          echo "========================================"
+          python scripts/ops/evaluate_qualifiers.py --verbose
+
+      - name: Generate Qualifier Evaluation Report
+        run: |
+          python scripts/ops/evaluate_qualifiers.py --generate
+          echo ""
+          echo "========================================"
+          echo "QUALIFIER EVALUATION REPORT"
+          echo "========================================"
+          cat docs/governance/QUALIFIER_EVALUATION.yaml
+
+      - name: Check for PROMOTED without QUALIFIED
+        run: |
+          echo "========================================"
+          echo "CHECKING FOR PROMOTION VIOLATIONS"
+          echo "========================================"
+
+          # Extract capabilities with status: PROMOTED from CAPABILITY_LIFECYCLE.yaml
+          # and check if they are QUALIFIED
+          python3 << 'EOF'
+          import yaml
+          import sys
+
+          # Load lifecycle
+          with open('docs/governance/CAPABILITY_LIFECYCLE.yaml', 'r') as f:
+              lifecycle = yaml.safe_load(f)
+
+          # Load qualifiers
+          with open('docs/governance/QUALIFIER_EVALUATION.yaml', 'r') as f:
+              qualifiers = yaml.safe_load(f)
+
+          violations = []
+          capabilities = lifecycle.get('capabilities', {})
+          qual_caps = qualifiers.get('capabilities', {})
+
+          for name, data in capabilities.items():
+              status = data.get('status', 'UNKNOWN')
+              qual_state = qual_caps.get(name, {}).get('state', 'UNKNOWN')
+
+              # Check for PROMOTED/COMPLETE without QUALIFIED
+              if status in ['PROMOTED', 'COMPLETE'] and qual_state != 'QUALIFIED':
+                  violations.append(f"{name}: status={status} but qualifier={qual_state}")
+
+          if violations:
+              print("VIOLATION: Capabilities claim PROMOTED/COMPLETE without QUALIFIED:")
+              for v in violations:
+                  print(f"  - {v}")
+              sys.exit(1)
+          else:
+              print("OK: No promotion violations found.")
+              print("All capabilities with PROMOTED/COMPLETE status are QUALIFIED.")
+          EOF
+
+      - name: Upload Qualifier Evaluation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualifier-evaluation
+          path: docs/governance/QUALIFIER_EVALUATION.yaml
+          retention-days: 30
+
+  qualifier-summary:
+    name: Qualifier Summary
+    runs-on: ubuntu-latest
+    needs: qualifier-check
+    if: always()
+
+    steps:
+      - name: Qualification Status
+        run: |
+          echo "========================================"
+          echo "GOVERNANCE QUALIFIER STATUS"
+          echo "========================================"
+          echo ""
+          echo "Qualifier: GQ-L2-CONTRACT-READY"
+          echo "Check Result: ${{ needs.qualifier-check.result == 'success' && 'PASS' || 'FAIL' }}"
+          echo ""
+          if [ "${{ needs.qualifier-check.result }}" != "success" ]; then
+            echo "BLOCKING: Governance qualification failed."
+            echo ""
+            echo "Possible causes:"
+            echo "  - Capabilities claim PROMOTED but are not QUALIFIED"
+            echo "  - CAPABILITY_LIFECYCLE.yaml is out of sync"
+            echo ""
+            echo "Resolution:"
+            echo "  - Run: python scripts/ops/evaluate_qualifiers.py --verbose"
+            echo "  - Fix structural issues before claiming readiness"
+            exit 1
+          fi
+          echo "All governance qualifiers passed."

@@ -78,7 +78,58 @@ Where:
 |----------|-------------|-------------|
 | `system` | System-wide settings | L4 |
 | `ops` | Ops console access | L4 |
-| `replay` | Replay capabilities | L4 |
+| `replay` | Execution replay for audit/debugging | L4 |
+| `predictions` | ML predictions (advisory, read-only) | L4 |
+
+---
+
+## Capability-Specific Permissions
+
+### Replay Capability (CAP-001)
+
+The replay capability allows replaying past executions for audit and debugging.
+
+| Permission | Description | Mutating | Required Role |
+|------------|-------------|----------|---------------|
+| `read:replay` | View replay history | No | viewer, developer |
+| `execute:replay` | Execute a replay | Yes | developer, machine, replay |
+| `audit:replay` | View replay audit logs | No | viewer, admin |
+| `admin:replay` | Manage replay settings | Yes | admin, operator |
+
+**Action Semantics:**
+- `read:replay` - List and view past replay records
+- `execute:replay` - Trigger replay of a run or call (requires tenant match)
+- `audit:replay` - View full audit trail of replay operations
+- `admin:replay` - Configure replay retention, disable replay for tenant
+
+**Tenant Isolation:**
+- All replay operations are tenant-scoped
+- `execute:replay` requires actor.tenant_id == run.tenant_id
+- SYSTEM actors (workers) can replay within their assigned tenant
+
+### Prediction Capability (CAP-004)
+
+The prediction capability provides ML-based advisory predictions (cost, risk, optimization).
+Predictions are READ-ONLY advisory signals - they do not mutate state.
+
+| Permission | Description | Mutating | Required Role |
+|------------|-------------|----------|---------------|
+| `read:predictions` | View predictions | No | viewer, developer |
+| `execute:predictions` | Trigger prediction generation | Yes | developer, machine |
+| `audit:predictions` | View prediction audit logs | No | viewer, admin |
+| `admin:predictions` | Manage prediction settings | Yes | admin, operator |
+
+**Action Semantics:**
+- `read:predictions` - View existing predictions (list, detail, stats)
+- `execute:predictions` - Trigger new prediction generation (incident-risk, spend-spike, policy-drift)
+- `audit:predictions` - View prediction generation history and model versions
+- `admin:predictions` - Configure prediction thresholds, enable/disable prediction types
+
+**Advisory Semantics (PIN-205):**
+- Predictions are advisory only - they inform, they do not enforce
+- Consuming a prediction does NOT modify system state
+- Predictions may be stale or wrong - consumers must handle this
+- No "founder bypass" - predictions follow same rules for all actors
 
 ---
 
@@ -225,6 +276,7 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "read:*", "write:*", "delete:*",
         "admin:account", "admin:team", "admin:members",
         "read:billing:account", "write:billing:account",
+        "admin:replay", "admin:predictions",  # Capability admin
     },
 
     "team_admin": {
@@ -236,17 +288,21 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "read:*",
         "write:runs", "write:agents", "write:skills",
         "execute:*",
+        "execute:replay", "execute:predictions",  # Capability execute
     },
 
     "viewer": {
         "read:*",
         "audit:*",
+        "read:replay", "read:predictions",  # Read-only capability access
+        "audit:replay", "audit:predictions",
     },
 
     "machine": {
         "read:*",
         "write:runs", "write:traces", "write:metrics",
         "execute:*",
+        "execute:replay", "execute:predictions",  # Machine capability access
     },
 
     "ci": {
@@ -257,6 +313,11 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
     "replay": {
         "read:*",
         "execute:replay",
+    },
+
+    "predictions": {
+        "read:*",
+        "execute:predictions",  # Prediction-specific role
     },
 }
 ```

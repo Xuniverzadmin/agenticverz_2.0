@@ -2,17 +2,28 @@
 # CAPABILITY REGISTRY ENFORCEMENT
 # =============================================================================
 #
-# Reference: PIN-306 (Capability Registry Governance)
+# Reference: PIN-306 (Capability Registry Governance), PIN-309 (Governance Freeze)
 #
 # This workflow enforces:
 #   T1: Capability Linkage - Every code change must link to registered capability
 #   T2: UI Expansion Guard - UI changes require ui_expansion_allowed flag
+#   T3: Registry Validation - Registry structure must be valid
+#   T4: Gap Heatmap - Auto-updates on main merge
+#
+# Phase G: Governance Freeze (PIN-309)
+#   G1: Registry Mutation - State changes require PIN reference
+#   G2: Plane Purity - Route/authority plane matching
+#   G3: Taxonomy Lock - Permission changes require version bump
+#   G4: Worker Auth - Workers use API keys only
+#   G5: Authority Guard - Replay/prediction routes have RBAC
 #
 # INVARIANTS:
 #   - No code without capability_id
 #   - No UI expansion without governance flag
 #   - No changes to QUARANTINED capabilities
 #   - PLANNED capabilities only allow docs
+#   - No capability state mutation without PIN reference
+#   - No taxonomy changes without version bump
 #
 # =============================================================================
 
@@ -241,3 +252,223 @@ jobs:
         run: |
           echo "Scanning for unregistered capabilities..."
           python scripts/ops/capability_registry_enforcer.py scan-unregistered --generate-drafts
+
+  # ===========================================================================
+  # PHASE G: GOVERNANCE FREEZE ENFORCEMENT (PIN-309)
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # G1: Registry Mutation Freeze
+  # ---------------------------------------------------------------------------
+  registry-mutation-guard:
+    name: G1 Registry Mutation Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check for registry changes
+        id: registry-check
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            docs/capabilities/CAPABILITY_REGISTRY.yaml
+
+      - name: Get registry diff
+        if: steps.registry-check.outputs.any_changed == 'true'
+        run: |
+          git diff origin/main -- docs/capabilities/CAPABILITY_REGISTRY.yaml > /tmp/registry_diff.txt || true
+
+      - name: Check registry mutation
+        if: steps.registry-check.outputs.any_changed == 'true'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          echo "Checking registry mutation governance..."
+          python scripts/ops/capability_registry_enforcer.py registry-mutation \
+            --diff-file /tmp/registry_diff.txt \
+            --pr-body "$PR_BODY" \
+            --commit-message "$COMMIT_MSG" \
+            --format github
+
+      - name: No registry changes
+        if: steps.registry-check.outputs.any_changed != 'true'
+        run: echo "No registry changes - skipping mutation guard"
+
+  # ---------------------------------------------------------------------------
+  # G2: Plane Purity Enforcement
+  # ---------------------------------------------------------------------------
+  plane-purity-guard:
+    name: G2 Plane Purity Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Get changed API files
+        id: api-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            backend/app/api/**/*.py
+
+      - name: Check plane purity
+        if: steps.api-files.outputs.any_changed == 'true'
+        run: |
+          echo "Checking route/authority plane purity..."
+          python scripts/ops/capability_registry_enforcer.py plane-purity \
+            --files ${{ steps.api-files.outputs.all_changed_files }} \
+            --format github
+
+      - name: No API files changed
+        if: steps.api-files.outputs.any_changed != 'true'
+        run: echo "No API files changed - skipping plane purity guard"
+
+  # ---------------------------------------------------------------------------
+  # G3: Taxonomy Lock Enforcement
+  # ---------------------------------------------------------------------------
+  taxonomy-lock-guard:
+    name: G3 Taxonomy Lock Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check for taxonomy changes
+        id: taxonomy-check
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            docs/governance/PERMISSION_TAXONOMY*.md
+
+      - name: Get taxonomy diff
+        if: steps.taxonomy-check.outputs.any_changed == 'true'
+        run: |
+          git diff origin/main -- docs/governance/PERMISSION_TAXONOMY_V1.md > /tmp/taxonomy_diff.txt || true
+
+      - name: Check taxonomy lock
+        if: steps.taxonomy-check.outputs.any_changed == 'true'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "Checking permission taxonomy versioning..."
+          python scripts/ops/capability_registry_enforcer.py taxonomy-lock \
+            --diff-file /tmp/taxonomy_diff.txt \
+            --pr-body "$PR_BODY" \
+            --format github
+
+      - name: No taxonomy changes
+        if: steps.taxonomy-check.outputs.any_changed != 'true'
+        run: echo "No taxonomy changes - skipping taxonomy lock guard"
+
+  # ---------------------------------------------------------------------------
+  # G4: Worker Auth Compliance
+  # ---------------------------------------------------------------------------
+  worker-auth-guard:
+    name: G4 Worker Auth Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Get changed worker/webhook files
+        id: worker-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            backend/app/worker/**/*.py
+            backend/app/workers/**/*.py
+            backend/app/api/webhooks/**/*.py
+            backend/app/webhooks/**/*.py
+            workers/**/*.py
+
+      - name: Check worker auth compliance
+        if: steps.worker-files.outputs.any_changed == 'true'
+        run: |
+          echo "Checking worker auth compliance..."
+          python scripts/ops/capability_registry_enforcer.py worker-auth \
+            --files ${{ steps.worker-files.outputs.all_changed_files }} \
+            --format github
+
+      - name: No worker files changed
+        if: steps.worker-files.outputs.any_changed != 'true'
+        run: echo "No worker/webhook files changed - skipping worker auth guard"
+
+  # ---------------------------------------------------------------------------
+  # G5: Authority Guard (Replay/Prediction)
+  # ---------------------------------------------------------------------------
+  authority-guard:
+    name: G5 Authority Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Get changed backend files
+        id: backend-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            backend/app/api/**/*.py
+
+      - name: Check authority enforcement
+        if: steps.backend-files.outputs.any_changed == 'true'
+        run: |
+          echo "Checking authority enforcement on replay/prediction routes..."
+          python scripts/ops/capability_registry_enforcer.py authority-guard \
+            --files ${{ steps.backend-files.outputs.all_changed_files }} \
+            --format github
+
+      - name: No backend API files changed
+        if: steps.backend-files.outputs.any_changed != 'true'
+        run: echo "No backend API files changed - skipping authority guard"

@@ -1,0 +1,126 @@
+# Intentional Omissions Registry
+# Reference: PIN-281 (Claude Task TODO), PIN-280 (Promotion Guide)
+# Purpose: Document capabilities explicitly withheld from L2 customer exposure
+# Rule: Only capabilities with explicit human approval may be listed here
+# Created: 2026-01-03
+
+schema_version: "1.0"
+last_updated: "2026-01-03"
+
+# ==============================================================================
+# INTENTIONALLY INTERNAL CAPABILITIES
+# ==============================================================================
+# These capabilities exist at L4/L5 but are NOT intended for customer exposure.
+# They are internal system functions that serve automation, learning, or ops.
+
+omissions:
+
+  # ---------------------------------------------------------------------------
+  # LEARNING DOMAIN (Internal System)
+  # ---------------------------------------------------------------------------
+  LEARNING_S1_ROLLBACK:
+    description: "S1 rollback learning from execution patterns"
+    current_layer: L4
+    location: "backend/app/learning/s1_rollback.py"
+    audience: INTERNAL
+    reason: "Learning loops are system-internal, not customer-visible"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "Learning is a platform capability, not a product surface"
+
+  LEARNING_SUGGESTIONS:
+    description: "Learning suggestion generation"
+    current_layer: L4
+    location: "backend/app/learning/suggestions.py"
+    audience: INTERNAL
+    reason: "Suggestions flow internally to inform system behavior"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "Internal optimization, not customer-facing"
+
+  # ---------------------------------------------------------------------------
+  # PATTERN DETECTION (Internal System)
+  # ---------------------------------------------------------------------------
+  PATTERN_DETECTION:
+    description: "Pattern detection service"
+    current_layer: L4
+    location: "backend/app/services/pattern_detection.py"
+    audience: INTERNAL
+    reason: "Patterns feed internal models, not surfaced to customers"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "Internal analytics, exposed only through derived insights"
+
+  # ---------------------------------------------------------------------------
+  # COSTSIM INTERNALS (System Automation)
+  # ---------------------------------------------------------------------------
+  COSTSIM_CANARY:
+    description: "Cost simulation canary runs"
+    current_layer: L5
+    location: "backend/app/costsim/canary.py"
+    audience: INTERNAL
+    reason: "Canary runs are automated, timer-triggered"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "Automated verification, not interactive"
+
+  COSTSIM_DIVERGENCE:
+    description: "Cost simulation divergence detection"
+    current_layer: L4
+    location: "backend/app/costsim/divergence.py"
+    audience: INTERNAL
+    reason: "Internal divergence checks for system health"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "System health metric, surfaced through incidents if triggered"
+
+  # ---------------------------------------------------------------------------
+  # FOUNDER-ONLY CAPABILITIES
+  # ---------------------------------------------------------------------------
+  FOUNDER_OPS_PULSE:
+    description: "System pulse for founder console"
+    current_layer: L2
+    location: "backend/app/api/ops.py"
+    audience: FOUNDER
+    reason: "Cross-tenant visibility, founder-only"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "Jurisdiction boundary - customers cannot see cross-tenant data"
+
+  FOUNDER_STICKINESS:
+    description: "Feature stickiness metrics"
+    current_layer: L2
+    location: "backend/app/api/ops.py"
+    audience: FOUNDER
+    reason: "Business analytics, founder-only"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "Sensitive business metrics"
+
+  FOUNDER_REVENUE_RISK:
+    description: "Revenue risk analysis"
+    current_layer: L2
+    location: "backend/app/api/ops.py"
+    audience: FOUNDER
+    reason: "Financial analytics, founder-only"
+    approval:
+      status: APPROVED
+      date: "2026-01-03"
+      rationale: "Sensitive business metrics"
+
+# ==============================================================================
+# OMISSION VALIDATION RULES
+# ==============================================================================
+
+validation_rules:
+  - "Every omission must have explicit approval"
+  - "INTERNAL capabilities must not have customer adapters"
+  - "FOUNDER capabilities must be scoped to founder console only"
+  - "No omission may be added without human rationale"
