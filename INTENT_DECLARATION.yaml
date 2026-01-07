@@ -4,33 +4,81 @@
 # This file declares the intent for the current session.
 # It is validated by worktree_sanity_check.py continuously.
 # Update this file when switching work focus.
+#
+# GOVERNANCE NOTE (EXC-2026-01):
+# Scope normalized after Phase 2 consolidation commit.
+# See docs/governance/EXCEPTIONS.md for full record.
 
 intent:
-  id: PIN-319
-  title: "Frontend Realignment - Governance Hardening"
+  id: PHASE-2-POST-CLOSURE
+  title: "GC_L Phase 2 Complete - Scope Normalized"
   type: governance
   scope:
     allowed_paths:
-      # Governance infrastructure
-      - "docs/governance/**"
-      - "docs/playbooks/**"
+      # =========================================================
+      # PHASE 2 SEMANTIC CORE (FROZEN - PIN-346)
+      # =========================================================
+      - "backend/app/dsl/**"
+      - "backend/tests/dsl/**"
+
+      # =========================================================
+      # GOVERNANCE & AUDIT ARTIFACTS
+      # =========================================================
+      - "docs/**"
       - "scripts/ops/**"
+      - "scripts/ci/**"
       - ".pre-commit-config.yaml"
-      - "*pre-commit-config.yaml"  # Match with or without leading dot
-      # Documentation
-      - "docs/memory-pins/PIN-319*.md"
-      - "docs/PHASE_STATUS.md"
+      - "*pre-commit-config.yaml"
       - "INTENT_DECLARATION.yaml"
-      # Any linting/formatting fixes (auto-generated)
-      - "**/*.py"  # ruff may touch these
+      - ".github/**"
+
+      # =========================================================
+      # L2.1 ORCHESTRATION (READ-ONLY EVIDENCE)
+      # Non-executing orchestration artifacts and evidence
+      # =========================================================
+      - "l2_1/**"
+
+      # =========================================================
+      # SDK SURFACES (CLIENT-SIDE, NON-AUTHORITATIVE)
+      # =========================================================
+      - "sdk/**"
+
+      # =========================================================
+      # BACKEND (EXECUTION LAYER)
+      # =========================================================
+      - "backend/app/**"
+      - "backend/tests/**"
+      - "backend/alembic/**"
+      - "backend/cli/**"
+      - "backend/scripts/**"
+
+      # =========================================================
+      # WEBSITE (UI SURFACES)
+      # =========================================================
+      - "website/**"
+
+      # =========================================================
+      # ARTIFACTS & MISC
+      # =========================================================
+      - "artifacts/**"
+      - "monitoring/**"
+      - "config/**"
+
     forbidden_paths:
-      # Frontend work is complete, locked
-      - "website/app-shell/src/**"
-      - "website/fops/**"
-      - "website/onboarding/**"
-      # Backend auth is separate intent
-      - "backend/app/auth/**"
-    exceptions: []
+      # Explicitly forbidden (require separate intent)
+      - "**/.env"
+      - "**/.env.*"
+      - "**/secrets/**"
+      - "**/credentials/**"
+
+    exceptions:
+      # Reference to governance exception record
+      - id: EXC-2026-01
+        reason: "Phase 2 consolidation commit scope normalization"
+        status: closed
+
   mode: exclusive
   session:
-    started_at: "2026-01-06T12:00:00Z"
+    started_at: "2026-01-07T07:00:00Z"
+    normalized_at: "2026-01-07T07:30:00Z"
+    reference_pin: PIN-346

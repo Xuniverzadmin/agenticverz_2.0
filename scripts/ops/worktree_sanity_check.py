@@ -145,12 +145,25 @@ def get_forbidden_paths(intent: dict) -> list[str]:
 
 
 def get_exceptions(intent: dict) -> list[str]:
-    """Extract exception paths from intent."""
+    """Extract exception paths from intent.
+
+    Note: The 'exceptions' field in INTENT_DECLARATION.yaml contains
+    governance exception metadata (id, reason, status), not path patterns.
+    Path-based exceptions should be added to 'allowed_paths' directly.
+
+    This function returns an empty list since governance exceptions are
+    documented in docs/governance/EXCEPTIONS.md, not used for path matching.
+    """
     if intent.get("_fallback"):
         return []
 
+    # Exceptions are governance metadata, not path patterns
+    # See docs/governance/EXCEPTIONS.md for exception records
     scope = intent.get("scope", {})
-    return scope.get("exceptions", [])
+    exceptions = scope.get("exceptions", [])
+
+    # Filter to only string patterns (future-proof for path exceptions)
+    return [e for e in exceptions if isinstance(e, str)]
 
 
 def get_mode(intent: dict) -> str:
