@@ -34,7 +34,6 @@ from sqlmodel import Session
 
 from app.auth.console_auth import FounderToken, verify_fops_token
 from app.contracts.ops import (
-    AutoExecuteReviewFilterDTO,
     AutoExecuteReviewItemDTO,
     AutoExecuteReviewListDTO,
     AutoExecuteReviewStatsDTO,
@@ -311,105 +310,7 @@ async def list_auto_execute_decisions(
     )
 
 
-@router.get(
-    "/auto-execute/{invocation_id}",
-    response_model=AutoExecuteReviewItemDTO,
-    summary="Get single AUTO_EXECUTE decision",
-    description="""
-    Get detailed evidence for a single AUTO_EXECUTE decision.
-
-    **PIN-333 Constraints:**
-    - Evidence-only: Returns data from execution envelope
-    - Read-only: No mutation
-    - Founder-only: Requires FOPS token
-    """,
-)
-async def get_auto_execute_decision(
-    invocation_id: str,
-    token: FounderToken = Depends(verify_fops_token),
-    session: Session = Depends(get_session),
-) -> AutoExecuteReviewItemDTO:
-    """
-    Get detailed evidence for a single AUTO_EXECUTE decision.
-
-    EVIDENCE-ONLY: Returns stored envelope data, no computation or inference.
-    """
-    # Emit audit event
-    emit_review_audit_event(
-        session,
-        founder_id=token.sub,
-        action="GET_AUTO_EXECUTE_DECISION",
-        resource_type="AUTO_EXECUTE_REVIEW",
-        resource_id=invocation_id,
-    )
-
-    query = """
-        SELECT
-            e.invocation_id,
-            e.envelope_id,
-            e.timestamp,
-            e.tenant_id,
-            e.account_id,
-            e.project_id,
-            e.capability_id,
-            e.execution_vector,
-            e.confidence_score,
-            e.confidence_threshold,
-            e.confidence_auto_execute_triggered,
-            e.recovery_action,
-            e.recovery_candidate_id,
-            e.input_hash,
-            e.plan_hash,
-            e.plan_mutation_detected,
-            e.worker_identity,
-            e.safety_checked,
-            e.safety_passed,
-            e.safety_flags,
-            e.safety_warnings
-        FROM execution_envelopes e
-        WHERE e.invocation_id = :invocation_id
-        AND e.capability_id = 'SUB-019'
-    """
-
-    try:
-        result = session.execute(text(query), {"invocation_id": invocation_id})
-        row = result.fetchone()
-    except Exception as e:
-        logger.warning(f"Auto-execute lookup failed: {e}")
-        raise HTTPException(status_code=404, detail="Decision not found")
-
-    if not row:
-        raise HTTPException(status_code=404, detail="Decision not found")
-
-    decision_value = "EXECUTED" if row.confidence_auto_execute_triggered else "SKIPPED"
-
-    return AutoExecuteReviewItemDTO(
-        invocation_id=row.invocation_id,
-        envelope_id=row.envelope_id,
-        timestamp=row.timestamp.isoformat() if row.timestamp else "",
-        tenant_id=row.tenant_id,
-        account_id=row.account_id,
-        project_id=row.project_id,
-        capability_id="SUB-019",
-        execution_vector="AUTO_EXEC",
-        confidence_score=row.confidence_score or 0.0,
-        threshold=row.confidence_threshold or 0.8,
-        decision=decision_value,
-        recovery_action=row.recovery_action,
-        recovery_candidate_id=row.recovery_candidate_id,
-        incident_id=None,
-        execution_result=None,
-        input_hash=row.input_hash or "",
-        plan_hash=row.plan_hash or "",
-        plan_mutation_detected=row.plan_mutation_detected or False,
-        worker_identity=row.worker_identity or "recovery_claim_worker",
-        safety_checked=row.safety_checked or False,
-        safety_passed=row.safety_passed if row.safety_passed is not None else True,
-        safety_flags=row.safety_flags or [],
-        safety_warnings=row.safety_warnings or [],
-    )
-
-
+# NOTE: Static route must come BEFORE dynamic route to avoid shadowing
 @router.get(
     "/auto-execute/stats",
     response_model=AutoExecuteReviewStatsDTO,
@@ -559,11 +460,13 @@ async def get_auto_execute_stats(
     try:
         result = session.execute(text(daily_query), params)
         for row in result.fetchall():
-            daily_counts.append({
-                "date": row.date.isoformat() if row.date else "",
-                "executed": row.executed or 0,
-                "skipped": row.skipped or 0,
-            })
+            daily_counts.append(
+                {
+                    "date": row.date.isoformat() if row.date else "",
+                    "executed": row.executed or 0,
+                    "skipped": row.skipped or 0,
+                }
+            )
     except Exception as e:
         logger.warning(f"Daily counts query failed: {e}")
 
@@ -577,4 +480,103 @@ async def get_auto_execute_stats(
         flagged_count=flagged,
         flag_counts=flag_counts,
         daily_counts=daily_counts,
+    )
+
+
+@router.get(
+    "/auto-execute/{invocation_id}",
+    response_model=AutoExecuteReviewItemDTO,
+    summary="Get single AUTO_EXECUTE decision",
+    description="""
+    Get detailed evidence for a single AUTO_EXECUTE decision.
+
+    **PIN-333 Constraints:**
+    - Evidence-only: Returns data from execution envelope
+    - Read-only: No mutation
+    - Founder-only: Requires FOPS token
+    """,
+)
+async def get_auto_execute_decision(
+    invocation_id: str,
+    token: FounderToken = Depends(verify_fops_token),
+    session: Session = Depends(get_session),
+) -> AutoExecuteReviewItemDTO:
+    """
+    Get detailed evidence for a single AUTO_EXECUTE decision.
+
+    EVIDENCE-ONLY: Returns stored envelope data, no computation or inference.
+    """
+    # Emit audit event
+    emit_review_audit_event(
+        session,
+        founder_id=token.sub,
+        action="GET_AUTO_EXECUTE_DECISION",
+        resource_type="AUTO_EXECUTE_REVIEW",
+        resource_id=invocation_id,
+    )
+
+    query = """
+        SELECT
+            e.invocation_id,
+            e.envelope_id,
+            e.timestamp,
+            e.tenant_id,
+            e.account_id,
+            e.project_id,
+            e.capability_id,
+            e.execution_vector,
+            e.confidence_score,
+            e.confidence_threshold,
+            e.confidence_auto_execute_triggered,
+            e.recovery_action,
+            e.recovery_candidate_id,
+            e.input_hash,
+            e.plan_hash,
+            e.plan_mutation_detected,
+            e.worker_identity,
+            e.safety_checked,
+            e.safety_passed,
+            e.safety_flags,
+            e.safety_warnings
+        FROM execution_envelopes e
+        WHERE e.invocation_id = :invocation_id
+        AND e.capability_id = 'SUB-019'
+    """
+
+    try:
+        result = session.execute(text(query), {"invocation_id": invocation_id})
+        row = result.fetchone()
+    except Exception as e:
+        logger.warning(f"Auto-execute lookup failed: {e}")
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    decision_value = "EXECUTED" if row.confidence_auto_execute_triggered else "SKIPPED"
+
+    return AutoExecuteReviewItemDTO(
+        invocation_id=row.invocation_id,
+        envelope_id=row.envelope_id,
+        timestamp=row.timestamp.isoformat() if row.timestamp else "",
+        tenant_id=row.tenant_id,
+        account_id=row.account_id,
+        project_id=row.project_id,
+        capability_id="SUB-019",
+        execution_vector="AUTO_EXEC",
+        confidence_score=row.confidence_score or 0.0,
+        threshold=row.confidence_threshold or 0.8,
+        decision=decision_value,
+        recovery_action=row.recovery_action,
+        recovery_candidate_id=row.recovery_candidate_id,
+        incident_id=None,
+        execution_result=None,
+        input_hash=row.input_hash or "",
+        plan_hash=row.plan_hash or "",
+        plan_mutation_detected=row.plan_mutation_detected or False,
+        worker_identity=row.worker_identity or "recovery_claim_worker",
+        safety_checked=row.safety_checked or False,
+        safety_passed=row.safety_passed if row.safety_passed is not None else True,
+        safety_flags=row.safety_flags or [],
+        safety_warnings=row.safety_warnings or [],
     )
