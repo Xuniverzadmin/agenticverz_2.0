@@ -1,0 +1,17 @@
+{
+  "approved_version": "v3",
+  "versions": {
+    "v2": {
+      "file": "design/l2_1/supertable/l2_supertable_v2_cap_expanded.xlsx",
+      "generated_at": "2026-01-07T14:00:00+00:00",
+      "status": "SUPERSEDED"
+    },
+    "v3": {
+      "file": "design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx",
+      "generated_at": "2026-01-07T15:30:00+00:00",
+      "status": "APPROVED",
+      "promoted_at": "2026-01-07T16:12:00+00:00"
+    }
+  },
+  "last_updated": "2026-01-07T16:30:00+00:00"
+}

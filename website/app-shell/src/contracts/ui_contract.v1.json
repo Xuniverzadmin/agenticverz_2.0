@@ -1,0 +1,2138 @@
+{
+  "version": "v1",
+  "generated_from": "l2_supertable_v3_cap_expanded.xlsx",
+  "meta": {
+    "generated_at": "2026-01-07T16:12:16.688181+00:00",
+    "source_version": "v3",
+    "status": "DRAFT_UI_DRIVING"
+  },
+  "domains": [
+    {
+      "domain": "Overview",
+      "panels": [
+        {
+          "panel_id": "OVW-SH-CS-O1",
+          "panel_name": "System Status Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": true,
+            "target": "/overview/system-status?panel=OVW-SH-CS-O1"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "Overview: derived read model, navigational only",
+          "_source": {
+            "row_uids": [
+              "7386e7805265"
+            ],
+            "capabilities": [
+              "DERIVED_READ_MODEL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "OVW-SH-HM-O1",
+          "panel_name": "Health Metrics Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": true,
+            "target": "/overview/health-metrics?panel=OVW-SH-HM-O1"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "Overview: derived read model, navigational only",
+          "_source": {
+            "row_uids": [
+              "6447c98afb34"
+            ],
+            "capabilities": [
+              "DERIVED_READ_MODEL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "OVW-SH-HM-O2",
+          "panel_name": "Health Metrics List",
+          "order": "O2",
+          "ranking_dimension": "metric_type",
+          "visible": true,
+          "navigation": {
+            "enabled": true,
+            "target": "/overview/health-metrics?panel=OVW-SH-HM-O2"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "Overview: derived read model, navigational only",
+          "_source": {
+            "row_uids": [
+              "9ce83d0a0d72"
+            ],
+            "capabilities": [
+              "DERIVED_READ_MODEL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "Activity",
+      "panels": [
+        {
+          "panel_id": "ACT-EX-AR-O1",
+          "panel_name": "Active Runs Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "e7c4fae6900b"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-AR-O2",
+          "panel_name": "Active Runs List",
+          "order": "O2",
+          "ranking_dimension": "started_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "db40af6ee617"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-CR-O1",
+          "panel_name": "Completed Runs Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "ab643e35fa3d"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-CR-O2",
+          "panel_name": "Completed Runs List",
+          "order": "O2",
+          "ranking_dimension": "completed_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_MULTI",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "8b58eae248b3"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-CR-O3",
+          "panel_name": "Completed Run Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/activity/executions?panel=ACT-EX-CR-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "54e8bfd1a91b"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O1",
+          "panel_name": "Run Details Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "cd54d8ac33ef"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O2",
+          "panel_name": "Run Steps List",
+          "order": "O2",
+          "ranking_dimension": "step_order",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/activity/executions?panel=ACT-EX-RD-O2"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "2998221c4895"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O3",
+          "panel_name": "Run Step Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/activity/executions?panel=ACT-EX-RD-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "9ad413b4fff7"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O4",
+          "panel_name": "Run Context",
+          "order": "O4",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/activity/executions?panel=ACT-EX-RD-O4"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "2a4d1a265dfc"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O5",
+          "panel_name": "Run Proof",
+          "order": "O5",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/activity/executions?panel=ACT-EX-RD-O5"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "5128ed1cf8c9"
+            ],
+            "capabilities": [
+              "CAP-ACT-LIST",
+              "CAP-ACT-DETAIL"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "Incidents",
+      "panels": [
+        {
+          "panel_id": "INC-AI-OI-O1",
+          "panel_name": "Open Incidents Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "9f4e235643e3"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-AI-OI-O2",
+          "panel_name": "Open Incidents List",
+          "order": "O2",
+          "ranking_dimension": "severity|created_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_MULTI",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            },
+            {
+              "type": "ACKNOWLEDGE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "81ff29d26153"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "ACTIVATE:ACKNOWLEDGE"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O1",
+          "panel_name": "Incident Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "0f76ea618656"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O2",
+          "panel_name": "Incident Timeline",
+          "order": "O2",
+          "ranking_dimension": "event_time",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/incidents/active-incidents?panel=INC-AI-ID-O2"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "48ada8d1e08a"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O3",
+          "panel_name": "Incident Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/incidents/active-incidents?panel=INC-AI-ID-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            },
+            {
+              "type": "ADD_NOTE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            },
+            {
+              "type": "ACTIVATE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "e267fd951582"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD",
+              "WRITE:ADD_NOTE",
+              "ACTIVATE:ACKNOWLEDGE",
+              "ACTIVATE:RESOLVE"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O4",
+          "panel_name": "Incident Impact",
+          "order": "O4",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/incidents/active-incidents?panel=INC-AI-ID-O4"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "48871529188d"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O1",
+          "panel_name": "Resolved Incidents Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "588df940f5b9"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O2",
+          "panel_name": "Resolved Incidents List",
+          "order": "O2",
+          "ranking_dimension": "resolved_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_MULTI",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "85fc8edbfdb6"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O3",
+          "panel_name": "Resolved Incident Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/incidents/historical-incidents?panel=INC-HI-RI-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "9b17287c8b0d"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O4",
+          "panel_name": "Resolved Incident Context",
+          "order": "O4",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/incidents/historical-incidents?panel=INC-HI-RI-O4"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "2526413b19bd"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O5",
+          "panel_name": "Resolved Incident Proof",
+          "order": "O5",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/incidents/historical-incidents?panel=INC-HI-RI-O5"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE); Replay/mutation conflict; Risk flag: REVERSIBILITY UNKNOWN; Requires human authorization",
+          "_source": {
+            "row_uids": [
+              "82118730f663"
+            ],
+            "capabilities": [
+              "CAP-INC-LIST",
+              "CAP-INC-GET",
+              "CAP-INC-ACK",
+              "CAP-INC-RESOLVE",
+              "CAP-INC-SEARCH",
+              "CAP-INC-TIMELINE",
+              "CAP-INC-NARRATIVE",
+              "CAP-INC-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "Policies",
+      "panels": [
+        {
+          "panel_id": "POL-AP-BP-O1",
+          "panel_name": "Budget Policies Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "2c119b5fe625"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-BP-O2",
+          "panel_name": "Budget Policies List",
+          "order": "O2",
+          "ranking_dimension": "policy_name",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "ed619e16cdd5"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-BP-O3",
+          "panel_name": "Budget Policy Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/policies/active-policies?panel=POL-AP-BP-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            },
+            {
+              "type": "UPDATE_THRESHOLD",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            },
+            {
+              "type": "ACTIVATE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE)",
+          "_source": {
+            "row_uids": [
+              "2dd7ac0e9dbd"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ",
+              "WRITE:UPDATE_THRESHOLD",
+              "ACTIVATE:ACTIVATE",
+              "ACTIVATE:DEACTIVATE"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-RL-O1",
+          "panel_name": "Rate Limits Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "66dc0dccdf9b"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-RL-O2",
+          "panel_name": "Rate Limits List",
+          "order": "O2",
+          "ranking_dimension": "limit_name",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "26707535b0cf"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-RL-O3",
+          "panel_name": "Rate Limit Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/policies/active-policies?panel=POL-AP-RL-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            },
+            {
+              "type": "UPDATE_LIMIT",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            },
+            {
+              "type": "ACTIVATE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE)",
+          "_source": {
+            "row_uids": [
+              "41024c5bcc9e"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ",
+              "WRITE:UPDATE_LIMIT",
+              "ACTIVATE:ACTIVATE",
+              "ACTIVATE:DEACTIVATE"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O1",
+          "panel_name": "Approval Rules Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "2a22f8c43932"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O2",
+          "panel_name": "Approval Rules List",
+          "order": "O2",
+          "ranking_dimension": "rule_name",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "daca2f5d4294"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O3",
+          "panel_name": "Approval Rule Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/policies/active-policies?panel=POL-AP-AR-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            },
+            {
+              "type": "UPDATE_RULE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            },
+            {
+              "type": "ACTIVATE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE)",
+          "_source": {
+            "row_uids": [
+              "27fef3fc170b"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ",
+              "WRITE:UPDATE_RULE",
+              "ACTIVATE:ACTIVATE",
+              "ACTIVATE:DEACTIVATE"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O4",
+          "panel_name": "Approval Rule Impact",
+          "order": "O4",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/policies/active-policies?panel=POL-AP-AR-O4"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "5ccff4509cae"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O1",
+          "panel_name": "Policy Changes Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "0eaf75dc6d90"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O2",
+          "panel_name": "Policy Changes List",
+          "order": "O2",
+          "ranking_dimension": "changed_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "2e8eda958e47"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O3",
+          "panel_name": "Policy Change Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/policies/policy-audit?panel=POL-PA-PC-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "41b06eeb6db9"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O4",
+          "panel_name": "Policy Change Context",
+          "order": "O4",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/policies/policy-audit?panel=POL-PA-PC-O4"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "4db6a848b83e"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O5",
+          "panel_name": "Policy Change Proof",
+          "order": "O5",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/policies/policy-audit?panel=POL-PA-PC-O5"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "7ac3ee0ff500"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "domain": "Logs",
+      "panels": [
+        {
+          "panel_id": "LOG-AL-SA-O1",
+          "panel_name": "System Audit Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "cddd0a1e07b6"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-AL-SA-O2",
+          "panel_name": "System Audit List",
+          "order": "O2",
+          "ranking_dimension": "logged_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_MULTI",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "f7e0a73f501a"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-AL-SA-O3",
+          "panel_name": "System Audit Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/logs/audit-logs?panel=LOG-AL-SA-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "c711fe9246c0"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-AL-SA-O5",
+          "panel_name": "System Audit Proof",
+          "order": "O5",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/logs/audit-logs?panel=LOG-AL-SA-O5"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "52e66f7d5d7f"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O1",
+          "panel_name": "User Audit Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "28f0161efd03"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O2",
+          "panel_name": "User Audit List",
+          "order": "O2",
+          "ranking_dimension": "logged_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_MULTI",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "81c7374e47f6"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O3",
+          "panel_name": "User Audit Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/logs/audit-logs?panel=LOG-AL-UA-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "6fbcdf5130f0"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O5",
+          "panel_name": "User Audit Proof",
+          "order": "O5",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/logs/audit-logs?panel=LOG-AL-UA-O5"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "4c2a5a3c739a"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O1",
+          "panel_name": "Trace Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "a732d741e676"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O2",
+          "panel_name": "Trace List",
+          "order": "O2",
+          "ranking_dimension": "traced_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_MULTI",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "350c7e41ebb1"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O3",
+          "panel_name": "Trace Detail",
+          "order": "O3",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/logs/execution-traces?panel=LOG-ET-TD-O3"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "a895868d0bd2"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O4",
+          "panel_name": "Trace Context",
+          "order": "O4",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/logs/execution-traces?panel=LOG-ET-TD-O4"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "c42f05056eb9"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O5",
+          "panel_name": "Trace Proof",
+          "order": "O5",
+          "ranking_dimension": "NONE",
+          "visible": false,
+          "navigation": {
+            "enabled": true,
+            "target": "/logs/execution-traces?panel=LOG-ET-TD-O5"
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "DOWNLOAD",
+              "enabled": true
+            },
+            {
+              "type": "NAVIGATE",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass; High latency risk",
+          "_source": {
+            "row_uids": [
+              "4a6281264e55"
+            ],
+            "capabilities": [
+              "CAP-LOG-LIST",
+              "CAP-LOG-DETAIL",
+              "CAP-LOG-EXPORT"
+            ],
+            "intents": [
+              "READ",
+              "DOWNLOAD"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

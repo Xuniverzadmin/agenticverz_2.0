@@ -53,9 +53,89 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 # CONSTANTS
 # =============================================================================
 
-VERSION = "2.0.0"
-PARENT_VERSION = "1.0.0"
+VERSION = "3.0.0"
+PARENT_VERSION = "2.0.0"
 GENERATION_MODE = "SCRIPT"
+
+# =============================================================================
+# OVERVIEW DOMAIN DOCTRINE (v3)
+# =============================================================================
+# Purpose: "What's happening today? Where should I focus?"
+# Nature: Cross-domain, not cross-tenant
+# Mutability: None (READ-ONLY)
+# Authority: None
+# Source: Derived from other domain READ models
+# Primary action: Navigate to underlying domain/panel
+#
+# Overview panels do NOT bind to platform/founder/infra capabilities.
+# They bind to a DERIVED_READ_MODEL marker indicating composition.
+# =============================================================================
+
+OVERVIEW_DOCTRINE = """
+OVERVIEW DOMAIN DOCTRINE (v3)
+=============================
+Purpose: "What's happening today? Where should I focus?"
+Nature: Cross-domain, not cross-tenant
+Mutability: None (READ-ONLY)
+Authority: None
+Source: Derived from other domain READ models
+Primary action: Navigate to underlying domain/panel
+
+DERIVED READ MODEL CONTRACT:
+- get_incidents_snapshot() → Incidents domain READ
+- get_activity_snapshot() → Activity domain READ
+- get_policy_snapshot() → Policies domain READ
+- get_log_snapshot() → Logs domain READ
+
+Each function returns:
+- headline_metric
+- trend_hint
+- severity_hint
+- redirect_target (domain/subdomain/topic/panel)
+
+Overview panels do NOT bind to platform/founder/infra capabilities (CAP-OVW-*).
+They use DERIVED_READ_MODEL as a composition marker.
+"""
+
+# Overview panel to source domain mapping
+OVERVIEW_SOURCE_MAPPING = {
+    "System Status Summary": {
+        "source_domain": "ALL",
+        "operator": "get_system_status_snapshot()",
+        "notes": "Aggregates health signals from all domains",
+    },
+    "Health Metrics Summary": {
+        "source_domain": "Activity|Incidents",
+        "operator": "get_health_metrics_snapshot()",
+        "notes": "Derived from Activity and Incidents READ surfaces",
+    },
+    "Health Metrics List": {
+        "source_domain": "Activity|Incidents",
+        "operator": "get_health_metrics_list()",
+        "notes": "O2 panel - should be O1 only per doctrine; marked for intent correction",
+    },
+    # Future panels per doctrine
+    "Incidents Snapshot": {
+        "source_domain": "Incidents",
+        "operator": "get_incidents_snapshot()",
+        "notes": "What needs attention now?",
+    },
+    "Activity Pulse": {
+        "source_domain": "Activity",
+        "operator": "get_activity_snapshot()",
+        "notes": "What changed recently?",
+    },
+    "Policy Status": {
+        "source_domain": "Policies",
+        "operator": "get_policy_snapshot()",
+        "notes": "Are controls stable?",
+    },
+    "Log Signals": {
+        "source_domain": "Logs",
+        "operator": "get_log_snapshot()",
+        "notes": "Anything unusual?",
+    },
+}
 
 # Required columns in intent supertable
 REQUIRED_INTENT_COLUMNS = [
@@ -367,6 +447,66 @@ def evaluate_latency_risk(cap: pd.Series) -> str:
 # =============================================================================
 
 
+def expand_overview_row(row: pd.Series, row_uid: str) -> list[dict[str, Any]]:
+    """
+    Expand an Overview domain row using DERIVED_READ_MODEL binding.
+
+    Overview panels do NOT bind to platform/founder capabilities (CAP-OVW-*).
+    They bind to a composition marker indicating derived data from other domains.
+
+    Returns list with single expanded row (one-to-one for Overview).
+    """
+    original_data = row.to_dict()
+    panel_name = str(row.get("Panel Name", ""))
+    order = str(row.get("Order", ""))
+
+    # Get mapping for this panel
+    mapping = OVERVIEW_SOURCE_MAPPING.get(
+        panel_name,
+        {
+            "source_domain": "UNKNOWN",
+            "operator": "get_overview_snapshot()",
+            "notes": "Panel not in doctrine mapping",
+        },
+    )
+
+    # Build binding notes
+    notes_parts = [
+        f"Derived from {mapping['source_domain']} domain READ capabilities",
+        "No direct platform binding",
+    ]
+
+    # Check for O2 violation (Overview should be O1 only per doctrine)
+    if order != "O1":
+        notes_parts.append(
+            f"INTENT_CORRECTION_NEEDED: {order} should be O1 per doctrine"
+        )
+
+    expanded_row = original_data.copy()
+    expanded_row.update(
+        {
+            "row_uid": row_uid,
+            "action_intent": "READ",
+            "candidate_capability_id": "DERIVED_READ_MODEL",
+            "candidate_operator": f"customer_console_overview.py::{mapping['operator']}",
+            "candidate_adapter": "LOCAL_COMPOSITION",
+            "cap_risk_flags": "",
+            "cap_confidence": "HIGH",
+            "cap_l2_1_aligned": "YES",
+            "mode_match": "YES",
+            "scope_match": "YES",
+            "bulk_match": "N/A",
+            "authority_match": "YES",
+            "replay_match": "N/A",
+            "latency_risk": "LOW",
+            "binding_status": BINDING_STATUS_SAFE,
+            "binding_notes": "; ".join(notes_parts),
+        }
+    )
+
+    return [expanded_row]
+
+
 def expand_intent_row(
     row: pd.Series,
     capabilities_df: pd.DataFrame,
@@ -380,6 +520,12 @@ def expand_intent_row(
 
     # Generate row UID
     row_uid = generate_row_uid(row)
+
+    # OVERVIEW DOMAIN SPECIAL HANDLING (v3)
+    # Overview panels bind to DERIVED_READ_MODEL, not platform capabilities
+    domain = str(row.get("Domain", "")).strip()
+    if domain.upper() == "OVERVIEW":
+        return expand_overview_row(row, row_uid)
 
     # Get all action intents
     action_intents = derive_action_intents(row)
@@ -549,27 +695,46 @@ def create_changelog_df(
     # Count binding statuses
     status_counts = expanded_df["binding_status"].value_counts().to_dict()
 
+    # Count Overview rows
+    overview_count = len(expanded_df[expanded_df["Domain"] == "Overview"])
+
+    # Build v3 summary
+    if VERSION.startswith("3"):
+        summary = (
+            "v3: Overview domain corrected to derived, cross-domain customer snapshot; "
+            "removed platform health bindings (CAP-OVW-*); "
+            "Overview now uses DERIVED_READ_MODEL marker"
+        )
+        domains_affected = "Overview"
+        overview_doctrine_note = OVERVIEW_DOCTRINE.strip()
+    else:
+        summary = "Expanded intent rows with capability candidates"
+        domains_affected = "All"
+        overview_doctrine_note = "N/A"
+
     changelog = {
         "version": VERSION,
         "parent_version": PARENT_VERSION,
         "generation_mode": GENERATION_MODE,
         "date": datetime.now().isoformat(),
-        "summary_of_change": "Expanded intent rows with capability candidates",
+        "summary_of_change": summary,
+        "domains_affected": domains_affected,
         "rows_in_parent": len(intent_df),
         "rows_in_this_version": len(expanded_df),
+        "overview_rows_modified": overview_count,
         "columns_added": ", ".join(columns_added),
         "columns_removed": "None",
         "known_limitations": "; ".join(
             [
                 "Crosswalk limited to Incidents domain",
                 "Activity/Logs/Policies crosswalks not provided",
-                "Some capabilities marked as NO Customer API",
             ]
         ),
         "review_status": "DRAFT",
         "binding_stats_safe": status_counts.get(BINDING_STATUS_SAFE, 0),
         "binding_stats_questionable": status_counts.get(BINDING_STATUS_QUESTIONABLE, 0),
         "binding_stats_blocked": status_counts.get(BINDING_STATUS_BLOCKED, 0),
+        "overview_doctrine": overview_doctrine_note,
     }
 
     return pd.DataFrame([changelog])
