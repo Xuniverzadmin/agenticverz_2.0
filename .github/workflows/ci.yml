@@ -183,6 +183,41 @@ jobs:
   # FAST JOBS (No DB required)
   # ============================================================================
 
+  # ============================================================================
+  # GOVERNANCE TRIPWIRE - Detects undocumented --no-verify bypasses
+  # ============================================================================
+  # Reference: PIN-319 (Intent Lock System), docs/governance/EXCEPTIONS.md
+  # Rule: All pre-commit bypasses MUST have documented exceptions
+  governance-tripwire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 20  # Need history to check recent commits
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Governance Tripwire Check
+        run: |
+          echo "=============================================="
+          echo "GOVERNANCE TRIPWIRE CHECK"
+          echo "=============================================="
+          echo "Detecting undocumented pre-commit hook bypasses..."
+          echo ""
+          echo "Rule: All --no-verify bypasses must have:"
+          echo "  1. Exception record in docs/governance/EXCEPTIONS.md"
+          echo "  2. Exception ID (EXC-XXXX-XX) referenced in commit"
+          echo "  3. Exception status: CLOSED"
+          echo ""
+
+          python3 scripts/ops/governance_tripwire.py --commits 10 --ci
+
+          echo ""
+          echo "✅ Governance tripwire check passed"
+
   # Migration drift guard - verifies all migrations are committed
   migration-check:
     runs-on: ubuntu-latest
