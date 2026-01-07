@@ -1,0 +1,53 @@
+l2_1_row_ref,panel_name,domain,order,action_types,candidate_capability_ids,candidate_operators,binding_confidence,blocking_unknowns,expected_failure_modes,safe_for_thin_ui
+OVW-SH-CS-O1,System Status Summary,Overview,O1,READ,CAP-OVW-HEALTH,get_platform_health,LOW,"NO Customer Console API (PIN-348); ADAPTER BYPASSED; Founder-only",API not implemented; fallback to placeholder,NO
+OVW-SH-HM-O1,Health Metrics Summary,Overview,O1,READ,CAP-OVW-CAPS,get_capabilities_eligibility,LOW,"NO Customer Console API (PIN-348); ADAPTER BYPASSED; HARDCODED MAP",API not implemented; fallback to placeholder,NO
+OVW-SH-HM-O2,Health Metrics List,Overview,O2,READ,"CAP-OVW-CAPS,CAP-OVW-DOMAIN","get_capabilities_eligibility,get_domain_health",LOW,"NO Customer Console API (PIN-348); ADAPTER BYPASSED",API not implemented; fallback to placeholder,NO
+ACT-EX-AR-O1,Active Runs Summary,Activity,O1,READ,CAP-ACT-LIST,list_activities(status=running),HIGH,,None expected,YES
+ACT-EX-AR-O2,Active Runs List,Activity,O2,READ,CAP-ACT-LIST,list_activities(status=running),HIGH,,None expected,YES
+ACT-EX-CR-O1,Completed Runs Summary,Activity,O1,READ,CAP-ACT-LIST,list_activities(status=completed),HIGH,,None expected,YES
+ACT-EX-CR-O2,Completed Runs List,Activity,O2,READ+DOWNLOAD,CAP-ACT-LIST,list_activities(status=completed),HIGH,,Bulk download latency,YES
+ACT-EX-CR-O3,Completed Run Detail,Activity,O3,READ+DOWNLOAD,CAP-ACT-DETAIL,get_activity(),HIGH,,None expected,YES
+ACT-EX-RD-O1,Run Details Summary,Activity,O1,READ,CAP-ACT-DETAIL,get_activity(),HIGH,,None expected,YES
+ACT-EX-RD-O2,Run Steps List,Activity,O2,READ,CAP-ACT-DETAIL,get_activity().steps,HIGH,,None expected,YES
+ACT-EX-RD-O3,Run Step Detail,Activity,O3,READ+DOWNLOAD,CAP-ACT-DETAIL,get_activity().steps[n],HIGH,,None expected,YES
+ACT-EX-RD-O4,Run Context,Activity,O4,READ,CAP-ACT-DETAIL,get_activity().context,HIGH,,None expected,YES
+ACT-EX-RD-O5,Run Proof,Activity,O5,READ+DOWNLOAD,CAP-ACT-DETAIL,get_activity().trace,HIGH,,None expected,YES
+INC-AI-OI-O1,Open Incidents Summary,Incidents,O1,READ,CAP-INC-LIST,list_incidents(status=open),HIGH,,None expected,YES
+INC-AI-OI-O2,Open Incidents List,Incidents,O2,READ+ACTIVATE,CAP-INC-LIST|CAP-INC-ACK,"list_incidents(status=open),acknowledge_incident()",MEDIUM,REVERSIBILITY UNKNOWN for ACK; IDEMPOTENCY UNCLEAR,Bulk ACK may timeout; partial ACK state,YES*
+INC-AI-ID-O1,Incident Summary,Incidents,O1,READ,CAP-INC-GET,get_incident(),HIGH,,None expected,YES
+INC-AI-ID-O2,Incident Timeline,Incidents,O2,READ,CAP-INC-GET|CAP-INC-TIMELINE,"get_incident().timeline,get_decision_timeline()",HIGH,,None expected,YES
+INC-AI-ID-O3,Incident Detail,Incidents,O3,READ+WRITE+ACTIVATE,"CAP-INC-GET|CAP-INC-ACK|CAP-INC-RESOLVE","get_incident(),acknowledge_incident(),resolve_incident()",MEDIUM,"REVERSIBILITY UNKNOWN; IDEMPOTENCY UNCLEAR; Notes persistence unclear",ACK/RESOLVE may fail silently; no REOPEN,YES*
+INC-AI-ID-O4,Incident Impact,Incidents,O4,READ,CAP-INC-GET,get_incident().impact,HIGH,,None expected,YES
+INC-HI-RI-O1,Resolved Incidents Summary,Incidents,O1,READ,CAP-INC-LIST,list_incidents(status=resolved),HIGH,,None expected,YES
+INC-HI-RI-O2,Resolved Incidents List,Incidents,O2,READ+DOWNLOAD,CAP-INC-LIST,list_incidents(status=resolved),HIGH,,Bulk download latency,YES
+INC-HI-RI-O3,Resolved Incident Detail,Incidents,O3,READ+DOWNLOAD,CAP-INC-GET,get_incident(),HIGH,,None expected,YES
+INC-HI-RI-O4,Resolved Incident Context,Incidents,O4,READ,CAP-INC-GET,get_incident().context,HIGH,,None expected,YES
+INC-HI-RI-O5,Resolved Incident Proof,Incidents,O5,READ+DOWNLOAD,CAP-INC-GET|CAP-INC-EXPORT,"get_incident().proof,export_incident_evidence()",MEDIUM,PDF export has HIGH LATENCY,Timeout on large incidents,YES
+POL-AP-BP-O1,Budget Policies Summary,Policies,O1,READ,CAP-POL-CONSTRAINTS,get_policy_constraints().budget,HIGH,,None expected,YES
+POL-AP-BP-O2,Budget Policies List,Policies,O2,READ,CAP-POL-CONSTRAINTS,get_policy_constraints().budget,HIGH,ACTIVATE_TOGGLE proposed but GC_L NOT IMPLEMENTED,None expected,YES
+POL-AP-BP-O3,Budget Policy Detail,Policies,O3,READ+WRITE+ACTIVATE,CAP-POL-CONSTRAINTS,get_policy_constraints().budget[n],LOW,GC_L NOT IMPLEMENTED; ACTIVATE/DEACTIVATE/UPDATE_THRESHOLD unavailable,All mutations blocked; read-only fallback,NO
+POL-AP-RL-O1,Rate Limits Summary,Policies,O1,READ,CAP-POL-CONSTRAINTS,get_policy_constraints().rate_limits,HIGH,,None expected,YES
+POL-AP-RL-O2,Rate Limits List,Policies,O2,READ,CAP-POL-CONSTRAINTS,get_policy_constraints().rate_limits,HIGH,ACTIVATE_TOGGLE proposed but GC_L NOT IMPLEMENTED,None expected,YES
+POL-AP-RL-O3,Rate Limit Detail,Policies,O3,READ+WRITE+ACTIVATE,CAP-POL-CONSTRAINTS,get_policy_constraints().rate_limits[n],LOW,GC_L NOT IMPLEMENTED; ACTIVATE/DEACTIVATE/UPDATE_LIMIT unavailable,All mutations blocked; read-only fallback,NO
+POL-AP-AR-O1,Approval Rules Summary,Policies,O1,READ,CAP-POL-GUARDRAIL,get_guardrail_detail().summary,HIGH,,None expected,YES
+POL-AP-AR-O2,Approval Rules List,Policies,O2,READ,CAP-POL-GUARDRAIL,get_guardrail_detail().list,HIGH,ACTIVATE_TOGGLE proposed but GC_L NOT IMPLEMENTED,None expected,YES
+POL-AP-AR-O3,Approval Rule Detail,Policies,O3,READ+WRITE+ACTIVATE,CAP-POL-GUARDRAIL,get_guardrail_detail(),LOW,GC_L NOT IMPLEMENTED; Threshold values redacted (intentional),All mutations blocked; read-only fallback,NO
+POL-AP-AR-O4,Approval Rule Impact,Policies,O4,READ,CAP-POL-GUARDRAIL,get_guardrail_detail().impact,HIGH,,None expected,YES
+POL-PA-PC-O1,Policy Changes Summary,Policies,O1,READ,UNBINDABLE,N/A,LOW,No capability for policy audit exists,Fallback to direct SQL or placeholder,NO
+POL-PA-PC-O2,Policy Changes List,Policies,O2,READ+DOWNLOAD,UNBINDABLE,N/A,LOW,No capability for policy audit exists,Fallback to direct SQL or placeholder,NO
+POL-PA-PC-O3,Policy Change Detail,Policies,O3,READ+DOWNLOAD,UNBINDABLE,N/A,LOW,No capability for policy audit exists,Fallback to direct SQL or placeholder,NO
+POL-PA-PC-O4,Policy Change Context,Policies,O4,READ,UNBINDABLE,N/A,LOW,No capability for policy audit exists,Fallback to direct SQL or placeholder,NO
+POL-PA-PC-O5,Policy Change Proof,Policies,O5,READ+DOWNLOAD,UNBINDABLE,N/A,LOW,No capability for policy audit exists,Fallback to direct SQL or placeholder,NO
+LOG-AL-SA-O1,System Audit Summary,Logs,O1,READ,CAP-LOG-LIST,list_logs(type=system),HIGH,,None expected,YES
+LOG-AL-SA-O2,System Audit List,Logs,O2,READ+DOWNLOAD,CAP-LOG-LIST|CAP-LOG-EXPORT,"list_logs(type=system),export_logs()",MEDIUM,CSV INJECTION RISK; HIGH VOLUME,Export timeout on large datasets,YES
+LOG-AL-SA-O3,System Audit Detail,Logs,O3,READ+DOWNLOAD,CAP-LOG-DETAIL,get_log(),HIGH,Internal fields redacted,None expected,YES
+LOG-AL-SA-O5,System Audit Proof,Logs,O5,READ+DOWNLOAD,CAP-LOG-DETAIL|CAP-LOG-EXPORT,"get_log().raw,export_logs()",MEDIUM,CSV INJECTION RISK,None expected,YES
+LOG-AL-UA-O1,User Audit Summary,Logs,O1,READ,CAP-LOG-LIST,list_logs(type=user),HIGH,,None expected,YES
+LOG-AL-UA-O2,User Audit List,Logs,O2,READ+DOWNLOAD,CAP-LOG-LIST|CAP-LOG-EXPORT,"list_logs(type=user),export_logs()",MEDIUM,CSV INJECTION RISK; HIGH VOLUME,Export timeout on large datasets,YES
+LOG-AL-UA-O3,User Audit Detail,Logs,O3,READ+DOWNLOAD,CAP-LOG-DETAIL,get_log(),HIGH,Internal fields redacted,None expected,YES
+LOG-AL-UA-O5,User Audit Proof,Logs,O5,READ+DOWNLOAD,CAP-LOG-DETAIL|CAP-LOG-EXPORT,"get_log().raw,export_logs()",MEDIUM,CSV INJECTION RISK,None expected,YES
+LOG-ET-TD-O1,Trace Summary,Logs,O1,READ,CAP-LOG-LIST,list_logs(type=trace),HIGH,,None expected,YES
+LOG-ET-TD-O2,Trace List,Logs,O2,READ+DOWNLOAD,CAP-LOG-LIST|CAP-LOG-EXPORT,"list_logs(type=trace),export_logs()",MEDIUM,CSV INJECTION RISK; HIGH VOLUME,Export timeout on large datasets,YES
+LOG-ET-TD-O3,Trace Detail,Logs,O3,READ+DOWNLOAD,CAP-LOG-DETAIL,get_log(),HIGH,Internal fields redacted,None expected,YES
+LOG-ET-TD-O4,Trace Context,Logs,O4,READ,CAP-LOG-DETAIL,get_log().context,HIGH,,None expected,YES
+LOG-ET-TD-O5,Trace Proof,Logs,O5,READ+DOWNLOAD,CAP-LOG-DETAIL|CAP-LOG-EXPORT,"get_log().raw,export_logs()",MEDIUM,CSV INJECTION RISK,None expected,YES

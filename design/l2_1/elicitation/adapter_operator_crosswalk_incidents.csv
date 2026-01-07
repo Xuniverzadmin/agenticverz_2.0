@@ -1,0 +1,18 @@
+adapter_id,adapter_layer,operator_name,operator_layer,capability_id,sync_async,side_effects,l2_1_surface,l2_1_action,layer_route,notes
+CustomerIncidentsAdapter,L3,list_incidents(),L4,CAP-INC-LIST,sync,None,INCIDENTS.ACTIVE_INCIDENTS.OPEN_INCIDENTS,ACT-INCIDENT-LIST-VIEW,L2_1,Paginated list max 100
+CustomerIncidentsAdapter,L3,list_incidents(),L4,CAP-INC-LIST,sync,None,INCIDENTS.ACTIVE_INCIDENTS.OPEN_INCIDENTS,ACT-INCIDENT-LIST-DOWNLOAD,L2_1,Export capability
+CustomerIncidentsAdapter,L3,get_incident(),L4,CAP-INC-GET,sync,None,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,ACT-INCIDENT-DETAIL-VIEW,L2_1,Includes timeline events
+CustomerIncidentsAdapter,L3,get_incident(),L4,CAP-INC-GET,sync,None,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,ACT-INCIDENT-DETAIL-DOWNLOAD,L2_1,Export capability
+CustomerIncidentsAdapter,L3,acknowledge_incident(),L4,CAP-INC-ACK,sync,Creates IncidentEvent,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,ACT-INCIDENT-ACKNOWLEDGE,GC_L,Human confirmation required
+CustomerIncidentsAdapter,L3,resolve_incident(),L4,CAP-INC-RESOLVE,sync,Creates IncidentEvent,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,ACT-INCIDENT-RESOLVE,GC_L,Human confirmation required
+IncidentReadService,L4,list_incidents(),L4,CAP-INC-LIST,sync,None,,,,"Domain engine, tenant scoped"
+IncidentReadService,L4,get_incident(),L4,CAP-INC-GET,sync,None,,,,"Domain engine, tenant scoped"
+IncidentReadService,L4,get_incident_events(),L4,CAP-INC-GET,sync,None,,,,Timeline events query
+IncidentReadService,L4,count_incidents_since(),L4,(internal),sync,None,,,,Used by status endpoint
+IncidentReadService,L4,get_last_incident(),L4,(internal),sync,None,,,,Used by status endpoint
+IncidentWriteService,L4,acknowledge_incident(),L4,CAP-INC-ACK,sync,DB commit + event,,,,Domain engine write
+IncidentWriteService,L4,resolve_incident(),L4,CAP-INC-RESOLVE,sync,DB commit + event,,,,Domain engine write
+(direct),L2,search_incidents(),L2,CAP-INC-SEARCH,sync,None,INCIDENTS.ACTIVE_INCIDENTS.OPEN_INCIDENTS,(not seeded),L2_1,Complex search - not through adapter
+(direct),L2,get_decision_timeline(),L2,CAP-INC-TIMELINE,sync,None,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,(not seeded),L2_1,M23 decision trace
+(direct),L2,get_customer_incident_narrative(),L2,CAP-INC-NARRATIVE,sync,None,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,(not seeded),L2_1,M29 calm vocabulary
+(direct),L2,export_incident_evidence(),L2,CAP-INC-EXPORT,sync,Generates PDF,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,(not seeded),L2_1,Legal-grade evidence report
