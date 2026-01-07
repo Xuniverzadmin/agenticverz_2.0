@@ -4,7 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/console/',
+  base: process.env.VITE_BASE_PATH || '/',
   resolve: {
     alias: {
       // Source directory aliases

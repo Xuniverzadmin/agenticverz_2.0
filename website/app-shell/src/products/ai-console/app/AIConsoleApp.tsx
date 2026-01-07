@@ -64,7 +64,7 @@ import { SettingsPage } from '@ai-console/account/SettingsPage';
 import { AccountPage } from '@ai-console/account/AccountPage';
 // QUARANTINE (PIN-317): SupportPage moved to quarantine - no route defined
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://agenticverz.com';
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 const STORAGE_KEY = 'guard-console-api-key';
 const TENANT_STORAGE_KEY = 'guard-console-tenant-id';
 

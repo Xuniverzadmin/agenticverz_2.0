@@ -43,6 +43,17 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const CreditsPage = lazy(() => import('@/pages/credits/CreditsPage'));
 
 // =============================================================================
+// L2.1 DOMAIN PAGES (Preflight: preflight-console.agenticverz.com)
+// Projection-driven pages from ui_projection_lock.json
+// Reference: PIN-352 (L2.1 UI Projection Pipeline)
+// =============================================================================
+const OverviewPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.OverviewPage })));
+const ActivityPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.ActivityPage })));
+const IncidentsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.IncidentsPage })));
+const PoliciesPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.PoliciesPage })));
+const LogsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.LogsPage })));
+
+// =============================================================================
 // FOUNDER PAGES (Target: fops.agenticverz.com) - Now in website/fops/
 // =============================================================================
 const TracesPage = lazy(() => import('@fops/pages/traces/TracesPage'));
@@ -191,8 +202,13 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          {/* M28: Root redirects to /guard (Customer Console) */}
-          <Route index element={<Navigate to="/guard" replace />} />
+          {/* M28: Root redirects based on environment
+           * - Preflight: /overview (L2.1 projection-driven UI)
+           * - Production: /guard (Customer Console)
+           */}
+          <Route index element={
+            <Navigate to={import.meta.env.VITE_PREFLIGHT_MODE === 'true' ? '/overview' : '/guard'} replace />
+          } />
 
           {/* =========================================================
            * FOUNDER ROUTES (/fops/*)
@@ -242,6 +258,22 @@ export function AppRoutes() {
            * CUSTOMER ROUTES (Target: console.agenticverz.com)
            * ========================================================= */}
 
+          {/* =========================================================
+           * L2.1 DOMAIN ROUTES (Preflight: preflight-console.agenticverz.com)
+           * Projection-driven UI from ui_projection_lock.json
+           * Reference: PIN-352
+           * ========================================================= */}
+          <Route path="overview" element={<OverviewPage />} />
+          <Route path="overview/*" element={<OverviewPage />} />
+          <Route path="activity" element={<ActivityPage />} />
+          <Route path="activity/*" element={<ActivityPage />} />
+          <Route path="incidents" element={<IncidentsPage />} />
+          <Route path="incidents/*" element={<IncidentsPage />} />
+          <Route path="policies" element={<PoliciesPage />} />
+          <Route path="policies/*" element={<PoliciesPage />} />
+          <Route path="logs" element={<LogsPage />} />
+          <Route path="logs/*" element={<LogsPage />} />
+
           {/* Billing (CUSTOMER) */}
           <Route path="credits" element={<CreditsPage />} />
 
@@ -250,8 +282,10 @@ export function AppRoutes() {
            */}
         </Route>
 
-        {/* Catch all - redirect to /guard (unified console) */}
-        <Route path="*" element={<Navigate to="/guard" replace />} />
+        {/* Catch all - redirect based on environment */}
+        <Route path="*" element={
+          <Navigate to={import.meta.env.VITE_PREFLIGHT_MODE === 'true' ? '/overview' : '/guard'} replace />
+        } />
       </Routes>
     </Suspense>
   );

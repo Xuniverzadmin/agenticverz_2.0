@@ -36,7 +36,7 @@ const queryClient = new QueryClient({
 
 type OpsView = 'pulse' | 'console';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://agenticverz.com';
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 const STORAGE_KEY = 'ops-console-api-key';
 
 export default function OpsConsoleEntry() {

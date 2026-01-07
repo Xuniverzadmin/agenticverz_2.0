@@ -132,7 +132,7 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 async function fetchPulseData(): Promise<PulseData> {
-  const baseUrl = import.meta.env.VITE_API_BASE || 'https://agenticverz.com';
+  const baseUrl = import.meta.env.VITE_API_BASE || '';
   const apiKey = localStorage.getItem('guard-console-api-key') || '';
 
   try {

@@ -1,0 +1,1955 @@
+{
+  "_meta": {
+    "type": "ui_projection_lock",
+    "version": "1.0.0",
+    "generated_at": "2026-01-07T19:20:40.524660+00:00",
+    "source": "design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx",
+    "processing_stage": "LOCKED",
+    "frozen": true,
+    "editable": false
+  },
+  "_statistics": {
+    "domain_count": 5,
+    "panel_count": 52,
+    "control_count": 95
+  },
+  "_contract": {
+    "renderer_must_consume_only_this_file": true,
+    "no_optional_fields": true,
+    "explicit_ordering_everywhere": true,
+    "all_controls_have_type": true,
+    "all_panels_have_render_mode": true,
+    "all_items_have_visibility": true
+  },
+  "domains": [
+    {
+      "domain": "Overview",
+      "order": 0,
+      "panels": [
+        {
+          "panel_id": "OVW-SH-CS-O1",
+          "panel_name": "System Status Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "CURRENT_STATUS",
+          "topic_id": "OVERVIEW.SYSTEM_HEALTH.CURRENT_STATUS",
+          "subdomain": "SYSTEM_HEALTH",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "OVW-SH-HM-O1",
+          "panel_name": "Health Metrics Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "HEALTH_METRICS",
+          "topic_id": "OVERVIEW.SYSTEM_HEALTH.HEALTH_METRICS",
+          "subdomain": "SYSTEM_HEALTH",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "OVW-SH-HM-O2",
+          "panel_name": "Health Metrics List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 3,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 4,
+          "topic": "HEALTH_METRICS",
+          "topic_id": "OVERVIEW.SYSTEM_HEALTH.HEALTH_METRICS",
+          "subdomain": "SYSTEM_HEALTH",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        }
+      ],
+      "panel_count": 3,
+      "total_controls": 4
+    },
+    {
+      "domain": "Activity",
+      "order": 1,
+      "panels": [
+        {
+          "panel_id": "ACT-EX-AR-O1",
+          "panel_name": "Active Runs Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "ACTIVE_RUNS",
+          "topic_id": "ACTIVITY.EXECUTIONS.ACTIVE_RUNS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-CR-O1",
+          "panel_name": "Completed Runs Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "COMPLETED_RUNS",
+          "topic_id": "ACTIVITY.EXECUTIONS.COMPLETED_RUNS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O1",
+          "panel_name": "Run Details Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "RUN_DETAILS",
+          "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-AR-O2",
+          "panel_name": "Active Runs List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 3,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 4,
+          "topic": "ACTIVE_RUNS",
+          "topic_id": "ACTIVITY.EXECUTIONS.ACTIVE_RUNS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-CR-O2",
+          "panel_name": "Completed Runs List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_MULTI",
+              "order": 2,
+              "icon": "checkbox",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "DOWNLOAD",
+              "order": 3,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 4,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "COMPLETED_RUNS",
+          "topic_id": "ACTIVITY.EXECUTIONS.COMPLETED_RUNS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O2",
+          "panel_name": "Run Steps List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 3,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 4,
+          "topic": "RUN_DETAILS",
+          "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-CR-O3",
+          "panel_name": "Completed Run Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 1,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "COMPLETED_RUNS",
+          "topic_id": "ACTIVITY.EXECUTIONS.COMPLETED_RUNS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O3",
+          "panel_name": "Run Step Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 1,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "RUN_DETAILS",
+          "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O4",
+          "panel_name": "Run Context",
+          "order": "O4",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "RUN_DETAILS",
+          "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "ACT-EX-RD-O5",
+          "panel_name": "Run Proof",
+          "order": "O5",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "RUN_DETAILS",
+          "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
+          "subdomain": "EXECUTIONS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        }
+      ],
+      "panel_count": 10,
+      "total_controls": 19
+    },
+    {
+      "domain": "Incidents",
+      "order": 2,
+      "panels": [
+        {
+          "panel_id": "INC-AI-OI-O1",
+          "panel_name": "Open Incidents Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "OPEN_INCIDENTS",
+          "topic_id": "INCIDENTS.ACTIVE_INCIDENTS.OPEN_INCIDENTS",
+          "subdomain": "ACTIVE_INCIDENTS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O1",
+          "panel_name": "Incident Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "INCIDENT_DETAILS",
+          "topic_id": "INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS",
+          "subdomain": "ACTIVE_INCIDENTS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O1",
+          "panel_name": "Resolved Incidents Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "RESOLVED_INCIDENTS",
+          "topic_id": "INCIDENTS.HISTORICAL_INCIDENTS.RESOLVED_INCIDENTS",
+          "subdomain": "HISTORICAL_INCIDENTS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-AI-OI-O2",
+          "panel_name": "Open Incidents List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_MULTI",
+              "order": 2,
+              "icon": "checkbox",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "ACKNOWLEDGE",
+              "order": 3,
+              "icon": "bell-off",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 4,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "OPEN_INCIDENTS",
+          "topic_id": "INCIDENTS.ACTIVE_INCIDENTS.OPEN_INCIDENTS",
+          "subdomain": "ACTIVE_INCIDENTS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": true
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O2",
+          "panel_name": "Incident Timeline",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "SORT",
+              "order": 0,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 1,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 2,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 3,
+          "topic": "INCIDENT_DETAILS",
+          "topic_id": "INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS",
+          "subdomain": "ACTIVE_INCIDENTS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O2",
+          "panel_name": "Resolved Incidents List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_MULTI",
+              "order": 2,
+              "icon": "checkbox",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "DOWNLOAD",
+              "order": 3,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 4,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "RESOLVED_INCIDENTS",
+          "topic_id": "INCIDENTS.HISTORICAL_INCIDENTS.RESOLVED_INCIDENTS",
+          "subdomain": "HISTORICAL_INCIDENTS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O3",
+          "panel_name": "Incident Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "ACKNOWLEDGE",
+              "order": 1,
+              "icon": "bell-off",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "RESOLVE",
+              "order": 2,
+              "icon": "check-square",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 3,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 4,
+          "topic": "INCIDENT_DETAILS",
+          "topic_id": "INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS",
+          "subdomain": "ACTIVE_INCIDENTS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": true,
+            "activate": true
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O3",
+          "panel_name": "Resolved Incident Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 1,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "RESOLVED_INCIDENTS",
+          "topic_id": "INCIDENTS.HISTORICAL_INCIDENTS.RESOLVED_INCIDENTS",
+          "subdomain": "HISTORICAL_INCIDENTS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-AI-ID-O4",
+          "panel_name": "Incident Impact",
+          "order": "O4",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "INCIDENT_DETAILS",
+          "topic_id": "INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS",
+          "subdomain": "ACTIVE_INCIDENTS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O4",
+          "panel_name": "Resolved Incident Context",
+          "order": "O4",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "RESOLVED_INCIDENTS",
+          "topic_id": "INCIDENTS.HISTORICAL_INCIDENTS.RESOLVED_INCIDENTS",
+          "subdomain": "HISTORICAL_INCIDENTS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "INC-HI-RI-O5",
+          "panel_name": "Resolved Incident Proof",
+          "order": "O5",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "RESOLVED_INCIDENTS",
+          "topic_id": "INCIDENTS.HISTORICAL_INCIDENTS.RESOLVED_INCIDENTS",
+          "subdomain": "HISTORICAL_INCIDENTS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        }
+      ],
+      "panel_count": 11,
+      "total_controls": 22
+    },
+    {
+      "domain": "Policies",
+      "order": 3,
+      "panels": [
+        {
+          "panel_id": "POL-AP-BP-O1",
+          "panel_name": "Budget Policies Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "BUDGET_POLICIES",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.BUDGET_POLICIES",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-AP-RL-O1",
+          "panel_name": "Rate Limits Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "RATE_LIMITS",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.RATE_LIMITS",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O1",
+          "panel_name": "Approval Rules Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "APPROVAL_RULES",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.APPROVAL_RULES",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O1",
+          "panel_name": "Policy Changes Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "POLICY_CHANGES",
+          "topic_id": "POLICIES.POLICY_AUDIT.POLICY_CHANGES",
+          "subdomain": "POLICY_AUDIT",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-AP-BP-O2",
+          "panel_name": "Budget Policies List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 3,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 4,
+          "topic": "BUDGET_POLICIES",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.BUDGET_POLICIES",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-AP-RL-O2",
+          "panel_name": "Rate Limits List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 3,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 4,
+          "topic": "RATE_LIMITS",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.RATE_LIMITS",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O2",
+          "panel_name": "Approval Rules List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 3,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 4,
+          "topic": "APPROVAL_RULES",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.APPROVAL_RULES",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O2",
+          "panel_name": "Policy Changes List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "DOWNLOAD",
+              "order": 3,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 4,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "POLICY_CHANGES",
+          "topic_id": "POLICIES.POLICY_AUDIT.POLICY_CHANGES",
+          "subdomain": "POLICY_AUDIT",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-AP-BP-O3",
+          "panel_name": "Budget Policy Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "BUDGET_POLICIES",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.BUDGET_POLICIES",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": true,
+            "activate": true
+          }
+        },
+        {
+          "panel_id": "POL-AP-RL-O3",
+          "panel_name": "Rate Limit Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "RATE_LIMITS",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.RATE_LIMITS",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": true,
+            "activate": true
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O3",
+          "panel_name": "Approval Rule Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "APPROVAL_RULES",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.APPROVAL_RULES",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": true,
+            "activate": true
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O3",
+          "panel_name": "Policy Change Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 1,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "POLICY_CHANGES",
+          "topic_id": "POLICIES.POLICY_AUDIT.POLICY_CHANGES",
+          "subdomain": "POLICY_AUDIT",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-AP-AR-O4",
+          "panel_name": "Approval Rule Impact",
+          "order": "O4",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "APPROVAL_RULES",
+          "topic_id": "POLICIES.ACTIVE_POLICIES.APPROVAL_RULES",
+          "subdomain": "ACTIVE_POLICIES",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O4",
+          "panel_name": "Policy Change Context",
+          "order": "O4",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "POLICY_CHANGES",
+          "topic_id": "POLICIES.POLICY_AUDIT.POLICY_CHANGES",
+          "subdomain": "POLICY_AUDIT",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "POL-PA-PC-O5",
+          "panel_name": "Policy Change Proof",
+          "order": "O5",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "POLICY_CHANGES",
+          "topic_id": "POLICIES.POLICY_AUDIT.POLICY_CHANGES",
+          "subdomain": "POLICY_AUDIT",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        }
+      ],
+      "panel_count": 15,
+      "total_controls": 25
+    },
+    {
+      "domain": "Logs",
+      "order": 4,
+      "panels": [
+        {
+          "panel_id": "LOG-AL-SA-O1",
+          "panel_name": "System Audit Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "SYSTEM_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.SYSTEM_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O1",
+          "panel_name": "User Audit Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "USER_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.USER_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O1",
+          "panel_name": "Trace Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "TRACE_DETAILS",
+          "topic_id": "LOGS.EXECUTION_TRACES.TRACE_DETAILS",
+          "subdomain": "EXECUTION_TRACES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-AL-SA-O2",
+          "panel_name": "System Audit List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_MULTI",
+              "order": 2,
+              "icon": "checkbox",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "DOWNLOAD",
+              "order": 3,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 4,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "SYSTEM_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.SYSTEM_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O2",
+          "panel_name": "User Audit List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_MULTI",
+              "order": 2,
+              "icon": "checkbox",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "DOWNLOAD",
+              "order": 3,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 4,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "USER_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.USER_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O2",
+          "panel_name": "Trace List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_MULTI",
+              "order": 2,
+              "icon": "checkbox",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "DOWNLOAD",
+              "order": 3,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 4,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 5,
+          "topic": "TRACE_DETAILS",
+          "topic_id": "LOGS.EXECUTION_TRACES.TRACE_DETAILS",
+          "subdomain": "EXECUTION_TRACES",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-AL-SA-O3",
+          "panel_name": "System Audit Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 1,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "SYSTEM_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.SYSTEM_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O3",
+          "panel_name": "User Audit Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 1,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "USER_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.USER_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O3",
+          "panel_name": "Trace Detail",
+          "order": "O3",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 1,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 2,
+          "topic": "TRACE_DETAILS",
+          "topic_id": "LOGS.EXECUTION_TRACES.TRACE_DETAILS",
+          "subdomain": "EXECUTION_TRACES",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O4",
+          "panel_name": "Trace Context",
+          "order": "O4",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "NAVIGATE",
+              "order": 0,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "TRACE_DETAILS",
+          "topic_id": "LOGS.EXECUTION_TRACES.TRACE_DETAILS",
+          "subdomain": "EXECUTION_TRACES",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-AL-SA-O5",
+          "panel_name": "System Audit Proof",
+          "order": "O5",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "SYSTEM_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.SYSTEM_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-AL-UA-O5",
+          "panel_name": "User Audit Proof",
+          "order": "O5",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "USER_AUDIT",
+          "topic_id": "LOGS.AUDIT_LOGS.USER_AUDIT",
+          "subdomain": "AUDIT_LOGS",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        },
+        {
+          "panel_id": "LOG-ET-TD-O5",
+          "panel_name": "Trace Proof",
+          "order": "O5",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": false,
+          "disabled_reason": "unspecified in L2.1",
+          "controls": [
+            {
+              "type": "DOWNLOAD",
+              "order": 0,
+              "icon": "download",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 1,
+          "topic": "TRACE_DETAILS",
+          "topic_id": "LOGS.EXECUTION_TRACES.TRACE_DETAILS",
+          "subdomain": "EXECUTION_TRACES",
+          "permissions": {
+            "nav_required": true,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          }
+        }
+      ],
+      "panel_count": 13,
+      "total_controls": 25
+    }
+  ]
+}

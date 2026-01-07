@@ -5,7 +5,7 @@ import OnboardingLayout from './OnboardingLayout';
 import { toastSuccess, toastError } from '@/components/common/Toast';
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://agenticverz.com';
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 type TestStatus = 'idle' | 'running' | 'success' | 'failed';
 

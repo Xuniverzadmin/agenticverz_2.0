@@ -90,7 +90,7 @@ export function StrategyHealthWidget() {
 
   // Navigate to SBA Inspector on click
   const handleClick = () => {
-    window.location.href = '/console/sba';
+    window.location.href = '/sba';
   };
 
   return (

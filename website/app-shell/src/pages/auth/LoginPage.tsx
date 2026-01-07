@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { toastError, toastSuccess } from '@/components/common/Toast';
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://agenticverz.com';
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 // OAuth provider icons
 const GoogleIcon = () => (

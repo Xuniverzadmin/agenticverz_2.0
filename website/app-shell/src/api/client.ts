@@ -46,7 +46,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
-      const loginUrl = import.meta.env.VITE_AUTH_LOGIN_URL || '/console/login';
+      const loginUrl = import.meta.env.VITE_AUTH_LOGIN_URL || '/login';
       window.location.href = loginUrl;
     }
     return Promise.reject(error);
