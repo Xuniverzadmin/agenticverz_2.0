@@ -33,6 +33,13 @@ intent:
       - ".github/**"
 
       # =========================================================
+      # DESIGN ARTIFACTS (NON-EXECUTING)
+      # Table-first design files, schemas, seeds, elicitation
+      # Reference: PIN-347 (L2.1 Epistemic Layer)
+      # =========================================================
+      - "design/**"
+
+      # =========================================================
       # L2.1 ORCHESTRATION (READ-ONLY EVIDENCE)
       # Non-executing orchestration artifacts and evidence
       # =========================================================

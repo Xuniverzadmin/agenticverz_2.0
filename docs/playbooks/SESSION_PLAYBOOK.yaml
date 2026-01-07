@@ -15,11 +15,18 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.34"
+session_playbook_version: "2.35"
 created: "2025-12-27"
-last_updated: "2026-01-06"
+last_updated: "2026-01-07"
 
 # Changelog:
+#   2.35 - SCOPE ADMISSION PROTOCOL (Section 36, PIN-347).
+#          Added scope_admission_protocol section for "No Code Before Scope" rule.
+#          Claude must detect new paths and update INTENT_DECLARATION.yaml BEFORE
+#          generating files. Prevents --no-verify bypass culture.
+#          Root cause fix: declare governance intent before code exists.
+#          Core rules: SCOPE-001 to SCOPE-004.
+#          Reference: PIN-347 (L2.1 Epistemic Layer Table-First Design)
 #   2.34 - INTENT LOCK SYSTEM (Section 35, PIN-319 Governance Fix).
 #          Added intent_lock section for clean push by construction.
 #          Requires INTENT_DECLARATION.yaml at session start.
@@ -7356,6 +7363,150 @@ intent_lock:
       description: Cannot use --no-verify for test/semantic/security failures
       enforcement: BLOCKING (manual review)
       audit: Logged if used
+
+# =============================================================================
+# Section 36: SCOPE ADMISSION PROTOCOL (PIN-347)
+# =============================================================================
+#
+# Purpose: Prevent scope violations by declaring intent BEFORE writing code.
+# Root cause: Claude writes code to new paths, pre-commit blocks, --no-verify bypass.
+# Fix: Claude must detect and declare new scope BEFORE generating any files.
+#
+# Core principle: Governance intent must be declared before code exists.
+
+scope_admission_protocol:
+  # ---------------------------------------------------------------------------
+  # Rule: No Code Before Scope
+  # ---------------------------------------------------------------------------
+  rule: |
+    Claude must never create files in a filesystem path that is not already
+    declared in INTENT_DECLARATION.yaml.
+
+  enforced_by:
+    - Claude (pre-generation, behavioral)
+    - pre-commit hooks (post-generation, mechanical)
+    - CI (final gate)
+
+  # ---------------------------------------------------------------------------
+  # Claude Obligations
+  # ---------------------------------------------------------------------------
+  claude_obligations:
+    - Detect new directory or top-level path introduction
+    - Halt code generation immediately
+    - Propose an INTENT_DECLARATION.yaml update
+    - Await explicit confirmation before proceeding
+
+  # ---------------------------------------------------------------------------
+  # Prohibited Actions
+  # ---------------------------------------------------------------------------
+  prohibited_actions:
+    - "Writing code before scope declaration"
+    - "Using --no-verify to bypass scope checks"
+    - "Retroactively justifying scope expansion"
+    - "Creating scaffolding in undeclared paths"
+    - "'We'll fix it later' scope deferrals"
+
+  # ---------------------------------------------------------------------------
+  # Allowed Flow (MANDATORY)
+  # ---------------------------------------------------------------------------
+  allowed_flow:
+    step_1:
+      name: Identify new scope
+      action: Claude detects a path not in INTENT_DECLARATION.yaml
+      output: "This introduces a new governed scope: <path>"
+
+    step_2:
+      name: Declare intent
+      action: Claude proposes INTENT_DECLARATION.yaml update
+      output: Diff showing new allowed_paths entry
+
+    step_3:
+      name: Commit intent alone
+      action: Governance change committed separately
+      output: Clean commit with only intent update
+
+    step_4:
+      name: Resume implementation
+      action: Claude proceeds with file creation
+      output: Pre-commit passes naturally
+
+  # ---------------------------------------------------------------------------
+  # Violation Response
+  # ---------------------------------------------------------------------------
+  violation_response:
+    on_new_scope_detected:
+      action: HALT
+      message: |
+        ❌ SCOPE ADMISSION REQUIRED
+
+        The path '{path}' is not in INTENT_DECLARATION.yaml.
+        I must update governance intent before creating files.
+
+        Proposed change:
+        ```yaml
+        allowed_paths:
+          - "{path}/**"
+        ```
+
+        Awaiting confirmation to proceed.
+
+    on_hook_failure:
+      interpretation: |
+        A pre-commit hook failure due to scope is NOT a nuisance.
+        It is evidence of missing governance work.
+      action: DO NOT USE --no-verify
+      correct_response: Update INTENT_DECLARATION.yaml first
+
+  # ---------------------------------------------------------------------------
+  # Claude Decision Tree (Internal)
+  # ---------------------------------------------------------------------------
+  claude_decision_tree:
+    before_creating_any_directory:
+      question_1: "Does this path exist in INTENT_DECLARATION.yaml?"
+      if_no:
+        question_2: "What type of artifact is this?"
+        if_semantic_layer: ESCALATE (requires human approval)
+        if_documentation: DECLARE (propose intent update)
+        if_design: DECLARE (propose intent update)
+        if_execution: BLOCK (may require architecture review)
+      if_yes: PROCEED
+
+  # ---------------------------------------------------------------------------
+  # Session Resume Check
+  # ---------------------------------------------------------------------------
+  session_resume_checks:
+    - name: scope_integrity
+      description: |
+        Before continuing work, verify that all existing uncommitted
+        files are within declared intent scope.
+      claude_action_on_violation:
+        - Stop further changes
+        - Identify offending paths
+        - Propose intent normalization commit
+
+  # ---------------------------------------------------------------------------
+  # Rules Summary
+  # ---------------------------------------------------------------------------
+  rules:
+    - id: SCOPE-001
+      name: No Code Before Scope
+      description: Files cannot be created in undeclared paths
+      enforcement: BLOCKING (Claude behavioral)
+
+    - id: SCOPE-002
+      name: Intent Before Implementation
+      description: INTENT_DECLARATION.yaml must be updated before new paths
+      enforcement: BLOCKING
+
+    - id: SCOPE-003
+      name: Hook Failures Are Signals
+      description: Scope-based hook failures indicate missing governance work
+      enforcement: BLOCKING (no bypass)
+
+    - id: SCOPE-004
+      name: Separate Governance Commits
+      description: Intent updates must be committed alone before implementation
+      enforcement: MANDATORY
 
 # =============================================================================
 # END OF SESSION PLAYBOOK
