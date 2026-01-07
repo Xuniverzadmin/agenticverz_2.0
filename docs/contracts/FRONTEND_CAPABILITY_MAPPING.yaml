@@ -1,0 +1,394 @@
+# =============================================================================
+# FRONTEND CAPABILITY MAPPING
+# =============================================================================
+#
+# Reference: PIN-321 (L2 → L2.1 Binding Execution)
+# Reference: CUSTOMER_CONSOLE_V1_CONSTITUTION.md (L1 Truth Space)
+# Created: 2026-01-06
+# Purpose: Map frontend-invocable capabilities to L1 domains and orders
+#
+# L1 FROZEN DOMAINS (from Constitution):
+#   - Overview:  Is the system okay right now?
+#   - Activity:  What ran / is running?
+#   - Incidents: What went wrong?
+#   - Policies:  How is behavior defined?
+#   - Logs:      What is the raw truth?
+#
+# ORDERS (Epistemic Depth):
+#   - O1: Summary / Snapshot (scannable)
+#   - O2: List of instances
+#   - O3: Detail / Explanation
+#   - O4: Context / Impact
+#   - O5: Raw records / Proof
+#
+# INVARIANTS:
+#   - New domains are NOT allowed
+#   - NONE requires explicit justification
+#   - Gap classification must explain why
+#
+# =============================================================================
+
+registry_version: "1.0.0"
+created: "2026-01-06"
+updated_by: "claude"
+
+# =============================================================================
+# SECTION 1: CAPABILITY-TO-DOMAIN MAPPING
+# =============================================================================
+
+mappings:
+
+  # ---------------------------------------------------------------------------
+  # CAP-001: REPLAY → Incidents
+  # ---------------------------------------------------------------------------
+  replay:
+    capability_id: CAP-001
+    name: "Execution Replay"
+
+    domain: Incidents
+    subdomain: "Incident Investigation"
+    topic: "Replay & Timeline"
+
+    orders:
+      O1: false    # Not a summary capability
+      O2: true     # List replay items (timeline)
+      O3: true     # Detail view (replay slice)
+      O4: true     # Context/impact (explain item)
+      O5: true     # Raw records (trace data)
+
+    status: fits
+    notes: >
+      Replay fits cleanly into Incidents domain. It answers "What went wrong?"
+      by providing detailed investigation tools for incident analysis.
+
+  # ---------------------------------------------------------------------------
+  # CAP-002: COST SIMULATION → Overview / Activity
+  # ---------------------------------------------------------------------------
+  cost_simulation:
+    capability_id: CAP-002
+    name: "Cost Simulation V2"
+
+    domain: Overview
+    subdomain: "Cost Advisory"
+    topic: "Pre-Execution Cost Estimate"
+
+    orders:
+      O1: true     # Summary (cost estimate)
+      O2: false    # Not a list capability
+      O3: true     # Detail (simulation breakdown)
+      O4: false    # No context needed
+      O5: false    # No raw records for advisory
+
+    status: fits
+    notes: >
+      Cost simulation fits Overview domain. It answers "Is the system okay?"
+      by providing cost projections before execution.
+
+  # ---------------------------------------------------------------------------
+  # CAP-003: POLICY PROPOSALS → Policies
+  # ---------------------------------------------------------------------------
+  policy_proposals:
+    capability_id: CAP-003
+    name: "Policy Proposals"
+
+    domain: Policies
+    subdomain: "Policy Evolution"
+    topic: "Pending Proposals"
+
+    orders:
+      O1: true     # Summary (proposal stats)
+      O2: true     # List of proposals
+      O3: true     # Detail (proposal content)
+      O4: true     # Context (versions, history)
+      O5: false    # No raw records (proposals are structured)
+
+    status: partial
+    gap_reason: >
+      Policy proposals fit Policies domain but are FOUNDER-ONLY in visibility
+      contract. Customer Console should NOT see proposals (FORBIDDEN).
+      Mapping is valid for Founder Console only.
+
+  # ---------------------------------------------------------------------------
+  # CAP-004: PREDICTION PLANE → Overview
+  # ---------------------------------------------------------------------------
+  prediction_plane:
+    capability_id: CAP-004
+    name: "C2 Prediction Plane"
+
+    domain: Overview
+    subdomain: "Predictive Signals"
+    topic: "Risk & Cost Predictions"
+
+    orders:
+      O1: true     # Summary (prediction stats)
+      O2: true     # List of predictions
+      O3: true     # Detail (prediction factors)
+      O4: false    # No context (predictions are point-in-time)
+      O5: false    # No raw records (predictions are derived)
+
+    status: partial
+    gap_reason: >
+      Predictions map to Overview but are OPTIONAL for Customer Console
+      per visibility contract. Full access is Founder Console only.
+
+  # ---------------------------------------------------------------------------
+  # CAP-005: FOUNDER CONSOLE → NONE (Separate Console)
+  # ---------------------------------------------------------------------------
+  founder_console:
+    capability_id: CAP-005
+    name: "Founder Console"
+
+    domain: NONE
+    subdomain: null
+    topic: null
+
+    orders:
+      O1: false
+      O2: false
+      O3: false
+      O4: false
+      O5: false
+
+    status: forbidden
+    notes: >
+      Founder Console is NOT part of Customer Console L1 Truth Space.
+      It is a separate console (fops.agenticverz.com) with its own domain model.
+      NONE is correct - no mapping to Customer Console domains.
+
+  # ---------------------------------------------------------------------------
+  # CAP-009: POLICY ENGINE → Policies
+  # ---------------------------------------------------------------------------
+  policy_engine:
+    capability_id: CAP-009
+    name: "Policy Engine"
+
+    domain: Policies
+    subdomain: "Active Policies"
+    topic: "Policy Rules"
+
+    orders:
+      O1: true     # Summary (policy count, status)
+      O2: true     # List of policies
+      O3: true     # Detail (policy rules)
+      O4: false    # No context needed
+      O5: false    # No raw records
+
+    status: fits
+    notes: >
+      Policy Engine fits cleanly into Policies domain. It answers
+      "How is behavior defined?" by showing active policy rules.
+
+  # ---------------------------------------------------------------------------
+  # CAP-011: GOVERNANCE ORCHESTRATION → NONE (Founder Only)
+  # ---------------------------------------------------------------------------
+  governance_orchestration:
+    capability_id: CAP-011
+    name: "Governance Orchestration"
+
+    domain: NONE
+    subdomain: null
+    topic: null
+
+    orders:
+      O1: false
+      O2: false
+      O3: false
+      O4: false
+      O5: false
+
+    status: forbidden
+    notes: >
+      Governance Orchestration is FOUNDER-ONLY.
+      Not part of Customer Console L1 Truth Space.
+      NONE is correct - no mapping to Customer Console domains.
+
+  # ---------------------------------------------------------------------------
+  # CAP-014: MEMORY SYSTEM → Activity
+  # ---------------------------------------------------------------------------
+  memory_system:
+    capability_id: CAP-014
+    name: "Memory System"
+
+    domain: Activity
+    subdomain: "Agent Memory"
+    topic: "Memory State"
+
+    orders:
+      O1: false    # Not a summary capability
+      O2: true     # List memories
+      O3: true     # Detail (memory content)
+      O4: false    # No context
+      O5: false    # No raw records
+
+    status: partial
+    gap_reason: >
+      Memory system maps to Activity but is currently FOUNDER-ONLY
+      in capability governance (no frontend client for customer).
+      Customer visibility requires explicit promotion.
+
+  # ---------------------------------------------------------------------------
+  # CAP-018: INTEGRATION PLATFORM → NONE (External)
+  # ---------------------------------------------------------------------------
+  integration_platform:
+    capability_id: CAP-018
+    name: "Integration Platform"
+
+    domain: NONE
+    subdomain: null
+    topic: null
+
+    orders:
+      O1: false
+      O2: false
+      O3: false
+      O4: false
+      O5: false
+
+    status: forbidden
+    notes: >
+      Integration Platform is external capability.
+      Not part of Customer Console L1 Truth Space.
+      Integration status shown in Connectivity section (not a domain).
+
+# =============================================================================
+# SECTION 2: MAPPING SUMMARY
+# =============================================================================
+
+summary:
+
+  by_domain:
+    Overview:
+      - cost_simulation       # fits
+      - prediction_plane      # partial (optional for customer)
+    Activity:
+      - memory_system         # partial (founder-only currently)
+    Incidents:
+      - replay                # fits
+    Policies:
+      - policy_proposals      # partial (founder-only)
+      - policy_engine         # fits
+    Logs:
+      []                      # No frontend-invocable capabilities map to Logs
+    NONE:
+      - founder_console       # Separate console
+      - governance_orchestration # Founder-only
+      - integration_platform  # External capability
+
+  by_status:
+    fits:
+      - replay                # Clean fit to Incidents
+      - cost_simulation       # Clean fit to Overview
+      - policy_engine         # Clean fit to Policies
+    partial:
+      - policy_proposals      # Domain fits, visibility mismatch
+      - prediction_plane      # Domain fits, visibility optional
+      - memory_system         # Domain fits, founder-only
+    gap:
+      []                      # No gaps (gaps are partial + blocked)
+    forbidden:
+      - founder_console       # Separate console
+      - governance_orchestration # Founder-only
+      - integration_platform  # External
+
+  by_order_coverage:
+    O1_capable:               # Summary/snapshot
+      - cost_simulation
+      - policy_proposals
+      - prediction_plane
+      - policy_engine
+    O2_capable:               # List view
+      - replay
+      - policy_proposals
+      - prediction_plane
+      - policy_engine
+      - memory_system
+    O3_capable:               # Detail view
+      - replay
+      - cost_simulation
+      - policy_proposals
+      - prediction_plane
+      - policy_engine
+      - memory_system
+    O4_capable:               # Context/impact
+      - replay
+      - policy_proposals
+    O5_capable:               # Raw records
+      - replay
+
+# =============================================================================
+# SECTION 3: GAP ANALYSIS
+# =============================================================================
+
+gaps:
+
+  # Gap 1: Logs domain has no frontend-invocable capability
+  - gap_id: MAP-GAP-001
+    domain: Logs
+    issue: "No frontend-invocable capability maps to Logs domain"
+    severity: medium
+    notes: >
+      Logs domain (O5: Raw records / Proof) has no capability mapping.
+      CAP-001 (Replay) provides trace access but maps to Incidents.
+      Direct log access may require a new capability or existing CAP-001 extension.
+
+  # Gap 2: Memory system is founder-only
+  - gap_id: MAP-GAP-002
+    capability_id: CAP-014
+    domain: Activity
+    issue: "Memory system maps to Activity but is founder-only"
+    severity: low
+    notes: >
+      Memory system could serve customer Activity domain but governance
+      currently restricts to founder. Promotion would require visibility
+      contract amendment and RBAC changes.
+
+  # Gap 3: Predictions visibility mismatch
+  - gap_id: MAP-GAP-003
+    capability_id: CAP-004
+    domain: Overview
+    issue: "Predictions map to Overview but are optional for customer"
+    severity: low
+    notes: >
+      Prediction visibility for customer is OPTIONAL per visibility contract.
+      This is intentional (advisory signals, not required), not a defect.
+
+# =============================================================================
+# SECTION 4: CUSTOMER CONSOLE DOMAIN COVERAGE
+# =============================================================================
+
+customer_console_coverage:
+
+  Overview:
+    capabilities:
+      - cost_simulation       # fits
+      - prediction_plane      # partial (optional)
+    coverage: partial
+    notes: "Cost simulation fully covered. Predictions optional."
+
+  Activity:
+    capabilities:
+      - memory_system         # partial (founder-only)
+    coverage: gap
+    notes: "Memory is founder-only. Activity needs customer-visible capability."
+
+  Incidents:
+    capabilities:
+      - replay                # fits
+    coverage: full
+    notes: "Replay provides full incident investigation capability."
+
+  Policies:
+    capabilities:
+      - policy_engine         # fits
+      - policy_proposals      # partial (founder-only)
+    coverage: partial
+    notes: "Policy viewing covered. Proposals are founder-only."
+
+  Logs:
+    capabilities: []
+    coverage: gap
+    notes: "No frontend-invocable capability for raw log access."
+
+# =============================================================================
+# END OF FRONTEND CAPABILITY MAPPING
+# =============================================================================

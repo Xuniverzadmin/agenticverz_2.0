@@ -15,6 +15,7 @@ Usage:
     status = client.poll_run(agent_id, run_id)
 """
 
+import logging
 import os
 import time
 import uuid
@@ -29,6 +30,32 @@ except ImportError:
 
     _USE_HTTPX = False
 
+# =============================================================================
+# INVOCATION SAFETY LAYER (PIN-332)
+# =============================================================================
+# Safety hooks for SDK methods
+# Mode: OBSERVE_WARN (v1) - logs warnings, only blocks on plan injection
+
+logger = logging.getLogger(__name__)
+
+try:
+    # Try to import from backend (when running in same environment)
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../backend"))
+    from app.auth.invocation_safety import (
+        InvocationSafetyContext,
+        SDKSafetyHook,
+        SafetyFlag,
+        emit_safety_metrics,
+        sdk_safety_hook,
+    )
+    _SAFETY_LAYER_AVAILABLE = True
+except ImportError:
+    # Safety layer not available - continue without it (degraded mode)
+    _SAFETY_LAYER_AVAILABLE = False
+    sdk_safety_hook = None
+    InvocationSafetyContext = None
+
 
 class AOSError(Exception):
     """Base exception for AOS SDK errors."""
@@ -39,6 +66,14 @@ class AOSError(Exception):
         super().__init__(message)
         self.status_code = status_code
         self.response = response
+
+
+class SafetyBlockedError(AOSError):
+    """Raised when a safety check blocks execution (PIN-332)."""
+
+    def __init__(self, message: str, flags: Optional[List[str]] = None):
+        super().__init__(message)
+        self.flags = flags or []
 
 
 class AOSClient:
@@ -63,10 +98,21 @@ class AOSClient:
         api_key: Optional[str] = None,
         base_url: str = "http://127.0.0.1:8000",
         timeout: int = 30,
+        tenant_id: Optional[str] = None,
+        caller_id: Optional[str] = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key or os.getenv("AOS_API_KEY")
         self.timeout = timeout
+        self.tenant_id = tenant_id or os.getenv("AOS_TENANT_ID")
+        self.caller_id = caller_id or os.getenv("AOS_CALLER_ID")
+
+        # Derive caller_id from API key if not explicitly set
+        if not self.caller_id and self.api_key:
+            self.caller_id = f"sdk:{self.api_key[:8]}" if len(self.api_key) >= 8 else f"sdk:{self.api_key}"
+
+        # Tenant budget limit for safety checks
+        self._tenant_budget_limit = int(os.getenv("AOS_TENANT_BUDGET_LIMIT", "10000"))
 
         headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -77,6 +123,46 @@ class AOSClient:
         else:
             self._session = requests.Session()
             self._session.headers.update(headers)
+
+    # =========== Safety Layer Helpers (PIN-332) ===========
+
+    def _build_safety_context(self) -> Optional["InvocationSafetyContext"]:
+        """Build safety context from SDK environment."""
+        if not _SAFETY_LAYER_AVAILABLE or InvocationSafetyContext is None:
+            return None
+
+        return InvocationSafetyContext(
+            caller_id=self.caller_id,
+            tenant_id=self.tenant_id,
+            tenant_budget_limit=self._tenant_budget_limit,
+        )
+
+    def _run_safety_check(self, method: str, result) -> None:
+        """
+        Process safety check result.
+
+        In OBSERVE_WARN mode (v1):
+        - Warnings are logged but don't block
+        - Only ERROR severity (plan injection) raises SafetyBlockedError
+        """
+        if result is None:
+            return
+
+        # Emit metrics
+        if _SAFETY_LAYER_AVAILABLE:
+            emit_safety_metrics("CAP-021", method, result)
+
+        # Log warnings
+        if result.warnings:
+            for warning in result.warnings:
+                logger.warning(f"SDK safety warning [{method}]: {warning}")
+
+        # Block on ERROR severity
+        if result.blocked:
+            raise SafetyBlockedError(
+                f"Safety blocked: {result.block_reason}",
+                flags=[f.value for f in result.flags],
+            )
 
     def _url(self, path: str) -> str:
         return f"{self.base_url}{path}"
@@ -142,10 +228,34 @@ class AOSClient:
             ... ])
             >>> if result["feasible"]:
             ...     print(f"Plan OK, cost: {result['estimated_cost_cents']}c")
+
+        Raises:
+            SafetyBlockedError: If plan contains forbidden fields (PIN-332 INPUT-003)
         """
+        # =========================================================================
+        # SAFETY CHECK (PIN-332)
+        # =========================================================================
+        # Check: ID-001 (identity), INPUT-001 (budget), INPUT-003 (plan injection)
+        if _SAFETY_LAYER_AVAILABLE and sdk_safety_hook:
+            ctx = self._build_safety_context()
+            if ctx:
+                result = sdk_safety_hook.check_simulate(
+                    ctx,
+                    plan_data={"steps": plan},
+                    budget_cents=budget_cents,
+                )
+                self._run_safety_check("simulate", result)
+
+        # Apply budget cap if needed
+        effective_budget = min(budget_cents, self._tenant_budget_limit)
+        if effective_budget < budget_cents:
+            logger.warning(
+                f"Budget {budget_cents} exceeds tenant limit {self._tenant_budget_limit}, using {effective_budget}"
+            )
+
         payload: Dict[str, Any] = {
             "plan": plan,
-            "budget_cents": budget_cents,
+            "budget_cents": effective_budget,
         }
         if agent_id:
             payload["agent_id"] = agent_id
@@ -267,6 +377,16 @@ class AOSClient:
         Returns:
             Agent ID
         """
+        # =========================================================================
+        # SAFETY CHECK (PIN-332)
+        # =========================================================================
+        # Check: ID-001 (identity)
+        if _SAFETY_LAYER_AVAILABLE and sdk_safety_hook:
+            ctx = self._build_safety_context()
+            if ctx:
+                result = sdk_safety_hook.check_create_agent(ctx)
+                self._run_safety_check("create_agent", result)
+
         data = self._request("POST", "/agents", json={"name": name})
         return data.get("agent_id") or data.get("id") or str(uuid.uuid4())
 
@@ -277,11 +397,22 @@ class AOSClient:
         Args:
             agent_id: Agent ID to execute the goal
             goal: Goal description
-            force_skill: Optional skill to force use
+            force_skill: Optional skill to force use (triggers impersonation warning)
 
         Returns:
             Run ID for tracking execution
         """
+        # =========================================================================
+        # SAFETY CHECK (PIN-332)
+        # =========================================================================
+        # Check: ID-001 (identity), ID-002 (impersonation via force_skill)
+        if _SAFETY_LAYER_AVAILABLE and sdk_safety_hook:
+            ctx = self._build_safety_context()
+            if ctx:
+                ctx.agent_id = agent_id
+                result = sdk_safety_hook.check_post_goal(ctx, force_skill=force_skill)
+                self._run_safety_check("post_goal", result)
+
         payload: Dict[str, Any] = {"goal": goal}
         if force_skill:
             payload["force_skill"] = force_skill
@@ -312,6 +443,19 @@ class AOSClient:
         Raises:
             TimeoutError: If run doesn't complete within timeout
         """
+        # =========================================================================
+        # SAFETY CHECK (PIN-332)
+        # =========================================================================
+        # Check: ID-001 (identity), OWN-002 (run ownership), RATE-001 (polling rate)
+        # Note: Rate limiting is enforced per poll, not per poll_run call
+        if _SAFETY_LAYER_AVAILABLE and sdk_safety_hook:
+            ctx = self._build_safety_context()
+            if ctx:
+                ctx.run_id = run_id
+                # Initial check (once per poll_run call)
+                result = sdk_safety_hook.check_poll_run(ctx, run_tenant_id=self.tenant_id)
+                self._run_safety_check("poll_run", result)
+
         end = time.time() + timeout
         while time.time() < end:
             try:
@@ -340,6 +484,17 @@ class AOSClient:
         Returns:
             Memory recall results
         """
+        # =========================================================================
+        # SAFETY CHECK (PIN-332)
+        # =========================================================================
+        # Check: ID-001 (identity), OWN-001 (agent ownership)
+        if _SAFETY_LAYER_AVAILABLE and sdk_safety_hook:
+            ctx = self._build_safety_context()
+            if ctx:
+                ctx.agent_id = agent_id
+                result = sdk_safety_hook.check_recall(ctx, agent_tenant_id=self.tenant_id)
+                self._run_safety_check("recall", result)
+
         return self._request("GET", f"/agents/{agent_id}/recall", params={"query": query, "k": k})
 
     # =========== Run Management APIs ===========
@@ -357,7 +512,24 @@ class AOSClient:
 
         Returns:
             Run creation response with run_id
+
+        Raises:
+            SafetyBlockedError: If plan contains forbidden fields (PIN-332 INPUT-003)
         """
+        # =========================================================================
+        # SAFETY CHECK (PIN-332)
+        # =========================================================================
+        # Check: ID-001 (identity), INPUT-002 (plan immutability), INPUT-003 (plan injection)
+        if _SAFETY_LAYER_AVAILABLE and sdk_safety_hook:
+            ctx = self._build_safety_context()
+            if ctx:
+                ctx.agent_id = agent_id
+                result = sdk_safety_hook.check_create_run(
+                    ctx,
+                    plan_data={"steps": plan} if plan else None,
+                )
+                self._run_safety_check("create_run", result)
+
         payload: Dict[str, Any] = {
             "agent_id": agent_id,
             "goal": goal,
@@ -377,6 +549,17 @@ class AOSClient:
         Returns:
             Run details including status, outcome, metrics
         """
+        # =========================================================================
+        # SAFETY CHECK (PIN-332)
+        # =========================================================================
+        # Check: ID-001 (identity), OWN-002 (run ownership)
+        if _SAFETY_LAYER_AVAILABLE and sdk_safety_hook:
+            ctx = self._build_safety_context()
+            if ctx:
+                ctx.run_id = run_id
+                result = sdk_safety_hook.check_get_run(ctx, run_tenant_id=self.tenant_id)
+                self._run_safety_check("get_run", result)
+
         return self._request("GET", f"/api/v1/runs/{run_id}")
 
     def close(self):

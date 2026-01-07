@@ -1,0 +1,24 @@
+{
+  "journey_id": "JRN-012",
+  "capability_id": "CAP-005",
+  "executed_at": "2026-01-06T11:51:20.398319Z",
+  "base_url": "http://localhost:8000",
+  "route": "/founder/timeline/recent",
+  "method": "GET",
+  "status_code": 403,
+  "response_headers": {
+    "date": "Tue, 06 Jan 2026 11:51:19 GMT",
+    "server": "uvicorn",
+    "content-length": "85",
+    "content-type": "application/json",
+    "x-request-id": "a8fc1de2-13e0-4a61-9166-0553b329ba88",
+    "connection": "close"
+  },
+  "response_body": "{\"error\":\"forbidden\",\"reason\":\"no-credentials\",\"resource\":\"runtime\",\"action\":\"query\"}",
+  "response_time_ms": 5.24,
+  "expected_status": 200,
+  "status_match": false,
+  "error": "HTTP Error 403: Forbidden",
+  "error_type": "HTTPError",
+  "suggested_failure_type": "AUTH_MISMATCH"
+}

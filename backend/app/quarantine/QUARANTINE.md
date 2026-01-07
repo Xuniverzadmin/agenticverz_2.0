@@ -17,43 +17,48 @@ Quarantined items are NOT deleted because they may have:
 
 ---
 
-## Quarantined Items
+## Restored Items
 
-### founder_review.py
+### founder_review.py → founder_contract_review.py
 
 **Original Location:** `app/api/founder_review.py`
 **Quarantine Date:** 2026-01-06
-**Reason:** API mounted but no frontend page calls `/founder/contracts/*` endpoints
+**Restored Date:** 2026-01-06
+**New Location:** `app/api/founder_contract_review.py`
 
-**Evidence:**
-- Routes: `/founder/contracts/review-queue`, `/founder/contracts/{id}`, `/founder/contracts/{id}/review`
-- Was mounted in main.py (registration removed during quarantine)
-- No frontend page calls these endpoints
-- References PART2_CRM_WORKFLOW_CHARTER.md (future feature)
+**Reason for Rename:** Original `app/api/founder_review.py` is now used for PIN-333 AUTO_EXECUTE review (evidence-only). CRM contract review restored with distinct name.
 
-**Recovery Path:**
-1. Create frontend page for contract review workflow
-2. Move file back to `app/api/`
-3. Restore router registration in main.py
-4. Restore adapter import in adapters/__init__.py
+**Recovery Actions Completed:**
+1. ✅ Created frontend page: `website/fops/src/pages/founder/ContractReviewContent.tsx`
+2. ✅ Unified review page: `website/fops/src/pages/founder/FounderReviewPage.tsx`
+3. ✅ Copied to `app/api/founder_contract_review.py`
+4. ✅ Router registered in main.py
+5. ✅ Added FOPS token authentication to all endpoints
+6. ✅ Adapter import restored in adapters/__init__.py
+
+**Routes Active:**
+- `GET /founder/contracts/review-queue`
+- `GET /founder/contracts/{contract_id}`
+- `POST /founder/contracts/{contract_id}/review`
 
 ---
 
-### founder_review_adapter.py
+### founder_review_adapter.py → founder_contract_review_adapter.py
 
 **Original Location:** `app/adapters/founder_review_adapter.py`
 **Quarantine Date:** 2026-01-06
-**Reason:** Adapter for founder_review.py, quarantined together
+**Restored Date:** 2026-01-06
+**New Location:** `app/adapters/founder_contract_review_adapter.py`
 
-**Evidence:**
-- Only consumer was founder_review.py (also quarantined)
-- Part of L3 adapter layer for founder review workflow
-- References PART2_CRM_WORKFLOW_CHARTER.md (future feature)
+**Recovery Actions Completed:**
+1. ✅ Copied to `app/adapters/founder_contract_review_adapter.py`
+2. ✅ Export restored in adapters/__init__.py
 
-**Recovery Path:**
-1. Restore alongside founder_review.py
-2. Move file back to `app/adapters/`
-3. Restore export in adapters/__init__.py
+---
+
+## Currently Quarantined Items
+
+*None - all items have been restored*
 
 ---
 

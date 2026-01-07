@@ -32,37 +32,19 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-# L3 imports (allowed)
-from app.adapters.platform_eligibility_adapter import (
-    PlatformEligibilityAdapter,
-    get_platform_eligibility_adapter,
-)
-
 # L6 imports (allowed)
 from app.db import get_session
-
-# L4 imports (allowed)
-from app.services.platform.platform_health_service import (
-    PlatformHealthService,
-    get_platform_health_service,
-)
 
 router = APIRouter(prefix="/platform", tags=["platform"])
 
 
 # =============================================================================
-# DEPENDENCIES
+# NOTE: Lightweight Implementation
 # =============================================================================
-
-
-def get_health_service(session: Session = Depends(get_session)) -> PlatformHealthService:
-    """Get PlatformHealthService instance with session."""
-    return get_platform_health_service(session)
-
-
-def get_adapter() -> PlatformEligibilityAdapter:
-    """Get PlatformEligibilityAdapter instance."""
-    return get_platform_eligibility_adapter()
+# All endpoints use direct SQL queries for performance with remote databases.
+# The full PlatformHealthService (L4) is available for batch processing or
+# more detailed health analysis but is too slow for real-time API calls
+# due to the number of queries required (~90 queries for full system health).
 
 
 # =============================================================================
@@ -79,133 +61,328 @@ def get_adapter() -> PlatformEligibilityAdapter:
 
 
 @router.get("/health", response_model=None)
-async def get_platform_health(
-    health_service: PlatformHealthService = Depends(get_health_service),
-    adapter: PlatformEligibilityAdapter = Depends(get_adapter),
+def get_platform_health(
+    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
-    Get platform system health.
+    Get platform system health (lightweight version).
 
-    Returns:
-        SystemHealthView with:
-        - Overall system state (HEALTHY, DEGRADED, BLOCKED)
-        - BLCA status
-        - Lifecycle coherence
-        - Per-domain health summaries
-        - Aggregate capability stats
+    Returns basic governance status without iterating all capabilities.
+    For full capability health, use /platform/capabilities.
 
     Audience: Founder only
     """
-    system_health = health_service.get_system_health()
-    view = adapter.system_to_view(system_health)
+    from sqlalchemy import text
 
-    # Convert dataclass to dict for JSON response
-    return _dataclass_to_dict(view)
+    now = datetime.now(timezone.utc)
+
+    # Single query to get BLCA status
+    blca_result = session.execute(
+        text("""
+            SELECT decision FROM governance_signals
+            WHERE signal_type = 'BLCA_STATUS'
+            AND scope = 'SYSTEM'
+            AND superseded_at IS NULL
+            ORDER BY recorded_at DESC
+            LIMIT 1
+        """)
+    ).fetchone()
+    blca_status = blca_result[0] if blca_result else "UNKNOWN"
+
+    # Single query to get lifecycle coherence
+    lifecycle_result = session.execute(
+        text("""
+            SELECT decision FROM governance_signals
+            WHERE signal_type = 'LIFECYCLE_QUALIFIER_COHERENCE'
+            AND scope = 'SYSTEM'
+            AND superseded_at IS NULL
+            ORDER BY recorded_at DESC
+            LIMIT 1
+        """)
+    ).fetchone()
+    lifecycle_coherence = lifecycle_result[0] if lifecycle_result else "UNKNOWN"
+
+    # Determine overall state
+    state = "HEALTHY"
+    if blca_status == "BLOCKED":
+        state = "BLOCKED"
+    elif blca_status == "WARN" or lifecycle_coherence == "INCOHERENT":
+        state = "DEGRADED"
+
+    return {
+        "state": state,
+        "blca_status": blca_status,
+        "lifecycle_coherence": lifecycle_coherence,
+        "last_checked": now.isoformat(),
+        "note": "Lightweight health check. Use /platform/capabilities for full capability status.",
+    }
 
 
 @router.get("/capabilities", response_model=None)
-async def get_capabilities_eligibility(
-    health_service: PlatformHealthService = Depends(get_health_service),
-    adapter: PlatformEligibilityAdapter = Depends(get_adapter),
+def get_capabilities_eligibility(
+    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
-    Get capability eligibility list.
+    Get capability eligibility list (lightweight version).
 
-    Returns:
-        PlatformEligibilityResponse with:
-        - Total capability count
-        - Eligible count
-        - Blocked count
-        - Per-capability eligibility status
+    Returns a batch summary of all capabilities using efficient queries.
 
     Audience: Founder only
     """
-    response = adapter.to_eligibility_response(health_service)
+    from sqlalchemy import text
 
-    return _dataclass_to_dict(response)
+    now = datetime.now(timezone.utc)
+
+    # All capabilities
+    DOMAIN_CAPABILITIES = {
+        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
+        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
+        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
+        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
+        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
+        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
+    }
+
+    # Single query to get all blocked scopes
+    blocked_result = session.execute(
+        text("""
+            SELECT DISTINCT scope FROM governance_signals
+            WHERE decision = 'BLOCKED'
+            AND superseded_at IS NULL
+            AND (expires_at IS NULL OR expires_at > NOW())
+        """)
+    ).fetchall()
+
+    blocked_scopes = {row[0] for row in blocked_result}
+    system_blocked = "SYSTEM" in blocked_scopes
+
+    # Build capability list
+    capabilities = []
+    eligible_count = 0
+    blocked_count = 0
+
+    for domain, caps in DOMAIN_CAPABILITIES.items():
+        for cap_name in caps:
+            # Blocked if: system-wide block, capability-specific block, or KILLSWITCH_STATUS
+            is_blocked = system_blocked or cap_name in blocked_scopes or cap_name == "KILLSWITCH_STATUS"
+
+            capabilities.append({
+                "name": cap_name,
+                "domain": domain,
+                "is_eligible": not is_blocked,
+                "state": "BLOCKED" if is_blocked else "HEALTHY",
+            })
+
+            if is_blocked:
+                blocked_count += 1
+            else:
+                eligible_count += 1
+
+    return {
+        "total": len(capabilities),
+        "eligible_count": eligible_count,
+        "blocked_count": blocked_count,
+        "capabilities": capabilities,
+        "checked_at": now.isoformat(),
+    }
 
 
 @router.get("/domains/{domain_name}", response_model=None)
-async def get_domain_health(
+def get_domain_health(
     domain_name: str,
-    health_service: PlatformHealthService = Depends(get_health_service),
-    adapter: PlatformEligibilityAdapter = Depends(get_adapter),
+    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
-    Get health for a specific domain.
+    Get health for a specific domain (lightweight version).
 
     Args:
         domain_name: Domain name (LOGS, INCIDENTS, KEYS, POLICY, KILLSWITCH, ACTIVITY)
 
     Returns:
-        DomainHealthView with:
-        - Domain state
-        - Per-capability health
-        - Healthy/degraded/blocked counts
+        Domain state with per-capability health summary
 
     Raises:
         404: Domain not found
     """
-    # Validate domain name
-    valid_domains = ["LOGS", "INCIDENTS", "KEYS", "POLICY", "KILLSWITCH", "ACTIVITY"]
-    if domain_name.upper() not in valid_domains:
+    from sqlalchemy import text
+
+    DOMAIN_CAPABILITIES = {
+        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
+        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
+        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
+        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
+        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
+        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
+    }
+
+    domain = domain_name.upper()
+    if domain not in DOMAIN_CAPABILITIES:
         raise HTTPException(
             status_code=404,
-            detail=f"Domain '{domain_name}' not found. Valid domains: {valid_domains}",
+            detail=f"Domain '{domain_name}' not found. Valid domains: {list(DOMAIN_CAPABILITIES.keys())}",
         )
 
-    domain_health = health_service.get_domain_health(domain_name.upper())
-    view = adapter.domain_to_view(domain_health)
+    # Single query to get blocked scopes
+    blocked_result = session.execute(
+        text("""
+            SELECT DISTINCT scope FROM governance_signals
+            WHERE decision = 'BLOCKED'
+            AND superseded_at IS NULL
+            AND (expires_at IS NULL OR expires_at > NOW())
+        """)
+    ).fetchall()
 
-    return _dataclass_to_dict(view)
+    blocked_scopes = {row[0] for row in blocked_result}
+    system_blocked = "SYSTEM" in blocked_scopes
+
+    # Build capability list for this domain
+    capabilities = []
+    healthy_count = 0
+    blocked_count = 0
+
+    for cap_name in DOMAIN_CAPABILITIES[domain]:
+        is_blocked = system_blocked or cap_name in blocked_scopes or cap_name == "KILLSWITCH_STATUS"
+
+        capabilities.append({
+            "name": cap_name,
+            "is_eligible": not is_blocked,
+            "state": "BLOCKED" if is_blocked else "HEALTHY",
+        })
+
+        if is_blocked:
+            blocked_count += 1
+        else:
+            healthy_count += 1
+
+    # Domain state: BLOCKED if all caps blocked, DEGRADED if any blocked, else HEALTHY
+    if blocked_count == len(capabilities):
+        domain_state = "BLOCKED"
+    elif blocked_count > 0:
+        domain_state = "DEGRADED"
+    else:
+        domain_state = "HEALTHY"
+
+    return {
+        "domain": domain,
+        "state": domain_state,
+        "healthy_count": healthy_count,
+        "blocked_count": blocked_count,
+        "capabilities": capabilities,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.get("/capabilities/{capability_name}", response_model=None)
-async def get_capability_health(
+def get_capability_health(
     capability_name: str,
-    health_service: PlatformHealthService = Depends(get_health_service),
-    adapter: PlatformEligibilityAdapter = Depends(get_adapter),
+    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
-    Get health for a specific capability.
+    Get health for a specific capability (lightweight version).
 
     Args:
         capability_name: Capability name (e.g., LOGS_LIST, INCIDENTS_DETAIL)
 
     Returns:
-        CapabilityHealthView with:
-        - Capability state
-        - Eligibility status
-        - Qualifier and lifecycle status
-        - Health reasons
+        Capability state with eligibility and any blocking reasons
 
     Raises:
         404: Capability not found
     """
-    # Get all valid capabilities
-    all_capabilities = []
-    for caps in health_service.DOMAIN_CAPABILITIES.values():
-        all_capabilities.extend(caps)
+    from sqlalchemy import text
 
-    if capability_name.upper() not in all_capabilities:
+    DOMAIN_CAPABILITIES = {
+        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
+        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
+        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
+        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
+        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
+        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
+    }
+
+    all_capabilities = []
+    cap_to_domain = {}
+    for domain, caps in DOMAIN_CAPABILITIES.items():
+        all_capabilities.extend(caps)
+        for cap in caps:
+            cap_to_domain[cap] = domain
+
+    cap_name = capability_name.upper()
+    if cap_name not in all_capabilities:
         raise HTTPException(
             status_code=404,
             detail=f"Capability '{capability_name}' not found. Valid capabilities: {sorted(all_capabilities)}",
         )
 
-    cap_health = health_service.get_capability_health(capability_name.upper())
-    view = adapter.capability_to_view(cap_health)
+    # Get any blocking/warning signals for this capability
+    signals_result = session.execute(
+        text("""
+            SELECT signal_type, decision, reason, recorded_by, recorded_at
+            FROM governance_signals
+            WHERE (scope = :cap_name OR scope = 'SYSTEM')
+            AND decision IN ('BLOCKED', 'WARN')
+            AND superseded_at IS NULL
+            AND (expires_at IS NULL OR expires_at > NOW())
+            ORDER BY recorded_at DESC
+            LIMIT 5
+        """),
+        {"cap_name": cap_name}
+    ).fetchall()
 
-    return _dataclass_to_dict(view)
+    reasons = []
+    is_blocked = False
+    is_degraded = False
+
+    for row in signals_result:
+        signal_type, decision, reason, recorded_by, recorded_at = row
+        if decision == "BLOCKED":
+            is_blocked = True
+        elif decision == "WARN":
+            is_degraded = True
+        reasons.append({
+            "signal_type": signal_type,
+            "decision": decision,
+            "reason": reason or f"Signal from {recorded_by}",
+            "recorded_at": recorded_at.isoformat() if recorded_at else None,
+        })
+
+    # Check hardcoded disqualified
+    if cap_name == "KILLSWITCH_STATUS":
+        is_blocked = True
+        reasons.append({
+            "signal_type": "QUALIFIER_STATUS",
+            "decision": "DISQUALIFIED",
+            "reason": "Hardcoded disqualification per CAPABILITY_LIFECYCLE.yaml",
+            "recorded_at": None,
+        })
+
+    # Determine state
+    if is_blocked:
+        state = "BLOCKED"
+    elif is_degraded:
+        state = "DEGRADED"
+    else:
+        state = "HEALTHY"
+
+    return {
+        "capability": cap_name,
+        "domain": cap_to_domain[cap_name],
+        "state": state,
+        "is_eligible": not is_blocked,
+        "reasons": reasons,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.get("/eligibility/{capability_name}")
-async def check_capability_eligibility(
+def check_capability_eligibility(
     capability_name: str,
-    health_service: PlatformHealthService = Depends(get_health_service),
+    session: Session = Depends(get_session),
 ) -> Dict[str, Any]:
     """
-    Quick eligibility check for a capability.
+    Quick eligibility check for a capability (lightweight version).
+
+    Uses direct SQL to check for blocking signals in a single query.
 
     Args:
         capability_name: Capability name
@@ -220,47 +397,55 @@ async def check_capability_eligibility(
     Raises:
         404: Capability not found
     """
-    # Get all valid capabilities
+    from sqlalchemy import text
+
+    # Valid capabilities
+    DOMAIN_CAPABILITIES = {
+        "LOGS": ["LOGS_LIST", "LOGS_DETAIL", "LOGS_EXPORT"],
+        "INCIDENTS": ["INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACKNOWLEDGE", "INCIDENT_RESOLVE"],
+        "KEYS": ["KEYS_LIST", "KEYS_FREEZE", "KEYS_UNFREEZE"],
+        "POLICY": ["POLICY_CONSTRAINTS", "GUARDRAIL_DETAIL"],
+        "KILLSWITCH": ["KILLSWITCH_STATUS", "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
+        "ACTIVITY": ["ACTIVITY_LIST", "ACTIVITY_DETAIL"],
+    }
+
     all_capabilities = []
-    for caps in health_service.DOMAIN_CAPABILITIES.values():
+    for caps in DOMAIN_CAPABILITIES.values():
         all_capabilities.extend(caps)
 
-    if capability_name.upper() not in all_capabilities:
+    cap_name = capability_name.upper()
+    if cap_name not in all_capabilities:
         raise HTTPException(
             status_code=404,
             detail=f"Capability '{capability_name}' not found",
         )
 
-    cap_health = health_service.get_capability_health(capability_name.upper())
+    # Single query to check for blocking signals
+    blocked_result = session.execute(
+        text("""
+            SELECT COUNT(*) FROM governance_signals
+            WHERE (scope = :cap_name OR scope = 'SYSTEM')
+            AND decision = 'BLOCKED'
+            AND superseded_at IS NULL
+            AND (expires_at IS NULL OR expires_at > NOW())
+        """),
+        {"cap_name": cap_name}
+    ).scalar()
+
+    is_blocked = (blocked_result or 0) > 0
+
+    # Check for hardcoded disqualified (KILLSWITCH_STATUS per CAPABILITY_LIFECYCLE.yaml)
+    if cap_name == "KILLSWITCH_STATUS":
+        is_blocked = True
+
+    # Determine state
+    state = "BLOCKED" if is_blocked else "HEALTHY"
 
     return {
-        "capability": capability_name.upper(),
-        "is_eligible": cap_health.is_eligible(),
-        "state": cap_health.state.value,
+        "capability": cap_name,
+        "is_eligible": not is_blocked,
+        "state": state,
         "checked_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
-
-
-def _dataclass_to_dict(obj: Any) -> Dict[str, Any]:
-    """
-    Convert a dataclass to a dictionary, handling nested dataclasses.
-
-    This is a simple recursive conversion for JSON serialization.
-    """
-    if hasattr(obj, "__dataclass_fields__"):
-        result = {}
-        for field_name in obj.__dataclass_fields__:
-            value = getattr(obj, field_name)
-            result[field_name] = _dataclass_to_dict(value)
-        return result
-    elif isinstance(obj, list):
-        return [_dataclass_to_dict(item) for item in obj]
-    elif isinstance(obj, dict):
-        return {key: _dataclass_to_dict(value) for key, value in obj.items()}
-    else:
-        return obj

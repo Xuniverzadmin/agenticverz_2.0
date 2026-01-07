@@ -1,0 +1,289 @@
+# =============================================================================
+# EXECUTION ENVELOPE SCHEMA — PIN-330
+# =============================================================================
+#
+# Reference: PIN-330 (Implicit Authority Hardening)
+# Purpose: Convert implicit authority into explicit, attributable evidence
+# Created: 2026-01-06
+# Version: 1.0.0
+#
+# CONSTRAINTS:
+#   - This schema enables attribution ONLY
+#   - No enforcement, blocking, or behavior changes
+#   - Failure to emit envelope does NOT block execution
+#   - All fields are evidence, not policy gates
+#
+# =============================================================================
+
+schema_version: "1.0.0"
+pin_reference: "PIN-330"
+created: "2026-01-06"
+
+# =============================================================================
+# EXECUTION ENVELOPE DEFINITION
+# =============================================================================
+
+execution_envelope:
+  description: |
+    Single canonical schema used by CLI, SDK, and auto-execute paths.
+    Converts implicit authority into explicit, attributable evidence.
+    Does NOT grant, deny, or block execution.
+
+  fields:
+
+    # -------------------------------------------------------------------------
+    # Core Identity
+    # -------------------------------------------------------------------------
+    envelope_id:
+      type: string
+      format: uuid
+      required: true
+      description: "Unique identifier for this execution envelope"
+      immutable: true
+
+    capability_id:
+      type: string
+      enum: [CAP-020, CAP-021, SUB-019]
+      required: true
+      description: "The capability being exercised"
+      immutable: true
+
+    execution_vector:
+      type: string
+      enum: [CLI, SDK, AUTO_EXEC]
+      required: true
+      description: "The entry point through which execution was triggered"
+      immutable: true
+
+    # -------------------------------------------------------------------------
+    # Caller Identity (Attribution Core)
+    # -------------------------------------------------------------------------
+    caller_identity:
+      type: object
+      required: true
+      description: "Who triggered this execution"
+      properties:
+        type:
+          type: string
+          enum: [human, service, system]
+          required: true
+          description: "Classification of the caller"
+        subject:
+          type: string
+          required: true
+          description: "Primary identity (user_id, service_id, or system component)"
+        impersonated_subject:
+          type: string
+          required: false
+          description: "Target identity if impersonation is used (--by parameter)"
+        impersonation_declared:
+          type: boolean
+          default: false
+          description: "Whether impersonation was explicitly declared"
+
+    # -------------------------------------------------------------------------
+    # Tenant Context
+    # -------------------------------------------------------------------------
+    tenant_context:
+      type: object
+      required: true
+      description: "Tenant isolation context"
+      properties:
+        tenant_id:
+          type: string
+          required: true
+          description: "Tenant identifier"
+        account_id:
+          type: string
+          required: false
+          description: "Account identifier (if applicable)"
+        project_id:
+          type: string
+          required: false
+          description: "Project identifier (if applicable)"
+
+    # -------------------------------------------------------------------------
+    # Invocation Tracking
+    # -------------------------------------------------------------------------
+    invocation:
+      type: object
+      required: true
+      description: "Invocation-level tracking"
+      properties:
+        invocation_id:
+          type: string
+          format: uuid
+          required: true
+          description: "Unique invocation identifier (changes if plan mutates)"
+          immutable: false  # May be regenerated on mutation
+        timestamp:
+          type: string
+          format: iso8601
+          required: true
+          description: "When this invocation was created"
+          immutable: true
+        sequence_number:
+          type: integer
+          required: false
+          description: "Sequence within a session (for mutation tracking)"
+
+    # -------------------------------------------------------------------------
+    # Plan Integrity (Anti-Injection Evidence)
+    # -------------------------------------------------------------------------
+    plan:
+      type: object
+      required: true
+      description: "Plan integrity evidence"
+      properties:
+        input_hash:
+          type: string
+          format: sha256
+          required: true
+          description: "Hash of raw input before any transformation"
+          immutable: true
+        resolved_plan_hash:
+          type: string
+          format: sha256
+          required: true
+          description: "Hash of resolved execution plan"
+          immutable: false  # Tracked across mutations
+        plan_mutation_detected:
+          type: boolean
+          default: false
+          description: "Whether plan changed mid-execution"
+        original_invocation_id:
+          type: string
+          format: uuid
+          required: false
+          description: "Original invocation_id if this is a mutation continuation"
+
+    # -------------------------------------------------------------------------
+    # Confidence & Decision Context (SUB-019 Auto-Execute)
+    # -------------------------------------------------------------------------
+    confidence:
+      type: object
+      required: false
+      description: "Confidence scoring for auto-execute paths"
+      properties:
+        score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          required: false
+          description: "Confidence score (e.g., 0.8 threshold for auto-execute)"
+        threshold_used:
+          type: number
+          format: float
+          required: false
+          description: "The threshold that was applied"
+        auto_execute_triggered:
+          type: boolean
+          default: false
+          description: "Whether auto-execution was triggered by this confidence"
+
+    # -------------------------------------------------------------------------
+    # Attribution Metadata
+    # -------------------------------------------------------------------------
+    attribution:
+      type: object
+      required: true
+      description: "Attribution and provenance metadata"
+      properties:
+        reason_code:
+          type: string
+          required: false
+          description: "Human-readable reason code for this execution"
+        origin:
+          type: string
+          default: "PIN-330"
+          description: "The governance origin that created this envelope"
+        source_command:
+          type: string
+          required: false
+          description: "The original command or method name"
+        sdk_version:
+          type: string
+          required: false
+          description: "SDK version if execution_vector is SDK"
+        cli_version:
+          type: string
+          required: false
+          description: "CLI version if execution_vector is CLI"
+
+    # -------------------------------------------------------------------------
+    # Evidence Emission Metadata
+    # -------------------------------------------------------------------------
+    evidence:
+      type: object
+      required: true
+      description: "Evidence emission tracking"
+      properties:
+        emitted_at:
+          type: string
+          format: iso8601
+          required: true
+          description: "When this envelope was emitted to storage"
+        storage_location:
+          type: string
+          required: false
+          description: "Where this envelope was stored"
+        emission_success:
+          type: boolean
+          default: true
+          description: "Whether emission succeeded (failure does NOT block)"
+
+# =============================================================================
+# INVARIANTS (EVIDENCE-ONLY, NO ENFORCEMENT)
+# =============================================================================
+
+invariants:
+  - id: INV-001
+    rule: "Envelope creation failure MUST NOT block execution"
+    enforcement: EVIDENCE_ONLY
+
+  - id: INV-002
+    rule: "Envelope is immutable once emitted (append-only storage)"
+    enforcement: STORAGE_LEVEL
+
+  - id: INV-003
+    rule: "Plan mutation generates new invocation_id but preserves original_invocation_id"
+    enforcement: EVIDENCE_ONLY
+
+  - id: INV-004
+    rule: "Missing impersonation declaration is audit finding, not execution blocker"
+    enforcement: EVIDENCE_ONLY
+
+  - id: INV-005
+    rule: "Auto-execute attribution records decision, does not grant/deny permission"
+    enforcement: EVIDENCE_ONLY
+
+# =============================================================================
+# CAPABILITY MAPPING
+# =============================================================================
+
+capability_mapping:
+  CAP-020:
+    name: "CLI Execution"
+    execution_vector: CLI
+    envelope_trigger: "CLI command entry point"
+    impersonation_risk: "--by parameter"
+    plan_injection_risk: "--plan parameter"
+
+  CAP-021:
+    name: "SDK Execution"
+    execution_vector: SDK
+    envelope_trigger: "SDK method invocation"
+    impersonation_risk: "force_skill parameter"
+    plan_injection_risk: "plan parameter on create_run"
+
+  SUB-019:
+    name: "Failure Recovery Processing"
+    execution_vector: AUTO_EXEC
+    envelope_trigger: "confidence >= threshold triggers auto-execute"
+    confidence_based: true
+    threshold_default: 0.8
+
+# =============================================================================
+# END OF SCHEMA
+# =============================================================================

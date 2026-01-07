@@ -1,0 +1,24 @@
+{
+  "journey_id": "JRN-007",
+  "capability_id": "CAP-003",
+  "executed_at": "2026-01-06T11:51:20.366356Z",
+  "base_url": "http://localhost:8000",
+  "route": "/api/v1/policy-proposals",
+  "method": "GET",
+  "status_code": 403,
+  "response_headers": {
+    "date": "Tue, 06 Jan 2026 11:51:19 GMT",
+    "server": "uvicorn",
+    "content-length": "83",
+    "content-type": "application/json",
+    "x-request-id": "ceae6df3-6119-45bb-8f05-251b9fdf62ff",
+    "connection": "close"
+  },
+  "response_body": "{\"error\":\"forbidden\",\"reason\":\"no-credentials\",\"resource\":\"policy\",\"action\":\"read\"}",
+  "response_time_ms": 12.84,
+  "expected_status": 200,
+  "status_match": false,
+  "error": "HTTP Error 403: Forbidden",
+  "error_type": "HTTPError",
+  "suggested_failure_type": "AUTH_MISMATCH"
+}

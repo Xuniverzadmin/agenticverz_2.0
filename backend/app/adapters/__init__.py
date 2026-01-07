@@ -55,7 +55,15 @@ from app.adapters.customer_policies_adapter import (
     get_customer_policies_adapter,
 )
 
-# QUARANTINE (PIN-317): founder_review_adapter moved to quarantine - no frontend consumer
+# RESTORED: founder_contract_review_adapter (CRM workflow) - unified review page created
+from app.adapters.founder_contract_review_adapter import (
+    FounderContractDetailView,
+    FounderContractSummaryView,
+    FounderReviewAdapter,
+    FounderReviewDecision,
+    FounderReviewQueueResponse,
+    FounderReviewResult,
+)
 from app.adapters.platform_eligibility_adapter import (
     CapabilityEligibilityView,
     CapabilityHealthView,

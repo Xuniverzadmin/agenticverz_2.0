@@ -1,0 +1,419 @@
+# =============================================================================
+# INVOCATION SAFETY CONTRACT V1 — PIN-332
+# =============================================================================
+#
+# Reference: PIN-332 (Invocation Safety Closure for CLI & SDK)
+# Prerequisites: PIN-330 (Evidence Attribution), PIN-331 (Authority Closure)
+# Created: 2026-01-06
+# Schema: V1.0.0
+#
+# PURPOSE:
+#   Define shared safety contract applied to ALL CLI and SDK invocations.
+#   Contract is capability-level (CAP-020, CAP-021), not per-method.
+#
+# SCOPE:
+#   - CAP-020: CLI Execution
+#   - CAP-021: SDK Execution
+#
+# ENFORCEMENT MODE:
+#   v1: OBSERVE_WARN (no hard blocks except invalid data)
+#   Future: Selective enforcement after evidence review
+#
+# CONSTRAINTS:
+#   - Does NOT change authority declarations (PIN-331)
+#   - Does NOT add RBAC per command/method
+#   - Does NOT touch L2 core execution logic
+#   - Fixes live ONLY at invocation boundary
+#
+# =============================================================================
+
+contract_version: "1.0.0"
+pin_reference: "PIN-332"
+created: "2026-01-06"
+enforcement_mode: "OBSERVE_WARN"
+
+# =============================================================================
+# SECTION 1: INVOCATION SAFETY CONTRACT
+# =============================================================================
+
+invocation_safety_contract:
+
+  # ---------------------------------------------------------------------------
+  # 1. Identity Validation
+  # ---------------------------------------------------------------------------
+  identity_validation:
+    description: "Caller identity must be resolved and impersonation must be explicit"
+
+    rules:
+      - id: ID-001
+        name: "Caller Identity Resolution"
+        requirement: "caller_identity must be resolved before invocation"
+        check: "caller_identity != null AND caller_identity.subject != null"
+        on_failure: "WARN"
+        envelope_flag: "identity_unresolved"
+
+      - id: ID-002
+        name: "Impersonation Declaration"
+        requirement: "impersonation must be explicitly declared with reason"
+        check: "IF impersonated_subject != null THEN impersonation_declared == true AND reason_code != null"
+        on_failure: "WARN"
+        envelope_flag: "impersonation_missing"
+
+      - id: ID-003
+        name: "Impersonation Reason Required"
+        requirement: "--by parameter must include reason for CLI, force_skill must be justified for SDK"
+        check: "IF impersonation THEN reason_code IS NOT EMPTY"
+        on_failure: "WARN"
+        envelope_flag: "impersonation_reason_missing"
+
+  # ---------------------------------------------------------------------------
+  # 2. Target Ownership
+  # ---------------------------------------------------------------------------
+  target_ownership:
+    description: "Target resources must belong to caller's tenant"
+
+    rules:
+      - id: OWN-001
+        name: "Agent Ownership"
+        requirement: "agent_id must belong to caller's tenant"
+        check: "agent.tenant_id == caller.tenant_id"
+        on_failure: "WARN"
+        envelope_flag: "ownership_violation"
+        applies_to:
+          - "create_agent"
+          - "post_goal"
+          - "recall"
+
+      - id: OWN-002
+        name: "Run Ownership"
+        requirement: "run_id must belong to caller's tenant"
+        check: "run.tenant_id == caller.tenant_id"
+        on_failure: "WARN"
+        envelope_flag: "ownership_violation"
+        applies_to:
+          - "get_run"
+          - "poll_run"
+          - "cancel_run"
+
+      - id: OWN-003
+        name: "Tenant Scoping for Queries"
+        requirement: "query results must be tenant-scoped"
+        check: "query.filter INCLUDES tenant_id == caller.tenant_id"
+        on_failure: "WARN"
+        envelope_flag: "tenant_scope_missing"
+        applies_to:
+          - "aos query"
+          - "aos recovery candidates"
+          - "aos capabilities"
+
+  # ---------------------------------------------------------------------------
+  # 3. Input Trust
+  # ---------------------------------------------------------------------------
+  input_trust:
+    description: "Client-provided inputs must be validated or sanitized"
+
+    rules:
+      - id: INPUT-001
+        name: "Budget Validation"
+        requirement: "client-provided budget must not exceed tenant limits"
+        check: "input.budget <= tenant.budget_limit OR input.budget IS NULL"
+        on_failure: "OVERRIDE"
+        action: "Use tenant budget limit instead"
+        envelope_flag: "budget_override_applied"
+        applies_to:
+          - "aos simulate --plan"
+          - "simulate()"
+
+      - id: INPUT-002
+        name: "Plan Immutability Post-Hash"
+        requirement: "plan inputs must be immutable after hash computation"
+        check: "plan_hash == compute_hash(current_plan)"
+        on_failure: "WARN"
+        envelope_flag: "plan_mutation_attempt"
+        applies_to:
+          - "aos simulate --plan"
+          - "create_run(plan=...)"
+
+      - id: INPUT-003
+        name: "Plan Parameter Injection Prevention"
+        requirement: "plan parameter cannot override security-critical fields"
+        check: "plan.tenant_id IS NULL AND plan.caller_id IS NULL"
+        on_failure: "REJECT"
+        envelope_flag: "plan_injection_blocked"
+
+  # ---------------------------------------------------------------------------
+  # 4. Integrity
+  # ---------------------------------------------------------------------------
+  integrity:
+    description: "Execution artifacts must maintain cryptographic integrity"
+
+    rules:
+      - id: INT-001
+        name: "Trace Hash Completeness"
+        requirement: "trace hash must include all audit-critical fields"
+        check: "trace_hash INCLUDES [timestamp, step_id, caller_id, outcome]"
+        on_failure: "WARN"
+        envelope_flag: "integrity_mismatch"
+        applies_to:
+          - "Trace.finalize()"
+          - "Trace.verify()"
+
+      - id: INT-002
+        name: "Replay Field Inclusion"
+        requirement: "replay-critical fields must be in execution hash"
+        check: "execution_hash INCLUDES [replay_id, step_sequence, deterministic_seed]"
+        on_failure: "WARN"
+        envelope_flag: "integrity_mismatch"
+
+      - id: INT-003
+        name: "Idempotency Key Collision Safety"
+        requirement: "idempotency keys must be tenant-scoped and collision-safe"
+        check: "idempotency_key INCLUDES tenant_id PREFIX"
+        on_failure: "WARN"
+        envelope_flag: "idempotency_collision_risk"
+
+  # ---------------------------------------------------------------------------
+  # 5. Rate Envelope
+  # ---------------------------------------------------------------------------
+  rate_envelope:
+    description: "High-frequency operations must respect rate limits"
+
+    rules:
+      - id: RATE-001
+        name: "Polling Rate Limit"
+        requirement: "poll_run calls must respect per-tenant rate limits"
+        check: "poll_count_per_minute <= rate_limit.polling"
+        on_failure: "WARN"
+        envelope_flag: "rate_threshold_exceeded"
+        default_limit: 60
+        applies_to:
+          - "poll_run()"
+
+      - id: RATE-002
+        name: "Query Rate Limit"
+        requirement: "query calls must respect per-tenant rate limits"
+        check: "query_count_per_minute <= rate_limit.query"
+        on_failure: "WARN"
+        envelope_flag: "rate_threshold_exceeded"
+        default_limit: 120
+        applies_to:
+          - "aos query"
+          - "query()"
+
+      - id: RATE-003
+        name: "Replay Rate Limit"
+        requirement: "replay operations must be rate-limited"
+        check: "replay_count_per_hour <= rate_limit.replay"
+        on_failure: "WARN"
+        envelope_flag: "rate_threshold_exceeded"
+        default_limit: 10
+
+# =============================================================================
+# SECTION 2: SAFETY FLAGS (ENVELOPE EXTENSION)
+# =============================================================================
+
+invocation_safety_flags:
+  description: "Flags added to execution envelope when safety checks fail"
+
+  flags:
+    - flag: "identity_unresolved"
+      severity: "WARNING"
+      description: "Caller identity could not be resolved"
+
+    - flag: "impersonation_missing"
+      severity: "WARNING"
+      description: "Impersonation used without explicit declaration"
+
+    - flag: "impersonation_reason_missing"
+      severity: "WARNING"
+      description: "Impersonation declared but reason not provided"
+
+    - flag: "ownership_violation"
+      severity: "WARNING"
+      description: "Target resource does not belong to caller's tenant"
+
+    - flag: "tenant_scope_missing"
+      severity: "WARNING"
+      description: "Query not properly tenant-scoped"
+
+    - flag: "budget_override_applied"
+      severity: "INFO"
+      description: "Client budget replaced with tenant limit"
+
+    - flag: "plan_mutation_attempt"
+      severity: "WARNING"
+      description: "Plan was modified after initial hash"
+
+    - flag: "plan_injection_blocked"
+      severity: "ERROR"
+      description: "Plan contained security-critical field injection"
+
+    - flag: "integrity_mismatch"
+      severity: "WARNING"
+      description: "Hash does not include all required fields"
+
+    - flag: "idempotency_collision_risk"
+      severity: "WARNING"
+      description: "Idempotency key not tenant-scoped"
+
+    - flag: "rate_threshold_exceeded"
+      severity: "WARNING"
+      description: "Operation exceeded rate limit threshold"
+
+# =============================================================================
+# SECTION 3: CAPABILITY MAPPING
+# =============================================================================
+
+capability_mapping:
+
+  CAP-020:
+    name: "CLI Execution"
+    commands:
+      - command: "aos query"
+        rules: [ID-001, OWN-003, RATE-002]
+
+      - command: "aos recovery approve/reject"
+        rules: [ID-001, ID-002, OWN-001, OWN-002]
+
+      - command: "aos capabilities"
+        rules: [ID-001, OWN-003]
+
+      - command: "aos simulate --plan"
+        rules: [ID-001, INPUT-001, INPUT-002, INPUT-003]
+
+      - command: "aos recovery candidates"
+        rules: [ID-001, OWN-003]
+
+      - command: "aos skills"
+        rules: [ID-001]
+
+      - command: "aos quickstart"
+        rules: [ID-001]
+        diagnostic_only: true
+
+  CAP-021:
+    name: "SDK Execution"
+    methods:
+      - method: "create_agent"
+        rules: [ID-001, OWN-001]
+
+      - method: "create_run"
+        rules: [ID-001, OWN-001, INPUT-002, INPUT-003]
+
+      - method: "post_goal"
+        rules: [ID-001, ID-002, OWN-001]
+
+      - method: "simulate"
+        rules: [ID-001, INPUT-001, INPUT-002]
+
+      - method: "recall"
+        rules: [ID-001, OWN-001]
+
+      - method: "get_run"
+        rules: [ID-001, OWN-002]
+
+      - method: "poll_run"
+        rules: [ID-001, OWN-002, RATE-001]
+
+      - method: "query"
+        rules: [ID-001, OWN-003, RATE-002]
+
+      - method: "Trace.finalize"
+        rules: [INT-001]
+
+      - method: "Trace.verify"
+        rules: [INT-001]
+
+      - method: "replay_step"
+        rules: [INT-002, RATE-003]
+
+      - method: "generate_idempotency_key"
+        rules: [INT-003]
+
+# =============================================================================
+# SECTION 4: ENFORCEMENT PROGRESSION
+# =============================================================================
+
+enforcement_progression:
+  description: "Safety checks progress through observe → warn → enforce"
+
+  v1_observe_warn:
+    status: "ACTIVE"
+    behavior:
+      - "Log safety check failures"
+      - "Add flags to execution envelope"
+      - "Emit metrics"
+      - "No hard blocks except INPUT-003 (injection)"
+    effective: "2026-01-06"
+
+  v2_selective_enforce:
+    status: "PLANNED"
+    behavior:
+      - "Block ownership violations"
+      - "Block impersonation without declaration"
+      - "Enforce rate limits"
+    requires: "Evidence review + founder approval"
+
+  v3_full_enforce:
+    status: "PLANNED"
+    behavior:
+      - "All rules enforced"
+      - "Violations blocked with clear error messages"
+    requires: "Policy ladder implementation"
+
+# =============================================================================
+# SECTION 5: METRICS
+# =============================================================================
+
+metrics:
+  counters:
+    - name: "cli_safety_warnings_total"
+      labels: ["flag", "command"]
+      description: "Total CLI safety warnings by flag type"
+
+    - name: "sdk_safety_warnings_total"
+      labels: ["flag", "method"]
+      description: "Total SDK safety warnings by flag type"
+
+    - name: "safety_check_passed_total"
+      labels: ["capability", "rule"]
+      description: "Total safety checks that passed"
+
+    - name: "safety_check_failed_total"
+      labels: ["capability", "rule", "severity"]
+      description: "Total safety checks that failed"
+
+  histograms:
+    - name: "poll_rate_per_tenant"
+      buckets: [1, 5, 10, 30, 60, 120]
+      description: "Polling rate distribution per tenant"
+
+# =============================================================================
+# SECTION 6: INTEGRATION POINTS
+# =============================================================================
+
+integration_points:
+
+  cli_entry:
+    location: "backend/cli/aos.py"
+    hook: "pre_invocation_safety_check"
+    description: "Single pre-invocation hook for all CLI commands"
+
+  sdk_python_entry:
+    location: "sdk/python/aos_sdk/client.py"
+    hook: "method_wrapper_safety_check"
+    description: "Wrapper around SDK methods for safety validation"
+
+  sdk_js_entry:
+    location: "sdk/js/aos-sdk/src/client.ts"
+    hook: "method_wrapper_safety_check"
+    description: "Wrapper around SDK methods for safety validation"
+
+  envelope_extension:
+    location: "backend/app/auth/execution_envelope.py"
+    field: "invocation_safety_flags"
+    description: "Safety flags added to execution envelope"
+
+# =============================================================================
+# END OF INVOCATION SAFETY CONTRACT V1 — PIN-332
+# =============================================================================

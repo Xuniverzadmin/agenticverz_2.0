@@ -1,0 +1,189 @@
+# =============================================================================
+# CAPABILITY REGISTRY SCHEMA V2 — PIN-327 Extension
+# =============================================================================
+#
+# Reference: PIN-327 (Capability Registration Finalization)
+# Created: 2026-01-06
+# Version: 2.0.0
+#
+# PURPOSE:
+#   Define the authoritative schema for capability registration.
+#   All executable power must be registered using this schema.
+#
+# INVARIANTS:
+#   - Every capability has exactly one status
+#   - Every capability has at least one execution vector
+#   - Registration is permanent (no silent removal)
+#   - Unclassifiable capabilities are DORMANT, not omitted
+#
+# =============================================================================
+
+schema_version: "2.0.0"
+schema_reference: "PIN-327"
+
+# =============================================================================
+# SECTION 1: CAPABILITY STATUS (MANDATORY)
+# =============================================================================
+
+status_enum:
+  FIRST_CLASS:
+    description: "Fully promoted, governed, and surfaceable capability"
+    requirements:
+      - authority_model must be DECLARED
+      - console_scope must NOT be UNDECIDED
+      - All execution vectors must be enumerated
+    restrictions:
+      - Cannot be demoted without founder approval
+      - Changes require governance review
+
+  DORMANT:
+    description: "Discovered but not yet promoted capability"
+    requirements:
+      - Must have origin PIN reference
+      - Must list all execution vectors
+    restrictions:
+      - Cannot be surfaced to console
+      - Cannot be invoked by frontend
+      - Requires promotion decision
+
+  SUBSTRATE:
+    description: "Foundational system capability, never user-invokable"
+    requirements:
+      - console_scope must be NONE
+      - invocable must be false
+      - Must have justification
+    restrictions:
+      - Cannot be promoted to FIRST_CLASS
+      - Cannot be surfaced to any console
+      - Never exposed to end users
+
+# =============================================================================
+# SECTION 2: EXECUTION VECTORS (MANDATORY)
+# =============================================================================
+
+execution_vector_enum:
+  http:
+    description: "HTTP API routes (L2)"
+    evidence_format: "route list"
+  worker:
+    description: "Background workers/tasks (L5)"
+    evidence_format: "worker list"
+  cli:
+    description: "CLI commands (L7)"
+    evidence_format: "command list"
+  sdk:
+    description: "SDK methods (L1)"
+    evidence_format: "method list"
+
+# =============================================================================
+# SECTION 3: AUTHORITY MODEL (MANDATORY)
+# =============================================================================
+
+authority_model_enum:
+  DECLARED:
+    description: "Authority rules explicitly defined and enforced"
+    requirements:
+      - RBAC permissions defined
+      - Scope rules declared
+      - Audit trail enabled
+  UNCLASSIFIED:
+    description: "Authority rules not yet defined"
+    restrictions:
+      - Cannot be FIRST_CLASS
+      - Requires authority declaration before promotion
+
+# =============================================================================
+# SECTION 4: CONSOLE SCOPE (MANDATORY)
+# =============================================================================
+
+console_scope_enum:
+  CUSTOMER:
+    description: "Visible in customer console (console.agenticverz.com)"
+    restrictions:
+      - Must be tenant-isolated
+      - Must be READ_ONLY or explicitly governed for writes
+  FOUNDER:
+    description: "Visible in founder console (fops.agenticverz.com)"
+    restrictions:
+      - Founder RBAC required
+  SDK:
+    description: "SDK-only, not console visible"
+    restrictions:
+      - No frontend invocation
+      - SDK handles capability
+  NONE:
+    description: "Not visible in any console"
+    restrictions:
+      - Internal or substrate only
+  UNDECIDED:
+    description: "Console scope not yet determined"
+    restrictions:
+      - Cannot be FIRST_CLASS
+      - Requires scope decision before promotion
+
+# =============================================================================
+# SECTION 5: CAPABILITY ENTRY SCHEMA
+# =============================================================================
+
+capability_entry_schema:
+  # Required fields
+  required:
+    - capability_id          # CAP-XXX or LCAP-XXX
+    - name                   # Human-readable name
+    - status                 # FIRST_CLASS | DORMANT | SUBSTRATE
+    - execution_vectors      # [http, worker, cli, sdk]
+    - authority_model        # DECLARED | UNCLASSIFIED
+    - console_scope          # CUSTOMER | FOUNDER | SDK | NONE | UNDECIDED
+    - origin                 # PIN reference
+
+  # Optional but recommended
+  optional:
+    - description            # What does this capability do
+    - owner                  # platform | product | founder
+    - routes                 # List of HTTP routes
+    - workers                # List of worker names
+    - commands               # List of CLI commands
+    - methods                # List of SDK methods
+    - promotion_blockers     # Why can't this be promoted
+    - layer_violations       # Layer boundary issues
+    - authority_gaps         # Missing authority rules
+    - justification          # For SUBSTRATE status
+    - invocable              # For SUBSTRATE (always false)
+    - planes                 # Legacy compatibility
+    - lifecycle              # Legacy compatibility
+    - governance             # Legacy compatibility
+    - evidence               # Legacy compatibility
+    - gaps                   # Legacy compatibility
+
+# =============================================================================
+# SECTION 6: VALIDATION RULES
+# =============================================================================
+
+validation_rules:
+  - rule: "status_authority_consistency"
+    condition: "status == FIRST_CLASS"
+    requirement: "authority_model == DECLARED"
+
+  - rule: "status_scope_consistency"
+    condition: "status == FIRST_CLASS"
+    requirement: "console_scope != UNDECIDED"
+
+  - rule: "substrate_scope_consistency"
+    condition: "status == SUBSTRATE"
+    requirement: "console_scope == NONE"
+
+  - rule: "substrate_invocable_consistency"
+    condition: "status == SUBSTRATE"
+    requirement: "invocable == false"
+
+  - rule: "execution_vector_required"
+    condition: "always"
+    requirement: "len(execution_vectors) >= 1"
+
+  - rule: "origin_required"
+    condition: "always"
+    requirement: "origin is not null"
+
+# =============================================================================
+# END OF SCHEMA
+# =============================================================================

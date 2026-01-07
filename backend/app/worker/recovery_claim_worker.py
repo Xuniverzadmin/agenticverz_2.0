@@ -66,6 +66,70 @@ from sqlmodel import Session, create_engine
 
 logger = logging.getLogger("nova.worker.recovery_claim")
 
+
+# =============================================================================
+# EXECUTION KERNEL (PIN-337)
+# =============================================================================
+# Mandatory choke point for all AUTO_EXECUTE paths
+# Mode: PERMISSIVE (v1) - logs and allows, never blocks
+
+try:
+    from app.governance.kernel import (
+        ExecutionKernel,
+        InvocationContext as KernelContext,
+    )
+    KERNEL_AVAILABLE = True
+except ImportError:
+    # Kernel not available - continue without it (degraded mode)
+    KERNEL_AVAILABLE = False
+    ExecutionKernel = None
+    KernelContext = None
+
+
+def record_worker_invocation(
+    operation: str,
+    tenant_id: str = "system",
+    candidate_id: Optional[int] = None,
+) -> None:
+    """
+    Record worker execution through ExecutionKernel (PIN-337).
+
+    This is the AUTO_EXECUTE-side of the mandatory execution kernel choke point.
+    Workers are system-initiated, not user-initiated, so they use system context.
+
+    Args:
+        operation: The worker operation (e.g., "evaluate_candidate", "claim_batch")
+        tenant_id: The tenant context (default: "system" for background workers)
+        candidate_id: Optional ID of the candidate being processed
+    """
+    if not KERNEL_AVAILABLE or ExecutionKernel is None:
+        return  # Degraded mode - kernel not available
+
+    try:
+        context = KernelContext(
+            subject="system:recovery_worker",
+            tenant_id=tenant_id,
+            metadata={"candidate_id": candidate_id} if candidate_id else {},
+        )
+
+        # Record invocation (envelope + metrics)
+        # AUTO_EXEC capability maps to SUB-002 (Recovery/Execution substrate)
+        ExecutionKernel._emit_envelope(
+            capability_id="SUB-002",
+            execution_vector="AUTO_EXEC",
+            context=context,
+            reason=f"worker:{operation}",
+        )
+        ExecutionKernel._record_invocation_start(
+            capability_id="SUB-002",
+            execution_vector="AUTO_EXEC",
+            context=context,
+            enforcement_mode=ExecutionKernel._ENFORCEMENT_CONFIG.get("SUB-002", "permissive"),
+        )
+    except Exception as e:
+        # CRITICAL: Never block worker execution due to kernel failure
+        logger.warning(f"Kernel recording failed (non-blocking): {e}")
+
 # Configuration
 DEFAULT_BATCH_SIZE = int(os.getenv("RECOVERY_WORKER_BATCH_SIZE", "50"))
 DEFAULT_POLL_INTERVAL = int(os.getenv("RECOVERY_WORKER_POLL_INTERVAL", "10"))
@@ -237,6 +301,13 @@ class RecoveryClaimWorker:
         Returns:
             Evaluation result dict
         """
+        # PIN-337: Record individual candidate evaluation through ExecutionKernel
+        record_worker_invocation(
+            "evaluate_candidate",
+            tenant_id="system",
+            candidate_id=candidate.get("id"),
+        )
+
         from app.worker.recovery_evaluator import (
             FailureEvent,
             RecoveryEvaluator,
@@ -397,6 +468,9 @@ class RecoveryClaimWorker:
         Polls for unevaluated candidates and processes them.
         Runs until shutdown signal received.
         """
+        # PIN-337: Record worker session start through ExecutionKernel
+        record_worker_invocation("worker_start", tenant_id="system")
+
         logger.info(
             f"Starting recovery claim worker: batch_size={self.batch_size}, poll_interval={self.poll_interval}s"
         )

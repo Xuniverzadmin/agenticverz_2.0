@@ -1,0 +1,17 @@
+{
+  "journey_id": "JRN-001",
+  "capability_id": "CAP-001",
+  "executed_at": "2026-01-06T12:21:30.685926Z",
+  "base_url": "http://localhost:8000",
+  "route": "/api/v1/replay/test-incident/timeline",
+  "method": "GET",
+  "status_code": null,
+  "response_headers": {},
+  "response_body": null,
+  "response_time_ms": 30085.77,
+  "expected_status": 200,
+  "status_match": false,
+  "error": "timed out",
+  "error_type": "TimeoutError",
+  "suggested_failure_type": null
+}

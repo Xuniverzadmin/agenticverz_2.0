@@ -1,0 +1,24 @@
+{
+  "journey_id": "JRN-022",
+  "capability_id": "PLATFORM",
+  "executed_at": "2026-01-06T12:22:08.091602Z",
+  "base_url": "http://localhost:8000",
+  "route": "/health",
+  "method": "GET",
+  "status_code": 200,
+  "response_headers": {
+    "date": "Tue, 06 Jan 2026 12:21:09 GMT",
+    "server": "uvicorn",
+    "content-length": "109",
+    "content-type": "application/json",
+    "x-request-id": "13d05753-fea1-4034-9962-71aee42d759c",
+    "connection": "close"
+  },
+  "response_body": "{\"status\":\"healthy\",\"timestamp\":\"2026-01-06T12:22:08.093471+00:00\",\"service\":\"aos-backend\",\"version\":\"1.0.0\"}",
+  "response_time_ms": 4.27,
+  "expected_status": 200,
+  "status_match": true,
+  "error": null,
+  "error_type": null,
+  "suggested_failure_type": null
+}

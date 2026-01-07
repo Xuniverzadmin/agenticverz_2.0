@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-06 (PIN-319 Frontend Realignment - App Shell Architecture - Hardening)
+**Last Updated:** 2026-01-07 (PIN-346 GC_L Phase 2 DSL Core Implementation - Phase 2 Closure)
 
 ---
 
@@ -327,6 +327,31 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-312](PIN-312-cap018-approval-registry-stable.md) | **CAP-018 Approval & Registry Stable** | Capability Registry / Approval | **✅ COMPLETE** | 2026-01-05 |
 | [PIN-313](PIN-313-governance-hardening-gap-closure.md) | **Governance Hardening & Gap Closure** | Governance / Gap Closure | **✅ COMPLETE** | 2026-01-05 |
 | [PIN-319](PIN-319-frontend-realignment---app-shell-architecture.md) | **Frontend Realignment - App Shell Architecture** | Frontend / Architecture | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-320](PIN-320-l2-l21-governance-audit.md) | **L2 → L2.1 Governance Audit** | Governance / L2.1 Promotion | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-321](PIN-321-l2-l21-binding-execution.md) | **L2 → L2.1 Binding Execution** | Governance / L2.1 Execution | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-322](PIN-322-l2-l21-progressive-activation.md) | **L2 ↔ L2.1 Progressive Activation** | Governance / L2.1 Discovery | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-323](PIN-323-l2-l21-audit-reinforcement.md) | **L2 ↔ L2.1 Audit Reinforcement** | Governance / Audit Reinforcement | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-324](PIN-324-capability-console-classification.md) | **Capability Console Classification (L2.1/L1 Reference)** | Governance / Console Classification | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-325](PIN-325-shadow-capability-forensic-audit.md) | **Shadow Capability & Implicit Power Forensic Audit** | Governance / Security Audit | **🚨 CRITICAL FINDINGS** | 2026-01-06 |
+| [PIN-326](PIN-326-dormant-capability-elicitation.md) | **Dormant → Declared Capability Elicitation** | Governance / Capability Elicitation | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-327](PIN-327-capability-registration-finalization.md) | **Capability Registration Finalization (First-Class, Dormant, Substrate)** | Governance / Capability Registration | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-328](PIN-328-dormant-promotion-decisions.md) | **DORMANT Promotion Decisions** | Governance / Capability Promotion | **⏳ AWAITING_HUMAN_DECISION** | 2026-01-06 |
+| [PIN-329](PIN-329-capability-promotion-merge-report.md) | **Capability Promotion & Merge Report** | Governance / Capability Registry | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-330](PIN-330-implicit-authority-hardening-report.md) | **Implicit Authority Hardening Report** | Governance / Security Hardening | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-331](PIN-331-authority-closure-report.md) | **Authority Declaration & Inheritance Closure Report** | Governance / Authority Closure | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-332](PIN-332-invocation-safety-closure-report.md) | **Invocation Safety Closure Report** | Governance / Invocation Safety | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-333](PIN-333-founder-auto-execute-review-closure.md) | **Founder AUTO_EXECUTE Review Dashboard Closure** | Founder Console / Review | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-334](PIN-334-crm-unquarantine-unified-review.md) | **CRM Unquarantine & Unified Founder Review Page** | Founder Console / Feature Integration | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-335](PIN-335-capability-registry-closure.md) | **Capability Registry Closure** | Governance / Registry Closure | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-336](PIN-336-admin-routes-capability-mapping.md) | **Admin Routes Capability Mapping** | Governance / Route Mapping | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-337](PIN-337-closure-report.md) | **Governance Enforcement Infrastructure Closure** | Governance / Enforcement | **✅ COMPLETE** | 2026-01-06 |
+| [PIN-338](PIN-338-governance-validator-baseline.md) | **Governance Validator Baseline** | Governance / Baseline | **✅ BASELINE** | 2026-01-06 |
+| [PIN-339](PIN-339-gc-l-customer-console-reclassification.md) | **Customer Console Capability Reclassification (GC-L)** | Governance / Customer Console | **✅ APPROVED** | 2026-01-06 |
+| [PIN-340](PIN-340-gc-l-implementation-specification.md) | **GC_L Implementation Specification** | Governance / Implementation | **READY** | 2026-01-07 |
+| [PIN-341](PIN-341-gc-l-formal-governance-pillars.md) | **GC_L Formal Governance Pillars** | Governance / Formal Spec | **AUTHORITATIVE** | 2026-01-07 |
+| [PIN-342](PIN-342-gc-l-ui-contract-interpreter-hashchain.md) | **GC_L UI Contract, Interpreter, Hash-Chain** | Governance / Enforcement | **NORMATIVE** | 2026-01-07 |
+| [PIN-343](PIN-343-gc-l-ir-optimizer-confidence-anchoring.md) | **GC_L IR Optimizer, Confidence, Anchoring** | Governance / Runtime | **SPECIFICATION** | 2026-01-07 |
+| [PIN-346](PIN-346-gcl-phase-2-dsl-core-implementation.md) | **GC_L Phase 2 DSL Core Implementation** | GC_L / DSL Implementation | **✅ COMPLETE** | 2026-01-07 |
 
 ---
 
@@ -1096,6 +1121,30 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-07 | **PIN-346 GC_L Phase 2 DSL Core Implementation** - Updated: Phase 2 Closure |
+| 2026-01-07 | **PIN-346 GC_L Phase 2 DSL Core Implementation** - Created via memory_trail. |
+| 2026-01-07 | **PIN-343 GC_L IR Optimizer, Confidence, Anchoring** - SPECIFICATION: (1) Policy DSL→IR bytecode compiler with 10-instruction closed set, 3 optimization passes, (2) Signal confidence calibration with temporal decay (λ rates) and human feedback learning, (3) Daily root hash anchoring with external export targets. Immutability enforced by triggers. |
+| 2026-01-07 | **PIN-342 GC_L UI Contract, Interpreter, Hash-Chain** - NORMATIVE: (1) UI Irreversible-Action Contract with endpoint mapping and metadata schema, (2) Pure Policy DSL Interpreter with TypeScript reference implementation, (3) Signal→Facilitation Compiler (RECOMMEND_ONLY), (4) Hash-Chain Verification algorithm. Backend rejects 409 GOVERNANCE_VIOLATION on contract breach. |
+| 2026-01-07 | **PIN-341 GC_L Formal Governance Pillars** - AUTHORITATIVE: Three formal specifications: (1) Policy DSL EBNF grammar (non-Turing-complete, no loops/functions/side-effects), (2) FACILITATION Signal Catalog v1 (21 signals across 5 categories), (3) GC_L Audit & Replay Format (immutable append-only log with hash chain). Trust boundary frozen. |
+| 2026-01-07 | **PIN-340 GC_L Implementation Specification** - READY: Full implementation spec for Policy Library (3 Postgres tables, lifecycle state machine), GC_L API Contract (7 customer endpoints with confirmation gates), FACILITATION Engine (signal catalog, export formats). Trust boundary locked: Human-only execution authority. |
+| 2026-01-06 | **PIN-339 Customer Console Capability Reclassification (GC-L)** - APPROVED: 6 Customer Console capabilities upgraded to GC_L (Governed Control with Learning). Constitution v1.3.0 with Section 6.4 (GC_L) and 6.5 (FACILITATION). Policy Library schema defined. 18 core templates. Learning permitted, enforcement without human action forbidden. |
+| 2026-01-06 | **PIN-338 Governance Validator Baseline** - BASELINE: Post-PIN-337 governance snapshot. 5 EXECUTE paths (3 compliant, 2 deferred), 18 valid capability bindings, 0 violations. |
+| 2026-01-06 | **PIN-337 Governance Enforcement Infrastructure Closure** - COMPLETE: ExecutionKernel created as mandatory choke point. CI validators for kernel usage and capability bindings. PERMISSIVE v1 mode verified. |
+| 2026-01-06 | **PIN-334 CRM Unquarantine & Unified Founder Review Page** - COMPLETE: Restored quarantined CRM contract review files (PIN-293). Merged with AUTO_EXECUTE review dashboard into unified tabbed page at `/fops/review`. Fixed broken adapter imports. |
+| 2026-01-06 | **PIN-333 Founder AUTO_EXECUTE Review Dashboard Closure** - COMPLETE: Evidence-only dashboard for AUTO_EXECUTE decisions. 16/16 non-interference tests passed. Read-only architecture enforced. |
+| 2026-01-06 | **PIN-332 Invocation Safety Closure Report** - COMPLETE: AUTO_EXECUTE invocation safety analysis. Authorization checks verified. All decision paths documented. |
+| 2026-01-06 | **PIN-331 Authority Declaration & Inheritance Closure Report** - COMPLETE: All 21 FIRST_CLASS capabilities have explicit authority. 12 implicit gaps annotated. LCAP inheritance asserted. Authority gap question re-answered: NO hidden gaps remain. |
+| 2026-01-06 | **PIN-330 Implicit Authority Hardening Report** - COMPLETE: Evidence-first hardening for CAP-020 (CLI), CAP-021 (SDK), SUB-019 (Auto-Execute). 24/24 tests passed. No runtime behavior altered. |
+| 2026-01-06 | **PIN-329 Capability Promotion & Merge Report** - COMPLETE: All 103 DORMANT processed. 13 internalized as SUBSTRATE. 46 merged into existing CAPs. 3 new CAPs created (CAP-019, CAP-020, CAP-021). Final: 21 FIRST_CLASS, 20 SUBSTRATE, 0 DORMANT. |
+| 2026-01-06 | **PIN-328 DORMANT Promotion Decisions** - CREATED: Decision framework for 103 DORMANT, 67 authority gaps, 41 CLI/SDK ungoverned, 1 critical auto-execute gate. Awaiting human decisions. |
+| 2026-01-06 | **PIN-327 Capability Registration Finalization** - COMPLETE: 128 capabilities registered (18 FIRST_CLASS + 103 DORMANT + 7 SUBSTRATE), V2.0.0 schema enforced, 0 unregistered capabilities. |
+| 2026-01-06 | **PIN-326 Dormant Capability Elicitation** - COMPLETE: 103 LCAP declared, 436 entry points enumerated, 0% shadow (all dormant), ready for human governance decisions. |
+| 2026-01-06 | **PIN-325 Shadow Capability Forensic Audit** - CRITICAL FINDINGS: 185 shadow capabilities, 7 implicit authority paths, 92% routes unmapped. |
+| 2026-01-06 | **PIN-324 Capability Console Classification** - Created: L2.1/L1 reference for 18 capabilities across 5 categories. |
+| 2026-01-06 | **PIN-323 L2 ↔ L2.1 Audit Reinforcement** - Completed: 6 phases, all 5 certification questions YES, L1 readiness HIGHER CONFIDENCE. |
+| 2026-01-06 | **PIN-322 L2 ↔ L2.1 Progressive Activation** - Completed: Discovery ledger, 6 blocked clients, 6 client gaps identified. |
+| 2026-01-06 | **PIN-321 L2 → L2.1 Binding Execution** - Completed: 23 canonical journeys executed, RBAC verified. |
+| 2026-01-06 | **PIN-320 L2 → L2.1 Governance Audit** - Completed: Full capability registry governance audit. |
 | 2026-01-06 | **PIN-319 Frontend Realignment - App Shell Architecture** - Updated: Hardening |
 | 2026-01-06 | **PIN-319 Frontend Realignment - App Shell Architecture** - Created via memory_trail. |
 | 2026-01-05 | **PIN-313 Governance Hardening & Gap Closure** - Completed all 14 tasks, 0 blocking gaps remaining. |

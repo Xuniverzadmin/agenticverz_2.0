@@ -75,6 +75,12 @@ const ScenarioBuilderPage = lazy(() => import('@fops/pages/founder/ScenarioBuild
 // Phase H3: Founder Explorer (FOUNDER - READ-ONLY Cross-Tenant)
 const FounderExplorerPage = lazy(() => import('@fops/pages/founder/FounderExplorerPage'));
 
+// PIN-333: AUTO_EXECUTE Review Dashboard (FOUNDER - READ-ONLY Evidence)
+const AutoExecuteReviewPage = lazy(() => import('@fops/pages/founder/AutoExecuteReviewPage'));
+
+// Unified Founder Review Dashboard (AUTO_EXECUTE + Contract Review)
+const FounderReviewPage = lazy(() => import('@fops/pages/founder/FounderReviewPage'));
+
 // =============================================================================
 // ONBOARDING PAGES (website/onboarding/)
 //
@@ -222,6 +228,12 @@ export function AppRoutes() {
 
           {/* Phase H3: Founder Explorer (FOUNDER - READ-ONLY Cross-Tenant) */}
           <Route path="fops/explorer" element={<FounderRoute><FounderExplorerPage /></FounderRoute>} />
+
+          {/* Unified Founder Review Dashboard (AUTO_EXECUTE + Contract Review) */}
+          <Route path="fops/review" element={<FounderRoute><FounderReviewPage /></FounderRoute>} />
+
+          {/* PIN-333: AUTO_EXECUTE Review Dashboard (FOUNDER - READ-ONLY Evidence) */}
+          <Route path="fops/review/auto-execute" element={<FounderRoute><AutoExecuteReviewPage /></FounderRoute>} />
 
           {/* Governance (FOUNDER) */}
           <Route path="fops/sba" element={<FounderRoute><SBAInspectorPage /></FounderRoute>} />

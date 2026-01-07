@@ -339,6 +339,14 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         "/docs",
         "/openapi.json",
         "/redoc",
+        # =================================================================
+        # FOUNDER ROUTES (PIN-336)
+        # These routes use dedicated FOPS auth via verify_fops_token.
+        # RBAC is bypassed; route handlers enforce FOPS token/key auth.
+        # =================================================================
+        "/founder/",  # Contract review, evidence review, timeline
+        "/ops/",  # Ops console actions (freeze, throttle, override)
+        "/platform/",  # Platform health (founder-only)
     ]
 
     for public_path in PUBLIC_PATHS:

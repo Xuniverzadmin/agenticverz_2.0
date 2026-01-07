@@ -1,0 +1,24 @@
+{
+  "journey_id": "JRN-023",
+  "capability_id": "PLATFORM",
+  "executed_at": "2026-01-06T12:22:08.096443Z",
+  "base_url": "http://localhost:8000",
+  "route": "/api/v1/killswitch/status",
+  "method": "GET",
+  "status_code": 403,
+  "response_headers": {
+    "date": "Tue, 06 Jan 2026 12:21:09 GMT",
+    "server": "uvicorn",
+    "content-length": "87",
+    "content-type": "application/json",
+    "x-request-id": "9bed18d9-afe2-46f3-bc12-52eb4b0ab6b2",
+    "connection": "close"
+  },
+  "response_body": "{\"error\":\"forbidden\",\"reason\":\"no-credentials\",\"resource\":\"killswitch\",\"action\":\"read\"}",
+  "response_time_ms": 3.51,
+  "expected_status": 200,
+  "status_match": false,
+  "error": "HTTP Error 403: Forbidden",
+  "error_type": "HTTPError",
+  "suggested_failure_type": "AUTH_MISMATCH"
+}

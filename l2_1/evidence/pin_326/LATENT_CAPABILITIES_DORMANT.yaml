@@ -1,0 +1,1355 @@
+# PIN-326: Latent Capability Declarations (DORMANT)
+# Generated: 2026-01-06
+# Status: ELICITATION ONLY - No fixes, no deletions
+# Purpose: Surface all shadow/dormant power into declared capabilities
+
+meta:
+  total_latent_capabilities: 103
+  status: DORMANT
+  governance_action: PENDING_HUMAN_DECISION
+  categories:
+    http_routes: 59
+    workers: 3
+    cli_commands: 10
+    sdk_python: 15
+    sdk_javascript: 16
+
+# =============================================================================
+# SECTION A: HTTP ROUTE CAPABILITIES (59 LCAP)
+# =============================================================================
+
+http_route_capabilities:
+
+  # --- AGENT AUTONOMY SYSTEM (10 capabilities) ---
+
+  LCAP-001:
+    name: Agent Lifecycle Management
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /agents
+      - GET /agents
+      - GET /agents/{agent_id}
+      - DELETE /agents/{agent_id}
+      - PUT /agents/{agent_id}
+    state_mutated: agents table
+    mapped_to_cap: null  # SHADOW - No CAP-XXX mapping
+    notes: "Agent creation, deletion, modification"
+
+  LCAP-002:
+    name: Agent Goal Submission
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /agents/{agent_id}/goals
+    state_mutated: runs table, execution queue
+    mapped_to_cap: null
+    notes: "Triggers execution pipeline"
+
+  LCAP-003:
+    name: Agent Run Monitoring
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /agents/{agent_id}/runs
+      - GET /agents/{agent_id}/runs/{run_id}
+    mapped_to_cap: null
+    notes: "Run status observation"
+
+  LCAP-004:
+    name: Agent Memory Operations
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - GET /agents/{agent_id}/recall
+      - POST /agents/{agent_id}/memory
+    state_mutated: memory table, embeddings
+    mapped_to_cap: null
+    notes: "Memory read/write for agents"
+
+  LCAP-005:
+    name: Agent Message Queue
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - POST /agents/{agent_id}/messages
+      - GET /agents/{agent_id}/messages
+    state_mutated: message queue
+    mapped_to_cap: null
+    notes: "Inter-agent messaging"
+
+  LCAP-006:
+    name: Blackboard Shared State
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - GET /blackboard/{key}
+      - PUT /blackboard/{key}
+      - DELETE /blackboard/{key}
+    state_mutated: blackboard table
+    mapped_to_cap: null
+    notes: "Multi-agent shared state coordination"
+
+  LCAP-007:
+    name: Agent Job Distribution
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /jobs
+      - GET /jobs
+      - GET /jobs/{job_id}
+      - PUT /jobs/{job_id}/claim
+    state_mutated: jobs table
+    mapped_to_cap: null
+    notes: "Distributed job queue for agents"
+
+  LCAP-008:
+    name: Agent Registration
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /agents/register
+    state_mutated: agents table
+    mapped_to_cap: null
+    notes: "SDK agent self-registration"
+
+  LCAP-009:
+    name: Agent Credits Management
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - GET /agents/{agent_id}/credits
+      - POST /agents/{agent_id}/credits/add
+    state_mutated: agent credits
+    mapped_to_cap: null
+    notes: "Agent budget/credit operations"
+
+  LCAP-010:
+    name: Agent Coordination Primitives
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /agents/{agent_id}/coordinate
+      - GET /agents/{agent_id}/coordination-status
+    state_mutated: coordination state
+    mapped_to_cap: null
+    notes: "Multi-agent coordination protocol"
+
+  # --- COST INTELLIGENCE (5 capabilities) ---
+
+  LCAP-011:
+    name: Cost Tracking & Visibility
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /cost/summary
+      - GET /cost/breakdown
+      - GET /cost/by-skill
+      - GET /cost/by-run
+      - GET /cost/history
+    mapped_to_cap: CAP-002  # Partial mapping
+    notes: "Cost observation routes"
+
+  LCAP-012:
+    name: Cost Simulation V2
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /api/v1/costsim/simulate
+      - POST /api/v1/costsim/scenarios
+      - GET /api/v1/costsim/status
+      - GET /api/v1/costsim/datasets
+    state_mutated: simulation results cache
+    mapped_to_cap: CAP-002  # Partial
+    notes: "Pre-execution cost estimation"
+
+  LCAP-013:
+    name: Cost Anomaly Detection
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /cost/anomalies
+      - GET /cost/alerts
+      - GET /cost/drift
+    mapped_to_cap: null
+    notes: "Cost anomaly surfacing"
+
+  LCAP-014:
+    name: Cost Control (Founder)
+    status: DORMANT
+    layer: L2
+    power_type: CONTROL
+    routes:
+      - POST /api/v1/costsim/reset
+      - POST /api/v1/costsim/validate
+      - POST /api/v1/costsim/canary/run
+      - GET /api/v1/costsim/canary/reports
+    state_mutated: costsim state
+    mapped_to_cap: CAP-002  # FOUNDER_ONLY subset
+    notes: "Founder-only cost controls"
+
+  LCAP-015:
+    name: Cost Feature Configuration
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - GET /cost/features
+      - PUT /cost/features
+    state_mutated: cost feature flags
+    mapped_to_cap: null
+    notes: "Cost feature toggles - uses CostWriteService"
+
+  # --- POLICY GOVERNANCE (4 capabilities) ---
+
+  LCAP-016:
+    name: Policy Evaluation
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /api/v1/policy/eval
+      - POST /api/v1/policy/batch-eval
+    state_mutated: evaluation results
+    mapped_to_cap: CAP-009  # Partial
+    notes: "Runtime policy evaluation"
+
+  LCAP-017:
+    name: Policy Administration
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - GET /api/v1/policies
+      - GET /api/v1/policies/{id}
+      - POST /api/v1/policies
+      - PUT /api/v1/policies/{id}
+      - DELETE /api/v1/policies/{id}
+    state_mutated: policies table
+    mapped_to_cap: CAP-009  # FOUNDER_ONLY subset
+    notes: "Policy CRUD operations"
+
+  LCAP-018:
+    name: Policy Versioning
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/policies/{id}/versions
+      - GET /api/v1/policies/{id}/diff
+    mapped_to_cap: null
+    notes: "Policy version history"
+
+  LCAP-019:
+    name: Policy Conflict Resolution
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/policies/conflicts
+      - POST /api/v1/policies/resolve-conflicts
+    state_mutated: conflict resolution decisions
+    mapped_to_cap: null
+    notes: "Policy conflict detection"
+
+  # --- INCIDENT MANAGEMENT (4 capabilities) ---
+
+  LCAP-020:
+    name: Incident Listing & Search
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/incidents
+      - GET /api/v1/incidents/search
+      - GET /api/v1/incidents/stats
+    mapped_to_cap: CAP-001  # Partial
+    notes: "Incident query and statistics"
+
+  LCAP-021:
+    name: Incident Detail & Analysis
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/incidents/{id}
+      - GET /api/v1/incidents/{id}/timeline
+      - GET /api/v1/incidents/{id}/impact
+    mapped_to_cap: CAP-001  # Partial
+    notes: "Incident deep inspection"
+
+  LCAP-022:
+    name: Incident Acknowledgment
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - POST /api/v1/incidents/{id}/acknowledge
+      - POST /api/v1/incidents/{id}/resolve
+    state_mutated: incident status
+    mapped_to_cap: CAP-001  # FOUNDER_ONLY
+    notes: "Incident state transitions"
+
+  LCAP-023:
+    name: Incident Aggregation
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/incidents/aggregated
+      - GET /api/v1/incidents/by-type
+      - GET /api/v1/incidents/by-severity
+    mapped_to_cap: null
+    notes: "Incident roll-ups and grouping"
+
+  # --- TRACE & REPLAY SYSTEM (4 capabilities) ---
+
+  LCAP-024:
+    name: Trace Observation
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/traces
+      - GET /api/v1/traces/{id}
+      - GET /api/v1/traces/{id}/steps
+    mapped_to_cap: CAP-001
+    notes: "Trace list and detail"
+
+  LCAP-025:
+    name: Trace Comparison & Determinism
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - POST /api/v1/traces/compare
+      - GET /api/v1/traces/{id}/hash
+      - GET /api/v1/traces/{id}/mismatches
+    mapped_to_cap: null
+    notes: "Trace hash comparison for replay"
+
+  LCAP-026:
+    name: Replay Execution
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /api/v1/replay/execute
+      - GET /api/v1/replay/{id}/status
+      - POST /api/v1/replay/{id}/abort
+    state_mutated: replay execution state
+    mapped_to_cap: CAP-001  # FOUNDER_ONLY
+    notes: "Replay initiation and control"
+
+  LCAP-027:
+    name: Replay Analysis
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/replay/slice
+      - GET /api/v1/replay/summary
+      - GET /api/v1/replay/timeline
+      - GET /api/v1/replay/explain
+    mapped_to_cap: CAP-001  # Customer subset
+    notes: "Replay observation routes"
+
+  # --- RECOVERY SYSTEM / M10 (5 capabilities) ---
+
+  LCAP-028:
+    name: Recovery Candidate Listing
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/recovery/candidates
+      - GET /api/v1/recovery/candidates/{id}
+    mapped_to_cap: CAP-018  # Partial
+    notes: "Recovery suggestion browsing"
+
+  LCAP-029:
+    name: Recovery Approval
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - POST /api/v1/recovery/approve
+      - POST /api/v1/recovery/reject
+    state_mutated: recovery candidate status
+    mapped_to_cap: CAP-018  # Partial
+    notes: "Human-in-the-loop approval"
+
+  LCAP-030:
+    name: Recovery Statistics
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/recovery/stats
+      - GET /api/v1/recovery/graduation
+    mapped_to_cap: CAP-018  # Partial
+    notes: "Recovery metrics"
+
+  LCAP-031:
+    name: Recovery Ingest
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - POST /api/v1/recovery/ingest
+    state_mutated: recovery_candidates table
+    mapped_to_cap: CAP-018
+    notes: "Failure ingestion for recovery"
+
+  LCAP-032:
+    name: Recovery Checkpoints
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/recovery/checkpoints
+    mapped_to_cap: CAP-018
+    notes: "Recovery checkpoint listing"
+
+  # --- FOUNDER ACTIONS (3 capabilities) ---
+
+  LCAP-033:
+    name: Founder Tenant Control
+    status: DORMANT
+    layer: L2
+    power_type: CONTROL
+    routes:
+      - POST /founder/actions/freeze-tenant
+      - POST /founder/actions/unfreeze-tenant
+      - POST /founder/actions/throttle-tenant
+    state_mutated: tenant state
+    mapped_to_cap: CAP-005  # FOUNDER_ONLY
+    notes: "Critical tenant containment"
+
+  LCAP-034:
+    name: Founder Incident Override
+    status: DORMANT
+    layer: L2
+    power_type: CONTROL
+    routes:
+      - POST /founder/actions/override-incident
+      - POST /founder/actions/force-resolve
+    state_mutated: incident state
+    mapped_to_cap: CAP-005  # FOUNDER_ONLY
+    notes: "Founder incident control"
+
+  LCAP-035:
+    name: Founder API Key Management
+    status: DORMANT
+    layer: L2
+    power_type: CONTROL
+    routes:
+      - POST /founder/actions/revoke-key
+      - POST /founder/actions/rotate-key
+    state_mutated: api_keys table
+    mapped_to_cap: CAP-005  # FOUNDER_ONLY
+    notes: "API key lifecycle control"
+
+  # --- OPS CONSOLE (5 capabilities) ---
+
+  LCAP-036:
+    name: Ops Pulse Dashboard
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /ops/pulse
+      - GET /ops/health
+      - GET /ops/metrics
+    mapped_to_cap: CAP-005  # Partial
+    side_effects: "Redis cache write on pulse"
+    notes: "System health overview"
+
+  LCAP-037:
+    name: Ops Customer Management
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /ops/customers
+      - GET /ops/customers/{id}
+      - GET /ops/customers/at-risk
+    mapped_to_cap: CAP-005  # Partial
+    side_effects: "Stickiness score caching, risk classification"
+    notes: "Customer health monitoring"
+
+  LCAP-038:
+    name: Ops Timeline
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /founder/timeline
+      - GET /founder/timeline/{id}
+    mapped_to_cap: CAP-005
+    notes: "Founder activity timeline"
+
+  LCAP-039:
+    name: Ops Controls
+    status: DORMANT
+    layer: L2
+    power_type: CONTROL
+    routes:
+      - GET /founder/controls
+      - PUT /founder/controls
+      - POST /founder/controls/killswitch
+    state_mutated: system controls
+    mapped_to_cap: CAP-005  # FOUNDER_ONLY
+    notes: "System-wide control toggles"
+
+  LCAP-040:
+    name: Ops Explorer
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /founder/explorer
+      - GET /founder/explorer/query
+    mapped_to_cap: CAP-005
+    notes: "Data exploration interface"
+
+  # --- RUNTIME API (5 capabilities) ---
+
+  LCAP-041:
+    name: Runtime Simulation
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - POST /api/v1/runtime/simulate
+    mapped_to_cap: CAP-016  # Partial
+    notes: "Plan feasibility check"
+
+  LCAP-042:
+    name: Runtime Query
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - POST /api/v1/runtime/query
+    mapped_to_cap: CAP-016  # Partial
+    notes: "Execution context query"
+
+  LCAP-043:
+    name: Runtime Capabilities
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/runtime/capabilities
+    mapped_to_cap: CAP-016  # Partial
+    notes: "Agent capability contract"
+
+  LCAP-044:
+    name: Runtime Skills
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/runtime/skills
+      - GET /api/v1/runtime/skills/{id}
+    mapped_to_cap: CAP-016  # Partial
+    notes: "Skill discovery and inspection"
+
+  LCAP-045:
+    name: Runtime Resource Contracts
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/runtime/resource-contract/{id}
+    mapped_to_cap: CAP-016  # Partial
+    notes: "Resource budget contracts"
+
+  # --- RUN MANAGEMENT (3 capabilities) ---
+
+  LCAP-046:
+    name: Run Creation
+    status: DORMANT
+    layer: L2
+    power_type: EXECUTE
+    routes:
+      - POST /api/v1/runs
+    state_mutated: runs table
+    mapped_to_cap: null
+    notes: "Direct run creation (bypasses agent)"
+
+  LCAP-047:
+    name: Run Status
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/runs/{id}
+      - GET /api/v1/runs
+    mapped_to_cap: null
+    notes: "Run status observation"
+
+  LCAP-048:
+    name: Run Control
+    status: DORMANT
+    layer: L2
+    power_type: CONTROL
+    routes:
+      - POST /api/v1/runs/{id}/cancel
+      - POST /api/v1/runs/{id}/pause
+      - POST /api/v1/runs/{id}/resume
+    state_mutated: run state
+    mapped_to_cap: null
+    notes: "Run lifecycle control"
+
+  # --- GUARD SYSTEM (3 capabilities) ---
+
+  LCAP-049:
+    name: Guard Status
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /guard/status
+      - GET /guard/incidents
+      - GET /guard/incidents/{id}
+    mapped_to_cap: CAP-001  # Partial
+    notes: "Guard system status"
+
+  LCAP-050:
+    name: Guard Keys
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /guard/keys
+      - GET /guard/settings
+    mapped_to_cap: CAP-001  # Partial
+    notes: "Guard configuration view"
+
+  LCAP-051:
+    name: Guard Policies
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /guard/policies
+      - GET /guard/policies/{id}
+    mapped_to_cap: CAP-009  # Customer READ
+    notes: "Policy view through guard"
+
+  # --- PREDICTIONS (2 capabilities) ---
+
+  LCAP-052:
+    name: Prediction Query
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/predictions
+      - GET /api/v1/predictions/{id}
+    mapped_to_cap: CAP-004
+    notes: "Prediction plane access"
+
+  LCAP-053:
+    name: Prediction Inference
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - POST /api/v1/predictions/infer
+    mapped_to_cap: CAP-004
+    notes: "On-demand prediction"
+
+  # --- MEMORY SYSTEM (2 capabilities) ---
+
+  LCAP-054:
+    name: Memory Query
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/memory
+      - GET /api/v1/memory/{id}
+      - GET /api/v1/memory/search
+    mapped_to_cap: CAP-014
+    notes: "Memory system access"
+
+  LCAP-055:
+    name: Embedding Operations
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/embedding
+      - POST /api/v1/embedding/query
+    mapped_to_cap: CAP-014
+    notes: "Embedding search"
+
+  # --- INTEGRATION PLATFORM (2 capabilities) ---
+
+  LCAP-056:
+    name: Integration Status
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/integration
+      - GET /api/v1/integration/status
+      - GET /api/v1/integration/connections
+    mapped_to_cap: CAP-018
+    notes: "Integration health"
+
+  LCAP-057:
+    name: Integration Webhooks
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - POST /api/v1/integration/webhooks
+      - DELETE /api/v1/integration/webhooks/{id}
+    state_mutated: webhook configuration
+    mapped_to_cap: CAP-018
+    notes: "Webhook management"
+
+  # --- FAILURES & LOGS (2 capabilities) ---
+
+  LCAP-058:
+    name: Failure Observation
+    status: DORMANT
+    layer: L2
+    power_type: READ_ONLY
+    routes:
+      - GET /api/v1/failures
+      - GET /api/v1/failures/stats
+      - GET /api/v1/failures/unrecovered
+    mapped_to_cap: CAP-001
+    notes: "Failure list and stats"
+
+  LCAP-059:
+    name: Governance Review
+    status: DORMANT
+    layer: L2
+    power_type: WRITE
+    routes:
+      - GET /founder/review
+      - POST /founder/review/{id}/approve
+      - POST /founder/review/{id}/reject
+    state_mutated: review decisions
+    mapped_to_cap: CAP-011
+    notes: "Governance approval workflow"
+
+# =============================================================================
+# SECTION B: WORKER CAPABILITIES (3 LCAP)
+# =============================================================================
+
+worker_capabilities:
+
+  LCAP-WKR-001:
+    name: Run Execution & Dispatch
+    status: DORMANT
+    layer: L5
+    power_type: AUTO_EXECUTE
+    location:
+      - backend/app/worker/pool.py
+      - backend/app/worker/runner.py
+    trigger: scheduler
+    autonomous_decisions:
+      - Run queue polling
+      - ThreadPool dispatch
+      - Budget enforcement
+      - Retry logic
+    state_mutated:
+      - runs table (queued → running → succeeded/failed)
+      - memory table
+      - provenance table
+    layer_access:
+      - L5 → L6 (EXPECTED by design)
+    notes: "Core execution engine"
+
+  LCAP-WKR-002:
+    name: Failure Recovery Processing
+    status: DORMANT
+    layer: L5
+    power_type: AUTO_EXECUTE
+    location:
+      - backend/app/worker/recovery_claim_worker.py
+      - backend/app/worker/recovery_evaluator.py
+    trigger: scheduler
+    autonomous_decisions:
+      - Candidate claiming (FOR UPDATE SKIP LOCKED)
+      - Recovery action selection
+      - Auto-execution at confidence >= 0.8
+    state_mutated:
+      - recovery_candidates table
+      - suggestion_provenance table
+    implicit_authority:
+      - AUTO_EXECUTE without capability gate when confidence >= 0.8
+    notes: "M10 recovery pipeline"
+
+  LCAP-WKR-003:
+    name: External Delivery & Outbox
+    status: DORMANT
+    layer: L5
+    power_type: AUTO_EXECUTE
+    location:
+      - backend/app/worker/outbox_processor.py
+    trigger: scheduler
+    autonomous_decisions:
+      - Event claiming
+      - HTTP call execution
+      - Retry with backoff
+      - Dead-letter routing
+    state_mutated:
+      - outbox_events table
+    external_calls:
+      - HTTP POST to configured webhooks
+      - Slack notifications
+    notes: "Outbox pattern processor"
+
+# =============================================================================
+# SECTION C: CLI CAPABILITIES (10 LCAP)
+# =============================================================================
+
+cli_capabilities:
+
+  LCAP-CLI-001:
+    name: Plan Simulation
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos simulate --plan <json>"
+    api_endpoints:
+      - POST /api/v1/runtime/simulate
+    implicit_authority:
+      - Budget checking not enforced
+      - Plan accepted without validation
+    notes: "Pre-execution feasibility"
+
+  LCAP-CLI-002:
+    name: Runtime Query
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos query <type>"
+    api_endpoints:
+      - POST /api/v1/runtime/query
+    implicit_authority:
+      - Can query any agent (no ownership check)
+    notes: "Execution context inspection"
+
+  LCAP-CLI-003:
+    name: Skill Discovery
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos skills"
+    api_endpoints:
+      - GET /api/v1/runtime/skills
+    notes: "List available skills"
+
+  LCAP-CLI-004:
+    name: Skill Inspection
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos skill <id>"
+    api_endpoints:
+      - GET /api/v1/runtime/skills/{id}
+    implicit_authority:
+      - Exposes failure mode probabilities
+    notes: "Detailed skill descriptor"
+
+  LCAP-CLI-005:
+    name: Capability Contract
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos capabilities"
+    api_endpoints:
+      - GET /api/v1/runtime/capabilities
+    implicit_authority:
+      - Can query any agent/tenant
+      - Reveals rate limit state
+    notes: "Agent capability inspection"
+
+  LCAP-CLI-006:
+    name: Recovery Candidate Browse
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos recovery candidates"
+    api_endpoints:
+      - GET /api/v1/recovery/candidates
+    implicit_authority:
+      - No user validation
+      - Cross-run visibility
+    notes: "M10 recovery listing"
+
+  LCAP-CLI-007:
+    name: Recovery Approval
+    status: DORMANT
+    layer: L7
+    power_type: WRITE
+    command: "aos recovery approve/reject"
+    api_endpoints:
+      - POST /api/v1/recovery/approve
+    implicit_authority:
+      - --by parameter is client-provided (impersonation possible)
+    notes: "Human-in-the-loop decision"
+
+  LCAP-CLI-008:
+    name: Recovery Statistics
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos recovery stats"
+    api_endpoints:
+      - GET /api/v1/recovery/stats
+    notes: "Recovery metrics"
+
+  LCAP-CLI-009:
+    name: Version Info
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos version"
+    api_endpoints:
+      - GET /version
+    notes: "System version"
+
+  LCAP-CLI-010:
+    name: Quickstart Validation
+    status: DORMANT
+    layer: L7
+    power_type: READ_ONLY
+    command: "aos quickstart"
+    api_endpoints:
+      - GET /health
+      - GET /api/v1/runtime/capabilities
+    implicit_authority:
+      - Health endpoint is always-open
+    notes: "Setup verification"
+
+# =============================================================================
+# SECTION D: SDK CAPABILITIES (31 LCAP)
+# =============================================================================
+
+sdk_capabilities:
+
+  # --- Python SDK (15) ---
+
+  LCAP-SDK-PY-001:
+    name: Python Simulate
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.simulate()"
+    api_endpoints:
+      - POST /api/v1/runtime/simulate
+    implicit_authority:
+      - No agent validation
+      - Budget client-provided
+    notes: "Python SDK simulation"
+
+  LCAP-SDK-PY-002:
+    name: Python Query
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.query()"
+    api_endpoints:
+      - POST /api/v1/runtime/query
+    notes: "Python SDK query"
+
+  LCAP-SDK-PY-003:
+    name: Python List Skills
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.list_skills()"
+    api_endpoints:
+      - GET /api/v1/runtime/skills
+    notes: "Python SDK skills"
+
+  LCAP-SDK-PY-004:
+    name: Python Describe Skill
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.describe_skill()"
+    api_endpoints:
+      - GET /api/v1/runtime/skills/{id}
+    notes: "Python SDK skill detail"
+
+  LCAP-SDK-PY-005:
+    name: Python Get Capabilities
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.get_capabilities()"
+    api_endpoints:
+      - GET /api/v1/runtime/capabilities
+    notes: "Python SDK capabilities"
+
+  LCAP-SDK-PY-006:
+    name: Python Resource Contract
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.get_resource_contract()"
+    api_endpoints:
+      - GET /api/v1/runtime/resource-contract/{id}
+    notes: "Python SDK resource"
+
+  LCAP-SDK-PY-007:
+    name: Python Create Agent
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    method: "AOSClient.create_agent()"
+    api_endpoints:
+      - POST /agents
+    implicit_authority:
+      - No validation of who can create agents
+    notes: "Python SDK agent creation"
+
+  LCAP-SDK-PY-008:
+    name: Python Post Goal
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    method: "AOSClient.post_goal()"
+    api_endpoints:
+      - POST /agents/{id}/goals
+    implicit_authority:
+      - force_skill bypasses planning
+      - No agent ownership validation
+    notes: "Python SDK goal submission"
+
+  LCAP-SDK-PY-009:
+    name: Python Poll Run
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.poll_run()"
+    api_endpoints:
+      - GET /agents/{id}/runs/{id}
+    implicit_authority:
+      - No rate limiting on polls
+    notes: "Python SDK run polling"
+
+  LCAP-SDK-PY-010:
+    name: Python Recall Memory
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.recall()"
+    api_endpoints:
+      - GET /agents/{id}/recall
+    implicit_authority:
+      - No query validation
+      - Memory scoping assumed, not enforced
+    notes: "Python SDK memory query"
+
+  LCAP-SDK-PY-011:
+    name: Python Create Run
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    method: "AOSClient.create_run()"
+    api_endpoints:
+      - POST /api/v1/runs
+    implicit_authority:
+      - Plan parameter allows injection
+    notes: "Python SDK direct run"
+
+  LCAP-SDK-PY-012:
+    name: Python Get Run
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.get_run()"
+    api_endpoints:
+      - GET /api/v1/runs/{id}
+    implicit_authority:
+      - No agent/user validation
+    notes: "Python SDK run status"
+
+  LCAP-SDK-PY-013:
+    name: Python RuntimeContext
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    class: RuntimeContext
+    methods:
+      - randint, random, choice, shuffle, uuid, timestamp
+    implicit_authority:
+      - Deterministic UUID generation
+      - RNG state captured
+    notes: "Deterministic simulation primitive"
+
+  LCAP-SDK-PY-014:
+    name: Python Trace
+    status: DORMANT
+    layer: L1
+    power_type: WRITE
+    class: Trace
+    methods:
+      - add_step, finalize, verify, save, load
+    implicit_authority:
+      - Audit fields not in hash (tamperable)
+    notes: "Execution recording"
+
+  LCAP-SDK-PY-015:
+    name: Python Replay
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    functions:
+      - replay_step, generate_idempotency_key, mark_idempotency_key_executed
+    implicit_authority:
+      - Global idempotency tracking
+      - Key collision possible
+    notes: "Idempotency protection"
+
+  # --- JavaScript SDK (16) ---
+
+  LCAP-SDK-JS-001:
+    name: JavaScript Simulate
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.simulate()"
+    api_endpoints:
+      - POST /api/v1/runtime/simulate
+    notes: "JS SDK simulation (parity with Python)"
+
+  LCAP-SDK-JS-002:
+    name: JavaScript Query
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.query()"
+    api_endpoints:
+      - POST /api/v1/runtime/query
+    notes: "JS SDK query"
+
+  LCAP-SDK-JS-003:
+    name: JavaScript List Skills
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.listSkills()"
+    api_endpoints:
+      - GET /api/v1/runtime/skills
+    notes: "JS SDK skills"
+
+  LCAP-SDK-JS-004:
+    name: JavaScript Describe Skill
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.describeSkill()"
+    api_endpoints:
+      - GET /api/v1/runtime/skills/{id}
+    notes: "JS SDK skill detail"
+
+  LCAP-SDK-JS-005:
+    name: JavaScript Get Capabilities
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.getCapabilities()"
+    api_endpoints:
+      - GET /api/v1/runtime/capabilities
+    notes: "JS SDK capabilities"
+
+  LCAP-SDK-JS-006:
+    name: JavaScript Resource Contract
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.getResourceContract()"
+    api_endpoints:
+      - GET /api/v1/runtime/resource-contract/{id}
+    notes: "JS SDK resource"
+
+  LCAP-SDK-JS-007:
+    name: JavaScript Create Agent
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    method: "AOSClient.createAgent()"
+    api_endpoints:
+      - POST /agents
+    notes: "JS SDK agent creation"
+
+  LCAP-SDK-JS-008:
+    name: JavaScript Post Goal
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    method: "AOSClient.postGoal()"
+    api_endpoints:
+      - POST /agents/{id}/goals
+    notes: "JS SDK goal submission"
+
+  LCAP-SDK-JS-009:
+    name: JavaScript Poll Run
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.pollRun()"
+    api_endpoints:
+      - GET /agents/{id}/runs/{id}
+    notes: "JS SDK run polling"
+
+  LCAP-SDK-JS-010:
+    name: JavaScript Recall Memory
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.recall()"
+    api_endpoints:
+      - GET /agents/{id}/recall
+    notes: "JS SDK memory query"
+
+  LCAP-SDK-JS-011:
+    name: JavaScript Create Run
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    method: "AOSClient.createRun()"
+    api_endpoints:
+      - POST /api/v1/runs
+    notes: "JS SDK direct run"
+
+  LCAP-SDK-JS-012:
+    name: JavaScript Get Run
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.getRun()"
+    api_endpoints:
+      - GET /api/v1/runs/{id}
+    notes: "JS SDK run status"
+
+  LCAP-SDK-JS-013:
+    name: JavaScript RuntimeContext
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    class: RuntimeContext
+    methods:
+      - randint, random, choice, shuffle, uuid, timestamp
+    notes: "JS deterministic primitive (xorshift32)"
+
+  LCAP-SDK-JS-014:
+    name: JavaScript Trace
+    status: DORMANT
+    layer: L1
+    power_type: WRITE
+    class: Trace
+    methods:
+      - addStep, finalize, verify, save, load
+    notes: "JS execution recording (hash parity with Python)"
+
+  LCAP-SDK-JS-015:
+    name: JavaScript Replay
+    status: DORMANT
+    layer: L1
+    power_type: EXECUTE
+    functions:
+      - replayStep, generateIdempotencyKey, markIdempotencyKeyExecuted
+    notes: "JS idempotency protection"
+
+  LCAP-SDK-JS-016:
+    name: JavaScript Health Check
+    status: DORMANT
+    layer: L1
+    power_type: READ_ONLY
+    method: "AOSClient.healthCheck()"
+    api_endpoints:
+      - GET /health
+    notes: "JS SDK health (not in Python SDK)"
+
+# =============================================================================
+# SECTION E: SUMMARY STATISTICS
+# =============================================================================
+
+summary:
+  total_capabilities: 103
+
+  by_layer:
+    L1_SDK: 31
+    L2_API: 59
+    L5_Worker: 3
+    L7_CLI: 10
+
+  by_power_type:
+    READ_ONLY: 52
+    EXECUTE: 24
+    WRITE: 15
+    CONTROL: 9
+    AUTO_EXECUTE: 3
+
+  by_mapping_status:
+    SHADOW_NO_CAP: 67  # No CAP-XXX mapping at all
+    PARTIAL_CAP: 33    # Mapped to CAP-XXX but routes not in allowed_routes
+    FULL_CAP: 3        # Properly mapped
+
+  critical_findings:
+    implicit_authority_gaps: 18
+    auto_execute_paths: 3
+    layer_violations: 2  # L5→L6 (expected by design)
+    no_ownership_validation: 14
+    impersonation_risks: 1  # --by parameter
+
+# =============================================================================
+# SECTION F: GOVERNANCE ACTION REQUIRED
+# =============================================================================
+
+governance_actions_pending:
+
+  decision_1:
+    question: "Should 67 SHADOW capabilities be added to CAPABILITY_REGISTRY?"
+    options:
+      - "Add all as new CAP-XXX entries"
+      - "Merge into existing CAP-XXX with expanded allowed_routes"
+      - "Declare some as FORBIDDEN (kill)"
+      - "Split into customer vs founder vs internal"
+
+  decision_2:
+    question: "Should AUTO_EXECUTE paths require explicit capability gates?"
+    affected:
+      - LCAP-WKR-002 (Recovery auto-execute at confidence >= 0.8)
+    options:
+      - "Add CAP-XXX for recovery:auto_execute"
+      - "Remove auto-execute, require human approval"
+      - "Accept as designed (internal worker authority)"
+
+  decision_3:
+    question: "Should implicit authority gaps be closed?"
+    affected:
+      - CLI --by parameter impersonation
+      - SDK no-owner-validation paths
+      - force_skill planning bypass
+    options:
+      - "Add validation to all affected paths"
+      - "Document as known limitations"
+      - "Accept for internal use only"

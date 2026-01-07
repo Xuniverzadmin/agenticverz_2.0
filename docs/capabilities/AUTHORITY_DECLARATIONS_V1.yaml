@@ -1,0 +1,676 @@
+# =============================================================================
+# AUTHORITY DECLARATIONS V1 — PIN-331 Authority Closure
+# =============================================================================
+#
+# Reference: PIN-331 (Authority Declaration & Inheritance Closure)
+# Prerequisites: PIN-329, PIN-330
+# Created: 2026-01-06
+# Schema: V1.0.0
+#
+# PURPOSE:
+#   Declare explicit authority requirements for every FIRST_CLASS capability.
+#   LCAPs inherit authority from their parent CAP.
+#   No authority at LCAP level — CAP-level only.
+#
+# AUTHORITY TYPES:
+#   - OBSERVE_OWN: Read data within tenant scope
+#   - OBSERVE_ANY: Read data across tenant boundaries (founder/admin)
+#   - INVOKE_OWN: Execute operations within tenant scope
+#   - INVOKE_ANY: Execute operations across tenant boundaries (system)
+#   - MUTATE_OWN: Modify data within tenant scope
+#   - MUTATE_ANY: Modify data across tenant boundaries (founder/admin)
+#   - ADMIN: Full administrative authority (founder only)
+#
+# SCOPE LEVELS:
+#   - project: Limited to selected project
+#   - tenant: Limited to tenant/organization
+#   - account: Limited to account (may span projects)
+#   - system: System-wide (internal capabilities)
+#
+# =============================================================================
+
+schema_version: "1.1.0"
+pin_reference: "PIN-339"
+previous_pin: "PIN-331"
+created: "2026-01-06"
+updated: "2026-01-06"
+
+# =============================================================================
+# PIN-339 AMENDMENT: GC_L and FACILITATION Power Types
+# =============================================================================
+#
+# GC_L (Governed Control with Learning) enables customers to configure their
+# own platform within Policy Library bounds. FACILITATION provides advisory
+# guidance. See CUSTOMER_CONSOLE_V1_CONSTITUTION.md Section 6.4 and 6.5.
+#
+# =============================================================================
+
+# =============================================================================
+# SECTION 1: FIRST_CLASS CAPABILITY AUTHORITY DECLARATIONS
+# =============================================================================
+
+first_class_authority:
+
+  # ---------------------------------------------------------------------------
+  # CAP-001: Execution Replay & Activity
+  # ---------------------------------------------------------------------------
+  CAP-001:
+    capability_id: CAP-001
+    name: "Execution Replay & Activity"
+    required_authority:
+      type: OBSERVE_OWN
+      scope: tenant
+      reason: "Read-only observation of execution history, traces, incidents, and failures within tenant boundary"
+    founder_escalation:
+      type: MUTATE_OWN
+      scope: tenant
+      routes:
+        - "POST /api/v1/replay/execute"
+        - "POST /guard/killswitch/*"
+        - "POST /guard/incidents/{id}/acknowledge"
+      reason: "Founder routes require mutation authority for killswitch and acknowledgment"
+
+  # ---------------------------------------------------------------------------
+  # CAP-002: Cost Simulation V2
+  # ---------------------------------------------------------------------------
+  # PIN-339: Upgraded to GC_L for customer budget/alert configuration
+  CAP-002:
+    capability_id: CAP-002
+    name: "Cost Simulation V2"
+    required_authority:
+      type: OBSERVE_OWN
+      scope: tenant
+      reason: "Cost simulation and observation are read-only operations within tenant"
+    gc_l_authority:  # PIN-339
+      type: GC_L
+      scope: tenant
+      reason: "Customer budget and alert configuration within Policy Library bounds"
+      gc_l_routes:
+        - "POST /cost/budgets/apply"
+        - "PUT /cost/alerts/configure"
+      policy_library_required:
+        - PLT-COST-001
+        - PLT-COST-002
+        - PLT-COST-003
+        - PLT-COST-004
+    founder_escalation:
+      type: MUTATE_OWN
+      scope: tenant
+      routes:
+        - "POST /costsim/v2/reset"
+        - "POST /costsim/canary/run"
+      reason: "Founder routes require mutation authority for reset and canary operations"
+
+  # ---------------------------------------------------------------------------
+  # CAP-003: Policy Proposals
+  # ---------------------------------------------------------------------------
+  # PIN-339: Upgraded to GC_L for customer proposal response
+  CAP-003:
+    capability_id: CAP-003
+    name: "Policy Proposals"
+    required_authority:
+      type: OBSERVE_OWN
+      scope: tenant
+      reason: "Read-only advisory view of policy proposals"
+    gc_l_authority:  # PIN-339
+      type: GC_L
+      scope: tenant
+      reason: "Customer accept/reject proposals for own resources"
+      gc_l_routes:
+        - "POST /api/v1/policy-proposals/{id}/accept"
+        - "POST /api/v1/policy-proposals/{id}/reject"
+      policy_library_required:
+        - PLT-PROP-001
+        - PLT-PROP-002
+        - PLT-PROP-003
+      note: "Creating new proposals remains FORBIDDEN"
+    forbidden_authority:
+      - "POST /api/v1/policy-proposals"
+      - "PUT /api/v1/policy-proposals/{id}"
+      - "DELETE /api/v1/policy-proposals/{id}"
+    reason: "Creating/modifying proposals explicitly forbidden for customer console"
+
+  # ---------------------------------------------------------------------------
+  # CAP-004: C2 Prediction Plane
+  # ---------------------------------------------------------------------------
+  # PIN-339: Upgraded to GC_L (limited) for prediction preference tuning
+  CAP-004:
+    capability_id: CAP-004
+    name: "C2 Prediction Plane"
+    required_authority:
+      type: OBSERVE_OWN
+      scope: tenant
+      reason: "Read-only ML predictions advisory within tenant"
+    gc_l_authority:  # PIN-339
+      type: GC_L
+      scope: tenant
+      reason: "Low-risk preference tuning for advisory predictions"
+      limited: true
+      gc_l_routes:
+        - "PUT /api/v1/predictions/preferences"
+      policy_library_required:
+        - PLT-PRED-001
+        - PLT-PRED-002
+        - PLT-PRED-003
+      note: "Limited GC_L - predictions remain advisory only"
+
+  # ---------------------------------------------------------------------------
+  # CAP-005: Founder Console
+  # ---------------------------------------------------------------------------
+  CAP-005:
+    capability_id: CAP-005
+    name: "Founder Console"
+    required_authority:
+      type: ADMIN
+      scope: system
+      reason: "Founder-only operations require full administrative authority across system"
+    cross_tenant: true
+    notes: "This is the only capability with cross-tenant visibility in normal operation"
+
+  # ---------------------------------------------------------------------------
+  # CAP-006: Authentication
+  # ---------------------------------------------------------------------------
+  CAP-006:
+    capability_id: CAP-006
+    name: "Authentication"
+    required_authority:
+      type: INVOKE_ANY
+      scope: system
+      reason: "Central auth gateway operates at system level for all identity flows"
+    notes: "Delegated to Clerk. No direct routes exposed."
+
+  # ---------------------------------------------------------------------------
+  # CAP-007: Authorization (RBAC v2)
+  # ---------------------------------------------------------------------------
+  CAP-007:
+    capability_id: CAP-007
+    name: "Authorization (RBAC v2)"
+    required_authority:
+      type: INVOKE_ANY
+      scope: system
+      reason: "Permission system operates at system level for all authorization decisions"
+    notes: "Internal middleware. No direct routes exposed."
+
+  # ---------------------------------------------------------------------------
+  # CAP-008: M12 Multi-Agent Orchestration
+  # ---------------------------------------------------------------------------
+  CAP-008:
+    capability_id: CAP-008
+    name: "M12 Multi-Agent Orchestration"
+    required_authority:
+      type: INVOKE_OWN
+      scope: tenant
+      reason: "Agent orchestration operates within tenant boundary via SDK"
+    inherits_from:
+      - SUB-008  # Agent Lifecycle Management
+      - SUB-013  # Blackboard Shared State
+      - SUB-014  # Agent Job Distribution
+    notes: "SDK-only. Authority inherited from SYSTEM-owned substrates."
+
+  # ---------------------------------------------------------------------------
+  # CAP-009: M19 Policy Engine
+  # ---------------------------------------------------------------------------
+  # PIN-339: CORE GC_L CAPABILITY - Customer policy selection and application
+  CAP-009:
+    capability_id: CAP-009
+    name: "M19 Policy Engine"
+    required_authority:
+      type: OBSERVE_OWN
+      scope: tenant
+      reason: "Policy evaluation and observation within tenant"
+    gc_l_authority:  # PIN-339 - CORE CAPABILITY
+      type: GC_L
+      scope: tenant
+      reason: "Core capability for customer self-governance via Policy Library"
+      core_capability: true
+      gc_l_routes:
+        - "POST /api/v1/policies/apply"
+        - "DELETE /api/v1/policies/{id}/binding"
+      policy_library_required:
+        - "Core Policy Library (all categories)"
+      conflict_detection: true
+      note: "Creating arbitrary policies remains FORBIDDEN - selection from Policy Library only"
+    founder_escalation:
+      type: MUTATE_OWN
+      scope: tenant
+      routes:
+        - "POST /api/v1/policies"
+        - "PUT /api/v1/policies/{id}"
+        - "DELETE /api/v1/policies/{id}"
+        - "POST /api/v1/policies/resolve-conflicts"
+      reason: "Founder routes require mutation authority for policy administration"
+
+  # ---------------------------------------------------------------------------
+  # CAP-010: M17 CARE-L Routing
+  # ---------------------------------------------------------------------------
+  CAP-010:
+    capability_id: CAP-010
+    name: "M17 CARE-L Routing"
+    required_authority:
+      type: INVOKE_ANY
+      scope: system
+      reason: "Internal routing capability operates at system level"
+    notes: "No exposed routes. Internal only."
+
+  # ---------------------------------------------------------------------------
+  # CAP-011: M28 Governance Orchestration
+  # ---------------------------------------------------------------------------
+  CAP-011:
+    capability_id: CAP-011
+    name: "M28 Governance Orchestration"
+    required_authority:
+      type: ADMIN
+      scope: system
+      reason: "Governance operations require full administrative authority"
+    notes: "Founder-only capability for contract execution and governance review"
+
+  # ---------------------------------------------------------------------------
+  # CAP-012: M4 Workflow Engine
+  # ---------------------------------------------------------------------------
+  CAP-012:
+    capability_id: CAP-012
+    name: "M4 Workflow Engine"
+    required_authority:
+      type: INVOKE_OWN
+      scope: tenant
+      reason: "Workflow execution operates within tenant boundary"
+    inherits_from:
+      - SUB-018  # Run Execution & Dispatch
+    notes: "Internal execution capability. No direct API."
+
+  # ---------------------------------------------------------------------------
+  # CAP-013: M5 Learning Pipeline
+  # ---------------------------------------------------------------------------
+  CAP-013:
+    capability_id: CAP-013
+    name: "M5 Learning Pipeline"
+    required_authority:
+      type: INVOKE_ANY
+      scope: system
+      reason: "Internal learning capability operates at system level"
+    notes: "No exposed routes. Internal processing only."
+
+  # ---------------------------------------------------------------------------
+  # CAP-014: M7 Memory System
+  # ---------------------------------------------------------------------------
+  # PIN-339: Upgraded to GC_L (limited) for retention policy configuration
+  CAP-014:
+    capability_id: CAP-014
+    name: "M7 Memory System"
+    required_authority:
+      type: OBSERVE_OWN
+      scope: tenant
+      reason: "Memory queries are read-only within tenant boundary"
+    gc_l_authority:  # PIN-339
+      type: GC_L
+      scope: tenant
+      reason: "Customer-controlled data lifecycle for their own memory"
+      limited: true
+      gc_l_routes:
+        - "PUT /api/v1/memory/retention-policy"
+      policy_library_required:
+        - PLT-MEM-001
+        - PLT-MEM-002
+        - PLT-MEM-003
+      note: "Limited GC_L - retention configuration only"
+    forbidden_authority:
+      - "POST /api/v1/memory/*"
+      - "DELETE /api/v1/memory/*"
+    reason: "Direct memory mutation routes explicitly forbidden"
+    inherits_from:
+      - SUB-011  # Agent Memory Operations
+
+  # ---------------------------------------------------------------------------
+  # CAP-015: M22 Optimization Engine
+  # ---------------------------------------------------------------------------
+  CAP-015:
+    capability_id: CAP-015
+    name: "M22 Optimization Engine"
+    required_authority:
+      type: INVOKE_ANY
+      scope: system
+      reason: "Internal optimization capability operates at system level"
+    notes: "No exposed routes. Internal processing only."
+
+  # ---------------------------------------------------------------------------
+  # CAP-016: Skill System (M2/M3)
+  # ---------------------------------------------------------------------------
+  CAP-016:
+    capability_id: CAP-016
+    name: "Skill System (M2/M3)"
+    required_authority:
+      type: INVOKE_OWN
+      scope: tenant
+      reason: "Skill registration and execution operate within tenant boundary via SDK"
+    notes: "SDK-facing capability."
+
+  # ---------------------------------------------------------------------------
+  # CAP-017: Cross-Project Aggregation
+  # ---------------------------------------------------------------------------
+  CAP-017:
+    capability_id: CAP-017
+    name: "Cross-Project Aggregation"
+    required_authority:
+      type: ADMIN
+      scope: system
+      reason: "Cross-project operations require founder-level administrative authority"
+    cross_project: true
+    notes: "PLANNED capability. Not implemented. Founder-only if implemented."
+
+  # ---------------------------------------------------------------------------
+  # CAP-018: M25 Integration Platform
+  # ---------------------------------------------------------------------------
+  # PIN-339: Upgraded to GC_L for integration configuration
+  CAP-018:
+    capability_id: CAP-018
+    name: "M25 Integration Platform"
+    required_authority:
+      type: OBSERVE_OWN
+      scope: tenant
+      reason: "Integration observation within tenant boundary"
+    gc_l_authority:  # PIN-339
+      type: GC_L
+      scope: tenant
+      reason: "Customer integration and webhook configuration within bounds"
+      gc_l_routes:
+        - "POST /api/v1/integration/configure"
+        - "PUT /api/v1/integration/webhooks/{id}"
+      policy_library_required:
+        - PLT-INT-001
+        - PLT-INT-002
+        - PLT-INT-003
+      note: "Webhook endpoint creation requires founder approval; GC_L allows configuration only"
+    founder_escalation:
+      type: MUTATE_OWN
+      scope: tenant
+      routes:
+        - "POST /api/v1/recovery/ingest/*"
+        - "POST /api/v1/integration/webhooks"
+        - "DELETE /api/v1/integration/webhooks/{id}"
+      reason: "Founder routes require mutation authority for recovery ingest and webhook creation"
+    inherits_from:
+      - SUB-019  # Failure Recovery Processing
+
+  # ---------------------------------------------------------------------------
+  # CAP-019: Run Management
+  # ---------------------------------------------------------------------------
+  CAP-019:
+    capability_id: CAP-019
+    name: "Run Management"
+    required_authority:
+      type: INVOKE_OWN
+      scope: tenant
+      reason: "Run lifecycle control operates within tenant boundary via SDK"
+    inherits_from:
+      - SUB-018  # Run Execution & Dispatch
+    notes: "SDK-facing capability. Direct run control requires explicit governance."
+
+  # ---------------------------------------------------------------------------
+  # CAP-020: CLI Execution
+  # ---------------------------------------------------------------------------
+  CAP-020:
+    capability_id: CAP-020
+    name: "CLI Execution"
+    required_authority:
+      type: INVOKE_OWN
+      scope: tenant
+      reason: "CLI execution operates within tenant boundary"
+    implicit_authority_gaps:
+      - "Budget checking not enforced on simulation"
+      - "No ownership validation on queries"
+      - "--by parameter allows impersonation on approval"
+      - "Cross-run visibility on recovery candidates"
+    notes: |
+      CLI bypasses L2 API governance. Implicit authority gaps carried forward.
+      PIN-330 provides evidence attribution but does NOT grant permission.
+
+  # ---------------------------------------------------------------------------
+  # CAP-021: SDK Execution
+  # ---------------------------------------------------------------------------
+  CAP-021:
+    capability_id: CAP-021
+    name: "SDK Execution"
+    required_authority:
+      type: INVOKE_OWN
+      scope: tenant
+      reason: "SDK execution operates within tenant boundary"
+    implicit_authority_gaps:
+      - "No agent validation on creation"
+      - "force_skill bypasses planning"
+      - "Plan parameter allows injection"
+      - "No rate limiting on polls"
+      - "Memory scoping assumed, not enforced"
+      - "Audit fields not in hash (tamperable)"
+      - "Global idempotency tracking with collision risk"
+    notes: |
+      SDK operates at L1 (client-side), bypasses L2 API governance.
+      PIN-330 provides evidence attribution but does NOT grant permission.
+
+# =============================================================================
+# SECTION 2: SUBSTRATE AUTHORITY (SYSTEM-OWNED)
+# =============================================================================
+#
+# SUBSTRATE capabilities are SYSTEM-owned and have no user-invokable authority.
+# They exist to support FIRST_CLASS capabilities, which inherit from them.
+#
+# =============================================================================
+
+substrate_authority:
+
+  # Agent Internals (PIN-331 Phase 1.1)
+  SUB-008:
+    capability_id: SUB-008
+    name: "Agent Lifecycle Management"
+    owned_by: SYSTEM
+    user_invokable: false
+    inherited_by:
+      - CAP-008  # M12 Multi-Agent Orchestration
+
+  SUB-013:
+    capability_id: SUB-013
+    name: "Blackboard Shared State"
+    owned_by: SYSTEM
+    user_invokable: false
+    inherited_by:
+      - CAP-008  # M12 Multi-Agent Orchestration
+
+  SUB-014:
+    capability_id: SUB-014
+    name: "Agent Job Distribution"
+    owned_by: SYSTEM
+    user_invokable: false
+    inherited_by:
+      - CAP-008  # M12 Multi-Agent Orchestration
+
+  # Other SUBSTRATE capabilities (reference only)
+  SUB-011:
+    capability_id: SUB-011
+    name: "Agent Memory Operations"
+    owned_by: SYSTEM
+    user_invokable: false
+    inherited_by:
+      - CAP-014  # M7 Memory System
+
+  SUB-018:
+    capability_id: SUB-018
+    name: "Run Execution & Dispatch"
+    owned_by: SYSTEM
+    user_invokable: false
+    inherited_by:
+      - CAP-012  # M4 Workflow Engine
+      - CAP-019  # Run Management
+
+  SUB-019:
+    capability_id: SUB-019
+    name: "Failure Recovery Processing"
+    owned_by: SYSTEM
+    user_invokable: false
+    inherited_by:
+      - CAP-018  # M25 Integration Platform
+    implicit_authority_gap: "AUTO_EXECUTE without capability gate when confidence >= 0.8"
+    notes: |
+      CRITICAL: Auto-execution at confidence >= 0.8 has no explicit capability gate.
+      PIN-330 provides evidence attribution but does NOT block execution.
+      This remains a known authority gap for human decision.
+
+# =============================================================================
+# SECTION 3: AUTHORITY TYPE REFERENCE
+# =============================================================================
+
+authority_types:
+
+  OBSERVE_OWN:
+    description: "Read data within tenant scope"
+    grants: [read]
+    scope: tenant
+    cross_tenant: false
+
+  # PIN-339: New power type for Customer Console governed control
+  GC_L:
+    description: "Governed Control with Learning - configure within Policy Library bounds"
+    grants: [read, configure, limited_write]
+    scope: tenant
+    cross_tenant: false
+    requires_policy_library: true
+    learning_permitted: true
+    enforcement_permitted: false
+    hierarchy_position: 2  # OBSERVE_OWN < GC_L < INVOKE_OWN
+    constraints:
+      - "All configuration must use Policy Library templates"
+      - "Parameter values must stay within template-defined bounds"
+      - "Conflicting configurations are rejected at application time"
+      - "All changes are audited with customer attribution"
+    does_not_allow:
+      - "Creating arbitrary policies from scratch"
+      - "Modifying Policy Library templates"
+      - "Cross-tenant configuration"
+      - "Automatic enforcement without customer action"
+
+  # PIN-339: Advisory power type for system guidance
+  FACILITATION:
+    description: "System advisory guidance for safe customer choices"
+    grants: [recommend, validate, upgrade]
+    scope: system
+    cross_tenant: false
+    mutates_state: false  # FACILITATION must never mutate state
+    capabilities:
+      recommend: "Suggest Policy Library entries based on patterns (non-binding)"
+      validate: "Check configuration for conflicts and risks"
+      upgrade: "Offer safer alternatives for risky choices (non-binding)"
+    blocking_scope: "Security-critical violations only (e.g., HTTPS required)"
+
+  OBSERVE_ANY:
+    description: "Read data across tenant boundaries"
+    grants: [read]
+    scope: system
+    cross_tenant: true
+    requires_role: [founder, admin]
+
+  INVOKE_OWN:
+    description: "Execute operations within tenant scope"
+    grants: [read, execute]
+    scope: tenant
+    cross_tenant: false
+
+  INVOKE_ANY:
+    description: "Execute operations across tenant boundaries"
+    grants: [read, execute]
+    scope: system
+    cross_tenant: true
+    requires_role: [system, founder]
+
+  MUTATE_OWN:
+    description: "Modify data within tenant scope"
+    grants: [read, execute, write]
+    scope: tenant
+    cross_tenant: false
+
+  MUTATE_ANY:
+    description: "Modify data across tenant boundaries"
+    grants: [read, execute, write]
+    scope: system
+    cross_tenant: true
+    requires_role: [founder, admin]
+
+  ADMIN:
+    description: "Full administrative authority"
+    grants: [read, execute, write, admin]
+    scope: system
+    cross_tenant: true
+    requires_role: [founder]
+
+# =============================================================================
+# SECTION 4: LCAP AUTHORITY INHERITANCE RULE
+# =============================================================================
+
+lcap_inheritance_rule:
+  description: |
+    LCAPs (Leaf Capabilities) do NOT have independent authority.
+    All LCAP authority is inherited from their parent CAP.
+
+    This is the key governance principle:
+    - Authority is declared at FIRST_CLASS CAP level ONLY
+    - LCAPs inherit authority from parent CAP
+    - No LCAP-level RBAC or permission checks
+    - This prevents authority fragmentation
+
+    Example:
+      LCAP-020 (Incident Listing) → Merged into CAP-001
+      CAP-001 has OBSERVE_OWN authority
+      Therefore: LCAP-020 operations inherit OBSERVE_OWN
+
+    This design ensures:
+    - Single authority declaration per capability
+    - Predictable permission model
+    - No authority gaps at leaf level
+
+  enforcement: |
+    - LCAP routes inherit parent CAP authority
+    - No separate permission checks for LCAPs
+    - Authority gaps at LCAP level are surfaced as parent CAP gaps
+    - PIN-330 evidence attribution applies to all routes uniformly
+
+# =============================================================================
+# SECTION 5: AUTHORITY SUMMARY
+# =============================================================================
+
+authority_summary:
+  generated: "2026-01-06"
+  pin_reference: "PIN-339"
+  previous_pin: "PIN-331"
+
+  by_authority_type:
+    OBSERVE_OWN: 5    # CAP-001, CAP-002, CAP-003, CAP-004, CAP-014 (base authority)
+    GC_L: 6           # PIN-339: CAP-002, CAP-003, CAP-004, CAP-009, CAP-014, CAP-018
+    INVOKE_OWN: 6     # CAP-008, CAP-012, CAP-016, CAP-019, CAP-020, CAP-021
+    INVOKE_ANY: 4     # CAP-006, CAP-007, CAP-010, CAP-013, CAP-015
+    MUTATE_OWN: 0     # All mutation is via founder_escalation
+    ADMIN: 3          # CAP-005, CAP-011, CAP-017
+    with_founder_escalation: 4  # CAP-001, CAP-002, CAP-009, CAP-018
+
+  # PIN-339 GC_L Summary
+  gc_l_capabilities:
+    core: [CAP-009]                        # Core GC_L capability (Policy Engine)
+    full: [CAP-002, CAP-003, CAP-018]      # Full GC_L authority
+    limited: [CAP-004, CAP-014]            # Limited GC_L (specific config only)
+    unchanged: [CAP-001]                   # Remains OBSERVE_OWN only (replay is read-only)
+
+  by_scope:
+    tenant: 11        # Customer-facing capabilities
+    system: 10        # Internal/founder capabilities
+
+  with_inheritance:
+    CAP-008: [SUB-008, SUB-013, SUB-014]
+    CAP-012: [SUB-018]
+    CAP-014: [SUB-011]
+    CAP-018: [SUB-019]
+    CAP-019: [SUB-018]
+
+  with_implicit_gaps:
+    CAP-020: 4        # CLI implicit authority gaps
+    CAP-021: 7        # SDK implicit authority gaps
+    SUB-019: 1        # Auto-execute without gate
+
+# =============================================================================
+# END OF AUTHORITY DECLARATIONS V1 — PIN-331
+# =============================================================================

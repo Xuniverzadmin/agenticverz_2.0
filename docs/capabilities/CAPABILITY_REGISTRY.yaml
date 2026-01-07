@@ -14,10 +14,11 @@
 #
 # =============================================================================
 
-registry_version: "1.0.0"
+registry_version: "1.0.1"
 schema_version: "1.0.0"
-last_updated: "2026-01-05"
+last_updated: "2026-01-06"
 updated_by: "claude+founder"
+pin_reference: "PIN-323"
 
 # =============================================================================
 # SECTION 1: ALLOWED ENUMS (LOCKED VOCABULARY)
@@ -1015,6 +1016,416 @@ enforcement:
   scripts:
     enforcer: "scripts/ops/capability_registry_enforcer.py"
     heatmap_output: "docs/capabilities/GAP_HEATMAP.md"
+
+# =============================================================================
+# SECTION 5: INVOCATION ADDENDUM (L2.1 Binding)
+# =============================================================================
+#
+# Reference: PIN-321 (L2 → L2.1 Binding Execution)
+# Created: 2026-01-06
+# Purpose: Explicit frontend invocation eligibility for each capability
+#
+# INVARIANTS:
+#   - If frontend_invocable: false → NO frontend client may invoke
+#   - Routes must exist in backend code
+#   - Forbidden routes are explicit when any route exists but is unsafe
+#   - If unsure → frontend_invocable: false
+#
+# =============================================================================
+
+invocation_addendum:
+
+  # ---------------------------------------------------------------------------
+  # CAP-001: REPLAY (+ Activity/Logs domain)
+  # ---------------------------------------------------------------------------
+  replay:
+    capability_id: CAP-001
+    frontend_invocable: true
+    allowed_routes:
+      # Replay endpoints
+      - "GET /api/v1/replay/{incident_id}/slice"
+      - "GET /api/v1/replay/{incident_id}/summary"
+      - "GET /api/v1/replay/{incident_id}/timeline"
+      - "GET /api/v1/replay/{incident_id}/explain/{item_id}"
+      - "POST /guard/replay/{call_id}"                    # Guard replay trigger
+      - "POST /runtime/replay/{run_id}"                   # Runtime replay trigger
+      # Guard endpoints (PIN-323)
+      - "GET /guard/status"                               # PIN-323: Guard status check
+      - "GET /guard/snapshot/today"                       # PIN-323: Today's guard snapshot
+      - "GET /guard/incidents"                            # PIN-323: Incidents list
+      - "POST /guard/incidents/search"                    # PIN-323: Incident search
+      - "GET /guard/keys"                                 # PIN-323: API keys list
+      - "GET /guard/settings"                             # PIN-323: Guard settings
+      # Activity domain (PIN-323 Phase 3) - READ-ONLY
+      - "GET /api/v1/traces"                              # PIN-323: Trace list (Activity domain)
+      - "GET /api/v1/traces/{id}"                         # PIN-323: Trace detail
+      # Logs domain (PIN-323 Phase 3) - READ-ONLY
+      - "GET /api/v1/failures"                            # PIN-323: Failure list (Logs domain)
+      - "GET /api/v1/failures/stats"                      # PIN-323: Failure statistics
+      - "GET /api/v1/failures/unrecovered"                # PIN-323: Unrecovered failures
+    forbidden_routes:
+      - "POST /api/v1/replay/execute"                     # Actual execution replay (backend-only)
+      - "POST /guard/killswitch/activate"                 # PIN-323: FOUNDER_ONLY - killswitch
+      - "POST /guard/killswitch/deactivate"               # PIN-323: FOUNDER_ONLY - killswitch
+      - "POST /guard/demo/seed-incident"                  # PIN-323: FORBIDDEN - demo only
+      - "POST /guard/incidents/{id}/acknowledge"          # PIN-323: FOUNDER_ONLY - state mutation
+      - "POST /guard/keys/{id}/freeze"                    # PIN-323: FOUNDER_ONLY - state mutation
+      - "POST /api/v1/traces"                             # PIN-323: FOUNDER_ONLY - trace creation
+      - "POST /api/v1/traces/cleanup"                     # PIN-323: FORBIDDEN - ops only
+    invocation_modes:
+      - read                                              # Timeline, slice, summary, guard data, traces, failures
+      - observe                                           # Explain item
+    notes: >
+      Frontend clients (replay.ts, guard.ts, traces.ts, failures.ts) may invoke READ-ONLY endpoints.
+      PIN-323 Phase 3: Activity (traces) and Logs (failures) domains mapped here.
+      Trace creation and cleanup are FOUNDER_ONLY/FORBIDDEN.
+      Killswitch and mutation operations are FOUNDER_ONLY or FORBIDDEN.
+
+  # ---------------------------------------------------------------------------
+  # CAP-002: COST SIMULATION
+  # ---------------------------------------------------------------------------
+  cost_simulation:
+    capability_id: CAP-002
+    frontend_invocable: true
+    allowed_routes:
+      - "POST /costsim/v2/simulate"
+      - "GET /costsim/v2/divergence"
+      - "GET /costsim/v2/status"                          # PIN-323: Safe status check
+      - "GET /costsim/v2/incidents"                       # PIN-323: Read-only incidents
+      - "GET /costsim/datasets"                           # PIN-323: Read-only datasets list
+      - "GET /costsim/datasets/{id}"                      # PIN-323: Read-only dataset detail
+      - "GET /api/v1/scenarios"                           # H2 cost scenarios
+      - "GET /api/v1/scenarios/{id}"
+    forbidden_routes:
+      - "POST /costsim/v2/reset"                          # PIN-323: FOUNDER_ONLY - circuit breaker reset
+      - "POST /costsim/datasets/{id}/validate"            # PIN-323: FOUNDER_ONLY - validation trigger
+      - "POST /costsim/canary/run"                        # PIN-323: FOUNDER_ONLY - canary trigger
+      - "GET /costsim/canary/reports"                     # PIN-323: FOUNDER_ONLY - canary reports
+    invocation_modes:
+      - read                                              # Divergence, scenarios, status, incidents
+      - proposal                                          # Simulate (advisory, no side-effects)
+    notes: >
+      Cost simulation is advisory-only with no side-effects.
+      Frontend may invoke read-only routes safely.
+      PIN-323: Added status, incidents, datasets routes. Circuit breaker reset
+      and canary operations are FOUNDER_ONLY.
+
+  # ---------------------------------------------------------------------------
+  # CAP-003: POLICY PROPOSALS
+  # ---------------------------------------------------------------------------
+  policy_proposals:
+    capability_id: CAP-003
+    frontend_invocable: true
+    allowed_routes:
+      - "GET /api/v1/policy-proposals"
+      - "GET /api/v1/policy-proposals/{id}"
+      - "GET /api/v1/policy-proposals/{id}/versions"
+      - "GET /api/v1/policy-proposals/stats/summary"
+    forbidden_routes:
+      - "POST /api/v1/policy-proposals"                   # No creation flow by design
+      - "PUT /api/v1/policy-proposals/{id}"               # No mutation
+      - "DELETE /api/v1/policy-proposals/{id}"            # No deletion
+    invocation_modes:
+      - read                                              # READ-ONLY by design
+    notes: >
+      Policy proposals are READ-ONLY. No creation flow exists.
+      Proposals generated by analytics engine (PB-S3), not user creation.
+
+  # ---------------------------------------------------------------------------
+  # CAP-004: PREDICTION PLANE (C2)
+  # ---------------------------------------------------------------------------
+  prediction_plane:
+    capability_id: CAP-004
+    frontend_invocable: true
+    allowed_routes:
+      - "GET /api/v1/predictions"
+      - "GET /api/v1/predictions/{id}"
+      - "GET /api/v1/predictions/subject/{type}/{id}"
+      - "GET /api/v1/predictions/stats/summary"
+    forbidden_routes: []                                  # All routes READ-ONLY
+    invocation_modes:
+      - read                                              # READ-ONLY advisory (PB-S5)
+    notes: >
+      Predictions are informational only. Zero side-effects.
+      PB-S5 invariant: predictions never modify execution.
+
+  # ---------------------------------------------------------------------------
+  # CAP-005: FOUNDER CONSOLE
+  # ---------------------------------------------------------------------------
+  founder_console:
+    capability_id: CAP-005
+    frontend_invocable: true
+    allowed_routes:
+      - "GET /ops/*"                                      # Ops metrics, dashboards
+      - "GET /founder/timeline/*"                         # Timeline queries
+      - "GET /founder/controls/*"                         # Control status
+      - "GET /founder/explorer/*"                         # H3 explorer mode
+      - "POST /founder/actions/*"                         # Founder actions (RBAC protected)
+    forbidden_routes: []                                  # RBAC handles authorization
+    invocation_modes:
+      - read                                              # Dashboard, timeline
+      - write                                             # Founder actions (RBAC gated)
+    notes: >
+      Founder console routes are RBAC-protected.
+      Only users with founder role can invoke.
+      Frontend client: ops.ts
+
+  # ---------------------------------------------------------------------------
+  # CAP-006: AUTHENTICATION
+  # ---------------------------------------------------------------------------
+  authentication:
+    capability_id: CAP-006
+    frontend_invocable: false
+    allowed_routes: []                                    # Delegated to Clerk
+    forbidden_routes:
+      - "POST /api/v1/auth/*"                             # No direct auth calls
+    invocation_modes: []
+    notes: >
+      Authentication is delegated to Clerk.
+      No frontend API client exists or should exist.
+      Frontend uses Clerk SDK directly.
+
+  # ---------------------------------------------------------------------------
+  # CAP-007: AUTHORIZATION (RBAC v2)
+  # ---------------------------------------------------------------------------
+  authorization:
+    capability_id: CAP-007
+    frontend_invocable: false
+    allowed_routes: []                                    # Internal system capability
+    forbidden_routes:
+      - "POST /api/v1/rbac/*"                             # No direct RBAC manipulation
+      - "PUT /api/v1/rbac/*"
+      - "DELETE /api/v1/rbac/*"
+    invocation_modes: []
+    notes: >
+      RBAC is internal system capability.
+      Frontend does not invoke RBAC directly.
+      Authorization happens transparently via middleware.
+
+  # ---------------------------------------------------------------------------
+  # CAP-008: M12 MULTI-AGENT ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  multi_agent:
+    capability_id: CAP-008
+    frontend_invocable: false
+    allowed_routes: []                                    # Internal/SDK capability
+    forbidden_routes:
+      - "POST /api/agents/*"                              # SDK-only
+    invocation_modes: []
+    notes: >
+      Multi-agent orchestration is SDK/internal capability.
+      Frontend clients do not invoke agent endpoints directly.
+      SDK handles agent invocation.
+
+  # ---------------------------------------------------------------------------
+  # CAP-009: M19 POLICY ENGINE
+  # ---------------------------------------------------------------------------
+  policy_engine:
+    capability_id: CAP-009
+    frontend_invocable: true
+    allowed_routes:
+      - "GET /api/v1/policies"                            # List policies
+      - "GET /api/v1/policies/{id}"                       # Policy details
+      - "GET /guard/policies/*"                           # Guard policy views
+      - "GET /guard/policies/active"                      # PIN-323: Active policies
+    forbidden_routes:
+      - "POST /api/v1/policies"                           # No creation from frontend
+      - "PUT /api/v1/policies/{id}"                       # No mutation from frontend
+      - "DELETE /api/v1/policies/{id}"                    # No deletion from frontend
+    invocation_modes:
+      - read                                              # Policy display in Guard
+    notes: >
+      Frontend may READ policies for display.
+      PIN-323: Confirmed /guard/policies/active is allowed.
+      Policy creation/mutation requires founder approval.
+
+  # ---------------------------------------------------------------------------
+  # CAP-010: M17 CARE-L ROUTING
+  # ---------------------------------------------------------------------------
+  care_routing:
+    capability_id: CAP-010
+    frontend_invocable: false
+    allowed_routes: []                                    # Internal routing
+    forbidden_routes:
+      - "POST /api/routing/*"                             # No direct routing calls
+    invocation_modes: []
+    notes: >
+      CARE-L routing is internal system capability.
+      No direct API exists. Routing happens transparently.
+
+  # ---------------------------------------------------------------------------
+  # CAP-011: M28 GOVERNANCE ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  governance_orchestration:
+    capability_id: CAP-011
+    frontend_invocable: true
+    allowed_routes:
+      - "GET /founder/review/*"                           # Review queues
+      - "GET /api/v1/discovery/*"                         # Discovery ledger
+      - "POST /founder/review/{id}/approve"               # Approval (RBAC gated)
+      - "POST /founder/review/{id}/reject"                # Rejection (RBAC gated)
+    forbidden_routes: []                                  # RBAC handles authorization
+    invocation_modes:
+      - read                                              # Review queue, discovery
+      - write                                             # Approval/rejection (founder only)
+    notes: >
+      Governance orchestration visible to founders.
+      Approval actions RBAC-gated.
+
+  # ---------------------------------------------------------------------------
+  # CAP-012: M4 WORKFLOW ENGINE
+  # ---------------------------------------------------------------------------
+  workflow_engine:
+    capability_id: CAP-012
+    frontend_invocable: false
+    allowed_routes: []                                    # Internal execution
+    forbidden_routes:
+      - "POST /api/workflow/*"                            # No direct workflow calls
+    invocation_modes: []
+    notes: >
+      Workflow engine is internal execution infrastructure.
+      No direct frontend invocation.
+
+  # ---------------------------------------------------------------------------
+  # CAP-013: M5 LEARNING PIPELINE
+  # ---------------------------------------------------------------------------
+  learning_pipeline:
+    capability_id: CAP-013
+    frontend_invocable: false
+    allowed_routes: []                                    # Internal processing
+    forbidden_routes:
+      - "POST /api/learning/*"                            # No direct learning calls
+    invocation_modes: []
+    notes: >
+      Learning pipeline is internal processing.
+      No direct frontend invocation.
+
+  # ---------------------------------------------------------------------------
+  # CAP-014: M7 MEMORY SYSTEM
+  # ---------------------------------------------------------------------------
+  memory_system:
+    capability_id: CAP-014
+    frontend_invocable: true
+    allowed_routes:
+      - "GET /api/v1/memory/*"                            # Memory queries
+      - "GET /api/v1/embedding/*"                         # Embedding queries
+    forbidden_routes:
+      - "POST /api/v1/memory/*"                           # No direct memory writes
+      - "DELETE /api/v1/memory/*"                         # No memory deletion
+    invocation_modes:
+      - read                                              # Memory queries only
+    notes: >
+      Memory system READ-ONLY from frontend.
+      Memory writes happen via execution, not direct API.
+
+  # ---------------------------------------------------------------------------
+  # CAP-015: M22 OPTIMIZATION ENGINE
+  # ---------------------------------------------------------------------------
+  optimization_engine:
+    capability_id: CAP-015
+    frontend_invocable: false
+    allowed_routes: []                                    # Internal optimization
+    forbidden_routes:
+      - "POST /api/optimization/*"                        # No direct optimization calls
+    invocation_modes: []
+    notes: >
+      Optimization engine is internal system capability.
+      No direct frontend invocation.
+
+  # ---------------------------------------------------------------------------
+  # CAP-016: SKILL SYSTEM
+  # ---------------------------------------------------------------------------
+  skill_system:
+    capability_id: CAP-016
+    frontend_invocable: false
+    allowed_routes: []                                    # SDK handles skills
+    forbidden_routes:
+      - "POST /api/skills/*"                              # SDK-only
+    invocation_modes: []
+    notes: >
+      Skill system is SDK capability.
+      Frontend does not invoke skills directly.
+
+  # ---------------------------------------------------------------------------
+  # CAP-017: CROSS-PROJECT AGGREGATION
+  # ---------------------------------------------------------------------------
+  cross_project:
+    capability_id: CAP-017
+    frontend_invocable: false
+    allowed_routes: []                                    # PLANNED only
+    forbidden_routes:
+      - "*"                                               # All routes forbidden
+    invocation_modes: []
+    notes: >
+      Cross-project aggregation is PLANNED only.
+      No implementation exists. Frontend MUST NOT invoke.
+
+  # ---------------------------------------------------------------------------
+  # CAP-018: M25 INTEGRATION PLATFORM
+  # ---------------------------------------------------------------------------
+  integration_platform:
+    capability_id: CAP-018
+    frontend_invocable: true
+    allowed_routes:
+      - "GET /api/v1/integration/*"                       # Integration status
+      - "GET /api/v1/recovery/*"                          # Recovery suggestions
+      - "GET /integration/checkpoints"                    # PIN-323: Checkpoint status
+      - "GET /integration/stats"                          # PIN-323: Integration stats
+      - "GET /integration/graduation"                     # PIN-323: Graduation status
+    forbidden_routes:
+      - "POST /api/v1/integration/*"                      # External integration-only
+      - "POST /api/v1/recovery/ingest/*"                  # External ingest-only
+    invocation_modes:
+      - read                                              # Status, suggestions, checkpoints
+    notes: >
+      Integration platform READ-ONLY from frontend.
+      PIN-323: Added checkpoints, stats, graduation routes.
+      Write operations are external integration-only.
+
+# =============================================================================
+# SECTION 6: INVOCATION SUMMARY (DERIVED)
+# =============================================================================
+
+invocation_summary:
+  total_capabilities: 18
+  frontend_invocable: 11
+  frontend_blocked: 7
+
+  invocable_capabilities:
+    - replay                      # CAP-001
+    - cost_simulation             # CAP-002
+    - policy_proposals            # CAP-003
+    - prediction_plane            # CAP-004
+    - founder_console             # CAP-005
+    - policy_engine               # CAP-009
+    - governance_orchestration    # CAP-011
+    - memory_system               # CAP-014
+    - integration_platform        # CAP-018
+
+  blocked_capabilities:
+    - authentication              # CAP-006: Delegated to Clerk
+    - authorization               # CAP-007: Internal RBAC
+    - multi_agent                 # CAP-008: SDK-only
+    - care_routing                # CAP-010: Internal routing
+    - workflow_engine             # CAP-012: Internal execution
+    - learning_pipeline           # CAP-013: Internal processing
+    - optimization_engine         # CAP-015: Internal optimization
+    - skill_system                # CAP-016: SDK-only
+    - cross_project               # CAP-017: PLANNED only
+
+  invocation_modes_by_capability:
+    read_only:
+      - policy_proposals          # CAP-003
+      - prediction_plane          # CAP-004
+      - policy_engine             # CAP-009
+      - memory_system             # CAP-014
+      - integration_platform      # CAP-018
+    read_and_proposal:
+      - replay                    # CAP-001
+      - cost_simulation           # CAP-002
+    read_and_write:
+      - founder_console           # CAP-005 (RBAC gated)
+      - governance_orchestration  # CAP-011 (RBAC gated)
 
 # =============================================================================
 # END OF REGISTRY

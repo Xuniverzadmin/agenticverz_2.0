@@ -39,6 +39,165 @@ from typing import Any, Dict, Optional
 # Configuration
 DEFAULT_API_URL = "http://127.0.0.1:8000"
 
+# =============================================================================
+# INVOCATION SAFETY LAYER (PIN-332)
+# =============================================================================
+# Import safety layer for pre-invocation checks
+# Mode: OBSERVE_WARN (v1) - logs warnings, only blocks on plan injection
+
+try:
+    # When running as installed module
+    from app.auth.invocation_safety import (
+        CLISafetyHook,
+        InvocationSafetyContext,
+        cli_safety_hook,
+        emit_safety_metrics,
+    )
+    SAFETY_LAYER_AVAILABLE = True
+except ImportError:
+    try:
+        # When running from source
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from app.auth.invocation_safety import (
+            CLISafetyHook,
+            InvocationSafetyContext,
+            cli_safety_hook,
+            emit_safety_metrics,
+        )
+        SAFETY_LAYER_AVAILABLE = True
+    except ImportError:
+        # Safety layer not available - continue without it (degraded mode)
+        SAFETY_LAYER_AVAILABLE = False
+        cli_safety_hook = None
+
+
+# =============================================================================
+# EXECUTION KERNEL (PIN-337)
+# =============================================================================
+# Mandatory choke point for all EXECUTE-power paths
+# Mode: PERMISSIVE (v1) - logs and allows, never blocks
+
+try:
+    from app.governance.kernel import (
+        ExecutionKernel,
+        InvocationContext as KernelContext,
+    )
+    KERNEL_AVAILABLE = True
+except ImportError:
+    try:
+        # When running from source
+        from app.governance.kernel import (
+            ExecutionKernel,
+            InvocationContext as KernelContext,
+        )
+        KERNEL_AVAILABLE = True
+    except ImportError:
+        # Kernel not available - continue without it (degraded mode)
+        KERNEL_AVAILABLE = False
+        ExecutionKernel = None
+        KernelContext = None
+
+
+def record_cli_invocation(command: str, capability_id: str = "CAP-020") -> None:
+    """
+    Record CLI command invocation through ExecutionKernel (PIN-337).
+
+    This is the CLI-side of the mandatory execution kernel choke point.
+    In v1 (PERMISSIVE mode), this logs and allows all invocations.
+
+    Args:
+        command: The CLI command being invoked (e.g., "simulate", "recovery_approve")
+        capability_id: The capability being exercised (default: CAP-020 for CLI)
+    """
+    if not KERNEL_AVAILABLE or ExecutionKernel is None:
+        return  # Degraded mode - kernel not available
+
+    try:
+        # Build context from CLI environment
+        api_key = get_api_key()
+        tenant_id = os.getenv("AOS_TENANT_ID", "unknown")
+        caller_id = os.getenv("AOS_CALLER_ID")
+
+        if not caller_id and api_key:
+            caller_id = f"cli:{api_key[:8]}" if len(api_key) >= 8 else f"cli:{api_key}"
+        else:
+            caller_id = "cli:anonymous"
+
+        context = KernelContext(
+            subject=caller_id,
+            tenant_id=tenant_id,
+        )
+
+        # Record invocation (envelope + metrics)
+        ExecutionKernel._emit_envelope(
+            capability_id=capability_id,
+            execution_vector="CLI",
+            context=context,
+            reason=f"cli_command:{command}",
+        )
+        ExecutionKernel._record_invocation_start(
+            capability_id=capability_id,
+            execution_vector="CLI",
+            context=context,
+            enforcement_mode=ExecutionKernel._ENFORCEMENT_CONFIG.get(capability_id, "permissive"),
+        )
+    except Exception as e:
+        # CRITICAL: Never block CLI execution due to kernel failure
+        # Log but continue
+        print(f"⚠️  Kernel recording failed (non-blocking): {e}", file=sys.stderr)
+
+
+def build_safety_context() -> Optional["InvocationSafetyContext"]:
+    """Build invocation safety context from CLI environment."""
+    if not SAFETY_LAYER_AVAILABLE:
+        return None
+
+    # Extract caller identity from environment
+    # In production, this would come from auth token validation
+    api_key = get_api_key()
+    tenant_id = os.getenv("AOS_TENANT_ID")
+    caller_id = os.getenv("AOS_CALLER_ID")
+
+    # If no explicit caller_id, derive from API key (first 8 chars as pseudo-ID)
+    if not caller_id and api_key:
+        caller_id = f"cli:{api_key[:8]}" if len(api_key) >= 8 else f"cli:{api_key}"
+
+    return InvocationSafetyContext(
+        caller_id=caller_id,
+        tenant_id=tenant_id,
+        tenant_budget_limit=int(os.getenv("AOS_TENANT_BUDGET_LIMIT", "10000")),
+    )
+
+
+def run_safety_check(command: str, check_result) -> bool:
+    """
+    Process safety check result. Returns True if execution should continue.
+
+    In OBSERVE_WARN mode (v1):
+    - Warnings are logged but don't block
+    - Only ERROR severity (plan injection) blocks execution
+    """
+    if check_result is None:
+        return True  # No safety layer available, continue
+
+    # Emit metrics
+    if SAFETY_LAYER_AVAILABLE:
+        emit_safety_metrics("CAP-020", command, check_result)
+
+    # Check if blocked
+    if check_result.blocked:
+        print(f"\n❌ SAFETY BLOCKED: {check_result.block_reason}", file=sys.stderr)
+        print("   This operation was blocked by invocation safety checks.", file=sys.stderr)
+        print(f"   Flags: {[f.value for f in check_result.flags]}", file=sys.stderr)
+        return False
+
+    # Show warnings (if any)
+    if check_result.warnings:
+        for warning in check_result.warnings:
+            print(f"⚠️  Safety warning: {warning}", file=sys.stderr)
+
+    return True
+
 
 def get_api_url() -> str:
     """Get API base URL from environment or default."""
@@ -105,6 +264,9 @@ def cmd_simulate(args):
 
     Shows cost estimates, latency, risks, and feasibility.
     """
+    # PIN-337: Record kernel invocation at entry (EXECUTE path)
+    record_cli_invocation("simulate", capability_id="CAP-020")
+
     # Parse plan from --plan argument or stdin
     plan_str = args.plan
 
@@ -116,6 +278,22 @@ def cmd_simulate(args):
     except json.JSONDecodeError as e:
         print(f"Error parsing plan JSON: {e}", file=sys.stderr)
         sys.exit(1)
+
+    # =========================================================================
+    # POST-PARSE SAFETY CHECK FOR STDIN PLANS (PIN-332)
+    # =========================================================================
+    # If plan was read from stdin, we couldn't pre-validate it in main()
+    # Run plan injection check now
+    if args.plan == "-" and SAFETY_LAYER_AVAILABLE:
+        safety_ctx = build_safety_context()
+        if safety_ctx and cli_safety_hook:
+            result = cli_safety_hook.check_simulate(
+                safety_ctx,
+                plan_data=plan_data,
+                budget_cents=args.budget,
+            )
+            if not run_safety_check("simulate:stdin", result):
+                sys.exit(2)  # Safety blocked (plan injection detected)
 
     # Handle different plan formats
     if "steps" in plan_data:
@@ -142,10 +320,27 @@ def cmd_simulate(args):
         print("Error: No valid steps in plan", file=sys.stderr)
         sys.exit(1)
 
+    # =========================================================================
+    # BUDGET HARDENING (PIN-332 INPUT-001)
+    # =========================================================================
+    # Apply budget cap to prevent exceeding tenant limits
+    tenant_budget_limit = int(os.getenv("AOS_TENANT_BUDGET_LIMIT", "10000"))
+    requested_budget = args.budget if args.budget else 1000
+
+    if requested_budget > tenant_budget_limit:
+        print(
+            f"⚠️  Budget {requested_budget} cents exceeds tenant limit {tenant_budget_limit} cents.",
+            file=sys.stderr,
+        )
+        print(f"   Using capped budget: {tenant_budget_limit} cents", file=sys.stderr)
+        effective_budget = tenant_budget_limit
+    else:
+        effective_budget = requested_budget
+
     # Build request
     request = {
         "plan": normalized_steps,
-        "budget_cents": args.budget if args.budget else 1000,
+        "budget_cents": effective_budget,
     }
 
     if args.agent:
@@ -525,7 +720,9 @@ def cmd_recovery_approve(args):
         aos recovery approve --id 17 --by mahesh [--note "looks correct"]
         aos recovery reject --id 17 --by mahesh [--note "false positive"]
     """
+    # PIN-337: Record kernel invocation at entry (EXECUTE path)
     decision = "approved" if not args.reject else "rejected"
+    record_cli_invocation(f"recovery_{decision}", capability_id="CAP-020")
 
     data = {
         "candidate_id": args.id,
@@ -807,30 +1004,126 @@ Environment:
 
     args = parser.parse_args()
 
+    # ==========================================================================
+    # PRE-INVOCATION SAFETY CHECKS (PIN-332)
+    # ==========================================================================
+    # Build safety context from CLI environment
+    safety_ctx = build_safety_context()
+
     if args.command == "simulate":
+        # Safety check: INPUT-001 (budget), INPUT-003 (plan injection)
+        if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+            # Parse plan for safety validation (before API call)
+            plan_str = args.plan
+            if plan_str == "-":
+                # Can't pre-validate stdin, will check after parse
+                plan_data = None
+            else:
+                try:
+                    plan_data = json.loads(plan_str)
+                except json.JSONDecodeError:
+                    plan_data = None
+
+            result = cli_safety_hook.check_simulate(
+                safety_ctx,
+                plan_data=plan_data,
+                budget_cents=args.budget,
+            )
+            if not run_safety_check("simulate", result):
+                sys.exit(2)  # Safety blocked
+
         cmd_simulate(args)
+
     elif args.command == "query":
+        # Safety check: ID-001 (identity), OWN-003 (tenant scope), RATE-002
+        if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+            result = cli_safety_hook.check_query(safety_ctx, args.query_type)
+            if not run_safety_check("query", result):
+                sys.exit(2)
+
         cmd_query(args)
+
     elif args.command == "skills":
+        # Safety check: ID-001 (identity)
+        if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+            result = cli_safety_hook.check_skills(safety_ctx)
+            if not run_safety_check("skills", result):
+                sys.exit(2)
+
         cmd_skills(args)
+
     elif args.command == "skill":
+        # Safety check: ID-001 (identity) - same as skills
+        if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+            result = cli_safety_hook.check_skills(safety_ctx)
+            if not run_safety_check("skill", result):
+                sys.exit(2)
+
         cmd_skill(args)
+
     elif args.command == "capabilities":
+        # Safety check: ID-001 (identity), OWN-003 (tenant scope)
+        if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+            result = cli_safety_hook.check_capabilities(safety_ctx, agent_id=args.agent)
+            if not run_safety_check("capabilities", result):
+                sys.exit(2)
+
         cmd_capabilities(args)
+
     elif args.command == "version":
+        # Version command is diagnostic-only, no safety check needed
         cmd_version(args)
+
     elif args.command == "quickstart":
+        # Safety check: diagnostic-only marker
+        if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+            result = cli_safety_hook.check_quickstart(safety_ctx)
+            # Don't block quickstart, just mark as diagnostic
+            run_safety_check("quickstart", result)
+
         cmd_quickstart(args)
+
     elif args.command == "recovery":
         if args.recovery_command == "candidates":
+            # Safety check: ID-001 (identity), OWN-003 (tenant scope)
+            if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+                result = cli_safety_hook.check_recovery_candidates(safety_ctx)
+                if not run_safety_check("recovery_candidates", result):
+                    sys.exit(2)
+
             cmd_recovery_candidates(args)
+
         elif args.recovery_command == "approve":
+            # Safety check: ID-001, ID-002 (impersonation), ID-003 (reason)
+            if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+                # The --by parameter is impersonation (who is approving)
+                safety_ctx.impersonation_reason = "recovery_approval"
+                result = cli_safety_hook.check_recovery_approve(safety_ctx, approved_by=args.by)
+                if not run_safety_check("recovery_approve", result):
+                    sys.exit(2)
+
             cmd_recovery_approve(args)
+
         elif args.recovery_command == "reject":
+            # Safety check: same as approve
+            if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+                safety_ctx.impersonation_reason = "recovery_rejection"
+                result = cli_safety_hook.check_recovery_approve(safety_ctx, approved_by=args.by)
+                if not run_safety_check("recovery_reject", result):
+                    sys.exit(2)
+
             args.reject = True
             cmd_recovery_approve(args)
+
         elif args.recovery_command == "stats":
+            # Stats is read-only, minimal safety check
+            if SAFETY_LAYER_AVAILABLE and safety_ctx and cli_safety_hook:
+                result = cli_safety_hook.check_skills(safety_ctx)  # Basic identity check
+                if not run_safety_check("recovery_stats", result):
+                    sys.exit(2)
+
             cmd_recovery_stats(args)
+
         else:
             recovery_parser.print_help()
     else:

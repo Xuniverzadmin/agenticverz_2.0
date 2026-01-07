@@ -1,0 +1,397 @@
+# =============================================================================
+# CONSOLE CLASSIFICATION — Capability Visibility by Console Type
+# =============================================================================
+#
+# Reference: PIN-323 (L2-L2.1 Audit Reinforcement)
+# Created: 2026-01-06
+# Version: 1.0.0
+#
+# PURPOSE:
+#   Explicitly classify which console(s) may invoke each capability.
+#   This prevents scope creep between customer, founder, and ops consoles.
+#
+# CONSOLE TYPES:
+#   - customer: Customer Console (console.agenticverz.com) - tenant-isolated
+#   - founder: Founder Console - cross-tenant visibility
+#   - ops: Ops Console - infrastructure operations
+#   - sdk: SDK-only - no console access
+#   - internal: Internal system capability - no console access
+#
+# RULES:
+#   - One primary console only (unless justified)
+#   - Shared capability must have explicit route separation
+#   - Customer console = tenant-isolated data only
+#
+# =============================================================================
+
+classification_version: "1.0.0"
+pin_reference: "PIN-323"
+created: "2026-01-06"
+
+# =============================================================================
+# CAPABILITY CLASSIFICATIONS
+# =============================================================================
+
+capabilities:
+
+  # ---------------------------------------------------------------------------
+  # CAP-001: REPLAY
+  # ---------------------------------------------------------------------------
+  replay:
+    capability_id: CAP-001
+    primary_console: customer
+    shared_with: [founder]
+    justification: >
+      Replay is primarily customer-facing for audit trail viewing.
+      Founders have additional execute capabilities.
+
+    customer_routes:
+      - "GET /api/v1/replay/{incident_id}/slice"
+      - "GET /api/v1/replay/{incident_id}/summary"
+      - "GET /api/v1/replay/{incident_id}/timeline"
+      - "GET /api/v1/replay/{incident_id}/explain/{item_id}"
+      - "POST /guard/replay/{call_id}"                    # Replay trigger (tenant-scoped)
+      - "POST /runtime/replay/{run_id}"                   # Replay trigger (tenant-scoped)
+      - "GET /guard/status"
+      - "GET /guard/snapshot/today"
+      - "GET /guard/incidents"
+      - "POST /guard/incidents/search"
+      - "GET /guard/keys"
+      - "GET /guard/settings"
+      - "GET /api/v1/traces"                              # Activity domain
+      - "GET /api/v1/traces/{id}"
+      - "GET /api/v1/failures"                            # Logs domain
+      - "GET /api/v1/failures/stats"
+      - "GET /api/v1/failures/unrecovered"
+
+    founder_routes:
+      - "POST /api/v1/replay/execute"                     # Actual replay execution
+      - "POST /guard/killswitch/activate"
+      - "POST /guard/killswitch/deactivate"
+      - "POST /guard/incidents/{id}/acknowledge"
+      - "POST /guard/keys/{id}/freeze"
+      - "POST /api/v1/traces"                             # Trace creation
+
+    forbidden_routes:
+      - "POST /guard/demo/seed-incident"                  # Demo only
+      - "POST /api/v1/traces/cleanup"                     # Ops only
+
+  # ---------------------------------------------------------------------------
+  # CAP-002: COST SIMULATION
+  # ---------------------------------------------------------------------------
+  cost_simulation:
+    capability_id: CAP-002
+    primary_console: customer
+    shared_with: [founder]
+    justification: >
+      Cost simulation is advisory-only for customers.
+      Founders have circuit breaker and canary controls.
+
+    customer_routes:
+      - "POST /costsim/v2/simulate"
+      - "GET /costsim/v2/divergence"
+      - "GET /costsim/v2/status"
+      - "GET /costsim/v2/incidents"
+      - "GET /costsim/datasets"
+      - "GET /costsim/datasets/{id}"
+      - "GET /api/v1/scenarios"
+      - "GET /api/v1/scenarios/{id}"
+
+    founder_routes:
+      - "POST /costsim/v2/reset"                          # Circuit breaker reset
+      - "POST /costsim/datasets/{id}/validate"            # Dataset validation
+      - "POST /costsim/canary/run"                        # Canary trigger
+      - "GET /costsim/canary/reports"                     # Canary reports
+
+  # ---------------------------------------------------------------------------
+  # CAP-003: POLICY PROPOSALS
+  # ---------------------------------------------------------------------------
+  policy_proposals:
+    capability_id: CAP-003
+    primary_console: customer
+    shared_with: []
+    justification: >
+      Policy proposals are READ-ONLY advisory information.
+      No creation flow exists by design (PB-S4).
+
+    customer_routes:
+      - "GET /api/v1/policy-proposals"
+      - "GET /api/v1/policy-proposals/{id}"
+      - "GET /api/v1/policy-proposals/{id}/versions"
+      - "GET /api/v1/policy-proposals/stats/summary"
+
+    forbidden_routes:
+      - "POST /api/v1/policy-proposals"
+      - "PUT /api/v1/policy-proposals/{id}"
+      - "DELETE /api/v1/policy-proposals/{id}"
+
+  # ---------------------------------------------------------------------------
+  # CAP-004: PREDICTION PLANE (C2)
+  # ---------------------------------------------------------------------------
+  prediction_plane:
+    capability_id: CAP-004
+    primary_console: customer
+    shared_with: []
+    justification: >
+      Predictions are informational only (PB-S5).
+      Zero side-effects, safe for customer viewing.
+
+    customer_routes:
+      - "GET /api/v1/predictions"
+      - "GET /api/v1/predictions/{id}"
+      - "GET /api/v1/predictions/subject/{type}/{id}"
+      - "GET /api/v1/predictions/stats/summary"
+
+  # ---------------------------------------------------------------------------
+  # CAP-005: FOUNDER CONSOLE
+  # ---------------------------------------------------------------------------
+  founder_console:
+    capability_id: CAP-005
+    primary_console: founder
+    shared_with: []
+    justification: >
+      Founder-only operations. Cross-tenant visibility.
+      RBAC-protected, requires founder role.
+
+    founder_routes:
+      - "GET /ops/*"
+      - "GET /founder/timeline/*"
+      - "GET /founder/controls/*"
+      - "GET /founder/explorer/*"
+      - "POST /founder/actions/*"
+
+  # ---------------------------------------------------------------------------
+  # CAP-006: AUTHENTICATION
+  # ---------------------------------------------------------------------------
+  authentication:
+    capability_id: CAP-006
+    primary_console: internal
+    shared_with: []
+    justification: >
+      Authentication is delegated to Clerk.
+      No console exposure - transparent middleware.
+
+  # ---------------------------------------------------------------------------
+  # CAP-007: AUTHORIZATION (RBAC v2)
+  # ---------------------------------------------------------------------------
+  authorization:
+    capability_id: CAP-007
+    primary_console: internal
+    shared_with: []
+    justification: >
+      RBAC is internal system capability.
+      Authorization happens transparently via middleware.
+
+  # ---------------------------------------------------------------------------
+  # CAP-008: M12 MULTI-AGENT ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  multi_agent:
+    capability_id: CAP-008
+    primary_console: sdk
+    shared_with: []
+    justification: >
+      Multi-agent orchestration is SDK-only capability.
+      No frontend console access.
+
+  # ---------------------------------------------------------------------------
+  # CAP-009: M19 POLICY ENGINE
+  # ---------------------------------------------------------------------------
+  policy_engine:
+    capability_id: CAP-009
+    primary_console: customer
+    shared_with: [founder]
+    justification: >
+      Customers can view policies.
+      Founders can create/modify/delete policies.
+
+    customer_routes:
+      - "GET /api/v1/policies"
+      - "GET /api/v1/policies/{id}"
+      - "GET /guard/policies/*"
+      - "GET /guard/policies/active"
+
+    founder_routes:
+      - "POST /api/v1/policies"
+      - "PUT /api/v1/policies/{id}"
+      - "DELETE /api/v1/policies/{id}"
+
+  # ---------------------------------------------------------------------------
+  # CAP-010: M17 CARE-L ROUTING
+  # ---------------------------------------------------------------------------
+  care_routing:
+    capability_id: CAP-010
+    primary_console: internal
+    shared_with: []
+    justification: >
+      CARE-L routing is internal system capability.
+      No direct API exists. Routing is transparent.
+
+  # ---------------------------------------------------------------------------
+  # CAP-011: M28 GOVERNANCE ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  governance_orchestration:
+    capability_id: CAP-011
+    primary_console: founder
+    shared_with: []
+    justification: >
+      Governance orchestration is founder-only.
+      Approval workflows require founder authority.
+
+    founder_routes:
+      - "GET /founder/review/*"
+      - "GET /api/v1/discovery/*"
+      - "POST /founder/review/{id}/approve"
+      - "POST /founder/review/{id}/reject"
+
+  # ---------------------------------------------------------------------------
+  # CAP-012: M4 WORKFLOW ENGINE
+  # ---------------------------------------------------------------------------
+  workflow_engine:
+    capability_id: CAP-012
+    primary_console: internal
+    shared_with: []
+    justification: >
+      Workflow engine is internal execution infrastructure.
+      No direct console access.
+
+  # ---------------------------------------------------------------------------
+  # CAP-013: M5 LEARNING PIPELINE
+  # ---------------------------------------------------------------------------
+  learning_pipeline:
+    capability_id: CAP-013
+    primary_console: internal
+    shared_with: []
+    justification: >
+      Learning pipeline is internal processing.
+      No direct console access.
+
+  # ---------------------------------------------------------------------------
+  # CAP-014: M7 MEMORY SYSTEM
+  # ---------------------------------------------------------------------------
+  memory_system:
+    capability_id: CAP-014
+    primary_console: customer
+    shared_with: []
+    justification: >
+      Memory system READ-ONLY from customer console.
+      Memory writes happen via execution, not direct API.
+
+    customer_routes:
+      - "GET /api/v1/memory/*"
+      - "GET /api/v1/embedding/*"
+
+    forbidden_routes:
+      - "POST /api/v1/memory/*"
+      - "DELETE /api/v1/memory/*"
+
+  # ---------------------------------------------------------------------------
+  # CAP-015: M22 OPTIMIZATION ENGINE
+  # ---------------------------------------------------------------------------
+  optimization_engine:
+    capability_id: CAP-015
+    primary_console: internal
+    shared_with: []
+    justification: >
+      Optimization engine is internal system capability.
+      No direct console access.
+
+  # ---------------------------------------------------------------------------
+  # CAP-016: SKILL SYSTEM (M2/M3)
+  # ---------------------------------------------------------------------------
+  skill_system:
+    capability_id: CAP-016
+    primary_console: sdk
+    shared_with: []
+    justification: >
+      Skill system is SDK capability.
+      No direct frontend console access.
+
+  # ---------------------------------------------------------------------------
+  # CAP-017: CROSS-PROJECT AGGREGATION
+  # ---------------------------------------------------------------------------
+  cross_project:
+    capability_id: CAP-017
+    primary_console: founder
+    shared_with: []
+    justification: >
+      Cross-project aggregation is PLANNED only.
+      If implemented, founder-only by design.
+      NEVER customer-visible (tenant isolation).
+
+  # ---------------------------------------------------------------------------
+  # CAP-018: M25 INTEGRATION PLATFORM
+  # ---------------------------------------------------------------------------
+  integration_platform:
+    capability_id: CAP-018
+    primary_console: customer
+    shared_with: []
+    justification: >
+      Integration platform READ-ONLY from customer console.
+      Write operations are external integration-only.
+
+    customer_routes:
+      - "GET /api/v1/integration/*"
+      - "GET /api/v1/recovery/*"
+      - "GET /integration/checkpoints"
+      - "GET /integration/stats"
+      - "GET /integration/graduation"
+
+    forbidden_routes:
+      - "POST /api/v1/integration/*"
+      - "POST /api/v1/recovery/ingest/*"
+
+# =============================================================================
+# CLASSIFICATION SUMMARY
+# =============================================================================
+
+summary:
+  total_capabilities: 18
+
+  by_primary_console:
+    customer: 8
+      # CAP-001 (shared), CAP-002 (shared), CAP-003, CAP-004,
+      # CAP-009 (shared), CAP-014, CAP-018
+    founder: 3
+      # CAP-005, CAP-011, CAP-017
+    internal: 5
+      # CAP-006, CAP-007, CAP-010, CAP-012, CAP-013, CAP-015
+    sdk: 2
+      # CAP-008, CAP-016
+
+  shared_capabilities:
+    - capability_id: CAP-001
+      shared_between: [customer, founder]
+      separation: "READ customer, EXECUTE founder"
+    - capability_id: CAP-002
+      shared_between: [customer, founder]
+      separation: "READ customer, CONTROL founder"
+    - capability_id: CAP-009
+      shared_between: [customer, founder]
+      separation: "READ customer, MUTATE founder"
+
+  customer_only_capabilities:
+    - CAP-003  # Policy Proposals
+    - CAP-004  # Prediction Plane
+    - CAP-014  # Memory System
+    - CAP-018  # Integration Platform
+
+  founder_only_capabilities:
+    - CAP-005  # Founder Console
+    - CAP-011  # Governance Orchestration
+    - CAP-017  # Cross-Project (if implemented)
+
+  internal_capabilities:
+    - CAP-006  # Authentication
+    - CAP-007  # Authorization
+    - CAP-010  # CARE-L Routing
+    - CAP-012  # Workflow Engine
+    - CAP-013  # Learning Pipeline
+    - CAP-015  # Optimization Engine
+
+  sdk_only_capabilities:
+    - CAP-008  # Multi-Agent
+    - CAP-016  # Skill System
+
+# =============================================================================
+# END OF CLASSIFICATION
+# =============================================================================

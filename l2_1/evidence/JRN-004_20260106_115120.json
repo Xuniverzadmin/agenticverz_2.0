@@ -1,0 +1,24 @@
+{
+  "journey_id": "JRN-004",
+  "capability_id": "CAP-002",
+  "executed_at": "2026-01-06T11:51:20.344656Z",
+  "base_url": "http://localhost:8000",
+  "route": "/costsim/v2/simulate",
+  "method": "POST",
+  "status_code": 403,
+  "response_headers": {
+    "date": "Tue, 06 Jan 2026 11:51:19 GMT",
+    "server": "uvicorn",
+    "content-length": "85",
+    "content-type": "application/json",
+    "x-request-id": "47bd1a49-77a1-497d-9830-0c6c42c00912",
+    "connection": "close"
+  },
+  "response_body": "{\"error\":\"forbidden\",\"reason\":\"no-credentials\",\"resource\":\"runtime\",\"action\":\"query\"}",
+  "response_time_ms": 6.62,
+  "expected_status": 200,
+  "status_match": false,
+  "error": "HTTP Error 403: Forbidden",
+  "error_type": "HTTPError",
+  "suggested_failure_type": "AUTH_MISMATCH"
+}

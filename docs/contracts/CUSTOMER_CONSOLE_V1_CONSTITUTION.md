@@ -241,6 +241,55 @@ All actions must be:
 - No inferring missing facts
 - First truth wins (ON CONFLICT DO NOTHING)
 
+### 6.4 Governed Control (GC_L)
+
+**Added:** 2026-01-06 (PIN-339)
+
+Customers may exercise governed control over their own platform configuration subject to:
+
+1. **Policy Library Constraint** — All configuration must use pre-approved Policy Library templates
+2. **Parameter Bounds** — Template parameters have enforced minimum/maximum bounds
+3. **Conflict Prevention** — System prevents application of conflicting policies
+4. **Audit Trail** — All configuration changes are logged with attribution
+
+**GC_L Authority Hierarchy:**
+```
+OBSERVE_OWN < GC_L < INVOKE_OWN < MUTATE_OWN < ADMIN
+```
+
+**GC_L does NOT allow:**
+- Creating arbitrary policies from scratch
+- Modifying templates or bounds
+- Cross-tenant configuration
+- Automatic enforcement without customer action
+
+**Learning Component:**
+- System may learn from customer selections for recommendations
+- Learning is for **recommendation only** — never enforcement
+- Enforcement without human action is **forbidden**
+- Policy Library is **mandatory** before any learned policy surfaces
+
+### 6.5 System Facilitation
+
+**Added:** 2026-01-06 (PIN-339)
+
+The system may provide advisory guidance to help customers make safe choices:
+
+1. **Recommendations** — Suggest Policy Library entries based on observed patterns
+2. **Warnings** — Alert customers to potentially risky configurations
+3. **Alternatives** — Offer safer options when risky choices are made
+
+**FACILITATION does NOT:**
+- Block customer choices (except security-critical violations)
+- Auto-apply changes
+- Override customer decisions
+- Use learned authority for enforcement
+- **Mutate state** (FACILITATION is read-only advisory)
+
+**Security-Critical Blocking:**
+FACILITATION may block only for security-critical violations (e.g., HTTPS required for webhooks).
+All other guidance is advisory.
+
 ---
 
 ## 7. Overview Philosophy
@@ -330,6 +379,7 @@ To amend this constitution:
 
 | Version | Date | Change | Author |
 |---------|------|--------|--------|
+| 1.3.0 | 2026-01-06 | Added Section 6.4 (GC_L) and 6.5 (FACILITATION) per PIN-339 | Human-approved |
 | 1.2.0 | 2025-12-29 | Renamed Administration → Account (secondary nav), clarified Account rules | Human-approved |
 | 1.1.0 | 2025-12-29 | Added Project Scope (5.4), Projects to Admin section | Human-approved |
 | 1.0.0 | 2025-12-29 | Initial freeze | Human-approved |

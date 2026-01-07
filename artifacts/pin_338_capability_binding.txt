@@ -1,0 +1,14 @@
+PIN-337 Capability Binding Validator
+Scanning: /root/agenticverz2.0/backend/app
+
+======================================================================
+  PIN-337 CAPABILITY BINDING VALIDATION REPORT
+======================================================================
+
+  Total capability bindings found:   18
+  Valid bindings:                    18
+  Unknown capability IDs:            0
+  Invalid bindings:                  0
+
+  ✅ PASS: All capability bindings are valid
+

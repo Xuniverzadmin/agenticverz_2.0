@@ -1,0 +1,23 @@
+PIN-337 Kernel Usage Validator
+Scanning: /root/agenticverz2.0/backend/app
+
+======================================================================
+  PIN-337 KERNEL USAGE VALIDATION REPORT
+======================================================================
+
+  Total EXECUTE paths found:    5
+  Compliant (kernel routed):    3
+  Deferred (known, tracked):    2
+  Violations (no kernel):       0
+
+  DEFERRED (Known Violations - Tracked for Incremental Integration):
+  ------------------------------------------------------------------
+    [WORKER] /root/agenticverz2.0/backend/app/workers/business_builder/worker.py:93
+           BusinessBuilderWorker
+           Reason: Deferred to Phase 7 incremental integration
+    [WORKER] /root/agenticverz2.0/backend/app/costsim/alert_worker.py:59
+           AlertWorker
+           Reason: Deferred to Phase 7 incremental integration
+
+  ⚠️  PASS (with deferred items): Core paths compliant, deferred items tracked
+

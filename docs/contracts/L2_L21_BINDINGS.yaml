@@ -1,0 +1,486 @@
+# =============================================================================
+# L2 ↔ L2.1 BINDING REGISTRY
+# =============================================================================
+#
+# Reference: PIN-321 (L2 → L2.1 Binding Execution)
+# Created: 2026-01-06
+# Purpose: Explicit binding between frontend clients (L2.1) and capabilities (L2)
+#
+# INVARIANTS:
+#   - Every frontend client must be either bound or explicitly blocked
+#   - Unbound clients are governance violations
+#   - Execution rights must align with invocation_addendum in CAPABILITY_REGISTRY.yaml
+#   - Evidence requirements must align with capability audit_replay status
+#
+# =============================================================================
+
+registry_version: "1.0.0"
+created: "2026-01-06"
+updated_by: "claude"
+
+# =============================================================================
+# SECTION 1: BOUND FRONTEND CLIENTS
+# =============================================================================
+
+bound_clients:
+
+  # ---------------------------------------------------------------------------
+  # replay.ts → CAP-001 (Replay)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/replay.ts"
+    capability_id: CAP-001
+    capability_name: "Execution Replay"
+    audience: founder
+    execution_rights:
+      - read                    # Timeline, slice, summary
+      - observe                 # Explain item
+    evidence_required:
+      - audit_log               # All replay access audited
+    routes_exercised:
+      - "GET /api/v1/replay/{incident_id}/slice"
+      - "GET /api/v1/replay/{incident_id}/summary"
+      - "GET /api/v1/replay/{incident_id}/timeline"
+      - "GET /api/v1/replay/{incident_id}/explain/{item_id}"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # costsim.ts → CAP-002 (Cost Simulation)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/costsim.ts"
+    capability_id: CAP-002
+    capability_name: "Cost Simulation V2"
+    audience: customer
+    execution_rights:
+      - read                    # Divergence, scenarios
+      - proposal                # Simulate (advisory)
+    evidence_required:
+      - provenance              # ProvenanceLog audit trail
+    routes_exercised:
+      - "POST /costsim/v2/simulate"
+      - "GET /costsim/v2/divergence"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # guard.ts → MULTI-CAPABILITY BINDING
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/guard.ts"
+    capability_id: MULTI
+    capability_name: "Guard Dashboard (Multi-Capability)"
+    audience: customer
+    capabilities_exercised:
+      - id: CAP-001
+        name: "Replay"
+        routes:
+          - "POST /guard/replay/{call_id}"
+      - id: CAP-009
+        name: "Policy Engine"
+        routes:
+          - "GET /guard/policies/*"
+    execution_rights:
+      - read                    # Status, incidents, policies
+      - invoke                  # Replay trigger
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /guard/status"
+      - "GET /guard/incidents"
+      - "GET /guard/incidents/{id}"
+      - "POST /guard/replay/{call_id}"
+      - "GET /guard/policies/*"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # ops.ts → CAP-005 (Founder Console)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/ops.ts"
+    capability_id: CAP-005
+    capability_name: "Founder Console"
+    audience: founder
+    execution_rights:
+      - read                    # Dashboards, metrics
+      - write                   # Founder actions (RBAC gated)
+    evidence_required:
+      - audit_log               # Founder actions audited
+    routes_exercised:
+      - "GET /ops/*"
+      - "GET /ops/metrics/*"
+      - "GET /ops/tenants/*"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # timeline.ts → CAP-005 (Founder Console - Timeline)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/timeline.ts"
+    capability_id: CAP-005
+    capability_name: "Founder Console"
+    audience: founder
+    execution_rights:
+      - read                    # Timeline queries
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /founder/timeline/*"
+      - "GET /founder/timeline/run/{run_id}"
+      - "GET /founder/timeline/decisions"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # traces.ts → CAP-001 (Replay - Trace Access)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/traces.ts"
+    capability_id: CAP-001
+    capability_name: "Execution Replay"
+    audience: founder
+    execution_rights:
+      - read                    # Trace queries
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /api/v1/traces"
+      - "GET /api/v1/traces/{run_id}"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # scenarios.ts → CAP-002 (Cost Simulation - Scenarios)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/scenarios.ts"
+    capability_id: CAP-002
+    capability_name: "Cost Simulation V2"
+    audience: customer
+    execution_rights:
+      - read                    # Scenario queries
+      - proposal                # Scenario simulation
+    evidence_required:
+      - provenance
+    routes_exercised:
+      - "GET /api/v1/scenarios"
+      - "GET /api/v1/scenarios/{id}"
+      - "POST /api/v1/scenarios/simulate"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # integration.ts → CAP-018 (Integration Platform)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/integration.ts"
+    capability_id: CAP-018
+    capability_name: "Integration Platform"
+    audience: founder
+    execution_rights:
+      - read                    # Integration status
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /api/v1/integration/*"
+      - "GET /integration/*"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # recovery.ts → CAP-018 (Integration Platform - Recovery)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/recovery.ts"
+    capability_id: CAP-018
+    capability_name: "Integration Platform"
+    audience: founder
+    execution_rights:
+      - read                    # Recovery suggestions
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /api/v1/recovery/*"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # memory.ts → CAP-014 (Memory System)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/memory.ts"
+    capability_id: CAP-014
+    capability_name: "Memory System"
+    audience: founder
+    execution_rights:
+      - read                    # Memory queries
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /api/v1/memory/*"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # explorer.ts → CAP-005 (Founder Console - Explorer)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/explorer.ts"
+    capability_id: CAP-005
+    capability_name: "Founder Console"
+    audience: founder
+    execution_rights:
+      - read                    # H3 Explorer mode
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /founder/explorer/*"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # sba.ts → CAP-011 (Governance Orchestration - SBA)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/sba.ts"
+    capability_id: CAP-011
+    capability_name: "Governance Orchestration"
+    audience: founder
+    execution_rights:
+      - read                    # SBA inspector
+    evidence_required:
+      - audit_log
+    routes_exercised:
+      - "GET /sba/*"
+    status: BOUND
+
+  # ---------------------------------------------------------------------------
+  # killswitch.ts → PLATFORM UTILITY
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/killswitch.ts"
+    capability_id: PLATFORM
+    capability_name: "KillSwitch (Platform Utility)"
+    audience: customer
+    execution_rights:
+      - read                    # KillSwitch status
+      - invoke                  # KillSwitch trigger (emergency)
+    evidence_required:
+      - audit_log               # All KillSwitch actions audited
+    routes_exercised:
+      - "GET /api/v1/killswitch/status"
+      - "POST /api/v1/killswitch/trigger"
+    status: BOUND
+    notes: >
+      KillSwitch is a platform utility, not a registered capability.
+      It's a safety mechanism that bypasses normal capability routing.
+
+# =============================================================================
+# SECTION 2: PLATFORM UTILITY CLIENTS (Non-Capability)
+# =============================================================================
+
+platform_clients:
+
+  # ---------------------------------------------------------------------------
+  # client.ts → Base API Client
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/client.ts"
+    purpose: "Base axios client configuration"
+    capability_id: NONE
+    status: UTILITY
+    notes: >
+      Base client, not a capability. Provides axios instance and auth headers.
+
+  # ---------------------------------------------------------------------------
+  # auth.ts → Clerk Integration
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/auth.ts"
+    purpose: "Clerk authentication integration"
+    capability_id: NONE
+    status: UTILITY
+    notes: >
+      Auth client for Clerk SDK integration. No backend API calls.
+      Authentication is delegated to Clerk (CAP-006).
+
+  # ---------------------------------------------------------------------------
+  # health.ts → Platform Health
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/health.ts"
+    purpose: "Backend health and determinism checks"
+    capability_id: PLATFORM
+    status: UTILITY
+    routes_exercised:
+      - "GET /health"
+      - "GET /determinism/status"
+    notes: >
+      Platform utility. Health endpoints are public, no auth required.
+
+  # ---------------------------------------------------------------------------
+  # metrics.ts → Platform Metrics
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/metrics.ts"
+    purpose: "Platform metrics access"
+    capability_id: PLATFORM
+    audience: founder
+    status: UTILITY
+    routes_exercised:
+      - "GET /metrics/*"
+    notes: >
+      Platform utility for Prometheus metrics. Founder-only access.
+
+# =============================================================================
+# SECTION 3: BLOCKED/UNBOUND CLIENTS (Governance Violations)
+# =============================================================================
+
+unbound_clients:
+
+  # ---------------------------------------------------------------------------
+  # agents.ts → BLOCKED (SDK-Only)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/agents.ts"
+    intended_capability: CAP-008
+    capability_name: "Multi-Agent Orchestration"
+    status: BLOCKED
+    reason: "Multi-agent is SDK-only capability (frontend_invocable: false)"
+    resolution: >
+      This client should not invoke agent endpoints directly.
+      Remove direct agent API calls or migrate to SDK usage.
+
+  # ---------------------------------------------------------------------------
+  # blackboard.ts → BLOCKED (SDK-Only)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/blackboard.ts"
+    intended_capability: CAP-008
+    capability_name: "Multi-Agent Orchestration"
+    status: BLOCKED
+    reason: "Blackboard is part of multi-agent (SDK-only)"
+    resolution: >
+      Blackboard API is SDK-only. Remove frontend client or migrate.
+
+  # ---------------------------------------------------------------------------
+  # credits.ts → BLOCKED (SDK-Only)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/credits.ts"
+    intended_capability: CAP-008
+    capability_name: "Multi-Agent Orchestration"
+    status: BLOCKED
+    reason: "Credits is part of multi-agent (SDK-only)"
+    resolution: >
+      Credits API is SDK-only. Remove frontend client or migrate.
+
+  # ---------------------------------------------------------------------------
+  # messages.ts → BLOCKED (SDK-Only)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/messages.ts"
+    intended_capability: CAP-008
+    capability_name: "Multi-Agent Orchestration"
+    status: BLOCKED
+    reason: "Messages is part of multi-agent (SDK-only)"
+    resolution: >
+      Messages API is SDK-only. Remove frontend client or migrate.
+
+  # ---------------------------------------------------------------------------
+  # jobs.ts → BLOCKED (SDK-Only)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/jobs.ts"
+    intended_capability: CAP-008
+    capability_name: "Multi-Agent Orchestration"
+    status: BLOCKED
+    reason: "Jobs is part of multi-agent (SDK-only)"
+    resolution: >
+      Jobs API is SDK-only. Remove frontend client or migrate.
+
+  # ---------------------------------------------------------------------------
+  # worker.ts → BLOCKED (Internal)
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/worker.ts"
+    intended_capability: CAP-012
+    capability_name: "Workflow Engine"
+    status: BLOCKED
+    reason: "Worker/workflow is internal capability (frontend_invocable: false)"
+    resolution: >
+      Worker API is internal execution infrastructure.
+      Frontend should not access worker endpoints directly.
+
+  # ---------------------------------------------------------------------------
+  # runtime.ts → REQUIRES REVIEW
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/runtime.ts"
+    intended_capability: UNCLEAR
+    capability_name: "Unknown - Requires Review"
+    status: UNBOUND
+    reason: "Runtime client invokes multiple capability routes - binding unclear"
+    resolution: >
+      Review runtime.ts to determine capability mapping.
+      May need to split into capability-specific clients.
+
+  # ---------------------------------------------------------------------------
+  # operator.ts → REQUIRES REVIEW
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/operator.ts"
+    intended_capability: CAP-005
+    capability_name: "Founder Console"
+    status: UNBOUND
+    reason: "Operator client appears to be founder console variant - needs verification"
+    resolution: >
+      Verify operator.ts routes align with CAP-005 (Founder Console).
+      If aligned, bind to CAP-005. If not, block or split.
+
+  # ---------------------------------------------------------------------------
+  # failures.ts → REQUIRES REVIEW
+  # ---------------------------------------------------------------------------
+  - client_file: "website/app-shell/src/api/failures.ts"
+    intended_capability: UNCLEAR
+    capability_name: "Unknown - Requires Review"
+    status: UNBOUND
+    reason: "Failures client capability mapping unclear"
+    resolution: >
+      Review failures.ts to determine capability mapping.
+      May map to CAP-001 (Replay) or CAP-013 (Learning Pipeline).
+
+# =============================================================================
+# SECTION 4: BINDING SUMMARY
+# =============================================================================
+
+binding_summary:
+  total_clients: 26
+  bound: 14
+  platform_utility: 4
+  blocked: 5
+  unbound: 3
+
+  by_status:
+    BOUND: 14
+    UTILITY: 4
+    BLOCKED: 5
+    UNBOUND: 3
+
+  by_audience:
+    customer:
+      - guard.ts
+      - costsim.ts
+      - scenarios.ts
+      - killswitch.ts
+    founder:
+      - replay.ts
+      - ops.ts
+      - timeline.ts
+      - traces.ts
+      - integration.ts
+      - recovery.ts
+      - memory.ts
+      - explorer.ts
+      - sba.ts
+
+  governance_violations:
+    blocked_clients:
+      - agents.ts       # SDK-only (CAP-008)
+      - blackboard.ts   # SDK-only (CAP-008)
+      - credits.ts      # SDK-only (CAP-008)
+      - messages.ts     # SDK-only (CAP-008)
+      - jobs.ts         # SDK-only (CAP-008)
+      - worker.ts       # Internal (CAP-012)
+    unbound_clients:
+      - runtime.ts      # Capability unclear
+      - operator.ts     # Needs verification
+      - failures.ts     # Capability unclear
+
+# =============================================================================
+# SECTION 5: ENFORCEMENT
+# =============================================================================
+
+enforcement:
+  binding_is_required: true
+  unbound_clients_block_discovery: false    # Directional, not blocking
+  blocked_clients_require_removal: false    # Directional, not blocking
+
+  ci_checks:
+    - name: "client-capability-binding"
+      path: ".github/workflows/frontend-bindings.yml"
+      status: PLANNED
+    - name: "blocked-client-warning"
+      path: ".github/workflows/frontend-bindings.yml"
+      status: PLANNED
+
+# =============================================================================
+# END OF BINDING REGISTRY
+# =============================================================================

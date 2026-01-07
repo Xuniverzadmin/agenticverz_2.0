@@ -1097,3 +1097,200 @@ class FounderActionListDTO(BaseModel):
     total_count: int = Field(description="Total number of actions matching filter")
     page: int = Field(default=1, description="Current page number")
     page_size: int = Field(default=50, description="Items per page")
+
+
+# =============================================================================
+# AUTO_EXECUTE REVIEW - PIN-333
+# Evidence-only review of SUB-019 auto-execution decisions
+# =============================================================================
+
+
+class AutoExecuteReviewItemDTO(BaseModel):
+    """
+    Single AUTO_EXECUTE decision evidence record.
+
+    PIN-333: Evidence-only, no control, no behavior change.
+
+    Maps 1:1 to ExecutionEnvelope (SUB-019) + InvocationSafetyFlags.
+    No derived fields. No computed judgments. No inferred risk scores.
+
+    Frozen: 2026-01-06 (PIN-333)
+    """
+
+    # Core identifiers
+    invocation_id: str = Field(description="Unique invocation ID from envelope")
+    envelope_id: str = Field(description="Execution envelope ID")
+    timestamp: str = Field(description="ISO8601 timestamp of decision")
+
+    # Tenant context (for cross-tenant founder view)
+    tenant_id: str = Field(description="Tenant ID from envelope")
+    account_id: Optional[str] = Field(default=None, description="Account ID if available")
+    project_id: Optional[str] = Field(default=None, description="Project ID if available")
+
+    # Capability attribution
+    capability_id: Literal["SUB-019"] = Field(default="SUB-019", description="Always SUB-019")
+    execution_vector: Literal["AUTO_EXEC"] = Field(default="AUTO_EXEC", description="Always AUTO_EXEC")
+
+    # Decision evidence
+    confidence_score: float = Field(ge=0.0, le=1.0, description="Confidence score from envelope")
+    threshold: float = Field(ge=0.0, le=1.0, description="Threshold used for decision")
+    decision: Literal["EXECUTED", "SKIPPED"] = Field(description="Whether auto-execute triggered")
+    recovery_action: Optional[str] = Field(default=None, description="Action taken (if executed)")
+
+    # Recovery context
+    recovery_candidate_id: Optional[str] = Field(default=None, description="Recovery candidate ID")
+    incident_id: Optional[str] = Field(default=None, description="Related incident ID if known")
+
+    # Execution result (if available)
+    execution_result: Optional[Literal["SUCCESS", "FAILED", "PENDING", "UNKNOWN"]] = Field(
+        default=None, description="Result of execution if completed"
+    )
+
+    # Plan integrity evidence
+    input_hash: str = Field(description="Hash of input from envelope")
+    plan_hash: str = Field(description="Hash of resolved plan from envelope")
+    plan_mutation_detected: bool = Field(default=False, description="Whether plan was mutated")
+
+    # Worker attribution
+    worker_identity: str = Field(default="recovery_claim_worker", description="Worker identity from envelope")
+
+    # Safety flags (from InvocationSafetyFlags)
+    safety_checked: bool = Field(default=False, description="Whether safety checks ran")
+    safety_passed: bool = Field(default=True, description="Whether safety checks passed")
+    safety_flags: List[str] = Field(default_factory=list, description="Safety flag values")
+    safety_warnings: List[str] = Field(default_factory=list, description="Safety warning messages")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "invocation_id": "abc123-def456-ghi789",
+                "envelope_id": "env_001",
+                "timestamp": "2026-01-06T10:30:00Z",
+                "tenant_id": "tenant_xyz",
+                "account_id": None,
+                "project_id": None,
+                "capability_id": "SUB-019",
+                "execution_vector": "AUTO_EXEC",
+                "confidence_score": 0.92,
+                "threshold": 0.80,
+                "decision": "EXECUTED",
+                "recovery_action": "retry_with_backoff",
+                "recovery_candidate_id": "rc_123",
+                "incident_id": "inc_456",
+                "execution_result": "SUCCESS",
+                "input_hash": "a1b2c3d4...",
+                "plan_hash": "e5f6g7h8...",
+                "plan_mutation_detected": False,
+                "worker_identity": "recovery_claim_worker",
+                "safety_checked": True,
+                "safety_passed": True,
+                "safety_flags": [],
+                "safety_warnings": [],
+            }
+        }
+
+
+class AutoExecuteReviewListDTO(BaseModel):
+    """
+    List of AUTO_EXECUTE decisions for founder review.
+
+    PIN-333: Evidence-only, read-only.
+    """
+
+    items: List[AutoExecuteReviewItemDTO] = Field(description="List of AUTO_EXECUTE decisions")
+    total_count: int = Field(ge=0, description="Total matching items")
+    page: int = Field(default=1, ge=1, description="Current page")
+    page_size: int = Field(default=50, ge=1, le=100, description="Items per page")
+
+    # Summary stats (from existing stored data, not computed)
+    executed_count: int = Field(ge=0, description="Count of EXECUTED decisions in result set")
+    skipped_count: int = Field(ge=0, description="Count of SKIPPED decisions in result set")
+    flagged_count: int = Field(ge=0, description="Count of decisions with safety flags")
+
+
+class AutoExecuteReviewFilterDTO(BaseModel):
+    """
+    Filter parameters for AUTO_EXECUTE review queries.
+
+    All filters are optional. Defaults to last 7 days.
+    """
+
+    # Time window
+    start_time: Optional[str] = Field(default=None, description="ISO8601 start time (default: 7 days ago)")
+    end_time: Optional[str] = Field(default=None, description="ISO8601 end time (default: now)")
+
+    # Tenant filter (optional - founders can see all tenants)
+    tenant_id: Optional[str] = Field(default=None, description="Filter by specific tenant")
+
+    # Decision filter
+    decision: Optional[Literal["EXECUTED", "SKIPPED"]] = Field(default=None, description="Filter by decision type")
+
+    # Confidence range
+    min_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Minimum confidence score")
+    max_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Maximum confidence score")
+
+    # Safety flag presence
+    has_safety_flags: Optional[bool] = Field(default=None, description="Filter for items with safety flags")
+
+    # Pagination
+    page: int = Field(default=1, ge=1, description="Page number")
+    page_size: int = Field(default=50, ge=1, le=100, description="Items per page")
+
+
+class AutoExecuteReviewStatsDTO(BaseModel):
+    """
+    Aggregate statistics for AUTO_EXECUTE review charts.
+
+    PIN-333: Charts reflect stored evidence only. No predictive analytics.
+    """
+
+    # Time window
+    start_time: str = Field(description="ISO8601 start of aggregation window")
+    end_time: str = Field(description="ISO8601 end of aggregation window")
+
+    # Counts
+    total_decisions: int = Field(ge=0, description="Total AUTO_EXECUTE decisions in window")
+    executed_count: int = Field(ge=0, description="Decisions where execution triggered")
+    skipped_count: int = Field(ge=0, description="Decisions where execution was skipped")
+
+    # Confidence distribution (for histogram)
+    confidence_distribution: Dict[str, int] = Field(
+        description="Confidence score buckets (0.0-0.5, 0.5-0.6, ..., 0.9-1.0)"
+    )
+
+    # Safety flag summary
+    flagged_count: int = Field(ge=0, description="Decisions with at least one safety flag")
+    flag_counts: Dict[str, int] = Field(
+        default_factory=dict, description="Count per safety flag type"
+    )
+
+    # Time series (for trend chart)
+    daily_counts: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Daily counts for trend chart"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "start_time": "2025-12-30T00:00:00Z",
+                "end_time": "2026-01-06T00:00:00Z",
+                "total_decisions": 150,
+                "executed_count": 120,
+                "skipped_count": 30,
+                "confidence_distribution": {
+                    "0.8-0.85": 25,
+                    "0.85-0.9": 45,
+                    "0.9-0.95": 35,
+                    "0.95-1.0": 15,
+                },
+                "flagged_count": 8,
+                "flag_counts": {
+                    "ownership_violation": 3,
+                    "rate_threshold_exceeded": 5,
+                },
+                "daily_counts": [
+                    {"date": "2025-12-30", "executed": 18, "skipped": 4},
+                    {"date": "2025-12-31", "executed": 15, "skipped": 5},
+                ],
+            }
+        }

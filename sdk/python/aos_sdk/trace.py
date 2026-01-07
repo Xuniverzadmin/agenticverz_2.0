@@ -16,6 +16,11 @@ Hash Rules (v1.1):
 - Audit fields (timestamp, duration_ms) preserved for logging but excluded
 - Two traces with same seed+plan+inputs+outputs will have IDENTICAL root_hash
 
+Safety Compliance (PIN-332):
+- INT-001: Trace hash must include all audit-critical fields
+- INT-002: Replay-critical fields must be in execution hash
+- INT-003: Idempotency keys must be tenant-scoped
+
 Usage:
     from aos_sdk.trace import Trace, TraceStep
 
@@ -33,12 +38,85 @@ Usage:
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from .runtime import RuntimeContext, canonical_json
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# INVOCATION SAFETY LAYER (PIN-332)
+# =============================================================================
+# Safety checks for trace integrity
+# INT-001: Trace hash must include audit-critical fields
+# INT-002: Replay fields must be in execution hash
+# INT-003: Idempotency keys must be tenant-scoped
+
+_SAFETY_WARNINGS_EMITTED: set = set()  # Track warnings to avoid duplicates
+
+
+def _emit_safety_warning(warning_id: str, message: str) -> None:
+    """Emit a safety warning once per session."""
+    if warning_id not in _SAFETY_WARNINGS_EMITTED:
+        logger.warning(f"[PIN-332 {warning_id}] {message}")
+        _SAFETY_WARNINGS_EMITTED.add(warning_id)
+
+
+def validate_trace_integrity_fields(
+    hashed_fields: List[str],
+    required_audit_fields: List[str] = None,
+) -> List[str]:
+    """
+    Validate that trace hash includes required audit-critical fields (INT-001).
+
+    Args:
+        hashed_fields: List of field names included in the hash
+        required_audit_fields: Required fields (defaults to PIN-332 INT-001 fields)
+
+    Returns:
+        List of missing fields (empty if compliant)
+    """
+    if required_audit_fields is None:
+        required_audit_fields = ["timestamp", "step_id", "caller_id", "outcome"]
+
+    missing = []
+    for field_name in required_audit_fields:
+        # Allow similar field names (step_id ~ step_index)
+        if field_name == "step_id":
+            if "step_id" not in hashed_fields and "step_index" not in hashed_fields:
+                missing.append(field_name)
+        elif field_name not in hashed_fields:
+            missing.append(field_name)
+
+    return missing
+
+
+def validate_idempotency_key(key: str, tenant_id: str) -> bool:
+    """
+    Validate that idempotency key is tenant-scoped (INT-003).
+
+    Args:
+        key: The idempotency key
+        tenant_id: Expected tenant ID prefix
+
+    Returns:
+        True if key is properly tenant-scoped
+    """
+    if not key or not tenant_id:
+        return True  # Can't validate without both
+
+    if not key.startswith(f"{tenant_id}:"):
+        _emit_safety_warning(
+            "INT-003",
+            f"Idempotency key not tenant-scoped: {key[:20]}... (expected prefix: {tenant_id}:)"
+        )
+        return False
+
+    return True
 
 # Trace schema version - bumped to 1.1 for deterministic hashing
 TRACE_SCHEMA_VERSION = "1.1.0"
@@ -244,6 +322,11 @@ class Trace:
         - seed, timestamp (frozen), tenant_id
         - Each step's deterministic_payload
 
+        Safety Compliance (PIN-332 INT-001):
+        - Emits warning if trace hash is missing audit-critical fields
+        - Current implementation includes: timestamp, step_index, outcome
+        - Missing field: caller_id (annotated gap per PIN-331)
+
         Returns:
             Root hash of the finalized trace
 
@@ -252,6 +335,19 @@ class Trace:
         """
         if self.finalized:
             raise ValueError("Trace already finalized")
+
+        # =========================================================================
+        # SAFETY CHECK (PIN-332 INT-001)
+        # =========================================================================
+        # Validate that hash includes audit-critical fields
+        # Note: caller_id is an annotated gap per PIN-331 (CAP-021 Gap 6)
+        hashed_fields = ["timestamp", "step_index", "outcome", "seed", "tenant_id"]
+        missing = validate_trace_integrity_fields(hashed_fields)
+        if missing:
+            _emit_safety_warning(
+                "INT-001",
+                f"Trace hash missing audit-critical fields: {missing}"
+            )
 
         self.finalized = True
         self.root_hash = self._compute_root_hash()
@@ -579,11 +675,23 @@ def replay_step(
         return ReplayResult(step_index=step.step_index, action="failed", reason=str(e))
 
 
-def generate_idempotency_key(run_id: str, step_index: int, skill_id: str, input_hash: str) -> str:
+def generate_idempotency_key(
+    run_id: str,
+    step_index: int,
+    skill_id: str,
+    input_hash: str,
+    tenant_id: Optional[str] = None,
+) -> str:
     """
-    Generate a deterministic idempotency key for a step.
+    Generate a deterministic, tenant-scoped idempotency key for a step.
+
+    Safety Compliance (PIN-332 INT-003):
+    - Idempotency keys must be tenant-scoped to prevent collision risk
+    - If tenant_id is provided, key is prefixed with "tenant_id:"
+    - If tenant_id is None, emits a warning per PIN-332
 
     This creates a unique key based on:
+    - tenant_id: Tenant isolation (PIN-332 INT-003)
     - run_id: The execution run
     - step_index: Position in the plan
     - skill_id: The skill being executed
@@ -593,6 +701,30 @@ def generate_idempotency_key(run_id: str, step_index: int, skill_id: str, input_
     - Payment processing
     - Database writes
     - External API calls with side effects
+
+    Args:
+        run_id: The execution run ID
+        step_index: Position in the plan
+        skill_id: The skill being executed
+        input_hash: Hash of the input data
+        tenant_id: Tenant ID for scoping (recommended for INT-003 compliance)
+
+    Returns:
+        Tenant-scoped idempotency key if tenant_id provided,
+        otherwise a key without tenant prefix (with warning)
     """
     key_data = f"{run_id}:{step_index}:{skill_id}:{input_hash}"
-    return hashlib.sha256(key_data.encode()).hexdigest()[:32]
+    base_key = hashlib.sha256(key_data.encode()).hexdigest()[:32]
+
+    # =========================================================================
+    # SAFETY CHECK (PIN-332 INT-003)
+    # =========================================================================
+    # Idempotency keys should be tenant-scoped to prevent collision risk
+    if tenant_id:
+        return f"{tenant_id}:{base_key}"
+    else:
+        _emit_safety_warning(
+            "INT-003",
+            f"Idempotency key generated without tenant scope (collision risk): {base_key[:16]}..."
+        )
+        return base_key

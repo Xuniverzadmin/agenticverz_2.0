@@ -3,19 +3,22 @@ import { Bell, User, LogOut, Settings } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/common/Button';
-import { formatCredits } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
-import { getCreditBalance } from '@/api/credits';
+// PIN-323: Credits API quarantined - CAP-008 is SDK-only
+// import { formatCredits } from '@/lib/utils';
+// import { useQuery } from '@tanstack/react-query';
+// import { getCreditBalance } from '@/api/credits';
 
 export function Header() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
-  const { data: credits } = useQuery({
-    queryKey: ['credits-balance'],
-    queryFn: getCreditBalance,
-    refetchInterval: 60000,
-  });
+  // PIN-323: Credits query disabled - capability quarantined
+  // const { data: credits } = useQuery({
+  //   queryKey: ['credits-balance'],
+  //   queryFn: getCreditBalance,
+  //   refetchInterval: 60000,
+  // });
+  const credits = null; // Placeholder until credits capability is resolved
 
   const handleLogout = () => {
     logout();

@@ -1,0 +1,341 @@
+# =============================================================================
+# CANONICAL JOURNEYS - L2.1 Discovery
+# =============================================================================
+#
+# Reference: PIN-322 (L2-L2.1 Progressive Activation)
+# Reference: CAPABILITY_REGISTRY.yaml (Invocation Addendum)
+# Reference: FRONTEND_CAPABILITY_MAPPING.yaml
+#
+# Purpose: Define one canonical journey per frontend-invocable capability
+# to validate L2 backend behavior matches governance declarations.
+#
+# Journey Structure:
+#   journey_id: Unique identifier (JRN-XXX)
+#   capability_id: Capability being tested
+#   name: Human-readable name
+#   route: API route to invoke
+#   method: HTTP method
+#   expected_status: Expected HTTP status code
+#   domain: L1 domain (from FRONTEND_CAPABILITY_MAPPING.yaml)
+#   orders: Epistemic depth levels covered
+#   audience: Required audience (customer/founder)
+#   description: What this journey validates
+#
+# =============================================================================
+
+journeys:
+
+  # ---------------------------------------------------------------------------
+  # CAP-001: REPLAY
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-001"
+    capability_id: "CAP-001"
+    name: "Replay Timeline Query"
+    route: "/api/v1/replay/test-incident/timeline"
+    method: "GET"
+    expected_status: 200
+    domain: "Incidents"
+    orders: ["O2", "O3"]
+    audience: "founder"
+    description: "Validate replay timeline endpoint returns structured timeline data"
+
+  - journey_id: "JRN-002"
+    capability_id: "CAP-001"
+    name: "Replay Slice Detail"
+    route: "/api/v1/replay/test-incident/slice"
+    method: "GET"
+    expected_status: 200
+    domain: "Incidents"
+    orders: ["O3", "O5"]
+    audience: "founder"
+    description: "Validate replay slice endpoint returns trace data"
+
+  - journey_id: "JRN-003"
+    capability_id: "CAP-001"
+    name: "Replay Summary"
+    route: "/api/v1/replay/test-incident/summary"
+    method: "GET"
+    expected_status: 200
+    domain: "Incidents"
+    orders: ["O1"]
+    audience: "founder"
+    description: "Validate replay summary provides incident overview"
+
+  # ---------------------------------------------------------------------------
+  # CAP-002: COST SIMULATION
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-004"
+    capability_id: "CAP-002"
+    name: "Cost Simulation Request"
+    route: "/costsim/v2/simulate"
+    method: "POST"
+    expected_status: 200
+    domain: "Overview"
+    orders: ["O1", "O3"]
+    audience: "customer"
+    description: "Validate cost simulation returns advisory estimate"
+
+  - journey_id: "JRN-005"
+    capability_id: "CAP-002"
+    name: "Cost Divergence Query"
+    route: "/costsim/v2/divergence"
+    method: "GET"
+    expected_status: 200
+    domain: "Overview"
+    orders: ["O2"]
+    audience: "customer"
+    description: "Validate divergence tracking returns current delta"
+
+  - journey_id: "JRN-006"
+    capability_id: "CAP-002"
+    name: "Scenarios List"
+    route: "/api/v1/scenarios"
+    method: "GET"
+    expected_status: 200
+    domain: "Overview"
+    orders: ["O2"]
+    audience: "customer"
+    description: "Validate scenarios list returns H2 cost scenarios"
+
+  # ---------------------------------------------------------------------------
+  # CAP-003: POLICY PROPOSALS
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-007"
+    capability_id: "CAP-003"
+    name: "Policy Proposals List"
+    route: "/api/v1/policy-proposals"
+    method: "GET"
+    expected_status: 200
+    domain: "Policies"
+    orders: ["O2"]
+    audience: "founder"
+    description: "Validate policy proposals list (founder-only visibility)"
+
+  - journey_id: "JRN-008"
+    capability_id: "CAP-003"
+    name: "Policy Proposals Summary"
+    route: "/api/v1/policy-proposals/stats/summary"
+    method: "GET"
+    expected_status: 200
+    domain: "Policies"
+    orders: ["O1"]
+    audience: "founder"
+    description: "Validate proposals stats summary"
+
+  # ---------------------------------------------------------------------------
+  # CAP-004: PREDICTION PLANE
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-009"
+    capability_id: "CAP-004"
+    name: "Predictions List"
+    route: "/api/v1/predictions"
+    method: "GET"
+    expected_status: 200
+    domain: "Overview"
+    orders: ["O2"]
+    audience: "customer"
+    description: "Validate predictions list returns advisory signals"
+
+  - journey_id: "JRN-010"
+    capability_id: "CAP-004"
+    name: "Predictions Summary"
+    route: "/api/v1/predictions/stats/summary"
+    method: "GET"
+    expected_status: 200
+    domain: "Overview"
+    orders: ["O1"]
+    audience: "customer"
+    description: "Validate predictions summary stats"
+
+  # ---------------------------------------------------------------------------
+  # CAP-005: FOUNDER CONSOLE
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-011"
+    capability_id: "CAP-005"
+    name: "Ops Dashboard"
+    route: "/ops/dashboard"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O1"]
+    audience: "founder"
+    description: "Validate founder ops dashboard access"
+
+  - journey_id: "JRN-012"
+    capability_id: "CAP-005"
+    name: "Founder Timeline"
+    route: "/founder/timeline/recent"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O2"]
+    audience: "founder"
+    description: "Validate founder timeline queries"
+
+  - journey_id: "JRN-013"
+    capability_id: "CAP-005"
+    name: "Founder Explorer"
+    route: "/founder/explorer/summary"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O1"]
+    audience: "founder"
+    description: "Validate H3 explorer mode access"
+
+  # ---------------------------------------------------------------------------
+  # CAP-009: POLICY ENGINE
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-014"
+    capability_id: "CAP-009"
+    name: "Policies List"
+    route: "/api/v1/policies"
+    method: "GET"
+    expected_status: 200
+    domain: "Policies"
+    orders: ["O2"]
+    audience: "customer"
+    description: "Validate active policies list"
+
+  - journey_id: "JRN-015"
+    capability_id: "CAP-009"
+    name: "Guard Policies"
+    route: "/guard/policies/active"
+    method: "GET"
+    expected_status: 200
+    domain: "Policies"
+    orders: ["O2"]
+    audience: "customer"
+    description: "Validate guard policies endpoint"
+
+  # ---------------------------------------------------------------------------
+  # CAP-011: GOVERNANCE ORCHESTRATION
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-016"
+    capability_id: "CAP-011"
+    name: "Review Queue"
+    route: "/founder/review/pending"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O2"]
+    audience: "founder"
+    description: "Validate governance review queue access"
+
+  - journey_id: "JRN-017"
+    capability_id: "CAP-011"
+    name: "SBA Inspector"
+    route: "/sba/status"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O1"]
+    audience: "founder"
+    description: "Validate SBA inspector status endpoint"
+
+  # ---------------------------------------------------------------------------
+  # CAP-014: MEMORY SYSTEM
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-018"
+    capability_id: "CAP-014"
+    name: "Memory Pins List"
+    route: "/api/v1/memory/pins"
+    method: "GET"
+    expected_status: 200
+    domain: "Activity"
+    orders: ["O2"]
+    audience: "founder"
+    description: "Validate memory pins list (founder-only)"
+
+  - journey_id: "JRN-019"
+    capability_id: "CAP-014"
+    name: "Embedding Query"
+    route: "/api/v1/embedding/status"
+    method: "GET"
+    expected_status: 200
+    domain: "Activity"
+    orders: ["O1"]
+    audience: "founder"
+    description: "Validate embedding system status"
+
+  # ---------------------------------------------------------------------------
+  # CAP-018: INTEGRATION PLATFORM
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-020"
+    capability_id: "CAP-018"
+    name: "Integration Status"
+    route: "/api/v1/integration/status"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O1"]
+    audience: "founder"
+    description: "Validate integration platform status"
+
+  - journey_id: "JRN-021"
+    capability_id: "CAP-018"
+    name: "Recovery Suggestions"
+    route: "/api/v1/recovery/suggestions"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O2"]
+    audience: "founder"
+    description: "Validate recovery suggestions list"
+
+  # ---------------------------------------------------------------------------
+  # PLATFORM UTILITIES (Non-Capability)
+  # ---------------------------------------------------------------------------
+  - journey_id: "JRN-022"
+    capability_id: "PLATFORM"
+    name: "Health Check"
+    route: "/health"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: []
+    audience: "public"
+    description: "Validate backend health endpoint (no auth required)"
+
+  - journey_id: "JRN-023"
+    capability_id: "PLATFORM"
+    name: "KillSwitch Status"
+    route: "/api/v1/killswitch/status"
+    method: "GET"
+    expected_status: 200
+    domain: "NONE"
+    orders: ["O1"]
+    audience: "customer"
+    description: "Validate killswitch status endpoint"
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+
+summary:
+  total_journeys: 23
+  by_capability:
+    CAP-001: 3
+    CAP-002: 3
+    CAP-003: 2
+    CAP-004: 2
+    CAP-005: 3
+    CAP-009: 2
+    CAP-011: 2
+    CAP-014: 2
+    CAP-018: 2
+    PLATFORM: 2
+  by_audience:
+    founder: 14
+    customer: 7
+    public: 2
+  by_domain:
+    Incidents: 3
+    Overview: 6
+    Policies: 4
+    Activity: 2
+    NONE: 8
+
+# =============================================================================
+# END OF CANONICAL JOURNEYS
+# =============================================================================

@@ -1,0 +1,24 @@
+{
+  "journey_id": "JRN-021",
+  "capability_id": "CAP-018",
+  "executed_at": "2026-01-06T12:22:08.088387Z",
+  "base_url": "http://localhost:8000",
+  "route": "/api/v1/recovery/suggestions",
+  "method": "GET",
+  "status_code": 403,
+  "response_headers": {
+    "date": "Tue, 06 Jan 2026 12:21:09 GMT",
+    "server": "uvicorn",
+    "content-length": "88",
+    "content-type": "application/json",
+    "x-request-id": "baae4bfb-f86c-41da-bb50-4eea9f5a520d",
+    "connection": "close"
+  },
+  "response_body": "{\"error\":\"forbidden\",\"reason\":\"no-credentials\",\"resource\":\"recovery\",\"action\":\"suggest\"}",
+  "response_time_ms": 2.64,
+  "expected_status": 200,
+  "status_match": false,
+  "error": "HTTP Error 403: Forbidden",
+  "error_type": "HTTPError",
+  "suggested_failure_type": "AUTH_MISMATCH"
+}
