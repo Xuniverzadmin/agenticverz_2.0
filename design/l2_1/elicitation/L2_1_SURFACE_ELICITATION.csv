@@ -1,0 +1,16 @@
+domain,subdomain,topic,surface_id,o1_enabled,o2_enabled,o3_enabled,o4_enabled,o5_enabled,read_allowed,download_allowed,write_allowed,write_action_name,write_confirmation,activate_allowed,activate_action_name,activate_confirmation,visible_by_default,requires_consent_ui,replay_required,notes
+Overview,SYSTEM_HEALTH,CURRENT_STATUS,OVERVIEW.SYSTEM_HEALTH.CURRENT_STATUS,YES,,,,,,,,,,,,,,,Primary health indicator
+Overview,SYSTEM_HEALTH,HEALTH_METRICS,OVERVIEW.SYSTEM_HEALTH.HEALTH_METRICS,YES,,,,,,,,,,,,,,,Key health metrics
+Activity,EXECUTIONS,ACTIVE_RUNS,ACTIVITY.EXECUTIONS.ACTIVE_RUNS,YES,,,,,,,,,,,,,,,Currently running executions
+Activity,EXECUTIONS,COMPLETED_RUNS,ACTIVITY.EXECUTIONS.COMPLETED_RUNS,YES,,,,,,,,,,,,,,,Completed executions
+Activity,EXECUTIONS,RUN_DETAILS,ACTIVITY.EXECUTIONS.RUN_DETAILS,YES,,,,,,,,,,,,,,,Full execution detail
+Incidents,ACTIVE_INCIDENTS,OPEN_INCIDENTS,INCIDENTS.ACTIVE_INCIDENTS.OPEN_INCIDENTS,YES,,,,,,,,,,,,,,,Open incidents list
+Incidents,ACTIVE_INCIDENTS,INCIDENT_DETAILS,INCIDENTS.ACTIVE_INCIDENTS.INCIDENT_DETAILS,YES,,,,,,,,,,,,,,,Incident detail with context
+Incidents,HISTORICAL_INCIDENTS,RESOLVED_INCIDENTS,INCIDENTS.HISTORICAL_INCIDENTS.RESOLVED_INCIDENTS,YES,,,,,,,,,,,,,,,Historical resolved incidents
+Policies,ACTIVE_POLICIES,BUDGET_POLICIES,POLICIES.ACTIVE_POLICIES.BUDGET_POLICIES,YES,,,,,,,,,,,,,,,Budget policy rules
+Policies,ACTIVE_POLICIES,RATE_LIMITS,POLICIES.ACTIVE_POLICIES.RATE_LIMITS,YES,,,,,,,,,,,,,,,Rate limit configuration
+Policies,ACTIVE_POLICIES,APPROVAL_RULES,POLICIES.ACTIVE_POLICIES.APPROVAL_RULES,YES,,,,,,,,,,,,,,,Approval requirements
+Policies,POLICY_AUDIT,POLICY_CHANGES,POLICIES.POLICY_AUDIT.POLICY_CHANGES,YES,,,,,,,,,,,,,,,Policy change audit trail
+Logs,AUDIT_LOGS,SYSTEM_AUDIT,LOGS.AUDIT_LOGS.SYSTEM_AUDIT,YES,,,,,,,,,,,,,,,System audit logs
+Logs,AUDIT_LOGS,USER_AUDIT,LOGS.AUDIT_LOGS.USER_AUDIT,YES,,,,,,,,,,,,,,,User action audit logs
+Logs,EXECUTION_TRACES,TRACE_DETAILS,LOGS.EXECUTION_TRACES.TRACE_DETAILS,YES,,,,,,,,,,,,,,,Execution trace detail

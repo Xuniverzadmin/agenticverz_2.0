@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-07 (PIN-346 GC_L Phase 2 DSL Core Implementation - Phase 2 Closure)
+**Last Updated:** 2026-01-07 (PIN-347 L2.1 Epistemic Layer — Table-First Design)
 
 ---
 
@@ -352,6 +352,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-342](PIN-342-gc-l-ui-contract-interpreter-hashchain.md) | **GC_L UI Contract, Interpreter, Hash-Chain** | Governance / Enforcement | **NORMATIVE** | 2026-01-07 |
 | [PIN-343](PIN-343-gc-l-ir-optimizer-confidence-anchoring.md) | **GC_L IR Optimizer, Confidence, Anchoring** | Governance / Runtime | **SPECIFICATION** | 2026-01-07 |
 | [PIN-346](PIN-346-gcl-phase-2-dsl-core-implementation.md) | **GC_L Phase 2 DSL Core Implementation** | GC_L / DSL Implementation | **✅ COMPLETE** | 2026-01-07 |
+| [PIN-347](PIN-347-l2-1-epistemic-layer-table-first.md) | **L2.1 Epistemic Layer — Table-First Design** | Architecture / Layer Design | **IN_PROGRESS** | 2026-01-07 |
 
 ---
 
@@ -1121,6 +1122,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-07 | **PIN-347 L2.1 Epistemic Layer — Table-First Design** - Phase 1 & 2 complete: 7 template docs, 3 SQL schemas, 2 seed files, trace system |
 | 2026-01-07 | **PIN-346 GC_L Phase 2 DSL Core Implementation** - Updated: Phase 2 Closure |
 | 2026-01-07 | **PIN-346 GC_L Phase 2 DSL Core Implementation** - Created via memory_trail. |
 | 2026-01-07 | **PIN-343 GC_L IR Optimizer, Confidence, Anchoring** - SPECIFICATION: (1) Policy DSL→IR bytecode compiler with 10-instruction closed set, 3 optimization passes, (2) Signal confidence calibration with temporal decay (λ rates) and human feedback learning, (3) Daily root hash anchoring with external export targets. Immutability enforced by triggers. |
