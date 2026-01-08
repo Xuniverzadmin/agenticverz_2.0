@@ -47,13 +47,13 @@ function NavItem({ icon: Icon, label, href, collapsed }: NavItemProps) {
 
 // =============================================================================
 // NAVIGATION STRUCTURE
-// M28: Founder routes (ops/*), Customer routes (guard/*)
+// M28: Founder routes (ops/*), Customer routes (cus/*)
 // Phase 5E: Founder control surfaces (timeline, controls)
 // =============================================================================
 
 const MAIN_NAV = [
   { icon: Radar, label: 'Ops Console', href: '/ops' },
-  { icon: Link2, label: 'Guard Console', href: '/guard' },
+  { icon: Link2, label: 'Customer Console', href: '/cus' },
 ];
 
 const FOUNDER_ITEMS = [

@@ -1,20 +1,29 @@
 /**
  * FounderRoute - Authority-enforced route guard for Founder Console
  *
- * PIN-318: Phase 1.2 Authority Hardening
+ * Layer: L1 — Product Experience (UI)
+ * Product: system-wide
+ * Role: Auth guard for founder console routes (/prefops/* and /fops/*)
+ * Reference: PIN-352, Routing Authority Model; PIN-318
  *
- * All founder routes are under /fops/* namespace:
- * - /fops/ops/*        - Ops console
- * - /fops/traces/*     - Execution traces
- * - /fops/workers/*    - Worker management
- * - /fops/recovery     - Recovery candidates
- * - /fops/integration  - Learning pipeline
- * - /fops/timeline     - Decision timeline
- * - /fops/controls     - Kill-switch (FOUNDER-only)
- * - /fops/replay/*     - Replay viewer
- * - /fops/scenarios    - Cost simulation
- * - /fops/explorer     - Cross-tenant explorer
- * - /fops/sba          - SBA inspector
+ * INFRASTRUCTURE: FROZEN
+ * Owner: platform
+ * Churn: low (deliberate changes only)
+ * Last Frozen: 2026-01-08
+ *
+ * All founder routes are under /prefops/* (preflight) or /fops/* (production):
+ * - ops/*        - Ops console
+ * - traces/*     - Execution traces
+ * - workers/*    - Worker management
+ * - recovery     - Recovery candidates
+ * - integration  - Learning pipeline
+ * - timeline     - Decision timeline
+ * - controls     - Kill-switch (FOUNDER-only)
+ * - replay/*     - Replay viewer
+ * - scenarios    - Cost simulation
+ * - explorer     - Cross-tenant explorer
+ * - review       - Founder review
+ * - sba          - SBA inspector
  *
  * This component enforces:
  * - Authentication (must be logged in)
@@ -22,11 +31,17 @@
  * - Optional role check (FOUNDER or OPERATOR)
  *
  * If a customer token (aud="console") attempts to access a founder route,
- * they are redirected to /guard (not /login) to prevent route discovery.
+ * they are redirected to customer console (not /login) to prevent route discovery.
  */
 
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore, TokenAudience } from '@/stores/authStore';
+import {
+  PUBLIC_ROUTES,
+  ONBOARDING_ROUTES,
+  CUSTOMER_ROUTES,
+  FOUNDER_ROUTES,
+} from '@/routing';
 
 // Founder roles (mirrors backend FounderRole enum)
 export type FounderRole = 'FOUNDER' | 'OPERATOR';
@@ -43,20 +58,20 @@ export function FounderRoute({ children, allowedRoles }: FounderRouteProps) {
 
   // Check 1: Must be authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={PUBLIC_ROUTES.login} state={{ from: location }} replace />;
   }
 
   // Check 2: Must have completed onboarding
   if (!onboardingComplete) {
-    return <Navigate to="/onboarding/connect" replace />;
+    return <Navigate to={ONBOARDING_ROUTES.connect} replace />;
   }
 
   // Check 3: Must have founder audience (aud="fops") or be marked as founder
-  // PIN-318: Explicit audience check - customer tokens (aud="console") are denied
+  // PIN-352: Explicit audience check - customer tokens (aud="console") are denied
   if (audience !== 'fops' && !isFounder) {
     // Redirect to customer console, not login
     // This prevents route discovery (customer sees their console, not an error)
-    return <Navigate to="/guard" replace />;
+    return <Navigate to={CUSTOMER_ROUTES.root} replace />;
   }
 
   // Check 4: Optional role restriction
@@ -65,7 +80,7 @@ export function FounderRoute({ children, allowedRoles }: FounderRouteProps) {
     if (!allowedRoles.includes(userRole)) {
       // User is founder but lacks required role
       // Redirect to main founder page (ops console)
-      return <Navigate to="/fops/ops" replace />;
+      return <Navigate to={FOUNDER_ROUTES.ops} replace />;
     }
   }
 
@@ -94,12 +109,12 @@ export function CustomerRoute({ children, allowedRoles }: CustomerRouteProps) {
 
   // Check 1: Must be authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={PUBLIC_ROUTES.login} state={{ from: location }} replace />;
   }
 
   // Check 2: Must have completed onboarding
   if (!onboardingComplete) {
-    return <Navigate to="/onboarding/connect" replace />;
+    return <Navigate to={ONBOARDING_ROUTES.connect} replace />;
   }
 
   // Check 3: Audience check
@@ -108,7 +123,7 @@ export function CustomerRoute({ children, allowedRoles }: CustomerRouteProps) {
   // This is intentional - founders may need to see customer view
   if (audience !== 'console' && audience !== 'fops') {
     // Unknown audience - redirect to login
-    return <Navigate to="/login" replace />;
+    return <Navigate to={PUBLIC_ROUTES.login} replace />;
   }
 
   // Check 4: Optional role restriction (only for customer tokens)
@@ -116,7 +131,7 @@ export function CustomerRoute({ children, allowedRoles }: CustomerRouteProps) {
     const userRole = user.role as CustomerRole;
     if (!allowedRoles.includes(userRole)) {
       // User lacks required role - redirect to overview
-      return <Navigate to="/guard/overview" replace />;
+      return <Navigate to={CUSTOMER_ROUTES.overview} replace />;
     }
   }
 

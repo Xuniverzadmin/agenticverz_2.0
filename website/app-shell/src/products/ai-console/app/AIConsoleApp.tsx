@@ -10,7 +10,7 @@
  * Role: Product boundary (routing, providers, layout)
  *
  * This is the product root for AI Console. It can be:
- * - Lazy-loaded by the main console shell (current: /guard/*)
+ * - Lazy-loaded by the main console shell (current: /cus/*)
  * - Mounted standalone via main.tsx (future: console.agenticverz.com)
  *
  * Architecture (3-layer separation):
@@ -19,17 +19,17 @@
  * - pages/*         = Features (UI, business logic)
  *
  * URL Routes:
- * - /guard                 → Redirects to /guard/overview
- * - /guard/overview        → Is the system okay right now?
- * - /guard/activity        → What ran / is running?
- * - /guard/incidents       → What went wrong?
- * - /guard/incidents/:id   → Incident detail (O3)
- * - /guard/policies        → How is behavior defined?
- * - /guard/logs            → What is the raw truth?
- * - /guard/integrations    → Connected services & webhooks
- * - /guard/keys            → API key management
- * - /guard/settings        → Configuration
- * - /guard/account         → Organization & team
+ * - /cus                 → Redirects to /cus/overview
+ * - /cus/overview        → Is the system okay right now?
+ * - /cus/activity        → What ran / is running?
+ * - /cus/incidents       → What went wrong?
+ * - /cus/incidents/:id   → Incident detail (O3)
+ * - /cus/policies        → How is behavior defined?
+ * - /cus/logs            → What is the raw truth?
+ * - /cus/integrations    → Connected services & webhooks
+ * - /cus/keys            → API key management
+ * - /cus/settings        → Configuration
+ * - /cus/account         → Organization & team
  *
  * Authentication (Hybrid - M24):
  * - Primary: OAuth tokens from main auth store (after onboarding)
@@ -43,6 +43,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
+import { CUSTOMER_ROUTES, CUSTOMER_ROOT, PUBLIC_ROUTES } from '@/routing';
 import { BetaBanner } from '@/components/BetaBanner';
 
 // App-level components (local)
@@ -107,10 +108,13 @@ export function AIConsoleApp() {
   const location = useLocation();
 
   // Derive activeTab from URL path
+  // PIN-352: Uses CUSTOMER_ROOT from routing authority
   const activeTab = useMemo((): NavItemId => {
     const path = location.pathname;
-    // Match /guard/{tab} pattern
-    const match = path.match(/^\/guard\/([a-z]+)/);
+    // Match {CUSTOMER_ROOT}/{tab} pattern dynamically
+    const rootPattern = CUSTOMER_ROOT.replace('/', '\\/');
+    const regex = new RegExp(`^${rootPattern}\\/([a-z]+)`);
+    const match = path.match(regex);
     if (match) {
       const tab = match[1] as NavItemId;
       // Validate it's a known tab
@@ -123,8 +127,9 @@ export function AIConsoleApp() {
   }, [location.pathname]);
 
   // Navigation handler - navigates to URL instead of setting state
+  // PIN-352: Uses CUSTOMER_ROOT from routing authority
   const handleTabChange = (tab: NavItemId) => {
-    navigate(`/guard/${tab}`);
+    navigate(`${CUSTOMER_ROOT}/${tab}`);
   };
 
   // Check authentication on mount
@@ -198,18 +203,19 @@ export function AIConsoleApp() {
     validateAndSetKey(inputKey);
   };
 
+  // PIN-352: Uses routing authority for navigation
   const handleLogout = () => {
     if (authMode === 'oauth') {
       // OAuth logout - go back to login
       oauthLogout();
-      navigate('/login', { replace: true });
+      navigate(PUBLIC_ROUTES.login, { replace: true });
     } else {
       // API key logout - stay on guard login
       setApiKey('');
       setIsApiKeyAuthenticated(false);
       setAuthMode(null);
       localStorage.removeItem(STORAGE_KEY);
-      navigate('/guard/overview', { replace: true });
+      navigate(CUSTOMER_ROUTES.overview, { replace: true });
     }
   };
 
@@ -218,7 +224,7 @@ export function AIConsoleApp() {
   };
 
   const handleOAuthLogin = () => {
-    navigate('/login', { replace: true });
+    navigate(PUBLIC_ROUTES.login, { replace: true });
   };
 
   // Check if authenticated (either OAuth or API key)
@@ -338,11 +344,12 @@ export function AIConsoleApp() {
   }
 
   // Phase 5: URL-based routing - all pages are routes
+  // PIN-352: Uses routing authority for navigation
   const renderRoutes = () => {
     return (
       <Routes>
         {/* Default redirect to overview */}
-        <Route path="/" element={<Navigate to="/guard/overview" replace />} />
+        <Route path="/" element={<Navigate to={CUSTOMER_ROUTES.overview} replace />} />
 
         {/* Core Lenses */}
         <Route path="overview" element={<OverviewPage />} />
@@ -361,7 +368,7 @@ export function AIConsoleApp() {
         <Route path="account" element={<AccountPage />} />
 
         {/* Catch-all redirect to overview */}
-        <Route path="*" element={<Navigate to="/guard/overview" replace />} />
+        <Route path="*" element={<Navigate to={CUSTOMER_ROUTES.overview} replace />} />
       </Routes>
     );
   };

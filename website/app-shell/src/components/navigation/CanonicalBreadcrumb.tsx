@@ -11,8 +11,8 @@
  *
  * Usage:
  * <CanonicalBreadcrumb
- *   root={{ label: "Incidents", path: "/guard/incidents" }}
- *   entity={{ label: "INC-442", path: "/guard/incidents/442" }}
+ *   root={{ label: "Incidents", path: "/cus/incidents" }}
+ *   entity={{ label: "INC-442", path: "/cus/incidents/442" }}
  * />
  *
  * Cross-entity navigation resets:
