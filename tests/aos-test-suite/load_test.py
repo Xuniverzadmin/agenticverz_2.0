@@ -240,14 +240,14 @@ class AOSLoadTest:
 
     def print_result(self, name: str, result: LoadTestResult):
         """Print formatted result"""
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print(f"📈 {name}")
-        print(f"{'='*50}")
+        print(f"{'=' * 50}")
         print(f"  Total Requests:    {result.total_requests}")
         print(f"  Successful:        {result.successful}")
         print(f"  Failed:            {result.failed}")
         print(
-            f"  Success Rate:      {(result.successful/result.total_requests*100):.1f}%"
+            f"  Success Rate:      {(result.successful / result.total_requests * 100):.1f}%"
         )
         print(f"  Duration:          {result.duration_seconds:.2f}s")
         print(f"  RPS:               {result.requests_per_second:.1f}")

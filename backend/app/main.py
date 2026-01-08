@@ -467,14 +467,15 @@ from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota
 
 # M29 Category 6: Founder Action Paths
 from .api.founder_actions import router as founder_actions_router  # /ops/actions/* - Founder actions
+
+# CRM Contract Review (approve/reject workflow)
+from .api.founder_contract_review import (
+    router as founder_contract_review_router,  # /founder/contracts/* - Contract review
+)
 from .api.founder_explorer import router as explorer_router  # H3 Founder Explorer (cross-tenant READ-ONLY)
 
 # PIN-333: Founder AUTO_EXECUTE Review (evidence-only, read-only)
 from .api.founder_review import router as founder_review_router  # /founder/review/* - Evidence review
-
-# CRM Contract Review (approve/reject workflow)
-from .api.founder_contract_review import router as founder_contract_review_router  # /founder/contracts/* - Contract review
-
 from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
 
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
@@ -546,7 +547,9 @@ app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 app.include_router(platform_router)  # /platform/* - PIN-284 Platform Health (founder-only)
 app.include_router(founder_timeline_router)  # Phase 4C-1 Founder Timeline (decision records)
 app.include_router(founder_review_router)  # PIN-333: /founder/review/* - AUTO_EXECUTE evidence review (FOPS auth)
-app.include_router(founder_contract_review_router)  # CRM: /founder/contracts/* - Contract approval/rejection (FOPS auth)
+app.include_router(
+    founder_contract_review_router
+)  # CRM: /founder/contracts/* - Contract approval/rejection (FOPS auth)
 app.include_router(customer_visibility_router)  # Phase 4C-2 Customer Visibility (predictability)
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
 app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop
@@ -1315,7 +1318,7 @@ async def retry_failed_run(payload: RetryRequest, _: str = Depends(verify_api_ke
     from sqlalchemy import select as sa_select
 
     from .db import get_async_session
-    from .governance.kernel import ExecutionKernel, InvocationContext, get_enforcement_mode
+    from .governance.kernel import ExecutionKernel, InvocationContext
     from .models.tenant import WorkerRun
 
     async with get_async_session() as session:

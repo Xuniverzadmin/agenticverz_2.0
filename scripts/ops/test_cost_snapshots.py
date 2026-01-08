@@ -3,6 +3,7 @@
 
 Tests the M27.1 Cost Snapshot Barrier with real Neon DB data.
 """
+
 import asyncio
 import os
 import ssl
@@ -57,9 +58,9 @@ async def get_db_session():
 
 async def test_snapshot_computation(tenant_id: str):
     """Test computing a snapshot for a tenant."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing Snapshot Computation for: {tenant_id}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     session = await get_db_session()
 
@@ -102,7 +103,7 @@ async def test_snapshot_computation(tenant_id: str):
         for row in result.fetchall():
             entity = row.entity_id or "(tenant-level)"
             print(
-                f"   {row.entity_type}: {entity} → ${row.total_cost_cents/100:.4f} ({row.request_count} requests)"
+                f"   {row.entity_type}: {entity} → ${row.total_cost_cents / 100:.4f} ({row.request_count} requests)"
             )
 
         return snapshot
@@ -113,9 +114,9 @@ async def test_snapshot_computation(tenant_id: str):
 
 async def test_anomaly_evaluation(snapshot_id: str, tenant_id: str):
     """Test evaluating a snapshot for anomalies."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing Anomaly Evaluation for Snapshot: {snapshot_id}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     session = await get_db_session()
 
@@ -168,9 +169,11 @@ async def test_anomaly_evaluation(snapshot_id: str, tenant_id: str):
                 },
             )
             await session.commit()
-            print(f"   Baseline: ${baseline_cost/100:.4f}/day")
-            print(f"   Current: ${current_cost/100:.4f} (today)")
-            print(f"   Expected deviation: {(current_cost/baseline_cost - 1)*100:.0f}%")
+            print(f"   Baseline: ${baseline_cost / 100:.4f}/day")
+            print(f"   Current: ${current_cost / 100:.4f} (today)")
+            print(
+                f"   Expected deviation: {(current_cost / baseline_cost - 1) * 100:.0f}%"
+            )
 
             # Update aggregate with baseline
             await session.execute(
@@ -212,9 +215,9 @@ async def test_anomaly_evaluation(snapshot_id: str, tenant_id: str):
 
 async def verify_db_state(tenant_id: str):
     """Verify the final database state."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Verifying Database State")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     session = await get_db_session()
 

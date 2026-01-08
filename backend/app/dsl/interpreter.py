@@ -37,16 +37,16 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.dsl.ir_compiler import (
-    PolicyIR,
     CompiledClause,
     Instruction,
     OpCode,
+    PolicyIR,
 )
-
 
 # =============================================================================
 # ERROR TYPES
 # =============================================================================
+
 
 class EvaluationError(Exception):
     """
@@ -67,17 +67,20 @@ class EvaluationError(Exception):
 
 class TypeMismatchError(EvaluationError):
     """Raised when types are incompatible for comparison."""
+
     pass
 
 
 class MissingMetricError(EvaluationError):
     """Raised when a required metric is not in facts."""
+
     pass
 
 
 # =============================================================================
 # RESULT TYPES (Immutable, Descriptive)
 # =============================================================================
+
 
 @dataclass(frozen=True, slots=True)
 class ActionResult:
@@ -87,6 +90,7 @@ class ActionResult:
     This is DESCRIPTIVE - it says what action applies,
     not what to do about it.
     """
+
     type: str  # "WARN", "BLOCK", "REQUIRE_APPROVAL"
     message: str | None = None
 
@@ -104,6 +108,7 @@ class ClauseResult:
 
     DESCRIPTIVE: Says whether the clause matched and what actions apply.
     """
+
     matched: bool
     actions: tuple[ActionResult, ...] = field(default_factory=tuple)
 
@@ -126,6 +131,7 @@ class EvaluationResult:
 
     This tells you WHAT IS TRUE, not what to do about it.
     """
+
     any_matched: bool
     clauses: tuple[ClauseResult, ...]
     all_actions: tuple[ActionResult, ...]
@@ -156,6 +162,7 @@ class EvaluationResult:
 # =============================================================================
 # INTERPRETER
 # =============================================================================
+
 
 class Interpreter:
     """
@@ -251,15 +258,11 @@ class Interpreter:
 
         # Final stack should have exactly one boolean
         if len(stack) != 1:
-            raise EvaluationError(
-                f"Invalid stack state after condition evaluation: {len(stack)} items"
-            )
+            raise EvaluationError(f"Invalid stack state after condition evaluation: {len(stack)} items")
 
         result = stack[0]
         if not isinstance(result, bool):
-            raise EvaluationError(
-                f"Condition must evaluate to bool, got {type(result).__name__}"
-            )
+            raise EvaluationError(f"Condition must evaluate to bool, got {type(result).__name__}")
 
         return result
 
@@ -291,7 +294,7 @@ class Interpreter:
                 raise EvaluationError("Stack underflow in COMPARE", inst)
 
             right = stack.pop()  # constant
-            left = stack.pop()   # metric value
+            left = stack.pop()  # metric value
 
             result = self._compare(left, comparator, right, inst)
             stack.append(result)
@@ -331,8 +334,7 @@ class Interpreter:
 
             stack.append(left or right)
 
-        elif opcode in (OpCode.EMIT_WARN, OpCode.EMIT_BLOCK,
-                        OpCode.EMIT_REQUIRE_APPROVAL, OpCode.END):
+        elif opcode in (OpCode.EMIT_WARN, OpCode.EMIT_BLOCK, OpCode.EMIT_REQUIRE_APPROVAL, OpCode.END):
             # Action opcodes should not appear in condition IR
             raise EvaluationError(
                 f"Action opcode {opcode.value} in condition IR",
@@ -429,6 +431,7 @@ class Interpreter:
 # =============================================================================
 # PUBLIC API
 # =============================================================================
+
 
 def evaluate(
     ir: PolicyIR,
@@ -541,6 +544,7 @@ class _LenientInterpreter(Interpreter):
 # Sentinel for missing metrics in lenient mode
 class _MissingSentinel:
     """Sentinel value for missing metrics."""
+
     pass
 
 

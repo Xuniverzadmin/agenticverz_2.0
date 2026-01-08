@@ -5,6 +5,7 @@ tools/test_idempotency_atomicity.py
 Concurrent idempotency atomicity test for Redis.
 Verifies that exactly one concurrent request wins when claiming the same idempotency key.
 """
+
 import asyncio
 import os
 import json
@@ -142,7 +143,7 @@ async def main():
         print(f"\nRESULT: FAILURE - Multiple winners detected ({len(winners)})")
         print("This indicates a race condition in the idempotency logic!")
         for i, w in enumerate(winners):
-            print(f"  Winner {i+1}: {w['attempted']['owner']}")
+            print(f"  Winner {i + 1}: {w['attempted']['owner']}")
         exit_code = 1
 
     # Cleanup

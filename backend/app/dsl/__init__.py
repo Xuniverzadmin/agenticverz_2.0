@@ -20,59 +20,55 @@ GOVERNANCE: This module is PURE. No I/O, no DB, no side effects.
 """
 
 from app.dsl.ast import (
-    PolicyAST,
-    PolicyMetadata,
+    Action,
+    BlockAction,
     Clause,
+    Comparator,
     Condition,
-    Predicate,
     ExistsPredicate,
     LogicalCondition,
-    WarnAction,
-    BlockAction,
+    LogicalOperator,
+    Mode,
+    PolicyAST,
+    PolicyMetadata,
+    Predicate,
     RequireApprovalAction,
     Scope,
-    Mode,
-    Comparator,
-    Action,
-    LogicalOperator,
+    WarnAction,
 )
-
-from app.dsl.parser import (
-    parse,
-    parse_condition,
-    ParseError,
-    ParseLocation,
-)
-
-from app.dsl.validator import (
-    validate,
-    is_valid,
-    PolicyValidator,
-    ValidationResult,
-    ValidationIssue,
-    Severity,
-)
-
-from app.dsl.ir_compiler import (
-    compile_policy,
-    ir_hash,
-    PolicyIR,
-    CompiledClause,
-    Instruction,
-    OpCode,
-    IRCompiler,
-)
-
 from app.dsl.interpreter import (
+    ActionResult,
+    ClauseResult,
+    EvaluationError,
+    EvaluationResult,
+    Interpreter,
+    MissingMetricError,
+    TypeMismatchError,
     evaluate,
     evaluate_policy,
-    Interpreter,
-    EvaluationResult,
-    ClauseResult,
-    ActionResult,
-    EvaluationError,
-    TypeMismatchError,
-    MissingMetricError,
+)
+from app.dsl.ir_compiler import (
+    CompiledClause,
+    Instruction,
+    IRCompiler,
+    OpCode,
+    PolicyIR,
+    compile_policy,
+    ir_hash,
+)
+from app.dsl.parser import (
+    ParseError,
+    ParseLocation,
+    parse,
+    parse_condition,
+)
+from app.dsl.validator import (
+    PolicyValidator,
+    Severity,
+    ValidationIssue,
+    ValidationResult,
+    is_valid,
+    validate,
 )
 
 __all__ = [

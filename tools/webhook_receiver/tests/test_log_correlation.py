@@ -153,9 +153,9 @@ class TestRateLimitLogCorrelation:
 
             logs = log_capture.get_logs()
             # Verify tenant_id is in logs
-            assert (
-                "tenant_id=test-tenant-123" in logs
-            ), f"Logs should contain tenant_id=test-tenant-123. Got: {logs}"
+            assert "tenant_id=test-tenant-123" in logs, (
+                f"Logs should contain tenant_id=test-tenant-123. Got: {logs}"
+            )
 
     def test_rate_limit_log_contains_ip(self):
         """Rate-limit exceeded logs should contain IP address."""
@@ -181,9 +181,9 @@ class TestRateLimitLogCorrelation:
 
             logs = log_capture.get_logs()
             # Verify IP is in logs
-            assert (
-                "ip=10.20.30.40" in logs
-            ), f"Logs should contain ip=10.20.30.40. Got: {logs}"
+            assert "ip=10.20.30.40" in logs, (
+                f"Logs should contain ip=10.20.30.40. Got: {logs}"
+            )
 
     def test_rate_limit_log_contains_request_id(self):
         """Rate-limit exceeded logs should contain request_id."""
@@ -211,9 +211,9 @@ class TestRateLimitLogCorrelation:
 
             logs = log_capture.get_logs()
             # Verify request_id is in logs
-            assert (
-                "request_id=req-correlation-test" in logs
-            ), f"Logs should contain request_id=req-correlation-test. Got: {logs}"
+            assert "request_id=req-correlation-test" in logs, (
+                f"Logs should contain request_id=req-correlation-test. Got: {logs}"
+            )
 
     def test_rate_limit_log_contains_redis_latency(self):
         """Rate-limit exceeded logs should contain redis_latency_ms."""
@@ -241,9 +241,9 @@ class TestRateLimitLogCorrelation:
 
             logs = log_capture.get_logs()
             # Verify redis_latency_ms is in logs
-            assert (
-                "redis_latency_ms=" in logs
-            ), f"Logs should contain redis_latency_ms. Got: {logs}"
+            assert "redis_latency_ms=" in logs, (
+                f"Logs should contain redis_latency_ms. Got: {logs}"
+            )
 
     @pytest.mark.skipif(not fastapi_available(), reason="FastAPI not available")
     def test_webhook_rate_limit_log_contains_both_tenant_and_ip(self):
@@ -288,9 +288,9 @@ class TestRateLimitLogCorrelation:
                     has_tenant = "ops-tenant-456" in logs or "tenant" in logs.lower()
                     has_ip = "203.0.113.50" in logs or "ip" in logs.lower()
 
-                    assert (
-                        has_tenant or has_ip
-                    ), f"Rate limit log should contain tenant/IP info. Got: {logs}"
+                    assert has_tenant or has_ip, (
+                        f"Rate limit log should contain tenant/IP info. Got: {logs}"
+                    )
                 else:
                     # If not rate limited (e.g. 500 from DB issues), skip assertion
                     pytest.skip(
@@ -329,9 +329,9 @@ class TestLogFieldFormat:
             # Check for structured rate limit info
             # Expected format: "Rate limit exceeded for IP 172.16.0.1: 10/5"
             assert "172.16.0.1" in logs, f"Should contain IP. Got: {logs}"
-            assert (
-                "10" in logs or "count" in logs.lower()
-            ), f"Should contain count. Got: {logs}"
+            assert "10" in logs or "count" in logs.lower(), (
+                f"Should contain count. Got: {logs}"
+            )
 
     def test_tenant_rate_limit_log_format(self):
         """Tenant rate limit log should have structured format."""
@@ -368,9 +368,9 @@ class TestLogFieldFormat:
             logs = log_capture.get_logs()
 
             # Check for tenant info in log
-            assert (
-                "tenant-rate-test" in logs or "tenant" in logs.lower()
-            ), f"Should contain tenant info. Got: {logs}"
+            assert "tenant-rate-test" in logs or "tenant" in logs.lower(), (
+                f"Should contain tenant info. Got: {logs}"
+            )
 
 
 class TestRedisLatencyLogging:
@@ -404,9 +404,9 @@ class TestRedisLatencyLogging:
 
             logs = log_capture.get_logs()
             # Should log the timeout error which contains timing info
-            assert (
-                "timeout" in logs.lower() or "error" in logs.lower()
-            ), f"Should log timeout/error info. Got: {logs}"
+            assert "timeout" in logs.lower() or "error" in logs.lower(), (
+                f"Should log timeout/error info. Got: {logs}"
+            )
 
 
 class TestLogCorrelationWithRequestContext:
@@ -445,9 +445,9 @@ class TestLogCorrelationWithRequestContext:
                 if tenant in logs:
                     found_tenants.append(tenant)
 
-            assert (
-                len(found_tenants) >= 1
-            ), f"Should log at least one tenant identifier. Got: {logs}"
+            assert len(found_tenants) >= 1, (
+                f"Should log at least one tenant identifier. Got: {logs}"
+            )
 
     def test_multiple_ips_distinguishable_in_logs(self):
         """Rate limits for different IPs should be distinguishable in logs."""
@@ -474,9 +474,9 @@ class TestLogCorrelationWithRequestContext:
 
             # Each IP should appear in logs
             found_ips = [ip for ip in test_ips if ip in logs]
-            assert (
-                len(found_ips) >= 1
-            ), f"Should log at least one IP address. Got: {logs}"
+            assert len(found_ips) >= 1, (
+                f"Should log at least one IP address. Got: {logs}"
+            )
 
 
 class TestEnhancedLogging:
@@ -579,9 +579,9 @@ class TestLogCorrelationIntegration:
                     has_tenant = "integration-log-test" in logs
                     has_ip = "10.99.99.99" in logs
 
-                    assert (
-                        has_tenant or has_ip
-                    ), f"Logs should contain tenant/IP. Got: {logs}"
+                    assert has_tenant or has_ip, (
+                        f"Logs should contain tenant/IP. Got: {logs}"
+                    )
 
         finally:
             await limiter.close()

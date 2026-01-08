@@ -41,14 +41,16 @@ logger = logging.getLogger(__name__)
 try:
     # Try to import from backend (when running in same environment)
     import sys
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../backend"))
     from app.auth.invocation_safety import (
         InvocationSafetyContext,
-        SDKSafetyHook,
         SafetyFlag,
+        SDKSafetyHook,
         emit_safety_metrics,
         sdk_safety_hook,
     )
+
     _SAFETY_LAYER_AVAILABLE = True
 except ImportError:
     # Safety layer not available - continue without it (degraded mode)
@@ -109,7 +111,9 @@ class AOSClient:
 
         # Derive caller_id from API key if not explicitly set
         if not self.caller_id and self.api_key:
-            self.caller_id = f"sdk:{self.api_key[:8]}" if len(self.api_key) >= 8 else f"sdk:{self.api_key}"
+            self.caller_id = (
+                f"sdk:{self.api_key[:8]}" if len(self.api_key) >= 8 else f"sdk:{self.api_key}"
+            )
 
         # Tenant budget limit for safety checks
         self._tenant_budget_limit = int(os.getenv("AOS_TENANT_BUDGET_LIMIT", "10000"))

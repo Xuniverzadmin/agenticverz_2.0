@@ -76,6 +76,7 @@ def governed(
         is_async = inspect.iscoroutinefunction(func)
 
         if is_async:
+
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 # Extract context from arguments
@@ -100,6 +101,7 @@ def governed(
 
             return async_wrapper  # type: ignore
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 # Extract context from arguments

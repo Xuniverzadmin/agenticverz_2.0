@@ -44,42 +44,36 @@ from enum import Enum
 from typing import Callable
 
 from app.dsl.ast import (
-    PolicyAST,
-    Clause,
     Condition,
-    Predicate,
-    ExistsPredicate,
-    LogicalCondition,
-    WarnAction,
-    BlockAction,
-    RequireApprovalAction,
-    Action,
     Mode,
-    is_predicate,
+    PolicyAST,
+    is_block_action,
     is_exists_predicate,
     is_logical_condition,
-    is_block_action,
+    is_predicate,
     is_require_approval_action,
 )
-
 
 # =============================================================================
 # VALIDATION RESULT TYPES
 # =============================================================================
 
+
 class Severity(str, Enum):
     """Severity level for validation issues."""
-    ERROR = "ERROR"      # Blocking - policy cannot be used
+
+    ERROR = "ERROR"  # Blocking - policy cannot be used
     WARNING = "WARNING"  # Non-blocking - policy can be used with caution
 
 
 @dataclass(frozen=True, slots=True)
 class ValidationIssue:
     """A single validation issue found in the policy."""
-    code: str          # Unique error code (e.g., "V001")
-    message: str       # Human-readable message
-    severity: Severity # ERROR or WARNING
-    path: str = ""     # Path to the issue (e.g., "clauses[0].then[1]")
+
+    code: str  # Unique error code (e.g., "V001")
+    message: str  # Human-readable message
+    severity: Severity  # ERROR or WARNING
+    path: str = ""  # Path to the issue (e.g., "clauses[0].then[1]")
 
     def __str__(self) -> str:
         loc = f" at {self.path}" if self.path else ""
@@ -89,13 +83,14 @@ class ValidationIssue:
 @dataclass(frozen=True, slots=True)
 class ValidationResult:
     """Result of policy validation."""
+
     issues: tuple[ValidationIssue, ...]
     is_valid: bool = field(init=False)
 
     def __post_init__(self) -> None:
         # is_valid if no ERROR severity issues
         has_errors = any(i.severity == Severity.ERROR for i in self.issues)
-        object.__setattr__(self, 'is_valid', not has_errors)
+        object.__setattr__(self, "is_valid", not has_errors)
 
     @property
     def errors(self) -> list[ValidationIssue]:
@@ -135,6 +130,7 @@ W002 = "W002"  # Redundant condition (same predicate twice)
 # =============================================================================
 # VALIDATOR
 # =============================================================================
+
 
 class PolicyValidator:
     """
@@ -201,20 +197,24 @@ class PolicyValidator:
                     path = f"clauses[{clause_idx}].then[{action_idx}]"
 
                     if is_block_action(action):
-                        issues.append(ValidationIssue(
-                            code=V001,
-                            message="BLOCK action is not allowed in MONITOR mode",
-                            severity=Severity.ERROR,
-                            path=path,
-                        ))
+                        issues.append(
+                            ValidationIssue(
+                                code=V001,
+                                message="BLOCK action is not allowed in MONITOR mode",
+                                severity=Severity.ERROR,
+                                path=path,
+                            )
+                        )
 
                     if is_require_approval_action(action):
-                        issues.append(ValidationIssue(
-                            code=V002,
-                            message="REQUIRE_APPROVAL action is not allowed in MONITOR mode",
-                            severity=Severity.ERROR,
-                            path=path,
-                        ))
+                        issues.append(
+                            ValidationIssue(
+                                code=V002,
+                                message="REQUIRE_APPROVAL action is not allowed in MONITOR mode",
+                                severity=Severity.ERROR,
+                                path=path,
+                            )
+                        )
 
         return issues
 
@@ -231,12 +231,14 @@ class PolicyValidator:
             metrics = self._extract_metrics(clause.when)
             for metric in metrics:
                 if metric not in self.allowed_metrics:
-                    issues.append(ValidationIssue(
-                        code=V010,
-                        message=f"Unknown metric: {metric}",
-                        severity=Severity.ERROR,
-                        path=f"clauses[{clause_idx}].when",
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            code=V010,
+                            message=f"Unknown metric: {metric}",
+                            severity=Severity.ERROR,
+                            path=f"clauses[{clause_idx}].when",
+                        )
+                    )
 
         return issues
 
@@ -263,21 +265,25 @@ class PolicyValidator:
         issues: list[ValidationIssue] = []
 
         if not policy.clauses:
-            issues.append(ValidationIssue(
-                code=V020,
-                message="Policy must have at least one clause",
-                severity=Severity.ERROR,
-                path="clauses",
-            ))
+            issues.append(
+                ValidationIssue(
+                    code=V020,
+                    message="Policy must have at least one clause",
+                    severity=Severity.ERROR,
+                    path="clauses",
+                )
+            )
 
         for clause_idx, clause in enumerate(policy.clauses):
             if not clause.then:
-                issues.append(ValidationIssue(
-                    code=V021,
-                    message="Clause must have at least one action",
-                    severity=Severity.ERROR,
-                    path=f"clauses[{clause_idx}].then",
-                ))
+                issues.append(
+                    ValidationIssue(
+                        code=V021,
+                        message="Clause must have at least one action",
+                        severity=Severity.ERROR,
+                        path=f"clauses[{clause_idx}].then",
+                    )
+                )
 
         return issues
 
@@ -299,12 +305,14 @@ class PolicyValidator:
                     break
 
             if not has_enforcement_action:
-                issues.append(ValidationIssue(
-                    code=W001,
-                    message="ENFORCE mode policy only uses WARN actions; consider MONITOR mode",
-                    severity=Severity.WARNING,
-                    path="metadata.mode",
-                ))
+                issues.append(
+                    ValidationIssue(
+                        code=W001,
+                        message="ENFORCE mode policy only uses WARN actions; consider MONITOR mode",
+                        severity=Severity.WARNING,
+                        path="metadata.mode",
+                    )
+                )
 
         return issues
 
@@ -312,6 +320,7 @@ class PolicyValidator:
 # =============================================================================
 # PUBLIC API
 # =============================================================================
+
 
 def validate(
     policy: PolicyAST,

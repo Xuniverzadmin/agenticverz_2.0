@@ -1,13 +1,19 @@
 // Layer: L1 — Product Experience (Frontend)
 // Product: AI Console
 // Type: Product Root (routing, providers, layout)
-// Reference: PIN-240
+// Reference: PIN-240, PIN-356
 // NOTE: If this file disappeared, only screens disappear. No logic here.
 
 /**
- * AI Console - Product Application Root
+ * AI Console - Product Application Root (CUSTOMER MODE)
  *
  * Role: Product boundary (routing, providers, layout)
+ *
+ * VIEW MODE: CUSTOMER (PIN-356)
+ * - Clean UX with suppressed internals
+ * - No panel IDs, topic IDs, permissions, control types visible
+ * - Same projection, same routing, same controls as INSPECTOR
+ * - Different visibility rules for metadata and chrome
  *
  * This is the product root for AI Console. It can be:
  * - Lazy-loaded by the main console shell (current: /cus/*)
@@ -45,6 +51,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { CUSTOMER_ROUTES, CUSTOMER_ROOT, PUBLIC_ROUTES } from '@/routing';
 import { BetaBanner } from '@/components/BetaBanner';
+import { RendererProvider, CUSTOMER_MODE } from '@/contexts/RendererContext';
 
 // App-level components (local)
 import { AIConsoleLayout, type NavItemId } from './AIConsoleLayout';
@@ -374,19 +381,22 @@ export function AIConsoleApp() {
   };
 
   // Render the AI Console with unified layout
+  // PIN-356: Wrap with CUSTOMER_MODE for clean UX (no internal metadata)
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* PIN-189: Founder Beta banner - remove after subdomain deployment */}
-      <BetaBanner />
-      <AIConsoleLayout
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        onLogout={handleLogout}
-        user={authMode === 'oauth' ? user : undefined}
-      >
-        {renderRoutes()}
-      </AIConsoleLayout>
-    </QueryClientProvider>
+    <RendererProvider value={CUSTOMER_MODE}>
+      <QueryClientProvider client={queryClient}>
+        {/* PIN-189: Founder Beta banner - remove after subdomain deployment */}
+        <BetaBanner />
+        <AIConsoleLayout
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onLogout={handleLogout}
+          user={authMode === 'oauth' ? user : undefined}
+        >
+          {renderRoutes()}
+        </AIConsoleLayout>
+      </QueryClientProvider>
+    </RendererProvider>
   );
 }
 

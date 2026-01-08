@@ -242,7 +242,7 @@ def run_sequential(
 
         status_icon = "✓" if result.success else "✗"
         logger.info(
-            f"[{i+1}/{count}] {status_icon} {result.alert_name} - "
+            f"[{i + 1}/{count}] {status_icon} {result.alert_name} - "
             f"{result.status_code} ({result.response_time_ms:.1f}ms)"
         )
 
@@ -274,7 +274,7 @@ def run_concurrent(
             results.append(result)
             status_icon = "✓" if result.success else "✗"
             logger.info(
-                f"[{i+1}/{count}] {status_icon} {result.alert_name} - "
+                f"[{i + 1}/{count}] {status_icon} {result.alert_name} - "
                 f"{result.status_code} ({result.response_time_ms:.1f}ms)"
             )
 
@@ -306,10 +306,10 @@ def print_summary(results: List[FuzzResult], duration_seconds: float):
     print("FUZZ SUMMARY")
     print("=" * 60)
     print(f"Total requests:    {total}")
-    print(f"Successful:        {successful} ({100*successful/total:.1f}%)")
-    print(f"Failed:            {failed} ({100*failed/total:.1f}%)")
+    print(f"Successful:        {successful} ({100 * successful / total:.1f}%)")
+    print(f"Failed:            {failed} ({100 * failed / total:.1f}%)")
     print(f"Duration:          {duration_seconds:.2f}s")
-    print(f"Requests/sec:      {total/duration_seconds:.1f}")
+    print(f"Requests/sec:      {total / duration_seconds:.1f}")
     print()
     print("Response Times:")
     print(f"  Min:   {min_time:.1f}ms")
@@ -438,7 +438,7 @@ Examples:
     # Exit with error if too many failures
     failure_rate = (len(results) - sum(1 for r in results if r.success)) / len(results)
     if failure_rate > 0.1:
-        logger.error(f"High failure rate: {failure_rate*100:.1f}%")
+        logger.error(f"High failure rate: {failure_rate * 100:.1f}%")
         sys.exit(1)
 
     sys.exit(0)

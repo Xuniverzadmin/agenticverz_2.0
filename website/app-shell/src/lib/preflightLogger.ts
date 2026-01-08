@@ -123,6 +123,16 @@ export const preflightLogger = {
     topicExpand: (topic: string) => log('debug', 'DOMAIN', `Topic expanded: ${topic}`),
   },
 
+  // Panel view logging
+  panel: {
+    render: (panelId: string, panelName: string) =>
+      log('info', 'PANEL', `Rendering panel: ${panelName}`, { panelId }),
+    controlClick: (controlType: string, panelId: string) =>
+      log('debug', 'PANEL', `Control clicked: ${controlType}`, { panelId }),
+    notFound: (route: string) =>
+      log('warn', 'PANEL', `Panel not found at route: ${route}`),
+  },
+
   // API/fetch logging
   api: {
     request: (endpoint: string) => log('debug', 'API', `Request: ${endpoint}`),

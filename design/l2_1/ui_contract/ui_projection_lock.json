@@ -2,7 +2,7 @@
   "_meta": {
     "type": "ui_projection_lock",
     "version": "1.0.0",
-    "generated_at": "2026-01-07T19:20:40.524660+00:00",
+    "generated_at": "2026-01-08T05:41:58.621940+00:00",
     "source": "design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx",
     "processing_stage": "LOCKED",
     "frozen": true,
@@ -45,7 +45,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/overview/ovw-sh-cs-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "OVW-SH-HM-O1",
@@ -66,7 +68,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/overview/ovw-sh-hm-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "OVW-SH-HM-O2",
@@ -120,11 +124,14 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/overview/ovw-sh-hm-o2",
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 3,
-      "total_controls": 4
+      "total_controls": 4,
+      "route": "/precus/overview"
     },
     {
       "domain": "Activity",
@@ -149,7 +156,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-ar-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-CR-O1",
@@ -170,7 +179,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-cr-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O1",
@@ -191,7 +202,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-rd-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-AR-O2",
@@ -245,7 +258,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-ar-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-CR-O2",
@@ -307,7 +322,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-cr-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O2",
@@ -361,7 +378,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-rd-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-CR-O3",
@@ -399,7 +418,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-cr-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O3",
@@ -437,7 +458,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-rd-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O4",
@@ -467,7 +490,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-rd-o4",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O5",
@@ -497,11 +522,14 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/activity/act-ex-rd-o5",
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 10,
-      "total_controls": 19
+      "total_controls": 19,
+      "route": "/precus/activity"
     },
     {
       "domain": "Incidents",
@@ -526,7 +554,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-ai-oi-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O1",
@@ -547,7 +577,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-ai-id-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O1",
@@ -568,7 +600,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-hi-ri-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-OI-O2",
@@ -630,7 +664,9 @@
             "read": true,
             "write": false,
             "activate": true
-          }
+          },
+          "route": "/precus/incidents/inc-ai-oi-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O2",
@@ -676,7 +712,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-ai-id-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O2",
@@ -738,7 +776,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-hi-ri-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O3",
@@ -792,7 +832,9 @@
             "read": true,
             "write": true,
             "activate": true
-          }
+          },
+          "route": "/precus/incidents/inc-ai-id-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O3",
@@ -830,7 +872,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-hi-ri-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O4",
@@ -860,7 +904,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-ai-id-o4",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O4",
@@ -890,7 +936,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-hi-ri-o4",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O5",
@@ -920,11 +968,14 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/incidents/inc-hi-ri-o5",
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 11,
-      "total_controls": 22
+      "total_controls": 22,
+      "route": "/precus/incidents"
     },
     {
       "domain": "Policies",
@@ -949,7 +1000,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-ap-bp-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-RL-O1",
@@ -970,7 +1023,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-ap-rl-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O1",
@@ -991,7 +1046,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-ap-ar-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O1",
@@ -1012,7 +1069,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-pa-pc-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-BP-O2",
@@ -1066,7 +1125,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-ap-bp-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-RL-O2",
@@ -1120,7 +1181,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-ap-rl-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O2",
@@ -1174,7 +1237,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-ap-ar-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O2",
@@ -1236,7 +1301,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-pa-pc-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-BP-O3",
@@ -1266,7 +1333,9 @@
             "read": true,
             "write": true,
             "activate": true
-          }
+          },
+          "route": "/precus/policies/pol-ap-bp-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-RL-O3",
@@ -1296,7 +1365,9 @@
             "read": true,
             "write": true,
             "activate": true
-          }
+          },
+          "route": "/precus/policies/pol-ap-rl-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O3",
@@ -1326,7 +1397,9 @@
             "read": true,
             "write": true,
             "activate": true
-          }
+          },
+          "route": "/precus/policies/pol-ap-ar-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O3",
@@ -1364,7 +1437,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-pa-pc-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O4",
@@ -1394,7 +1469,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-ap-ar-o4",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O4",
@@ -1424,7 +1501,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-pa-pc-o4",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O5",
@@ -1454,11 +1533,14 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/policies/pol-pa-pc-o5",
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 15,
-      "total_controls": 25
+      "total_controls": 25,
+      "route": "/precus/policies"
     },
     {
       "domain": "Logs",
@@ -1483,7 +1565,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-sa-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O1",
@@ -1504,7 +1588,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-ua-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O1",
@@ -1525,7 +1611,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-et-td-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-SA-O2",
@@ -1587,7 +1675,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-sa-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O2",
@@ -1649,7 +1739,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-ua-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O2",
@@ -1711,7 +1803,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-et-td-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-SA-O3",
@@ -1749,7 +1843,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-sa-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O3",
@@ -1787,7 +1883,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-ua-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O3",
@@ -1825,7 +1923,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-et-td-o3",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O4",
@@ -1855,7 +1955,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-et-td-o4",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-SA-O5",
@@ -1885,7 +1987,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-sa-o5",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O5",
@@ -1915,7 +2019,9 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-al-ua-o5",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O5",
@@ -1945,11 +2051,14 @@
             "read": true,
             "write": false,
             "activate": false
-          }
+          },
+          "route": "/precus/logs/log-et-td-o5",
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 13,
-      "total_controls": 25
+      "total_controls": 25,
+      "route": "/precus/logs"
     }
   ]
 }

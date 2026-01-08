@@ -99,9 +99,7 @@ class InvocationTracking:
     """Invocation-level tracking."""
 
     invocation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     sequence_number: Optional[int] = None
 
 
@@ -139,9 +137,7 @@ class Attribution:
 class EvidenceMetadata:
     """Evidence emission tracking."""
 
-    emitted_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    emitted_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     storage_location: Optional[str] = None
     emission_success: bool = True
 
@@ -364,8 +360,7 @@ class ExecutionEnvelopeFactory:
                 type=CallerType.HUMAN,
                 subject=subject,
                 impersonated_subject=impersonated_subject,
-                impersonation_declared=impersonated_subject is not None
-                and reason_code is not None,
+                impersonation_declared=impersonated_subject is not None and reason_code is not None,
             ),
             tenant_context=TenantContext(
                 tenant_id=tenant_id,
@@ -426,8 +421,7 @@ class ExecutionEnvelopeFactory:
                 type=caller_type,
                 subject=subject,
                 impersonated_subject=force_skill,  # force_skill is a form of bypass
-                impersonation_declared=force_skill is not None
-                and reason_code is not None,
+                impersonation_declared=force_skill is not None and reason_code is not None,
             ),
             tenant_context=TenantContext(
                 tenant_id=tenant_id,
@@ -491,9 +485,7 @@ class ExecutionEnvelopeFactory:
             ),
             invocation=InvocationTracking(),
             plan=PlanIntegrity(
-                input_hash=compute_plan_hash(
-                    {"candidate_id": recovery_candidate_id, "action": proposed_action}
-                ),
+                input_hash=compute_plan_hash({"candidate_id": recovery_candidate_id, "action": proposed_action}),
                 resolved_plan_hash=compute_plan_hash(resolved_plan),
             ),
             confidence=ConfidenceContext(
@@ -571,9 +563,7 @@ class ExecutionEnvelopeFactory:
 # =============================================================================
 
 
-def detect_plan_mutation(
-    envelope: ExecutionEnvelope, new_plan: Any
-) -> tuple[bool, Optional[ExecutionEnvelope]]:
+def detect_plan_mutation(envelope: ExecutionEnvelope, new_plan: Any) -> tuple[bool, Optional[ExecutionEnvelope]]:
     """
     Detect if plan has changed mid-execution.
 
@@ -594,9 +584,7 @@ def detect_plan_mutation(
 
     if new_hash != envelope.plan.resolved_plan_hash:
         # Mutation detected - create updated envelope
-        original_invocation_id = (
-            envelope.plan.original_invocation_id or envelope.invocation.invocation_id
-        )
+        original_invocation_id = envelope.plan.original_invocation_id or envelope.invocation.invocation_id
 
         updated_envelope = ExecutionEnvelope(
             envelope_id=envelope.envelope_id,  # Same envelope
@@ -661,21 +649,15 @@ class EvidenceSink:
         """
         raise NotImplementedError
 
-    def query_by_capability(
-        self, capability_id: CapabilityId, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    def query_by_capability(self, capability_id: CapabilityId, limit: int = 100) -> list[dict[str, Any]]:
         """Query envelopes by capability."""
         raise NotImplementedError
 
-    def query_by_tenant(
-        self, tenant_id: str, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    def query_by_tenant(self, tenant_id: str, limit: int = 100) -> list[dict[str, Any]]:
         """Query envelopes by tenant."""
         raise NotImplementedError
 
-    def query_by_invocation(
-        self, invocation_id: str
-    ) -> Optional[dict[str, Any]]:
+    def query_by_invocation(self, invocation_id: str) -> Optional[dict[str, Any]]:
         """Query envelope by invocation_id."""
         raise NotImplementedError
 
@@ -699,27 +681,13 @@ class InMemoryEvidenceSink(EvidenceSink):
             logger.error(f"Evidence emission failed (non-blocking): {e}")
             return False
 
-    def query_by_capability(
-        self, capability_id: CapabilityId, limit: int = 100
-    ) -> list[dict[str, Any]]:
-        return [
-            e
-            for e in self._envelopes
-            if e["capability_id"] == capability_id.value
-        ][:limit]
+    def query_by_capability(self, capability_id: CapabilityId, limit: int = 100) -> list[dict[str, Any]]:
+        return [e for e in self._envelopes if e["capability_id"] == capability_id.value][:limit]
 
-    def query_by_tenant(
-        self, tenant_id: str, limit: int = 100
-    ) -> list[dict[str, Any]]:
-        return [
-            e
-            for e in self._envelopes
-            if e["tenant_context"]["tenant_id"] == tenant_id
-        ][:limit]
+    def query_by_tenant(self, tenant_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        return [e for e in self._envelopes if e["tenant_context"]["tenant_id"] == tenant_id][:limit]
 
-    def query_by_invocation(
-        self, invocation_id: str
-    ) -> Optional[dict[str, Any]]:
+    def query_by_invocation(self, invocation_id: str) -> Optional[dict[str, Any]]:
         for e in self._envelopes:
             if e["invocation"]["invocation_id"] == invocation_id:
                 return e

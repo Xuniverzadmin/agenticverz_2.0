@@ -58,9 +58,9 @@ class AOSSmokeTest:
         resp = self._request("GET", "/health")
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
         data = resp.json()
-        assert (
-            data.get("status") == "healthy"
-        ), f"Expected healthy, got {data.get('status')}"
+        assert data.get("status") == "healthy", (
+            f"Expected healthy, got {data.get('status')}"
+        )
         assert "timestamp" in data, "Missing timestamp"
         assert "version" in data, "Missing version"
         return data
@@ -195,7 +195,7 @@ class AOSSmokeTest:
             "total": len(self.results),
             "passed": passed,
             "failed": failed,
-            "pass_rate": f"{(passed/len(self.results)*100):.1f}%"
+            "pass_rate": f"{(passed / len(self.results) * 100):.1f}%"
             if self.results
             else "0%",
             "total_time_ms": total_time,

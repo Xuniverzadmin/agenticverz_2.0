@@ -107,9 +107,9 @@ def generate_random_annotations() -> Dict[str, Any]:
         annotations["description"] = f"Description: {generate_random_string(100)}"
 
     if random.random() > 0.5:
-        annotations[
-            "runbook_url"
-        ] = f"https://runbooks.example.com/{generate_random_string(20)}"
+        annotations["runbook_url"] = (
+            f"https://runbooks.example.com/{generate_random_string(20)}"
+        )
 
     return annotations
 
@@ -217,7 +217,7 @@ def generate_malformed_payload() -> Any:
     elif malformed_type == "unicode":
         return {
             "alertname": "Alert\u0000Name",  # Null character
-            "message": "\U0001F525 Fire emoji",
+            "message": "\U0001f525 Fire emoji",
             "japanese": "\u65e5\u672c\u8a9e",
             "arabic": "\u0627\u0644\u0639\u0631\u0628\u064a\u0629",
         }
@@ -341,9 +341,9 @@ class TestMetricFuzzer:
 
         # Allow some errors but not too many
         error_rate = len(errors) / 500
-        assert (
-            error_rate < 0.1
-        ), f"Error rate too high: {error_rate:.2%}, errors: {errors[:5]}"
+        assert error_rate < 0.1, (
+            f"Error rate too high: {error_rate:.2%}, errors: {errors[:5]}"
+        )
 
         # Should have many successes
         assert successes > 400, f"Too few successes: {successes}/500"
@@ -367,9 +367,9 @@ class TestMetricFuzzer:
                 )
 
                 # Should not crash - any HTTP response is acceptable
-                assert response.status_code in range(
-                    200, 600
-                ), f"Invalid status code: {response.status_code}"
+                assert response.status_code in range(200, 600), (
+                    f"Invalid status code: {response.status_code}"
+                )
 
             except KeyError as e:
                 pytest.fail(f"KeyError on malformed payload {i}: {e}")
@@ -400,9 +400,9 @@ class TestMetricFuzzer:
                 successful_requests += 1
 
         # Verify we got reasonable success rate
-        assert (
-            successful_requests > 80
-        ), f"Too few successful requests: {successful_requests}/{num_requests}"
+        assert successful_requests > 80, (
+            f"Too few successful requests: {successful_requests}/{num_requests}"
+        )
 
     def test_fuzzer_rate_limits_triggered_predictably(self):
         """
@@ -482,9 +482,9 @@ class TestMetricFuzzer:
             # Should have some allowed and some limited
             # With rpm=10, first 10 should pass, rest should be limited
             assert allowed_count >= 10, f"Too few allowed: {allowed_count}"
-            assert (
-                limited_count > 0
-            ), f"Rate limiting should have kicked in (allowed={allowed_count}, limited={limited_count})"
+            assert limited_count > 0, (
+                f"Rate limiting should have kicked in (allowed={allowed_count}, limited={limited_count})"
+            )
 
         finally:
             app.dependency_overrides.clear()

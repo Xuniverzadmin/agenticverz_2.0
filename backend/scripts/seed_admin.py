@@ -94,17 +94,13 @@ def check_existing(session: Session) -> dict:
     }
 
     # Check tenant
-    tenant = session.exec(
-        select(Tenant).where(Tenant.slug == ADMIN_CONFIG["tenant_slug"])
-    ).first()
+    tenant = session.exec(select(Tenant).where(Tenant.slug == ADMIN_CONFIG["tenant_slug"])).first()
     if tenant:
         results["tenant_exists"] = True
         results["tenant_id"] = tenant.id
 
     # Check user
-    user = session.exec(
-        select(User).where(User.email == ADMIN_CONFIG["email"])
-    ).first()
+    user = session.exec(select(User).where(User.email == ADMIN_CONFIG["email"])).first()
     if user:
         results["user_exists"] = True
         results["user_id"] = user.id
@@ -237,9 +233,7 @@ def log_audit(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Seed admin1@agenticverz.com for console deployment"
-    )
+    parser = argparse.ArgumentParser(description="Seed admin1@agenticverz.com for console deployment")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -290,12 +284,14 @@ def main():
         print(f"  API Key:    {'✅ EXISTS' if existing['api_key_exists'] else '⬜ Missing'}")
 
         # If everything exists, nothing to do
-        all_exist = all([
-            existing["tenant_exists"],
-            existing["user_exists"],
-            existing["membership_exists"],
-            existing["api_key_exists"],
-        ])
+        all_exist = all(
+            [
+                existing["tenant_exists"],
+                existing["user_exists"],
+                existing["membership_exists"],
+                existing["api_key_exists"],
+            ]
+        )
 
         if all_exist and not args.force:
             print("\n✅ Admin user already fully configured. Nothing to do.")
@@ -391,7 +387,7 @@ def main():
     print("  1. Create user in Clerk dashboard: admin1@agenticverz.com")
     print("  2. Add metadata in Clerk: is_operator: true")
     print("  3. Update clerk_user_id if needed:")
-    print(f"     python3 backend/scripts/seed_admin.py --clerk-user-id <actual_id>")
+    print("     python3 backend/scripts/seed_admin.py --clerk-user-id <actual_id>")
     print("  4. Set environment variables:")
     print("     CONSOLE_MODE=DRAFT")
     print("     DATA_MODE=SYNTHETIC")

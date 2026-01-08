@@ -7,12 +7,14 @@
  *   Trigger: runtime (on mount)
  *   Execution: async (projection load)
  * Role: Render sidebar navigation from L2.1 UI Projection Lock
- * Reference: L2.1 UI Projection Pipeline, PIN-352
+ * Reference: L2.1 UI Projection Pipeline, PIN-352, PIN-355
  *
- * GOVERNANCE RULES:
- * - NO hardcoded domain/panel names
- * - All navigation derived from ui_projection_lock.json
- * - Uses contracts/ui_projection_loader.ts exclusively
+ * GOVERNANCE RULES (LOCKED):
+ * - Sidebar renders STRUCTURE, not content
+ * - Sidebar shows ONLY: Domain → Subdomain
+ * - NO topics in sidebar
+ * - NO panels in sidebar
+ * - Topics and Panels belong in main workspace only
  */
 
 import { useEffect, useState, useCallback } from 'react';
@@ -35,13 +37,13 @@ import { cn } from '@/lib/utils';
 import {
   loadProjection,
   getDomains,
-  getEnabledPanels,
+  getSubdomainsForDomain,
 } from '@/contracts/ui_projection_loader';
-import type { Domain, Panel, DomainName } from '@/contracts/ui_projection_types';
+import type { Domain, DomainName } from '@/contracts/ui_projection_types';
 import { preflightLogger } from '@/lib/preflightLogger';
 
 // ============================================================================
-// Domain Icon Mapping
+// Domain Icon Mapping (visual only, not routing)
 // ============================================================================
 
 const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
@@ -52,17 +54,53 @@ const DOMAIN_ICONS: Record<DomainName, React.ElementType> = {
   Logs: FileText,
 };
 
-// Domain route prefixes
-const DOMAIN_ROUTES: Record<DomainName, string> = {
-  Overview: '/overview',
-  Activity: '/activity',
-  Incidents: '/incidents',
-  Policies: '/policies',
-  Logs: '/logs',
-};
+// ============================================================================
+// Subdomain Nav Item (Structure Only - No Panels)
+// LOCKED: Sidebar stops at Domain → Subdomain. No deeper.
+// ============================================================================
+
+interface SubdomainNavItemProps {
+  domainName: DomainName;
+  subdomain: string;
+  domainRoute: string;
+}
+
+function SubdomainNavItem({
+  domainName,
+  subdomain,
+  domainRoute,
+}: SubdomainNavItemProps) {
+  const location = useLocation();
+
+  // Format subdomain name for display
+  const subdomainLabel = subdomain.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  // Subdomain route: domain route + subdomain slug
+  const subdomainRoute = `${domainRoute}?subdomain=${encodeURIComponent(subdomain)}`;
+
+  // Check if this subdomain is active (domain route matches and subdomain param matches)
+  const searchParams = new URLSearchParams(location.search);
+  const activeSubdomain = searchParams.get('subdomain');
+  const isActive = location.pathname.startsWith(domainRoute) && activeSubdomain === subdomain;
+
+  return (
+    <NavLink
+      to={subdomainRoute}
+      className={cn(
+        'block px-2 py-1.5 rounded text-sm transition-colors',
+        isActive
+          ? 'bg-gray-700/50 text-gray-200'
+          : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/30'
+      )}
+    >
+      <span className="truncate">{subdomainLabel}</span>
+    </NavLink>
+  );
+}
 
 // ============================================================================
-// Domain Section Component
+// Domain Section Component (Structure Only)
+// LOCKED: Shows Domain → Subdomain. No topics. No panels.
 // ============================================================================
 
 interface DomainSectionProps {
@@ -72,24 +110,28 @@ interface DomainSectionProps {
   onToggle: () => void;
 }
 
-function DomainSection({ domain, collapsed, expanded, onToggle }: DomainSectionProps) {
+function DomainSection({
+  domain,
+  collapsed,
+  expanded,
+  onToggle,
+}: DomainSectionProps) {
   const Icon = DOMAIN_ICONS[domain.domain] || LayoutDashboard;
-  const basePath = DOMAIN_ROUTES[domain.domain] || `/${domain.domain.toLowerCase()}`;
-  const panels = getEnabledPanels(domain.domain);
+  const subdomains = getSubdomainsForDomain(domain.domain);
   const location = useLocation();
 
-  // Check if current route is within this domain
-  const isActive = location.pathname.startsWith(basePath);
+  // Check if current route is within this domain (using projection route)
+  const isActive = location.pathname.startsWith(domain.route);
 
   const handleDomainClick = () => {
     preflightLogger.nav.domainClick(domain.domain);
   };
 
   if (collapsed) {
-    // Collapsed mode: just show icon linking to domain root
+    // Collapsed mode: icon linking to domain route (from projection)
     return (
       <NavLink
-        to={basePath}
+        to={domain.route}
         onClick={handleDomainClick}
         className={cn(
           'flex items-center justify-center p-2 rounded-lg transition-colors',
@@ -104,81 +146,56 @@ function DomainSection({ domain, collapsed, expanded, onToggle }: DomainSectionP
     );
   }
 
-  // Expanded mode: show domain with collapsible panels
+  // Expanded mode: domain header + subdomain list (NO panels)
   return (
     <div className="space-y-1">
-      {/* Domain Header */}
-      <button
-        onClick={onToggle}
-        className={cn(
-          'flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-primary-900/20 text-primary-300'
-            : 'text-gray-300 hover:bg-gray-700'
-        )}
-      >
-        <div className="flex items-center gap-3">
+      {/* Domain Header - NavLink to domain route */}
+      <div className="flex items-center">
+        <NavLink
+          to={domain.route}
+          onClick={handleDomainClick}
+          className={cn(
+            'flex-1 flex items-center gap-3 px-3 py-2 rounded-l-lg text-sm font-medium transition-colors',
+            isActive
+              ? 'bg-primary-900/20 text-primary-300'
+              : 'text-gray-300 hover:bg-gray-700'
+          )}
+        >
           <Icon size={20} className="flex-shrink-0" />
           <span>{domain.domain}</span>
-        </div>
-        {panels.length > 0 && (
-          <span className="text-gray-500">
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </span>
-        )}
-      </button>
+        </NavLink>
 
-      {/* Panel List (when expanded) */}
-      {expanded && panels.length > 0 && (
-        <div className="ml-8 space-y-0.5">
-          {panels.map((panel) => (
-            <PanelNavItem
-              key={panel.panel_id}
-              panel={panel}
-              basePath={basePath}
+        {/* Expand/Collapse button for subdomains */}
+        {subdomains.length > 0 && (
+          <button
+            onClick={onToggle}
+            className={cn(
+              'px-2 py-2 rounded-r-lg transition-colors',
+              isActive
+                ? 'bg-primary-900/20 text-primary-300 hover:bg-primary-900/30'
+                : 'text-gray-500 hover:bg-gray-700 hover:text-gray-300'
+            )}
+            title={expanded ? 'Collapse subdomains' : 'Expand subdomains'}
+          >
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        )}
+      </div>
+
+      {/* Subdomain List (Structure Only - No Panels) */}
+      {expanded && subdomains.length > 0 && (
+        <div className="ml-6 space-y-0.5 border-l border-gray-700 pl-2">
+          {subdomains.map((subdomain) => (
+            <SubdomainNavItem
+              key={subdomain}
+              domainName={domain.domain}
+              subdomain={subdomain}
+              domainRoute={domain.route}
             />
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-// ============================================================================
-// Panel Nav Item Component
-// ============================================================================
-
-interface PanelNavItemProps {
-  panel: Panel;
-  basePath: string;
-}
-
-function PanelNavItem({ panel, basePath }: PanelNavItemProps) {
-  // Create route from panel_id (e.g., "overview_system_health" -> "/overview/system-health")
-  const panelSlug = panel.panel_id
-    .replace(/^[a-z]+_/, '') // Remove domain prefix
-    .replace(/_/g, '-'); // Underscores to dashes
-  const panelPath = `${basePath}/${panelSlug}`;
-
-  const handleClick = () => {
-    preflightLogger.nav.panelClick(panel.panel_id, panel.panel_name);
-  };
-
-  return (
-    <NavLink
-      to={panelPath}
-      onClick={handleClick}
-      className={({ isActive }) =>
-        cn(
-          'block px-3 py-1.5 rounded text-sm transition-colors',
-          isActive
-            ? 'bg-primary-900/20 text-primary-400'
-            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
-        )
-      }
-    >
-      {panel.panel_name}
-    </NavLink>
   );
 }
 
@@ -242,7 +259,7 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const location = useLocation();
 
-  // State
+  // State (Structure Only - No panel/topic state needed)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -258,9 +275,9 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
       setDomains(loadedDomains);
       preflightLogger.sidebar.render(loadedDomains.length);
 
-      // Auto-expand domain based on current route
+      // Auto-expand domain based on current route (using projection routes)
       const currentDomain = loadedDomains.find((d) =>
-        location.pathname.startsWith(DOMAIN_ROUTES[d.domain])
+        location.pathname.startsWith(d.route)
       );
       if (currentDomain) {
         setExpandedDomains(new Set([currentDomain.domain]));
@@ -277,7 +294,7 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
     loadData();
   }, [loadData]);
 
-  // Toggle domain expansion
+  // Toggle domain expansion (shows/hides subdomains)
   const toggleDomain = (domain: DomainName) => {
     setExpandedDomains((prev) => {
       const next = new Set(prev);
@@ -328,11 +345,10 @@ export function ProjectionSidebar({ collapsed }: ProjectionSidebarProps) {
         ))}
       </nav>
 
-      {/* Statistics Footer */}
+      {/* Statistics Footer (Structure Only) */}
       {!collapsed && !loading && !error && (
         <div className="px-3 py-2 border-t border-gray-700 text-xs text-gray-500">
-          <span>{domains.length} domains • </span>
-          <span>{domains.reduce((sum, d) => sum + d.panel_count, 0)} panels</span>
+          <span>{domains.length} domains</span>
         </div>
       )}
 

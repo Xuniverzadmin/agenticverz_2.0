@@ -981,10 +981,10 @@ class ValidationSuite:
             <p><strong>Timestamp:</strong> {self.report.timestamp}</p>
             <h3>Failed Scenarios:</h3>
             <ul>
-            {"".join(f'<li><strong>{s.name}</strong>: {s.actual_effect}</li>' for s in failed_scenarios)}
+            {"".join(f"<li><strong>{s.name}</strong>: {s.actual_effect}</li>" for s in failed_scenarios)}
             </ul>
             <h3>Expected vs Actual:</h3>
-            {"".join(f'<p><strong>{s.name}</strong><br>Expected: {s.expected_result}<br>Actual: {s.actual_result}</p>' for s in failed_scenarios)}
+            {"".join(f"<p><strong>{s.name}</strong><br>Expected: {s.expected_result}<br>Actual: {s.actual_result}</p>" for s in failed_scenarios)}
             """
 
             await self.resend.send_alert(
@@ -1090,9 +1090,9 @@ def main():
                 print(json.dumps(report.to_dict(), indent=2, default=str))
             else:
                 summary = report.to_dict()["summary"]
-                print(f"\n{'='*60}")
+                print(f"\n{'=' * 60}")
                 print("M10 Observability Validation Report")
-                print(f"{'='*60}")
+                print(f"{'=' * 60}")
                 print(f"Run ID: {report.run_id}")
                 print(f"Timestamp: {report.timestamp}")
                 print(f"Overall: {report.overall_result.value.upper()}")

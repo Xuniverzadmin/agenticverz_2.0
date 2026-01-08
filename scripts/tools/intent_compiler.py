@@ -35,24 +35,49 @@ from typing import Any
 # Valid values for strict validation
 VALID_RENDER_MODES = {"FLAT", "TREE", "GRID", "TABLE", "CARD", "LIST"}
 VALID_CONTROL_TYPES = {
-    "FILTER", "SORT", "SELECT_SINGLE", "SELECT_MULTI", "NAVIGATE",
-    "BULK_SELECT", "DETAIL_VIEW", "ACTION", "DOWNLOAD", "EXPAND",
-    "REFRESH", "SEARCH", "PAGINATION", "TOGGLE", "EDIT", "DELETE",
-    "CREATE", "APPROVE", "REJECT", "ARCHIVE", "EXPORT", "IMPORT",
-    "ACKNOWLEDGE", "RESOLVE",  # Incident management controls
+    "FILTER",
+    "SORT",
+    "SELECT_SINGLE",
+    "SELECT_MULTI",
+    "NAVIGATE",
+    "BULK_SELECT",
+    "DETAIL_VIEW",
+    "ACTION",
+    "DOWNLOAD",
+    "EXPAND",
+    "REFRESH",
+    "SEARCH",
+    "PAGINATION",
+    "TOGGLE",
+    "EDIT",
+    "DELETE",
+    "CREATE",
+    "APPROVE",
+    "REJECT",
+    "ARCHIVE",
+    "EXPORT",
+    "IMPORT",
+    "ACKNOWLEDGE",
+    "RESOLVE",  # Incident management controls
 }
 VALID_VISIBILITY = {"ALWAYS", "CONDITIONAL", "HIDDEN", "ROLE_BASED"}
 VALID_DOMAINS = {"Overview", "Activity", "Incidents", "Policies", "Logs"}
 
 # Required fields that must not be empty
 REQUIRED_FIELDS = [
-    "row_uid", "domain", "panel_id", "panel_name",
-    "order", "render_mode", "visibility"
+    "row_uid",
+    "domain",
+    "panel_id",
+    "panel_name",
+    "order",
+    "render_mode",
+    "visibility",
 ]
 
 
 class CompilationError(Exception):
     """Raised when compilation fails due to validation error."""
+
     pass
 
 
@@ -62,7 +87,9 @@ def validate_required_fields(intent: dict[str, Any], idx: int) -> list[str]:
     for field in REQUIRED_FIELDS:
         val = intent.get(field)
         if val is None or val == "" or val == []:
-            errors.append(f"Row {idx} ({intent.get('row_uid', 'unknown')}): Empty required field '{field}'")
+            errors.append(
+                f"Row {idx} ({intent.get('row_uid', 'unknown')}): Empty required field '{field}'"
+            )
     return errors
 
 
@@ -111,8 +138,7 @@ def validate_disabled_reason(intent: dict[str, Any], idx: int) -> list[str]:
 
     if not enabled and (not disabled_reason or disabled_reason == ""):
         errors.append(
-            f"Row {idx} ({intent.get('row_uid', 'unknown')}): "
-            f"Disabled without reason"
+            f"Row {idx} ({intent.get('row_uid', 'unknown')}): Disabled without reason"
         )
     return errors
 
@@ -259,19 +285,19 @@ def main():
         "--input",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_intent_ir_normalized.json"),
-        help="Path to normalized intent IR JSON"
+        help="Path to normalized intent IR JSON",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_intent_ir_compiled.json"),
-        help="Output path for compiled intent IR JSON"
+        help="Output path for compiled intent IR JSON",
     )
     parser.add_argument(
         "--strict",
         action="store_true",
         default=True,
-        help="Enable strict mode (fail on any error)"
+        help="Enable strict mode (fail on any error)",
     )
 
     args = parser.parse_args()
@@ -291,7 +317,7 @@ def main():
     try:
         result = compile_intents(normalized_ir)
     except CompilationError as e:
-        print(f"\nCOMPILATION FAILED")
+        print("\nCOMPILATION FAILED")
         print(f"{'=' * 60}")
         print(str(e))
         print(f"{'=' * 60}")
@@ -306,7 +332,7 @@ def main():
     # Report success
     print(f"Generated compiled intent IR: {args.output}")
     print(f"  Rows: {result['_meta']['row_count']}")
-    print(f"  Validation: PASSED")
+    print("  Validation: PASSED")
     print(f"  Stage: {result['_meta']['processing_stage']}")
 
     return 0

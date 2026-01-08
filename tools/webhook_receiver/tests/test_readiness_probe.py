@@ -101,22 +101,22 @@ class TestReadinessProbeJSONFormat:
 
             # Verify exact expected format
             assert "status" in data, "Response must have 'status' field"
-            assert (
-                data["status"] == "ok"
-            ), f"Status should be 'ok', got: {data['status']}"
+            assert data["status"] == "ok", (
+                f"Status should be 'ok', got: {data['status']}"
+            )
 
             assert "redis" in data, "Response must have 'redis' field"
             assert data["redis"] == "ok", f"Redis should be 'ok', got: {data['redis']}"
 
             assert "version" in data, "Response must have 'version' field"
-            assert (
-                data["version"] == "v1"
-            ), f"Version should be 'v1', got: {data['version']}"
+            assert data["version"] == "v1", (
+                f"Version should be 'v1', got: {data['version']}"
+            )
 
             assert "uptime_seconds" in data, "Response must have 'uptime_seconds' field"
-            assert isinstance(
-                data["uptime_seconds"], int
-            ), "uptime_seconds should be integer"
+            assert isinstance(data["uptime_seconds"], int), (
+                "uptime_seconds should be integer"
+            )
             assert data["uptime_seconds"] >= 0, "uptime_seconds should be non-negative"
 
         finally:
@@ -149,16 +149,16 @@ class TestReadinessProbeJSONFormat:
             client = get_test_client()
             response = client.get("/ready")
 
-            assert (
-                response.status_code == 200
-            ), "Should return 200 even when degraded (fail-open)"
+            assert response.status_code == 200, (
+                "Should return 200 even when degraded (fail-open)"
+            )
             data = response.json()
 
             # Verify degraded response format
             assert "status" in data, "Response must have 'status' field"
-            assert (
-                data["status"] == "degraded"
-            ), f"Status should be 'degraded', got: {data['status']}"
+            assert data["status"] == "degraded", (
+                f"Status should be 'degraded', got: {data['status']}"
+            )
 
             assert "redis" in data, "Response must have 'redis' field"
             # Redis field should indicate error
@@ -277,9 +277,9 @@ class TestReadinessProbeFields:
                 response = client.get("/ready")
                 data = response.json()
 
-                assert (
-                    expected in data["redis"].lower()
-                ), f"Expected redis to contain '{expected}', got: {data['redis']}"
+                assert expected in data["redis"].lower(), (
+                    f"Expected redis to contain '{expected}', got: {data['redis']}"
+                )
 
         finally:
             main_module.redis_rate_limiter = original
@@ -335,9 +335,9 @@ class TestReadinessProbeErrorMessages:
             data = response.json()
 
             # Error should be truncated to reasonable length
-            assert (
-                len(data["redis"]) <= 60
-            ), f"Error message should be truncated, got length {len(data['redis'])}"
+            assert len(data["redis"]) <= 60, (
+                f"Error message should be truncated, got length {len(data['redis'])}"
+            )
             assert "error:" in data["redis"], "Should prefix with 'error:'"
 
         finally:
@@ -411,9 +411,9 @@ class TestHealthVsReadinessProbe:
 
             assert response.status_code == 200
             data = response.json()
-            assert (
-                data["status"] == "degraded"
-            ), "Readiness should show degraded when Redis unavailable"
+            assert data["status"] == "degraded", (
+                "Readiness should show degraded when Redis unavailable"
+            )
 
         finally:
             main_module.redis_rate_limiter = original

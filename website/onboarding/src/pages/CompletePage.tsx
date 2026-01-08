@@ -1,12 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { CUSTOMER_ROUTES } from '@/routing';
 import OnboardingLayout from './OnboardingLayout';
-
-// PIN-352: Environment-aware redirects for preflight mode
-const isPreflight = import.meta.env.VITE_PREFLIGHT_MODE === 'true';
-const CONSOLE_ROOT = isPreflight ? '/overview' : '/guard';
-const POLICIES_PATH = isPreflight ? '/policies' : '/guard/policies';
 
 export default function CompletePage() {
   const navigate = useNavigate();
@@ -16,16 +12,15 @@ export default function CompletePage() {
     setOnboardingStep(5);
   }, []);
 
+  // PIN-352: Environment-aware redirects via routing authority
   const handleGoToGuard = () => {
     setOnboardingComplete(true);
-    navigate(CONSOLE_ROOT, { replace: true });
+    navigate(CUSTOMER_ROUTES.root, { replace: true });
   };
 
-  // PIN-318: Fixed ghost route /dashboard → /guard/policies
-  // PIN-352: Now environment-aware for preflight mode
   const handleGoToPolicies = () => {
     setOnboardingComplete(true);
-    navigate(POLICIES_PATH, { replace: true });
+    navigate(CUSTOMER_ROUTES.policies, { replace: true });
   };
 
   return (

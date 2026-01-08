@@ -1065,10 +1065,10 @@ class ScenarioTestRunner:
         if sets is None:
             sets = ["A", "B", "C"]
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  SCENARIO TEST MATRIX - Run ID: {self.report.run_id[:8]}")
         print(f"  Sets: {', '.join(sets)}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         for set_name in sets:
             if set_name not in scenarios:
@@ -1098,9 +1098,9 @@ class ScenarioTestRunner:
 
     def print_summary(self):
         """Print final summary."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("  SUMMARY")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"  Total: {self.report.total_scenarios}")
         print(f"  ✅ Passed: {self.report.passed}")
         print(f"  ❌ Failed: {self.report.failed}")
@@ -1110,7 +1110,7 @@ class ScenarioTestRunner:
             print(f"    {provider}: {count}")
         print(f"\n  Run ID: {self.report.run_id}")
         print(f"  Duration: {self.report.started_at} → {self.report.completed_at}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # All-green condition
         if self.report.failed == 0 and self.report.skipped <= 2:

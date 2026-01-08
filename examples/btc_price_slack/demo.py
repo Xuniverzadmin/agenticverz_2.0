@@ -96,7 +96,7 @@ def simulate_plan(client: AOSClient, plan: list, budget_cents: int = 100) -> dic
             for i, step in enumerate(result["step_simulations"]):
                 status = step.get("feasible", "unknown")
                 cost = step.get("estimated_cost_cents", 0)
-                print(f"    Step {i+1}: feasible={status}, cost={cost}c")
+                print(f"    Step {i + 1}: feasible={status}, cost={cost}c")
 
         return result
 
@@ -192,7 +192,7 @@ def main():
     plan = create_plan(SLACK_WEBHOOK)
     print(f"\nPlan created with {len(plan)} steps:")
     for i, step in enumerate(plan):
-        print(f"  {i+1}. [{step['skill']}] {step.get('description', '')}")
+        print(f"  {i + 1}. [{step['skill']}] {step.get('description', '')}")
     print(f"  Plan hash: {hash_data(plan)}")
 
     # Create trace for recording

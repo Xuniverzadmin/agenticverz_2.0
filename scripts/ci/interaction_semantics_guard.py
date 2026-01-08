@@ -41,7 +41,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Tuple
 
 # =============================================================================
 # CONFIGURATION - From INTERACTION_SEMANTICS.yaml
@@ -182,7 +182,10 @@ CLIENT_BINDINGS = {
 # HTTP method to input_type mapping
 METHOD_TO_INPUT_TYPE = {
     "GET": ["query"],  # GET = read = query
-    "POST": ["command", "proposal"],  # POST can be command (mutate) or proposal (advisory)
+    "POST": [
+        "command",
+        "proposal",
+    ],  # POST can be command (mutate) or proposal (advisory)
     "PUT": ["command"],  # PUT = always mutating
     "PATCH": ["command"],  # PATCH = always mutating
     "DELETE": ["command"],  # DELETE = always mutating
@@ -199,9 +202,11 @@ FRONTEND_API_DIR = "website/app-shell/src/api"
 # VIOLATION TYPES
 # =============================================================================
 
+
 @dataclass
 class Violation:
     """Represents an interaction semantics violation."""
+
     file: str
     line: int
     violation_type: str
@@ -215,6 +220,7 @@ class Violation:
 @dataclass
 class RouteCall:
     """Represents an API route call extracted from frontend code."""
+
     file: str
     line: int
     method: str
@@ -226,34 +232,37 @@ class RouteCall:
 # ROUTE EXTRACTION
 # =============================================================================
 
+
 def extract_api_calls(file_path: Path) -> List[RouteCall]:
     """Extract API route calls from a TypeScript file."""
     calls = []
 
     try:
         content = file_path.read_text()
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         # Pattern for HTTP method calls
         http_pattern = re.compile(
             r'(?:client|axios|api|http)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*[\'"`]([^\'"`]+)[\'"`]',
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         for line_no, line in enumerate(lines, 1):
-            if line.strip().startswith('//') or line.strip().startswith('*'):
+            if line.strip().startswith("//") or line.strip().startswith("*"):
                 continue
 
             for match in http_pattern.finditer(line):
                 method = match.group(1).upper()
                 route = match.group(2)
-                calls.append(RouteCall(
-                    file=str(file_path),
-                    line=line_no,
-                    method=method,
-                    route=route,
-                    raw_code=line.strip(),
-                ))
+                calls.append(
+                    RouteCall(
+                        file=str(file_path),
+                        line=line_no,
+                        method=method,
+                        route=route,
+                        raw_code=line.strip(),
+                    )
+                )
 
     except Exception as e:
         print(f"Warning: Could not parse {file_path}: {e}", file=sys.stderr)
@@ -264,6 +273,7 @@ def extract_api_calls(file_path: Path) -> List[RouteCall]:
 # =============================================================================
 # VALIDATION
 # =============================================================================
+
 
 def check_semantics_consistency(
     client_name: str,
@@ -301,13 +311,15 @@ def check_semantics_consistency(
         if actual_input_type not in expected_input_types:
             # Special case: POST with query input_type is suspicious
             if call.method == "POST" and actual_input_type == "query":
-                violations.append(Violation(
-                    file=call.file,
-                    line=call.line,
-                    violation_type="INPUT_TYPE_MISMATCH",
-                    message=f"{call.method} used with query capability ({cap_id}). Expected GET for queries.",
-                    severity="WARNING",
-                ))
+                violations.append(
+                    Violation(
+                        file=call.file,
+                        line=call.line,
+                        violation_type="INPUT_TYPE_MISMATCH",
+                        message=f"{call.method} used with query capability ({cap_id}). Expected GET for queries.",
+                        severity="WARNING",
+                    )
+                )
 
         # Check 2: Mutation consistency
         if call.method in MUTATING_METHODS and not semantics["writes_state"]:
@@ -315,37 +327,43 @@ def check_semantics_consistency(
             if call.method == "POST" and actual_input_type == "proposal":
                 pass  # Proposal POSTs are OK even with writes_state: false
             else:
-                violations.append(Violation(
-                    file=call.file,
-                    line=call.line,
-                    violation_type="MUTATION_ON_READONLY",
-                    message=f"{call.method} used on read-only capability ({cap_id}). writes_state: false",
-                    severity="WARNING",
-                ))
+                violations.append(
+                    Violation(
+                        file=call.file,
+                        line=call.line,
+                        violation_type="MUTATION_ON_READONLY",
+                        message=f"{call.method} used on read-only capability ({cap_id}). writes_state: false",
+                        severity="WARNING",
+                    )
+                )
 
         # Check 3: Audience consistency for state-mutating capabilities
         audience_required = semantics.get("audience_required")
         if audience_required and semantics["writes_state"]:
             if client_audience != audience_required:
-                violations.append(Violation(
-                    file=call.file,
-                    line=call.line,
-                    violation_type="AUDIENCE_MISMATCH",
-                    message=f"State-mutating capability ({cap_id}) requires {audience_required} audience, but client is {client_audience}",
-                    severity="BLOCKING",
-                ))
+                violations.append(
+                    Violation(
+                        file=call.file,
+                        line=call.line,
+                        violation_type="AUDIENCE_MISMATCH",
+                        message=f"State-mutating capability ({cap_id}) requires {audience_required} audience, but client is {client_audience}",
+                        severity="BLOCKING",
+                    )
+                )
 
         # Check 4: Human-required capabilities with automated patterns
         if semantics["human_required"]:
             # Look for patterns that suggest automation (e.g., retry loops, batching)
             if "retry" in call.raw_code.lower() or "batch" in call.raw_code.lower():
-                violations.append(Violation(
-                    file=call.file,
-                    line=call.line,
-                    violation_type="HUMAN_REQUIRED_AUTOMATION",
-                    message=f"Capability ({cap_id}) requires human decision. Automated patterns detected.",
-                    severity="WARNING",
-                ))
+                violations.append(
+                    Violation(
+                        file=call.file,
+                        line=call.line,
+                        violation_type="HUMAN_REQUIRED_AUTOMATION",
+                        message=f"Capability ({cap_id}) requires human decision. Automated patterns detected.",
+                        severity="WARNING",
+                    )
+                )
 
     return violations
 
@@ -390,6 +408,7 @@ def check_client(file_path: Path, verbose: bool = False) -> List[Violation]:
 # SUMMARY STATISTICS
 # =============================================================================
 
+
 def generate_semantics_summary() -> str:
     """Generate a summary of interaction semantics by capability."""
     lines = []
@@ -421,7 +440,10 @@ def generate_semantics_summary() -> str:
 # MAIN GUARD
 # =============================================================================
 
-def run_guard(verbose: bool = False, ci_mode: bool = False) -> Tuple[int, List[Violation]]:
+
+def run_guard(
+    verbose: bool = False, ci_mode: bool = False
+) -> Tuple[int, List[Violation]]:
     """Run the interaction semantics consistency guard."""
     all_violations: List[Violation] = []
     repo_root = Path(__file__).parent.parent.parent
@@ -431,7 +453,7 @@ def run_guard(verbose: bool = False, ci_mode: bool = False) -> Tuple[int, List[V
     print("INTERACTION SEMANTICS CONSISTENCY GUARD (Phase A2)")
     print("=" * 70)
     print()
-    print(f"Reference: PIN-322 (L2-L2.1 Progressive Activation)")
+    print("Reference: PIN-322 (L2-L2.1 Progressive Activation)")
     print(f"Checking: {api_dir}")
     print()
 
@@ -522,14 +544,10 @@ def main():
         description="Interaction Semantics Consistency Guard (Phase A2)"
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Show detailed analysis"
+        "--verbose", "-v", action="store_true", help="Show detailed analysis"
     )
     parser.add_argument(
-        "--ci",
-        action="store_true",
-        help="CI mode (stricter enforcement)"
+        "--ci", action="store_true", help="CI mode (stricter enforcement)"
     )
     args = parser.parse_args()
 

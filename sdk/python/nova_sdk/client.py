@@ -7,6 +7,7 @@ Usage:
     run_id = client.post_goal(agent_id, "ping")
     status = client.poll_run(agent_id, run_id, timeout=10)
 """
+
 import time
 import uuid
 from typing import Any, Dict, Optional

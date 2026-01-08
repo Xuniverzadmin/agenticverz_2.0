@@ -10,6 +10,7 @@ Usage:
 Environment:
     DATABASE_URL - PostgreSQL connection string (required)
 """
+
 import asyncio
 import os
 import ssl

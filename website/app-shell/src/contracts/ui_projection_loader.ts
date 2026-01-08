@@ -25,6 +25,11 @@ import type {
   ControlType,
 } from "./ui_projection_types";
 import { preflightLogger } from "@/lib/preflightLogger";
+import {
+  assertValidProjection,
+  validateProjection as validateProjectionStructure,
+  type ValidationResult,
+} from "./projection_assertions";
 
 // ============================================================================
 // Loader State
@@ -100,6 +105,13 @@ export function getProjection(): UIProjectionLock {
     );
   }
   return cachedProjection;
+}
+
+/**
+ * Check if projection is loaded (for conditional rendering).
+ */
+export function isProjectionLoaded(): boolean {
+  return cachedProjection !== null;
 }
 
 // ============================================================================
@@ -260,10 +272,264 @@ function validateProjection(data: unknown): asserts data is UIProjectionLock {
   if (projection.domains.length === 0) {
     throw new Error("Invalid projection: domains array is empty");
   }
+
+  // Group H: Additional structure validation using assertions
+  const validationResult = validateProjectionStructure(data);
+  if (!validationResult.valid) {
+    preflightLogger.projection.loadError(new Error(`Validation warnings: ${validationResult.errors.join(', ')}`));
+  }
+}
+
+// ============================================================================
+// Context Accessor (Group C - Domain/Subdomain Context)
+// ============================================================================
+
+export interface DomainContext {
+  domain: DomainName | null;
+  subdomain: string | null;
+  topic: string | null;
+  topicId: string | null;
+  order: string | null;
+  panelId: string | null;
+  panelName: string | null;
+}
+
+/**
+ * Get domain context from a panel ID.
+ * Returns domain, subdomain, and topic info for the panel.
+ */
+export function getDomainContextForPanel(panelId: string): DomainContext {
+  const projection = getProjection();
+
+  for (const domain of projection.domains) {
+    const panel = domain.panels.find((p) => p.panel_id === panelId);
+    if (panel) {
+      return {
+        domain: domain.domain,
+        subdomain: panel.subdomain,
+        topic: panel.topic,
+        topicId: panel.topic_id,
+        order: panel.order,
+        panelId: panel.panel_id,
+        panelName: panel.panel_name,
+      };
+    }
+  }
+
+  return {
+    domain: null,
+    subdomain: null,
+    topic: null,
+    topicId: null,
+    order: null,
+    panelId: null,
+    panelName: null,
+  };
+}
+
+/**
+ * Get domain context from a route path.
+ * Parses route to extract domain and optionally panel info.
+ */
+export function getDomainContextForRoute(pathname: string): DomainContext {
+  const projection = getProjection();
+
+  // Parse route: /precus/{domain}/{panel-id}
+  const parts = pathname.split('/').filter(Boolean);
+
+  // Check if this is a precus or cus route
+  if (parts[0] !== 'precus' && parts[0] !== 'cus') {
+    return {
+      domain: null,
+      subdomain: null,
+      topic: null,
+      topicId: null,
+      order: null,
+      panelId: null,
+      panelName: null,
+    };
+  }
+
+  // Find domain from route
+  const domainSlug = parts[1]?.toLowerCase();
+  const domain = projection.domains.find(
+    (d) => d.domain.toLowerCase() === domainSlug
+  );
+
+  if (!domain) {
+    return {
+      domain: null,
+      subdomain: null,
+      topic: null,
+      topicId: null,
+      order: null,
+      panelId: null,
+      panelName: null,
+    };
+  }
+
+  // If we have a panel ID in the route
+  const panelSlug = parts[2]?.toLowerCase();
+  if (panelSlug) {
+    const panel = domain.panels.find(
+      (p) => p.panel_id.toLowerCase() === panelSlug
+    );
+    if (panel) {
+      return {
+        domain: domain.domain,
+        subdomain: panel.subdomain,
+        topic: panel.topic,
+        topicId: panel.topic_id,
+        order: panel.order,
+        panelId: panel.panel_id,
+        panelName: panel.panel_name,
+      };
+    }
+  }
+
+  // Domain only (no specific panel)
+  return {
+    domain: domain.domain,
+    subdomain: null,
+    topic: null,
+    topicId: null,
+    order: null,
+    panelId: null,
+    panelName: null,
+  };
+}
+
+/**
+ * Get all unique subdomains for a domain.
+ */
+export function getSubdomainsForDomain(domainName: DomainName): string[] {
+  const domain = getDomain(domainName);
+  if (!domain) return [];
+
+  const subdomains = new Set<string>();
+  for (const panel of domain.panels) {
+    if (panel.subdomain) {
+      subdomains.add(panel.subdomain);
+    }
+  }
+  return Array.from(subdomains);
+}
+
+/**
+ * Get panels for a specific subdomain within a domain.
+ */
+export function getPanelsForSubdomain(
+  domainName: DomainName,
+  subdomain: string
+): Panel[] {
+  const domain = getDomain(domainName);
+  if (!domain) return [];
+
+  return domain.panels
+    .filter((p) => p.subdomain === subdomain)
+    .sort((a, b) => String(a.order).localeCompare(String(b.order)));
+}
+
+// ============================================================================
+// Preflight Normalizer (TODO-1: Temporary Description Injection)
+// Only active in PREFLIGHT mode. Never in production.
+// ============================================================================
+
+const IS_PREFLIGHT = import.meta.env.VITE_PREFLIGHT_MODE === 'true';
+
+export interface NormalizedPanel extends Panel {
+  _normalization?: {
+    auto_description: boolean;
+  };
+}
+
+export interface NormalizedDomain extends Omit<Domain, 'panels'> {
+  panels: NormalizedPanel[];
+  _normalization?: {
+    auto_description: boolean;
+  };
+}
+
+/**
+ * Generate a placeholder description for preflight validation.
+ * RULE: Only in preflight. Never in production.
+ */
+function generatePlaceholderDescription(label: string, type: 'domain' | 'subdomain' | 'panel'): string {
+  const cleanLabel = label.replace(/_/g, ' ').toLowerCase();
+  switch (type) {
+    case 'domain':
+      return `Provides an overview of ${cleanLabel} across your system.`;
+    case 'subdomain':
+      return `Manages ${cleanLabel} configuration and monitoring.`;
+    case 'panel':
+      return `Displays ${cleanLabel} data and controls.`;
+    default:
+      return `Overview of ${cleanLabel}.`;
+  }
+}
+
+/**
+ * Normalize a panel with placeholder description if missing (preflight only).
+ */
+export function normalizePanel(panel: Panel): NormalizedPanel {
+  if (!IS_PREFLIGHT || panel.short_description) {
+    return panel;
+  }
+
+  return {
+    ...panel,
+    short_description: generatePlaceholderDescription(panel.panel_name, 'panel'),
+    _normalization: {
+      auto_description: true,
+    },
+  };
+}
+
+/**
+ * Normalize a domain with placeholder description if missing (preflight only).
+ */
+export function normalizeDomain(domain: Domain): NormalizedDomain {
+  const normalizedPanels = domain.panels.map(normalizePanel);
+
+  if (!IS_PREFLIGHT || domain.short_description) {
+    return {
+      ...domain,
+      panels: normalizedPanels,
+    };
+  }
+
+  return {
+    ...domain,
+    panels: normalizedPanels,
+    short_description: generatePlaceholderDescription(domain.domain, 'domain'),
+    _normalization: {
+      auto_description: true,
+    },
+  };
+}
+
+/**
+ * Get normalized panels for a subdomain (with placeholder descriptions in preflight).
+ */
+export function getNormalizedPanelsForSubdomain(
+  domainName: DomainName,
+  subdomain: string
+): NormalizedPanel[] {
+  const panels = getPanelsForSubdomain(domainName, subdomain);
+  return panels.map(normalizePanel);
+}
+
+/**
+ * Get normalized domain (with placeholder descriptions in preflight).
+ */
+export function getNormalizedDomain(name: DomainName): NormalizedDomain | undefined {
+  const domain = getDomain(name);
+  if (!domain) return undefined;
+  return normalizeDomain(domain);
 }
 
 // ============================================================================
 // Exports
 // ============================================================================
 
-export type { UIProjectionLock, Domain, Panel, Control };
+export type { UIProjectionLock, Domain, Panel, Control, DomainContext };

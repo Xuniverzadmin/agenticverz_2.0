@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "type": "global_context_intent",
+    "version": "1.0.0",
+    "created_at": "2026-01-08",
+    "description": "Global context configuration - NOT L2.1, NOT projection-driven"
+  },
+  "project_selector": {
+    "enabled": true,
+    "scope": "global",
+    "required": true,
+    "position": "header",
+    "description": "Project selector is a global scope filter, not a domain"
+  },
+  "tenant_context": {
+    "enabled": true,
+    "scope": "session",
+    "description": "Tenant context from authentication"
+  },
+  "rules": {
+    "project_is_not_domain": true,
+    "project_does_not_change_sidebar": true,
+    "project_changes_data_scope_only": true,
+    "cross_project_aggregation_forbidden": true
+  }
+}

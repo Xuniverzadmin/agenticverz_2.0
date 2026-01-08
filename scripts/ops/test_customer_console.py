@@ -103,9 +103,9 @@ def assert_shape(name: str, result: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         if name == "pulse":
-            assert (
-                "system_state" in body or "system_status" in body
-            ), "pulse missing system_state"
+            assert "system_state" in body or "system_status" in body, (
+                "pulse missing system_state"
+            )
             result["data_present"] = body.get("active_tenants_24h", 0) > 0
 
         elif name == "customers":
@@ -134,12 +134,12 @@ def assert_shape(name: str, result: Dict[str, Any]) -> Dict[str, Any]:
             result["playbooks_configured"] = expected.issubset(set(playbook_ids))
 
         elif name == "infra":
-            assert (
-                "db_connections_current" in body or "db" in body
-            ), "infra missing db info"
-            assert (
-                "redis_memory_used_mb" in body or "redis" in body
-            ), "infra missing redis info"
+            assert "db_connections_current" in body or "db" in body, (
+                "infra missing db info"
+            )
+            assert "redis_memory_used_mb" in body or "redis" in body, (
+                "infra missing redis info"
+            )
             result["data_present"] = True
 
         result["assertion"] = "PASSED"
@@ -301,9 +301,9 @@ def main():
         sys.exit(0 if all_ok else 1)
 
     # Pretty output
-    print(f"\n{CYAN}{'='*60}{RESET}")
+    print(f"\n{CYAN}{'=' * 60}{RESET}")
     print(f"{CYAN}{BOLD}  Customer Console – Ops API Test{RESET}")
-    print(f"{CYAN}{'='*60}{RESET}")
+    print(f"{CYAN}{'=' * 60}{RESET}")
     print(
         f"  {DIM}API: {BASE_URL}  |  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}{RESET}\n"
     )
@@ -328,7 +328,7 @@ def main():
             print()
 
     # Summary
-    print(f"\n{CYAN}{'─'*60}{RESET}")
+    print(f"\n{CYAN}{'─' * 60}{RESET}")
 
     if playbooks_ok:
         print(f"  {GREEN}✓{RESET} 5 Founder Playbooks configured")
@@ -348,7 +348,7 @@ def main():
         print(f"  {GREEN}✓{RESET} ops_events data present")
 
     print(f"\n  {BOLD}Result: {'PASS' if all_ok else 'FAIL'}{RESET}")
-    print(f"{CYAN}{'='*60}{RESET}\n")
+    print(f"{CYAN}{'=' * 60}{RESET}\n")
 
     sys.exit(0 if all_ok else 1)
 

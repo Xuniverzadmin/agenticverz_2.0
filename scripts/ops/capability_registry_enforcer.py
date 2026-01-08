@@ -460,8 +460,14 @@ AUTH_PARSING_PATTERNS = [
     (r"jwt\.decode\s*\(", "JWT decode call"),
     (r"jwt\.encode\s*\(", "JWT encode call"),
     # Authorization header access
-    (r'request\.headers\s*\[\s*["\']Authorization["\']', "Direct Authorization header access"),
-    (r'request\.headers\.get\s*\(\s*["\']Authorization["\']', "Authorization header access"),
+    (
+        r'request\.headers\s*\[\s*["\']Authorization["\']',
+        "Direct Authorization header access",
+    ),
+    (
+        r'request\.headers\.get\s*\(\s*["\']Authorization["\']',
+        "Authorization header access",
+    ),
     (r'headers\s*\[\s*["\']Authorization["\']', "Direct Authorization header access"),
     (r'headers\.get\s*\(\s*["\']Authorization["\']', "Authorization header access"),
     # Bearer token parsing
@@ -508,7 +514,10 @@ REPLAY_ROUTE_PATTERNS = [
 # Patterns that indicate prediction route without authority
 PREDICTION_ROUTE_PATTERNS = [
     # Route definitions for predictions
-    (r'@router\.(post|get)\s*\(\s*["\'][^"\']*prediction[^"\']*["\']', "prediction route"),
+    (
+        r'@router\.(post|get)\s*\(\s*["\'][^"\']*prediction[^"\']*["\']',
+        "prediction route",
+    ),
     (r'@router\.get\s*\(\s*["\"]["\"]', "predictions list route"),  # Empty path = list
 ]
 
@@ -662,7 +671,8 @@ def check_authority_guard(files: list) -> list[Violation]:
                 if re.search(pattern, content, re.IGNORECASE):
                     # Check if authority enforcement is present
                     has_authority = any(
-                        re.search(ep, content) for ep in AUTHORITY_ENFORCEMENT_PATTERNS
+                        re.search(ep, content)
+                        for ep in AUTHORITY_ENFORCEMENT_PATTERNS
                         if "replay" in ep.lower()
                     )
                     if not has_authority:
@@ -670,7 +680,7 @@ def check_authority_guard(files: list) -> list[Violation]:
                             Violation(
                                 type="MISSING_AUTHORITY",
                                 file=filepath,
-                                message=f"Replay route found without authority enforcement. Add require_replay_execute/read.",
+                                message="Replay route found without authority enforcement. Add require_replay_execute/read.",
                                 capability_id="CAP-001",
                                 blocking=True,
                             )
@@ -688,7 +698,8 @@ def check_authority_guard(files: list) -> list[Violation]:
             if route_found:
                 # Check if authority enforcement is present
                 has_authority = any(
-                    re.search(ep, content) for ep in AUTHORITY_ENFORCEMENT_PATTERNS
+                    re.search(ep, content)
+                    for ep in AUTHORITY_ENFORCEMENT_PATTERNS
                     if "predictions" in ep.lower()
                 )
                 if not has_authority:
@@ -696,7 +707,7 @@ def check_authority_guard(files: list) -> list[Violation]:
                         Violation(
                             type="MISSING_AUTHORITY",
                             file=filepath,
-                            message=f"Prediction route found without authority enforcement. Add require_predictions_read.",
+                            message="Prediction route found without authority enforcement. Add require_predictions_read.",
                             capability_id="CAP-004",
                             blocking=True,
                         )
@@ -1405,7 +1416,10 @@ def cmd_authority_guard(args):
 # G1: REGISTRY MUTATION FREEZE
 # -----------------------------------------------------------------------------
 
-def check_registry_mutation(pr_body: str = "", commit_message: str = "") -> list[Violation]:
+
+def check_registry_mutation(
+    pr_body: str = "", commit_message: str = ""
+) -> list[Violation]:
     """
     Check that registry mutations are documented with PIN reference.
 
@@ -1431,7 +1445,10 @@ def check_registry_mutation(pr_body: str = "", commit_message: str = "") -> list
         "[capability-state-change-approved]",
         "[governance-approved]",
     ]
-    has_approval = any(marker.lower() in (pr_body + commit_message).lower() for marker in approval_markers)
+    has_approval = any(
+        marker.lower() in (pr_body + commit_message).lower()
+        for marker in approval_markers
+    )
 
     if not has_pin_ref and not has_approval:
         # This is a warning - actual mutation detection happens in CI via git diff
@@ -1440,7 +1457,9 @@ def check_registry_mutation(pr_body: str = "", commit_message: str = "") -> list
     return violations
 
 
-def check_registry_diff_for_state_changes(diff_content: str, pr_body: str = "") -> list[Violation]:
+def check_registry_diff_for_state_changes(
+    diff_content: str, pr_body: str = ""
+) -> list[Violation]:
     """
     Check git diff of registry for unauthorized state changes.
 
@@ -1450,7 +1469,10 @@ def check_registry_diff_for_state_changes(diff_content: str, pr_body: str = "") 
 
     # Patterns that indicate state changes
     state_change_patterns = [
-        (r"^\+\s*state:\s*(CLOSED|PARTIAL|READ_ONLY|FROZEN|QUARANTINED|PLANNED)", "lifecycle state change"),
+        (
+            r"^\+\s*state:\s*(CLOSED|PARTIAL|READ_ONLY|FROZEN|QUARANTINED|PLANNED)",
+            "lifecycle state change",
+        ),
         (r"^\+\s*authority:\s*true", "authority plane enabled"),
         (r"^\+\s*authority_wired:\s*true", "authority wiring change"),
         (r"^\-\s*state:\s*CLOSED", "CLOSED capability modified"),
@@ -1540,7 +1562,9 @@ def check_plane_purity(files: list) -> list[Violation]:
             continue
 
         # Check 1: HUMAN routes need authority
-        is_human_route_file = any(route in normalized_path for route in HUMAN_ONLY_ROUTES)
+        is_human_route_file = any(
+            route in normalized_path for route in HUMAN_ONLY_ROUTES
+        )
         if is_human_route_file:
             has_router = "@router." in content
             has_authority = any(
@@ -1548,7 +1572,9 @@ def check_plane_purity(files: list) -> list[Violation]:
                 for pattern in AUTHORITY_ENFORCEMENT_PATTERNS
             )
             # Also check for verify_console_token (human auth)
-            has_human_auth = "verify_console_token" in content or "get_current_user" in content
+            has_human_auth = (
+                "verify_console_token" in content or "get_current_user" in content
+            )
 
             if has_router and not (has_authority or has_human_auth):
                 violations.append(
@@ -1562,7 +1588,9 @@ def check_plane_purity(files: list) -> list[Violation]:
                 )
 
         # Check 2: MACHINE routes should not use HumanAuthContext
-        is_machine_route_file = any(route in normalized_path for route in MACHINE_ONLY_ROUTES)
+        is_machine_route_file = any(
+            route in normalized_path for route in MACHINE_ONLY_ROUTES
+        )
         if is_machine_route_file:
             if "HumanAuthContext" in content or "verify_console_token" in content:
                 violations.append(
@@ -1643,7 +1671,9 @@ def check_taxonomy_lock(diff_content: str = "", pr_body: str = "") -> list[Viola
         has_version_bump = bool(re.search(r"^\+.*Version:", diff_content, re.MULTILINE))
 
         # Check for new permission additions
-        new_permission = bool(re.search(r"^\+\s*\|\s*`[a-z]+:[a-z]+", diff_content, re.MULTILINE))
+        new_permission = bool(
+            re.search(r"^\+\s*\|\s*`[a-z]+:[a-z]+", diff_content, re.MULTILINE)
+        )
 
         if new_permission and not has_version_bump:
             violations.append(
@@ -1785,7 +1815,10 @@ def check_worker_auth_compliance(files: list = None) -> list[Violation]:
             if "@router." in content:
                 if "verify_api_key" not in content and "X-AOS-Key" not in content:
                     # Also check for webhook signature verification
-                    if "verify_webhook_signature" not in content and "X-Webhook-Signature" not in content:
+                    if (
+                        "verify_webhook_signature" not in content
+                        and "X-Webhook-Signature" not in content
+                    ):
                         violations.append(
                             Violation(
                                 type="WEBHOOK_NO_AUTH",
@@ -1802,6 +1835,7 @@ def check_worker_auth_compliance(files: list = None) -> list[Violation]:
 # -----------------------------------------------------------------------------
 # G5: GOVERNANCE BASELINE REPORT
 # -----------------------------------------------------------------------------
+
 
 def generate_governance_baseline() -> str:
     """
@@ -1838,17 +1872,19 @@ def generate_governance_baseline() -> str:
         gaps = cap_data.get("gaps", [])
         for gap in gaps:
             if gap.get("type") == "INTENTIONALLY_ABSENT":
-                intentional_gaps.append({
-                    "capability": cap_name,
-                    "detail": gap.get("detail", ""),
-                })
+                intentional_gaps.append(
+                    {
+                        "capability": cap_name,
+                        "detail": gap.get("detail", ""),
+                    }
+                )
 
     # Build report
     report = f"""# Governance Baseline Report
 
 **Generated:** {today}
 **Timestamp:** {timestamp}
-**Registry Version:** {registry.get('registry_version', '1.0.0')}
+**Registry Version:** {registry.get("registry_version", "1.0.0")}
 
 ---
 
@@ -1860,8 +1896,11 @@ def generate_governance_baseline() -> str:
 
     for state in ["CLOSED", "FROZEN", "READ_ONLY", "PARTIAL", "PLANNED", "QUARANTINED"]:
         count = state_counts.get(state, 0)
-        caps = [name for name, data in capabilities.items()
-                if data.get("lifecycle", {}).get("state") == state]
+        caps = [
+            name
+            for name, data in capabilities.items()
+            if data.get("lifecycle", {}).get("state") == state
+        ]
         report += f"| {state} | {count} | {', '.join(caps) if caps else '-'} |\n"
 
     report += f"""
@@ -1886,7 +1925,7 @@ The following capabilities have authority enforcement:
             else:
                 report += f"  - `{evidence}`\n"
 
-    report += f"""
+    report += """
 ---
 
 ## CI Invariants
@@ -1924,7 +1963,7 @@ These gaps are by design and should not be "fixed":
     else:
         report += "- None declared\n"
 
-    report += f"""
+    report += """
 ---
 
 ## Blocking Gaps
@@ -1979,7 +2018,7 @@ This baseline can be verified against the registry:
 ```
 Registry Hash: {hash(str(capabilities)) & 0xFFFFFFFF:08x}
 Capabilities: {len(capabilities)}
-CLOSED: {state_counts.get('CLOSED', 0)}
+CLOSED: {state_counts.get("CLOSED", 0)}
 Authority Surfaces: {len(authority_surfaces)}
 ```
 
@@ -1995,6 +2034,7 @@ Authority Surfaces: {len(authority_surfaces)}
 # COMMAND HANDLERS FOR PHASE G
 # -----------------------------------------------------------------------------
 
+
 def cmd_registry_mutation(args):
     """Check registry mutations are documented."""
     violations = []
@@ -2002,7 +2042,9 @@ def cmd_registry_mutation(args):
     if args.diff_file:
         with open(args.diff_file, "r") as f:
             diff_content = f.read()
-        violations = check_registry_diff_for_state_changes(diff_content, args.pr_body or "")
+        violations = check_registry_diff_for_state_changes(
+            diff_content, args.pr_body or ""
+        )
     else:
         # Just validate registry structure
         violations = check_registry_mutation(args.pr_body or "")
@@ -2143,7 +2185,8 @@ def main():
 
     # authority-guard command (CAP-001 replay, CAP-004 predictions)
     authority_parser = subparsers.add_parser(
-        "authority-guard", help="Check replay/prediction routes have authority enforcement (CAP-001, CAP-004)"
+        "authority-guard",
+        help="Check replay/prediction routes have authority enforcement (CAP-001, CAP-004)",
     )
     authority_parser.add_argument(
         "--files", nargs="+", help="Files to check (required unless --scan-all)"
@@ -2153,7 +2196,9 @@ def main():
         action="store_true",
         help="Scan replay/prediction routes for authority violations",
     )
-    authority_parser.add_argument("--format", choices=["text", "github"], default="text")
+    authority_parser.add_argument(
+        "--format", choices=["text", "github"], default="text"
+    )
     authority_parser.set_defaults(func=cmd_authority_guard)
 
     # =========================================================================
@@ -2200,9 +2245,7 @@ def main():
         "--diff-file", help="File containing git diff of taxonomy"
     )
     taxonomy_parser.add_argument("--pr-body", help="PR body text")
-    taxonomy_parser.add_argument(
-        "--format", choices=["text", "github"], default="text"
-    )
+    taxonomy_parser.add_argument("--format", choices=["text", "github"], default="text")
     taxonomy_parser.set_defaults(func=cmd_taxonomy_lock)
 
     # worker-auth command (G4)

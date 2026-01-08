@@ -53,6 +53,7 @@ try:
         cli_safety_hook,
         emit_safety_metrics,
     )
+
     SAFETY_LAYER_AVAILABLE = True
 except ImportError:
     try:
@@ -64,6 +65,7 @@ except ImportError:
             cli_safety_hook,
             emit_safety_metrics,
         )
+
         SAFETY_LAYER_AVAILABLE = True
     except ImportError:
         # Safety layer not available - continue without it (degraded mode)
@@ -80,16 +82,22 @@ except ImportError:
 try:
     from app.governance.kernel import (
         ExecutionKernel,
+    )
+    from app.governance.kernel import (
         InvocationContext as KernelContext,
     )
+
     KERNEL_AVAILABLE = True
 except ImportError:
     try:
         # When running from source
         from app.governance.kernel import (
             ExecutionKernel,
+        )
+        from app.governance.kernel import (
             InvocationContext as KernelContext,
         )
+
         KERNEL_AVAILABLE = True
     except ImportError:
         # Kernel not available - continue without it (degraded mode)

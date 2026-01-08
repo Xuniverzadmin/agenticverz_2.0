@@ -1260,14 +1260,10 @@ class AutoExecuteReviewStatsDTO(BaseModel):
 
     # Safety flag summary
     flagged_count: int = Field(ge=0, description="Decisions with at least one safety flag")
-    flag_counts: Dict[str, int] = Field(
-        default_factory=dict, description="Count per safety flag type"
-    )
+    flag_counts: Dict[str, int] = Field(default_factory=dict, description="Count per safety flag type")
 
     # Time series (for trend chart)
-    daily_counts: List[Dict[str, Any]] = Field(
-        default_factory=list, description="Daily counts for trend chart"
-    )
+    daily_counts: List[Dict[str, Any]] = Field(default_factory=list, description="Daily counts for trend chart")
 
     class Config:
         json_schema_extra = {

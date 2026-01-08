@@ -26,22 +26,22 @@ COVERAGE:
 """
 
 import json
+
 import pytest
 
-from app.dsl.parser import parse
-from app.dsl.validator import validate
-from app.dsl.ir_compiler import compile_policy, PolicyIR, OpCode
 from app.dsl.interpreter import (
-    evaluate,
     EvaluationResult,
     MissingMetricError,
     TypeMismatchError,
+    evaluate,
 )
-
+from app.dsl.ir_compiler import PolicyIR, compile_policy
+from app.dsl.parser import parse
 
 # =============================================================================
 # FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def policy_ir() -> PolicyIR:
@@ -73,6 +73,7 @@ def serialized_ir(policy_ir: PolicyIR) -> str:
 # =============================================================================
 # REPLAY FROM IR TESTS
 # =============================================================================
+
 
 class TestReplayFromIR:
     """Tests that replay works from IR alone."""
@@ -137,6 +138,7 @@ class TestReplayFromIR:
 # =============================================================================
 # REPLAY INDEPENDENCE TESTS
 # =============================================================================
+
 
 class TestReplayIndependence:
     """Tests that replay is independent of external systems."""
@@ -207,6 +209,7 @@ class TestReplayIndependence:
 # FACT SNAPSHOT ISOLATION TESTS
 # =============================================================================
 
+
 class TestFactSnapshotIsolation:
     """Tests that evaluation uses only the provided fact snapshot."""
 
@@ -258,6 +261,7 @@ class TestFactSnapshotIsolation:
 # =============================================================================
 # ERROR REPRODUCIBILITY TESTS
 # =============================================================================
+
 
 class TestErrorReproducibility:
     """Tests that errors are reproducible across replays."""
@@ -344,6 +348,7 @@ class TestErrorReproducibility:
 # IR HASH AS REPLAY KEY TESTS
 # =============================================================================
 
+
 class TestIRHashAsReplayKey:
     """Tests that IR hash can be used as replay key."""
 
@@ -407,6 +412,7 @@ class TestIRHashAsReplayKey:
 # =============================================================================
 # COMPLETE REPLAY SCENARIO TESTS
 # =============================================================================
+
 
 class TestCompleteReplayScenario:
     """End-to-end replay scenario tests."""

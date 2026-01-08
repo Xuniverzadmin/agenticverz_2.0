@@ -378,9 +378,9 @@ class TestMetricsUnderChaos:
             await limiter.allow_request(tenant_id="test", ip="1.2.3.4")
 
         new_allowed = RATE_LIMIT_ALLOWED._value.get()
-        assert (
-            new_allowed == initial_allowed + 1
-        ), "Should increment allowed metric on fail-open"
+        assert new_allowed == initial_allowed + 1, (
+            "Should increment allowed metric on fail-open"
+        )
 
 
 @requires_redis
@@ -447,7 +447,7 @@ class TestRedisChaoIntegration:
         # Make requests up to limit (10)
         for i in range(10):
             result = await limiter.allow_request(tenant_id=tenant_id, ip=ip)
-            assert result is True, f"Request {i+1} should be allowed"
+            assert result is True, f"Request {i + 1} should be allowed"
 
         # 11th request should be blocked
         result = await limiter.allow_request(tenant_id=tenant_id, ip=ip)

@@ -33,18 +33,18 @@ Exit Codes:
 """
 
 import argparse
-import ast
 import os
 import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Tuple
 
 
 @dataclass
 class ExecutePath:
     """Represents an identified EXECUTE-power path."""
+
     file_path: str
     line_number: int
     path_type: str  # HTTP_ADMIN, CLI, WORKER, SDK
@@ -58,10 +58,13 @@ class ExecutePath:
 @dataclass
 class ValidationResult:
     """Result of kernel usage validation."""
+
     total_paths: int = 0
     compliant_paths: int = 0
     violations: List[ExecutePath] = field(default_factory=list)
-    deferred: List[ExecutePath] = field(default_factory=list)  # Known deferred violations
+    deferred: List[ExecutePath] = field(
+        default_factory=list
+    )  # Known deferred violations
     warnings: List[str] = field(default_factory=list)
 
 
@@ -80,7 +83,7 @@ HTTP_EXECUTE_PATTERNS = [
 
 # Deprecated routes (return 410 Gone) - excluded from validation
 DEPRECATED_ROUTE_PATTERNS = [
-    r'/admin/rerun',  # Deprecated in favor of /admin/retry (PIN-337)
+    r"/admin/rerun",  # Deprecated in favor of /admin/retry (PIN-337)
 ]
 
 # Known deferred violations - documented for incremental integration
@@ -92,32 +95,32 @@ KNOWN_DEFERRED_VIOLATIONS = {
 
 CLI_EXECUTE_PATTERNS = [
     # CLI command functions that execute logic (mutations)
-    (r'def\s+cmd_simulate\s*\(', "CLI"),
-    (r'def\s+cmd_recovery_approve\s*\(', "CLI"),
+    (r"def\s+cmd_simulate\s*\(", "CLI"),
+    (r"def\s+cmd_recovery_approve\s*\(", "CLI"),
 ]
 
 WORKER_EXECUTE_PATTERNS = [
     # Recovery claim worker - processes recovery candidates
-    (r'class\s+RecoveryClaimWorker', "WORKER"),
+    (r"class\s+RecoveryClaimWorker", "WORKER"),
     # Business builder worker - executes business plans
-    (r'class\s+BusinessBuilderWorker', "WORKER"),
+    (r"class\s+BusinessBuilderWorker", "WORKER"),
     # Alert worker - processes alerts
-    (r'class\s+AlertWorker', "WORKER"),
+    (r"class\s+AlertWorker", "WORKER"),
     # Outbox processor run method
-    (r'async\s+def\s+run\s*\(\s*self\s*\)\s*->\s*None\s*:.*outbox', "WORKER"),
+    (r"async\s+def\s+run\s*\(\s*self\s*\)\s*->\s*None\s*:.*outbox", "WORKER"),
 ]
 
 # Kernel usage patterns
 KERNEL_USAGE_PATTERNS = [
-    r'ExecutionKernel\.invoke',
-    r'ExecutionKernel\.invoke_async',
-    r'ExecutionKernel\._emit_envelope',
-    r'ExecutionKernel\._record_invocation',
-    r'record_cli_invocation\s*\(',
-    r'record_worker_invocation\s*\(',
+    r"ExecutionKernel\.invoke",
+    r"ExecutionKernel\.invoke_async",
+    r"ExecutionKernel\._emit_envelope",
+    r"ExecutionKernel\._record_invocation",
+    r"record_cli_invocation\s*\(",
+    r"record_worker_invocation\s*\(",
 ]
 
-GOVERNED_DECORATOR_PATTERN = r'@governed\s*\('
+GOVERNED_DECORATOR_PATTERN = r"@governed\s*\("
 
 
 def is_deprecated_route(identifier: str) -> bool:
@@ -131,7 +134,7 @@ def is_deprecated_route(identifier: str) -> bool:
 def find_execute_paths(file_path: str, content: str) -> List[ExecutePath]:
     """Find all EXECUTE-power paths in a file."""
     paths = []
-    lines = content.split('\n')
+    lines = content.split("\n")
 
     for i, line in enumerate(lines, 1):
         # Check HTTP patterns
@@ -145,41 +148,47 @@ def find_execute_paths(file_path: str, content: str) -> List[ExecutePath]:
                 if is_deprecated_route(identifier):
                     continue
 
-                paths.append(ExecutePath(
-                    file_path=file_path,
-                    line_number=i,
-                    path_type=path_type,
-                    identifier=identifier,
-                    details=line.strip(),
-                ))
+                paths.append(
+                    ExecutePath(
+                        file_path=file_path,
+                        line_number=i,
+                        path_type=path_type,
+                        identifier=identifier,
+                        details=line.strip(),
+                    )
+                )
 
         # Check CLI patterns
         for pattern, path_type in CLI_EXECUTE_PATTERNS:
             if re.search(pattern, line):
                 # Extract function name
-                func_match = re.search(r'def\s+(\w+)', line)
+                func_match = re.search(r"def\s+(\w+)", line)
                 identifier = func_match.group(1) if func_match else "unknown"
-                paths.append(ExecutePath(
-                    file_path=file_path,
-                    line_number=i,
-                    path_type=path_type,
-                    identifier=identifier,
-                    details=line.strip(),
-                ))
+                paths.append(
+                    ExecutePath(
+                        file_path=file_path,
+                        line_number=i,
+                        path_type=path_type,
+                        identifier=identifier,
+                        details=line.strip(),
+                    )
+                )
 
         # Check Worker patterns
         for pattern, path_type in WORKER_EXECUTE_PATTERNS:
             if re.search(pattern, line):
                 # Extract class/method name
-                name_match = re.search(r'(class|def)\s+(\w+)', line)
+                name_match = re.search(r"(class|def)\s+(\w+)", line)
                 identifier = name_match.group(2) if name_match else "unknown"
-                paths.append(ExecutePath(
-                    file_path=file_path,
-                    line_number=i,
-                    path_type=path_type,
-                    identifier=identifier,
-                    details=line.strip(),
-                ))
+                paths.append(
+                    ExecutePath(
+                        file_path=file_path,
+                        line_number=i,
+                        path_type=path_type,
+                        identifier=identifier,
+                        details=line.strip(),
+                    )
+                )
 
     return paths
 
@@ -190,7 +199,7 @@ def check_kernel_usage(file_path: str, content: str, execute_path: ExecutePath) 
 
     Looks for kernel usage within the function/method scope.
     """
-    lines = content.split('\n')
+    lines = content.split("\n")
 
     # Find the scope of the execute path (function or class method)
     start_line = execute_path.line_number - 1
@@ -213,14 +222,19 @@ def check_kernel_usage(file_path: str, content: str, execute_path: ExecutePath) 
 
         # Check if we've exited the scope (dedented to base level or less)
         line_indent = len(line) - len(line.lstrip())
-        if i > start_line and line_indent <= base_indent and line.strip() and not line.strip().startswith('#'):
+        if (
+            i > start_line
+            and line_indent <= base_indent
+            and line.strip()
+            and not line.strip().startswith("#")
+        ):
             # Check for class/function at same or lower indent
-            if re.match(r'\s*(def|class|@)', line):
+            if re.match(r"\s*(def|class|@)", line):
                 break
 
         scope_content.append(line)
 
-    scope_text = '\n'.join(scope_content)
+    scope_text = "\n".join(scope_content)
 
     # Check for kernel usage patterns
     for pattern in KERNEL_USAGE_PATTERNS:
@@ -236,7 +250,9 @@ def check_kernel_usage(file_path: str, content: str, execute_path: ExecutePath) 
     return False
 
 
-def validate_file(file_path: str, verbose: bool = False) -> Tuple[List[ExecutePath], List[ExecutePath], List[ExecutePath]]:
+def validate_file(
+    file_path: str, verbose: bool = False
+) -> Tuple[List[ExecutePath], List[ExecutePath], List[ExecutePath]]:
     """
     Validate a single file for kernel usage.
 
@@ -244,7 +260,7 @@ def validate_file(file_path: str, verbose: bool = False) -> Tuple[List[ExecutePa
         Tuple of (compliant_paths, violations, deferred)
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
         if verbose:
@@ -285,22 +301,26 @@ def validate_directory(
 
     # Default exclusions
     default_excludes = [
-        '__pycache__',
-        '.git',
-        'node_modules',
-        '.venv',
-        'venv',
-        'tests/',  # Don't validate test files for kernel usage
-        'quarantine/',
+        "__pycache__",
+        ".git",
+        "node_modules",
+        ".venv",
+        "venv",
+        "tests/",  # Don't validate test files for kernel usage
+        "quarantine/",
     ]
     all_excludes = default_excludes + exclude_patterns
 
     for root, dirs, files in os.walk(directory):
         # Filter excluded directories
-        dirs[:] = [d for d in dirs if not any(excl in os.path.join(root, d) for excl in all_excludes)]
+        dirs[:] = [
+            d
+            for d in dirs
+            if not any(excl in os.path.join(root, d) for excl in all_excludes)
+        ]
 
         for file in files:
-            if not file.endswith('.py'):
+            if not file.endswith(".py"):
                 continue
 
             file_path = os.path.join(root, file)
@@ -362,7 +382,9 @@ def print_report(result: ValidationResult, verbose: bool = False) -> None:
         print("    3. Add record_*_invocation() helper call")
         print()
     elif result.deferred:
-        print("  ⚠️  PASS (with deferred items): Core paths compliant, deferred items tracked")
+        print(
+            "  ⚠️  PASS (with deferred items): Core paths compliant, deferred items tracked"
+        )
         print()
     else:
         print("  ✅ PASS: All EXECUTE paths route through ExecutionKernel")
@@ -414,7 +436,7 @@ def main():
         print(f"Error: Directory not found: {scan_dir}")
         sys.exit(2)
 
-    print(f"PIN-337 Kernel Usage Validator")
+    print("PIN-337 Kernel Usage Validator")
     print(f"Scanning: {scan_dir}")
 
     result = validate_directory(

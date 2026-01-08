@@ -1349,6 +1349,42 @@ See `docs/contracts/INDEX.md` for contract status.
 
 ---
 
+## Web Server Infrastructure (Debugging Reference)
+
+**Full docs:** `docs/infrastructure/WEB_SERVER_ARCHITECTURE.md`
+
+**Quick Reference:**
+```
+INTERNET (80/443) → APACHE (main server) → serves all sites
+                         │
+                         └→ mail.xuniverz.com only → NGINX (127.0.0.1:8081) → iRedMail apps
+```
+
+| Server | Port | Role |
+|--------|------|------|
+| **Apache** | 80, 443 | Main web server (ALL external traffic) |
+| **Nginx** | 127.0.0.1:8081 | Internal only (iRedMail: webmail, admin) |
+
+**Frontend Deployment:**
+```bash
+cd /root/agenticverz2.0/website/app-shell
+npm run build                          # Production: dist/
+cp -r dist dist-preflight              # Preflight: dist-preflight/
+sudo systemctl reload apache2          # Apply changes
+```
+
+**Domain → Config Mapping:**
+| Domain | Apache Config | DocumentRoot |
+|--------|---------------|--------------|
+| console.agenticverz.com | `console.agenticverz.com.conf` | `dist/` |
+| preflight-console.agenticverz.com | `preflight-console.agenticverz.com.conf` | `dist-preflight/` |
+
+**Cache-busting:** Already configured. Browsers auto-refresh after deploy (no manual cache clear).
+
+**Route Redirect:** `/guard/*` → `/cus/*` (301) already configured.
+
+---
+
 ## Machine-Native APIs (Implemented)
 
 ```python

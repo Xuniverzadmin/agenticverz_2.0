@@ -100,6 +100,8 @@ services:
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-24}
       REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS:-7}
       FRONTEND_URL: ${FRONTEND_URL:-https://agenticverz.com}
+      # Dev-only password login (preflight convenience)
+      DEV_LOGIN_PASSWORD: ${DEV_LOGIN_PASSWORD:-}
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import httpx; r=httpx.get('http://localhost:8000/health'); exit(0 if r.status_code==200 else 1)\""]
       interval: 10s

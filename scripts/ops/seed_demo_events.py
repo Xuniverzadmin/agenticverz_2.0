@@ -421,7 +421,7 @@ def insert_events(conn, events: List[Dict[str, Any]]) -> int:
         execute_values(
             cur,
             f"""
-            INSERT INTO ops_events ({', '.join(columns)})
+            INSERT INTO ops_events ({", ".join(columns)})
             VALUES %s
             """,
             values,
@@ -453,9 +453,9 @@ def main():
     )
     args = parser.parse_args()
 
-    print(f"\n{CYAN}{'='*60}{RESET}")
+    print(f"\n{CYAN}{'=' * 60}{RESET}")
     print(f"{CYAN}{BOLD}  Ops Console Demo Seeder{RESET}")
-    print(f"{CYAN}{'='*60}{RESET}\n")
+    print(f"{CYAN}{'=' * 60}{RESET}\n")
 
     now = datetime.now(timezone.utc)
 
@@ -538,7 +538,7 @@ def main():
 
     if args.dry_run:
         print(f"\n  {YELLOW}Dry run - no data inserted{RESET}")
-        print(f"{CYAN}{'='*60}{RESET}\n")
+        print(f"{CYAN}{'=' * 60}{RESET}\n")
         return
 
     # Connect and insert
@@ -563,11 +563,11 @@ def main():
         sys.exit(1)
 
     # Summary
-    print(f"\n{CYAN}{'─'*60}{RESET}")
+    print(f"\n{CYAN}{'─' * 60}{RESET}")
     print(f"  {GREEN}✓ Demo data seeded successfully{RESET}")
     print(f"\n  {DIM}Run the console test to verify:{RESET}")
     print(f"  {DIM}  python3 scripts/ops/test_customer_console.py --verbose{RESET}")
-    print(f"{CYAN}{'='*60}{RESET}\n")
+    print(f"{CYAN}{'=' * 60}{RESET}\n")
 
 
 if __name__ == "__main__":

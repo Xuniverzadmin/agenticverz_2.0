@@ -101,7 +101,9 @@ def normalize_intent(intent: dict[str, Any]) -> tuple[dict[str, Any], list[str]]
     return normalized, filled_fields
 
 
-def validate_no_empty_fields(intent: dict[str, Any], required_fields: list[str]) -> list[str]:
+def validate_no_empty_fields(
+    intent: dict[str, Any], required_fields: list[str]
+) -> list[str]:
     """
     Check for empty fields after normalization.
     Returns list of still-empty required fields.
@@ -125,8 +127,14 @@ def normalize_intents(raw_ir: dict[str, Any]) -> dict[str, Any]:
     fill_stats = {}
 
     required_fields = [
-        "row_uid", "domain", "panel_id", "panel_name",
-        "order", "enabled", "render_mode", "visibility"
+        "row_uid",
+        "domain",
+        "panel_id",
+        "panel_name",
+        "order",
+        "enabled",
+        "render_mode",
+        "visibility",
     ]
 
     for intent in raw_ir.get("intents", []):
@@ -141,9 +149,7 @@ def normalize_intents(raw_ir: dict[str, Any]) -> dict[str, Any]:
         empty = validate_no_empty_fields(normalized, required_fields)
         if empty:
             # Still has empty fields - record for error reporting
-            normalized["_validation_errors"] = {
-                "empty_required_fields": empty
-            }
+            normalized["_validation_errors"] = {"empty_required_fields": empty}
 
         normalized_intents.append(normalized)
 
@@ -176,13 +182,13 @@ def main():
         "--input",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_intent_ir_raw.json"),
-        help="Path to raw intent IR JSON"
+        help="Path to raw intent IR JSON",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_intent_ir_normalized.json"),
-        help="Output path for normalized intent IR JSON"
+        help="Output path for normalized intent IR JSON",
     )
 
     args = parser.parse_args()

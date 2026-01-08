@@ -132,11 +132,7 @@ class ExecutionEnvelopeModel(Base):
             },
             "invocation": {
                 "invocation_id": self.invocation_id,
-                "timestamp": (
-                    self.invocation_timestamp.isoformat()
-                    if self.invocation_timestamp
-                    else None
-                ),
+                "timestamp": (self.invocation_timestamp.isoformat() if self.invocation_timestamp else None),
                 "sequence_number": self.sequence_number,
             },
             "plan": {
@@ -162,9 +158,7 @@ class ExecutionEnvelopeModel(Base):
                 "cli_version": self.cli_version,
             },
             "evidence": {
-                "emitted_at": (
-                    self.emitted_at.isoformat() if self.emitted_at else None
-                ),
+                "emitted_at": (self.emitted_at.isoformat() if self.emitted_at else None),
                 "emission_success": self.emission_success,
             },
         }
@@ -222,9 +216,7 @@ class ExecutionEnvelopeStats(Base):
             "capability_id": self.capability_id,
             "execution_vector": self.execution_vector,
             "tenant_id": self.tenant_id,
-            "period_start": (
-                self.period_start.isoformat() if self.period_start else None
-            ),
+            "period_start": (self.period_start.isoformat() if self.period_start else None),
             "period_end": self.period_end.isoformat() if self.period_end else None,
             "total_envelopes": self.total_envelopes,
             "impersonation_count": self.impersonation_count,

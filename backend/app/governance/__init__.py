@@ -26,14 +26,14 @@ CONSTRAINTS (v1):
 The kernel is PHYSICS, not POLICY.
 """
 
+from app.governance.decorator import governed
 from app.governance.kernel import (
-    ExecutionKernel,
-    InvocationContext,
-    ExecutionResult,
     EnforcementMode,
+    ExecutionKernel,
+    ExecutionResult,
+    InvocationContext,
     get_enforcement_mode,
 )
-from app.governance.decorator import governed
 
 __all__ = [
     "ExecutionKernel",

@@ -18,17 +18,18 @@ COVERAGE:
 """
 
 import json
+
 import pytest
 
+from app.dsl.interpreter import evaluate
+from app.dsl.ir_compiler import compile_policy, ir_hash
 from app.dsl.parser import parse
 from app.dsl.validator import validate
-from app.dsl.ir_compiler import compile_policy, ir_hash
-from app.dsl.interpreter import evaluate
-
 
 # =============================================================================
 # FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def cost_guard_dsl() -> str:
@@ -91,6 +92,7 @@ def complex_condition_dsl() -> str:
 # =============================================================================
 # PARSE DETERMINISM TESTS
 # =============================================================================
+
 
 class TestParseDeterminism:
     """Tests that parsing is deterministic."""
@@ -165,6 +167,7 @@ class TestParseDeterminism:
 # COMPILE DETERMINISM TESTS
 # =============================================================================
 
+
 class TestCompileDeterminism:
     """Tests that compilation is deterministic."""
 
@@ -204,16 +207,12 @@ class TestCompileDeterminism:
 
         for i, (clause1, clause2) in enumerate(zip(ir1.clauses, ir2.clauses)):
             # Condition instructions must match exactly
-            for j, (inst1, inst2) in enumerate(
-                zip(clause1.condition_ir, clause2.condition_ir)
-            ):
+            for j, (inst1, inst2) in enumerate(zip(clause1.condition_ir, clause2.condition_ir)):
                 assert inst1.opcode == inst2.opcode, f"Clause {i}, instruction {j}"
                 assert inst1.operands == inst2.operands, f"Clause {i}, instruction {j}"
 
             # Action instructions must match exactly
-            for j, (inst1, inst2) in enumerate(
-                zip(clause1.action_ir, clause2.action_ir)
-            ):
+            for j, (inst1, inst2) in enumerate(zip(clause1.action_ir, clause2.action_ir)):
                 assert inst1.opcode == inst2.opcode, f"Clause {i}, action {j}"
                 assert inst1.operands == inst2.operands, f"Clause {i}, action {j}"
 
@@ -221,6 +220,7 @@ class TestCompileDeterminism:
 # =============================================================================
 # EVALUATE DETERMINISM TESTS
 # =============================================================================
+
 
 class TestEvaluateDeterminism:
     """Tests that evaluation is deterministic."""
@@ -276,6 +276,7 @@ class TestEvaluateDeterminism:
 # =============================================================================
 # FULL PIPELINE DETERMINISM TESTS
 # =============================================================================
+
 
 class TestFullPipelineDeterminism:
     """Tests for full pipeline determinism: DSL → AST → IR → Result"""
@@ -343,6 +344,7 @@ class TestFullPipelineDeterminism:
 # =============================================================================
 # HASH STABILITY TESTS
 # =============================================================================
+
 
 class TestHashStability:
     """Tests for hash stability properties."""
@@ -425,6 +427,7 @@ class TestHashStability:
 # =============================================================================
 # BOUNDARY CONDITION TESTS
 # =============================================================================
+
 
 class TestBoundaryConditions:
     """Tests for determinism at boundary conditions."""

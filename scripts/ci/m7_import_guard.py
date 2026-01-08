@@ -123,7 +123,7 @@ def main():
     print("=" * 70)
     print("M7 Import Guard - Checking for unauthorized M7 (rbac_engine) imports")
     print("=" * 70)
-    print(f"Reference: docs/invariants/AUTHZ_AUTHORITY.md (I-AUTH-003)")
+    print("Reference: docs/invariants/AUTHZ_AUTHORITY.md (I-AUTH-003)")
     print(f"Checking {len(python_files)} Python files...")
     print()
 
@@ -144,7 +144,9 @@ def main():
         print("=" * 70)
         return 0
     else:
-        print(f"FAIL: Found {total_violations} violation(s) in {len(violation_files)} file(s)")
+        print(
+            f"FAIL: Found {total_violations} violation(s) in {len(violation_files)} file(s)"
+        )
         print()
         print("Allowed M7 importers (legacy, scheduled for removal):")
         for allowed in sorted(ALLOWED_M7_IMPORTERS):
@@ -152,9 +154,13 @@ def main():
         print()
         if args.fix:
             print("FIX SUGGESTIONS:")
-            print("  1. Use authorize_action() from app.auth.authorization_choke instead")
+            print(
+                "  1. Use authorize_action() from app.auth.authorization_choke instead"
+            )
             print("  2. Add resource to m7_to_m28.py mapping if needed")
-            print("  3. If file MUST use M7, add to ALLOWED_M7_IMPORTERS (requires approval)")
+            print(
+                "  3. If file MUST use M7, add to ALLOWED_M7_IMPORTERS (requires approval)"
+            )
         print("=" * 70)
         return 1
 

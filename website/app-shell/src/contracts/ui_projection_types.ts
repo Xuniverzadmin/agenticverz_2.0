@@ -78,6 +78,8 @@ export interface PanelPermissions {
   activate: boolean;
 }
 
+export type ViewType = "DOMAIN_HOME" | "PANEL_VIEW";
+
 export interface Panel {
   panel_id: string;
   panel_name: string;
@@ -92,8 +94,13 @@ export interface Panel {
   topic: string | null;
   topic_id: string | null;
   subdomain: string | null;
+  // Short description for customer-facing display (Group D)
+  short_description: string | null;
   // Permissions
   permissions: PanelPermissions;
+  // Navigation (Phase 1.1 - projection-driven routing)
+  route: string;
+  view_type: ViewType;
 }
 
 // ============================================================================
@@ -113,6 +120,10 @@ export interface Domain {
   panels: Panel[];
   panel_count: number;
   total_controls: number;
+  // Short description for customer-facing display (Group D)
+  short_description: string | null;
+  // Navigation (Phase 1.1 - projection-driven routing)
+  route: string;
 }
 
 // ============================================================================

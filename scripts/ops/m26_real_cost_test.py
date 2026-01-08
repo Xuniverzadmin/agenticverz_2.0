@@ -262,7 +262,7 @@ class M26TestSuite:
             )
 
             if "error" in result:
-                print(f"  Request {i+1}: OpenAI error - {result['error']}")
+                print(f"  Request {i + 1}: OpenAI error - {result['error']}")
                 continue
 
             total_input += result["input_tokens"]
@@ -287,10 +287,10 @@ class M26TestSuite:
             if record_response.status_code in [200, 201]:
                 records_created += 1
                 print(
-                    f"  Request {i+1}: {result['input_tokens']}+{result['output_tokens']} tokens, ${result['cost_cents']/100:.4f}"
+                    f"  Request {i + 1}: {result['input_tokens']}+{result['output_tokens']} tokens, ${result['cost_cents'] / 100:.4f}"
                 )
             else:
-                print(f"  Request {i+1}: Failed to record - {record_response.text}")
+                print(f"  Request {i + 1}: Failed to record - {record_response.text}")
 
         # Verify dashboard
         dashboard = await self.api_call("GET", "/cost/dashboard?days=1")
@@ -324,7 +324,7 @@ class M26TestSuite:
 
         if passed:
             details.append(
-                f"Created {records_created} records, ${total_cost/100:.4f} total"
+                f"Created {records_created} records, ${total_cost / 100:.4f} total"
             )
 
         self.total_cost_cents += total_cost
@@ -392,7 +392,7 @@ class M26TestSuite:
             )
 
             if i % 5 == 4:
-                print(f"  Requests {i+1}/20 complete, ${spike_cost/100:.4f} spent")
+                print(f"  Requests {i + 1}/20 complete, ${spike_cost / 100:.4f} spent")
 
         self.total_cost_cents += spike_cost
 
@@ -424,7 +424,7 @@ class M26TestSuite:
                 f"Detected {detected_count} anomalies, spike_found={spike_found}"
             )
 
-        details.append(f"Spike cost: ${spike_cost/100:.4f}")
+        details.append(f"Spike cost: ${spike_cost / 100:.4f}")
 
         result = TestResult(
             name="Feature Cost Spike",
@@ -476,7 +476,7 @@ class M26TestSuite:
             details.append("No budgets configured")
         else:
             details.append(
-                f"Budget: {budgets[0].get('daily_limit_cents', 0)/100:.2f}/day"
+                f"Budget: {budgets[0].get('daily_limit_cents', 0) / 100:.2f}/day"
             )
 
         if budget_used_pct is not None:
@@ -573,7 +573,9 @@ class M26TestSuite:
                 user_b_cost = user.get("total_cost_cents", 0)
 
         passed = user_b_cost > user_a_cost
-        details = [f"User A: ${user_a_cost/100:.4f}, User B: ${user_b_cost/100:.4f}"]
+        details = [
+            f"User A: ${user_a_cost / 100:.4f}, User B: ${user_b_cost / 100:.4f}"
+        ]
 
         if not passed:
             details.append("User B should have higher cost")
@@ -629,7 +631,7 @@ class M26TestSuite:
             details.append("Negative projection")
         else:
             details.append(
-                f"Daily avg: ${daily_avg/100:.2f}, Monthly: ${monthly_proj/100:.2f}, Trend: {trend}"
+                f"Daily avg: ${daily_avg / 100:.2f}, Monthly: ${monthly_proj / 100:.2f}, Trend: {trend}"
             )
 
         result = TestResult(
@@ -673,7 +675,7 @@ class M26TestSuite:
 
         print("-" * 60)
         print(f"Total: {passed}/{total} tests passed")
-        print(f"Total real cost: ${self.total_cost_cents/100:.4f}")
+        print(f"Total real cost: ${self.total_cost_cents / 100:.4f}")
         print("=" * 60)
 
         # Generate proof document
@@ -694,7 +696,7 @@ class M26TestSuite:
         with open(proof_path, "w") as f:
             f.write("# M26 Real Cost Test Proof\n\n")
             f.write(f"**Date:** {datetime.now(timezone.utc).isoformat()}\n")
-            f.write(f"**Total Cost:** ${self.total_cost_cents/100:.4f}\n\n")
+            f.write(f"**Total Cost:** ${self.total_cost_cents / 100:.4f}\n\n")
 
             f.write("## Results\n\n")
             for r in self.results:

@@ -85,9 +85,9 @@ def log_warn(msg: str):
 
 
 def log_phase(phase: str):
-    print(f"\n{Colors.BOLD}{Colors.BLUE}{'='*60}")
+    print(f"\n{Colors.BOLD}{Colors.BLUE}{'=' * 60}")
     print(f" {phase}")
-    print(f"{'='*60}{Colors.END}\n")
+    print(f"{'=' * 60}{Colors.END}\n")
 
 
 # =============================================================================
@@ -192,7 +192,7 @@ async def setup_test_tenant(session) -> dict:
         },
     )
     results["budget_created"] = True
-    log_pass(f"Budget set: ${DAILY_BUDGET_CENTS/100:.2f}/day with hard limit")
+    log_pass(f"Budget set: ${DAILY_BUDGET_CENTS / 100:.2f}/day with hard limit")
 
     await session.commit()
     return results
@@ -286,13 +286,13 @@ async def generate_real_cost(session) -> dict:
             )
 
             log_info(
-                f"  Request {i+1}: {input_tokens} in / {output_tokens} out = ${cost_cents/100:.4f}"
+                f"  Request {i + 1}: {input_tokens} in / {output_tokens} out = ${cost_cents / 100:.4f}"
             )
 
             time.sleep(0.5)  # Rate limit
 
         except Exception as e:
-            log_warn(f"  Request {i+1} failed: {e}")
+            log_warn(f"  Request {i + 1} failed: {e}")
 
     await session.commit()
 
@@ -307,7 +307,7 @@ async def generate_real_cost(session) -> dict:
 
     log_pass(f"Generated {requests_made} requests")
     log_pass(f"Total tokens: {total_input_tokens} in / {total_output_tokens} out")
-    log_pass(f"Total real spend: ${total_cost_cents/100:.4f}")
+    log_pass(f"Total real spend: ${total_cost_cents / 100:.4f}")
 
     return result
 
@@ -334,7 +334,7 @@ async def detect_anomaly(session, cost_data: dict) -> dict:
     today_total_cents = float(row[0])
     record_count = row[1]
 
-    log_info(f"Today's total: ${today_total_cents/100:.4f} ({record_count} records)")
+    log_info(f"Today's total: ${today_total_cents / 100:.4f} ({record_count} records)")
 
     # Get budget
     budget_sql = """
@@ -357,7 +357,7 @@ async def detect_anomaly(session, cost_data: dict) -> dict:
         (today_total_cents / daily_limit_cents) * 100 if daily_limit_cents > 0 else 0
     )
 
-    log_info(f"Budget: ${daily_limit_cents/100:.2f}/day")
+    log_info(f"Budget: ${daily_limit_cents / 100:.2f}/day")
     log_info(f"Usage: {usage_pct:.1f}% of daily budget")
 
     # Determine anomaly type and severity
@@ -410,7 +410,7 @@ async def detect_anomaly(session, cost_data: dict) -> dict:
         RETURNING id, severity
     """
 
-    message = f"User {USER_ID} triggered cost spike: ${today_total_cents/100:.4f} ({usage_pct:.0f}% of budget)"
+    message = f"User {USER_ID} triggered cost spike: ${today_total_cents / 100:.4f} ({usage_pct:.0f}% of budget)"
 
     await execute_sql(
         session,
@@ -645,7 +645,7 @@ async def verify_db_state(session, loop_result: dict) -> dict:
     row = result.fetchone()
 
     if row and row[0] > 0:
-        log_pass(f"Cost records in DB: {row[0]} records, ${float(row[1])/100:.4f}")
+        log_pass(f"Cost records in DB: {row[0]} records, ${float(row[1]) / 100:.4f}")
         results["cost_records_persisted"] = True
     else:
         log_fail("No cost records found")
@@ -765,7 +765,7 @@ async def main():
     print(
         f"  Total tokens: {cost_data.get('total_input_tokens', 0)} in / {cost_data.get('total_output_tokens', 0)} out"
     )
-    print(f"  Real spend: ${cost_data.get('total_cost_cents', 0)/100:.4f}")
+    print(f"  Real spend: ${cost_data.get('total_cost_cents', 0) / 100:.4f}")
     print(f"  Elapsed time: {elapsed:.1f}s")
 
     print()

@@ -14,34 +14,32 @@ COVERAGE:
 """
 
 import json
+
 import pytest
 
-from app.dsl.parser import (
-    parse,
-    parse_condition,
-    ParseError,
-    ParseLocation,
-    Lexer,
-    Token,
-)
 from app.dsl.ast import (
-    PolicyAST,
-    Scope,
-    Mode,
     Comparator,
     LogicalOperator,
-    is_predicate,
+    Mode,
+    Scope,
+    is_block_action,
     is_exists_predicate,
     is_logical_condition,
-    is_warn_action,
-    is_block_action,
+    is_predicate,
     is_require_approval_action,
+    is_warn_action,
 )
-
+from app.dsl.parser import (
+    Lexer,
+    ParseError,
+    parse,
+    parse_condition,
+)
 
 # =============================================================================
 # LEXER TESTS
 # =============================================================================
+
 
 class TestLexer:
     """Tests for the lexer."""
@@ -53,7 +51,7 @@ class TestLexer:
         tokens = lexer.tokenize()
 
         types = [t.type for t in tokens[:-1]]  # Exclude EOF
-        assert types == ['POLICY', 'VERSION', 'SCOPE_KW', 'MODE_KW', 'WHEN', 'THEN']
+        assert types == ["POLICY", "VERSION", "SCOPE_KW", "MODE_KW", "WHEN", "THEN"]
 
     def test_tokenize_comparators(self) -> None:
         """Test all comparators."""
@@ -62,7 +60,7 @@ class TestLexer:
         tokens = lexer.tokenize()
 
         types = [t.type for t in tokens[:-1]]
-        assert types == ['GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ']
+        assert types == ["GT", "GTE", "LT", "LTE", "EQ", "NEQ"]
 
     def test_tokenize_literals(self) -> None:
         """Test literal values."""
@@ -72,11 +70,11 @@ class TestLexer:
 
         values = [(t.type, t.value) for t in tokens[:-1]]
         assert values == [
-            ('INT', 42),
-            ('FLOAT', 3.14),
-            ('STRING', 'hello'),
-            ('TRUE', True),
-            ('FALSE', False),
+            ("INT", 42),
+            ("FLOAT", 3.14),
+            ("STRING", "hello"),
+            ("TRUE", True),
+            ("FALSE", False),
         ]
 
     def test_tokenize_identifiers(self) -> None:
@@ -86,7 +84,7 @@ class TestLexer:
         tokens = lexer.tokenize()
 
         values = [t.value for t in tokens[:-1]]
-        assert values == ['cost_per_hour', 'error_rate', 'some_metric_123']
+        assert values == ["cost_per_hour", "error_rate", "some_metric_123"]
 
     def test_tokenize_comments(self) -> None:
         """Test that comments are skipped."""
@@ -99,7 +97,7 @@ class TestLexer:
         tokens = lexer.tokenize()
 
         types = [t.type for t in tokens[:-1]]
-        assert types == ['POLICY', 'VERSION']
+        assert types == ["POLICY", "VERSION"]
 
     def test_tokenize_tracks_position(self) -> None:
         """Test that line/column tracking works."""
@@ -124,6 +122,7 @@ class TestLexer:
 # =============================================================================
 # BASIC PARSER TESTS
 # =============================================================================
+
 
 class TestParserBasic:
     """Basic parser tests."""
@@ -203,6 +202,7 @@ class TestParserBasic:
 # =============================================================================
 # CONDITION PARSING TESTS
 # =============================================================================
+
 
 class TestConditionParsing:
     """Tests for condition parsing."""
@@ -309,6 +309,7 @@ class TestConditionParsing:
 # =============================================================================
 # ERROR HANDLING TESTS
 # =============================================================================
+
 
 class TestParserErrors:
     """Tests for parser error handling."""
@@ -425,7 +426,7 @@ class TestParserErrors:
 
     def test_unclosed_parenthesis(self) -> None:
         """Test error on unclosed parenthesis."""
-        source = "policy Test version 1 scope ORG mode MONITOR when (x > 0 then WARN \"test\""
+        source = 'policy Test version 1 scope ORG mode MONITOR when (x > 0 then WARN "test"'
         with pytest.raises(ParseError) as exc_info:
             parse(source)
         assert "Expected RPAREN" in str(exc_info.value)
@@ -442,6 +443,7 @@ class TestParserErrors:
 # =============================================================================
 # ROUNDTRIP TESTS
 # =============================================================================
+
 
 class TestRoundtrip:
     """Tests for DSL → AST → JSON roundtrip."""
@@ -550,6 +552,7 @@ class TestRoundtrip:
 # EDGE CASE TESTS
 # =============================================================================
 
+
 class TestEdgeCases:
     """Tests for edge cases."""
 
@@ -628,6 +631,7 @@ class TestEdgeCases:
 # =============================================================================
 # FULL POLICY EXAMPLES
 # =============================================================================
+
 
 class TestFullPolicies:
     """Tests with realistic full policy examples."""

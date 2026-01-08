@@ -15,6 +15,7 @@ Features:
     - Auto-rollback on threshold breach with alerting
     - JSON report generation with provenance (git sha, config hash, timestamps)
 """
+
 import argparse
 import hashlib
 import json
@@ -655,15 +656,15 @@ def send_alert(webhook_url: str, report: "CanaryReport") -> Tuple[bool, str]:
 **Reason:** {report.rollback_reason}
 **Environment:** staging
 **Time:** {report.end_time or datetime.now(timezone.utc).isoformat()}
-**Git SHA:** {report.git_sha or 'unknown'}
+**Git SHA:** {report.git_sha or "unknown"}
 **Config:** {report.config_path}
 
-**Flags Rolled Back:** {', '.join(report.flags_enabled)}
+**Flags Rolled Back:** {", ".join(report.flags_enabled)}
 
 **Metrics Delta:**
 {json.dumps(report.metrics_delta, indent=2)}
 
-**Smoke Test:** {'PASSED' if report.smoke_returncode == 0 else f'FAILED (code {report.smoke_returncode})'}
+**Smoke Test:** {"PASSED" if report.smoke_returncode == 0 else f"FAILED (code {report.smoke_returncode})"}
 
 [View Report]({report.config_path})
 """

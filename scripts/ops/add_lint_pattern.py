@@ -45,11 +45,11 @@ def add_unsafe_pattern(content: str, pattern: dict) -> str:
     # Find the end of UNSAFE_PATTERNS list
     marker = "]\n\n# Safe patterns"
 
-    new_entry = f"""    # Added: {datetime.now().strftime('%Y-%m-%d')}
+    new_entry = f"""    # Added: {datetime.now().strftime("%Y-%m-%d")}
     {{
-        "regex": r"{pattern['regex']}",
-        "message": "{pattern['message']}",
-        "suggestion": "{pattern['suggestion']}",
+        "regex": r"{pattern["regex"]}",
+        "message": "{pattern["message"]}",
+        "suggestion": "{pattern["suggestion"]}",
     }},
 """
 

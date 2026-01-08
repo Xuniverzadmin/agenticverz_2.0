@@ -16,36 +16,27 @@ COVERAGE:
 
 import pytest
 
+from app.dsl.ast import (
+    PolicyAST,
+)
 from app.dsl.parser import parse
 from app.dsl.validator import (
-    validate,
-    is_valid,
-    PolicyValidator,
-    ValidationResult,
-    ValidationIssue,
-    Severity,
     V001,
     V002,
     V010,
     W001,
+    PolicyValidator,
+    Severity,
+    ValidationIssue,
+    ValidationResult,
+    is_valid,
+    validate,
 )
-from app.dsl.ast import (
-    PolicyAST,
-    PolicyMetadata,
-    Clause,
-    Predicate,
-    WarnAction,
-    BlockAction,
-    RequireApprovalAction,
-    Scope,
-    Mode,
-    Comparator,
-)
-
 
 # =============================================================================
 # HELPER FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def monitor_policy_warn_only() -> PolicyAST:
@@ -92,6 +83,7 @@ def monitor_policy_with_block() -> PolicyAST:
 # =============================================================================
 # VALIDATION RESULT TESTS
 # =============================================================================
+
 
 class TestValidationResult:
     """Tests for ValidationResult structure."""
@@ -148,6 +140,7 @@ class TestValidationResult:
 # =============================================================================
 # MODE ENFORCEMENT TESTS
 # =============================================================================
+
 
 class TestModeEnforcement:
     """Tests for mode enforcement validation."""
@@ -272,6 +265,7 @@ class TestModeEnforcement:
 # METRIC VALIDATION TESTS
 # =============================================================================
 
+
 class TestMetricValidation:
     """Tests for metric validation."""
 
@@ -357,6 +351,7 @@ class TestMetricValidation:
 # WARNING TESTS
 # =============================================================================
 
+
 class TestWarnings:
     """Tests for validation warnings."""
 
@@ -423,6 +418,7 @@ class TestWarnings:
 # CUSTOM RULES TESTS
 # =============================================================================
 
+
 class TestCustomRules:
     """Tests for custom validation rules."""
 
@@ -449,6 +445,7 @@ class TestCustomRules:
 
     def test_custom_rule_can_add_errors(self) -> None:
         """Custom rules can add validation errors."""
+
         def no_cost_policy(policy: PolicyAST) -> list[ValidationIssue]:
             # Rule: Policies named "NoCost" cannot use cost metric
             issues = []
@@ -456,12 +453,14 @@ class TestCustomRules:
                 for clause_idx, clause in enumerate(policy.clauses):
                     # Check if any predicate uses "cost"
                     # (simplified check)
-                    issues.append(ValidationIssue(
-                        code="CUSTOM-001",
-                        message="NoCost policies cannot use cost metric",
-                        severity=Severity.ERROR,
-                        path=f"clauses[{clause_idx}]",
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            code="CUSTOM-001",
+                            message="NoCost policies cannot use cost metric",
+                            severity=Severity.ERROR,
+                            path=f"clauses[{clause_idx}]",
+                        )
+                    )
             return issues
 
         validator = PolicyValidator(custom_rules=[no_cost_policy])
@@ -509,6 +508,7 @@ class TestCustomRules:
 # PUBLIC API TESTS
 # =============================================================================
 
+
 class TestPublicAPI:
     """Tests for public API functions."""
 
@@ -543,6 +543,7 @@ class TestPublicAPI:
 # =============================================================================
 # INTEGRATION TESTS
 # =============================================================================
+
 
 class TestIntegration:
     """Integration tests with parser."""

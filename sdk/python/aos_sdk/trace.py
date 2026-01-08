@@ -112,11 +112,12 @@ def validate_idempotency_key(key: str, tenant_id: str) -> bool:
     if not key.startswith(f"{tenant_id}:"):
         _emit_safety_warning(
             "INT-003",
-            f"Idempotency key not tenant-scoped: {key[:20]}... (expected prefix: {tenant_id}:)"
+            f"Idempotency key not tenant-scoped: {key[:20]}... (expected prefix: {tenant_id}:)",
         )
         return False
 
     return True
+
 
 # Trace schema version - bumped to 1.1 for deterministic hashing
 TRACE_SCHEMA_VERSION = "1.1.0"
@@ -344,10 +345,7 @@ class Trace:
         hashed_fields = ["timestamp", "step_index", "outcome", "seed", "tenant_id"]
         missing = validate_trace_integrity_fields(hashed_fields)
         if missing:
-            _emit_safety_warning(
-                "INT-001",
-                f"Trace hash missing audit-critical fields: {missing}"
-            )
+            _emit_safety_warning("INT-001", f"Trace hash missing audit-critical fields: {missing}")
 
         self.finalized = True
         self.root_hash = self._compute_root_hash()
@@ -725,6 +723,6 @@ def generate_idempotency_key(
     else:
         _emit_safety_warning(
             "INT-003",
-            f"Idempotency key generated without tenant scope (collision risk): {base_key[:16]}..."
+            f"Idempotency key generated without tenant scope (collision risk): {base_key[:16]}...",
         )
         return base_key

@@ -17,6 +17,7 @@ Exit codes:
     0 - All schema checks passed
     1 - Schema audit failed (missing elements)
 """
+
 import os
 import sys
 import json

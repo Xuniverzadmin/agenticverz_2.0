@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { toastError, toastSuccess } from '@/components/common/Toast';
+import { getPostAuthRoute, ONBOARDING_ROUTES } from '@/routing';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
@@ -39,12 +40,14 @@ export default function LoginPage() {
 
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [usePassword, setUsePassword] = useState(true); // Default to password for dev convenience
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/onboarding/connect';
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || ONBOARDING_ROUTES.connect;
 
   // Handle OAuth callback tokens from URL
   useEffect(() => {
@@ -65,14 +68,10 @@ export default function LoginPage() {
   }, [searchParams]);
 
   // Redirect if already authenticated
-  // PIN-318: Fixed ghost route /dashboard → /guard
+  // PIN-352: Environment-aware routing via routing authority
   useEffect(() => {
     if (isAuthenticated) {
-      if (onboardingComplete) {
-        navigate('/guard', { replace: true });
-      } else {
-        navigate('/onboarding/connect', { replace: true });
-      }
+      navigate(getPostAuthRoute(onboardingComplete), { replace: true });
     }
   }, [isAuthenticated, onboardingComplete, navigate]);
 
@@ -102,7 +101,7 @@ export default function LoginPage() {
         setTenant(user.default_tenant_id);
       }
       toastSuccess('Welcome to Agenticverz!');
-      navigate('/onboarding/connect', { replace: true });
+      navigate(ONBOARDING_ROUTES.connect, { replace: true });
     } catch (err) {
       console.error('Failed to fetch user info:', err);
       toastError('Failed to load user profile');
@@ -183,10 +182,55 @@ export default function LoginPage() {
         setTenant(user.default_tenant_id);
       }
       toastSuccess('Email verified! Welcome to Agenticverz');
-      navigate('/onboarding/connect', { replace: true });
+      navigate(ONBOARDING_ROUTES.connect, { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       toastError(error.response?.data?.detail || 'Invalid verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordLogin = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      toastError('Please enter a valid email address');
+      return;
+    }
+    if (!password.trim()) {
+      toastError('Please enter your password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE}/api/v1/auth/login/password`, {
+        email,
+        password
+      });
+      const { access_token, refresh_token, user } = response.data;
+      setTokens(access_token, refresh_token);
+      setUser({
+        id: user.id,
+        email: user.email,
+        name: user.name || user.email.split('@')[0],
+        role: 'admin',
+        oauth_provider: 'password',
+        email_verified: true,
+      });
+      if (user.default_tenant_id) {
+        setTenant(user.default_tenant_id);
+      }
+      toastSuccess('Welcome to Agenticverz!');
+      navigate(ONBOARDING_ROUTES.connect, { replace: true });
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      const detail = error.response?.data?.detail;
+      if (detail === 'Password login is not enabled. Set DEV_LOGIN_PASSWORD env variable.') {
+        toastError('Password login not available. Use OTP instead.');
+        setUsePassword(false);
+      } else {
+        toastError(detail || 'Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
@@ -265,6 +309,7 @@ export default function LoginPage() {
                   setShowEmailForm(false);
                   setOtpSent(false);
                   setOtp('');
+                  setPassword('');
                 }}
                 className="text-slate-400 hover:text-white text-sm flex items-center gap-1"
               >
@@ -274,7 +319,55 @@ export default function LoginPage() {
                 Back
               </button>
 
-              {!otpSent ? (
+              {usePassword && !otpSent ? (
+                /* Password Login Form (browser can save credentials) */
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Email address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@company.com"
+                      autoFocus
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter password"
+                      onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    onClick={handlePasswordLogin}
+                    disabled={loading || !email.trim() || !password.trim()}
+                    className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Signing in...' : 'Sign in'}
+                  </button>
+                  <button
+                    onClick={() => setUsePassword(false)}
+                    className="w-full text-sm text-slate-400 hover:text-white transition-colors"
+                  >
+                    Use email verification code instead
+                  </button>
+                </>
+              ) : !otpSent ? (
+                /* OTP Request Form */
                 <>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -296,8 +389,15 @@ export default function LoginPage() {
                   >
                     {loading ? 'Sending...' : 'Send verification code'}
                   </button>
+                  <button
+                    onClick={() => setUsePassword(true)}
+                    className="w-full text-sm text-slate-400 hover:text-white transition-colors"
+                  >
+                    Use password instead
+                  </button>
                 </>
               ) : (
+                /* OTP Verification Form */
                 <>
                   <div className="text-center mb-4">
                     <p className="text-slate-300">

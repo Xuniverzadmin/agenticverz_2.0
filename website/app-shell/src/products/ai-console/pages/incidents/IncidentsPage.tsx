@@ -23,6 +23,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { guardApi, IncidentSearchRequest, IncidentSearchResult } from '@/api/guard';
+import { CUSTOMER_ROUTES } from '@/routing';
 import { IncidentSearchBar } from './IncidentSearchBar';
 import { IncidentFilters } from './IncidentFilters';
 import { logger } from '@/lib/consoleLogger';
@@ -127,9 +128,10 @@ export function IncidentsPage() {
   }, []);
 
   // V-001 Fix: Navigate to O3 detail page instead of opening modal
+  // PIN-352: Uses routing authority for navigation
   const handleInspect = useCallback((incidentId: string) => {
     logger.userEvent('click', 'incident_inspect', { incident_id: incidentId });
-    navigate(`/guard/incidents/${incidentId}`);
+    navigate(CUSTOMER_ROUTES.incidentDetail(incidentId));
   }, [navigate]);
 
   // Determine which data to show

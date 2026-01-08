@@ -44,31 +44,32 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.dsl.ast import (
-    PolicyAST,
-    PolicyMetadata,
+    Action,
+    BlockAction,
     Clause,
+    Comparator,
     Condition,
-    Predicate,
     ExistsPredicate,
     LogicalCondition,
-    WarnAction,
-    BlockAction,
-    RequireApprovalAction,
-    Action,
-    Scope,
-    Mode,
-    Comparator,
     LogicalOperator,
+    Mode,
+    PolicyAST,
+    PolicyMetadata,
+    Predicate,
+    RequireApprovalAction,
+    Scope,
+    WarnAction,
 )
-
 
 # =============================================================================
 # ERROR TYPES
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class ParseLocation:
     """Source location for error reporting."""
+
     line: int
     column: int
 
@@ -96,9 +97,11 @@ class ParseError(Exception):
 # LEXER (Tokenization)
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class Token:
     """A lexical token with position info."""
+
     type: str
     value: Any
     line: int
@@ -115,49 +118,44 @@ class Lexer:
     # Token patterns (order matters)
     TOKEN_PATTERNS = [
         # Keywords (must come before IDENT)
-        (r'\bpolicy\b', 'POLICY'),
-        (r'\bversion\b', 'VERSION'),
-        (r'\bscope\b', 'SCOPE_KW'),
-        (r'\bmode\b', 'MODE_KW'),
-        (r'\bwhen\b', 'WHEN'),
-        (r'\bthen\b', 'THEN'),
-        (r'\bexists\b', 'EXISTS'),
-        (r'\bAND\b', 'AND'),
-        (r'\bOR\b', 'OR'),
-        (r'\bWARN\b', 'WARN'),
-        (r'\bBLOCK\b', 'BLOCK'),
-        (r'\bREQUIRE_APPROVAL\b', 'REQUIRE_APPROVAL'),
-        (r'\bORG\b', 'ORG'),
-        (r'\bPROJECT\b', 'PROJECT'),
-        (r'\bMONITOR\b', 'MONITOR'),
-        (r'\bENFORCE\b', 'ENFORCE'),
-        (r'\btrue\b', 'TRUE'),
-        (r'\bfalse\b', 'FALSE'),
-
+        (r"\bpolicy\b", "POLICY"),
+        (r"\bversion\b", "VERSION"),
+        (r"\bscope\b", "SCOPE_KW"),
+        (r"\bmode\b", "MODE_KW"),
+        (r"\bwhen\b", "WHEN"),
+        (r"\bthen\b", "THEN"),
+        (r"\bexists\b", "EXISTS"),
+        (r"\bAND\b", "AND"),
+        (r"\bOR\b", "OR"),
+        (r"\bWARN\b", "WARN"),
+        (r"\bBLOCK\b", "BLOCK"),
+        (r"\bREQUIRE_APPROVAL\b", "REQUIRE_APPROVAL"),
+        (r"\bORG\b", "ORG"),
+        (r"\bPROJECT\b", "PROJECT"),
+        (r"\bMONITOR\b", "MONITOR"),
+        (r"\bENFORCE\b", "ENFORCE"),
+        (r"\btrue\b", "TRUE"),
+        (r"\bfalse\b", "FALSE"),
         # Comparators
-        (r'>=', 'GTE'),
-        (r'<=', 'LTE'),
-        (r'==', 'EQ'),
-        (r'!=', 'NEQ'),
-        (r'>', 'GT'),
-        (r'<', 'LT'),
-
+        (r">=", "GTE"),
+        (r"<=", "LTE"),
+        (r"==", "EQ"),
+        (r"!=", "NEQ"),
+        (r">", "GT"),
+        (r"<", "LT"),
         # Literals
-        (r'-?\d+\.\d+', 'FLOAT'),
-        (r'-?\d+', 'INT'),
-        (r'"[^"]*"', 'STRING'),
-        (r"'[^']*'", 'STRING'),
-
+        (r"-?\d+\.\d+", "FLOAT"),
+        (r"-?\d+", "INT"),
+        (r'"[^"]*"', "STRING"),
+        (r"'[^']*'", "STRING"),
         # Identifiers (metric names)
-        (r'[a-zA-Z_][a-zA-Z0-9_]*', 'IDENT'),
-
+        (r"[a-zA-Z_][a-zA-Z0-9_]*", "IDENT"),
         # Punctuation
-        (r'\(', 'LPAREN'),
-        (r'\)', 'RPAREN'),
-
+        (r"\(", "LPAREN"),
+        (r"\)", "RPAREN"),
         # Whitespace and comments (to skip)
-        (r'\s+', None),  # Skip whitespace
-        (r'#[^\n]*', None),  # Skip comments
+        (r"\s+", None),  # Skip whitespace
+        (r"#[^\n]*", None),  # Skip comments
     ]
 
     def __init__(self, source: str) -> None:
@@ -181,12 +179,14 @@ class Lexer:
 
                     if token_type is not None:  # Not whitespace/comment
                         value = self._convert_value(token_type, text)
-                        tokens.append(Token(
-                            type=token_type,
-                            value=value,
-                            line=self.line,
-                            column=self.column,
-                        ))
+                        tokens.append(
+                            Token(
+                                type=token_type,
+                                value=value,
+                                line=self.line,
+                                column=self.column,
+                            )
+                        )
 
                     # Update position
                     self._advance(text)
@@ -198,13 +198,13 @@ class Lexer:
                     ParseLocation(self.line, self.column),
                 )
 
-        tokens.append(Token('EOF', None, self.line, self.column))
+        tokens.append(Token("EOF", None, self.line, self.column))
         return tokens
 
     def _advance(self, text: str) -> None:
         """Advance position, tracking line/column."""
         for char in text:
-            if char == '\n':
+            if char == "\n":
                 self.line += 1
                 self.column = 1
             else:
@@ -213,14 +213,14 @@ class Lexer:
 
     def _convert_value(self, token_type: str, text: str) -> Any:
         """Convert token text to appropriate Python value."""
-        if token_type == 'INT':
+        if token_type == "INT":
             return int(text)
-        elif token_type == 'FLOAT':
+        elif token_type == "FLOAT":
             return float(text)
-        elif token_type == 'STRING':
+        elif token_type == "STRING":
             return text[1:-1]  # Strip quotes
-        elif token_type in ('TRUE', 'FALSE'):
-            return token_type == 'TRUE'
+        elif token_type in ("TRUE", "FALSE"):
+            return token_type == "TRUE"
         else:
             return text
 
@@ -228,6 +228,7 @@ class Lexer:
 # =============================================================================
 # PARSER
 # =============================================================================
+
 
 class Parser:
     """
@@ -237,12 +238,12 @@ class Parser:
     """
 
     COMPARATOR_MAP = {
-        'GT': Comparator.GT,
-        'GTE': Comparator.GTE,
-        'LT': Comparator.LT,
-        'LTE': Comparator.LTE,
-        'EQ': Comparator.EQ,
-        'NEQ': Comparator.NEQ,
+        "GT": Comparator.GT,
+        "GTE": Comparator.GTE,
+        "LT": Comparator.LT,
+        "LTE": Comparator.LTE,
+        "EQ": Comparator.EQ,
+        "NEQ": Comparator.NEQ,
     }
 
     def __init__(self, tokens: list[Token]) -> None:
@@ -266,9 +267,7 @@ class Parser:
     def expect(self, token_type: str) -> Token:
         """Consume and return token of expected type."""
         if self.current.type != token_type:
-            raise self.error(
-                f"Expected {token_type}, got {self.current.type}"
-            )
+            raise self.error(f"Expected {token_type}, got {self.current.type}")
         token = self.current
         self.pos += 1
         return token
@@ -285,32 +284,32 @@ class Parser:
         """Parse complete policy."""
         metadata = self._parse_header()
         clauses = self._parse_clauses()
-        self.expect('EOF')
+        self.expect("EOF")
         return PolicyAST(metadata=metadata, clauses=tuple(clauses))
 
     def _parse_header(self) -> PolicyMetadata:
         """Parse policy header."""
         # policy <name>
-        self.expect('POLICY')
-        name_token = self.expect('IDENT')
+        self.expect("POLICY")
+        name_token = self.expect("IDENT")
 
         # version <n>
-        self.expect('VERSION')
-        version_token = self.expect('INT')
+        self.expect("VERSION")
+        version_token = self.expect("INT")
 
         # scope ORG|PROJECT
-        self.expect('SCOPE_KW')
-        scope_token = self.accept('ORG', 'PROJECT')
+        self.expect("SCOPE_KW")
+        scope_token = self.accept("ORG", "PROJECT")
         if not scope_token:
             raise self.error("Expected ORG or PROJECT")
-        scope = Scope.ORG if scope_token.type == 'ORG' else Scope.PROJECT
+        scope = Scope.ORG if scope_token.type == "ORG" else Scope.PROJECT
 
         # mode MONITOR|ENFORCE
-        self.expect('MODE_KW')
-        mode_token = self.accept('MONITOR', 'ENFORCE')
+        self.expect("MODE_KW")
+        mode_token = self.accept("MONITOR", "ENFORCE")
         if not mode_token:
             raise self.error("Expected MONITOR or ENFORCE")
-        mode = Mode.MONITOR if mode_token.type == 'MONITOR' else Mode.ENFORCE
+        mode = Mode.MONITOR if mode_token.type == "MONITOR" else Mode.ENFORCE
 
         return PolicyMetadata(
             name=name_token.value,
@@ -323,7 +322,7 @@ class Parser:
         """Parse one or more when-then clauses."""
         clauses: list[Clause] = []
 
-        while self.current.type == 'WHEN':
+        while self.current.type == "WHEN":
             clauses.append(self._parse_clause())
 
         if not clauses:
@@ -334,11 +333,11 @@ class Parser:
     def _parse_clause(self) -> Clause:
         """Parse a single when-then clause."""
         # when <condition>
-        self.expect('WHEN')
+        self.expect("WHEN")
         condition = self._parse_condition()
 
         # then <action>+
-        self.expect('THEN')
+        self.expect("THEN")
         actions = self._parse_actions()
 
         return Clause(when=condition, then=tuple(actions))
@@ -351,7 +350,7 @@ class Parser:
         """Parse OR expression: and_expr (OR and_expr)*"""
         left = self._parse_and_expr()
 
-        while self.accept('OR'):
+        while self.accept("OR"):
             right = self._parse_and_expr()
             left = LogicalCondition(
                 left=left,
@@ -365,7 +364,7 @@ class Parser:
         """Parse AND expression: atom (AND atom)*"""
         left = self._parse_atom()
 
-        while self.accept('AND'):
+        while self.accept("AND"):
             right = self._parse_atom()
             left = LogicalCondition(
                 left=left,
@@ -378,16 +377,16 @@ class Parser:
     def _parse_atom(self) -> Condition:
         """Parse atomic condition: predicate | exists | ( or_expr )"""
         # Parenthesized expression
-        if self.accept('LPAREN'):
+        if self.accept("LPAREN"):
             expr = self._parse_or_expr()
-            self.expect('RPAREN')
+            self.expect("RPAREN")
             return expr
 
         # exists(metric)
-        if self.accept('EXISTS'):
-            self.expect('LPAREN')
-            metric = self.expect('IDENT')
-            self.expect('RPAREN')
+        if self.accept("EXISTS"):
+            self.expect("LPAREN")
+            metric = self.expect("IDENT")
+            self.expect("RPAREN")
             return ExistsPredicate(metric=metric.value)
 
         # Simple predicate: metric comparator value
@@ -395,10 +394,10 @@ class Parser:
 
     def _parse_predicate(self) -> Predicate:
         """Parse simple predicate: metric comparator value"""
-        metric = self.expect('IDENT')
+        metric = self.expect("IDENT")
 
         # Comparator
-        comp_token = self.accept('GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ')
+        comp_token = self.accept("GT", "GTE", "LT", "LTE", "EQ", "NEQ")
         if not comp_token:
             raise self.error("Expected comparator (>, >=, <, <=, ==, !=)")
         comparator = self.COMPARATOR_MAP[comp_token.type]
@@ -414,7 +413,7 @@ class Parser:
 
     def _parse_value(self) -> int | float | str | bool:
         """Parse a literal value."""
-        token = self.accept('INT', 'FLOAT', 'STRING', 'TRUE', 'FALSE')
+        token = self.accept("INT", "FLOAT", "STRING", "TRUE", "FALSE")
         if not token:
             raise self.error("Expected value (int, float, string, or bool)")
         return token.value
@@ -436,14 +435,14 @@ class Parser:
 
     def _try_parse_action(self) -> Action | None:
         """Try to parse an action, return None if not an action."""
-        if self.accept('WARN'):
-            message = self.expect('STRING')
+        if self.accept("WARN"):
+            message = self.expect("STRING")
             return WarnAction(message=message.value)
 
-        if self.accept('BLOCK'):
+        if self.accept("BLOCK"):
             return BlockAction()
 
-        if self.accept('REQUIRE_APPROVAL'):
+        if self.accept("REQUIRE_APPROVAL"):
             return RequireApprovalAction()
 
         return None
@@ -452,6 +451,7 @@ class Parser:
 # =============================================================================
 # PUBLIC API
 # =============================================================================
+
 
 def parse(source: str) -> PolicyAST:
     """
@@ -507,6 +507,6 @@ def parse_condition(source: str) -> Condition:
     parser = Parser(tokens)
     condition = parser._parse_condition()
     # Ensure we consumed everything except EOF
-    if parser.current.type != 'EOF':
+    if parser.current.type != "EOF":
         raise parser.error(f"Unexpected token after condition: {parser.current.type}")
     return condition

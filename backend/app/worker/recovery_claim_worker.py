@@ -76,8 +76,11 @@ logger = logging.getLogger("nova.worker.recovery_claim")
 try:
     from app.governance.kernel import (
         ExecutionKernel,
+    )
+    from app.governance.kernel import (
         InvocationContext as KernelContext,
     )
+
     KERNEL_AVAILABLE = True
 except ImportError:
     # Kernel not available - continue without it (degraded mode)
@@ -129,6 +132,7 @@ def record_worker_invocation(
     except Exception as e:
         # CRITICAL: Never block worker execution due to kernel failure
         logger.warning(f"Kernel recording failed (non-blocking): {e}")
+
 
 # Configuration
 DEFAULT_BATCH_SIZE = int(os.getenv("RECOVERY_WORKER_BATCH_SIZE", "50"))

@@ -13,13 +13,14 @@ Revises: 069_create_gcl_audit_log
 Create Date: 2026-01-07
 """
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers
-revision = '070_create_signal_accuracy'
-down_revision = '069_create_gcl_audit_log'
+revision = "070_create_signal_accuracy"
+down_revision = "069_create_gcl_audit_log"
 branch_labels = None
 depends_on = None
 
@@ -38,41 +39,32 @@ def upgrade() -> None:
     # Formula: calibrated_confidence = raw × historical_accuracy × temporal_decay
     # =========================================================================
     op.create_table(
-        'signal_accuracy',
-        sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('signal_type', sa.Text(), nullable=False),
-        sa.Column('total_outcomes', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('accuracy', sa.Numeric(precision=5, scale=4), nullable=False,
-                  server_default='0.5'),  # Default 50% accuracy
-        sa.Column('last_updated', sa.TIMESTAMP(), nullable=False,
-                  server_default=sa.text('NOW()')),
+        "signal_accuracy",
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("signal_type", sa.Text(), nullable=False),
+        sa.Column("total_outcomes", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "accuracy", sa.Numeric(precision=5, scale=4), nullable=False, server_default="0.5"
+        ),  # Default 50% accuracy
+        sa.Column("last_updated", sa.TIMESTAMP(), nullable=False, server_default=sa.text("NOW()")),
         # Extended fields for decay configuration per PIN-343 Section 2.5
-        sa.Column('decay_lambda', sa.Numeric(precision=5, scale=4), nullable=False,
-                  server_default='0.1'),  # Default λ
-        sa.Column('suppression_threshold', sa.Numeric(precision=3, scale=2), nullable=False,
-                  server_default='0.2'),  # Below this, suppress signal
-
+        sa.Column("decay_lambda", sa.Numeric(precision=5, scale=4), nullable=False, server_default="0.1"),  # Default λ
+        sa.Column(
+            "suppression_threshold", sa.Numeric(precision=3, scale=2), nullable=False, server_default="0.2"
+        ),  # Below this, suppress signal
         # Primary key
-        sa.PrimaryKeyConstraint('tenant_id', 'signal_type'),
-
+        sa.PrimaryKeyConstraint("tenant_id", "signal_type"),
         # Constraints
+        sa.CheckConstraint("accuracy >= 0.0 AND accuracy <= 1.0", name="ck_signal_accuracy_range"),
+        sa.CheckConstraint("decay_lambda >= 0.0", name="ck_signal_decay_positive"),
         sa.CheckConstraint(
-            "accuracy >= 0.0 AND accuracy <= 1.0",
-            name='ck_signal_accuracy_range'
-        ),
-        sa.CheckConstraint(
-            "decay_lambda >= 0.0",
-            name='ck_signal_decay_positive'
-        ),
-        sa.CheckConstraint(
-            "suppression_threshold >= 0.0 AND suppression_threshold <= 1.0",
-            name='ck_signal_suppression_range'
+            "suppression_threshold >= 0.0 AND suppression_threshold <= 1.0", name="ck_signal_suppression_range"
         ),
     )
 
     # Indexes
-    op.create_index('idx_signal_accuracy_tenant', 'signal_accuracy', ['tenant_id'])
-    op.create_index('idx_signal_accuracy_type', 'signal_accuracy', ['signal_type'])
+    op.create_index("idx_signal_accuracy_tenant", "signal_accuracy", ["tenant_id"])
+    op.create_index("idx_signal_accuracy_type", "signal_accuracy", ["signal_type"])
 
     # =========================================================================
     # Table: confidence_audit_log
@@ -80,29 +72,26 @@ def upgrade() -> None:
     # Reference: PIN-343 Section 2.7
     # =========================================================================
     op.create_table(
-        'confidence_audit_log',
-        sa.Column('event_id', postgresql.UUID(as_uuid=True),
-                  server_default=sa.text('gen_random_uuid()'), nullable=False),
-        sa.Column('signal_id', sa.Text(), nullable=False),  # Instance of signal
-        sa.Column('signal_type', sa.Text(), nullable=False),  # Signal catalog type
-        sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('old_confidence', sa.Numeric(precision=5, scale=4), nullable=False),
-        sa.Column('new_confidence', sa.Numeric(precision=5, scale=4), nullable=False),
-        sa.Column('components', postgresql.JSONB(), nullable=False),
+        "confidence_audit_log",
+        sa.Column(
+            "event_id", postgresql.UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), nullable=False
+        ),
+        sa.Column("signal_id", sa.Text(), nullable=False),  # Instance of signal
+        sa.Column("signal_type", sa.Text(), nullable=False),  # Signal catalog type
+        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("old_confidence", sa.Numeric(precision=5, scale=4), nullable=False),
+        sa.Column("new_confidence", sa.Numeric(precision=5, scale=4), nullable=False),
+        sa.Column("components", postgresql.JSONB(), nullable=False),
         # {raw: 0.85, historical_accuracy: 0.72, temporal_decay: 0.90}
-        sa.Column('reason', sa.Text(), nullable=False),
-        sa.Column('timestamp', sa.TIMESTAMP(), nullable=False,
-                  server_default=sa.text('NOW()')),
-
+        sa.Column("reason", sa.Text(), nullable=False),
+        sa.Column("timestamp", sa.TIMESTAMP(), nullable=False, server_default=sa.text("NOW()")),
         # Primary key
-        sa.PrimaryKeyConstraint('event_id'),
+        sa.PrimaryKeyConstraint("event_id"),
     )
 
     # Indexes
-    op.create_index('idx_confidence_audit_tenant', 'confidence_audit_log',
-                    ['tenant_id', 'timestamp'])
-    op.create_index('idx_confidence_audit_signal', 'confidence_audit_log',
-                    ['signal_type', 'timestamp'])
+    op.create_index("idx_confidence_audit_tenant", "confidence_audit_log", ["tenant_id", "timestamp"])
+    op.create_index("idx_confidence_audit_signal", "confidence_audit_log", ["signal_type", "timestamp"])
 
     # =========================================================================
     # Immutability for confidence audit log
@@ -193,12 +182,12 @@ def downgrade() -> None:
     op.execute("DROP FUNCTION IF EXISTS prevent_confidence_audit_mutation();")
 
     # Drop indexes
-    op.drop_index('idx_confidence_audit_signal', 'confidence_audit_log')
-    op.drop_index('idx_confidence_audit_tenant', 'confidence_audit_log')
+    op.drop_index("idx_confidence_audit_signal", "confidence_audit_log")
+    op.drop_index("idx_confidence_audit_tenant", "confidence_audit_log")
 
-    op.drop_index('idx_signal_accuracy_type', 'signal_accuracy')
-    op.drop_index('idx_signal_accuracy_tenant', 'signal_accuracy')
+    op.drop_index("idx_signal_accuracy_type", "signal_accuracy")
+    op.drop_index("idx_signal_accuracy_tenant", "signal_accuracy")
 
     # Drop tables
-    op.drop_table('confidence_audit_log')
-    op.drop_table('signal_accuracy')
+    op.drop_table("confidence_audit_log")
+    op.drop_table("signal_accuracy")

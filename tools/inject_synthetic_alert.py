@@ -18,6 +18,7 @@ Alert Types:
 - worker_unhealthy: Worker health check failed
 - custom: Custom alert with --name and --description
 """
+
 import os
 import sys
 import json

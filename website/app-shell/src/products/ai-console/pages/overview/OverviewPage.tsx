@@ -27,6 +27,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { guardApi } from '@/api/guard';
+import { CUSTOMER_ROUTES } from '@/routing';
 import { logger } from '@/lib/consoleLogger';
 
 // Simple relative time formatter (no date-fns dependency)
@@ -251,12 +252,13 @@ export function OverviewPage() {
       </div>
 
       {/* ============== QUICK ACTIONS ============== */}
+      {/* PIN-352: Uses routing authority for navigation */}
       <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">
         Quick Actions
       </h2>
       <div className="grid grid-cols-3 gap-4">
         <button
-          onClick={() => navigate('/guard/activity')}
+          onClick={() => navigate(CUSTOMER_ROUTES.activity)}
           className="bg-navy-surface border border-navy-border hover:border-accent-info/50 rounded-xl p-6 text-left transition-colors group"
         >
           <span className="text-2xl mb-3 block">⚡</span>
@@ -269,7 +271,7 @@ export function OverviewPage() {
         </button>
 
         <button
-          onClick={() => navigate('/guard/policies')}
+          onClick={() => navigate(CUSTOMER_ROUTES.policies)}
           className="bg-navy-surface border border-navy-border hover:border-accent-info/50 rounded-xl p-6 text-left transition-colors group"
         >
           <span className="text-2xl mb-3 block">📜</span>
@@ -282,7 +284,7 @@ export function OverviewPage() {
         </button>
 
         <button
-          onClick={() => navigate('/guard/keys')}
+          onClick={() => navigate(CUSTOMER_ROUTES.keys)}
           className="bg-navy-surface border border-navy-border hover:border-accent-info/50 rounded-xl p-6 text-left transition-colors group"
         >
           <span className="text-2xl mb-3 block">🔑</span>

@@ -53,10 +53,23 @@ CUSTOMER_L2_FILES = {
     # guard.py has mixed responsibilities - some endpoints are internal/admin
     # We verify L3 adapters are imported, not that ALL imports are via L3
     "backend/app/api/guard.py": {
-        "expected_l3": ["customer_keys_adapter", "customer_incidents_adapter", "customer_killswitch_adapter"],
-        "capabilities": ["KEYS_LIST", "KEYS_DETAIL", "KEYS_FREEZE", "KEYS_UNFREEZE",
-                        "INCIDENTS_LIST", "INCIDENTS_DETAIL", "INCIDENT_ACK", "INCIDENT_RESOLVE",
-                        "KILLSWITCH_ACTIVATE", "KILLSWITCH_DEACTIVATE"],
+        "expected_l3": [
+            "customer_keys_adapter",
+            "customer_incidents_adapter",
+            "customer_killswitch_adapter",
+        ],
+        "capabilities": [
+            "KEYS_LIST",
+            "KEYS_DETAIL",
+            "KEYS_FREEZE",
+            "KEYS_UNFREEZE",
+            "INCIDENTS_LIST",
+            "INCIDENTS_DETAIL",
+            "INCIDENT_ACK",
+            "INCIDENT_RESOLVE",
+            "KILLSWITCH_ACTIVATE",
+            "KILLSWITCH_DEACTIVATE",
+        ],
         "allow_mixed_imports": True,
     },
     "backend/app/api/guard_logs.py": {
@@ -83,7 +96,10 @@ CUSTOMER_L2_FILES = {
 CUSTOMER_L3_ADAPTERS = {
     "backend/app/adapters/customer_keys_adapter.py": {
         "expected_l4": ["keys_service"],
-        "forbidden_imports": ["app.db", "sqlalchemy"],  # app.models OK for type hints only
+        "forbidden_imports": [
+            "app.db",
+            "sqlalchemy",
+        ],  # app.models OK for type hints only
     },
     "backend/app/adapters/customer_incidents_adapter.py": {
         "expected_l4": ["incident_read_service", "incident_write_service"],
@@ -112,16 +128,16 @@ CUSTOMER_L3_ADAPTERS = {
 
 # Forbidden import patterns at L2 (bypassing L3) - only for pure customer files
 L2_FORBIDDEN_PATTERNS = [
-    r"from app\.models\.",       # Direct L6 model access
-    r"from app\.db import",      # Direct database access
-    r"from sqlmodel import",     # Direct ORM access
-    r"from sqlalchemy import",   # Direct ORM access
+    r"from app\.models\.",  # Direct L6 model access
+    r"from app\.db import",  # Direct database access
+    r"from sqlmodel import",  # Direct ORM access
+    r"from sqlalchemy import",  # Direct ORM access
 ]
 
 # Forbidden import patterns at L3 (bypassing L4)
 L3_FORBIDDEN_PATTERNS = [
-    r"from app\.db import",      # Direct database access
-    r"from sqlalchemy import",   # Direct ORM access (Session OK via SQLModel)
+    r"from app\.db import",  # Direct database access
+    r"from sqlalchemy import",  # Direct ORM access (Session OK via SQLModel)
 ]
 
 
@@ -129,9 +145,11 @@ L3_FORBIDDEN_PATTERNS = [
 # VIOLATION TYPES
 # =============================================================================
 
+
 @dataclass
 class Violation:
     """Represents a layer violation."""
+
     file: str
     line: int
     violation_type: str
@@ -145,6 +163,7 @@ class Violation:
 # =============================================================================
 # AST ANALYSIS
 # =============================================================================
+
 
 def extract_imports(file_path: Path) -> List[Tuple[int, str, str]]:
     """Extract all imports from a Python file.
@@ -171,7 +190,9 @@ def extract_imports(file_path: Path) -> List[Tuple[int, str, str]]:
     return imports
 
 
-def check_l2_imports(file_path: Path, config: dict, verbose: bool = False) -> List[Violation]:
+def check_l2_imports(
+    file_path: Path, config: dict, verbose: bool = False
+) -> List[Violation]:
     """Check L2 file imports for layer violations."""
     violations = []
     imports = extract_imports(file_path)
@@ -185,13 +206,15 @@ def check_l2_imports(file_path: Path, config: dict, verbose: bool = False) -> Li
         if not allow_mixed:
             for pattern in L2_FORBIDDEN_PATTERNS:
                 if re.search(pattern, full_import):
-                    violations.append(Violation(
-                        file=str(file_path),
-                        line=line_no,
-                        violation_type="L2_BYPASSES_L3",
-                        message=f"L2 directly imports L6: {full_import}",
-                        severity="BLOCKING",
-                    ))
+                    violations.append(
+                        Violation(
+                            file=str(file_path),
+                            line=line_no,
+                            violation_type="L2_BYPASSES_L3",
+                            message=f"L2 directly imports L6: {full_import}",
+                            severity="BLOCKING",
+                        )
+                    )
 
         # Track L3 adapter imports
         for l3_name in expected_l3:
@@ -202,18 +225,22 @@ def check_l2_imports(file_path: Path, config: dict, verbose: bool = False) -> Li
     missing_l3 = expected_l3 - found_l3
     if missing_l3:
         for l3 in missing_l3:
-            violations.append(Violation(
-                file=str(file_path),
-                line=0,
-                violation_type="L2_MISSING_L3",
-                message=f"L2 does not import expected L3 adapter: {l3}",
-                severity="BLOCKING",  # Changed from WARNING - missing L3 is blocking
-            ))
+            violations.append(
+                Violation(
+                    file=str(file_path),
+                    line=0,
+                    violation_type="L2_MISSING_L3",
+                    message=f"L2 does not import expected L3 adapter: {l3}",
+                    severity="BLOCKING",  # Changed from WARNING - missing L3 is blocking
+                )
+            )
 
     # For mixed files with L3 adapters imported, clear violations and report success
     if allow_mixed and not missing_l3 and found_l3:
         if verbose:
-            print(f"  ✓ {file_path}: L3 adapters imported ({', '.join(found_l3)}) [mixed file]")
+            print(
+                f"  ✓ {file_path}: L3 adapters imported ({', '.join(found_l3)}) [mixed file]"
+            )
         return []  # Clear violations for mixed files that have proper L3 imports
 
     if verbose and not violations:
@@ -222,7 +249,9 @@ def check_l2_imports(file_path: Path, config: dict, verbose: bool = False) -> Li
     return violations
 
 
-def check_l3_imports(file_path: Path, config: dict, verbose: bool = False) -> List[Violation]:
+def check_l3_imports(
+    file_path: Path, config: dict, verbose: bool = False
+) -> List[Violation]:
     """Check L3 adapter imports for layer violations."""
     violations = []
     imports = extract_imports(file_path)
@@ -235,24 +264,28 @@ def check_l3_imports(file_path: Path, config: dict, verbose: bool = False) -> Li
         # Check for forbidden direct imports (L6 bypass)
         for pattern in L3_FORBIDDEN_PATTERNS:
             if re.search(pattern, full_import):
-                violations.append(Violation(
-                    file=str(file_path),
-                    line=line_no,
-                    violation_type="L3_BYPASSES_L4",
-                    message=f"L3 directly imports L6: {full_import}",
-                    severity="BLOCKING",
-                ))
+                violations.append(
+                    Violation(
+                        file=str(file_path),
+                        line=line_no,
+                        violation_type="L3_BYPASSES_L4",
+                        message=f"L3 directly imports L6: {full_import}",
+                        severity="BLOCKING",
+                    )
+                )
 
         # Check for other forbidden imports
         for forbidden_module in forbidden:
             if forbidden_module in full_import:
-                violations.append(Violation(
-                    file=str(file_path),
-                    line=line_no,
-                    violation_type="L3_FORBIDDEN_IMPORT",
-                    message=f"L3 imports forbidden module: {full_import}",
-                    severity="BLOCKING",
-                ))
+                violations.append(
+                    Violation(
+                        file=str(file_path),
+                        line=line_no,
+                        violation_type="L3_FORBIDDEN_IMPORT",
+                        message=f"L3 imports forbidden module: {full_import}",
+                        severity="BLOCKING",
+                    )
+                )
 
         # Track L4 service imports
         for l4_name in expected_l4:
@@ -263,13 +296,15 @@ def check_l3_imports(file_path: Path, config: dict, verbose: bool = False) -> Li
     missing_l4 = expected_l4 - found_l4
     if missing_l4:
         for l4 in missing_l4:
-            violations.append(Violation(
-                file=str(file_path),
-                line=0,
-                violation_type="L3_MISSING_L4",
-                message=f"L3 does not import expected L4 service: {l4}",
-                severity="WARNING",
-            ))
+            violations.append(
+                Violation(
+                    file=str(file_path),
+                    line=0,
+                    violation_type="L3_MISSING_L4",
+                    message=f"L3 does not import expected L4 service: {l4}",
+                    severity="WARNING",
+                )
+            )
 
     if verbose and not violations:
         print(f"  ✓ {file_path}: L3 imports L4 correctly ({', '.join(found_l4)})")
@@ -280,6 +315,7 @@ def check_l3_imports(file_path: Path, config: dict, verbose: bool = False) -> Li
 # =============================================================================
 # MAIN GUARD
 # =============================================================================
+
 
 def run_guard(verbose: bool = False, fix: bool = False) -> Tuple[int, List[Violation]]:
     """Run the L2→L3→L4 guard and return (exit_code, violations)."""
@@ -312,13 +348,15 @@ def run_guard(verbose: bool = False, fix: bool = False) -> Tuple[int, List[Viola
             violations = check_l3_imports(file_path, config, verbose)
             all_violations.extend(violations)
         else:
-            all_violations.append(Violation(
-                file=l3_path,
-                line=0,
-                violation_type="L3_MISSING",
-                message=f"Expected L3 adapter not found: {l3_path}",
-                severity="BLOCKING",
-            ))
+            all_violations.append(
+                Violation(
+                    file=l3_path,
+                    line=0,
+                    violation_type="L3_MISSING",
+                    message=f"Expected L3 adapter not found: {l3_path}",
+                    severity="BLOCKING",
+                )
+            )
 
     print()
 
@@ -367,14 +405,10 @@ def main():
         description="L2→L3→L4 Layer Guard (GATE-7) - CI enforcement for layer compliance"
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Show detailed analysis"
+        "--verbose", "-v", action="store_true", help="Show detailed analysis"
     )
     parser.add_argument(
-        "--fix",
-        action="store_true",
-        help="Suggest fixes (no auto-apply)"
+        "--fix", action="store_true", help="Suggest fixes (no auto-apply)"
     )
     args = parser.parse_args()
 

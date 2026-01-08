@@ -9,13 +9,16 @@
  * Role: Render a domain with subdomains and topics from L2.1 UI Projection Lock
  * Reference: L2.1 UI Projection Pipeline, PIN-352
  *
- * GOVERNANCE RULES:
- * - NO hardcoded panel names
- * - All content derived from ui_projection_lock.json
- * - Uses contracts/ui_projection_loader.ts exclusively
+ * GOVERNANCE RULES (LOCKED):
+ * - Header hierarchy: Domain → Subdomain → Short Description → Topic Tabs
+ * - Topic tabs are horizontal, in main workspace
+ * - Panels render ONLY under selected topic
+ * - NO internal IDs in customer-facing header
+ * - NO kebab menus
  */
 
 import { useEffect, useState, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   LayoutDashboard,
   Activity,
@@ -24,24 +27,27 @@ import {
   FileText,
   Loader2,
   AlertCircle,
-  ChevronDown,
-  ChevronRight,
   List,
   Grid3x3,
   Table,
   Layers,
   CreditCard,
-  FolderOpen,
-  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   loadProjection,
   getDomain,
   getPanels,
+  getSubdomainsForDomain,
+  getPanelsForSubdomain,
+  getNormalizedDomain,
+  getNormalizedPanelsForSubdomain,
+  type NormalizedPanel,
+  type NormalizedDomain,
 } from '@/contracts/ui_projection_loader';
 import type { Domain, Panel, DomainName, RenderMode } from '@/contracts/ui_projection_types';
 import { preflightLogger } from '@/lib/preflightLogger';
+import { useRenderer, InspectorOnly } from '@/contexts/RendererContext';
 
 // ============================================================================
 // Constants
@@ -65,240 +71,223 @@ const RENDER_MODE_ICONS: Record<RenderMode, React.ElementType> = {
 };
 
 // ============================================================================
-// Types
+// Helper: Get unique topics for a subdomain
 // ============================================================================
 
-interface SubdomainGroup {
-  subdomain: string;
-  topics: Map<string, Panel[]>;
-  panelCount: number;
-  enabledCount: number;
-}
-
-// ============================================================================
-// Helper: Group panels by subdomain and topic
-// ============================================================================
-
-function groupPanelsBySubdomainAndTopic(panels: Panel[]): SubdomainGroup[] {
-  const subdomainMap = new Map<string, Map<string, Panel[]>>();
-
+function getTopicsForSubdomain(panels: NormalizedPanel[]): string[] {
+  const topics = new Set<string>();
   for (const panel of panels) {
-    const subdomain = panel.subdomain || 'DEFAULT';
-    const topic = panel.topic || 'GENERAL';
-
-    if (!subdomainMap.has(subdomain)) {
-      subdomainMap.set(subdomain, new Map());
+    if (panel.topic) {
+      topics.add(panel.topic);
     }
-
-    const topicMap = subdomainMap.get(subdomain)!;
-    if (!topicMap.has(topic)) {
-      topicMap.set(topic, []);
-    }
-    topicMap.get(topic)!.push(panel);
   }
-
-  // Convert to array and sort
-  const result: SubdomainGroup[] = [];
-  for (const [subdomain, topicMap] of subdomainMap) {
-    const allPanels = Array.from(topicMap.values()).flat();
-    result.push({
-      subdomain,
-      topics: topicMap,
-      panelCount: allPanels.length,
-      enabledCount: allPanels.filter(p => p.enabled).length,
-    });
-  }
-
-  return result.sort((a, b) => a.subdomain.localeCompare(b.subdomain));
+  return Array.from(topics).sort();
 }
 
 // ============================================================================
-// Panel Card Component
+// Helper: Get panels for a specific topic
+// ============================================================================
+
+function getPanelsForTopic(panels: NormalizedPanel[], topic: string): NormalizedPanel[] {
+  return panels.filter(p => p.topic === topic && p.enabled);
+}
+
+// ============================================================================
+// Helper: Check if panel is Order-1
+// ============================================================================
+
+function isOrder1Panel(panel: NormalizedPanel): boolean {
+  return panel.order === 'O1';
+}
+
+// ============================================================================
+// Helper: Format label (remove underscores, title case)
+// ============================================================================
+
+function formatLabel(str: string): string {
+  return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ============================================================================
+// Panel Card Component (For O2-O5 panels - navigable)
 // ============================================================================
 
 interface PanelCardProps {
-  panel: Panel;
-  compact?: boolean;
+  panel: NormalizedPanel;
 }
 
-function PanelCard({ panel, compact = false }: PanelCardProps) {
+function PanelCard({ panel }: PanelCardProps) {
   const RenderIcon = RENDER_MODE_ICONS[panel.render_mode] || List;
+  const isAutoDescription = panel._normalization?.auto_description;
 
-  if (compact) {
-    return (
-      <div className={cn(
-        'flex items-center justify-between px-3 py-2 rounded border transition-colors',
-        panel.enabled
-          ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
-          : 'bg-gray-900/50 border-gray-800 opacity-60'
-      )}>
-        <div className="flex items-center gap-2">
-          <RenderIcon size={14} className="text-gray-500" />
-          <span className="text-sm text-gray-200">{panel.panel_name}</span>
+  return (
+    <Link
+      to={panel.route}
+      className="block bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-primary-600 hover:bg-gray-750 transition-all group"
+    >
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-gray-700/50 rounded-lg group-hover:bg-primary-900/30 transition-colors">
+          <RenderIcon size={20} className="text-gray-400 group-hover:text-primary-400" />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 font-mono">{panel.render_mode}</span>
-          {panel.enabled ? (
-            <span className="w-2 h-2 rounded-full bg-green-500" title="Enabled" />
-          ) : (
-            <span className="w-2 h-2 rounded-full bg-gray-600" title="Disabled" />
+        <div className="flex-1 min-w-0">
+          <h4 className="font-medium text-gray-100 group-hover:text-white mb-1">
+            {panel.panel_name}
+          </h4>
+          {panel.short_description && (
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-400 line-clamp-2">{panel.short_description}</p>
+              {/* Auto-description marker - Inspector only */}
+              {isAutoDescription && (
+                <InspectorOnly>
+                  <span className="text-xs px-1 py-0.5 bg-amber-900/30 text-amber-500 rounded font-mono flex-shrink-0">
+                    AUTO
+                  </span>
+                </InspectorOnly>
+              )}
+            </div>
           )}
         </div>
+      </div>
+    </Link>
+  );
+}
+
+// ============================================================================
+// Order-1 Inline Panel Component (TODO-2: Render inline, no button/CTA)
+// O1 panels are content surfaces, NOT navigation targets
+// ============================================================================
+
+interface Order1PanelProps {
+  panel: NormalizedPanel;
+}
+
+function Order1Panel({ panel }: Order1PanelProps) {
+  const RenderIcon = RENDER_MODE_ICONS[panel.render_mode] || List;
+  const isAutoDescription = panel._normalization?.auto_description;
+
+  return (
+    <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+      {/* Panel Header - NO button, NO click handler */}
+      <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary-900/30 rounded-lg">
+            <RenderIcon size={20} className="text-primary-400" />
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-100">{panel.panel_name}</h3>
+            {panel.short_description && (
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-sm text-gray-400">{panel.short_description}</p>
+                {isAutoDescription && (
+                  <InspectorOnly>
+                    <span className="text-xs px-1 py-0.5 bg-amber-900/30 text-amber-500 rounded font-mono">
+                      AUTO
+                    </span>
+                  </InspectorOnly>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Order badge - Inspector only */}
+        <InspectorOnly>
+          <span className="text-xs px-2 py-1 bg-emerald-900/30 text-emerald-400 rounded font-mono">
+            O1
+          </span>
+        </InspectorOnly>
+      </div>
+
+      {/* Panel Content - Inline render placeholder */}
+      <div className="p-5">
+        <div className="bg-gray-900/50 border border-dashed border-gray-600 rounded-lg p-8 text-center">
+          <p className="text-gray-500 text-sm">
+            Content surface — awaiting backend binding
+          </p>
+          <InspectorOnly>
+            <p className="text-gray-600 text-xs mt-2 font-mono">
+              render_mode: {panel.render_mode} | controls: {panel.control_count}
+            </p>
+          </InspectorOnly>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Topic Tabs Component (Horizontal - Main Workspace)
+// ============================================================================
+
+interface TopicTabsProps {
+  topics: string[];
+  activeTopic: string | null;
+  onSelectTopic: (topic: string) => void;
+}
+
+function TopicTabs({ topics, activeTopic, onSelectTopic }: TopicTabsProps) {
+  if (topics.length === 0) return null;
+
+  return (
+    <div className="border-b border-gray-700">
+      <div className="flex gap-1 overflow-x-auto">
+        {topics.map((topic) => (
+          <button
+            key={topic}
+            onClick={() => onSelectTopic(topic)}
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px',
+              activeTopic === topic
+                ? 'text-primary-400 border-primary-400 bg-primary-900/10'
+                : 'text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-600'
+            )}
+          >
+            {formatLabel(topic)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Panels Grid (Under Selected Topic)
+// Order-1 panels: Render inline (no click, no CTA)
+// Order 2-5 panels: Render as navigable cards
+// ============================================================================
+
+interface PanelsGridProps {
+  panels: NormalizedPanel[];
+}
+
+function PanelsGrid({ panels }: PanelsGridProps) {
+  if (panels.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-gray-500">No panels in this topic.</p>
       </div>
     );
   }
 
-  return (
-    <div className={cn(
-      'bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors',
-      !panel.enabled && 'opacity-60'
-    )}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <RenderIcon size={16} className="text-gray-500" />
-          <h4 className="font-medium text-gray-100">{panel.panel_name}</h4>
-        </div>
-        <span className={cn(
-          'text-xs px-2 py-0.5 rounded',
-          panel.enabled
-            ? 'bg-green-900/30 text-green-400'
-            : 'bg-gray-700 text-gray-500'
-        )}>
-          {panel.enabled ? 'Enabled' : 'Disabled'}
-        </span>
-      </div>
-
-      <div className="space-y-1.5 text-sm">
-        <div className="flex items-center justify-between text-gray-400">
-          <span>ID</span>
-          <span className="font-mono text-xs text-gray-500">{panel.panel_id}</span>
-        </div>
-        <div className="flex items-center justify-between text-gray-400">
-          <span>Render</span>
-          <span className="font-mono text-gray-300">{panel.render_mode}</span>
-        </div>
-        <div className="flex items-center justify-between text-gray-400">
-          <span>Controls</span>
-          <span className="font-mono text-gray-300">{panel.control_count}</span>
-        </div>
-      </div>
-
-      {/* Control Types */}
-      {panel.controls.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-700">
-          <div className="flex flex-wrap gap-1">
-            {panel.controls.slice(0, 4).map((control, idx) => (
-              <span
-                key={idx}
-                className="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-400 rounded"
-              >
-                {control.type}
-              </span>
-            ))}
-            {panel.controls.length > 4 && (
-              <span className="text-xs px-1.5 py-0.5 text-gray-500">
-                +{panel.controls.length - 4}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// Topic Section Component
-// ============================================================================
-
-interface TopicSectionProps {
-  topic: string;
-  panels: Panel[];
-}
-
-function TopicSection({ topic, panels }: TopicSectionProps) {
-  const [expanded, setExpanded] = useState(true);
-  const enabledCount = panels.filter(p => p.enabled).length;
-
-  const handleToggle = () => {
-    const newExpanded = !expanded;
-    setExpanded(newExpanded);
-    preflightLogger.domain.topicExpand(topic);
-  };
+  // Separate O1 panels from deeper order panels
+  const o1Panels = panels.filter(isOrder1Panel);
+  const deeperPanels = panels.filter(p => !isOrder1Panel(p));
 
   return (
-    <div className="border border-gray-700 rounded-lg overflow-hidden">
-      <button
-        onClick={handleToggle}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Tag size={14} className="text-gray-500" />
-          <span className="font-medium text-gray-200">{topic.replace(/_/g, ' ')}</span>
-          <span className="text-xs text-gray-500">
-            ({enabledCount}/{panels.length} enabled)
-          </span>
-        </div>
-        {expanded ? (
-          <ChevronDown size={16} className="text-gray-500" />
-        ) : (
-          <ChevronRight size={16} className="text-gray-500" />
-        )}
-      </button>
-
-      {expanded && (
-        <div className="p-3 space-y-2 bg-gray-900/30">
-          {panels.map((panel) => (
-            <PanelCard key={panel.panel_id} panel={panel} compact />
+    <div className="space-y-6">
+      {/* Order-1 Panels: Render inline (content surfaces) */}
+      {o1Panels.length > 0 && (
+        <div className="space-y-4">
+          {o1Panels.map((panel) => (
+            <Order1Panel key={panel.panel_id} panel={panel} />
           ))}
         </div>
       )}
-    </div>
-  );
-}
 
-// ============================================================================
-// Subdomain Section Component
-// ============================================================================
-
-interface SubdomainSectionProps {
-  group: SubdomainGroup;
-}
-
-function SubdomainSection({ group }: SubdomainSectionProps) {
-  const [expanded, setExpanded] = useState(true);
-  const topics = Array.from(group.topics.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-
-  const handleToggle = () => {
-    const newExpanded = !expanded;
-    setExpanded(newExpanded);
-    preflightLogger.domain.subdomainExpand(group.subdomain);
-  };
-
-  return (
-    <div className="border border-gray-600 rounded-xl overflow-hidden">
-      <button
-        onClick={handleToggle}
-        className="w-full flex items-center justify-between px-5 py-4 bg-gray-800 hover:bg-gray-700 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <FolderOpen size={18} className="text-primary-400" />
-          <span className="font-semibold text-gray-100">{group.subdomain.replace(/_/g, ' ')}</span>
-          <span className="text-sm text-gray-400">
-            {group.enabledCount}/{group.panelCount} panels • {topics.length} topics
-          </span>
-        </div>
-        {expanded ? (
-          <ChevronDown size={18} className="text-gray-400" />
-        ) : (
-          <ChevronRight size={18} className="text-gray-400" />
-        )}
-      </button>
-
-      {expanded && (
-        <div className="p-4 space-y-3 bg-gray-850">
-          {topics.map(([topic, panels]) => (
-            <TopicSection key={topic} topic={topic} panels={panels} />
+      {/* Order 2-5 Panels: Render as navigable cards */}
+      {deeperPanels.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {deeperPanels.map((panel) => (
+            <PanelCard key={panel.panel_id} panel={panel} />
           ))}
         </div>
       )}
@@ -357,6 +346,8 @@ function DomainNotFound({ domainName }: { domainName: string }) {
 
 // ============================================================================
 // Main Domain Page Component
+// LOCKED: Header = Domain → Subdomain → Description → Topic Tabs
+// Panels render ONLY under selected topic
 // ============================================================================
 
 interface DomainPageProps {
@@ -364,23 +355,57 @@ interface DomainPageProps {
 }
 
 export function DomainPage({ domainName }: DomainPageProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const renderer = useRenderer();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [domain, setDomain] = useState<Domain | null>(null);
-  const [panels, setPanels] = useState<Panel[]>([]);
+  const [domain, setDomain] = useState<NormalizedDomain | null>(null);
+  const [subdomainPanels, setSubdomainPanels] = useState<NormalizedPanel[]>([]);
+
+  // Get subdomain from URL (set by sidebar)
+  const activeSubdomain = searchParams.get('subdomain');
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
       await loadProjection();
-      const loadedDomain = getDomain(domainName);
+      // Use normalized domain (with placeholder descriptions in preflight)
+      const loadedDomain = getNormalizedDomain(domainName);
       if (loadedDomain) {
         setDomain(loadedDomain);
-        setPanels(getPanels(domainName)); // Get ALL panels, not just enabled
+
+        // Get subdomains for this domain
+        const subdomains = getSubdomainsForDomain(domainName);
+
+        // If subdomain is specified, load its panels (normalized)
+        if (activeSubdomain && subdomains.includes(activeSubdomain)) {
+          const panels = getNormalizedPanelsForSubdomain(domainName, activeSubdomain);
+          setSubdomainPanels(panels.filter(p => p.enabled));
+
+          // Auto-select first topic
+          const topics = getTopicsForSubdomain(panels);
+          if (topics.length > 0 && !activeTopic) {
+            setActiveTopic(topics[0]);
+          }
+        } else if (subdomains.length > 0) {
+          // Auto-select first subdomain if none specified
+          const firstSubdomain = subdomains[0];
+          setSearchParams({ subdomain: firstSubdomain });
+          const panels = getNormalizedPanelsForSubdomain(domainName, firstSubdomain);
+          setSubdomainPanels(panels.filter(p => p.enabled));
+
+          const topics = getTopicsForSubdomain(panels);
+          if (topics.length > 0) {
+            setActiveTopic(topics[0]);
+          }
+        } else {
+          setSubdomainPanels([]);
+        }
       } else {
         setDomain(null);
-        setPanels([]);
+        setSubdomainPanels([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load projection');
@@ -391,19 +416,27 @@ export function DomainPage({ domainName }: DomainPageProps) {
 
   useEffect(() => {
     loadData();
-  }, [domainName]);
+  }, [domainName, activeSubdomain]);
 
-  // Group panels by subdomain and topic
-  const subdomainGroups = useMemo(() => {
-    const groups = groupPanelsBySubdomainAndTopic(panels);
-    if (domain) {
-      preflightLogger.domain.render(domain.domain, groups.length, panels.length);
+  // Get topics for current subdomain
+  const topics = useMemo(() => {
+    return getTopicsForSubdomain(subdomainPanels);
+  }, [subdomainPanels]);
+
+  // Auto-select first topic when topics change
+  useEffect(() => {
+    if (topics.length > 0 && (!activeTopic || !topics.includes(activeTopic))) {
+      setActiveTopic(topics[0]);
     }
-    return groups;
-  }, [panels, domain]);
+  }, [topics, activeTopic]);
+
+  // Get panels for active topic
+  const topicPanels = useMemo(() => {
+    if (!activeTopic) return [];
+    return getPanelsForTopic(subdomainPanels, activeTopic);
+  }, [subdomainPanels, activeTopic]);
 
   const Icon = DOMAIN_ICONS[domainName] || LayoutDashboard;
-  const enabledPanels = panels.filter(p => p.enabled);
 
   if (loading) {
     return <DomainLoading />;
@@ -419,70 +452,64 @@ export function DomainPage({ domainName }: DomainPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Domain Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary-900/30 rounded-lg">
-            <Icon size={24} className="text-primary-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-100">{domain.domain}</h1>
-            <p className="text-sm text-gray-400">
-              {subdomainGroups.length} subdomains • {panels.length} panels • {domain.total_controls} controls
-            </p>
-          </div>
-        </div>
+      {/* ================================================================
+          HEADER HIERARCHY (LOCKED ORDER):
+          1. Domain
+          2. Subdomain
+          3. Short description (if provided)
+          4. Topic tabs
+          ================================================================ */}
 
-        {/* Preflight Badge */}
-        {import.meta.env.VITE_PREFLIGHT_MODE === 'true' && (
-          <span className="px-3 py-1 bg-amber-900/30 text-amber-400 text-sm font-mono rounded">
-            PREFLIGHT
-          </span>
-        )}
+      {/* 1. Domain */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-primary-900/30 rounded-lg">
+          <Icon size={24} className="text-primary-400" />
+        </div>
+        <h1 className="text-2xl font-semibold text-gray-100">{domain.domain}</h1>
       </div>
 
-      {/* Domain Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="text-2xl font-semibold text-gray-100">{subdomainGroups.length}</div>
-          <div className="text-sm text-gray-400">Subdomains</div>
+      {/* 2. Subdomain */}
+      {activeSubdomain && (
+        <div className="text-lg font-medium text-gray-300">
+          {formatLabel(activeSubdomain)}
         </div>
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="text-2xl font-semibold text-gray-100">{panels.length}</div>
-          <div className="text-sm text-gray-400">Total Panels</div>
-        </div>
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="text-2xl font-semibold text-green-400">{enabledPanels.length}</div>
-          <div className="text-sm text-gray-400">Enabled</div>
-        </div>
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="text-2xl font-semibold text-gray-100">{domain.total_controls}</div>
-          <div className="text-sm text-gray-400">Controls</div>
-        </div>
-      </div>
+      )}
 
-      {/* Subdomains */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-medium text-gray-200">Subdomains & Topics</h2>
-        {subdomainGroups.length === 0 ? (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 text-center">
-            <p className="text-gray-400">No panels in this domain.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {subdomainGroups.map((group) => (
-              <SubdomainSection key={group.subdomain} group={group} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* 3. Short Description (domain level) */}
+      {domain.short_description && (
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-gray-400">{domain.short_description}</p>
+          {/* Auto-description marker - Inspector only */}
+          {domain._normalization?.auto_description && (
+            <InspectorOnly>
+              <span className="text-xs px-1.5 py-0.5 bg-amber-900/30 text-amber-500 rounded font-mono">
+                AUTO
+              </span>
+            </InspectorOnly>
+          )}
+        </div>
+      )}
 
-      {/* Projection Source (dev info) */}
-      <div className="text-xs text-gray-500 border-t border-gray-800 pt-4">
-        <span className="font-mono">Source: ui_projection_lock.json</span>
-        <span className="mx-2">•</span>
-        <span className="font-mono">Order: {domain.order}</span>
-      </div>
+      {/* 4. Topic Tabs (Horizontal) */}
+      <TopicTabs
+        topics={topics}
+        activeTopic={activeTopic}
+        onSelectTopic={setActiveTopic}
+      />
+
+      {/* ================================================================
+          PANELS (Render ONLY under selected topic)
+          ================================================================ */}
+
+      {activeTopic ? (
+        <div className="space-y-4">
+          <PanelsGrid panels={topicPanels} />
+        </div>
+      ) : (
+        <div className="py-12 text-center">
+          <p className="text-gray-500">Select a topic to view panels.</p>
+        </div>
+      )}
     </div>
   );
 }

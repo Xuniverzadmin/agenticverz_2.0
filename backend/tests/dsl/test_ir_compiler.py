@@ -16,38 +16,21 @@ COVERAGE:
 """
 
 import json
+
 import pytest
 
-from app.dsl.parser import parse
 from app.dsl.ir_compiler import (
-    compile_policy,
-    ir_hash,
-    PolicyIR,
-    CompiledClause,
     Instruction,
     OpCode,
-    IRCompiler,
+    compile_policy,
+    ir_hash,
 )
-from app.dsl.ast import (
-    PolicyAST,
-    PolicyMetadata,
-    Clause,
-    Predicate,
-    ExistsPredicate,
-    LogicalCondition,
-    WarnAction,
-    BlockAction,
-    RequireApprovalAction,
-    Scope,
-    Mode,
-    Comparator,
-    LogicalOperator,
-)
-
+from app.dsl.parser import parse
 
 # =============================================================================
 # INSTRUCTION TESTS
 # =============================================================================
+
 
 class TestInstruction:
     """Tests for Instruction structure."""
@@ -81,6 +64,7 @@ class TestInstruction:
 # OPCODE TESTS
 # =============================================================================
 
+
 class TestOpCode:
     """Tests for closed instruction set."""
 
@@ -110,6 +94,7 @@ class TestOpCode:
 # =============================================================================
 # BASIC COMPILATION TESTS
 # =============================================================================
+
 
 class TestBasicCompilation:
     """Tests for basic compilation."""
@@ -176,6 +161,7 @@ class TestBasicCompilation:
 # =============================================================================
 # CONDITION COMPILATION TESTS
 # =============================================================================
+
 
 class TestConditionCompilation:
     """Tests for condition compilation."""
@@ -313,6 +299,7 @@ class TestConditionCompilation:
 # ACTION COMPILATION TESTS
 # =============================================================================
 
+
 class TestActionCompilation:
     """Tests for action compilation."""
 
@@ -398,6 +385,7 @@ class TestActionCompilation:
 # =============================================================================
 # DETERMINISM TESTS
 # =============================================================================
+
 
 class TestDeterminism:
     """Tests for IR determinism."""
@@ -506,6 +494,7 @@ class TestDeterminism:
 # SERIALIZATION TESTS
 # =============================================================================
 
+
 class TestSerialization:
     """Tests for IR serialization."""
 
@@ -590,6 +579,7 @@ class TestSerialization:
 # INSTRUCTION COUNT TESTS
 # =============================================================================
 
+
 class TestInstructionCount:
     """Tests for instruction counting."""
 
@@ -638,6 +628,7 @@ class TestInstructionCount:
 # =============================================================================
 # FULL POLICY TESTS
 # =============================================================================
+
 
 class TestFullPolicies:
     """Integration tests with full policies."""

@@ -371,9 +371,9 @@ def check_console_scope(name: str, config: dict, strict: bool = False) -> dict:
                 result["check_result"][f"console_{console}"] = f"DECLARED_{visibility}"
 
         result["check_result"]["console_scope"] = "DECLARATIVE_ONLY (Phase B)"
-        result["check_result"][
-            "note"
-        ] = "Runtime enforcement via subdomain+auth in Phase C"
+        result["check_result"]["note"] = (
+            "Runtime enforcement via subdomain+auth in Phase C"
+        )
         return result
 
     # Phase C: Runtime enforcement via subdomain + auth
@@ -410,9 +410,9 @@ def check_console_scope(name: str, config: dict, strict: bool = False) -> dict:
         topology = CONSOLE_TOPOLOGY.get(console, {})
         subdomain = topology.get("subdomain", "unknown")
         audience = topology.get("audience", "unknown")
-        result["check_result"][
-            f"console_{console}"
-        ] = f"FORBIDDEN (would check: Host={subdomain}, Audience={audience})"
+        result["check_result"][f"console_{console}"] = (
+            f"FORBIDDEN (would check: Host={subdomain}, Audience={audience})"
+        )
 
     return result
 
@@ -474,12 +474,12 @@ def check_discovery_presence(name: str, config: dict, phase: str = "B") -> dict:
         result["check_result"]["discovery_entries"] = count
 
         if count == 0:
-            result[
-                "warning"
-            ] = f"DPC: Artifact '{name}' has REQUIRED visibility but no discovery entry"
-            result["check_result"][
-                "discovery_presence"
-            ] = "WARNING (no discovery entry)"
+            result["warning"] = (
+                f"DPC: Artifact '{name}' has REQUIRED visibility but no discovery entry"
+            )
+            result["check_result"]["discovery_presence"] = (
+                "WARNING (no discovery entry)"
+            )
             # In Phase D, this would be a failure
             if phase == "D":
                 result["passed"] = False
@@ -554,18 +554,18 @@ def check_promotion_legitimacy(name: str, config: dict, phase: str = "B") -> dic
         conn.close()
 
         if row is None:
-            result[
-                "warning"
-            ] = f"PLC: Artifact '{name}' has visibility but no discovery entry"
-            result["check_result"][
-                "promotion_legitimacy"
-            ] = "WARNING (no discovery entry)"
+            result["warning"] = (
+                f"PLC: Artifact '{name}' has visibility but no discovery entry"
+            )
+            result["check_result"]["promotion_legitimacy"] = (
+                "WARNING (no discovery entry)"
+            )
             if phase == "D":
                 result["passed"] = False
         elif row[0] == "observed":
-            result[
-                "warning"
-            ] = f"PLC: Artifact '{name}' has visibility but status is still 'observed' (not promoted)"
+            result["warning"] = (
+                f"PLC: Artifact '{name}' has visibility but status is still 'observed' (not promoted)"
+            )
             result["check_result"]["promotion_legitimacy"] = "WARNING (status=observed)"
             if phase == "D":
                 result["passed"] = False

@@ -113,7 +113,7 @@ def simulate_with_risks(client: AOSClient, plan: list) -> dict:
         if risks:
             print(f"\nIdentified Risks ({len(risks)}):")
             for i, risk in enumerate(risks):
-                print(f"  {i+1}. {risk}")
+                print(f"  {i + 1}. {risk}")
         else:
             print("\nNo significant risks identified.")
 
@@ -126,7 +126,7 @@ def simulate_with_risks(client: AOSClient, plan: list) -> dict:
                 feasible = step.get("feasible", "unknown")
                 failure_modes = step.get("failure_modes", [])
 
-                print(f"\n  Step {i+1}: [{skill}] {desc}")
+                print(f"\n  Step {i + 1}: [{skill}] {desc}")
                 print(f"    Feasible: {feasible}")
                 if failure_modes:
                     print("    Potential Failures:")
@@ -196,7 +196,7 @@ def execute_with_retry(client: AOSClient, plan: list) -> dict:
             if outcome.get("retries"):
                 print(f"\n  Retry History ({len(outcome['retries'])} attempts):")
                 for i, retry in enumerate(outcome["retries"]):
-                    print(f"    Attempt {i+1}: {retry.get('status', 'unknown')}")
+                    print(f"    Attempt {i + 1}: {retry.get('status', 'unknown')}")
 
         return result
 
@@ -301,7 +301,7 @@ def main():
     plan = create_retry_plan()
     print(f"\nPlan has {len(plan)} steps with retry/fallback:")
     for i, step in enumerate(plan):
-        print(f"  {i+1}. {step.get('description', step['skill'])}")
+        print(f"  {i + 1}. {step.get('description', step['skill'])}")
         if step.get("fallback"):
             print(f"      Fallback: {step['fallback'].get('skill', 'unknown')}")
     print(f"  Plan hash: {hash_data(plan)}")

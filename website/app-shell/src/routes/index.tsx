@@ -58,6 +58,7 @@ const ActivityPage = lazy(() => import('@/pages/domains/DomainPage').then(m => (
 const IncidentsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.IncidentsPage })));
 const PoliciesPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.PoliciesPage })));
 const LogsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.LogsPage })));
+const PanelView = lazy(() => import('@/pages/panels/PanelView'));
 
 // =============================================================================
 // CUS: PRODUCTION CUSTOMER CONSOLE (/cus/*)
@@ -155,6 +156,10 @@ export function AppRoutes() {
          * CONSOLE 1: PRECUS - PREFLIGHT CUSTOMER (/precus/*)
          * L2.1 projection-driven UI
          * Layout: PreCusLayout
+         *
+         * Route Structure (Phase 3.2 - Projection-Driven):
+         *   /precus/:domain           → DomainPage (domain home)
+         *   /precus/:domain/:panelSlug → PanelView (panel execution surface)
          * =============================================================== */}
         <Route
           path="/precus"
@@ -165,16 +170,15 @@ export function AppRoutes() {
           }
         >
           <Route index element={<Navigate to="/precus/overview" replace />} />
+          {/* Domain home pages */}
           <Route path="overview" element={<OverviewPage />} />
-          <Route path="overview/*" element={<OverviewPage />} />
           <Route path="activity" element={<ActivityPage />} />
-          <Route path="activity/*" element={<ActivityPage />} />
           <Route path="incidents" element={<IncidentsPage />} />
-          <Route path="incidents/*" element={<IncidentsPage />} />
           <Route path="policies" element={<PoliciesPage />} />
-          <Route path="policies/*" element={<PoliciesPage />} />
           <Route path="logs" element={<LogsPage />} />
-          <Route path="logs/*" element={<LogsPage />} />
+          {/* Panel execution surfaces - :domain/:panelSlug */}
+          <Route path=":domain/:panelSlug" element={<PanelView />} />
+          {/* Credits page */}
           <Route path="credits" element={<CreditsPage />} />
           <Route path="*" element={<Navigate to="/precus/overview" replace />} />
         </Route>

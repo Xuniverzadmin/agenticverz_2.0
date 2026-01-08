@@ -29,13 +29,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal, Union
 
-
 # =============================================================================
 # ENUMERATIONS (Closed Sets)
 # =============================================================================
 
+
 class Scope(str, Enum):
     """Policy scope determines visibility boundaries."""
+
     ORG = "ORG"
     PROJECT = "PROJECT"
 
@@ -47,12 +48,14 @@ class Mode(str, Enum):
     MONITOR: Can only WARN, cannot BLOCK or REQUIRE_APPROVAL
     ENFORCE: Can WARN, BLOCK, or REQUIRE_APPROVAL
     """
+
     MONITOR = "MONITOR"
     ENFORCE = "ENFORCE"
 
 
 class Comparator(str, Enum):
     """Comparison operators for predicates."""
+
     GT = ">"
     GTE = ">="
     LT = "<"
@@ -63,6 +66,7 @@ class Comparator(str, Enum):
 
 class LogicalOperator(str, Enum):
     """Logical operators for compound conditions."""
+
     AND = "AND"
     OR = "OR"
 
@@ -71,12 +75,14 @@ class LogicalOperator(str, Enum):
 # ACTION NODES (Immutable)
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class WarnAction:
     """
     Emit a warning message.
     Allowed in both MONITOR and ENFORCE modes.
     """
+
     message: str
     type: Literal["WARN"] = field(default="WARN", repr=False)
 
@@ -90,6 +96,7 @@ class BlockAction:
     Block execution.
     ONLY allowed in ENFORCE mode (validated by validator.py).
     """
+
     type: Literal["BLOCK"] = field(default="BLOCK", repr=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -102,6 +109,7 @@ class RequireApprovalAction:
     Require human approval before proceeding.
     ONLY allowed in ENFORCE mode (validated by validator.py).
     """
+
     type: Literal["REQUIRE_APPROVAL"] = field(default="REQUIRE_APPROVAL", repr=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -116,6 +124,7 @@ Action = Union[WarnAction, BlockAction, RequireApprovalAction]
 # CONDITION NODES (Immutable)
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class Predicate:
     """
@@ -123,6 +132,7 @@ class Predicate:
 
     Example: cost_per_hour > 200
     """
+
     metric: str
     comparator: Comparator
     value: Union[int, float, str, bool]
@@ -143,6 +153,7 @@ class ExistsPredicate:
 
     Example: exists(anomaly_flag)
     """
+
     metric: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -159,6 +170,7 @@ class LogicalCondition:
 
     Example: cost_per_hour > 200 AND error_rate > 0.1
     """
+
     left: Condition
     operator: LogicalOperator
     right: Condition
@@ -180,6 +192,7 @@ Condition = Union[Predicate, ExistsPredicate, LogicalCondition]
 # CLAUSE NODE (Immutable)
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class Clause:
     """
@@ -189,6 +202,7 @@ class Clause:
         when <condition>
         then <action>+
     """
+
     when: Condition
     then: tuple[Action, ...]  # Tuple for immutability
 
@@ -208,6 +222,7 @@ class Clause:
 # METADATA NODE (Immutable)
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class PolicyMetadata:
     """
@@ -219,6 +234,7 @@ class PolicyMetadata:
     - scope: ORG or PROJECT
     - mode: MONITOR or ENFORCE
     """
+
     name: str
     version: int
     scope: Scope
@@ -245,6 +261,7 @@ class PolicyMetadata:
 # POLICY AST ROOT (Immutable)
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class PolicyAST:
     """
@@ -264,6 +281,7 @@ class PolicyAST:
     SERIALIZATION: Use to_dict() or to_json() for serialization.
     HASHING: Use compute_hash() for deterministic content hash.
     """
+
     metadata: PolicyMetadata
     clauses: tuple[Clause, ...]  # Tuple for immutability
 
@@ -320,6 +338,7 @@ class PolicyAST:
 # =============================================================================
 # TYPE GUARDS (for runtime type checking)
 # =============================================================================
+
 
 def is_predicate(condition: Condition) -> bool:
     """Check if condition is a simple predicate."""

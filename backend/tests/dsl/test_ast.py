@@ -16,31 +16,31 @@ COVERAGE:
 import pytest
 
 from app.dsl.ast import (
-    PolicyAST,
-    PolicyMetadata,
+    BlockAction,
     Clause,
-    Predicate,
+    Comparator,
     ExistsPredicate,
     LogicalCondition,
-    WarnAction,
-    BlockAction,
+    LogicalOperator,
+    Mode,
+    PolicyAST,
+    PolicyMetadata,
+    Predicate,
     RequireApprovalAction,
     Scope,
-    Mode,
-    Comparator,
-    LogicalOperator,
-    is_predicate,
+    WarnAction,
+    is_block_action,
     is_exists_predicate,
     is_logical_condition,
-    is_warn_action,
-    is_block_action,
+    is_predicate,
     is_require_approval_action,
+    is_warn_action,
 )
-
 
 # =============================================================================
 # METADATA TESTS
 # =============================================================================
+
 
 class TestPolicyMetadata:
     """Tests for PolicyMetadata node."""
@@ -110,6 +110,7 @@ class TestPolicyMetadata:
 # ACTION TESTS
 # =============================================================================
 
+
 class TestActions:
     """Tests for action nodes."""
 
@@ -145,6 +146,7 @@ class TestActions:
 # =============================================================================
 # CONDITION TESTS
 # =============================================================================
+
 
 class TestConditions:
     """Tests for condition nodes."""
@@ -235,6 +237,7 @@ class TestConditions:
 # CLAUSE TESTS
 # =============================================================================
 
+
 class TestClause:
     """Tests for Clause node."""
 
@@ -281,6 +284,7 @@ class TestClause:
 # =============================================================================
 # POLICY AST TESTS
 # =============================================================================
+
 
 class TestPolicyAST:
     """Tests for PolicyAST root node."""
@@ -396,6 +400,7 @@ class TestPolicyAST:
 # TYPE GUARD TESTS
 # =============================================================================
 
+
 class TestTypeGuards:
     """Tests for type guard functions."""
 
@@ -445,6 +450,7 @@ class TestTypeGuards:
 # =============================================================================
 # COMPARATOR TESTS
 # =============================================================================
+
 
 class TestComparators:
     """Tests for all comparator types."""

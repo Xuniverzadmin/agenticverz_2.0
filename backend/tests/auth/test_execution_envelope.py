@@ -27,10 +27,6 @@ CONSTRAINTS:
 """
 
 import json
-import uuid
-from datetime import datetime, timezone
-
-import pytest
 
 from app.auth.execution_envelope import (
     CallerType,
@@ -41,7 +37,6 @@ from app.auth.execution_envelope import (
     compute_plan_hash,
     detect_plan_mutation,
     emit_envelope,
-    get_evidence_sink,
     set_evidence_sink,
 )
 from app.auth.invocation_context import (
@@ -50,7 +45,6 @@ from app.auth.invocation_context import (
     invocation_context,
     tag_with_invocation,
 )
-
 
 # =============================================================================
 # PHASE 6.1: CONTROLLED TEST RUNS

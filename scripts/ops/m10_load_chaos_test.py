@@ -214,7 +214,7 @@ def create_test_events(
             sql = f"""
                 INSERT INTO m10_recovery.outbox
                 (aggregate_type, aggregate_id, event_type, payload)
-                VALUES {', '.join(values)}
+                VALUES {", ".join(values)}
             """
             session.execute(text(sql))
 

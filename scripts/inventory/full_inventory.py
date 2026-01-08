@@ -453,13 +453,13 @@ def print_summary(inventory):
     print()
     print(f"Total Files Scanned: {stats['total_files']}")
     print(
-        f"  Executable (CODE/TEST):  {stats['executable']} ({100*stats['executable']/total:.1f}%)"
+        f"  Executable (CODE/TEST):  {stats['executable']} ({100 * stats['executable'] / total:.1f}%)"
     )
     print(
-        f"  Non-Executable:          {stats['non_executable']} ({100*stats['non_executable']/total:.1f}%)"
+        f"  Non-Executable:          {stats['non_executable']} ({100 * stats['non_executable'] / total:.1f}%)"
     )
     print(
-        f"  With Headers:            {stats['with_headers']} ({100*stats['with_headers']/total:.1f}%)"
+        f"  With Headers:            {stats['with_headers']} ({100 * stats['with_headers'] / total:.1f}%)"
     )
     print()
 

@@ -230,9 +230,9 @@ class SyntheticStabilityRunner:
 
         # Check if second would be allowed
         result2 = self.coordinator.check_allowed(env2)
-        assert (
-            not result2.allowed
-        ), "Second envelope should be rejected (same parameter)"
+        assert not result2.allowed, (
+            "Second envelope should be rejected (same parameter)"
+        )
         assert result2.decision == CoordinationDecisionType.REJECTED
 
         # Revert first
@@ -286,9 +286,9 @@ class SyntheticStabilityRunner:
         # Verify priority order is correct
         low_priority = get_envelope_priority(EnvelopeClass.COST)
         high_priority = get_envelope_priority(EnvelopeClass.RELIABILITY)
-        assert (
-            high_priority < low_priority
-        ), "RELIABILITY should have higher priority than COST"
+        assert high_priority < low_priority, (
+            "RELIABILITY should have higher priority than COST"
+        )
 
         # Cleanup
         self.coordinator.revert(env_low.envelope_id, RevertReason.TIMEBOX_EXPIRED)
@@ -637,12 +637,12 @@ SYNTHETIC_STABILITY_DECLARATION
 - total_coordination_cycles: {evidence.total_cycles}
 - runtime_sessions: {evidence.sessions}
 - entropy_sources_injected:
-  - overlapping_envelopes: {evidence.entropy_counts['overlapping_envelopes']}
-  - priority_preemptions: {evidence.entropy_counts['priority_preemptions']}
-  - same_parameter_rejections: {evidence.entropy_counts['same_parameter_rejections']}
-  - backend_restarts: {evidence.entropy_counts['backend_restarts']}
-  - killswitch_dryruns: {evidence.entropy_counts['killswitch_dryruns']}
-  - replay_verifications: {evidence.entropy_counts['replay_verifications']}
+  - overlapping_envelopes: {evidence.entropy_counts["overlapping_envelopes"]}
+  - priority_preemptions: {evidence.entropy_counts["priority_preemptions"]}
+  - same_parameter_rejections: {evidence.entropy_counts["same_parameter_rejections"]}
+  - backend_restarts: {evidence.entropy_counts["backend_restarts"]}
+  - killswitch_dryruns: {evidence.entropy_counts["killswitch_dryruns"]}
+  - replay_verifications: {evidence.entropy_counts["replay_verifications"]}
 - emergency_killswitch_activations: {evidence.emergency_killswitch_activations}
 - replay_determinism: VERIFIED
 - ci_guardrails: 100% passing

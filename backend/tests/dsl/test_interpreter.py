@@ -19,24 +19,22 @@ COVERAGE:
 
 import pytest
 
-from app.dsl.parser import parse
-from app.dsl.ir_compiler import compile_policy
 from app.dsl.interpreter import (
+    ActionResult,
+    ClauseResult,
+    EvaluationResult,
+    MissingMetricError,
+    TypeMismatchError,
     evaluate,
     evaluate_policy,
-    Interpreter,
-    EvaluationResult,
-    ClauseResult,
-    ActionResult,
-    EvaluationError,
-    TypeMismatchError,
-    MissingMetricError,
 )
-
+from app.dsl.ir_compiler import compile_policy
+from app.dsl.parser import parse
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def compile_and_evaluate(source: str, facts: dict) -> EvaluationResult:
     """Helper to parse, compile, and evaluate a policy."""
@@ -48,6 +46,7 @@ def compile_and_evaluate(source: str, facts: dict) -> EvaluationResult:
 # =============================================================================
 # RESULT STRUCTURE TESTS
 # =============================================================================
+
 
 class TestResultStructure:
     """Tests for result data structures."""
@@ -107,6 +106,7 @@ class TestResultStructure:
 # BASIC EVALUATION TESTS
 # =============================================================================
 
+
 class TestBasicEvaluation:
     """Tests for basic evaluation."""
 
@@ -122,7 +122,7 @@ class TestBasicEvaluation:
             when cost > 100
             then WARN "High cost"
             """,
-            {"cost": 150}
+            {"cost": 150},
         )
 
         assert result.any_matched
@@ -142,7 +142,7 @@ class TestBasicEvaluation:
             when cost > 100
             then WARN "High cost"
             """,
-            {"cost": 50}
+            {"cost": 50},
         )
 
         assert not result.any_matched
@@ -160,7 +160,7 @@ class TestBasicEvaluation:
             when cost > 100
             then WARN "Alert"
             """,
-            {"cost": 100}  # Exactly 100, should NOT match
+            {"cost": 100},  # Exactly 100, should NOT match
         )
         assert not result.any_matched
 
@@ -176,7 +176,7 @@ class TestBasicEvaluation:
             when cost >= 100
             then WARN "Alert"
             """,
-            {"cost": 100}  # Exactly 100, should match
+            {"cost": 100},  # Exactly 100, should match
         )
         assert result.any_matched
 
@@ -185,27 +185,31 @@ class TestBasicEvaluation:
 # COMPARATOR TESTS
 # =============================================================================
 
+
 class TestComparators:
     """Tests for all comparator types."""
 
-    @pytest.mark.parametrize("op,value,expected", [
-        (">", 101, True),
-        (">", 100, False),
-        (">", 99, False),
-        (">=", 101, True),
-        (">=", 100, True),
-        (">=", 99, False),
-        ("<", 99, True),
-        ("<", 100, False),
-        ("<", 101, False),
-        ("<=", 99, True),
-        ("<=", 100, True),
-        ("<=", 101, False),
-        ("==", 100, True),
-        ("==", 99, False),
-        ("!=", 99, True),
-        ("!=", 100, False),
-    ])
+    @pytest.mark.parametrize(
+        "op,value,expected",
+        [
+            (">", 101, True),
+            (">", 100, False),
+            (">", 99, False),
+            (">=", 101, True),
+            (">=", 100, True),
+            (">=", 99, False),
+            ("<", 99, True),
+            ("<", 100, False),
+            ("<", 101, False),
+            ("<=", 99, True),
+            ("<=", 100, True),
+            ("<=", 101, False),
+            ("==", 100, True),
+            ("==", 99, False),
+            ("!=", 99, True),
+            ("!=", 100, False),
+        ],
+    )
     def test_numeric_comparisons(self, op: str, value: int, expected: bool) -> None:
         """Test all numeric comparisons."""
         result = compile_and_evaluate(
@@ -218,7 +222,7 @@ class TestComparators:
             when x {op} 100
             then WARN "Match"
             """,
-            {"x": value}
+            {"x": value},
         )
         assert result.any_matched == expected
 
@@ -234,7 +238,7 @@ class TestComparators:
             when rate > 0.05
             then WARN "High rate"
             """,
-            {"rate": 0.1}
+            {"rate": 0.1},
         )
         assert result.any_matched
 
@@ -250,7 +254,7 @@ class TestComparators:
             when status == "error"
             then WARN "Error status"
             """,
-            {"status": "error"}
+            {"status": "error"},
         )
         assert result.any_matched
 
@@ -266,7 +270,7 @@ class TestComparators:
             when flag == true
             then WARN "Flag set"
             """,
-            {"flag": True}
+            {"flag": True},
         )
         assert result.any_matched
 
@@ -274,6 +278,7 @@ class TestComparators:
 # =============================================================================
 # LOGICAL OPERATOR TESTS
 # =============================================================================
+
 
 class TestLogicalOperators:
     """Tests for AND/OR operators."""
@@ -290,7 +295,7 @@ class TestLogicalOperators:
             when a > 0 AND b > 0
             then WARN "Both positive"
             """,
-            {"a": 10, "b": 20}
+            {"a": 10, "b": 20},
         )
         assert result.any_matched
 
@@ -306,7 +311,7 @@ class TestLogicalOperators:
             when a > 0 AND b > 0
             then WARN "Both positive"
             """,
-            {"a": -5, "b": 20}
+            {"a": -5, "b": 20},
         )
         assert not result.any_matched
 
@@ -322,7 +327,7 @@ class TestLogicalOperators:
             when a > 0 AND b > 0
             then WARN "Both positive"
             """,
-            {"a": 10, "b": -5}
+            {"a": 10, "b": -5},
         )
         assert not result.any_matched
 
@@ -338,7 +343,7 @@ class TestLogicalOperators:
             when a > 0 OR b > 0
             then WARN "At least one positive"
             """,
-            {"a": 10, "b": 20}
+            {"a": 10, "b": 20},
         )
         assert result.any_matched
 
@@ -354,7 +359,7 @@ class TestLogicalOperators:
             when a > 0 OR b > 0
             then WARN "At least one positive"
             """,
-            {"a": 10, "b": -5}
+            {"a": 10, "b": -5},
         )
         assert result.any_matched
 
@@ -370,7 +375,7 @@ class TestLogicalOperators:
             when a > 0 OR b > 0
             then WARN "At least one positive"
             """,
-            {"a": -5, "b": 20}
+            {"a": -5, "b": 20},
         )
         assert result.any_matched
 
@@ -386,7 +391,7 @@ class TestLogicalOperators:
             when a > 0 OR b > 0
             then WARN "At least one positive"
             """,
-            {"a": -5, "b": -10}
+            {"a": -5, "b": -10},
         )
         assert not result.any_matched
 
@@ -403,7 +408,7 @@ class TestLogicalOperators:
             when (a > 0 AND b > 0) OR c > 0
             then WARN "Complex match"
             """,
-            {"a": -5, "b": -5, "c": 10}  # Only c matches
+            {"a": -5, "b": -5, "c": 10},  # Only c matches
         )
         assert result.any_matched
 
@@ -411,6 +416,7 @@ class TestLogicalOperators:
 # =============================================================================
 # EXISTS PREDICATE TESTS
 # =============================================================================
+
 
 class TestExistsPredicate:
     """Tests for exists predicate."""
@@ -427,7 +433,7 @@ class TestExistsPredicate:
             when exists(flag)
             then WARN "Flag exists"
             """,
-            {"flag": True}
+            {"flag": True},
         )
         assert result.any_matched
 
@@ -443,7 +449,7 @@ class TestExistsPredicate:
             when exists(flag)
             then WARN "Flag exists"
             """,
-            {"other_metric": 123}
+            {"other_metric": 123},
         )
         assert not result.any_matched
 
@@ -459,7 +465,7 @@ class TestExistsPredicate:
             when exists(flag)
             then WARN "Flag exists"
             """,
-            {"flag": None}  # Metric exists, even if value is None
+            {"flag": None},  # Metric exists, even if value is None
         )
         assert result.any_matched
 
@@ -475,7 +481,7 @@ class TestExistsPredicate:
             when exists(anomaly) AND severity > 5
             then WARN "Anomaly detected"
             """,
-            {"anomaly": True, "severity": 8}
+            {"anomaly": True, "severity": 8},
         )
         assert result.any_matched
 
@@ -483,6 +489,7 @@ class TestExistsPredicate:
 # =============================================================================
 # ACTION TESTS
 # =============================================================================
+
 
 class TestActions:
     """Tests for all action types."""
@@ -499,7 +506,7 @@ class TestActions:
             when x > 0
             then WARN "Warning message"
             """,
-            {"x": 10}
+            {"x": 10},
         )
 
         assert len(result.all_actions) == 1
@@ -518,7 +525,7 @@ class TestActions:
             when x > 0
             then BLOCK
             """,
-            {"x": 10}
+            {"x": 10},
         )
 
         assert len(result.all_actions) == 1
@@ -537,7 +544,7 @@ class TestActions:
             when x > 0
             then REQUIRE_APPROVAL
             """,
-            {"x": 10}
+            {"x": 10},
         )
 
         assert len(result.all_actions) == 1
@@ -556,7 +563,7 @@ class TestActions:
             when x > 0
             then WARN "Alert" BLOCK REQUIRE_APPROVAL
             """,
-            {"x": 10}
+            {"x": 10},
         )
 
         assert len(result.all_actions) == 3
@@ -567,6 +574,7 @@ class TestActions:
 # =============================================================================
 # MULTIPLE CLAUSES TESTS
 # =============================================================================
+
 
 class TestMultipleClauses:
     """Tests for policies with multiple clauses."""
@@ -586,7 +594,7 @@ class TestMultipleClauses:
             when b > 0
             then WARN "B positive"
             """,
-            {"a": 10, "b": 20}
+            {"a": 10, "b": 20},
         )
 
         assert result.any_matched
@@ -609,7 +617,7 @@ class TestMultipleClauses:
             when b > 0
             then WARN "B positive"
             """,
-            {"a": 10, "b": -5}
+            {"a": 10, "b": -5},
         )
 
         assert result.any_matched
@@ -632,7 +640,7 @@ class TestMultipleClauses:
             when b > 0
             then WARN "B positive"
             """,
-            {"a": -5, "b": -10}
+            {"a": -5, "b": -10},
         )
 
         assert not result.any_matched
@@ -642,6 +650,7 @@ class TestMultipleClauses:
 # =============================================================================
 # ERROR HANDLING TESTS
 # =============================================================================
+
 
 class TestErrorHandling:
     """Tests for error conditions."""
@@ -700,6 +709,7 @@ class TestErrorHandling:
 # =============================================================================
 # LENIENT MODE TESTS
 # =============================================================================
+
 
 class TestLenientMode:
     """Tests for lenient (non-strict) evaluation."""
@@ -760,6 +770,7 @@ class TestLenientMode:
 # FULL POLICY TESTS
 # =============================================================================
 
+
 class TestFullPolicies:
     """Integration tests with realistic policies."""
 
@@ -781,7 +792,7 @@ class TestFullPolicies:
             when total_cost > 10000 AND error_rate > 0.01
             then WARN "High cost with errors" REQUIRE_APPROVAL
             """,
-            {"cost_per_hour": 600, "total_cost": 15000, "error_rate": 0.05}
+            {"cost_per_hour": 600, "total_cost": 15000, "error_rate": 0.05},
         )
 
         # All three clauses should match
@@ -812,7 +823,7 @@ class TestFullPolicies:
             when safety_score >= 0.8 AND safety_score < 0.9
             then WARN "Safety score is borderline"
             """,
-            {"safety_score": 0.85, "anomaly_flag": True}
+            {"safety_score": 0.85, "anomaly_flag": True},
         )
 
         # First clause: 0.85 < 0.8 is FALSE

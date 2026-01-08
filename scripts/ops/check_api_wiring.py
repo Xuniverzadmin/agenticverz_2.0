@@ -94,7 +94,7 @@ def check_response_models(api_dir: Path) -> List[WiringIssue]:
                             issues.append(
                                 WiringIssue(
                                     category="response_model",
-                                    file=f"{filepath.name}:{i+1}",
+                                    file=f"{filepath.name}:{i + 1}",
                                     message=f"Endpoint '{func_name}' missing response_model",
                                     severity="warning",
                                 )

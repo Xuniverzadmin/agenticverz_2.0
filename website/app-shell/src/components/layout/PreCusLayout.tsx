@@ -1,5 +1,5 @@
 /**
- * PreCusLayout — Preflight Customer Console Layout
+ * PreCusLayout — Preflight Customer Console Layout (INSPECTOR MODE)
  *
  * Layer: L1 — Product Experience (UI)
  * Product: customer-console (preflight)
@@ -7,7 +7,12 @@
  *   Trigger: render
  *   Execution: sync
  * Role: Layout shell for /precus/* routes with L2.1 projection sidebar
- * Reference: PIN-352, Routing Authority Model
+ * Reference: PIN-352, PIN-356, Routing Authority Model
+ *
+ * VIEW MODE: INSPECTOR
+ * - Full metadata visibility for developer triage
+ * - Shows panel IDs, topic IDs, permissions, control types
+ * - This is the "Projection Inspector Renderer" - not customer-facing
  *
  * INVARIANTS:
  * - This layout is ONLY for /precus/* routes (preflight customer console)
@@ -29,6 +34,8 @@ import { ProjectionSidebar } from './ProjectionSidebar';
 import { StatusBar } from './StatusBar';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
+import { RendererProvider, INSPECTOR_MODE } from '@/contexts/RendererContext';
+import { ProjectProvider } from '@/contexts/ProjectContext';
 
 /**
  * PreCusLayout — Preflight Customer Console Layout
@@ -40,22 +47,26 @@ export function PreCusLayout() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900">
-      <Header />
-      <div className="flex flex-1 overflow-hidden">
-        {/* L2.1 Projection Sidebar - always used in PreCusLayout */}
-        <ProjectionSidebar collapsed={sidebarCollapsed} />
-        <main
-          className={cn(
-            'flex-1 overflow-auto p-6 transition-all duration-200',
-            sidebarCollapsed ? 'ml-16' : 'ml-60'
-          )}
-        >
-          <Outlet />
-        </main>
-      </div>
-      <StatusBar />
-    </div>
+    <ProjectProvider>
+      <RendererProvider value={INSPECTOR_MODE}>
+        <div className="flex flex-col h-screen bg-gray-900">
+          <Header />
+          <div className="flex flex-1 overflow-hidden">
+            {/* L2.1 Projection Sidebar - always used in PreCusLayout */}
+            <ProjectionSidebar collapsed={sidebarCollapsed} />
+            <main
+              className={cn(
+                'flex-1 overflow-auto p-6 transition-all duration-200',
+                sidebarCollapsed ? 'ml-16' : 'ml-60'
+              )}
+            >
+              <Outlet />
+            </main>
+          </div>
+          <StatusBar />
+        </div>
+      </RendererProvider>
+    </ProjectProvider>
   );
 }
 

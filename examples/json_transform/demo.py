@@ -84,7 +84,7 @@ def simulate_transform(client: AOSClient, plan: list) -> dict:
             for i, step in enumerate(result["step_simulations"]):
                 skill = plan[i].get("skill", "unknown")
                 desc = plan[i].get("description", "")
-                print(f"  {i+1}. [{skill}] {desc}")
+                print(f"  {i + 1}. [{skill}] {desc}")
                 print(f"      Feasible: {step.get('feasible', 'unknown')}")
 
         return result
@@ -218,7 +218,7 @@ def main():
 
     print("\nTransform Plan:")
     for i, step in enumerate(plan):
-        print(f"  {i+1}. {step.get('description', step['skill'])}")
+        print(f"  {i + 1}. {step.get('description', step['skill'])}")
     print(f"  Plan hash: {hash_data(plan)}")
 
     # Create trace for recording

@@ -606,9 +606,9 @@ def capture_evidence_trail(
         and not completeness["has_prevention"]
     ):
         evidence_bundle["status"] = "WAITING_FOR_PREVENTION"
-        evidence_bundle[
-            "message"
-        ] = "Incident processed, recovery applied, awaiting prevention event."
+        evidence_bundle["message"] = (
+            "Incident processed, recovery applied, awaiting prevention event."
+        )
     elif not completeness["has_incident"]:
         evidence_bundle["status"] = "INVALID"
         evidence_bundle["message"] = "Source incident not found."

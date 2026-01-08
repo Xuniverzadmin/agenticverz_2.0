@@ -166,12 +166,14 @@ def get_capabilities_eligibility(
             # Blocked if: system-wide block, capability-specific block, or KILLSWITCH_STATUS
             is_blocked = system_blocked or cap_name in blocked_scopes or cap_name == "KILLSWITCH_STATUS"
 
-            capabilities.append({
-                "name": cap_name,
-                "domain": domain,
-                "is_eligible": not is_blocked,
-                "state": "BLOCKED" if is_blocked else "HEALTHY",
-            })
+            capabilities.append(
+                {
+                    "name": cap_name,
+                    "domain": domain,
+                    "is_eligible": not is_blocked,
+                    "state": "BLOCKED" if is_blocked else "HEALTHY",
+                }
+            )
 
             if is_blocked:
                 blocked_count += 1
@@ -243,11 +245,13 @@ def get_domain_health(
     for cap_name in DOMAIN_CAPABILITIES[domain]:
         is_blocked = system_blocked or cap_name in blocked_scopes or cap_name == "KILLSWITCH_STATUS"
 
-        capabilities.append({
-            "name": cap_name,
-            "is_eligible": not is_blocked,
-            "state": "BLOCKED" if is_blocked else "HEALTHY",
-        })
+        capabilities.append(
+            {
+                "name": cap_name,
+                "is_eligible": not is_blocked,
+                "state": "BLOCKED" if is_blocked else "HEALTHY",
+            }
+        )
 
         if is_blocked:
             blocked_count += 1
@@ -326,7 +330,7 @@ def get_capability_health(
             ORDER BY recorded_at DESC
             LIMIT 5
         """),
-        {"cap_name": cap_name}
+        {"cap_name": cap_name},
     ).fetchall()
 
     reasons = []
@@ -339,22 +343,26 @@ def get_capability_health(
             is_blocked = True
         elif decision == "WARN":
             is_degraded = True
-        reasons.append({
-            "signal_type": signal_type,
-            "decision": decision,
-            "reason": reason or f"Signal from {recorded_by}",
-            "recorded_at": recorded_at.isoformat() if recorded_at else None,
-        })
+        reasons.append(
+            {
+                "signal_type": signal_type,
+                "decision": decision,
+                "reason": reason or f"Signal from {recorded_by}",
+                "recorded_at": recorded_at.isoformat() if recorded_at else None,
+            }
+        )
 
     # Check hardcoded disqualified
     if cap_name == "KILLSWITCH_STATUS":
         is_blocked = True
-        reasons.append({
-            "signal_type": "QUALIFIER_STATUS",
-            "decision": "DISQUALIFIED",
-            "reason": "Hardcoded disqualification per CAPABILITY_LIFECYCLE.yaml",
-            "recorded_at": None,
-        })
+        reasons.append(
+            {
+                "signal_type": "QUALIFIER_STATUS",
+                "decision": "DISQUALIFIED",
+                "reason": "Hardcoded disqualification per CAPABILITY_LIFECYCLE.yaml",
+                "recorded_at": None,
+            }
+        )
 
     # Determine state
     if is_blocked:
@@ -429,7 +437,7 @@ def check_capability_eligibility(
             AND superseded_at IS NULL
             AND (expires_at IS NULL OR expires_at > NOW())
         """),
-        {"cap_name": cap_name}
+        {"cap_name": cap_name},
     ).scalar()
 
     is_blocked = (blocked_result or 0) > 0
@@ -447,5 +455,3 @@ def check_capability_eligibility(
         "state": state,
         "checked_at": datetime.now(timezone.utc).isoformat(),
     }
-
-

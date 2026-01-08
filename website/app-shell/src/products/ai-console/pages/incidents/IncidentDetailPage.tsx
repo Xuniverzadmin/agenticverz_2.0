@@ -29,6 +29,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { guardApi, DecisionTimelineResponse, ReplayResult } from '@/api/guard';
+import { CUSTOMER_ROUTES } from '@/routing';
 import { DecisionTimeline } from './DecisionTimeline';
 import { CanonicalBreadcrumb } from '@/components/navigation/CanonicalBreadcrumb';
 import { truncateValue } from '@/utils/truncateValue';
@@ -256,13 +257,14 @@ export default function IncidentDetailPage() {
   const severity = isCritical ? 'critical' : failedPolicies.length > 0 ? 'high' : 'medium';
   const severityConfig = SEVERITY_CONFIG[severity];
 
+  // PIN-352: Uses routing authority for navigation
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 p-6">
         <div className="max-w-4xl mx-auto">
           <CanonicalBreadcrumb
-            root={{ label: 'Incidents', path: '/guard/incidents' }}
-            entity={{ label: incidentId || '', id: incidentId, path: `/guard/incidents/${incidentId}` }}
+            root={{ label: 'Incidents', path: CUSTOMER_ROUTES.incidents }}
+            entity={{ label: incidentId || '', id: incidentId, path: CUSTOMER_ROUTES.incidentDetail(incidentId || '') }}
           />
           <div className="flex items-center justify-center h-64">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -277,15 +279,15 @@ export default function IncidentDetailPage() {
       <div className="min-h-screen bg-slate-900 p-6">
         <div className="max-w-4xl mx-auto">
           <CanonicalBreadcrumb
-            root={{ label: 'Incidents', path: '/guard/incidents' }}
-            entity={{ label: incidentId || '', id: incidentId, path: `/guard/incidents/${incidentId}` }}
+            root={{ label: 'Incidents', path: CUSTOMER_ROUTES.incidents }}
+            entity={{ label: incidentId || '', id: incidentId, path: CUSTOMER_ROUTES.incidentDetail(incidentId || '') }}
           />
           <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 text-center">
             <AlertTriangle className="w-12 h-12 text-slate-600 mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-white mb-2">Incident Not Found</h2>
             <p className="text-slate-400 mb-4">The requested incident could not be loaded.</p>
             <button
-              onClick={() => navigate('/guard/incidents')}
+              onClick={() => navigate(CUSTOMER_ROUTES.incidents)}
               className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-white text-sm"
             >
               Back to Incidents
@@ -300,9 +302,10 @@ export default function IncidentDetailPage() {
     <div className="min-h-screen bg-slate-900 p-6">
       <div className="max-w-4xl mx-auto">
         {/* V-003 Fix: Using CanonicalBreadcrumb (INV-5) */}
+        {/* PIN-352: Uses routing authority for paths */}
         <CanonicalBreadcrumb
-          root={{ label: 'Incidents', path: '/guard/incidents' }}
-          entity={{ label: timeline.incident_id, id: timeline.incident_id, path: `/guard/incidents/${timeline.incident_id}` }}
+          root={{ label: 'Incidents', path: CUSTOMER_ROUTES.incidents }}
+          entity={{ label: timeline.incident_id, id: timeline.incident_id, path: CUSTOMER_ROUTES.incidentDetail(timeline.incident_id) }}
         />
 
         {/* Header */}
@@ -310,7 +313,7 @@ export default function IncidentDetailPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <button
-                onClick={() => navigate('/guard/incidents')}
+                onClick={() => navigate(CUSTOMER_ROUTES.incidents)}
                 className="p-1 hover:bg-slate-800 rounded"
               >
                 <ArrowLeft className="w-5 h-5 text-slate-400" />

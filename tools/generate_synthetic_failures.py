@@ -407,7 +407,7 @@ def main():
 
     for i, failure in enumerate(failures):
         if (i + 1) % args.batch_size == 0:
-            logger.info(f"Progress: {i+1}/{len(failures)}")
+            logger.info(f"Progress: {i + 1}/{len(failures)}")
 
         record_id = persist_failure(failure)
         if record_id:

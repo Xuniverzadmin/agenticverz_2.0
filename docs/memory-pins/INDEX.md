@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-07 (PIN-352 L2.1 UI Projection Pipeline & Preflight Console - Updates)
+**Last Updated:** 2026-01-08 (PIN-359 Sidebar & Workspace Realignment - Wireframe Compliance)
 
 ---
 
@@ -357,6 +357,10 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-349](PIN-349-l21-ui-contract-v1-generation.md) | **L2.1 UI Contract v1 Generation** | Customer Console / L2.1 Orchestration | **✅ COMPLETE** | 2026-01-07 |
 | [PIN-350](PIN-350-l2-governed-pipeline-with-approval-gate.md) | **L2 Governed Pipeline with Approval Gate** | Customer Console / L2.1 Orchestration | **✅ COMPLETE** | 2026-01-07 |
 | [PIN-351](PIN-351-console-deployment---consoleagenticverzcom.md) | **Console Deployment - console.agenticverz.com** | Infrastructure / Deployment | **✅ COMPLETE** | 2026-01-07 |
+| [PIN-356](PIN-356-l21-ui-projection-pipeline-and-preflight-auth.md) | **L2.1 UI Projection Pipeline and Preflight Auth** | Frontend / Architecture | **✅ COMPLETE** | 2026-01-08 |
+| [PIN-357](PIN-357-view-mode-layer-architecture-renderercontext.md) | **View Mode Layer Architecture (RendererContext)** | Frontend / Architecture | **✅ COMPLETE** | 2026-01-08 |
+| [PIN-358](PIN-358-precus-gap-closure-task-tracker.md) | **PreCus Gap Closure Task Tracker** | Frontend / Implementation | **🏗️ IN_PROGRESS** | 2026-01-08 |
+| [PIN-359](PIN-359-sidebar-workspace-realignment---wireframe-compliance.md) | **Sidebar & Workspace Realignment - Wireframe Compliance** | Frontend / UI Governance | **✅ COMPLETE** | 2026-01-08 |
 
 ---
 
@@ -1126,6 +1130,11 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-08 | **PIN-359 Sidebar & Workspace Realignment - Wireframe Compliance** - Created via memory_trail. |
+| 2026-01-08 | **PIN-358 PreCus Gap Closure Task Tracker** - Created via memory_trail. |
+| 2026-01-08 | **PIN-357 View Mode Layer Architecture (RendererContext)** - Created via memory_trail. |
+| 2026-01-08 | **PIN-356 L2.1 UI Projection Pipeline and Preflight Auth** - Updated: Updates |
+| 2026-01-08 | **PIN-356 L2.1 UI Projection Pipeline and Preflight Auth** - Created via memory_trail. |
 | 2026-01-07 | **PIN-352 L2.1 UI Projection Pipeline & Preflight Console** - Updated: Updates |
 | 2026-01-07 | **PIN-352 L2.1 UI Projection Pipeline & Preflight Console** - Updated: Updates |
 | 2026-01-07 | **PIN-351 Console Deployment - console.agenticverz.com** - Updated: Updates |

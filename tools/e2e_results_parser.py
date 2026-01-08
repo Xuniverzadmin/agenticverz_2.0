@@ -16,6 +16,7 @@ Supports:
 - JUnit XML format
 - Custom AOS E2E harness output
 """
+
 import os
 import sys
 import json
@@ -425,12 +426,12 @@ def main():
         s = summary["summary"]
         output = f"""E2E Test Results
 ================
-Total:      {s['total']}
-Passed:     {s['passed']}
-Failed:     {s['failed']}
-Skipped:    {s['skipped']}
-Pass Rate:  {s['pass_rate_percent']:.1f}%
-Duration:   {summary['duration_seconds']:.2f}s
+Total:      {s["total"]}
+Passed:     {s["passed"]}
+Failed:     {s["failed"]}
+Skipped:    {s["skipped"]}
+Pass Rate:  {s["pass_rate_percent"]:.1f}%
+Duration:   {summary["duration_seconds"]:.2f}s
 """
         if summary["failed_tests"]:
             output += "\nFailed Tests:\n"

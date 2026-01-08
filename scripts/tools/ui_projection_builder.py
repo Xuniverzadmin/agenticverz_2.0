@@ -81,17 +81,31 @@ def build_control(control_type: str, idx: int) -> dict[str, Any]:
     }
 
 
-def build_panel(intent: dict[str, Any]) -> dict[str, Any]:
+def slugify_panel_id(panel_id: str) -> str:
+    """
+    Convert panel_id to URL-safe slug.
+
+    Example: "OVW-SH-CS-O1" -> "ovw-sh-cs-o1"
+    """
+    return panel_id.lower().replace("_", "-")
+
+
+def build_panel(intent: dict[str, Any], domain_route: str) -> dict[str, Any]:
     """
     Build explicit panel projection from intent.
 
     D2: Every panel must have explicit control list.
+    D4: Every panel must have explicit route (Phase 1.2).
     """
     # Build controls with explicit ordering
     controls = []
     for idx, control_type in enumerate(intent.get("controls", [])):
         control = build_control(control_type, idx)
         controls.append(control)
+
+    # Generate panel route from panel_id
+    panel_slug = slugify_panel_id(intent["panel_id"])
+    panel_route = f"{domain_route}/{panel_slug}"
 
     return {
         "panel_id": intent["panel_id"],
@@ -115,6 +129,9 @@ def build_panel(intent: dict[str, Any]) -> dict[str, Any]:
             "write": intent.get("write", False),
             "activate": intent.get("activate", False),
         },
+        # Navigation (Phase 1.2 - projection-driven routing)
+        "route": panel_route,
+        "view_type": "PANEL_VIEW",
     }
 
 
@@ -159,14 +176,21 @@ def deduplicate_panels(panels: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(seen.values())
 
 
-def build_domain_projection(domain: str, intents: list[dict[str, Any]], domain_order: int) -> dict[str, Any]:
+def build_domain_projection(
+    domain: str, intents: list[dict[str, Any]], domain_order: int, console_root: str
+) -> dict[str, Any]:
     """
     Build explicit domain projection.
 
     D2: Every domain must have explicit panel list.
+    D4: Every domain must have explicit route (Phase 1.2).
     """
-    # Build panels from intents
-    panels = [build_panel(intent) for intent in intents]
+    # Generate domain route
+    domain_slug = domain.lower()
+    domain_route = f"{console_root}/{domain_slug}"
+
+    # Build panels from intents (with domain_route for panel routing)
+    panels = [build_panel(intent, domain_route) for intent in intents]
 
     # Deduplicate panels
     panels = deduplicate_panels(panels)
@@ -185,14 +209,19 @@ def build_domain_projection(domain: str, intents: list[dict[str, Any]], domain_o
         "panels": panels,
         "panel_count": len(panels),
         "total_controls": sum(p["control_count"] for p in panels),
+        # Navigation (Phase 1.2 - projection-driven routing)
+        "route": domain_route,
     }
 
 
-def build_projection(compiled_ir: dict[str, Any]) -> dict[str, Any]:
+def build_projection(
+    compiled_ir: dict[str, Any], console_root: str = "/precus"
+) -> dict[str, Any]:
     """
     Build complete UI projection lock from compiled IR.
 
     D3: Output: Emit ui_projection_lock.json
+    D4: All routes are absolute with console_root prefix (Phase 1.2)
     """
     intents = compiled_ir.get("intents", [])
 
@@ -208,11 +237,13 @@ def build_projection(compiled_ir: dict[str, Any]) -> dict[str, Any]:
         "Logs": 4,
     }
 
-    # Build domain projections
+    # Build domain projections with console_root
     domains = []
     for domain_name, domain_intents in grouped.items():
         order = domain_order.get(domain_name, 99)
-        projection = build_domain_projection(domain_name, domain_intents, order)
+        projection = build_domain_projection(
+            domain_name, domain_intents, order, console_root
+        )
         domains.append(projection)
 
     # Sort domains by order
@@ -289,13 +320,19 @@ def main():
         "--input",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_intent_ir_compiled.json"),
-        help="Path to compiled intent IR JSON"
+        help="Path to compiled intent IR JSON",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_projection_lock.json"),
-        help="Output path for UI projection lock JSON"
+        help="Output path for UI projection lock JSON",
+    )
+    parser.add_argument(
+        "--console-root",
+        type=str,
+        default="/precus",
+        help="Console root path for route generation (e.g., /precus, /cus)",
     )
 
     args = parser.parse_args()
@@ -309,14 +346,15 @@ def main():
     with open(args.input) as f:
         compiled_ir = json.load(f)
 
-    # Build projection
+    # Build projection with console root
     print(f"Building projection from: {args.input}")
-    lock = build_projection(compiled_ir)
+    print(f"Console root: {args.console_root}")
+    lock = build_projection(compiled_ir, args.console_root)
 
     # Validate projection
     errors = validate_projection(lock)
     if errors:
-        print(f"\nPROJECTION VALIDATION FAILED")
+        print("\nPROJECTION VALIDATION FAILED")
         print(f"{'=' * 60}")
         for error in errors[:20]:
             print(f"  - {error}")

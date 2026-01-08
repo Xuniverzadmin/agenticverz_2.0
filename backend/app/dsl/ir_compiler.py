@@ -54,30 +54,26 @@ from enum import Enum
 from typing import Any
 
 from app.dsl.ast import (
-    PolicyAST,
+    Action,
     Clause,
     Condition,
-    Predicate,
     ExistsPredicate,
     LogicalCondition,
-    Action,
-    WarnAction,
-    BlockAction,
-    RequireApprovalAction,
-    Comparator,
     LogicalOperator,
-    is_predicate,
+    PolicyAST,
+    Predicate,
+    is_block_action,
     is_exists_predicate,
     is_logical_condition,
-    is_warn_action,
-    is_block_action,
+    is_predicate,
     is_require_approval_action,
+    is_warn_action,
 )
-
 
 # =============================================================================
 # INSTRUCTION SET (CLOSED - 10 OPCODES)
 # =============================================================================
+
 
 class OpCode(str, Enum):
     """
@@ -86,6 +82,7 @@ class OpCode(str, Enum):
     GUARANTEE: This enum will never grow beyond these 10 opcodes.
     Any new functionality requires a new IR version.
     """
+
     LOAD_METRIC = "LOAD_METRIC"
     LOAD_CONST = "LOAD_CONST"
     COMPARE = "COMPARE"
@@ -102,6 +99,7 @@ class OpCode(str, Enum):
 # IR STRUCTURES (Immutable)
 # =============================================================================
 
+
 @dataclass(frozen=True, slots=True)
 class Instruction:
     """
@@ -109,6 +107,7 @@ class Instruction:
 
     Immutable to ensure IR integrity after compilation.
     """
+
     opcode: OpCode
     operands: tuple[Any, ...] = field(default_factory=tuple)
 
@@ -129,6 +128,7 @@ class CompiledClause:
     - condition_ir: Instructions to evaluate the condition
     - action_ir: Instructions to emit actions (if condition true)
     """
+
     condition_ir: tuple[Instruction, ...]
     action_ir: tuple[Instruction, ...]
 
@@ -147,6 +147,7 @@ class PolicyIR:
 
     GUARANTEE: Same AST → Same IR → Same hash
     """
+
     name: str
     version: int
     scope: str
@@ -192,6 +193,7 @@ class PolicyIR:
 # =============================================================================
 # COMPILER
 # =============================================================================
+
 
 class IRCompiler:
     """
@@ -279,22 +281,28 @@ class IRCompiler:
         Pattern: LOAD_METRIC, LOAD_CONST, COMPARE
         """
         # Load metric value
-        out.append(Instruction(
-            opcode=OpCode.LOAD_METRIC,
-            operands=(pred.metric,),
-        ))
+        out.append(
+            Instruction(
+                opcode=OpCode.LOAD_METRIC,
+                operands=(pred.metric,),
+            )
+        )
 
         # Load constant value
-        out.append(Instruction(
-            opcode=OpCode.LOAD_CONST,
-            operands=(pred.value,),
-        ))
+        out.append(
+            Instruction(
+                opcode=OpCode.LOAD_CONST,
+                operands=(pred.value,),
+            )
+        )
 
         # Compare
-        out.append(Instruction(
-            opcode=OpCode.COMPARE,
-            operands=(pred.comparator.value,),
-        ))
+        out.append(
+            Instruction(
+                opcode=OpCode.COMPARE,
+                operands=(pred.comparator.value,),
+            )
+        )
 
     def _emit_exists(self, pred: ExistsPredicate, out: list[Instruction]) -> None:
         """
@@ -302,10 +310,12 @@ class IRCompiler:
 
         Pattern: EXISTS
         """
-        out.append(Instruction(
-            opcode=OpCode.EXISTS,
-            operands=(pred.metric,),
-        ))
+        out.append(
+            Instruction(
+                opcode=OpCode.EXISTS,
+                operands=(pred.metric,),
+            )
+        )
 
     def _emit_logical(self, cond: LogicalCondition, out: list[Instruction]) -> None:
         """
@@ -334,18 +344,24 @@ class IRCompiler:
 
         for action in actions:
             if is_warn_action(action):
-                instructions.append(Instruction(
-                    opcode=OpCode.EMIT_WARN,
-                    operands=(action.message,),
-                ))
+                instructions.append(
+                    Instruction(
+                        opcode=OpCode.EMIT_WARN,
+                        operands=(action.message,),
+                    )
+                )
             elif is_block_action(action):
-                instructions.append(Instruction(
-                    opcode=OpCode.EMIT_BLOCK,
-                ))
+                instructions.append(
+                    Instruction(
+                        opcode=OpCode.EMIT_BLOCK,
+                    )
+                )
             elif is_require_approval_action(action):
-                instructions.append(Instruction(
-                    opcode=OpCode.EMIT_REQUIRE_APPROVAL,
-                ))
+                instructions.append(
+                    Instruction(
+                        opcode=OpCode.EMIT_REQUIRE_APPROVAL,
+                    )
+                )
 
         # Always end action sequence
         instructions.append(Instruction(opcode=OpCode.END))
@@ -356,6 +372,7 @@ class IRCompiler:
 # =============================================================================
 # OPTIMIZING COMPILER (Safe Optimizations Only)
 # =============================================================================
+
 
 class OptimizingIRCompiler(IRCompiler):
     """
@@ -385,6 +402,7 @@ class OptimizingIRCompiler(IRCompiler):
 # =============================================================================
 # PUBLIC API
 # =============================================================================
+
 
 def compile_policy(ast: PolicyAST, optimize: bool = False) -> PolicyIR:
     """

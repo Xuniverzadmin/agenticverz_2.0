@@ -23,36 +23,32 @@ Coverage:
 - Metrics and audit emission
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-
 from app.auth.invocation_safety import (
-    SafetyFlag,
-    Severity,
-    SafetyCheckResult,
+    CLISafetyHook,
     InvocationSafetyContext,
     InvocationSafetyResult,
+    SafetyCheckResult,
+    SafetyCheckTimer,
+    SafetyFlag,
+    SDKSafetyHook,
+    Severity,
+    check_agent_ownership,
+    check_budget_validation,
+    check_idempotency_key,
     check_identity_resolved,
     check_impersonation_declared,
     check_impersonation_reason,
-    check_agent_ownership,
-    check_run_ownership,
-    check_tenant_scoping,
-    check_budget_validation,
     check_plan_immutability,
     check_plan_injection,
-    check_trace_hash_completeness,
-    check_idempotency_key,
     check_rate_limit,
+    check_run_ownership,
+    check_tenant_scoping,
+    check_trace_hash_completeness,
     compute_plan_hash,
-    run_safety_checks,
-    CLISafetyHook,
-    SDKSafetyHook,
-    emit_safety_metrics,
     emit_safety_audit_event,
-    SafetyCheckTimer,
+    emit_safety_metrics,
+    run_safety_checks,
 )
-
 
 # =============================================================================
 # IDENTITY CHECKS (ID-001 to ID-003)
@@ -441,9 +437,7 @@ class TestCLISafetyHook:
             caller_id="user_123",
             tenant_id="tenant_A",
         )
-        result = hook.check_simulate(
-            ctx, plan_data={"steps": [], "tenant_id": "evil"}, budget_cents=1000
-        )
+        result = hook.check_simulate(ctx, plan_data={"steps": [], "tenant_id": "evil"}, budget_cents=1000)
         assert result.blocked is True
         assert SafetyFlag.PLAN_INJECTION_BLOCKED in result.flags
 
@@ -651,9 +645,7 @@ class TestMetricsAndAudit:
         assert timer.duration < 0.5  # Less than 500ms
 
         # emit should not crash
-        result = InvocationSafetyResult(
-            passed=True, flags=[], warnings=[], blocked=False
-        )
+        result = InvocationSafetyResult(passed=True, flags=[], warnings=[], blocked=False)
         timer.emit(result)
 
 

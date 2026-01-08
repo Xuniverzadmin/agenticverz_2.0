@@ -54,9 +54,9 @@ _current_invocation: contextvars.ContextVar[Optional[str]] = contextvars.Context
     "current_invocation_id", default=None
 )
 
-_current_envelope: contextvars.ContextVar[
-    Optional["ExecutionEnvelope"]
-] = contextvars.ContextVar("current_envelope", default=None)
+_current_envelope: contextvars.ContextVar[Optional["ExecutionEnvelope"]] = contextvars.ContextVar(
+    "current_envelope", default=None
+)
 
 
 # =============================================================================

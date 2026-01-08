@@ -104,7 +104,7 @@ class AgentSimulator:
 
             agent = SyntheticAgent(
                 id=f"agent-{uuid.uuid4().hex[:8]}",
-                name=f"SyntheticAgent-{i+1}",
+                name=f"SyntheticAgent-{i + 1}",
                 agent_type=agent_type,
                 capabilities=capabilities,
             )
@@ -279,7 +279,7 @@ class AgentSimulator:
             "total_workflows": num_workflows,
             "successful": len(successful),
             "failed": len(failed),
-            "success_rate": f"{len(successful)/num_workflows*100:.1f}%",
+            "success_rate": f"{len(successful) / num_workflows * 100:.1f}%",
             "total_cost_cents": total_cost,
             "avg_latency_ms": sum(latencies) / len(latencies) if latencies else 0,
             "duration_seconds": duration,
@@ -360,9 +360,9 @@ class AgentSimulator:
 
 def print_results(title: str, results: Dict):
     """Print formatted results"""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"📊 {title}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for key, value in results.items():
         if key != "agent_stats":
             print(f"  {key}: {value}")

@@ -217,7 +217,7 @@ class TestRedisRateLimiterIntegration:
         # Make requests up to the limit
         for i in range(10):
             result = await limiter.allow_request(tenant_id=tenant_id, ip=ip)
-            assert result is True, f"Request {i+1} should be allowed"
+            assert result is True, f"Request {i + 1} should be allowed"
 
         # Next request should be rate limited
         result = await limiter.allow_request(tenant_id=tenant_id, ip=ip)
@@ -232,7 +232,7 @@ class TestRedisRateLimiterIntegration:
         for i in range(10):
             ip = f"10.0.1.{i}"
             result = await limiter.allow_request(tenant_id=tenant_id, ip=ip)
-            assert result is True, f"Request {i+1} should be allowed"
+            assert result is True, f"Request {i + 1} should be allowed"
 
         # Next request should be rate limited (tenant limit exceeded)
         result = await limiter.allow_request(tenant_id=tenant_id, ip="10.0.1.99")

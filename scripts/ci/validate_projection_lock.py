@@ -49,9 +49,13 @@ def validate_schema(data: dict) -> list[str]:
     # Check _meta
     meta = data.get("_meta", {})
     if meta.get("type") != "ui_projection_lock":
-        errors.append(f"Invalid type: expected 'ui_projection_lock', got '{meta.get('type')}'")
+        errors.append(
+            f"Invalid type: expected 'ui_projection_lock', got '{meta.get('type')}'"
+        )
     if meta.get("processing_stage") != "LOCKED":
-        errors.append(f"Invalid stage: expected 'LOCKED', got '{meta.get('processing_stage')}'")
+        errors.append(
+            f"Invalid stage: expected 'LOCKED', got '{meta.get('processing_stage')}'"
+        )
     if meta.get("frozen") is not True:
         errors.append(f"Invalid frozen: expected true, got {meta.get('frozen')}")
     if meta.get("editable") is not False:
@@ -93,7 +97,8 @@ def regenerate_and_compare(lock_path: Path) -> tuple[bool, str]:
         # Run the full pipeline
         result = subprocess.run(
             [
-                "python3", "scripts/tools/l2_raw_intent_parser.py",
+                "python3",
+                "scripts/tools/l2_raw_intent_parser.py",
             ],
             capture_output=True,
             text=True,
@@ -103,7 +108,8 @@ def regenerate_and_compare(lock_path: Path) -> tuple[bool, str]:
 
         result = subprocess.run(
             [
-                "python3", "scripts/tools/intent_normalizer.py",
+                "python3",
+                "scripts/tools/intent_normalizer.py",
             ],
             capture_output=True,
             text=True,
@@ -113,7 +119,8 @@ def regenerate_and_compare(lock_path: Path) -> tuple[bool, str]:
 
         result = subprocess.run(
             [
-                "python3", "scripts/tools/intent_compiler.py",
+                "python3",
+                "scripts/tools/intent_compiler.py",
             ],
             capture_output=True,
             text=True,
@@ -123,8 +130,10 @@ def regenerate_and_compare(lock_path: Path) -> tuple[bool, str]:
 
         result = subprocess.run(
             [
-                "python3", "scripts/tools/ui_projection_builder.py",
-                "--output", str(temp_path),
+                "python3",
+                "scripts/tools/ui_projection_builder.py",
+                "--output",
+                str(temp_path),
             ],
             capture_output=True,
             text=True,
@@ -146,7 +155,10 @@ def regenerate_and_compare(lock_path: Path) -> tuple[bool, str]:
         regenerated_json = json.dumps(regenerated_data, sort_keys=True)
 
         if current_json != regenerated_json:
-            return False, "Projection lock has been manually edited! Regenerate via pipeline."
+            return (
+                False,
+                "Projection lock has been manually edited! Regenerate via pipeline.",
+            )
 
         return True, "Projection lock matches pipeline output"
 
@@ -164,19 +176,14 @@ def main():
         "--lock",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_projection_lock.json"),
-        help="Path to projection lock JSON"
+        help="Path to projection lock JSON",
     )
     parser.add_argument(
         "--skip-regenerate",
         action="store_true",
-        help="Skip regeneration comparison (schema validation only)"
+        help="Skip regeneration comparison (schema validation only)",
     )
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Verbose output"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
 

@@ -40,12 +40,11 @@ Usage:
 """
 
 import argparse
-import ast
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # =============================================================================
 # CONFIGURATION - From CAPABILITY_REGISTRY.yaml Section 5-6
@@ -186,18 +185,51 @@ FRONTEND_BLOCKED_CAPABILITIES = {
 # Frontend clients and their bindings (from L2_L21_BINDINGS.yaml)
 BOUND_CLIENTS = {
     "replay.ts": {"capability_id": "CAP-001", "audience": "founder", "status": "BOUND"},
-    "costsim.ts": {"capability_id": "CAP-002", "audience": "customer", "status": "BOUND"},
-    "guard.ts": {"capability_id": "MULTI", "capabilities": ["CAP-001", "CAP-009"], "audience": "customer", "status": "BOUND"},
+    "costsim.ts": {
+        "capability_id": "CAP-002",
+        "audience": "customer",
+        "status": "BOUND",
+    },
+    "guard.ts": {
+        "capability_id": "MULTI",
+        "capabilities": ["CAP-001", "CAP-009"],
+        "audience": "customer",
+        "status": "BOUND",
+    },
     "ops.ts": {"capability_id": "CAP-005", "audience": "founder", "status": "BOUND"},
-    "timeline.ts": {"capability_id": "CAP-005", "audience": "founder", "status": "BOUND"},
+    "timeline.ts": {
+        "capability_id": "CAP-005",
+        "audience": "founder",
+        "status": "BOUND",
+    },
     "traces.ts": {"capability_id": "CAP-001", "audience": "founder", "status": "BOUND"},
-    "scenarios.ts": {"capability_id": "CAP-002", "audience": "customer", "status": "BOUND"},
-    "integration.ts": {"capability_id": "CAP-018", "audience": "founder", "status": "BOUND"},
-    "recovery.ts": {"capability_id": "CAP-018", "audience": "founder", "status": "BOUND"},
+    "scenarios.ts": {
+        "capability_id": "CAP-002",
+        "audience": "customer",
+        "status": "BOUND",
+    },
+    "integration.ts": {
+        "capability_id": "CAP-018",
+        "audience": "founder",
+        "status": "BOUND",
+    },
+    "recovery.ts": {
+        "capability_id": "CAP-018",
+        "audience": "founder",
+        "status": "BOUND",
+    },
     "memory.ts": {"capability_id": "CAP-014", "audience": "founder", "status": "BOUND"},
-    "explorer.ts": {"capability_id": "CAP-005", "audience": "founder", "status": "BOUND"},
+    "explorer.ts": {
+        "capability_id": "CAP-005",
+        "audience": "founder",
+        "status": "BOUND",
+    },
     "sba.ts": {"capability_id": "CAP-011", "audience": "founder", "status": "BOUND"},
-    "killswitch.ts": {"capability_id": "PLATFORM", "audience": "customer", "status": "BOUND"},
+    "killswitch.ts": {
+        "capability_id": "PLATFORM",
+        "audience": "customer",
+        "status": "BOUND",
+    },
 }
 
 PLATFORM_CLIENTS = {
@@ -208,12 +240,36 @@ PLATFORM_CLIENTS = {
 }
 
 BLOCKED_CLIENTS = {
-    "agents.ts": {"intended_capability": "CAP-008", "reason": "SDK-only", "status": "BLOCKED"},
-    "blackboard.ts": {"intended_capability": "CAP-008", "reason": "SDK-only", "status": "BLOCKED"},
-    "credits.ts": {"intended_capability": "CAP-008", "reason": "SDK-only", "status": "BLOCKED"},
-    "messages.ts": {"intended_capability": "CAP-008", "reason": "SDK-only", "status": "BLOCKED"},
-    "jobs.ts": {"intended_capability": "CAP-008", "reason": "SDK-only", "status": "BLOCKED"},
-    "worker.ts": {"intended_capability": "CAP-012", "reason": "Internal", "status": "BLOCKED"},
+    "agents.ts": {
+        "intended_capability": "CAP-008",
+        "reason": "SDK-only",
+        "status": "BLOCKED",
+    },
+    "blackboard.ts": {
+        "intended_capability": "CAP-008",
+        "reason": "SDK-only",
+        "status": "BLOCKED",
+    },
+    "credits.ts": {
+        "intended_capability": "CAP-008",
+        "reason": "SDK-only",
+        "status": "BLOCKED",
+    },
+    "messages.ts": {
+        "intended_capability": "CAP-008",
+        "reason": "SDK-only",
+        "status": "BLOCKED",
+    },
+    "jobs.ts": {
+        "intended_capability": "CAP-008",
+        "reason": "SDK-only",
+        "status": "BLOCKED",
+    },
+    "worker.ts": {
+        "intended_capability": "CAP-012",
+        "reason": "Internal",
+        "status": "BLOCKED",
+    },
 }
 
 UNBOUND_CLIENTS = {
@@ -230,9 +286,11 @@ FRONTEND_API_DIR = "website/app-shell/src/api"
 # VIOLATION TYPES
 # =============================================================================
 
+
 @dataclass
 class Violation:
     """Represents a capability invocation violation."""
+
     file: str
     line: int
     violation_type: str
@@ -246,6 +304,7 @@ class Violation:
 @dataclass
 class RouteCall:
     """Represents an API route call extracted from frontend code."""
+
     file: str
     line: int
     method: str  # GET, POST, PUT, DELETE, PATCH
@@ -256,6 +315,7 @@ class RouteCall:
 # =============================================================================
 # ROUTE EXTRACTION
 # =============================================================================
+
 
 def extract_api_calls(file_path: Path) -> List[RouteCall]:
     """Extract API route calls from a TypeScript file.
@@ -270,43 +330,41 @@ def extract_api_calls(file_path: Path) -> List[RouteCall]:
 
     try:
         content = file_path.read_text()
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         # Pattern for HTTP method calls
         # Matches: client.get('/path'), axios.post('/path'), etc.
         http_pattern = re.compile(
             r'(?:client|axios|api|http)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*[\'"`]([^\'"`]+)[\'"`]',
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         # Pattern for fetch calls
         fetch_pattern = re.compile(
-            r'fetch\s*\(\s*[\'"`]([^\'"`]+)[\'"`]',
-            re.IGNORECASE
+            r'fetch\s*\(\s*[\'"`]([^\'"`]+)[\'"`]', re.IGNORECASE
         )
 
         # Pattern for template literal routes with baseURL
-        template_pattern = re.compile(
-            r'`\$\{[^}]+\}(/[^`]+)`',
-            re.IGNORECASE
-        )
+        template_pattern = re.compile(r"`\$\{[^}]+\}(/[^`]+)`", re.IGNORECASE)
 
         for line_no, line in enumerate(lines, 1):
             # Skip comments
-            if line.strip().startswith('//') or line.strip().startswith('*'):
+            if line.strip().startswith("//") or line.strip().startswith("*"):
                 continue
 
             # HTTP method calls
             for match in http_pattern.finditer(line):
                 method = match.group(1).upper()
                 route = match.group(2)
-                calls.append(RouteCall(
-                    file=str(file_path),
-                    line=line_no,
-                    method=method,
-                    route=route,
-                    raw_code=line.strip(),
-                ))
+                calls.append(
+                    RouteCall(
+                        file=str(file_path),
+                        line=line_no,
+                        method=method,
+                        route=route,
+                        raw_code=line.strip(),
+                    )
+                )
 
             # Fetch calls (assume GET unless method specified)
             for match in fetch_pattern.finditer(line):
@@ -315,13 +373,15 @@ def extract_api_calls(file_path: Path) -> List[RouteCall]:
                 method = "GET"
                 if "method:" in line or "'POST'" in line or '"POST"' in line:
                     method = "POST"
-                calls.append(RouteCall(
-                    file=str(file_path),
-                    line=line_no,
-                    method=method,
-                    route=route,
-                    raw_code=line.strip(),
-                ))
+                calls.append(
+                    RouteCall(
+                        file=str(file_path),
+                        line=line_no,
+                        method=method,
+                        route=route,
+                        raw_code=line.strip(),
+                    )
+                )
 
     except Exception as e:
         print(f"Warning: Could not parse {file_path}: {e}", file=sys.stderr)
@@ -337,11 +397,11 @@ def normalize_route(route: str) -> str:
     - Normalize slashes
     """
     # Remove query strings
-    if '?' in route:
-        route = route.split('?')[0]
+    if "?" in route:
+        route = route.split("?")[0]
 
     # Remove trailing slash
-    route = route.rstrip('/')
+    route = route.rstrip("/")
 
     return route
 
@@ -360,9 +420,9 @@ def route_matches(actual: str, pattern: str) -> bool:
     # {param} -> matches any segment
     # * -> matches any remaining path
     regex_pattern = pattern
-    regex_pattern = re.sub(r'\{[^}]+\}', r'[^/]+', regex_pattern)
-    regex_pattern = regex_pattern.replace('/*', '/.*')
-    regex_pattern = f'^{regex_pattern}$'
+    regex_pattern = re.sub(r"\{[^}]+\}", r"[^/]+", regex_pattern)
+    regex_pattern = regex_pattern.replace("/*", "/.*")
+    regex_pattern = f"^{regex_pattern}$"
 
     try:
         return bool(re.match(regex_pattern, actual))
@@ -374,7 +434,10 @@ def route_matches(actual: str, pattern: str) -> bool:
 # VALIDATION
 # =============================================================================
 
-def validate_client_binding(client_name: str) -> Tuple[str, Optional[str], Optional[Dict]]:
+
+def validate_client_binding(
+    client_name: str,
+) -> Tuple[str, Optional[str], Optional[Dict]]:
     """Validate a client's binding status.
 
     Returns (status, capability_id, binding_info)
@@ -387,7 +450,11 @@ def validate_client_binding(client_name: str) -> Tuple[str, Optional[str], Optio
         return "UTILITY", None, PLATFORM_CLIENTS[client_name]
 
     if client_name in BLOCKED_CLIENTS:
-        return "BLOCKED", BLOCKED_CLIENTS[client_name].get("intended_capability"), BLOCKED_CLIENTS[client_name]
+        return (
+            "BLOCKED",
+            BLOCKED_CLIENTS[client_name].get("intended_capability"),
+            BLOCKED_CLIENTS[client_name],
+        )
 
     if client_name in UNBOUND_CLIENTS:
         return "UNBOUND", None, UNBOUND_CLIENTS[client_name]
@@ -419,7 +486,9 @@ def validate_route_invocation(
     full_route = f"{method} {route}"
     for allowed in cap_info["allowed_routes"]:
         allowed_method, allowed_path = allowed.split(" ", 1)
-        if method.upper() == allowed_method.upper() and route_matches(route, allowed_path):
+        if method.upper() == allowed_method.upper() and route_matches(
+            route, allowed_path
+        ):
             return True, f"Matches allowed route: {allowed}"
 
     return False, f"Route not in allowed_routes for {capability_id}"
@@ -434,23 +503,27 @@ def check_client(file_path: Path, verbose: bool = False) -> List[Violation]:
     status, capability_id, binding_info = validate_client_binding(client_name)
 
     if status == "BLOCKED":
-        violations.append(Violation(
-            file=str(file_path),
-            line=0,
-            violation_type="BLOCKED_CLIENT",
-            message=f"Client is BLOCKED: {binding_info.get('reason', 'Unknown')}",
-            severity="BLOCKING",
-        ))
+        violations.append(
+            Violation(
+                file=str(file_path),
+                line=0,
+                violation_type="BLOCKED_CLIENT",
+                message=f"Client is BLOCKED: {binding_info.get('reason', 'Unknown')}",
+                severity="BLOCKING",
+            )
+        )
         return violations
 
     if status == "UNBOUND":
-        violations.append(Violation(
-            file=str(file_path),
-            line=0,
-            violation_type="UNBOUND_CLIENT",
-            message=f"Client is UNBOUND: {binding_info.get('reason', 'Unknown')}",
-            severity="WARNING",
-        ))
+        violations.append(
+            Violation(
+                file=str(file_path),
+                line=0,
+                violation_type="UNBOUND_CLIENT",
+                message=f"Client is UNBOUND: {binding_info.get('reason', 'Unknown')}",
+                severity="WARNING",
+            )
+        )
         # Continue checking routes anyway
 
     if status == "UTILITY":
@@ -459,13 +532,15 @@ def check_client(file_path: Path, verbose: bool = False) -> List[Violation]:
         return violations
 
     if status == "UNKNOWN":
-        violations.append(Violation(
-            file=str(file_path),
-            line=0,
-            violation_type="UNKNOWN_CLIENT",
-            message="Client not registered in L2_L21_BINDINGS.yaml",
-            severity="WARNING",
-        ))
+        violations.append(
+            Violation(
+                file=str(file_path),
+                line=0,
+                violation_type="UNKNOWN_CLIENT",
+                message="Client not registered in L2_L21_BINDINGS.yaml",
+                severity="WARNING",
+            )
+        )
 
     # Extract API calls
     calls = extract_api_calls(file_path)
@@ -494,7 +569,9 @@ def check_client(file_path: Path, verbose: bool = False) -> List[Violation]:
         route_reason = ""
 
         for cap_id in capability_ids:
-            is_valid, reason = validate_route_invocation(call.method, call.route, cap_id)
+            is_valid, reason = validate_route_invocation(
+                call.method, call.route, cap_id
+            )
             if is_valid:
                 route_valid = True
                 route_reason = reason
@@ -502,13 +579,15 @@ def check_client(file_path: Path, verbose: bool = False) -> List[Violation]:
             route_reason = reason
 
         if not route_valid and capability_ids:
-            violations.append(Violation(
-                file=str(file_path),
-                line=call.line,
-                violation_type="ROUTE_NOT_ALLOWED",
-                message=f"{call.method} {call.route} - {route_reason}",
-                severity="WARNING",  # WARNING because route extraction may be imprecise
-            ))
+            violations.append(
+                Violation(
+                    file=str(file_path),
+                    line=call.line,
+                    violation_type="ROUTE_NOT_ALLOWED",
+                    message=f"{call.method} {call.route} - {route_reason}",
+                    severity="WARNING",  # WARNING because route extraction may be imprecise
+                )
+            )
         else:
             valid_count += 1
 
@@ -522,7 +601,10 @@ def check_client(file_path: Path, verbose: bool = False) -> List[Violation]:
 # MAIN GUARD
 # =============================================================================
 
-def run_guard(verbose: bool = False, ci_mode: bool = False) -> Tuple[int, List[Violation]]:
+
+def run_guard(
+    verbose: bool = False, ci_mode: bool = False
+) -> Tuple[int, List[Violation]]:
     """Run the capability invocation guard."""
     all_violations: List[Violation] = []
     repo_root = Path(__file__).parent.parent.parent
@@ -532,7 +614,7 @@ def run_guard(verbose: bool = False, ci_mode: bool = False) -> Tuple[int, List[V
     print("CAPABILITY INVOCATION GUARD (Phase A1)")
     print("=" * 70)
     print()
-    print(f"Reference: PIN-322 (L2-L2.1 Progressive Activation)")
+    print("Reference: PIN-322 (L2-L2.1 Progressive Activation)")
     print(f"Checking: {api_dir}")
     print()
 
@@ -634,14 +716,10 @@ def main():
         description="Capability Invocation Guard (Phase A1) - CI enforcement for frontend capability invocation"
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Show detailed analysis"
+        "--verbose", "-v", action="store_true", help="Show detailed analysis"
     )
     parser.add_argument(
-        "--ci",
-        action="store_true",
-        help="CI mode (stricter enforcement)"
+        "--ci", action="store_true", help="CI mode (stricter enforcement)"
     )
     args = parser.parse_args()
 

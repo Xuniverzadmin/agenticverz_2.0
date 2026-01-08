@@ -44,16 +44,48 @@ from typing import List, Optional, Set, Tuple
 # Source of truth: app/governance/kernel.py
 KNOWN_CAPABILITIES: Set[str] = {
     # FIRST_CLASS (CAP-001 to CAP-021)
-    "CAP-001", "CAP-002", "CAP-003", "CAP-004", "CAP-005",
-    "CAP-006", "CAP-007", "CAP-008", "CAP-009", "CAP-010",
-    "CAP-011", "CAP-012", "CAP-013", "CAP-014", "CAP-015",
-    "CAP-016", "CAP-017", "CAP-018", "CAP-019", "CAP-020",
+    "CAP-001",
+    "CAP-002",
+    "CAP-003",
+    "CAP-004",
+    "CAP-005",
+    "CAP-006",
+    "CAP-007",
+    "CAP-008",
+    "CAP-009",
+    "CAP-010",
+    "CAP-011",
+    "CAP-012",
+    "CAP-013",
+    "CAP-014",
+    "CAP-015",
+    "CAP-016",
+    "CAP-017",
+    "CAP-018",
+    "CAP-019",
+    "CAP-020",
     "CAP-021",
     # SUBSTRATE (SUB-001 to SUB-020)
-    "SUB-001", "SUB-002", "SUB-003", "SUB-004", "SUB-005",
-    "SUB-006", "SUB-007", "SUB-008", "SUB-009", "SUB-010",
-    "SUB-011", "SUB-012", "SUB-013", "SUB-014", "SUB-015",
-    "SUB-016", "SUB-017", "SUB-018", "SUB-019", "SUB-020",
+    "SUB-001",
+    "SUB-002",
+    "SUB-003",
+    "SUB-004",
+    "SUB-005",
+    "SUB-006",
+    "SUB-007",
+    "SUB-008",
+    "SUB-009",
+    "SUB-010",
+    "SUB-011",
+    "SUB-012",
+    "SUB-013",
+    "SUB-014",
+    "SUB-015",
+    "SUB-016",
+    "SUB-017",
+    "SUB-018",
+    "SUB-019",
+    "SUB-020",
 }
 
 # Patterns to find capability_id references
@@ -63,7 +95,7 @@ CAPABILITY_PATTERNS = [
     # "capability_id": "CAP-XXX"
     r'"capability_id"\s*:\s*["\']([^"\']+)["\']',
     # CapabilityId.CAP_NNN or CapabilityId.SUB_NNN (enum references)
-    r'CapabilityId\.(CAP_\d+|SUB_\d+)',
+    r"CapabilityId\.(CAP_\d+|SUB_\d+)",
 ]
 
 # Invalid capability values (placeholders, unknowns)
@@ -83,6 +115,7 @@ INVALID_CAPABILITY_VALUES = {
 @dataclass
 class CapabilityBinding:
     """A capability binding found in code."""
+
     file_path: str
     line_number: int
     capability_id: str
@@ -92,6 +125,7 @@ class CapabilityBinding:
 @dataclass
 class ValidationResult:
     """Result of capability binding validation."""
+
     total_bindings: int = 0
     valid_bindings: int = 0
     invalid_bindings: List[CapabilityBinding] = field(default_factory=list)
@@ -102,18 +136,20 @@ class ValidationResult:
 def find_capability_bindings(file_path: str, content: str) -> List[CapabilityBinding]:
     """Find all capability_id bindings in a file."""
     bindings = []
-    lines = content.split('\n')
+    lines = content.split("\n")
 
     for i, line in enumerate(lines, 1):
         for pattern in CAPABILITY_PATTERNS:
             for match in re.finditer(pattern, line):
                 cap_id = match.group(1)
-                bindings.append(CapabilityBinding(
-                    file_path=file_path,
-                    line_number=i,
-                    capability_id=cap_id,
-                    context=line.strip()[:80],
-                ))
+                bindings.append(
+                    CapabilityBinding(
+                        file_path=file_path,
+                        line_number=i,
+                        capability_id=cap_id,
+                        context=line.strip()[:80],
+                    )
+                )
 
     return bindings
 
@@ -145,7 +181,7 @@ def validate_binding(binding: CapabilityBinding) -> Tuple[bool, str]:
     # Check if it's a known capability (normalize underscore to hyphen)
     if normalized not in KNOWN_CAPABILITIES:
         # Allow CAP-XXX or SUB-XXX format with unknown number (for flexibility)
-        if re.match(r'^(CAP|SUB)[-_]\d{3}$', cap_id):
+        if re.match(r"^(CAP|SUB)[-_]\d{3}$", cap_id):
             return False, f"Unknown capability: {cap_id}"
         else:
             return False, f"Invalid format: {cap_id}"
@@ -153,7 +189,9 @@ def validate_binding(binding: CapabilityBinding) -> Tuple[bool, str]:
     return True, "Valid"
 
 
-def validate_file(file_path: str, verbose: bool = False) -> Tuple[List[CapabilityBinding], List[CapabilityBinding], List[CapabilityBinding]]:
+def validate_file(
+    file_path: str, verbose: bool = False
+) -> Tuple[List[CapabilityBinding], List[CapabilityBinding], List[CapabilityBinding]]:
     """
     Validate all capability bindings in a file.
 
@@ -161,7 +199,7 @@ def validate_file(file_path: str, verbose: bool = False) -> Tuple[List[Capabilit
         Tuple of (valid_bindings, invalid_bindings, unknown_bindings)
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
         if verbose:
@@ -198,21 +236,25 @@ def validate_directory(
 
     # Default exclusions
     default_excludes = [
-        '__pycache__',
-        '.git',
-        'node_modules',
-        '.venv',
-        'venv',
-        'quarantine/',
+        "__pycache__",
+        ".git",
+        "node_modules",
+        ".venv",
+        "venv",
+        "quarantine/",
     ]
     all_excludes = default_excludes + exclude_patterns
 
     for root, dirs, files in os.walk(directory):
         # Filter excluded directories
-        dirs[:] = [d for d in dirs if not any(excl in os.path.join(root, d) for excl in all_excludes)]
+        dirs[:] = [
+            d
+            for d in dirs
+            if not any(excl in os.path.join(root, d) for excl in all_excludes)
+        ]
 
         for file in files:
-            if not file.endswith('.py'):
+            if not file.endswith(".py"):
                 continue
 
             file_path = os.path.join(root, file)
@@ -329,7 +371,7 @@ def main():
         print(f"Error: Directory not found: {scan_dir}")
         sys.exit(2)
 
-    print(f"PIN-337 Capability Binding Validator")
+    print("PIN-337 Capability Binding Validator")
     print(f"Scanning: {scan_dir}")
 
     result = validate_directory(

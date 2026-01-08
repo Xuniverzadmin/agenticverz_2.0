@@ -58,7 +58,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Tuple
 
 # =============================================================================
 # CONFIGURATION - From FRONTEND_CAPABILITY_MAPPING.yaml
@@ -226,9 +226,11 @@ FRONTEND_API_DIR = "website/app-shell/src/api"
 # VIOLATION TYPES
 # =============================================================================
 
+
 @dataclass
 class Violation:
     """Represents a constitutional mapping violation."""
+
     file: str
     line: int
     violation_type: str
@@ -242,6 +244,7 @@ class Violation:
 @dataclass
 class RouteCall:
     """Represents an API route call extracted from frontend code."""
+
     file: str
     line: int
     method: str
@@ -253,33 +256,36 @@ class RouteCall:
 # ROUTE EXTRACTION
 # =============================================================================
 
+
 def extract_api_calls(file_path: Path) -> List[RouteCall]:
     """Extract API route calls from a TypeScript file."""
     calls = []
 
     try:
         content = file_path.read_text()
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         http_pattern = re.compile(
             r'(?:client|axios|api|http)\s*\.\s*(get|post|put|delete|patch)\s*\(\s*[\'"`]([^\'"`]+)[\'"`]',
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         for line_no, line in enumerate(lines, 1):
-            if line.strip().startswith('//') or line.strip().startswith('*'):
+            if line.strip().startswith("//") or line.strip().startswith("*"):
                 continue
 
             for match in http_pattern.finditer(line):
                 method = match.group(1).upper()
                 route = match.group(2)
-                calls.append(RouteCall(
-                    file=str(file_path),
-                    line=line_no,
-                    method=method,
-                    route=route,
-                    raw_code=line.strip(),
-                ))
+                calls.append(
+                    RouteCall(
+                        file=str(file_path),
+                        line=line_no,
+                        method=method,
+                        route=route,
+                        raw_code=line.strip(),
+                    )
+                )
 
     except Exception as e:
         print(f"Warning: Could not parse {file_path}: {e}", file=sys.stderr)
@@ -290,6 +296,7 @@ def extract_api_calls(file_path: Path) -> List[RouteCall]:
 # =============================================================================
 # VALIDATION
 # =============================================================================
+
 
 def infer_domain_from_route(route: str) -> Optional[str]:
     """Infer the L1 domain from a route based on patterns."""
@@ -337,46 +344,54 @@ def check_domain_alignment(
 
         # Check 1: Forbidden capabilities in customer console
         if mapping_status == "forbidden" and client_audience == "customer":
-            violations.append(Violation(
-                file=call.file,
-                line=call.line,
-                violation_type="FORBIDDEN_IN_CUSTOMER",
-                message=f"Capability {cap_id} ({mapping['name']}) is forbidden in Customer Console",
-                severity="BLOCKING",
-            ))
+            violations.append(
+                Violation(
+                    file=call.file,
+                    line=call.line,
+                    violation_type="FORBIDDEN_IN_CUSTOMER",
+                    message=f"Capability {cap_id} ({mapping['name']}) is forbidden in Customer Console",
+                    severity="BLOCKING",
+                )
+            )
             continue
 
         # Check 2: Domain alignment
         inferred_domain = infer_domain_from_route(call.route)
         if inferred_domain and declared_domain != "NONE":
             if inferred_domain != declared_domain:
-                violations.append(Violation(
-                    file=call.file,
-                    line=call.line,
-                    violation_type="DOMAIN_MISMATCH",
-                    message=f"Route suggests '{inferred_domain}' domain, but capability {cap_id} maps to '{declared_domain}'",
-                    severity="WARNING",
-                ))
+                violations.append(
+                    Violation(
+                        file=call.file,
+                        line=call.line,
+                        violation_type="DOMAIN_MISMATCH",
+                        message=f"Route suggests '{inferred_domain}' domain, but capability {cap_id} maps to '{declared_domain}'",
+                        severity="WARNING",
+                    )
+                )
 
         # Check 3: Gap domain exposure
         if inferred_domain in GAP_DOMAINS:
-            violations.append(Violation(
-                file=call.file,
-                line=call.line,
-                violation_type="GAP_DOMAIN_EXPOSURE",
-                message=f"Route touches gap domain '{inferred_domain}': {GAP_DOMAINS[inferred_domain]}",
-                severity="DIRECTIONAL",
-            ))
+            violations.append(
+                Violation(
+                    file=call.file,
+                    line=call.line,
+                    violation_type="GAP_DOMAIN_EXPOSURE",
+                    message=f"Route touches gap domain '{inferred_domain}': {GAP_DOMAINS[inferred_domain]}",
+                    severity="DIRECTIONAL",
+                )
+            )
 
         # Check 4: Partial visibility warning
         if mapping_status == "partial" and client_audience == "customer":
-            violations.append(Violation(
-                file=call.file,
-                line=call.line,
-                violation_type="PARTIAL_VISIBILITY",
-                message=f"Capability {cap_id} has partial visibility for customer. Review required.",
-                severity="WARNING",
-            ))
+            violations.append(
+                Violation(
+                    file=call.file,
+                    line=call.line,
+                    violation_type="PARTIAL_VISIBILITY",
+                    message=f"Capability {cap_id} has partial visibility for customer. Review required.",
+                    severity="WARNING",
+                )
+            )
 
     return violations
 
@@ -427,6 +442,7 @@ def check_client(file_path: Path, verbose: bool = False) -> List[Violation]:
 # DOMAIN COVERAGE SUMMARY
 # =============================================================================
 
+
 def generate_domain_summary() -> str:
     """Generate a summary of domain coverage."""
     lines = []
@@ -445,13 +461,18 @@ def generate_domain_summary() -> str:
 
         if caps_for_domain:
             for cap_id, name, status in caps_for_domain:
-                status_icon = {"fits": "✓", "partial": "◐", "forbidden": "✗", "gap": "○"}.get(status, "?")
+                status_icon = {
+                    "fits": "✓",
+                    "partial": "◐",
+                    "forbidden": "✗",
+                    "gap": "○",
+                }.get(status, "?")
                 lines.append(f"  {status_icon} {cap_id}: {name} [{status}]")
         else:
             if domain in GAP_DOMAINS:
                 lines.append(f"  ○ GAP: {GAP_DOMAINS[domain]}")
             else:
-                lines.append(f"  ? No capabilities mapped")
+                lines.append("  ? No capabilities mapped")
 
     return "\n".join(lines)
 
@@ -460,7 +481,10 @@ def generate_domain_summary() -> str:
 # MAIN GUARD
 # =============================================================================
 
-def run_guard(verbose: bool = False, ci_mode: bool = False) -> Tuple[int, List[Violation]]:
+
+def run_guard(
+    verbose: bool = False, ci_mode: bool = False
+) -> Tuple[int, List[Violation]]:
     """Run the frontend constitutional mapping guard."""
     all_violations: List[Violation] = []
     repo_root = Path(__file__).parent.parent.parent
@@ -470,8 +494,8 @@ def run_guard(verbose: bool = False, ci_mode: bool = False) -> Tuple[int, List[V
     print("FRONTEND CONSTITUTIONAL MAPPING GUARD (Phase A3)")
     print("=" * 70)
     print()
-    print(f"Reference: PIN-322 (L2-L2.1 Progressive Activation)")
-    print(f"Reference: CUSTOMER_CONSOLE_V1_CONSTITUTION.md")
+    print("Reference: PIN-322 (L2-L2.1 Progressive Activation)")
+    print("Reference: CUSTOMER_CONSOLE_V1_CONSTITUTION.md")
     print(f"Checking: {api_dir}")
     print()
 
@@ -579,14 +603,10 @@ def main():
         description="Frontend Constitutional Mapping Guard (Phase A3)"
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Show detailed analysis"
+        "--verbose", "-v", action="store_true", help="Show detailed analysis"
     )
     parser.add_argument(
-        "--ci",
-        action="store_true",
-        help="CI mode (stricter enforcement)"
+        "--ci", action="store_true", help="CI mode (stricter enforcement)"
     )
     args = parser.parse_args()
 

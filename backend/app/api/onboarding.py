@@ -58,6 +58,10 @@ REFRESH_TTL_DAYS = int(os.getenv("REFRESH_TTL_DAYS", "7"))
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://agenticverz.com")
 
+# Dev-only password login (for preflight convenience)
+DEV_LOGIN_PASSWORD = os.getenv("DEV_LOGIN_PASSWORD", "")
+DEV_LOGIN_ENABLED = bool(DEV_LOGIN_PASSWORD)
+
 # Redis for state storage
 _redis: Optional[Redis] = None
 
@@ -97,6 +101,21 @@ class EmailSignupRequest(BaseModel):
 
     email: str = Field(..., min_length=5, max_length=255)
     name: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        if not re.match(email_regex, v):
+            raise ValueError("Invalid email format")
+        return v.lower().strip()
+
+
+class PasswordLoginRequest(BaseModel):
+    """Password-based login request (for development convenience)."""
+
+    email: str = Field(..., min_length=5, max_length=255)
+    password: str = Field(..., min_length=1)
 
     @field_validator("email")
     @classmethod
@@ -576,6 +595,51 @@ async def verify_email(request: EmailVerifyRequest):
 
     # Create session tokens
     access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
+
+    return AuthResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=SESSION_TTL_HOURS * 3600,
+        user=user_data,
+    )
+
+
+# ============== Dev Password Login (Preflight Only) ==============
+
+
+@router.post("/login/password", response_model=AuthResponse)
+async def login_password(request: PasswordLoginRequest):
+    """
+    Password-based login for development convenience.
+
+    This endpoint is ONLY available when DEV_LOGIN_PASSWORD is set.
+    Use for preflight testing to avoid OTP flow on every rebuild.
+
+    The password is verified against the DEV_LOGIN_PASSWORD env variable.
+    Browser can save and autofill credentials.
+    """
+    if not DEV_LOGIN_ENABLED:
+        raise HTTPException(
+            status_code=403, detail="Password login is not enabled. Set DEV_LOGIN_PASSWORD env variable."
+        )
+
+    # Verify password
+    if request.password != DEV_LOGIN_PASSWORD:
+        logger.warning(f"Failed password login attempt for {request.email}")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Create or get user (same as email verification flow)
+    user_data, is_new = get_or_create_user_from_email(request.email)
+
+    # Create default tenant for new users
+    if is_new:
+        tenant_result = create_default_tenant_for_user(user_data)
+        user_data["default_tenant_id"] = tenant_result["tenant_id"]
+
+    # Create session tokens
+    access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
+
+    logger.info(f"Password login successful for {request.email}")
 
     return AuthResponse(
         access_token=access_token,

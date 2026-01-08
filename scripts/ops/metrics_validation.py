@@ -14,6 +14,7 @@ Exit codes:
     0 - All metrics checks passed
     1 - Metrics validation failed
 """
+
 import argparse
 import sys
 import requests

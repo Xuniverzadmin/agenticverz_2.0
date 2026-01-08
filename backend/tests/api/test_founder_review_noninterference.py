@@ -30,13 +30,15 @@ These tests verify the HARD CONSTRAINTS of PIN-333:
 - ✅ Founder-only (RBAC enforced)
 """
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime, timezone
+from unittest.mock import MagicMock
+
+import pytest
 
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_fops_token():
@@ -76,6 +78,7 @@ def mock_execution_envelope():
 # Non-Interference Tests: READ-ONLY Verification
 # =============================================================================
 
+
 class TestReadOnlyNonInterference:
     """Verify dashboard operations are strictly read-only."""
 
@@ -89,10 +92,12 @@ class TestReadOnlyNonInterference:
         # Collect all routes
         routes = []
         for route in router.routes:
-            routes.append({
-                "path": route.path,
-                "methods": getattr(route, "methods", set()),
-            })
+            routes.append(
+                {
+                    "path": route.path,
+                    "methods": getattr(route, "methods", set()),
+                }
+            )
 
         # Verify all routes are GET only
         for route in routes:
@@ -107,6 +112,7 @@ class TestReadOnlyNonInterference:
         """
         import ast
         import inspect
+
         from app.api import founder_review
 
         source = inspect.getsource(founder_review)
@@ -128,10 +134,7 @@ class TestReadOnlyNonInterference:
         ]
 
         # Check function definitions (except for query-related ones)
-        function_names = [
-            node.name for node in ast.walk(tree)
-            if isinstance(node, ast.FunctionDef)
-        ]
+        function_names = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
 
         for name in function_names:
             name_lower = name.lower()
@@ -171,14 +174,14 @@ class TestReadOnlyNonInterference:
             field_names = model.model_fields.keys()
             for forbidden in forbidden_fields:
                 assert forbidden not in field_names, (
-                    f"Model {model.__name__} has forbidden field '{forbidden}'. "
-                    f"PIN-333 requires no action affordances."
+                    f"Model {model.__name__} has forbidden field '{forbidden}'. PIN-333 requires no action affordances."
                 )
 
 
 # =============================================================================
 # Non-Interference Tests: AUTO_EXECUTE Behavior Preservation
 # =============================================================================
+
 
 class TestAutoExecuteBehaviorPreservation:
     """Verify AUTO_EXECUTE behavior is not affected by dashboard access."""
@@ -218,16 +221,16 @@ class TestAutoExecuteBehaviorPreservation:
 
         # Verify original envelope is unchanged
         assert mock_execution_envelope == original, (
-            "Envelope was modified during DTO creation. "
-            "PIN-333 requires no modification of source data."
+            "Envelope was modified during DTO creation. PIN-333 requires no modification of source data."
         )
 
     def test_no_threshold_modification_capability(self):
         """
         PIN-333 NON-INTERFERENCE: Dashboard must not have threshold modification.
         """
-        from app.api import founder_review
         import inspect
+
+        from app.api import founder_review
 
         source = inspect.getsource(founder_review)
 
@@ -247,10 +250,7 @@ class TestAutoExecuteBehaviorPreservation:
                 if pattern == "threshold:" or pattern == "threshold =":
                     # Check context - should only be reading
                     continue
-                pytest.fail(
-                    f"Found '{pattern}' in founder_review module. "
-                    f"PIN-333 forbids threshold modification."
-                )
+                pytest.fail(f"Found '{pattern}' in founder_review module. PIN-333 forbids threshold modification.")
 
     def test_no_confidence_score_modification(self):
         """
@@ -288,6 +288,7 @@ class TestAutoExecuteBehaviorPreservation:
 # Non-Interference Tests: RBAC Enforcement
 # =============================================================================
 
+
 class TestRBACEnforcement:
     """Verify RBAC properly restricts access to founders only."""
 
@@ -296,15 +297,13 @@ class TestRBACEnforcement:
         PIN-333 RBAC: All endpoints must use verify_fops_token dependency.
         """
         from app.api.founder_review import router
-        from app.auth.console_auth import verify_fops_token
 
         # Verify all routes have dependencies
         for route in router.routes:
             # Check if route has dependencies that include fops verification
-            if hasattr(route, 'dependencies'):
+            if hasattr(route, "dependencies"):
                 has_fops_dep = any(
-                    'fops' in str(dep).lower() or 'founder' in str(dep).lower()
-                    for dep in route.dependencies
+                    "fops" in str(dep).lower() or "founder" in str(dep).lower() for dep in route.dependencies
                 )
                 # Routes should have founder token verification
                 # Note: May be enforced at router level, not route level
@@ -314,9 +313,10 @@ class TestRBACEnforcement:
         """
         PIN-333 RBAC: verify_fops_token function must exist and be used.
         """
-        from app.auth.console_auth import verify_fops_token
-        from app.api import founder_review
         import inspect
+
+        from app.api import founder_review
+        from app.auth.console_auth import verify_fops_token
 
         # Verify the function exists
         assert callable(verify_fops_token)
@@ -324,8 +324,7 @@ class TestRBACEnforcement:
         # Verify it's imported in founder_review
         source = inspect.getsource(founder_review)
         assert "verify_fops_token" in source, (
-            "verify_fops_token not used in founder_review module. "
-            "PIN-333 requires founder-only access."
+            "verify_fops_token not used in founder_review module. PIN-333 requires founder-only access."
         )
 
     def test_no_customer_console_routes(self):
@@ -338,14 +337,14 @@ class TestRBACEnforcement:
         for route in router.routes:
             path = route.path
             assert "/founder/" in path or path.startswith("/founder"), (
-                f"Route {path} is not under founder namespace. "
-                f"PIN-333 forbids customer console exposure."
+                f"Route {path} is not under founder namespace. PIN-333 forbids customer console exposure."
             )
 
 
 # =============================================================================
 # Non-Interference Tests: Audit Trail
 # =============================================================================
+
 
 class TestAuditTrailNonInterference:
     """Verify audit events don't block operations."""
@@ -393,15 +392,13 @@ class TestAuditTrailNonInterference:
                 details={"count": 10},
             )
         except Exception:
-            pytest.fail(
-                "Audit emission raised exception. "
-                "PIN-333 requires non-blocking audit."
-            )
+            pytest.fail("Audit emission raised exception. PIN-333 requires non-blocking audit.")
 
 
 # =============================================================================
 # Non-Interference Tests: Evidence Integrity
 # =============================================================================
+
 
 class TestEvidenceIntegrity:
     """Verify evidence data is not corrupted by dashboard access."""
@@ -437,6 +434,7 @@ class TestEvidenceIntegrity:
         }
 
         from app.contracts.ops import AutoExecuteReviewItemDTO
+
         dto = AutoExecuteReviewItemDTO(**dto_data)
 
         # Verify flags preserved
@@ -481,6 +479,7 @@ class TestEvidenceIntegrity:
 # Non-Interference Tests: No Side Effects
 # =============================================================================
 
+
 class TestNoSideEffects:
     """Verify dashboard operations have no side effects on system state."""
 
@@ -488,8 +487,9 @@ class TestNoSideEffects:
         """
         PIN-333 NO SIDE EFFECTS: List operation must not write to database.
         """
-        from app.api import founder_review
         import inspect
+
+        from app.api import founder_review
 
         source = inspect.getsource(founder_review)
 
@@ -508,8 +508,7 @@ class TestNoSideEffects:
         for pattern in write_patterns:
             # Allow in comments
             lines_with_pattern = [
-                line for line in source.split("\n")
-                if pattern in line and not line.strip().startswith("#")
+                line for line in source.split("\n") if pattern in line and not line.strip().startswith("#")
             ]
 
             for line in lines_with_pattern:
@@ -523,8 +522,9 @@ class TestNoSideEffects:
         """
         PIN-333 NO SIDE EFFECTS: No state mutation modules imported.
         """
-        from app.api import founder_review
         import inspect
+
+        from app.api import founder_review
 
         source = inspect.getsource(founder_review)
 
@@ -539,14 +539,14 @@ class TestNoSideEffects:
 
         for forbidden in forbidden_imports:
             assert forbidden not in source, (
-                f"Found '{forbidden}' import in founder_review. "
-                f"PIN-333 forbids state mutation module imports."
+                f"Found '{forbidden}' import in founder_review. PIN-333 forbids state mutation module imports."
             )
 
 
 # =============================================================================
 # Summary Test
 # =============================================================================
+
 
 class TestPIN333Compliance:
     """Summary test verifying all PIN-333 constraints."""

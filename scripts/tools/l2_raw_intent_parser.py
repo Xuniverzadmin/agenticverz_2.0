@@ -66,27 +66,41 @@ def row_to_intent(row: pd.Series, idx: int) -> dict[str, Any]:
 
     # Build raw intent - preserve nulls as None
     intent = {
-        "row_uid": row.get("row_uid") if pd.notna(row.get("row_uid")) else f"auto_{idx}",
+        "row_uid": row.get("row_uid")
+        if pd.notna(row.get("row_uid"))
+        else f"auto_{idx}",
         "domain": row.get("Domain") if pd.notna(row.get("Domain")) else None,
         "subdomain": row.get("Subdomain") if pd.notna(row.get("Subdomain")) else None,
         "topic": row.get("Topic") if pd.notna(row.get("Topic")) else None,
         "topic_id": row.get("Topic ID") if pd.notna(row.get("Topic ID")) else None,
         "panel_id": row.get("Panel ID") if pd.notna(row.get("Panel ID")) else None,
-        "panel_name": row.get("Panel Name") if pd.notna(row.get("Panel Name")) else None,
+        "panel_name": row.get("Panel Name")
+        if pd.notna(row.get("Panel Name"))
+        else None,
         "order": row.get("Order") if pd.notna(row.get("Order")) else None,
         "controls": controls,
         "control_count": len(controls),
-        "visible_by_default": row.get("Visible by Default") if pd.notna(row.get("Visible by Default")) else None,
-        "nav_required": row.get("Nav Required") if pd.notna(row.get("Nav Required")) else None,
+        "visible_by_default": row.get("Visible by Default")
+        if pd.notna(row.get("Visible by Default"))
+        else None,
+        "nav_required": row.get("Nav Required")
+        if pd.notna(row.get("Nav Required"))
+        else None,
         "filtering": row.get("Filtering") if pd.notna(row.get("Filtering")) else None,
-        "selection_mode": row.get("Selection Mode") if pd.notna(row.get("Selection Mode")) else None,
-        "ranking_dimension": row.get("Ranking Dimension") if pd.notna(row.get("Ranking Dimension")) else None,
+        "selection_mode": row.get("Selection Mode")
+        if pd.notna(row.get("Selection Mode"))
+        else None,
+        "ranking_dimension": row.get("Ranking Dimension")
+        if pd.notna(row.get("Ranking Dimension"))
+        else None,
         # Read/Write/Activate permissions
         "read": row.get("Read") if pd.notna(row.get("Read")) else None,
         "write": row.get("Write") if pd.notna(row.get("Write")) else None,
         "activate": row.get("Activate") if pd.notna(row.get("Activate")) else None,
         # Additional context (for traceability)
-        "action_layer": row.get("Action Layer") if pd.notna(row.get("Action Layer")) else None,
+        "action_layer": row.get("Action Layer")
+        if pd.notna(row.get("Action Layer"))
+        else None,
         "notes": row.get("Notes") if pd.notna(row.get("Notes")) else None,
     }
 
@@ -94,8 +108,7 @@ def row_to_intent(row: pd.Series, idx: int) -> dict[str, Any]:
 
 
 def parse_l2_to_raw_intent(
-    xlsx_path: Path,
-    sheet_name: str = "SUPERTABLE"
+    xlsx_path: Path, sheet_name: str = "SUPERTABLE"
 ) -> dict[str, Any]:
     """
     Parse L2.1 supertable to raw UI intent IR.
@@ -138,18 +151,16 @@ def main():
         "--input",
         type=Path,
         default=Path("design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx"),
-        help="Path to L2.1 supertable Excel file"
+        help="Path to L2.1 supertable Excel file",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("design/l2_1/ui_contract/ui_intent_ir_raw.json"),
-        help="Output path for raw intent IR JSON"
+        help="Output path for raw intent IR JSON",
     )
     parser.add_argument(
-        "--sheet",
-        default="SUPERTABLE",
-        help="Sheet name to read (default: SUPERTABLE)"
+        "--sheet", default="SUPERTABLE", help="Sheet name to read (default: SUPERTABLE)"
     )
 
     args = parser.parse_args()

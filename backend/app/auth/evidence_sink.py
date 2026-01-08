@@ -23,11 +23,10 @@ CONSTRAINTS:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Optional
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.execution_envelope import (
     CapabilityId,
@@ -112,9 +111,7 @@ class DatabaseEvidenceSink(EvidenceSink):
             )
             return False
 
-    def _envelope_to_model(
-        self, envelope: ExecutionEnvelope
-    ) -> ExecutionEnvelopeModel:
+    def _envelope_to_model(self, envelope: ExecutionEnvelope) -> ExecutionEnvelopeModel:
         """Convert ExecutionEnvelope to database model."""
         return ExecutionEnvelopeModel(
             envelope_id=envelope.envelope_id,
@@ -128,40 +125,26 @@ class DatabaseEvidenceSink(EvidenceSink):
             account_id=envelope.tenant_context.account_id,
             project_id=envelope.tenant_context.project_id,
             invocation_id=envelope.invocation.invocation_id,
-            invocation_timestamp=datetime.fromisoformat(
-                envelope.invocation.timestamp.replace("Z", "+00:00")
-            ),
+            invocation_timestamp=datetime.fromisoformat(envelope.invocation.timestamp.replace("Z", "+00:00")),
             sequence_number=envelope.invocation.sequence_number,
             input_hash=envelope.plan.input_hash,
             resolved_plan_hash=envelope.plan.resolved_plan_hash,
             plan_mutation_detected=envelope.plan.plan_mutation_detected,
             original_invocation_id=envelope.plan.original_invocation_id,
-            confidence_score=(
-                envelope.confidence.score if envelope.confidence else None
-            ),
-            confidence_threshold=(
-                envelope.confidence.threshold_used if envelope.confidence else None
-            ),
-            auto_execute_triggered=(
-                envelope.confidence.auto_execute_triggered
-                if envelope.confidence
-                else None
-            ),
+            confidence_score=(envelope.confidence.score if envelope.confidence else None),
+            confidence_threshold=(envelope.confidence.threshold_used if envelope.confidence else None),
+            auto_execute_triggered=(envelope.confidence.auto_execute_triggered if envelope.confidence else None),
             attribution_origin=envelope.attribution.origin,
             reason_code=envelope.attribution.reason_code,
             source_command=envelope.attribution.source_command,
             sdk_version=envelope.attribution.sdk_version,
             cli_version=envelope.attribution.cli_version,
-            emitted_at=datetime.fromisoformat(
-                envelope.evidence.emitted_at.replace("Z", "+00:00")
-            ),
+            emitted_at=datetime.fromisoformat(envelope.evidence.emitted_at.replace("Z", "+00:00")),
             emission_success=envelope.evidence.emission_success,
             envelope_json=envelope.to_dict(),
         )
 
-    async def query_by_capability_async(
-        self, capability_id: CapabilityId, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    async def query_by_capability_async(self, capability_id: CapabilityId, limit: int = 100) -> list[dict[str, Any]]:
         """Query envelopes by capability (async)."""
         try:
             async with self._session_factory() as session:
@@ -178,16 +161,12 @@ class DatabaseEvidenceSink(EvidenceSink):
             logger.error(f"Query by capability failed: {e}")
             return []
 
-    def query_by_capability(
-        self, capability_id: CapabilityId, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    def query_by_capability(self, capability_id: CapabilityId, limit: int = 100) -> list[dict[str, Any]]:
         """Query envelopes by capability (sync stub)."""
         logger.warning("Sync query not supported - use async version")
         return []
 
-    async def query_by_tenant_async(
-        self, tenant_id: str, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    async def query_by_tenant_async(self, tenant_id: str, limit: int = 100) -> list[dict[str, Any]]:
         """Query envelopes by tenant (async)."""
         try:
             async with self._session_factory() as session:
@@ -204,22 +183,16 @@ class DatabaseEvidenceSink(EvidenceSink):
             logger.error(f"Query by tenant failed: {e}")
             return []
 
-    def query_by_tenant(
-        self, tenant_id: str, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    def query_by_tenant(self, tenant_id: str, limit: int = 100) -> list[dict[str, Any]]:
         """Query envelopes by tenant (sync stub)."""
         logger.warning("Sync query not supported - use async version")
         return []
 
-    async def query_by_invocation_async(
-        self, invocation_id: str
-    ) -> Optional[dict[str, Any]]:
+    async def query_by_invocation_async(self, invocation_id: str) -> Optional[dict[str, Any]]:
         """Query envelope by invocation_id (async)."""
         try:
             async with self._session_factory() as session:
-                stmt = select(ExecutionEnvelopeModel).where(
-                    ExecutionEnvelopeModel.invocation_id == invocation_id
-                )
+                stmt = select(ExecutionEnvelopeModel).where(ExecutionEnvelopeModel.invocation_id == invocation_id)
                 result = await session.execute(stmt)
                 row = result.scalar_one_or_none()
                 return row.to_dict() if row else None
@@ -227,9 +200,7 @@ class DatabaseEvidenceSink(EvidenceSink):
             logger.error(f"Query by invocation failed: {e}")
             return None
 
-    def query_by_invocation(
-        self, invocation_id: str
-    ) -> Optional[dict[str, Any]]:
+    def query_by_invocation(self, invocation_id: str) -> Optional[dict[str, Any]]:
         """Query envelope by invocation_id (sync stub)."""
         logger.warning("Sync query not supported - use async version")
         return None
@@ -253,21 +224,15 @@ class DatabaseEvidenceSink(EvidenceSink):
                     ExecutionEnvelopeModel.capability_id,
                     ExecutionEnvelopeModel.execution_vector,
                     sql_func.count(ExecutionEnvelopeModel.id).label("total"),
-                    sql_func.sum(
-                        sql_func.cast(
-                            ExecutionEnvelopeModel.impersonation_declared, Integer
-                        )
-                    ).label("impersonation_count"),
-                    sql_func.sum(
-                        sql_func.cast(
-                            ExecutionEnvelopeModel.plan_mutation_detected, Integer
-                        )
-                    ).label("mutation_count"),
-                    sql_func.sum(
-                        sql_func.cast(
-                            ExecutionEnvelopeModel.auto_execute_triggered, Integer
-                        )
-                    ).label("auto_execute_count"),
+                    sql_func.sum(sql_func.cast(ExecutionEnvelopeModel.impersonation_declared, Integer)).label(
+                        "impersonation_count"
+                    ),
+                    sql_func.sum(sql_func.cast(ExecutionEnvelopeModel.plan_mutation_detected, Integer)).label(
+                        "mutation_count"
+                    ),
+                    sql_func.sum(sql_func.cast(ExecutionEnvelopeModel.auto_execute_triggered, Integer)).label(
+                        "auto_execute_count"
+                    ),
                 ).group_by(
                     ExecutionEnvelopeModel.capability_id,
                     ExecutionEnvelopeModel.execution_vector,
@@ -275,13 +240,9 @@ class DatabaseEvidenceSink(EvidenceSink):
 
                 # Apply filters
                 if capability_id:
-                    base_query = base_query.where(
-                        ExecutionEnvelopeModel.capability_id == capability_id.value
-                    )
+                    base_query = base_query.where(ExecutionEnvelopeModel.capability_id == capability_id.value)
                 if tenant_id:
-                    base_query = base_query.where(
-                        ExecutionEnvelopeModel.tenant_id == tenant_id
-                    )
+                    base_query = base_query.where(ExecutionEnvelopeModel.tenant_id == tenant_id)
 
                 result = await session.execute(base_query)
                 rows = result.all()

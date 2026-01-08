@@ -61,9 +61,11 @@ MAX_RESPONSE_BODY = 10000
 # DATA STRUCTURES
 # =============================================================================
 
+
 @dataclass
 class Journey:
     """Represents a canonical journey to execute."""
+
     journey_id: str
     capability_id: str
     name: str
@@ -81,6 +83,7 @@ class Journey:
 @dataclass
 class JourneyResult:
     """Represents the result of executing a journey."""
+
     journey_id: str
     capability_id: str
     executed_at: str
@@ -110,6 +113,7 @@ class JourneyResult:
 # JOURNEY LOADING (simplified YAML parser)
 # =============================================================================
 
+
 def load_journeys_simple(file_path: Path) -> List[Journey]:
     """Load journeys from a simplified YAML file.
 
@@ -129,31 +133,35 @@ def load_journeys_simple(file_path: Path) -> List[Journey]:
     in_journey = False
     current_key = None
 
-    for line in content.split('\n'):
+    for line in content.split("\n"):
         stripped = line.strip()
 
         # Skip comments and empty lines
-        if not stripped or stripped.startswith('#'):
+        if not stripped or stripped.startswith("#"):
             continue
 
         # Detect journey start (e.g., "- journey_id: JRN-001")
-        if stripped.startswith('- journey_id:'):
+        if stripped.startswith("- journey_id:"):
             if current_journey:
                 journeys.append(parse_journey_dict(current_journey))
-            current_journey = {'journey_id': stripped.split(':', 1)[1].strip().strip('"')}
+            current_journey = {
+                "journey_id": stripped.split(":", 1)[1].strip().strip('"')
+            }
             in_journey = True
             continue
 
         if in_journey:
             # Parse key-value pairs
-            if ':' in stripped and not stripped.startswith('-'):
-                key, value = stripped.split(':', 1)
+            if ":" in stripped and not stripped.startswith("-"):
+                key, value = stripped.split(":", 1)
                 key = key.strip()
                 value = value.strip().strip('"').strip("'")
 
                 # Handle list values (orders)
-                if value.startswith('[') and value.endswith(']'):
-                    value = [v.strip().strip('"').strip("'") for v in value[1:-1].split(',')]
+                if value.startswith("[") and value.endswith("]"):
+                    value = [
+                        v.strip().strip('"').strip("'") for v in value[1:-1].split(",")
+                    ]
 
                 current_journey[key] = value
 
@@ -166,21 +174,21 @@ def load_journeys_simple(file_path: Path) -> List[Journey]:
 
 def parse_journey_dict(d: Dict) -> Journey:
     """Parse a dictionary into a Journey object."""
-    orders = d.get('orders', [])
+    orders = d.get("orders", [])
     if isinstance(orders, str):
         orders = [orders]
 
     return Journey(
-        journey_id=d.get('journey_id', 'UNKNOWN'),
-        capability_id=d.get('capability_id', 'UNKNOWN'),
-        name=d.get('name', 'Unnamed Journey'),
-        route=d.get('route', '/'),
-        method=d.get('method', 'GET').upper(),
-        expected_status=int(d.get('expected_status', 200)),
-        domain=d.get('domain', 'Unknown'),
+        journey_id=d.get("journey_id", "UNKNOWN"),
+        capability_id=d.get("capability_id", "UNKNOWN"),
+        name=d.get("name", "Unnamed Journey"),
+        route=d.get("route", "/"),
+        method=d.get("method", "GET").upper(),
+        expected_status=int(d.get("expected_status", 200)),
+        domain=d.get("domain", "Unknown"),
         orders=orders,
-        audience=d.get('audience', 'unknown'),
-        description=d.get('description', ''),
+        audience=d.get("audience", "unknown"),
+        description=d.get("description", ""),
     )
 
 
@@ -188,7 +196,10 @@ def parse_journey_dict(d: Dict) -> Journey:
 # JOURNEY EXECUTION
 # =============================================================================
 
-def execute_journey(journey: Journey, base_url: str, api_key: Optional[str] = None) -> JourneyResult:
+
+def execute_journey(
+    journey: Journey, base_url: str, api_key: Optional[str] = None
+) -> JourneyResult:
     """Execute a single journey and capture evidence."""
     executed_at = datetime.utcnow().isoformat() + "Z"
     url = f"{base_url}{journey.route}"
@@ -206,7 +217,7 @@ def execute_journey(journey: Journey, base_url: str, api_key: Optional[str] = No
     # Prepare request
     data = None
     if journey.body:
-        data = json.dumps(journey.body).encode('utf-8')
+        data = json.dumps(journey.body).encode("utf-8")
 
     req = urllib.request.Request(
         url,
@@ -229,9 +240,12 @@ def execute_journey(journey: Journey, base_url: str, api_key: Optional[str] = No
             response_headers = dict(response.headers)
             body = response.read()
             if len(body) > MAX_RESPONSE_BODY:
-                response_body = body[:MAX_RESPONSE_BODY].decode('utf-8', errors='replace') + "... [TRUNCATED]"
+                response_body = (
+                    body[:MAX_RESPONSE_BODY].decode("utf-8", errors="replace")
+                    + "... [TRUNCATED]"
+                )
             else:
-                response_body = body.decode('utf-8', errors='replace')
+                response_body = body.decode("utf-8", errors="replace")
 
     except urllib.error.HTTPError as e:
         status_code = e.code
@@ -239,9 +253,12 @@ def execute_journey(journey: Journey, base_url: str, api_key: Optional[str] = No
         try:
             body = e.read()
             if len(body) > MAX_RESPONSE_BODY:
-                response_body = body[:MAX_RESPONSE_BODY].decode('utf-8', errors='replace') + "... [TRUNCATED]"
+                response_body = (
+                    body[:MAX_RESPONSE_BODY].decode("utf-8", errors="replace")
+                    + "... [TRUNCATED]"
+                )
             else:
-                response_body = body.decode('utf-8', errors='replace')
+                response_body = body.decode("utf-8", errors="replace")
         except:
             response_body = None
         error = str(e)
@@ -308,6 +325,7 @@ def save_evidence(result: JourneyResult, evidence_dir: Path) -> Path:
 # MAIN RUNNER
 # =============================================================================
 
+
 def run_journeys(
     journeys: List[Journey],
     base_url: str,
@@ -338,7 +356,11 @@ def run_journeys(
     print()
 
     for journey in journeys:
-        print(f"  {journey.journey_id}: {journey.method} {journey.route}...", end=" ", flush=True)
+        print(
+            f"  {journey.journey_id}: {journey.method} {journey.route}...",
+            end=" ",
+            flush=True,
+        )
 
         result = execute_journey(journey, base_url, api_key)
         results.append(result)
@@ -373,7 +395,9 @@ def run_journeys(
         print("FAILURES:")
         for r in results:
             if not r.status_match:
-                print(f"  {r.journey_id}: {r.error or f'Status {r.status_code}'} [{r.suggested_failure_type}]")
+                print(
+                    f"  {r.journey_id}: {r.error or f'Status {r.status_code}'} [{r.suggested_failure_type}]"
+                )
 
     return results
 
@@ -385,36 +409,26 @@ def main():
     parser.add_argument(
         "--base-url",
         default=os.environ.get("L2_BASE_URL", DEFAULT_BASE_URL),
-        help=f"Base URL for L2 backend (default: {DEFAULT_BASE_URL})"
+        help=f"Base URL for L2 backend (default: {DEFAULT_BASE_URL})",
     )
     parser.add_argument(
         "--api-key",
         default=os.environ.get("AOS_API_KEY"),
-        help="API key for authentication (default: from AOS_API_KEY env var)"
+        help="API key for authentication (default: from AOS_API_KEY env var)",
+    )
+    parser.add_argument("--journey", help="Run specific journey by ID")
+    parser.add_argument("--capability", help="Run journeys for specific capability ID")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would run without executing"
     )
     parser.add_argument(
-        "--journey",
-        help="Run specific journey by ID"
-    )
-    parser.add_argument(
-        "--capability",
-        help="Run journeys for specific capability ID"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would run without executing"
-    )
-    parser.add_argument(
-        "--no-evidence",
-        action="store_true",
-        help="Don't save evidence files"
+        "--no-evidence", action="store_true", help="Don't save evidence files"
     )
     parser.add_argument(
         "--journeys-file",
         type=Path,
         default=JOURNEYS_FILE,
-        help="Path to journeys YAML file"
+        help="Path to journeys YAML file",
     )
     args = parser.parse_args()
 

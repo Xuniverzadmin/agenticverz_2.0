@@ -414,9 +414,7 @@ def generate_registry_hints(
         for d in other_drifts[:30]:
             desc = d.get("description", "")[:50]
             lines.append(
-                f"| {d.get('drift_type', '')} "
-                f"| {desc} "
-                f"| {d.get('severity', '')} |"
+                f"| {d.get('drift_type', '')} | {desc} | {d.get('severity', '')} |"
             )
     else:
         lines.append("*No drift candidates found.*")

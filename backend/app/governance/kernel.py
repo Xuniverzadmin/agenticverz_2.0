@@ -29,12 +29,11 @@ If code doesn't call the kernel, it doesn't execute.
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +52,7 @@ class EnforcementMode(str, Enum):
     PERMISSIVE: Log and allow (v1 default)
     STRICT: Enforce authority and policy (v2+, opt-in per capability)
     """
+
     PERMISSIVE = "permissive"
     STRICT = "strict"
 
@@ -95,7 +95,7 @@ def set_enforcement_mode(capability_id: str, mode: EnforcementMode) -> None:
         extra={
             "capability_id": capability_id,
             "mode": mode.value,
-        }
+        },
     )
 
 
@@ -122,9 +122,7 @@ class InvocationContext:
 
     # Invocation metadata
     invocation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     # Request context (for HTTP)
     request_id: Optional[str] = None
@@ -201,16 +199,48 @@ class ExecutionKernel:
     # This list is populated from CAPABILITY_REGISTRY_UNIFIED.yaml
     _KNOWN_CAPABILITIES: set[str] = {
         # FIRST_CLASS (CAP-001 to CAP-021)
-        "CAP-001", "CAP-002", "CAP-003", "CAP-004", "CAP-005",
-        "CAP-006", "CAP-007", "CAP-008", "CAP-009", "CAP-010",
-        "CAP-011", "CAP-012", "CAP-013", "CAP-014", "CAP-015",
-        "CAP-016", "CAP-017", "CAP-018", "CAP-019", "CAP-020",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CAP-005",
+        "CAP-006",
+        "CAP-007",
+        "CAP-008",
+        "CAP-009",
+        "CAP-010",
+        "CAP-011",
+        "CAP-012",
+        "CAP-013",
+        "CAP-014",
+        "CAP-015",
+        "CAP-016",
+        "CAP-017",
+        "CAP-018",
+        "CAP-019",
+        "CAP-020",
         "CAP-021",
         # SUBSTRATE (SUB-001 to SUB-020)
-        "SUB-001", "SUB-002", "SUB-003", "SUB-004", "SUB-005",
-        "SUB-006", "SUB-007", "SUB-008", "SUB-009", "SUB-010",
-        "SUB-011", "SUB-012", "SUB-013", "SUB-014", "SUB-015",
-        "SUB-016", "SUB-017", "SUB-018", "SUB-019", "SUB-020",
+        "SUB-001",
+        "SUB-002",
+        "SUB-003",
+        "SUB-004",
+        "SUB-005",
+        "SUB-006",
+        "SUB-007",
+        "SUB-008",
+        "SUB-009",
+        "SUB-010",
+        "SUB-011",
+        "SUB-012",
+        "SUB-013",
+        "SUB-014",
+        "SUB-015",
+        "SUB-016",
+        "SUB-017",
+        "SUB-018",
+        "SUB-019",
+        "SUB-020",
     }
 
     @classmethod
@@ -257,7 +287,7 @@ class ExecutionKernel:
                     "tenant_id": context.tenant_id,
                     "enforcement_mode": enforcement_mode.value,
                     "action": "ALLOWED (v1 permissive)",
-                }
+                },
             )
             # v1: Allow execution even for unknown capability
             # CI should catch this, not runtime
@@ -368,7 +398,7 @@ class ExecutionKernel:
                     "tenant_id": context.tenant_id,
                     "enforcement_mode": enforcement_mode.value,
                     "action": "ALLOWED (v1 permissive)",
-                }
+                },
             )
 
         # Emit execution envelope
@@ -464,9 +494,11 @@ class ExecutionKernel:
         """
         try:
             from app.auth.execution_envelope import (
+                CapabilityId,
                 ExecutionEnvelopeFactory,
                 emit_envelope,
-                CapabilityId,
+            )
+            from app.auth.execution_envelope import (
                 ExecutionVector as EnvVector,
             )
 
@@ -514,7 +546,7 @@ class ExecutionKernel:
                     "subject": context.subject,
                     "tenant_id": context.tenant_id,
                     "reason": reason,
-                }
+                },
             )
             return envelope_id
 
@@ -527,7 +559,7 @@ class ExecutionKernel:
                     "invocation_id": context.invocation_id,
                     "error": str(e),
                     "action": "CONTINUED (non-blocking)",
-                }
+                },
             )
             return f"failed-{uuid.uuid4()}"
 
@@ -549,7 +581,7 @@ class ExecutionKernel:
                 "subject": context.subject,
                 "tenant_id": context.tenant_id,
                 "enforcement_mode": enforcement_mode.value,
-            }
+            },
         )
 
     @classmethod
@@ -570,7 +602,7 @@ class ExecutionKernel:
                 "success": success,
                 "duration_ms": duration_ms,
                 "error": error,
-            }
+            },
         )
 
     @classmethod
