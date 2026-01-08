@@ -5,9 +5,9 @@
   promotion_origin: pre-PIN-326
   claimed_console_scope: CUSTOMER
   claimed_exposure_type: UI
-  claimed_role: control
+  claimed_role: observe
   determinism_claim: deterministic
-  mutability_claim: write
+  mutability_claim: read
   replay_claim: 'yes'
   export_claim: unknown
   owner: platform
@@ -25,7 +25,7 @@
     system behavior that should never be user-invokable. They are reclassified as
     SUBSTRATE.
   normalization_notes: Merged from 2 LCAPs
-  trust_weight: HIGH
+  trust_weight: MEDIUM
 - capability_id: CAP-002
   canonical_name: Cost Simulation V2
   status: FIRST_CLASS

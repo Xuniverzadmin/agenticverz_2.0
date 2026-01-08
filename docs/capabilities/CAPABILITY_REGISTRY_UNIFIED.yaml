@@ -78,6 +78,10 @@ first_class_capabilities:
     console_scope: CUSTOMER
     origin: pre-PIN-326
     owner: platform
+    # PIN-363: Explicit directional claims (override inference)
+    # CAP-001 is read-only observation - POST routes are FOUNDER_ONLY for replay execution
+    role: observe
+    mutability: read
 
     routes:
       # Original CAP-001 routes

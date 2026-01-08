@@ -1,16 +1,4 @@
 - domain: ACTIVITY
-  capability_id: CAP-001
-  capability_name: Execution Replay & Activity
-  applicable: true
-  questions_answered: ACT-Q5, ACT-Q6
-  question_count: 2
-  decision: CONSUME
-  confidence: 1.0
-  trust_weight: HIGH
-  console_scope: CUSTOMER
-  status: FIRST_CLASS
-  notes: Primary:4 Secondary:2 Questions:2
-- domain: ACTIVITY
   capability_id: CAP-011
   capability_name: M28 Governance Orchestration
   applicable: true
@@ -94,6 +82,18 @@
   console_scope: NONE
   status: FIRST_CLASS
   notes: Primary:1 Secondary:0 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: ACT-Q5, ACT-Q6
+  question_count: 2
+  decision: CONSUME
+  confidence: 0.8
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:4 Secondary:2 Questions:2
 - domain: ACTIVITY
   capability_id: CAP-019
   capability_name: Run Management
@@ -491,18 +491,6 @@
   status: SUBSTRATE
   notes: Excluded by domain keywords
 - domain: INCIDENTS
-  capability_id: CAP-001
-  capability_name: Execution Replay & Activity
-  applicable: true
-  questions_answered: INC-Q1, INC-Q2, INC-Q5
-  question_count: 3
-  decision: CONSUME
-  confidence: 1.0
-  trust_weight: HIGH
-  console_scope: CUSTOMER
-  status: FIRST_CLASS
-  notes: Primary:2 Secondary:0 Questions:3
-- domain: INCIDENTS
   capability_id: CAP-002
   capability_name: Cost Simulation V2
   applicable: true
@@ -550,6 +538,18 @@
   console_scope: NONE
   status: FIRST_CLASS
   notes: Primary:1 Secondary:0 Questions:1
+- domain: INCIDENTS
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: INC-Q1, INC-Q2, INC-Q5
+  question_count: 3
+  decision: CONSUME
+  confidence: 0.8
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:0 Questions:3
 - domain: INCIDENTS
   capability_id: CAP-018
   capability_name: M25 Integration Platform
@@ -983,18 +983,6 @@
   status: SUBSTRATE
   notes: No keyword or question match
 - domain: LOGS
-  capability_id: CAP-001
-  capability_name: Execution Replay & Activity
-  applicable: true
-  questions_answered: LOG-Q1, LOG-Q2
-  question_count: 2
-  decision: CONSUME
-  confidence: 1.0
-  trust_weight: HIGH
-  console_scope: CUSTOMER
-  status: FIRST_CLASS
-  notes: Primary:2 Secondary:1 Questions:2
-- domain: LOGS
   capability_id: CAP-002
   capability_name: Cost Simulation V2
   applicable: true
@@ -1018,6 +1006,18 @@
   console_scope: NONE
   status: FIRST_CLASS
   notes: Primary:0 Secondary:0 Questions:1
+- domain: LOGS
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: LOG-Q1, LOG-Q2
+  question_count: 2
+  decision: CONSUME
+  confidence: 0.8
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:1 Questions:2
 - domain: LOGS
   capability_id: CAP-020
   capability_name: CLI Execution
@@ -1487,18 +1487,6 @@
   status: FIRST_CLASS
   notes: Primary:2 Secondary:4 Questions:2
 - domain: POLICIES
-  capability_id: CAP-001
-  capability_name: Execution Replay & Activity
-  applicable: true
-  questions_answered: POL-Q2
-  question_count: 1
-  decision: CONSUME
-  confidence: 0.85
-  trust_weight: HIGH
-  console_scope: CUSTOMER
-  status: FIRST_CLASS
-  notes: Primary:0 Secondary:0 Questions:1
-- domain: POLICIES
   capability_id: CAP-005
   capability_name: Founder Console
   applicable: true
@@ -1546,6 +1534,18 @@
   console_scope: SDK
   status: FIRST_CLASS
   notes: Primary:1 Secondary:1 Questions:1
+- domain: POLICIES
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: POL-Q2
+  question_count: 1
+  decision: DEFER
+  confidence: 0.55
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Low confidence. Primary:0 Secondary:0
 - domain: POLICIES
   capability_id: CAP-017
   capability_name: Cross-Project Aggregation

@@ -1,5 +1,4 @@
 domain,capability_id,capability_name,applicable,decision,confidence,questions_answered,question_count,trust_weight,console_scope,status,notes
-ACTIVITY,CAP-001,Execution Replay & Activity,True,CONSUME,1.0,"ACT-Q5, ACT-Q6",2,HIGH,CUSTOMER,FIRST_CLASS,Primary:4 Secondary:2 Questions:2
 ACTIVITY,CAP-011,M28 Governance Orchestration,True,CONSUME,0.95,ACT-Q6,1,HIGH,FOUNDER,FIRST_CLASS,Primary:2 Secondary:0 Questions:1
 ACTIVITY,CAP-016,Skill System (M2/M3),True,CONSUME,0.95,ACT-Q6,1,HIGH,SDK,FIRST_CLASS,Primary:2 Secondary:2 Questions:1
 ACTIVITY,CAP-002,Cost Simulation V2,True,CONSUME,0.85,ACT-Q6,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:1 Secondary:1 Questions:1
@@ -7,6 +6,7 @@ ACTIVITY,CAP-008,M12 Multi-Agent Orchestration,True,CONSUME,0.85,ACT-Q6,1,MEDIUM
 ACTIVITY,CAP-012,M4 Workflow Engine,True,CONSUME,0.85,ACT-Q6,1,MEDIUM,NONE,FIRST_CLASS,Primary:2 Secondary:0 Questions:1
 ACTIVITY,CAP-020,CLI Execution,True,CONSUME,0.85,ACT-Q6,1,MEDIUM,NONE,FIRST_CLASS,Primary:2 Secondary:0 Questions:1
 ACTIVITY,CAP-021,SDK Execution,True,CONSUME,0.85,ACT-Q6,1,HIGH,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:1
+ACTIVITY,CAP-001,Execution Replay & Activity,True,CONSUME,0.8,"ACT-Q5, ACT-Q6",2,MEDIUM,CUSTOMER,FIRST_CLASS,Primary:4 Secondary:2 Questions:2
 ACTIVITY,CAP-019,Run Management,True,CONSUME,0.6,,0,MEDIUM,SDK,FIRST_CLASS,Primary:1 Secondary:1 Questions:0
 ACTIVITY,SUB-018,Run Execution & Dispatch,True,DEFER,0.55,ACT-Q6,1,MEDIUM,NONE,SUBSTRATE,Low confidence. Primary:2 Secondary:2
 ACTIVITY,CAP-003,Policy Proposals,True,DEFER,0.5,,0,MEDIUM,CUSTOMER,FIRST_CLASS,Low confidence. Primary:1 Secondary:0
@@ -40,11 +40,11 @@ ACTIVITY,SUB-015,Agent Registration,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No
 ACTIVITY,SUB-016,Agent Credits Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
 ACTIVITY,SUB-017,Agent Coordination Primitives,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
 ACTIVITY,SUB-019,Failure Recovery Processing,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,Excluded by domain keywords
-INCIDENTS,CAP-001,Execution Replay & Activity,True,CONSUME,1.0,"INC-Q1, INC-Q2, INC-Q5",3,HIGH,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:0 Questions:3
 INCIDENTS,CAP-002,Cost Simulation V2,True,CONSUME,1.0,"INC-Q1, INC-Q2, INC-Q5",3,HIGH,CUSTOMER,FIRST_CLASS,Primary:1 Secondary:0 Questions:3
 INCIDENTS,CAP-005,Founder Console,True,CONSUME,0.85,INC-Q5,1,HIGH,FOUNDER,FIRST_CLASS,Primary:1 Secondary:1 Questions:1
 INCIDENTS,CAP-009,M19 Policy Engine,True,CONSUME,0.85,INC-Q1,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
 INCIDENTS,CAP-021,SDK Execution,True,CONSUME,0.85,INC-Q5,1,HIGH,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:1
+INCIDENTS,CAP-001,Execution Replay & Activity,True,CONSUME,0.8,"INC-Q1, INC-Q2, INC-Q5",3,MEDIUM,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:0 Questions:3
 INCIDENTS,CAP-018,M25 Integration Platform,False,REJECT,0.4,,0,MEDIUM,CUSTOMER,FIRST_CLASS,"Secondary keywords only, no questions answered"
 INCIDENTS,SUB-019,Failure Recovery Processing,False,REJECT,0.1,,0,MEDIUM,NONE,SUBSTRATE,Below threshold. Confidence:0.10
 INCIDENTS,CAP-003,Policy Proposals,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
@@ -81,9 +81,9 @@ INCIDENTS,SUB-016,Agent Credits Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBST
 INCIDENTS,SUB-017,Agent Coordination Primitives,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
 INCIDENTS,SUB-018,Run Execution & Dispatch,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
 INCIDENTS,SUB-020,External Delivery & Outbox,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
-LOGS,CAP-001,Execution Replay & Activity,True,CONSUME,1.0,"LOG-Q1, LOG-Q2",2,HIGH,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:1 Questions:2
 LOGS,CAP-002,Cost Simulation V2,True,CONSUME,0.85,LOG-Q1,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
 LOGS,CAP-021,SDK Execution,True,CONSUME,0.85,LOG-Q1,1,HIGH,NONE,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
+LOGS,CAP-001,Execution Replay & Activity,True,CONSUME,0.8,"LOG-Q1, LOG-Q2",2,MEDIUM,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:1 Questions:2
 LOGS,CAP-020,CLI Execution,True,CONSUME,0.75,LOG-Q2,1,MEDIUM,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:1
 LOGS,CAP-011,M28 Governance Orchestration,True,CONSUME,0.7,,0,HIGH,FOUNDER,FIRST_CLASS,Primary:1 Secondary:0 Questions:0
 LOGS,CAP-012,M4 Workflow Engine,True,CONSUME,0.6,,0,MEDIUM,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:0
@@ -123,11 +123,11 @@ LOGS,SUB-018,Run Execution & Dispatch,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,
 LOGS,SUB-019,Failure Recovery Processing,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
 LOGS,SUB-020,External Delivery & Outbox,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
 POLICIES,CAP-009,M19 Policy Engine,True,CONSUME,1.0,"POL-Q1, POL-Q4",2,HIGH,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:4 Questions:2
-POLICIES,CAP-001,Execution Replay & Activity,True,CONSUME,0.85,POL-Q2,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
 POLICIES,CAP-005,Founder Console,True,CONSUME,0.85,POL-Q4,1,HIGH,FOUNDER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
 POLICIES,CAP-011,M28 Governance Orchestration,True,CONSUME,0.7,,0,HIGH,FOUNDER,FIRST_CLASS,Primary:1 Secondary:0 Questions:0
 POLICIES,CAP-003,Policy Proposals,True,CONSUME,0.65,POL-Q4,1,MEDIUM,CUSTOMER,FIRST_CLASS,Primary:1 Secondary:2 Questions:1
 POLICIES,CAP-016,Skill System (M2/M3),True,CONSUME,0.65,POL-Q4,1,HIGH,SDK,FIRST_CLASS,Primary:1 Secondary:1 Questions:1
+POLICIES,CAP-001,Execution Replay & Activity,True,DEFER,0.55,POL-Q2,1,MEDIUM,CUSTOMER,FIRST_CLASS,Low confidence. Primary:0 Secondary:0
 POLICIES,CAP-017,Cross-Project Aggregation,True,DEFER,0.55,POL-Q4,1,MEDIUM,FOUNDER,FIRST_CLASS,Low confidence. Primary:1 Secondary:0
 POLICIES,CAP-019,Run Management,True,DEFER,0.55,POL-Q4,1,MEDIUM,SDK,FIRST_CLASS,Low confidence. Primary:1 Secondary:1
 POLICIES,CAP-002,Cost Simulation V2,False,REJECT,0.0,,0,HIGH,CUSTOMER,FIRST_CLASS,No keyword or question match

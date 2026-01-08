@@ -1,6 +1,6 @@
 # PIN-363: STEP 1B-R — L2.1 Surface Rebaselining
 
-**Status:** IN_PROGRESS
+**Status:** COMPLETE (FROZEN)
 **Created:** 2026-01-08
 **Category:** Governance / Capability Intelligence
 **Scope:** Mechanical taxonomy repair
@@ -200,8 +200,12 @@ Remaining generated rows should represent:
 | Derive surface clusters | COMPLETE | 8 unique clusters identified |
 | Define rebased schema | COMPLETE | 8 canonical surfaces |
 | Create rebased supertable | COMPLETE | `l2_supertable_v3_rebased_surfaces.xlsx` |
-| Re-run STEP 1B | COMPLETE | See results below |
-| Validate gates G1-G4 | PARTIAL | G2 FAIL — data quality issue |
+| Re-run STEP 1B | COMPLETE | 33 bindings |
+| Validate gates G1-G4 (initial) | PARTIAL | G2 FAIL — CAP-001 data quality issue |
+| Fix CAP-001 metadata | COMPLETE | role→observe, mutability→read |
+| Re-run full pipeline | COMPLETE | STEP 0B → 1 → 1B → 1B-R |
+| Validate gates G1-G4 (final) | **ALL PASS** | G1/G2/G3/G4 all PASS |
+| Freeze STEP 1B acceptance | **FROZEN** | 2026-01-08 |
 
 ---
 
@@ -244,20 +248,37 @@ Remaining generated rows should represent:
 | G3 | Zero authority violations | 0 violations | **PASS** |
 | G4 | Generated ≤40% | 0% | **PASS** |
 
-### Gate G2 Failure Analysis
+### Gate G2 Failure Analysis (RESOLVED)
 
-**Problem:** CAP-001 (Execution Replay & Activity) binds to L21-ACT-W in all 4 domains.
+**Problem (Initial):** CAP-001 (Execution Replay & Activity) bound to L21-ACT-W in all 4 domains.
 
-**Root Cause:** STEP 0B metadata is incorrect:
-- Current: `claimed_role=control`, `mutability_claim=write`
-- Expected: `claimed_role=observe`, `mutability_claim=read`
+**Root Cause:** STEP 0B metadata was incorrect:
+- Before: `claimed_role=control`, `mutability_claim=write` (inferred incorrectly)
+- After: `claimed_role=observe`, `mutability_claim=read` (explicit in registry)
 
-**Impact:** Mechanical binding is correct per input data, but input data is wrong.
+**Resolution (2026-01-08):**
+1. Added explicit `role: observe` and `mutability: read` to CAP-001 in CAPABILITY_REGISTRY_UNIFIED.yaml
+2. Modified STEP 0B script to use explicit fields when present
+3. Re-ran full pipeline: STEP 0B → STEP 1 → STEP 1B → STEP 1B-R
+4. Gate G2 now PASSES — CAP-001 binds to L21-EVD-R (EVIDENCE) in all domains
 
-**Corrective Action Required:**
-1. Fix CAP-001's directional metadata in STEP 0B
-2. Re-run STEP 0B → STEP 1 → STEP 1B → STEP 1B-R
-3. Validate Gate G2 passes
+### Final Gate Validation (2026-01-08)
+
+| Gate | Requirement | Result | Status |
+|------|-------------|--------|--------|
+| G1 | Baseline dominance ≥60% | 100% | **PASS** |
+| G2 | CAP-001 → EVIDENCE | CAP-001 → L21-EVD-R | **PASS** |
+| G3 | Zero authority violations | 0 violations | **PASS** |
+| G4 | Generated ≤40% | 0% | **PASS** |
+
+### CAP-001 Final Bindings
+
+| Domain | Surface | Type | Status |
+|--------|---------|------|--------|
+| ACTIVITY | L21-EVD-R | EVIDENCE | OK |
+| INCIDENTS | L21-EVD-R | EVIDENCE | OK |
+| LOGS | L21-EVD-R | EVIDENCE | OK |
+| POLICIES | L21-EVD-R | EVIDENCE | OK |
 
 ---
 
