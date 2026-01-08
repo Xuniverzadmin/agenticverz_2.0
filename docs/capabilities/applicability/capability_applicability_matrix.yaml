@@ -1,0 +1,1968 @@
+- domain: ACTIVITY
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: ACT-Q5, ACT-Q6
+  question_count: 2
+  decision: CONSUME
+  confidence: 1.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:4 Secondary:2 Questions:2
+- domain: ACTIVITY
+  capability_id: CAP-011
+  capability_name: M28 Governance Orchestration
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.95
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:0 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-016
+  capability_name: Skill System (M2/M3)
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.95
+  trust_weight: HIGH
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:2 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-002
+  capability_name: Cost Simulation V2
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:1 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-008
+  capability_name: M12 Multi-Agent Orchestration
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:0 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-012
+  capability_name: M4 Workflow Engine
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:0 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-020
+  capability_name: CLI Execution
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:0 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-021
+  capability_name: SDK Execution
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:0 Questions:1
+- domain: ACTIVITY
+  capability_id: CAP-019
+  capability_name: Run Management
+  applicable: true
+  questions_answered: ''
+  question_count: 0
+  decision: CONSUME
+  confidence: 0.6
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:1 Questions:0
+- domain: ACTIVITY
+  capability_id: SUB-018
+  capability_name: Run Execution & Dispatch
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: DEFER
+  confidence: 0.55
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Low confidence. Primary:2 Secondary:2
+- domain: ACTIVITY
+  capability_id: CAP-003
+  capability_name: Policy Proposals
+  applicable: true
+  questions_answered: ''
+  question_count: 0
+  decision: DEFER
+  confidence: 0.5
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Low confidence. Primary:1 Secondary:0
+- domain: ACTIVITY
+  capability_id: SUB-003
+  capability_name: Task Scheduling Substrate
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: DEFER
+  confidence: 0.45
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Low confidence. Primary:1 Secondary:0
+- domain: ACTIVITY
+  capability_id: SUB-009
+  capability_name: Agent Goal Submission
+  applicable: true
+  questions_answered: ACT-Q6
+  question_count: 1
+  decision: DEFER
+  confidence: 0.45
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Low confidence. Primary:1 Secondary:0
+- domain: ACTIVITY
+  capability_id: CAP-007
+  capability_name: Authorization (RBAC v2)
+  applicable: true
+  questions_answered: ''
+  question_count: 0
+  decision: DEFER
+  confidence: 0.4
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Low confidence. Primary:1 Secondary:0
+- domain: ACTIVITY
+  capability_id: SUB-010
+  capability_name: Agent Run Monitoring
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.2
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Below threshold. Confidence:0.20
+- domain: ACTIVITY
+  capability_id: SUB-007
+  capability_name: Container Runtime Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.1
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Below threshold. Confidence:0.10
+- domain: ACTIVITY
+  capability_id: SUB-014
+  capability_name: Agent Job Distribution
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.1
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Below threshold. Confidence:0.10
+- domain: ACTIVITY
+  capability_id: SUB-020
+  capability_name: External Delivery & Outbox
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.1
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Secondary keywords only, no questions answered
+- domain: ACTIVITY
+  capability_id: CAP-004
+  capability_name: C2 Prediction Plane
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-005
+  capability_name: Founder Console
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Excluded by domain keywords
+- domain: ACTIVITY
+  capability_id: CAP-006
+  capability_name: Authentication
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-009
+  capability_name: M19 Policy Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-010
+  capability_name: M17 CARE-L Routing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-013
+  capability_name: M5 Learning Pipeline
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-014
+  capability_name: M7 Memory System
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-015
+  capability_name: M22 Optimization Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-017
+  capability_name: Cross-Project Aggregation
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: CAP-018
+  capability_name: M25 Integration Platform
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-001
+  capability_name: Database Connection Pool
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-002
+  capability_name: Cache Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-004
+  capability_name: Observability Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-005
+  capability_name: Migration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-006
+  capability_name: Configuration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-008
+  capability_name: Agent Lifecycle Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-011
+  capability_name: Agent Memory Operations
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-012
+  capability_name: Agent Message Queue
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-013
+  capability_name: Blackboard Shared State
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-015
+  capability_name: Agent Registration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-016
+  capability_name: Agent Credits Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-017
+  capability_name: Agent Coordination Primitives
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: ACTIVITY
+  capability_id: SUB-019
+  capability_name: Failure Recovery Processing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Excluded by domain keywords
+- domain: INCIDENTS
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: INC-Q1, INC-Q2, INC-Q5
+  question_count: 3
+  decision: CONSUME
+  confidence: 1.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:0 Questions:3
+- domain: INCIDENTS
+  capability_id: CAP-002
+  capability_name: Cost Simulation V2
+  applicable: true
+  questions_answered: INC-Q1, INC-Q2, INC-Q5
+  question_count: 3
+  decision: CONSUME
+  confidence: 1.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:0 Questions:3
+- domain: INCIDENTS
+  capability_id: CAP-005
+  capability_name: Founder Console
+  applicable: true
+  questions_answered: INC-Q5
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:1 Questions:1
+- domain: INCIDENTS
+  capability_id: CAP-009
+  capability_name: M19 Policy Engine
+  applicable: true
+  questions_answered: INC-Q1
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:0 Secondary:0 Questions:1
+- domain: INCIDENTS
+  capability_id: CAP-021
+  capability_name: SDK Execution
+  applicable: true
+  questions_answered: INC-Q5
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:0 Questions:1
+- domain: INCIDENTS
+  capability_id: CAP-018
+  capability_name: M25 Integration Platform
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.4
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Secondary keywords only, no questions answered
+- domain: INCIDENTS
+  capability_id: SUB-019
+  capability_name: Failure Recovery Processing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.1
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Below threshold. Confidence:0.10
+- domain: INCIDENTS
+  capability_id: CAP-003
+  capability_name: Policy Proposals
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-004
+  capability_name: C2 Prediction Plane
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-006
+  capability_name: Authentication
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-007
+  capability_name: Authorization (RBAC v2)
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-008
+  capability_name: M12 Multi-Agent Orchestration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-010
+  capability_name: M17 CARE-L Routing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-011
+  capability_name: M28 Governance Orchestration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-012
+  capability_name: M4 Workflow Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-013
+  capability_name: M5 Learning Pipeline
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-014
+  capability_name: M7 Memory System
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-015
+  capability_name: M22 Optimization Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-016
+  capability_name: Skill System (M2/M3)
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-017
+  capability_name: Cross-Project Aggregation
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-019
+  capability_name: Run Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: CAP-020
+  capability_name: CLI Execution
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-001
+  capability_name: Database Connection Pool
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-002
+  capability_name: Cache Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-003
+  capability_name: Task Scheduling Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-004
+  capability_name: Observability Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-005
+  capability_name: Migration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-006
+  capability_name: Configuration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-007
+  capability_name: Container Runtime Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-008
+  capability_name: Agent Lifecycle Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-009
+  capability_name: Agent Goal Submission
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-010
+  capability_name: Agent Run Monitoring
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-011
+  capability_name: Agent Memory Operations
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-012
+  capability_name: Agent Message Queue
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-013
+  capability_name: Blackboard Shared State
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-014
+  capability_name: Agent Job Distribution
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-015
+  capability_name: Agent Registration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-016
+  capability_name: Agent Credits Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-017
+  capability_name: Agent Coordination Primitives
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-018
+  capability_name: Run Execution & Dispatch
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: INCIDENTS
+  capability_id: SUB-020
+  capability_name: External Delivery & Outbox
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: LOG-Q1, LOG-Q2
+  question_count: 2
+  decision: CONSUME
+  confidence: 1.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:1 Questions:2
+- domain: LOGS
+  capability_id: CAP-002
+  capability_name: Cost Simulation V2
+  applicable: true
+  questions_answered: LOG-Q1
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:0 Secondary:0 Questions:1
+- domain: LOGS
+  capability_id: CAP-021
+  capability_name: SDK Execution
+  applicable: true
+  questions_answered: LOG-Q1
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Primary:0 Secondary:0 Questions:1
+- domain: LOGS
+  capability_id: CAP-020
+  capability_name: CLI Execution
+  applicable: true
+  questions_answered: LOG-Q2
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.75
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:0 Questions:1
+- domain: LOGS
+  capability_id: CAP-011
+  capability_name: M28 Governance Orchestration
+  applicable: true
+  questions_answered: ''
+  question_count: 0
+  decision: CONSUME
+  confidence: 0.7
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:0 Questions:0
+- domain: LOGS
+  capability_id: CAP-012
+  capability_name: M4 Workflow Engine
+  applicable: true
+  questions_answered: ''
+  question_count: 0
+  decision: CONSUME
+  confidence: 0.6
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:0 Questions:0
+- domain: LOGS
+  capability_id: CAP-005
+  capability_name: Founder Console
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.7
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Secondary keywords only, no questions answered
+- domain: LOGS
+  capability_id: SUB-004
+  capability_name: Observability Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.1
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: Below threshold. Confidence:0.10
+- domain: LOGS
+  capability_id: CAP-003
+  capability_name: Policy Proposals
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-004
+  capability_name: C2 Prediction Plane
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-006
+  capability_name: Authentication
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-007
+  capability_name: Authorization (RBAC v2)
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-008
+  capability_name: M12 Multi-Agent Orchestration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-009
+  capability_name: M19 Policy Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-010
+  capability_name: M17 CARE-L Routing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-013
+  capability_name: M5 Learning Pipeline
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-014
+  capability_name: M7 Memory System
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-015
+  capability_name: M22 Optimization Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-016
+  capability_name: Skill System (M2/M3)
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-017
+  capability_name: Cross-Project Aggregation
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-018
+  capability_name: M25 Integration Platform
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: CAP-019
+  capability_name: Run Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-001
+  capability_name: Database Connection Pool
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-002
+  capability_name: Cache Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-003
+  capability_name: Task Scheduling Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-005
+  capability_name: Migration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-006
+  capability_name: Configuration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-007
+  capability_name: Container Runtime Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-008
+  capability_name: Agent Lifecycle Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-009
+  capability_name: Agent Goal Submission
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-010
+  capability_name: Agent Run Monitoring
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-011
+  capability_name: Agent Memory Operations
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-012
+  capability_name: Agent Message Queue
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-013
+  capability_name: Blackboard Shared State
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-014
+  capability_name: Agent Job Distribution
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-015
+  capability_name: Agent Registration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-016
+  capability_name: Agent Credits Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-017
+  capability_name: Agent Coordination Primitives
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-018
+  capability_name: Run Execution & Dispatch
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-019
+  capability_name: Failure Recovery Processing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: LOGS
+  capability_id: SUB-020
+  capability_name: External Delivery & Outbox
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-009
+  capability_name: M19 Policy Engine
+  applicable: true
+  questions_answered: POL-Q1, POL-Q4
+  question_count: 2
+  decision: CONSUME
+  confidence: 1.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:2 Secondary:4 Questions:2
+- domain: POLICIES
+  capability_id: CAP-001
+  capability_name: Execution Replay & Activity
+  applicable: true
+  questions_answered: POL-Q2
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:0 Secondary:0 Questions:1
+- domain: POLICIES
+  capability_id: CAP-005
+  capability_name: Founder Console
+  applicable: true
+  questions_answered: POL-Q4
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.85
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Primary:0 Secondary:0 Questions:1
+- domain: POLICIES
+  capability_id: CAP-011
+  capability_name: M28 Governance Orchestration
+  applicable: true
+  questions_answered: ''
+  question_count: 0
+  decision: CONSUME
+  confidence: 0.7
+  trust_weight: HIGH
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:0 Questions:0
+- domain: POLICIES
+  capability_id: CAP-003
+  capability_name: Policy Proposals
+  applicable: true
+  questions_answered: POL-Q4
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.65
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:2 Questions:1
+- domain: POLICIES
+  capability_id: CAP-016
+  capability_name: Skill System (M2/M3)
+  applicable: true
+  questions_answered: POL-Q4
+  question_count: 1
+  decision: CONSUME
+  confidence: 0.65
+  trust_weight: HIGH
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: Primary:1 Secondary:1 Questions:1
+- domain: POLICIES
+  capability_id: CAP-017
+  capability_name: Cross-Project Aggregation
+  applicable: true
+  questions_answered: POL-Q4
+  question_count: 1
+  decision: DEFER
+  confidence: 0.55
+  trust_weight: MEDIUM
+  console_scope: FOUNDER
+  status: FIRST_CLASS
+  notes: Low confidence. Primary:1 Secondary:0
+- domain: POLICIES
+  capability_id: CAP-019
+  capability_name: Run Management
+  applicable: true
+  questions_answered: POL-Q4
+  question_count: 1
+  decision: DEFER
+  confidence: 0.55
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: Low confidence. Primary:1 Secondary:1
+- domain: POLICIES
+  capability_id: CAP-002
+  capability_name: Cost Simulation V2
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-004
+  capability_name: C2 Prediction Plane
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-006
+  capability_name: Authentication
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-007
+  capability_name: Authorization (RBAC v2)
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-008
+  capability_name: M12 Multi-Agent Orchestration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: SDK
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-010
+  capability_name: M17 CARE-L Routing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-012
+  capability_name: M4 Workflow Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-013
+  capability_name: M5 Learning Pipeline
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-014
+  capability_name: M7 Memory System
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-015
+  capability_name: M22 Optimization Engine
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-018
+  capability_name: M25 Integration Platform
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: CUSTOMER
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-020
+  capability_name: CLI Execution
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: CAP-021
+  capability_name: SDK Execution
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: HIGH
+  console_scope: NONE
+  status: FIRST_CLASS
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-001
+  capability_name: Database Connection Pool
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-002
+  capability_name: Cache Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-003
+  capability_name: Task Scheduling Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-004
+  capability_name: Observability Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-005
+  capability_name: Migration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-006
+  capability_name: Configuration Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-007
+  capability_name: Container Runtime Substrate
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: LOW
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-008
+  capability_name: Agent Lifecycle Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-009
+  capability_name: Agent Goal Submission
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-010
+  capability_name: Agent Run Monitoring
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-011
+  capability_name: Agent Memory Operations
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-012
+  capability_name: Agent Message Queue
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-013
+  capability_name: Blackboard Shared State
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-014
+  capability_name: Agent Job Distribution
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-015
+  capability_name: Agent Registration
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-016
+  capability_name: Agent Credits Management
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-017
+  capability_name: Agent Coordination Primitives
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-018
+  capability_name: Run Execution & Dispatch
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-019
+  capability_name: Failure Recovery Processing
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match
+- domain: POLICIES
+  capability_id: SUB-020
+  capability_name: External Delivery & Outbox
+  applicable: false
+  questions_answered: ''
+  question_count: 0
+  decision: REJECT
+  confidence: 0.0
+  trust_weight: MEDIUM
+  console_scope: NONE
+  status: SUBSTRATE
+  notes: No keyword or question match

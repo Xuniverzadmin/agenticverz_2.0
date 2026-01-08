@@ -1,0 +1,1099 @@
+- capability_id: CAP-001
+  canonical_name: Execution Replay & Activity
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: CUSTOMER
+  claimed_exposure_type: UI
+  claimed_role: control
+  determinism_claim: deterministic
+  mutability_claim: write
+  replay_claim: 'yes'
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 34
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 2
+  has_justification: false
+  governance_notes: Agent Autonomy capabilities (LCAP-001 to LCAP-010) are internal
+    system behavior that should never be user-invokable. They are reclassified as
+    SUBSTRATE.
+  normalization_notes: Merged from 2 LCAPs
+  trust_weight: HIGH
+- capability_id: CAP-002
+  canonical_name: Cost Simulation V2
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: CUSTOMER
+  claimed_exposure_type: UI
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 21
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-002 | SUB-009 | Agent Goal Submission | Internal system
+    behavior |'
+  normalization_notes: ''
+  trust_weight: HIGH
+- capability_id: CAP-003
+  canonical_name: Policy Proposals
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: CUSTOMER
+  claimed_exposure_type: UI
+  claimed_role: advisory
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 4
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-003 | SUB-010 | Agent Run Monitoring | Internal system
+    behavior |'
+  normalization_notes: ''
+  trust_weight: MEDIUM
+- capability_id: CAP-004
+  canonical_name: C2 Prediction Plane
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: CUSTOMER
+  claimed_exposure_type: UI
+  claimed_role: advisory
+  determinism_claim: probabilistic
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 5
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-004 | SUB-011 | Agent Memory Operations | Internal system
+    behavior |'
+  normalization_notes: ''
+  trust_weight: MEDIUM
+- capability_id: CAP-005
+  canonical_name: Founder Console
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: FOUNDER
+  claimed_exposure_type: UI
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: control
+  replay_claim: unknown
+  export_claim: unknown
+  owner: founder
+  layer: ''
+  has_routes: true
+  route_count: 25
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-005 | SUB-012 | Agent Message Queue | Internal system
+    behavior |'
+  normalization_notes: ''
+  trust_weight: HIGH
+- capability_id: CAP-006
+  canonical_name: Authentication
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: middleware
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-006 | SUB-013 | Blackboard Shared State | Internal system
+    behavior |'
+  normalization_notes: Internal-only, no user exposure
+  trust_weight: MEDIUM
+- capability_id: CAP-007
+  canonical_name: Authorization (RBAC v2)
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: middleware
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-007 | SUB-014 | Agent Job Distribution | Internal system
+    behavior |'
+  normalization_notes: Internal-only, no user exposure
+  trust_weight: MEDIUM
+- capability_id: CAP-008
+  canonical_name: M12 Multi-Agent Orchestration
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: SDK
+  claimed_exposure_type: SDK
+  claimed_role: engine
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-008 | SUB-015 | Agent Registration | Internal system behavior
+    |'
+  normalization_notes: ''
+  trust_weight: MEDIUM
+- capability_id: CAP-009
+  canonical_name: M19 Policy Engine
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: CUSTOMER
+  claimed_exposure_type: UI
+  claimed_role: engine
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 9
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-009 | SUB-016 | Agent Credits Management | Internal system
+    behavior |'
+  normalization_notes: ''
+  trust_weight: HIGH
+- capability_id: CAP-010
+  canonical_name: M17 CARE-L Routing
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: middleware
+  determinism_claim: probabilistic
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: Agent Autonomy capabilities (LCAP-001 to LCAP-010) are internal
+    system behavior that should never be user-invokable. They are reclassified as
+    SUBSTRATE.
+  normalization_notes: Internal-only, no user exposure
+  trust_weight: MEDIUM
+- capability_id: CAP-011
+  canonical_name: M28 Governance Orchestration
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: FOUNDER
+  claimed_exposure_type: UI
+  claimed_role: engine
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 5
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| CAP-002 (Cost Simulation) | LCAP-011 to LCAP-015 | 5 | Cost
+    observation & simulation |'
+  normalization_notes: ''
+  trust_weight: HIGH
+- capability_id: CAP-012
+  canonical_name: M4 Workflow Engine
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: engine
+  determinism_claim: deterministic
+  mutability_claim: read
+  replay_claim: 'yes'
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 1
+  has_justification: false
+  governance_notes: '- Cost simulation V2 (LCAP-012)'
+  normalization_notes: Internal-only, no user exposure; Merged from 1 LCAPs
+  trust_weight: MEDIUM
+- capability_id: CAP-013
+  canonical_name: M5 Learning Pipeline
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: engine
+  determinism_claim: probabilistic
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '- Cost anomaly detection (LCAP-013)'
+  normalization_notes: Internal-only, no user exposure
+  trust_weight: MEDIUM
+- capability_id: CAP-014
+  canonical_name: M7 Memory System
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: CUSTOMER
+  claimed_exposure_type: UI
+  claimed_role: unknown
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 7
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| CAP-014 (Memory System) | LCAP-054, LCAP-055 | 2 | Memory &
+    embeddings |'
+  normalization_notes: ''
+  trust_weight: MEDIUM
+- capability_id: CAP-015
+  canonical_name: M22 Optimization Engine
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: engine
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| CAP-002 (Cost Simulation) | LCAP-011 to LCAP-015 | 5 | Cost
+    observation & simulation |'
+  normalization_notes: Internal-only, no user exposure
+  trust_weight: MEDIUM
+- capability_id: CAP-016
+  canonical_name: Skill System (M2/M3)
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: SDK
+  claimed_exposure_type: SDK
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 6
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| CAP-009 (Policy Engine) | LCAP-016 to LCAP-019, LCAP-051 |
+    5 | Policy evaluation |'
+  normalization_notes: ''
+  trust_weight: HIGH
+- capability_id: CAP-017
+  canonical_name: Cross-Project Aggregation
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: FOUNDER
+  claimed_exposure_type: INTERNAL
+  claimed_role: unknown
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '- Policy administration (LCAP-017) - FOUNDER_ONLY'
+  normalization_notes: Internal-only, no user exposure
+  trust_weight: MEDIUM
+- capability_id: CAP-018
+  canonical_name: M25 Integration Platform
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: pre-PIN-326
+  claimed_console_scope: CUSTOMER
+  claimed_exposure_type: UI
+  claimed_role: unknown
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 15
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 1
+  has_justification: false
+  governance_notes: '| CAP-018 (Integration) | LCAP-028 to LCAP-032, LCAP-056, LCAP-057
+    | 7 | Integration & recovery |'
+  normalization_notes: Merged from 1 LCAPs
+  trust_weight: MEDIUM
+- capability_id: CAP-019
+  canonical_name: Run Management
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: promoted_from_PIN-329
+  claimed_console_scope: SDK
+  claimed_exposure_type: API
+  claimed_role: advisory
+  determinism_claim: mixed
+  mutability_claim: control
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: true
+  route_count: 6
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| CAP-009 (Policy Engine) | LCAP-016 to LCAP-019, LCAP-051 |
+    5 | Policy evaluation |'
+  normalization_notes: ''
+  trust_weight: MEDIUM
+- capability_id: CAP-020
+  canonical_name: CLI Execution
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: promoted_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: CLI
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: true
+  command_count: 10
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| CAP-001 (Replay & Activity) | LCAP-020 to LCAP-027, LCAP-049,
+    LCAP-050, LCAP-058 | 11 | Observation of execution |'
+  normalization_notes: ''
+  trust_weight: MEDIUM
+- capability_id: CAP-021
+  canonical_name: SDK Execution
+  status: FIRST_CLASS
+  lifecycle_state: active
+  promotion_origin: promoted_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: SDK
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: ''
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: true
+  sdk_method_count: 16
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '- Incident listing, search, aggregation (LCAP-020, LCAP-021,
+    LCAP-023)'
+  normalization_notes: ''
+  trust_weight: HIGH
+- capability_id: SUB-001
+  canonical_name: Database Connection Pool
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: PIN-327
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L6
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: false
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: ''
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: LOW
+- capability_id: SUB-002
+  canonical_name: Cache Substrate
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: PIN-327
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: advisory
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L6
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: false
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: ''
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: LOW
+- capability_id: SUB-003
+  canonical_name: Task Scheduling Substrate
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: PIN-327
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L5
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: false
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: ''
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: LOW
+- capability_id: SUB-004
+  canonical_name: Observability Substrate
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: PIN-327
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L6
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: false
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: ''
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: LOW
+- capability_id: SUB-005
+  canonical_name: Migration Substrate
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: PIN-327
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L7
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: false
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: ''
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: LOW
+- capability_id: SUB-006
+  canonical_name: Configuration Substrate
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: PIN-327
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L6
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: false
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: ''
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: LOW
+- capability_id: SUB-007
+  canonical_name: Container Runtime Substrate
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: PIN-327
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L7
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: false
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: ''
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: LOW
+- capability_id: SUB-008
+  canonical_name: Agent Lifecycle Management
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 5
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-001 | SUB-008 | Agent Lifecycle Management | Internal
+    system behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-009
+  canonical_name: Agent Goal Submission
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 1
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-002 | SUB-009 | Agent Goal Submission | Internal system
+    behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-010
+  canonical_name: Agent Run Monitoring
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: advisory
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 2
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-003 | SUB-010 | Agent Run Monitoring | Internal system
+    behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-011
+  canonical_name: Agent Memory Operations
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 2
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-004 | SUB-011 | Agent Memory Operations | Internal system
+    behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-012
+  canonical_name: Agent Message Queue
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 2
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-005 | SUB-012 | Agent Message Queue | Internal system
+    behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-013
+  canonical_name: Blackboard Shared State
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 3
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-006 | SUB-013 | Blackboard Shared State | Internal system
+    behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-014
+  canonical_name: Agent Job Distribution
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 4
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-007 | SUB-014 | Agent Job Distribution | Internal system
+    behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-015
+  canonical_name: Agent Registration
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 1
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-008 | SUB-015 | Agent Registration | Internal system behavior
+    |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-016
+  canonical_name: Agent Credits Management
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 2
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-009 | SUB-016 | Agent Credits Management | Internal system
+    behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-017
+  canonical_name: Agent Coordination Primitives
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: API
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: write
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L2
+  has_routes: true
+  route_count: 2
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-010 | SUB-017 | Agent Coordination Primitives | Internal
+    system behavior |'
+  normalization_notes: Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-018
+  canonical_name: Run Execution & Dispatch
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: control
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L5
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-WKR-001 | SUB-018 | Run Execution & Dispatch | System
+    plumbing |'
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-019
+  canonical_name: Failure Recovery Processing
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L5
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-WKR-002 | SUB-019 | Failure Recovery Processing | System
+    plumbing |'
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: MEDIUM
+- capability_id: SUB-020
+  canonical_name: External Delivery & Outbox
+  status: SUBSTRATE
+  lifecycle_state: active
+  promotion_origin: internalized_from_PIN-329
+  claimed_console_scope: NONE
+  claimed_exposure_type: INTERNAL
+  claimed_role: substrate
+  determinism_claim: mixed
+  mutability_claim: read
+  replay_claim: unknown
+  export_claim: unknown
+  owner: platform
+  layer: L5
+  has_routes: false
+  route_count: 0
+  has_sdk_methods: false
+  sdk_method_count: 0
+  has_commands: false
+  command_count: 0
+  pin329_mentioned: true
+  merged_from_count: 0
+  has_justification: false
+  governance_notes: '| LCAP-WKR-003 | SUB-020 | External Delivery & Outbox | System
+    plumbing |'
+  normalization_notes: Internal-only, no user exposure; Substrate - never user-invokable
+  trust_weight: MEDIUM

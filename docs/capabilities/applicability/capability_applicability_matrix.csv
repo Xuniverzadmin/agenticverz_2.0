@@ -1,0 +1,165 @@
+domain,capability_id,capability_name,applicable,decision,confidence,questions_answered,question_count,trust_weight,console_scope,status,notes
+ACTIVITY,CAP-001,Execution Replay & Activity,True,CONSUME,1.0,"ACT-Q5, ACT-Q6",2,HIGH,CUSTOMER,FIRST_CLASS,Primary:4 Secondary:2 Questions:2
+ACTIVITY,CAP-011,M28 Governance Orchestration,True,CONSUME,0.95,ACT-Q6,1,HIGH,FOUNDER,FIRST_CLASS,Primary:2 Secondary:0 Questions:1
+ACTIVITY,CAP-016,Skill System (M2/M3),True,CONSUME,0.95,ACT-Q6,1,HIGH,SDK,FIRST_CLASS,Primary:2 Secondary:2 Questions:1
+ACTIVITY,CAP-002,Cost Simulation V2,True,CONSUME,0.85,ACT-Q6,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:1 Secondary:1 Questions:1
+ACTIVITY,CAP-008,M12 Multi-Agent Orchestration,True,CONSUME,0.85,ACT-Q6,1,MEDIUM,SDK,FIRST_CLASS,Primary:2 Secondary:0 Questions:1
+ACTIVITY,CAP-012,M4 Workflow Engine,True,CONSUME,0.85,ACT-Q6,1,MEDIUM,NONE,FIRST_CLASS,Primary:2 Secondary:0 Questions:1
+ACTIVITY,CAP-020,CLI Execution,True,CONSUME,0.85,ACT-Q6,1,MEDIUM,NONE,FIRST_CLASS,Primary:2 Secondary:0 Questions:1
+ACTIVITY,CAP-021,SDK Execution,True,CONSUME,0.85,ACT-Q6,1,HIGH,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:1
+ACTIVITY,CAP-019,Run Management,True,CONSUME,0.6,,0,MEDIUM,SDK,FIRST_CLASS,Primary:1 Secondary:1 Questions:0
+ACTIVITY,SUB-018,Run Execution & Dispatch,True,DEFER,0.55,ACT-Q6,1,MEDIUM,NONE,SUBSTRATE,Low confidence. Primary:2 Secondary:2
+ACTIVITY,CAP-003,Policy Proposals,True,DEFER,0.5,,0,MEDIUM,CUSTOMER,FIRST_CLASS,Low confidence. Primary:1 Secondary:0
+ACTIVITY,SUB-003,Task Scheduling Substrate,True,DEFER,0.45,ACT-Q6,1,LOW,NONE,SUBSTRATE,Low confidence. Primary:1 Secondary:0
+ACTIVITY,SUB-009,Agent Goal Submission,True,DEFER,0.45,ACT-Q6,1,MEDIUM,NONE,SUBSTRATE,Low confidence. Primary:1 Secondary:0
+ACTIVITY,CAP-007,Authorization (RBAC v2),True,DEFER,0.4,,0,MEDIUM,NONE,FIRST_CLASS,Low confidence. Primary:1 Secondary:0
+ACTIVITY,SUB-010,Agent Run Monitoring,False,REJECT,0.2,,0,MEDIUM,NONE,SUBSTRATE,Below threshold. Confidence:0.20
+ACTIVITY,SUB-007,Container Runtime Substrate,False,REJECT,0.1,,0,LOW,NONE,SUBSTRATE,Below threshold. Confidence:0.10
+ACTIVITY,SUB-014,Agent Job Distribution,False,REJECT,0.1,,0,MEDIUM,NONE,SUBSTRATE,Below threshold. Confidence:0.10
+ACTIVITY,SUB-020,External Delivery & Outbox,False,REJECT,0.1,,0,MEDIUM,NONE,SUBSTRATE,"Secondary keywords only, no questions answered"
+ACTIVITY,CAP-004,C2 Prediction Plane,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-005,Founder Console,False,REJECT,0.0,,0,HIGH,FOUNDER,FIRST_CLASS,Excluded by domain keywords
+ACTIVITY,CAP-006,Authentication,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-009,M19 Policy Engine,False,REJECT,0.0,,0,HIGH,CUSTOMER,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-010,M17 CARE-L Routing,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-013,M5 Learning Pipeline,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-014,M7 Memory System,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-015,M22 Optimization Engine,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-017,Cross-Project Aggregation,False,REJECT,0.0,,0,MEDIUM,FOUNDER,FIRST_CLASS,No keyword or question match
+ACTIVITY,CAP-018,M25 Integration Platform,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+ACTIVITY,SUB-001,Database Connection Pool,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-002,Cache Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-004,Observability Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-005,Migration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-006,Configuration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-008,Agent Lifecycle Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-011,Agent Memory Operations,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-012,Agent Message Queue,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-013,Blackboard Shared State,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-015,Agent Registration,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-016,Agent Credits Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-017,Agent Coordination Primitives,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+ACTIVITY,SUB-019,Failure Recovery Processing,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,Excluded by domain keywords
+INCIDENTS,CAP-001,Execution Replay & Activity,True,CONSUME,1.0,"INC-Q1, INC-Q2, INC-Q5",3,HIGH,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:0 Questions:3
+INCIDENTS,CAP-002,Cost Simulation V2,True,CONSUME,1.0,"INC-Q1, INC-Q2, INC-Q5",3,HIGH,CUSTOMER,FIRST_CLASS,Primary:1 Secondary:0 Questions:3
+INCIDENTS,CAP-005,Founder Console,True,CONSUME,0.85,INC-Q5,1,HIGH,FOUNDER,FIRST_CLASS,Primary:1 Secondary:1 Questions:1
+INCIDENTS,CAP-009,M19 Policy Engine,True,CONSUME,0.85,INC-Q1,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
+INCIDENTS,CAP-021,SDK Execution,True,CONSUME,0.85,INC-Q5,1,HIGH,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:1
+INCIDENTS,CAP-018,M25 Integration Platform,False,REJECT,0.4,,0,MEDIUM,CUSTOMER,FIRST_CLASS,"Secondary keywords only, no questions answered"
+INCIDENTS,SUB-019,Failure Recovery Processing,False,REJECT,0.1,,0,MEDIUM,NONE,SUBSTRATE,Below threshold. Confidence:0.10
+INCIDENTS,CAP-003,Policy Proposals,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-004,C2 Prediction Plane,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-006,Authentication,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-007,Authorization (RBAC v2),False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-008,M12 Multi-Agent Orchestration,False,REJECT,0.0,,0,MEDIUM,SDK,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-010,M17 CARE-L Routing,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-011,M28 Governance Orchestration,False,REJECT,0.0,,0,HIGH,FOUNDER,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-012,M4 Workflow Engine,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-013,M5 Learning Pipeline,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-014,M7 Memory System,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-015,M22 Optimization Engine,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-016,Skill System (M2/M3),False,REJECT,0.0,,0,HIGH,SDK,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-017,Cross-Project Aggregation,False,REJECT,0.0,,0,MEDIUM,FOUNDER,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-019,Run Management,False,REJECT,0.0,,0,MEDIUM,SDK,FIRST_CLASS,No keyword or question match
+INCIDENTS,CAP-020,CLI Execution,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+INCIDENTS,SUB-001,Database Connection Pool,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-002,Cache Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-003,Task Scheduling Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-004,Observability Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-005,Migration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-006,Configuration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-007,Container Runtime Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-008,Agent Lifecycle Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-009,Agent Goal Submission,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-010,Agent Run Monitoring,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-011,Agent Memory Operations,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-012,Agent Message Queue,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-013,Blackboard Shared State,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-014,Agent Job Distribution,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-015,Agent Registration,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-016,Agent Credits Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-017,Agent Coordination Primitives,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-018,Run Execution & Dispatch,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+INCIDENTS,SUB-020,External Delivery & Outbox,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,CAP-001,Execution Replay & Activity,True,CONSUME,1.0,"LOG-Q1, LOG-Q2",2,HIGH,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:1 Questions:2
+LOGS,CAP-002,Cost Simulation V2,True,CONSUME,0.85,LOG-Q1,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
+LOGS,CAP-021,SDK Execution,True,CONSUME,0.85,LOG-Q1,1,HIGH,NONE,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
+LOGS,CAP-020,CLI Execution,True,CONSUME,0.75,LOG-Q2,1,MEDIUM,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:1
+LOGS,CAP-011,M28 Governance Orchestration,True,CONSUME,0.7,,0,HIGH,FOUNDER,FIRST_CLASS,Primary:1 Secondary:0 Questions:0
+LOGS,CAP-012,M4 Workflow Engine,True,CONSUME,0.6,,0,MEDIUM,NONE,FIRST_CLASS,Primary:1 Secondary:0 Questions:0
+LOGS,CAP-005,Founder Console,False,REJECT,0.7,,0,HIGH,FOUNDER,FIRST_CLASS,"Secondary keywords only, no questions answered"
+LOGS,SUB-004,Observability Substrate,False,REJECT,0.1,,0,LOW,NONE,SUBSTRATE,Below threshold. Confidence:0.10
+LOGS,CAP-003,Policy Proposals,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+LOGS,CAP-004,C2 Prediction Plane,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+LOGS,CAP-006,Authentication,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+LOGS,CAP-007,Authorization (RBAC v2),False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+LOGS,CAP-008,M12 Multi-Agent Orchestration,False,REJECT,0.0,,0,MEDIUM,SDK,FIRST_CLASS,No keyword or question match
+LOGS,CAP-009,M19 Policy Engine,False,REJECT,0.0,,0,HIGH,CUSTOMER,FIRST_CLASS,No keyword or question match
+LOGS,CAP-010,M17 CARE-L Routing,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+LOGS,CAP-013,M5 Learning Pipeline,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+LOGS,CAP-014,M7 Memory System,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+LOGS,CAP-015,M22 Optimization Engine,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+LOGS,CAP-016,Skill System (M2/M3),False,REJECT,0.0,,0,HIGH,SDK,FIRST_CLASS,No keyword or question match
+LOGS,CAP-017,Cross-Project Aggregation,False,REJECT,0.0,,0,MEDIUM,FOUNDER,FIRST_CLASS,No keyword or question match
+LOGS,CAP-018,M25 Integration Platform,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+LOGS,CAP-019,Run Management,False,REJECT,0.0,,0,MEDIUM,SDK,FIRST_CLASS,No keyword or question match
+LOGS,SUB-001,Database Connection Pool,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-002,Cache Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-003,Task Scheduling Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-005,Migration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-006,Configuration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-007,Container Runtime Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-008,Agent Lifecycle Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-009,Agent Goal Submission,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-010,Agent Run Monitoring,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-011,Agent Memory Operations,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-012,Agent Message Queue,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-013,Blackboard Shared State,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-014,Agent Job Distribution,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-015,Agent Registration,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-016,Agent Credits Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-017,Agent Coordination Primitives,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-018,Run Execution & Dispatch,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-019,Failure Recovery Processing,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+LOGS,SUB-020,External Delivery & Outbox,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,CAP-009,M19 Policy Engine,True,CONSUME,1.0,"POL-Q1, POL-Q4",2,HIGH,CUSTOMER,FIRST_CLASS,Primary:2 Secondary:4 Questions:2
+POLICIES,CAP-001,Execution Replay & Activity,True,CONSUME,0.85,POL-Q2,1,HIGH,CUSTOMER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
+POLICIES,CAP-005,Founder Console,True,CONSUME,0.85,POL-Q4,1,HIGH,FOUNDER,FIRST_CLASS,Primary:0 Secondary:0 Questions:1
+POLICIES,CAP-011,M28 Governance Orchestration,True,CONSUME,0.7,,0,HIGH,FOUNDER,FIRST_CLASS,Primary:1 Secondary:0 Questions:0
+POLICIES,CAP-003,Policy Proposals,True,CONSUME,0.65,POL-Q4,1,MEDIUM,CUSTOMER,FIRST_CLASS,Primary:1 Secondary:2 Questions:1
+POLICIES,CAP-016,Skill System (M2/M3),True,CONSUME,0.65,POL-Q4,1,HIGH,SDK,FIRST_CLASS,Primary:1 Secondary:1 Questions:1
+POLICIES,CAP-017,Cross-Project Aggregation,True,DEFER,0.55,POL-Q4,1,MEDIUM,FOUNDER,FIRST_CLASS,Low confidence. Primary:1 Secondary:0
+POLICIES,CAP-019,Run Management,True,DEFER,0.55,POL-Q4,1,MEDIUM,SDK,FIRST_CLASS,Low confidence. Primary:1 Secondary:1
+POLICIES,CAP-002,Cost Simulation V2,False,REJECT,0.0,,0,HIGH,CUSTOMER,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-004,C2 Prediction Plane,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-006,Authentication,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-007,Authorization (RBAC v2),False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-008,M12 Multi-Agent Orchestration,False,REJECT,0.0,,0,MEDIUM,SDK,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-010,M17 CARE-L Routing,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-012,M4 Workflow Engine,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-013,M5 Learning Pipeline,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-014,M7 Memory System,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-015,M22 Optimization Engine,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-018,M25 Integration Platform,False,REJECT,0.0,,0,MEDIUM,CUSTOMER,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-020,CLI Execution,False,REJECT,0.0,,0,MEDIUM,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,CAP-021,SDK Execution,False,REJECT,0.0,,0,HIGH,NONE,FIRST_CLASS,No keyword or question match
+POLICIES,SUB-001,Database Connection Pool,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-002,Cache Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-003,Task Scheduling Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-004,Observability Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-005,Migration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-006,Configuration Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-007,Container Runtime Substrate,False,REJECT,0.0,,0,LOW,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-008,Agent Lifecycle Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-009,Agent Goal Submission,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-010,Agent Run Monitoring,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-011,Agent Memory Operations,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-012,Agent Message Queue,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-013,Blackboard Shared State,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-014,Agent Job Distribution,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-015,Agent Registration,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-016,Agent Credits Management,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-017,Agent Coordination Primitives,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-018,Run Execution & Dispatch,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-019,Failure Recovery Processing,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match
+POLICIES,SUB-020,External Delivery & Outbox,False,REJECT,0.0,,0,MEDIUM,NONE,SUBSTRATE,No keyword or question match

@@ -1,0 +1,138 @@
+# =============================================================================
+# DOMAIN INTENT SPECIFICATION — v1.0
+# =============================================================================
+#
+# Reference: PIN-361 (STEP 1 Domain Applicability Matrix)
+# Created: 2026-01-08
+# Status: EXECUTABLE
+#
+# PURPOSE:
+#   Defines what the product believes the user is asking.
+#   This is a CONTRACT, not a helper file.
+#
+# DESIGN RULES (NON-NEGOTIABLE):
+#   D1: Question-first (no capabilities, no UI)
+#   D2: Questions must be answerable (observable, user language)
+#   D3: IDs are mandatory and stable
+#   D4: Overview is excluded (derived later)
+#
+# SCHEMA:
+#   <DOMAIN>:
+#     intent: <one-line intent>
+#     questions:
+#       - id: <Q-ID>
+#         text: <user-facing question>
+#         type: <state | performance | decision | explanation | action>
+#         criticality: <HIGH | MEDIUM | LOW>
+#     notes: <optional>
+#
+# EVOLUTION RULES:
+#   ALLOWED: Add questions, refine text, change criticality
+#   FORBIDDEN: Rename IDs, delete bound questions, add Overview
+#
+# =============================================================================
+
+ACTIVITY:
+  intent: Deterministic understanding of executions and runs
+  questions:
+    - id: ACT-Q1
+      text: What is running right now?
+      type: state
+      criticality: HIGH
+
+    - id: ACT-Q2
+      text: What ran recently?
+      type: state
+      criticality: HIGH
+
+    - id: ACT-Q3
+      text: How did executions perform?
+      type: performance
+      criticality: HIGH
+
+    - id: ACT-Q4
+      text: Which executions underperformed?
+      type: performance
+      criticality: MEDIUM
+
+    - id: ACT-Q5
+      text: Why did an execution fail or degrade?
+      type: explanation
+      criticality: HIGH
+
+    - id: ACT-Q6
+      text: What actions can I take on an execution?
+      type: action
+      criticality: HIGH
+
+
+INCIDENTS:
+  intent: Manage and resolve system-impacting exceptions
+  questions:
+    - id: INC-Q1
+      text: What incidents are currently active?
+      type: state
+      criticality: HIGH
+
+    - id: INC-Q2
+      text: What incidents happened recently?
+      type: state
+      criticality: MEDIUM
+
+    - id: INC-Q3
+      text: Which incidents had the highest impact?
+      type: performance
+      criticality: HIGH
+
+    - id: INC-Q4
+      text: What caused this incident?
+      type: explanation
+      criticality: HIGH
+
+    - id: INC-Q5
+      text: What actions are available to mitigate or resolve this incident?
+      type: action
+      criticality: HIGH
+
+
+POLICIES:
+  intent: Control system behavior and prevent failures
+  questions:
+    - id: POL-Q1
+      text: Which policies are currently active?
+      type: state
+      criticality: HIGH
+
+    - id: POL-Q2
+      text: Which executions or incidents were affected by policies?
+      type: explanation
+      criticality: HIGH
+
+    - id: POL-Q3
+      text: Are policies effective in preventing issues?
+      type: performance
+      criticality: MEDIUM
+
+    - id: POL-Q4
+      text: What policy actions can I take?
+      type: action
+      criticality: HIGH
+
+
+LOGS:
+  intent: Provide verifiable evidence and replay of events
+  questions:
+    - id: LOG-Q1
+      text: What events occurred around a specific execution or incident?
+      type: explanation
+      criticality: HIGH
+
+    - id: LOG-Q2
+      text: Can I replay what happened deterministically?
+      type: state
+      criticality: HIGH
+
+    - id: LOG-Q3
+      text: Can I export logs as evidence?
+      type: action
+      criticality: MEDIUM

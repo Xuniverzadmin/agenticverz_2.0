@@ -1,0 +1,192 @@
+# =============================================================================
+# L2.1 ENUM DEFINITIONS — PIN-362
+# =============================================================================
+#
+# Reference: PIN-362 (STEP 1B L2.1 Compatibility Scan)
+# Created: 2026-01-08
+# Status: LOCKED
+#
+# PURPOSE:
+#   Define ordering for compatibility checks.
+#   A capability cannot bind to a row that requires MORE than it provides.
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# AUTHORITY CLASS
+# -----------------------------------------------------------------------------
+# Defines what power level a capability has or a row requires.
+# Ordering: OBSERVE < EXPLAIN < ACT < CONTROL < ADMIN
+#
+authority_class:
+  OBSERVE:
+    level: 0
+    description: "Read-only, no side effects"
+    examples:
+      - "View execution status"
+      - "Read incident details"
+      - "Browse logs"
+
+  EXPLAIN:
+    level: 1
+    description: "Correlates / derives truth"
+    examples:
+      - "Explain why execution failed"
+      - "Show incident impact analysis"
+      - "Correlate traces"
+
+  ACT:
+    level: 2
+    description: "Triggers system behavior"
+    examples:
+      - "Retry execution"
+      - "Export logs"
+      - "Create run"
+
+  CONTROL:
+    level: 3
+    description: "Enforces or blocks"
+    examples:
+      - "Acknowledge incident"
+      - "Apply policy"
+      - "Cancel execution"
+
+  ADMIN:
+    level: 4
+    description: "Governance / irreversible"
+    examples:
+      - "Delete policy"
+      - "Freeze tenant"
+      - "Revoke API key"
+
+
+# -----------------------------------------------------------------------------
+# DETERMINISM LEVEL
+# -----------------------------------------------------------------------------
+# Defines how predictable the output is.
+# Ordering: ADVISORY < BOUNDED < STRICT
+#
+determinism_level:
+  ADVISORY:
+    level: 0
+    description: "Non-deterministic (ML, predictions)"
+    examples:
+      - "Prediction confidence"
+      - "Cost optimization suggestions"
+      - "Risk assessments"
+
+  BOUNDED:
+    level: 1
+    description: "Allowed variance"
+    examples:
+      - "Aggregated metrics with tolerance"
+      - "Sampled data"
+      - "Time-windowed statistics"
+
+  STRICT:
+    level: 2
+    description: "Same input → same output"
+    examples:
+      - "Replay execution"
+      - "Trace verification"
+      - "Hash computation"
+
+
+# -----------------------------------------------------------------------------
+# MUTABILITY
+# -----------------------------------------------------------------------------
+# Defines what state changes are allowed.
+# Ordering: READ < WRITE < EXECUTE < GOVERN
+#
+mutability:
+  READ:
+    level: 0
+    description: "No state changes"
+    examples:
+      - "View logs"
+      - "Browse incidents"
+      - "Read policy"
+
+  WRITE:
+    level: 1
+    description: "State changes"
+    examples:
+      - "Update incident notes"
+      - "Modify policy draft"
+      - "Add tag"
+
+  EXECUTE:
+    level: 2
+    description: "Triggers actions"
+    examples:
+      - "Retry execution"
+      - "Apply recovery"
+      - "Export data"
+
+  GOVERN:
+    level: 3
+    description: "Policy/governance changes"
+    examples:
+      - "Publish policy"
+      - "Freeze capability"
+      - "Revoke access"
+
+
+# -----------------------------------------------------------------------------
+# SURFACE TYPE
+# -----------------------------------------------------------------------------
+# Defines what kind of UI surface this is.
+#
+surface_type:
+  TIMELINE:
+    description: "Temporal sequence of events"
+    authority_range: [OBSERVE, ACT]
+    typical_determinism: BOUNDED
+
+  DETAIL:
+    description: "Deep dive into single item"
+    authority_range: [OBSERVE, EXPLAIN]
+    typical_determinism: STRICT
+
+  ACTION:
+    description: "User-triggered operations"
+    authority_range: [ACT, CONTROL]
+    typical_determinism: STRICT
+
+  EVIDENCE:
+    description: "Immutable proof / replay"
+    authority_range: [OBSERVE]
+    typical_determinism: STRICT
+
+  SUBSTRATE:
+    description: "Internal system surface"
+    authority_range: [OBSERVE, ADMIN]
+    typical_determinism: STRICT
+
+
+# -----------------------------------------------------------------------------
+# UI VISIBILITY
+# -----------------------------------------------------------------------------
+# Defines how the row appears in UI.
+#
+ui_visibility:
+  VISIBLE:
+    description: "Always shown in domain"
+  COLLAPSIBLE:
+    description: "Can be collapsed/hidden by user"
+  HIDDEN:
+    description: "Not shown in standard view"
+
+
+# -----------------------------------------------------------------------------
+# ROW ORIGIN
+# -----------------------------------------------------------------------------
+# Tracks where the row came from.
+#
+row_origin:
+  BASELINE:
+    description: "From original L2.1 supertable"
+  GENERATED:
+    description: "Created by STEP 1B expansion"
+  MANUAL:
+    description: "Manually added"
