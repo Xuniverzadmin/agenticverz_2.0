@@ -2,16 +2,16 @@
   "_meta": {
     "type": "ui_projection_lock",
     "version": "1.0.0",
-    "generated_at": "2026-01-08T05:41:58.621940+00:00",
-    "source": "design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx",
+    "generated_at": "2026-01-09T15:48:19.079887+00:00",
+    "source": "design/l2_1/supertable/l2_supertable_v4_cap_expanded.xlsx",
     "processing_stage": "LOCKED",
     "frozen": true,
     "editable": false
   },
   "_statistics": {
     "domain_count": 5,
-    "panel_count": 52,
-    "control_count": 95
+    "panel_count": 54,
+    "control_count": 101
   },
   "_contract": {
     "renderer_must_consume_only_this_file": true,
@@ -47,8 +47,7 @@
             "activate": false
           },
           "route": "/precus/overview/ovw-sh-cs-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of current status"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "OVW-SH-HM-O1",
@@ -71,8 +70,7 @@
             "activate": false
           },
           "route": "/precus/overview/ovw-sh-hm-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of health metrics"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "OVW-SH-HM-O2",
@@ -128,14 +126,12 @@
             "activate": false
           },
           "route": "/precus/overview/ovw-sh-hm-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all health metrics"
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 3,
       "total_controls": 4,
-      "route": "/precus/overview",
-      "short_description": "System health at a glance - status, metrics, and alerts"
+      "route": "/precus/overview"
     },
     {
       "domain": "Activity",
@@ -162,8 +158,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-ar-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of active runs"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-CR-O1",
@@ -186,8 +181,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-cr-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of completed runs"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O1",
@@ -210,8 +204,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-rd-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of run details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-AR-O2",
@@ -267,8 +260,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-ar-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all active runs"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-CR-O2",
@@ -332,8 +324,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-cr-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all completed runs"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O2",
@@ -389,8 +380,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-rd-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all run details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-CR-O3",
@@ -430,8 +420,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-cr-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of completed runs"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O3",
@@ -471,8 +460,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-rd-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of run details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O4",
@@ -504,8 +492,7 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-rd-o4",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Related context for run details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "ACT-EX-RD-O5",
@@ -537,14 +524,12 @@
             "activate": false
           },
           "route": "/precus/activity/act-ex-rd-o5",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Raw proof and evidence for run details"
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 10,
       "total_controls": 19,
-      "route": "/precus/activity",
-      "short_description": "Track agent executions, runs, and their outcomes"
+      "route": "/precus/activity"
     },
     {
       "domain": "Incidents",
@@ -571,8 +556,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-ai-oi-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of open incidents"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O1",
@@ -595,8 +579,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-ai-id-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of incident details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O1",
@@ -619,8 +602,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-hi-ri-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of resolved incidents"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-OI-O2",
@@ -684,8 +666,7 @@
             "activate": true
           },
           "route": "/precus/incidents/inc-ai-oi-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all open incidents"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O2",
@@ -733,8 +714,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-ai-id-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all incident details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O2",
@@ -798,8 +778,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-hi-ri-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all resolved incidents"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O3",
@@ -855,8 +834,7 @@
             "activate": true
           },
           "route": "/precus/incidents/inc-ai-id-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of incident details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O3",
@@ -896,8 +874,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-hi-ri-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of resolved incidents"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-AI-ID-O4",
@@ -929,8 +906,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-ai-id-o4",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Related context for incident details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O4",
@@ -962,8 +938,7 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-hi-ri-o4",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Related context for resolved incidents"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "INC-HI-RI-O5",
@@ -995,14 +970,12 @@
             "activate": false
           },
           "route": "/precus/incidents/inc-hi-ri-o5",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Raw proof and evidence for resolved incidents"
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 11,
       "total_controls": 22,
-      "route": "/precus/incidents",
-      "short_description": "Monitor and manage policy violations and system failures"
+      "route": "/precus/incidents"
     },
     {
       "domain": "Policies",
@@ -1029,8 +1002,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-ap-bp-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of budget policies"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-RL-O1",
@@ -1053,8 +1025,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-ap-rl-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of rate limits"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O1",
@@ -1077,8 +1048,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-ap-ar-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of approval rules"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O1",
@@ -1101,8 +1071,30 @@
             "activate": false
           },
           "route": "/precus/policies/pol-pa-pc-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of policy changes"
+          "view_type": "PANEL_VIEW"
+        },
+        {
+          "panel_id": "POL-PR-PP-O1",
+          "panel_name": "Pending Proposals Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "PENDING_PROPOSALS",
+          "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+          "subdomain": "PROPOSALS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/precus/policies/pol-pr-pp-o1",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-BP-O2",
@@ -1158,8 +1150,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-ap-bp-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all budget policies"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-RL-O2",
@@ -1215,8 +1206,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-ap-rl-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all rate limits"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O2",
@@ -1272,8 +1262,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-ap-ar-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all approval rules"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O2",
@@ -1337,8 +1326,79 @@
             "activate": false
           },
           "route": "/precus/policies/pol-pa-pc-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all policy changes"
+          "view_type": "PANEL_VIEW"
+        },
+        {
+          "panel_id": "POL-PR-PP-O2",
+          "panel_name": "Pending Proposals List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "APPROVE",
+              "order": 3,
+              "icon": "check-circle",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "REJECT",
+              "order": 4,
+              "icon": "x-circle",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 5,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 6,
+          "topic": "PENDING_PROPOSALS",
+          "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+          "subdomain": "PROPOSALS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": true
+          },
+          "route": "/precus/policies/pol-pr-pp-o2",
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-BP-O3",
@@ -1370,8 +1430,7 @@
             "activate": true
           },
           "route": "/precus/policies/pol-ap-bp-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of budget policies"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-RL-O3",
@@ -1403,8 +1462,7 @@
             "activate": true
           },
           "route": "/precus/policies/pol-ap-rl-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of rate limits"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O3",
@@ -1436,8 +1494,7 @@
             "activate": true
           },
           "route": "/precus/policies/pol-ap-ar-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of approval rules"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O3",
@@ -1477,8 +1534,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-pa-pc-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of policy changes"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-AP-AR-O4",
@@ -1510,8 +1566,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-ap-ar-o4",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Related context for approval rules"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O4",
@@ -1543,8 +1598,7 @@
             "activate": false
           },
           "route": "/precus/policies/pol-pa-pc-o4",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Related context for policy changes"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "POL-PA-PC-O5",
@@ -1576,14 +1630,12 @@
             "activate": false
           },
           "route": "/precus/policies/pol-pa-pc-o5",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Raw proof and evidence for policy changes"
+          "view_type": "PANEL_VIEW"
         }
       ],
-      "panel_count": 15,
-      "total_controls": 25,
-      "route": "/precus/policies",
-      "short_description": "Configure budgets, rate limits, and approval workflows"
+      "panel_count": 17,
+      "total_controls": 31,
+      "route": "/precus/policies"
     },
     {
       "domain": "Logs",
@@ -1610,8 +1662,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-sa-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of system audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O1",
@@ -1634,8 +1685,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-ua-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of user audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O1",
@@ -1658,8 +1708,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-et-td-o1",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Summary of trace details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-SA-O2",
@@ -1723,8 +1772,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-sa-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all system audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O2",
@@ -1788,8 +1836,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-ua-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all user audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O2",
@@ -1853,8 +1900,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-et-td-o2",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Browse all trace details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-SA-O3",
@@ -1894,8 +1940,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-sa-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of system audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O3",
@@ -1935,8 +1980,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-ua-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of user audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O3",
@@ -1976,8 +2020,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-et-td-o3",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Detailed view of trace details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O4",
@@ -2009,8 +2052,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-et-td-o4",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Related context for trace details"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-SA-O5",
@@ -2042,8 +2084,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-sa-o5",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Raw proof and evidence for system audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-AL-UA-O5",
@@ -2075,8 +2116,7 @@
             "activate": false
           },
           "route": "/precus/logs/log-al-ua-o5",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Raw proof and evidence for user audit"
+          "view_type": "PANEL_VIEW"
         },
         {
           "panel_id": "LOG-ET-TD-O5",
@@ -2108,14 +2148,12 @@
             "activate": false
           },
           "route": "/precus/logs/log-et-td-o5",
-          "view_type": "PANEL_VIEW",
-          "short_description": "Raw proof and evidence for trace details"
+          "view_type": "PANEL_VIEW"
         }
       ],
       "panel_count": 13,
       "total_controls": 25,
-      "route": "/precus/logs",
-      "short_description": "Audit trails, execution traces, and compliance records"
+      "route": "/precus/logs"
     }
   ]
 }

@@ -1,7 +1,7 @@
 """
-PB-S4 Policy Proposals API (READ-ONLY)
+PB-S4 Policy Proposals API
 
-Exposes policy_proposals and policy_versions data for observability without modification.
+Exposes policy_proposals and policy_versions data with human-controlled approval.
 
 PB-S4 Contract:
 - Policies are proposed, never auto-enforced
@@ -9,29 +9,28 @@ PB-S4 Contract:
 - Proposals have provenance to triggering feedback
 - Rejection preserved for audit trail
 
-READ_ONLY = True
-
 O1: API endpoint exists ✓
 O2: List visible with pagination ✓
 O3: Detail accessible ✓
-O4: Execution unchanged ✓ (no POST/PUT/DELETE)
+O4: Approve/Reject actions (human-controlled) ✓ (PIN-373)
 """
 
 import logging
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from ..auth import verify_api_key
+from ..auth.gateway_middleware import get_auth_context
 from ..db import get_async_session
-from ..models.policy import PolicyProposal, PolicyVersion
+from ..models.policy import PolicyApprovalRequest, PolicyProposal, PolicyVersion
+from ..services.policy_proposal import review_policy_proposal
 
 logger = logging.getLogger("nova.api.policy_proposals")
 
-router = APIRouter(prefix="/api/v1/policy-proposals", tags=["policy-proposals", "pb-s4", "read-only"])
+router = APIRouter(prefix="/api/v1/policy-proposals", tags=["policy-proposals", "pb-s4"])
 
 
 # =============================================================================
@@ -104,12 +103,12 @@ class VersionResponse(BaseModel):
 
 @router.get("", response_model=ProposalListResponse)
 async def list_proposals(
+    request: Request,
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
     status: Optional[str] = Query(None, description="Filter by status (draft/approved/rejected)"),
     proposal_type: Optional[str] = Query(None, description="Filter by proposal type"),
     limit: int = Query(50, ge=1, le=200, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    _: str = Depends(verify_api_key),
 ):
     """
     List policy proposals (PB-S4).
@@ -175,8 +174,8 @@ async def list_proposals(
 
 @router.get("/stats/summary")
 async def get_proposal_stats(
+    request: Request,
     tenant_id: Optional[str] = Query(None, description="Filter by tenant"),
-    _: str = Depends(verify_api_key),
 ):
     """
     Get policy proposal statistics (PB-S4).
@@ -222,8 +221,8 @@ async def get_proposal_stats(
 
 @router.get("/{proposal_id}", response_model=ProposalDetailResponse)
 async def get_proposal(
+    request: Request,
     proposal_id: str,
-    _: str = Depends(verify_api_key),
 ):
     """
     Get detailed policy proposal by ID (PB-S4).
@@ -282,8 +281,8 @@ async def get_proposal(
 
 @router.get("/{proposal_id}/versions", response_model=list[VersionResponse])
 async def list_proposal_versions(
+    request: Request,
     proposal_id: str,
-    _: str = Depends(verify_api_key),
 ):
     """
     List all versions of a policy proposal (PB-S4).
@@ -316,3 +315,135 @@ async def list_proposal_versions(
             )
             for v in versions
         ]
+
+
+# =============================================================================
+# Human-Controlled Actions (PIN-373: Policy Lifecycle Completion)
+# =============================================================================
+
+
+class ApproveRejectRequest(BaseModel):
+    """Request body for approve/reject actions."""
+
+    reviewed_by: str
+    review_notes: Optional[str] = None
+
+
+class ApprovalResponse(BaseModel):
+    """Response for approve/reject actions."""
+
+    proposal_id: str
+    status: str
+    reviewed_by: str
+    reviewed_at: Optional[str]
+    message: str
+
+
+@router.post("/{proposal_id}/approve", response_model=ApprovalResponse)
+async def approve_proposal(
+    http_request: Request,
+    proposal_id: str,
+    request: ApproveRejectRequest,
+):
+    """
+    Approve a policy proposal (PIN-373).
+
+    HUMAN ACTION: This creates a policy_rules entry when approved.
+    Only draft proposals can be approved.
+
+    PB-S4 Contract: Human approval is mandatory - system cannot auto-approve.
+    """
+    try:
+        proposal_uuid = UUID(proposal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid proposal ID format")
+
+    try:
+        async with get_async_session() as session:
+            approval_request = PolicyApprovalRequest(
+                action="approve",
+                reviewed_by=request.reviewed_by,
+                review_notes=request.review_notes,
+            )
+
+            updated_proposal = await review_policy_proposal(
+                session, proposal_uuid, approval_request
+            )
+            await session.commit()
+
+            logger.info(
+                "proposal_approved_via_api",
+                extra={
+                    "proposal_id": proposal_id,
+                    "reviewed_by": request.reviewed_by,
+                },
+            )
+
+            return ApprovalResponse(
+                proposal_id=str(updated_proposal.id),
+                status=updated_proposal.status,
+                reviewed_by=updated_proposal.reviewed_by or "",
+                reviewed_at=updated_proposal.reviewed_at.isoformat() if updated_proposal.reviewed_at else None,
+                message="Proposal approved successfully",
+            )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"Error approving proposal {proposal_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/{proposal_id}/reject", response_model=ApprovalResponse)
+async def reject_proposal(
+    http_request: Request,
+    proposal_id: str,
+    request: ApproveRejectRequest,
+):
+    """
+    Reject a policy proposal (PIN-373).
+
+    HUMAN ACTION: This marks the proposal as rejected.
+    Rejection is preserved for audit trail.
+    Only draft proposals can be rejected.
+
+    PB-S4 Contract: Human decision is mandatory - system cannot auto-reject.
+    """
+    try:
+        proposal_uuid = UUID(proposal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid proposal ID format")
+
+    try:
+        async with get_async_session() as session:
+            approval_request = PolicyApprovalRequest(
+                action="reject",
+                reviewed_by=request.reviewed_by,
+                review_notes=request.review_notes,
+            )
+
+            updated_proposal = await review_policy_proposal(
+                session, proposal_uuid, approval_request
+            )
+            await session.commit()
+
+            logger.info(
+                "proposal_rejected_via_api",
+                extra={
+                    "proposal_id": proposal_id,
+                    "reviewed_by": request.reviewed_by,
+                    "reason": request.review_notes,
+                },
+            )
+
+            return ApprovalResponse(
+                proposal_id=str(updated_proposal.id),
+                status=updated_proposal.status,
+                reviewed_by=updated_proposal.reviewed_by or "",
+                reviewed_at=updated_proposal.reviewed_at.isoformat() if updated_proposal.reviewed_at else None,
+                message="Proposal rejected",
+            )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception(f"Error rejecting proposal {proposal_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

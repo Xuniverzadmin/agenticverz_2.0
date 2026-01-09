@@ -1,0 +1,114 @@
+# =============================================================================
+# INCIDENTS-EXEC-FAILURE-001: Reactive Incident Creation
+# =============================================================================
+# Domain: INCIDENTS (reactive)
+# Type: Cross-domain propagation validation
+# Reference: PIN-370 (SDSR), Cross-Domain Propagation Contract
+#
+# PURPOSE:
+# Validate that when a run fails with high-severity failure code,
+# the backend AUTOMATICALLY creates an incident without scenario scripting.
+#
+# KEY PRINCIPLE:
+# This scenario injects a CAUSE (failed run) and EXPECTS an EFFECT (incident).
+# If the incident doesn't appear, the BACKEND is broken, not the scenario.
+# =============================================================================
+
+scenario_id: INCIDENTS-EXEC-FAILURE-001
+domain: incidents
+type: reactive
+version: "1.0"
+
+# -----------------------------------------------------------------------------
+# Prerequisites
+# -----------------------------------------------------------------------------
+prerequisites:
+  scenarios:
+    - ONBOARDING-001  # Tenant, API key, agent must exist
+
+# -----------------------------------------------------------------------------
+# Cause (what inject_synthetic.py writes)
+# -----------------------------------------------------------------------------
+# ONLY the failed run is injected. Nothing else.
+cause:
+  table: runs
+  data:
+    id: synth-run-incident-001
+    tenant_id: synth-tenant-001
+    agent_id: synth-agent-001
+    goal: "SDSR Incident Trigger - Execution Timeout"
+    status: failed
+    error_message: "EXECUTION_TIMEOUT: Agent exceeded maximum execution time (300s)"
+    failure_code: EXECUTION_TIMEOUT
+    failure_severity: HIGH
+    is_synthetic: true
+    synthetic_scenario_id: INCIDENTS-EXEC-FAILURE-001
+
+# -----------------------------------------------------------------------------
+# Expects (what backend MUST create automatically)
+# -----------------------------------------------------------------------------
+# These are ASSERTIONS, not writes. If they fail, backend is incomplete.
+expects:
+  # Incident must be auto-created by Incident Engine
+  incidents:
+    - match:
+        source_run_id: synth-run-incident-001
+        tenant_id: synth-tenant-001
+      assertions:
+        - field: category
+          equals: EXECUTION_FAILURE
+        - field: severity
+          equals: HIGH
+        - field: status
+          equals: OPEN
+        - field: created_at
+          exists: true
+        - field: is_synthetic
+          equals: true
+
+  # Logs must contain failure evidence
+  logs:
+    - contains:
+        - "EXECUTION_TIMEOUT"
+        - "synth-run-incident-001"
+
+  # Policy engine may emit suggestion (optional but tracked)
+  policies:
+    optional: true
+    any_of:
+      - suggestion_type: RETRY_POLICY
+      - suggestion_type: TIMEOUT_THRESHOLD_ADJUSTMENT
+
+# -----------------------------------------------------------------------------
+# Constraints (explicit anti-cheating)
+# -----------------------------------------------------------------------------
+constraints:
+  no_direct_writes:
+    - incidents    # Incident Engine's job
+    - policies     # Policy Engine's job
+    - logs         # Logging system's job
+    - traces       # Evidence system's job
+
+# -----------------------------------------------------------------------------
+# Cleanup (removes all synthetic data from this scenario)
+# -----------------------------------------------------------------------------
+cleanup:
+  tables:
+    - runs
+    - incidents
+    - policy_suggestions
+    - traces
+  filter:
+    synthetic_scenario_id: INCIDENTS-EXEC-FAILURE-001
+
+# -----------------------------------------------------------------------------
+# UI Validation (observer checklist)
+# -----------------------------------------------------------------------------
+ui_validation:
+  route: /precus/incidents
+  expected:
+    - incident_visible: true
+    - severity_shown: HIGH
+    - status_shown: OPEN
+    - linked_run_navigable: true
+    - timestamp_correct: true

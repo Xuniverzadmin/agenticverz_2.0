@@ -50,7 +50,8 @@ const CreditsPage = lazy(() => import('@/pages/credits/CreditsPage'));
 
 // =============================================================================
 // PRECUS: PREFLIGHT CUSTOMER CONSOLE (/precus/*)
-// L2.1 projection-driven pages
+// L2.1 projection-driven pages - All domains use DomainPage for proper structure
+// SDSR data binding happens at panel level via PanelContentRegistry
 // =============================================================================
 const PreCusLayout = lazy(() => import('@/components/layout/PreCusLayout'));
 const OverviewPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.OverviewPage })));

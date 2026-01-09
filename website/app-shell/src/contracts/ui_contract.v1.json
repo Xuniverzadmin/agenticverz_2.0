@@ -1,8 +1,8 @@
 {
   "version": "v1",
-  "generated_from": "l2_supertable_v3_cap_expanded.xlsx",
+  "generated_from": "l2_supertable_v4_cap_expanded.xlsx",
   "meta": {
-    "generated_at": "2026-01-07T16:12:16.688181+00:00",
+    "generated_at": "2026-01-09T15:47:28.887090+00:00",
     "source_version": "v3",
     "status": "DRAFT_UI_DRIVING"
   },
@@ -1599,6 +1599,83 @@
             "intents": [
               "READ",
               "DOWNLOAD"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-PR-PP-O1",
+          "panel_name": "Pending Proposals Summary",
+          "order": "O1",
+          "ranking_dimension": "NONE",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            }
+          ],
+          "binding_status": "SAFE",
+          "binding_notes": "All checks pass",
+          "_source": {
+            "row_uids": [
+              "3a56f1a0c9ac"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ"
+            ]
+          }
+        },
+        {
+          "panel_id": "POL-PR-PP-O2",
+          "panel_name": "Pending Proposals List",
+          "order": "O2",
+          "ranking_dimension": "created_at",
+          "visible": true,
+          "navigation": {
+            "enabled": false,
+            "target": null
+          },
+          "controls": [
+            {
+              "type": "READ",
+              "enabled": true
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "enabled": true
+            },
+            {
+              "type": "FILTER",
+              "enabled": true
+            },
+            {
+              "type": "ACTIVATE",
+              "enabled": false,
+              "reason": "QUESTIONABLE_BINDING"
+            }
+          ],
+          "binding_status": "QUESTIONABLE",
+          "binding_notes": "All checks pass; Mode mismatch (READ vs WRITE)",
+          "_source": {
+            "row_uids": [
+              "7fa967bdd113"
+            ],
+            "capabilities": [
+              "CAP-POL-CONSTRAINTS",
+              "CAP-POL-GUARDRAIL"
+            ],
+            "intents": [
+              "READ",
+              "ACTIVATE:APPROVE",
+              "ACTIVATE:REJECT"
             ]
           }
         }

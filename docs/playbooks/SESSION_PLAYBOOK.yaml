@@ -15,11 +15,43 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.35"
+session_playbook_version: "2.39"
 created: "2025-12-27"
-last_updated: "2026-01-07"
+last_updated: "2026-01-09"
 
 # Changelog:
+#   2.39 - CANONICAL-FIRST FIX POLICY (Section 39, ARCH-CANON-001, PIN-370).
+#          Added canonical_first_policy section enforcing extension over duplication.
+#          Core principle: Claude is FORBIDDEN from creating new tables/APIs for existing domains.
+#          Must fix by extension: lifecycle hooks, state transitions, mappings, queries, indexes.
+#          Explicitly forbidden: parallel tables (sdsr_*, *_v2), shadow APIs, "temporary" structures.
+#          Added canonical repair order (4-step mandatory process).
+#          Added fragmentation escalation protocol (ARCH-FRAG-ESCALATE-001).
+#          Fragmentation is not forbidden, but never Claude's decision - must escalate.
+#          Root cause fix: sdsr_incidents incident required emergency consolidation.
+#          Reference: PIN-370, CLAUDE_ENGINEERING_AUTHORITY.md Section 13-15
+#   2.38 - SDSR CROSS-DOMAIN PROPAGATION CONTRACT (PIN-370).
+#          Added SDSR-PROP-001 to SDSR-PROP-004 rules.
+#          Core principle: Scenarios inject causes, not consequences.
+#          Cross-domain effects must emerge from backend capabilities.
+#          Added cross_domain_propagation section with backend responsibility matrix.
+#          Domain execution order: Activity → Incidents → Policies → Logs.
+#          If cross-domain effects don't fire, backend is broken, not scenario.
+#   2.37 - SDSR UI ARCHITECTURE GATE (Section 38, BL-SDSR-UI-001, PIN-370).
+#          Added sdsr_ui_architecture section enforcing projection-driven UI.
+#          Core principle: UI renders projection. UI does not bypass projection.
+#          SDSR data binding must happen at panel level via PanelContentRegistry.
+#          Custom pages that bypass DomainPage structure are FORBIDDEN.
+#          Conflict resolution: ASK_USER when architecture is ambiguous.
+#          Adds rules SDSR-UI-001 to SDSR-UI-004.
+#          Reference: PIN-370, docs/governance/SDSR.md
+#   2.36 - DEPLOY AFTER REBUILD RULE (BL-DEPLOY-001, PIN-359).
+#          Added mandatory deployment discipline: build without deploy is forbidden.
+#          Frontend: npm run build MUST be followed by cp dist/* dist-preflight/ && reload apache2
+#          Backend: docker compose up -d --build includes deploy by construction.
+#          Incident: Code rebuilt but not deployed, user could not see/test changes.
+#          Principle: Build without deploy = invisible work = wasted time.
+#          Reference: PIN-359 Phase 2
 #   2.35 - SCOPE ADMISSION PROTOCOL (Section 36, PIN-347).
 #          Added scope_admission_protocol section for "No Code Before Scope" rule.
 #          Claude must detect new paths and update INTENT_DECLARATION.yaml BEFORE
@@ -7507,6 +7539,522 @@ scope_admission_protocol:
       name: Separate Governance Commits
       description: Intent updates must be committed alone before implementation
       enforcement: MANDATORY
+
+# =============================================================================
+# Section 37: DEPLOY AFTER REBUILD DISCIPLINE (BL-DEPLOY-001)
+# =============================================================================
+# Incident: Code rebuilt but not deployed, user could not see/test changes.
+# Root Cause: Build step completed, but deploy step was forgotten.
+# Principle: Build without deploy = invisible work = wasted time.
+# Reference: PIN-359 Phase 2
+# =============================================================================
+
+deployment_discipline:
+  rule_id: BL-DEPLOY-001
+  severity: BLOCKING
+  effective: "2026-01-08"
+
+  principle: |
+    Build without deploy is forbidden.
+    User cannot see or test changes until they are deployed.
+    Build + Deploy must be treated as a single atomic operation.
+
+  # ---------------------------------------------------------------------------
+  # Frontend Deployment (app-shell)
+  # ---------------------------------------------------------------------------
+  frontend:
+    working_directory: /root/agenticverz2.0/website/app-shell
+    build_command: npm run build
+    deploy_commands:
+      - cp -r dist/* dist-preflight/
+      - sudo systemctl reload apache2
+    verification: "Refresh browser - changes visible"
+
+    canonical_sequence: |
+      cd /root/agenticverz2.0/website/app-shell && npm run build && \
+      cp -r dist/* dist-preflight/ && sudo systemctl reload apache2
+
+  # ---------------------------------------------------------------------------
+  # Backend Deployment (docker compose)
+  # ---------------------------------------------------------------------------
+  backend:
+    working_directory: /root/agenticverz2.0
+    build_and_deploy_command: docker compose up -d --build backend
+    verification: docker compose ps
+    health_check: "Status: healthy"
+
+    canonical_sequence: |
+      cd /root/agenticverz2.0 && docker compose up -d --build backend && \
+      docker compose ps
+
+  # ---------------------------------------------------------------------------
+  # Claude Behavioral Rule
+  # ---------------------------------------------------------------------------
+  claude_behavior:
+    after_any_build:
+      - MUST run deploy commands immediately
+      - MUST NOT stop at "build complete"
+      - MUST NOT assume user can see changes
+      - MUST confirm deployment in response
+
+    response_format: |
+      Build complete. Deploying...
+      [deploy commands output]
+      Deployed. Refresh browser to see changes.
+
+  # ---------------------------------------------------------------------------
+  # Violation Response
+  # ---------------------------------------------------------------------------
+  violation_response:
+    on_build_without_deploy: |
+      BL-DEPLOY-001 VIOLATION: Build completed but not deployed.
+
+      After ANY rebuild, you MUST deploy:
+
+      Frontend:
+        cp -r dist/* dist-preflight/ && sudo systemctl reload apache2
+
+      Backend:
+        docker compose up -d --build backend
+
+      User cannot see/test changes until deployed.
+
+  # ---------------------------------------------------------------------------
+  # Rules Summary
+  # ---------------------------------------------------------------------------
+  rules:
+    - id: DEPLOY-001
+      name: Deploy After Frontend Build
+      description: npm run build MUST be followed by deploy to dist-preflight/
+      enforcement: BLOCKING
+
+    - id: DEPLOY-002
+      name: Reload Apache After Deploy
+      description: Frontend deploy MUST include systemctl reload apache2
+      enforcement: BLOCKING
+
+    - id: DEPLOY-003
+      name: Backend Build Includes Deploy
+      description: docker compose up -d --build IS build + deploy
+      enforcement: BY_CONSTRUCTION
+
+    - id: DEPLOY-004
+      name: Verify Deployment
+      description: Always confirm deployment was successful
+      enforcement: MANDATORY
+
+# =============================================================================
+# Section 38: SDSR UI ARCHITECTURE GATE (BL-SDSR-UI-001)
+# =============================================================================
+# Incident: Custom ActivityPage bypassed projection-driven DomainPage.
+# Root Cause: SDSR data binding happened at page level, not panel level.
+# Principle: UI renders projection. UI does not bypass projection.
+# Reference: PIN-370, docs/governance/SDSR.md
+# =============================================================================
+
+sdsr_ui_architecture:
+  rule_id: BL-SDSR-UI-001
+  severity: BLOCKING
+  effective: "2026-01-09"
+
+  # ---------------------------------------------------------------------------
+  # Core Principle
+  # ---------------------------------------------------------------------------
+  principle: |
+    UI renders projection. UI does not bypass projection.
+
+    The L2.1 projection pipeline defines the canonical UI structure:
+      Domain → Subdomain → Topic Tabs → Panels
+
+    SDSR data binding happens at the PANEL level via PanelContentRegistry.
+    Custom pages that bypass the projection structure are FORBIDDEN.
+
+  # ---------------------------------------------------------------------------
+  # Architecture Rules
+  # ---------------------------------------------------------------------------
+  rules:
+    - id: SDSR-UI-001
+      name: Routes Use DomainPage
+      description: |
+        All domain routes in routes/index.tsx must import from DomainPage.tsx.
+        Direct custom page imports for domains are forbidden.
+      enforcement: BLOCKING
+      reference: website/app-shell/src/routes/index.tsx
+
+    - id: SDSR-UI-002
+      name: Data Binding via PanelContentRegistry
+      description: |
+        SDSR data must be bound at the panel level via PanelContentRegistry.
+        Do NOT render data directly in custom components outside the panel structure.
+      enforcement: BLOCKING
+      reference: website/app-shell/src/components/panels/PanelContentRegistry.tsx
+
+    - id: SDSR-UI-003
+      name: Panel ID Registration Required
+      description: |
+        Before a panel can show real data, its panel_id must be registered
+        in the PANEL_CONTENT_REGISTRY map with a content renderer function.
+      enforcement: BLOCKING
+
+    - id: SDSR-UI-004
+      name: Projection Structure Preserved
+      description: |
+        The DomainPage structure (Domain → Subdomain → Topic → Panel) must be
+        preserved. Flattening or bypassing this hierarchy is forbidden.
+      enforcement: BLOCKING
+
+    # Cross-Domain Propagation Rules
+    - id: SDSR-PROP-001
+      name: Scenarios Inject Causes Not Consequences
+      description: |
+        Scenarios must NEVER simulate cross-domain behavior.
+        Cross-domain reflection must emerge ONLY from backend capabilities.
+        A scenario's job is to introduce a cause, not to fake consequences.
+      enforcement: BLOCKING
+
+    - id: SDSR-PROP-002
+      name: One Scenario One Domain
+      description: |
+        Each scenario is authored from exactly one domain's point of view.
+        Examples: ACTIVITY-FAILED-RUN-001, INCIDENTS-THRESHOLD-BREACH-001
+      enforcement: BLOCKING
+
+    - id: SDSR-PROP-003
+      name: Expectations Not Cross-Domain Writes
+      description: |
+        Scenarios declare `writes` ONLY for their domain.
+        Cross-domain effects use `expects` (assertions), not `writes`.
+        If any `expects` fail → backend bug, not scenario bug.
+      enforcement: BLOCKING
+
+    - id: SDSR-PROP-004
+      name: Backend Owns Propagation
+      description: |
+        Cross-domain effects must fire from backend capabilities:
+        - Run → Incident: Incident Engine
+        - Incident → Policy: Policy Engine
+        - Run → Logs: Logging/Evidence
+        If these don't fire, backend is broken, not scenario.
+      enforcement: BLOCKING
+
+  # ---------------------------------------------------------------------------
+  # Cross-Domain Propagation Contract
+  # ---------------------------------------------------------------------------
+  cross_domain_propagation:
+    principle: |
+      If a failed Activity run does NOT create an Incident, influence Policies,
+      or appear in Logs, then the backend is broken, not the scenario.
+
+    backend_responsibility_matrix:
+      - effect: Run → Incident
+        owner: Incident Engine
+        scenario_role: EXPECT only
+      - effect: Incident → Policy
+        owner: Policy Engine
+        scenario_role: EXPECT only
+      - effect: Run → Logs
+        owner: Logging / Evidence
+        scenario_role: EXPECT only
+      - effect: Incident → Logs
+        owner: Logging / Evidence
+        scenario_role: EXPECT only
+      - effect: Policy → Memory
+        owner: Memory / Learning
+        scenario_role: EXPECT only
+
+    domain_execution_order:
+      - Activity (cause)
+      - Incidents (reactive)
+      - Policies (reactive)
+      - Logs (evidence)
+
+    rule: No parallelism. No shortcuts.
+
+  # ---------------------------------------------------------------------------
+  # Conflict Resolution (MANDATORY)
+  # ---------------------------------------------------------------------------
+  conflict_resolution:
+    on_ambiguity: ASK_USER
+    rule: |
+      When Claude is uncertain whether a UI change respects projection architecture,
+      Claude MUST stop and ask the user. Guessing is forbidden.
+
+    claude_question_format: |
+      UI ARCHITECTURE CONFLICT DETECTED
+
+      I'm uncertain whether this change respects the projection-driven architecture.
+
+      Options:
+      1. Bind data at panel level via PanelContentRegistry (recommended)
+      2. Create a custom page (requires explicit approval)
+      3. Clarify the UI structure requirement
+
+      Which approach should I take?
+
+    default_choice: Option 1 (PanelContentRegistry)
+
+  # ---------------------------------------------------------------------------
+  # Validation Checklist
+  # ---------------------------------------------------------------------------
+  validation_checklist:
+    name: SDSR UI Architecture Check
+    run_before: Any UI work involving SDSR data binding
+    items:
+      - question: Does this use DomainPage for structure?
+        required: YES
+      - question: Does data binding happen via PanelContentRegistry?
+        required: YES
+      - question: Is the panel_id registered in the registry?
+        required: YES
+      - question: Does the API endpoint exist?
+        required: YES
+      - question: Is synthetic data properly marked (is_synthetic)?
+        required: YES
+
+    on_failure: STOP and resolve before proceeding
+
+  # ---------------------------------------------------------------------------
+  # Claude Behavioral Rules
+  # ---------------------------------------------------------------------------
+  claude_behavior:
+    forbidden_actions:
+      - Bypass DomainPage for domain routes
+      - Create flat custom pages that ignore projection hierarchy
+      - Render data outside PanelContentRegistry pattern
+      - Assume UI structure without checking projection lock
+      - Proceed with ambiguous UI architecture decisions
+
+    required_actions:
+      - Ask when UI architecture is unclear
+      - Use PanelContentRegistry for all SDSR data binding
+      - Verify panel_id exists in projection_lock.json
+      - Confirm projection structure is preserved
+
+  # ---------------------------------------------------------------------------
+  # Violation Response
+  # ---------------------------------------------------------------------------
+  violation_response:
+    on_bypass_attempt: |
+      BL-SDSR-UI-001 VIOLATION: Projection bypass detected.
+
+      Routes must use DomainPage for domain rendering.
+      Data binding must happen via PanelContentRegistry.
+
+      Correct pattern:
+      1. DomainPage provides: Domain → Subdomain → Topic → Panel structure
+      2. PanelContentRegistry binds data to specific panel_ids
+      3. FullPanelSurface checks registry and renders content
+
+      Do NOT create custom pages that bypass this structure.
+
+  # ---------------------------------------------------------------------------
+  # Reference Files
+  # ---------------------------------------------------------------------------
+  reference_files:
+    governance: docs/governance/SDSR.md
+    pin: docs/memory-pins/PIN-370-sdsr-scenario-driven-system-realization.md
+    domain_page: website/app-shell/src/pages/domains/DomainPage.tsx
+    panel_registry: website/app-shell/src/components/panels/PanelContentRegistry.tsx
+    projection_lock: website/app-shell/public/projection/ui_projection_lock.json
+    routes: website/app-shell/src/routes/index.tsx
+
+# =============================================================================
+# SECTION 39: CANONICAL-FIRST FIX POLICY (ARCH-CANON-001)
+# =============================================================================
+# Reference: PIN-370 (SDSR Consolidation Incident), CLAUDE_ENGINEERING_AUTHORITY.md
+# Root Cause: sdsr_incidents table was created instead of extending canonical incidents table
+# Incident: Analytics fragmentation, policy engine breakage, export compliance issues
+# =============================================================================
+
+canonical_first_policy:
+  status: MANDATORY
+  effective: 2026-01-09
+  reference: PIN-370
+
+  # ---------------------------------------------------------------------------
+  # Core Rule (HARD BLOCK)
+  # ---------------------------------------------------------------------------
+  core_rule:
+    id: ARCH-CANON-001
+    name: Canonical-First Fix Policy
+    statement: |
+      Claude is FORBIDDEN from creating new database tables, schemas, or public APIs
+      when addressing functional gaps, bugs, or missing behavior in an existing domain.
+    enforcement: BLOCKING
+
+  # ---------------------------------------------------------------------------
+  # Mandatory Behavior
+  # ---------------------------------------------------------------------------
+  mandatory_behavior:
+    principle: |
+      Claude MUST assume a single canonical structure already exists for each
+      domain concept (e.g., incidents, runs, policies).
+
+    fix_types:
+      - type: Lifecycle hooks
+        description: Add/fix event handlers, triggers
+      - type: State transitions
+        description: Fix status changes, workflow steps
+      - type: Mappings
+        description: Fix field mappings, transformations
+      - type: Queries
+        description: Fix SELECT/JOIN logic
+      - type: Indexing
+        description: Add/fix database indexes
+      - type: Ownership boundaries
+        description: Fix domain engine responsibility
+
+  # ---------------------------------------------------------------------------
+  # Explicitly Forbidden Actions
+  # ---------------------------------------------------------------------------
+  forbidden_actions:
+    - action: Creating parallel tables
+      pattern: "sdsr_*, *_v2, *_new"
+      reason: Fragments analytics, policy, exports
+    - action: Creating shadow APIs
+      pattern: Duplicate endpoints for same intent
+      reason: Confuses callers, duplicates maintenance
+    - action: Introducing "temporary" structures
+      pattern: Any structure labeled temporary
+      reason: Temporary becomes permanent
+    - action: Renaming domain concepts
+      pattern: Avoiding collisions by renaming
+      reason: Obscures truth
+
+  # ---------------------------------------------------------------------------
+  # Canonical Repair Order (MANDATORY)
+  # ---------------------------------------------------------------------------
+  repair_order:
+    description: |
+      When a conflict or limitation appears, Claude must follow this exact repair order.
+      At no point may Claude bypass a canonical structure.
+
+    steps:
+      - step: 1
+        name: Find the Canonical Structure
+        action: Identify existing table, model, API, domain engine
+
+      - step: 2
+        name: Explain Why Behavior Is Missing
+        diagnose:
+          - Lifecycle hook absent
+          - Event not emitted
+          - Mapping incomplete
+          - Query wrong
+          - Transaction boundary wrong
+
+      - step: 3
+        name: Fix by Extension Not Duplication
+        do_this:
+          - Add fields to existing table
+          - Add hooks to existing flow
+          - Add handlers to existing engine
+          - Add indexes to existing table
+          - Add constraints to existing schema
+        not_this:
+          - Create new table
+          - Create parallel flow
+          - Create new service
+          - Create materialized view
+          - Create shadow validation
+
+      - step: 4
+        name: Re-run Scenario
+        action: |
+          If scenario passes → proceed
+          If scenario fails → repeat from Step 2
+
+  # ---------------------------------------------------------------------------
+  # Fragmentation Escalation Protocol (ARCH-FRAG-ESCALATE-001)
+  # ---------------------------------------------------------------------------
+  fragmentation_escalation:
+    id: ARCH-FRAG-ESCALATE-001
+    name: Fragmentation Escalation Protocol
+    principle: |
+      Fragmentation is not forbidden, but it is never Claude's decision.
+
+    escalation_triggers:
+      - Break backward compatibility
+      - Violate regulatory constraints
+      - Corrupt production data
+      - Invalidate existing customers
+
+    required_report_format: |
+      FRAGMENTATION ESCALATION REPORT
+
+      Title: Canonical Architecture Conflict Detected — Decision Required
+
+      1. CANONICAL STRUCTURE IDENTIFIED
+         - Name: [table/model/API name]
+         - Location: [file path]
+         - Owner domain: [domain name]
+
+      2. WHY DIRECT FIX IS UNSAFE
+         - Concrete reason (not speculative)
+         - What would break
+
+      3. OPTIONS (No More Than 3)
+         | Option | Description | Trade-offs | Long-Term Cost |
+         |--------|-------------|------------|----------------|
+         | A      | Fix canonical structure | ... | ... |
+         | B      | Introduce parallel structure | ... | ... |
+         | C      | Transitional shim | ... | ... |
+
+      4. RECOMMENDATION (Optional)
+         - Claude may recommend ONE option
+         - Must justify clearly
+
+      5. EXPLICIT ASK
+         "Please choose A, B, or C. I will not proceed without direction."
+
+    hard_stop_rule: |
+      Claude MUST NOT write code after producing this report.
+      Claude MUST wait for user instruction.
+
+  # ---------------------------------------------------------------------------
+  # Blocking Rules
+  # ---------------------------------------------------------------------------
+  blocking_rules:
+    - rule_id: ARCH-CANON-001
+      name: Canonical-First Fix Policy
+      enforcement: |
+        If Claude proposes any new table or public API without approval,
+        response is INVALID. Claude must STOP and report the conflict.
+
+    - rule_id: ARCH-FRAG-ESCALATE-001
+      name: Fragmentation Escalation Required
+      enforcement: |
+        If canonical fix is unsafe, Claude must produce Fragmentation
+        Escalation Report and wait for direction. Code is forbidden.
+
+  # ---------------------------------------------------------------------------
+  # Hard Failure Response
+  # ---------------------------------------------------------------------------
+  violation_response:
+    on_parallel_structure_attempt: |
+      ARCH-CANON-001 VIOLATION: Cannot create new table/API for existing domain.
+
+      Canonical structure: [name] at [location]
+      Must fix by extension, not duplication.
+
+      If canonical fix is unsafe, produce Fragmentation Escalation Report.
+
+      Reference: docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md Section 13
+
+  # ---------------------------------------------------------------------------
+  # Rationale (Claude Must Internalize)
+  # ---------------------------------------------------------------------------
+  rationale: |
+    Fragmentation solves the immediate error but permanently damages:
+    - Analytics (queries must join multiple sources)
+    - Policy reasoning (engines see incomplete data)
+    - Exports & compliance (reports miss data)
+    - Trust (system truth is fragmented)
+
+    Fixing canonical structures preserves long-term system integrity.
+    This rule was created after the sdsr_incidents incident (PIN-370)
+    where a parallel table was created instead of extending the canonical
+    incidents table, requiring emergency consolidation.
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

@@ -137,3 +137,26 @@ export async function getWorkerRun(
 export function getWorkerStreamUrl(workerId: string, runId: string): string {
   return `/api/v1/workers/${workerId}/stream/${runId}`;
 }
+
+// ============================================================================
+// Phase-2.5: Real Actions
+// ============================================================================
+
+export interface RetryRunResponse {
+  id: string;
+  parent_run_id: string;
+  status: string;
+}
+
+/**
+ * Retry a completed or failed run - Phase-2.5
+ *
+ * Creates a new run linked to the original via parent_run_id.
+ * This is the first REAL action graduating from simulation.
+ */
+export async function retryRun(runId: string): Promise<RetryRunResponse> {
+  const { data } = await apiClient.post<RetryRunResponse>(
+    `/api/v1/workers/business-builder/runs/${runId}/retry`
+  );
+  return data;
+}

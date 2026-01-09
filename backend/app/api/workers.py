@@ -225,6 +225,14 @@ class RunListResponse(BaseModel):
     total: int
 
 
+class RunRetryResponse(BaseModel):
+    """Response for run retry - Phase-2.5."""
+
+    id: str
+    parent_run_id: str
+    status: str
+
+
 # =============================================================================
 # PostgreSQL Run Storage (P0-005 Fix: Real persistence, not in-memory)
 # =============================================================================
@@ -1089,6 +1097,72 @@ async def list_runs(
     ]
 
     return RunListResponse(runs=items, total=len(items))
+
+
+@router.post("/runs/{run_id}/retry", response_model=RunRetryResponse, status_code=201)
+async def retry_run(
+    run_id: str,
+    _: str = Depends(verify_api_key),
+):
+    """
+    Retry a completed or failed run - Phase-2.5.
+
+    Creates a new run linked to the original via parent_run_id.
+    This is a lifecycle event, not execution - the run is queued only.
+
+    Rules:
+    - Original run must be COMPLETED or FAILED
+    - No agent execution triggered
+    - DB write only, deterministic
+    """
+    from app.db import Run
+
+    async with get_async_session() as session:
+        # Get original run
+        result = await session.execute(
+            select(Run).where(Run.id == run_id)
+        )
+        original = result.scalar_one_or_none()
+
+        if not original:
+            raise HTTPException(status_code=404, detail="Run not found")
+
+        # Validate status - only completed or failed runs can be retried
+        valid_statuses = ["completed", "failed", "succeeded"]
+        if original.status.lower() not in valid_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot retry run with status '{original.status}'. Must be completed or failed."
+            )
+
+        # Create new run linked to original
+        # Note: Use naive datetime for asyncpg compatibility
+        from datetime import datetime as dt
+        new_run = Run(
+            agent_id=original.agent_id,
+            goal=original.goal,
+            status="queued",
+            parent_run_id=original.id,
+            tenant_id=original.tenant_id,
+            max_attempts=original.max_attempts,
+            priority=original.priority,
+            created_at=dt.utcnow(),
+        )
+
+        session.add(new_run)
+        await session.commit()
+        await session.refresh(new_run)
+
+        # Audit log
+        logger.info(
+            f"run_retry_requested: original={run_id} new={new_run.id} status=queued"
+        )
+
+        return RunRetryResponse(
+            id=new_run.id,
+            parent_run_id=run_id,
+            status="queued",
+        )
 
 
 @router.post("/validate-brand", response_model=BrandValidationResponse)

@@ -1,0 +1,23 @@
+{
+  "scenario_id": "INCIDENTS-001",
+  "domain": "Incidents",
+  "status": "PASS",
+  "surfaces_tested": [
+    "L21-EVD-R"
+  ],
+  "slots_validated": [
+    "SLOT-INC-AI-OI-O2",
+    "SLOT-INC-AI-ID-O3"
+  ],
+  "assertions_passed": [
+    "surface_available",
+    "slot_visible",
+    "evidence_loads",
+    "no_control_actions"
+  ],
+  "assertions_failed": [],
+  "failures": [],
+  "timestamp": "2026-01-09T05:38:32.377120+00:00",
+  "duration_ms": 0,
+  "pipeline_version": "1.0.0"
+}

@@ -84,6 +84,10 @@ class Tenant(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
+    # SDSR: Synthetic data marking (PIN-370)
+    is_synthetic: bool = Field(default=False, description="True if created by synthetic scenario injection")
+    synthetic_scenario_id: Optional[str] = Field(default=None, max_length=100, description="Scenario ID for traceability")
+
     def can_create_run(self) -> tuple[bool, str]:
         """Check if tenant can create a new run."""
         if self.status != "active":
@@ -275,6 +279,10 @@ class APIKey(SQLModel, table=True):
 
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
+
+    # SDSR: Synthetic data marking (PIN-370)
+    is_synthetic: bool = Field(default=False, description="True if created by synthetic scenario injection")
+    synthetic_scenario_id: Optional[str] = Field(default=None, max_length=100, description="Scenario ID for traceability")
 
     @staticmethod
     def generate_key() -> tuple[str, str, str]:
@@ -480,6 +488,10 @@ class WorkerRun(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+
+    # SDSR: Synthetic data marking (PIN-370)
+    is_synthetic: bool = Field(default=False, description="True if created by synthetic scenario injection")
+    synthetic_scenario_id: Optional[str] = Field(default=None, max_length=100, description="Scenario ID for traceability")
 
 
 # ============== AUDIT LOG ==============

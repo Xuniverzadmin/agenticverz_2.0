@@ -159,3 +159,20 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
         always_run: true
+
+      # Surface-Slot Coverage Guard
+      # PIN-365: STEP 2A — Prevents "silent invisibility" bugs
+      # Every STEP 1B surface must map to ≥1 UI slot or be marked non-UI
+      - id: surface-slot-coverage
+        name: Surface-Slot Coverage Guard (PIN-365)
+        entry: python scripts/ci/surface_slot_coverage_guard.py
+        language: python
+        additional_dependencies: [pandas, openpyxl]
+        pass_filenames: false
+        stages: [pre-commit]
+        files: |
+          (?x)^(
+            design/l2_1/step_2a/.*|
+            docs/capabilities/l21_bounded/.*|
+            scripts/ci/surface_slot_coverage_guard\.py
+          )$

@@ -42,6 +42,7 @@ import {
   CheckCircle,
   XCircle,
   Info,
+  Beaker,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -51,6 +52,8 @@ import {
 import type { Panel, Control, DomainName, RenderMode } from '@/contracts/ui_projection_types';
 import { preflightLogger } from '@/lib/preflightLogger';
 import { useRenderer, InspectorOnly } from '@/contexts/RendererContext';
+import { SimulatedControl } from '@/components/simulation/SimulatedControl';
+import { useSimulation } from '@/contexts/SimulationContext';
 
 // ============================================================================
 // Constants
@@ -110,41 +113,9 @@ function findDomainByPanelRoute(route: string): DomainName | undefined {
 }
 
 // ============================================================================
-// Control Item Component
+// Control Item Component - REPLACED BY SimulatedControl (PIN-368)
 // ============================================================================
-
-interface ControlItemProps {
-  control: Control;
-  showType: boolean;
-}
-
-function ControlItem({ control, showType }: ControlItemProps) {
-  const colorClass = CONTROL_CATEGORY_COLORS[control.category] || CONTROL_CATEGORY_COLORS.unknown;
-
-  return (
-    <div className={cn(
-      'flex items-center justify-between px-4 py-3 rounded-lg border transition-colors',
-      colorClass
-    )}>
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-mono">{control.type}</span>
-        {showType && (
-          <span className="text-xs opacity-70">({control.category})</span>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        {showType && (
-          <span className="text-xs opacity-70">Order: {control.order}</span>
-        )}
-        {control.enabled ? (
-          <CheckCircle size={14} className="text-green-400" />
-        ) : (
-          <XCircle size={14} className="text-gray-500" />
-        )}
-      </div>
-    </div>
-  );
-}
+// See: @/components/simulation/SimulatedControl.tsx
 
 // ============================================================================
 // Permissions Display (Inspector Only)
@@ -245,6 +216,7 @@ function PanelNotFound({ route, domainRoute }: { route: string; domainRoute: str
 export default function PanelView() {
   const { domain: domainSlug, panelSlug } = useParams<{ domain: string; panelSlug: string }>();
   const renderer = useRenderer();
+  const simulation = useSimulation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -453,12 +425,24 @@ export default function PanelView() {
       {/* Controls */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium text-gray-200">
+          <h3 className="font-medium text-gray-200 flex items-center gap-2">
             Controls {renderer.showMetadata && `(${panel.control_count})`}
+            {/* Simulation mode indicator */}
+            {simulation.isSimulationEnabled && (
+              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-900/50 text-amber-400 border border-amber-700/50">
+                <Beaker size={12} />
+                SIMULATION
+              </span>
+            )}
           </h3>
           {renderer.showMetadata && (
             <span className="text-xs text-gray-500">
               {panel.controls.filter(c => c.enabled).length} enabled
+              {panel.controls.filter(c => c.category === 'action').length > 0 && (
+                <span className="ml-2 text-amber-400">
+                  ({panel.controls.filter(c => c.category === 'action').length} actions)
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -468,9 +452,10 @@ export default function PanelView() {
         ) : (
           <div className="space-y-2">
             {panel.controls.map((control, idx) => (
-              <ControlItem
+              <SimulatedControl
                 key={`${control.type}-${idx}`}
                 control={control}
+                panelId={panel.panel_id}
                 showType={renderer.showControlTypes}
               />
             ))}

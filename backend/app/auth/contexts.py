@@ -38,7 +38,8 @@ from typing import FrozenSet, Optional
 class AuthSource(str, Enum):
     """How authentication was established."""
 
-    CLERK = "clerk"  # Production Clerk JWT
+    CONSOLE = "console"  # Internal console HS256 JWT (transitional)
+    CLERK = "clerk"  # Production Clerk RS256 JWT
     STUB = "stub"  # Development stub token
     API_KEY = "api_key"  # Machine API key
 

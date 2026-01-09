@@ -1,5 +1,5 @@
 {
-  "approved_version": "v3",
+  "approved_version": "v4",
   "versions": {
     "v2": {
       "file": "design/l2_1/supertable/l2_supertable_v2_cap_expanded.xlsx",
@@ -9,9 +9,15 @@
     "v3": {
       "file": "design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx",
       "generated_at": "2026-01-07T15:30:00+00:00",
-      "status": "APPROVED",
+      "status": "SUPERSEDED",
       "promoted_at": "2026-01-07T16:12:00+00:00"
+    },
+    "v4": {
+      "file": "design/l2_1/supertable/l2_supertable_v4_cap_expanded.xlsx",
+      "generated_at": "2026-01-09T15:47:16.570798+00:00",
+      "status": "APPROVED",
+      "promoted_at": "2026-01-09T15:47:29.323968+00:00"
     }
   },
-  "last_updated": "2026-01-07T16:30:00+00:00"
+  "last_updated": "2026-01-09T15:47:29.324027+00:00"
 }

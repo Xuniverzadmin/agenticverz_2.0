@@ -1,0 +1,264 @@
+# STEP 3 Scenario Specification
+# Reference: PIN-366 (STEP 3 — Scenario Generation, Execution & Validation)
+#
+# This file defines WHAT to test, not HOW.
+# Scenarios consume frozen artifacts only.
+# Scenarios never modify upstream files.
+
+version: 1
+owner: STEP-3
+rules:
+  - scenarios_are_read_only: true
+  - no_l21_mutation: true
+  - no_ui_projection_mutation: true
+  - deterministic_seed_required: true
+
+scenarios:
+
+  # ─────────────────────────────────────────────
+  # ACTIVITY DOMAIN
+  # ─────────────────────────────────────────────
+
+  - scenario_id: ACTIVITY-001
+    domain: Activity
+    intent: "User can see running executions and replay evidence"
+    description: |
+      Validates that the Activity domain correctly displays
+      execution lists and allows evidence replay without
+      any write/control actions.
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - ACTIVITY_RUN_LIST
+      - ACTIVITY_REPLAY_VIEWER
+    assertions:
+      - surface_available
+      - surface_authority_ok
+      - slot_visible
+      - evidence_loads
+      - no_control_actions
+    fixtures:
+      executions:
+        - state: RUNNING
+          count: 2
+        - state: COMPLETED
+          count: 1
+    seed: 42
+
+  # ─────────────────────────────────────────────
+  # INCIDENTS DOMAIN
+  # ─────────────────────────────────────────────
+
+  - scenario_id: INCIDENTS-001
+    domain: Incidents
+    intent: "User can see active incidents and inspect evidence"
+    description: |
+      Validates that the Incidents domain correctly displays
+      incident lists and allows evidence inspection without
+      any write/control actions.
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - INCIDENT_LIST
+      - INCIDENT_EVIDENCE_VIEW
+    assertions:
+      - surface_available
+      - slot_visible
+      - evidence_loads
+      - no_control_actions
+    fixtures:
+      incidents:
+        - severity: HIGH
+          state: ACTIVE
+          count: 1
+    seed: 42
+
+  # ─────────────────────────────────────────────
+  # POLICIES DOMAIN
+  # ─────────────────────────────────────────────
+
+  - scenario_id: POLICIES-001
+    domain: Policies
+    intent: "User can view active policies but cannot mutate them"
+    description: |
+      Validates that the Policies domain correctly displays
+      policy lists and details, with controls disabled to
+      prevent unauthorized mutations.
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - POLICY_LIST
+      - POLICY_DETAILS
+    assertions:
+      - surface_available
+      - slot_visible
+      - control_disabled
+      - no_authority_escalation
+    fixtures:
+      policies:
+        - status: ACTIVE
+          count: 3
+    seed: 42
+
+  # ─────────────────────────────────────────────
+  # LOGS DOMAIN
+  # ─────────────────────────────────────────────
+
+  - scenario_id: LOGS-001
+    domain: Logs
+    intent: "User can view log evidence in a sliding replay window"
+    description: |
+      Validates that the Logs domain correctly displays
+      log streams and replay windows without any write/control
+      actions.
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - LOG_EVENT_STREAM
+      - LOG_REPLAY_WINDOW
+    assertions:
+      - surface_available
+      - slot_visible
+      - replay_window_loads
+      - no_control_actions
+    fixtures:
+      logs:
+        - window_seconds: 60
+          event_count: 50
+    seed: 42
+
+  # ─────────────────────────────────────────────
+  # NEGATIVE SCENARIOS (CONTROL-PATH)
+  # These scenarios test the assertion engine's
+  # ability to detect and report failures correctly.
+  # ─────────────────────────────────────────────
+
+  - scenario_id: ACTIVITY-NEG-001
+    domain: Activity
+    intent: "User attempts a write/control action on a read-only evidence surface"
+    description: |
+      NEGATIVE SCENARIO: Tests that the assertion engine correctly
+      detects and reports authority violations. A user attempts to
+      execute a write/control action (REPLAY_EXPORT) on the read-only
+      evidence surface (L21-EVD-R). This MUST fail with SL-04.
+    baseline: false
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - ACTIVITY_RUN_LIST
+    attempted_actions:
+      - type: EXECUTE
+        target: REPLAY_EXPORT
+    assertions:
+      - surface_available
+      - slot_visible
+      - action_blocked
+    fixtures:
+      executions:
+        - state: RUNNING
+          count: 1
+    expected_failure:
+      category: SLOT
+      code: SL-04
+    seed: 42
+
+  # ─────────────────────────────────────────────
+  # INCIDENTS NEGATIVE SCENARIO
+  # ─────────────────────────────────────────────
+
+  - scenario_id: INCIDENTS-NEG-001
+    domain: Incidents
+    intent: "User attempts to mitigate or close an incident from a read-only evidence surface"
+    description: |
+      NEGATIVE SCENARIO: Tests that incident mitigation/closure actions
+      are blocked on read-only evidence surfaces. A user attempts to
+      execute INCIDENT_CLOSE on L21-EVD-R. This MUST fail with SL-04.
+    baseline: false
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - INCIDENT_LIST
+      - INCIDENT_EVIDENCE_VIEW
+    attempted_actions:
+      - type: EXECUTE
+        target: INCIDENT_CLOSE
+    assertions:
+      - surface_available
+      - slot_visible
+      - action_blocked
+    fixtures:
+      incidents:
+        - severity: HIGH
+          state: ACTIVE
+          count: 1
+    expected_failure:
+      category: SLOT
+      code: SL-04
+    seed: 42
+
+  # ─────────────────────────────────────────────
+  # POLICIES NEGATIVE SCENARIO
+  # ─────────────────────────────────────────────
+
+  - scenario_id: POLICIES-NEG-001
+    domain: Policies
+    intent: "User attempts to enable or disable a policy from a read-only evidence surface"
+    description: |
+      NEGATIVE SCENARIO: Tests that policy toggle actions are blocked
+      on read-only evidence surfaces. A user attempts to execute
+      POLICY_TOGGLE on L21-EVD-R. This MUST fail with SL-04.
+    baseline: false
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - POLICY_LIST
+      - POLICY_DETAILS
+    attempted_actions:
+      - type: EXECUTE
+        target: POLICY_TOGGLE
+    assertions:
+      - surface_available
+      - slot_visible
+      - control_disabled
+      - action_blocked
+    fixtures:
+      policies:
+        - status: ACTIVE
+          count: 1
+    expected_failure:
+      category: SLOT
+      code: SL-04
+    seed: 42
+
+  # ─────────────────────────────────────────────
+  # LOGS NEGATIVE SCENARIO
+  # ─────────────────────────────────────────────
+
+  - scenario_id: LOGS-NEG-001
+    domain: Logs
+    intent: "User attempts to delete or destructively export logs from a read-only evidence surface"
+    description: |
+      NEGATIVE SCENARIO: Tests that log deletion/destructive export
+      actions are blocked on read-only evidence surfaces. A user
+      attempts to execute LOG_DELETE on L21-EVD-R. This MUST fail with SL-04.
+    baseline: false
+    surfaces_required:
+      - L21-EVD-R
+    slots_expected:
+      - LOG_EVENT_STREAM
+      - LOG_REPLAY_WINDOW
+    attempted_actions:
+      - type: EXECUTE
+        target: LOG_DELETE
+    assertions:
+      - surface_available
+      - slot_visible
+      - action_blocked
+    fixtures:
+      logs:
+        - window_seconds: 60
+          event_count: 10
+    expected_failure:
+      category: SLOT
+      code: SL-04
+    seed: 42

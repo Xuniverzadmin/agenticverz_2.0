@@ -1,0 +1,23 @@
+{
+  "scenario_id": "LOGS-001",
+  "domain": "Logs",
+  "status": "PASS",
+  "surfaces_tested": [
+    "L21-EVD-R"
+  ],
+  "slots_validated": [
+    "SLOT-LOG-ET-TD-O2",
+    "SLOT-LOG-ET-TD-O5"
+  ],
+  "assertions_passed": [
+    "surface_available",
+    "slot_visible",
+    "replay_window_loads",
+    "no_control_actions"
+  ],
+  "assertions_failed": [],
+  "failures": [],
+  "timestamp": "2026-01-09T05:01:44.100146+00:00",
+  "duration_ms": 0,
+  "pipeline_version": "1.0.0"
+}

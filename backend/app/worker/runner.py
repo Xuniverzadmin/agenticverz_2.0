@@ -36,6 +36,7 @@ from app.infra import FeatureIntent, RetryPolicy
 # Reference: PIN-257 Phase R-3 (L5→L4 Violation Fix)
 from ..db import Agent, Memory, Provenance, Run, engine
 from ..events import get_publisher
+from ..services.incident_engine import get_incident_engine
 from ..metrics import (
     nova_runs_failed_total,
     nova_runs_total,
@@ -234,12 +235,16 @@ class RunRunner:
             )
 
             # Update run status to reflect authorization failure
+            error_msg = f"Authorization denied: {reason}"
             self._update_run(
                 status="failed",
                 attempts=run.attempts or 0,
                 completed_at=datetime.now(timezone.utc),
-                error_message=f"Authorization denied: {reason}",
+                error_message=error_msg,
             )
+
+            # SDSR: Create incident for failed run (PIN-370)
+            self._create_incident_for_failure(error_message=error_msg)
 
             self.publisher.publish(
                 "run.failed",
@@ -314,6 +319,46 @@ class RunRunner:
                     run.duration_ms = duration_ms
                 session.add(run)
                 session.commit()
+
+    def _create_incident_for_failure(self, error_message: Optional[str] = None):
+        """
+        Create an incident when a run fails.
+
+        SDSR Cross-Domain Propagation (PIN-370):
+        Activity (failed run) → Incident Engine → sdsr_incidents table
+        """
+        try:
+            run = self._get_run()
+            if not run:
+                logger.warning("create_incident_skip_no_run", extra={"run_id": self.run_id})
+                return
+
+            incident_engine = get_incident_engine()
+            incident_id = incident_engine.check_and_create_incident(
+                run_id=self.run_id,
+                status="failed",
+                error_message=error_message or run.error_message,
+                tenant_id=run.tenant_id,
+                agent_id=run.agent_id,
+                is_synthetic=run.is_synthetic or False,
+                synthetic_scenario_id=run.synthetic_scenario_id,
+            )
+
+            if incident_id:
+                logger.info(
+                    "incident_created_for_failed_run",
+                    extra={"run_id": self.run_id, "incident_id": incident_id},
+                )
+                self.publisher.publish(
+                    "incident.created",
+                    {"run_id": self.run_id, "incident_id": incident_id},
+                )
+        except Exception as e:
+            # Don't fail the run because of incident creation failure
+            logger.error(
+                "incident_creation_failed",
+                extra={"run_id": self.run_id, "error": str(e)},
+            )
 
     def run(self):
         """Execute the run synchronously (called from thread pool)."""
@@ -746,12 +791,17 @@ class RunRunner:
             attempts = (run.attempts or 0) + 1
 
             if attempts >= MAX_ATTEMPTS:
+                error_msg = str(exc)[:500]
                 self._update_run(
                     status="failed",
                     attempts=attempts,
-                    error_message=str(exc)[:500],
+                    error_message=error_msg,
                     completed_at=datetime.now(timezone.utc),
                 )
+
+                # SDSR: Create incident for failed run (PIN-370)
+                self._create_incident_for_failure(error_message=error_msg)
+
                 self.publisher.publish(
                     "run.failed", {"run_id": self.run_id, "attempts": attempts, "error": str(exc)[:200]}
                 )

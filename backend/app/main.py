@@ -461,6 +461,8 @@ from .api.cost_intelligence import router as cost_intelligence_router
 # M29 Category 4: Cost Intelligence Completion
 from .api.cost_ops import router as cost_ops_router  # /ops/cost/* - Founder cost visibility
 from .api.costsim import router as costsim_router
+from .api.activity import router as activity_router  # SDSR Activity API (/activity/runs)
+from .api.incidents import router as incidents_router  # SDSR Incidents API (/incidents/*)
 from .api.customer_activity import router as customer_activity_router  # ACTIVITY Domain Qualification (L2→L3→L4)
 from .api.customer_visibility import router as customer_visibility_router  # Phase 4C-2 Customer Visibility
 from .api.embedding import router as embedding_router  # PIN-047 Embedding Quota API
@@ -542,6 +544,8 @@ app.include_router(guard_router)  # /guard/* - Customer Console (trust + control
 app.include_router(guard_logs_router)  # PIN-281: /guard/logs/* - Customer Logs (L4→L3→L2)
 app.include_router(guard_policies_router)  # PIN-281: /guard/policies/* - Customer Policy Constraints
 app.include_router(customer_activity_router)  # ACTIVITY Domain Qualification: /api/v1/customer/activity/* (L2→L3→L4)
+app.include_router(activity_router, prefix="/api/v1")  # SDSR Activity API: /api/v1/activity/runs
+app.include_router(incidents_router, prefix="/api/v1")  # SDSR Incidents API: /api/v1/incidents/*
 # M28: operator_router removed (PIN-145) - merged into /ops/*
 app.include_router(ops_router)  # /ops/* - M24 Founder Intelligence Console
 app.include_router(platform_router)  # /platform/* - PIN-284 Platform Health (founder-only)

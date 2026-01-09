@@ -211,6 +211,10 @@ class Agent(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
+    # SDSR: Synthetic data marking (PIN-370)
+    is_synthetic: bool = Field(default=False, description="True if created by synthetic scenario injection")
+    synthetic_scenario_id: Optional[str] = Field(default=None, description="Scenario ID for traceability")
+
     @property
     def remaining_budget_cents(self) -> Optional[int]:
         """Calculate remaining budget."""
@@ -276,6 +280,10 @@ class Run(SQLModel, table=True):
 
     # Tenant scoping
     tenant_id: Optional[str] = Field(default=None, index=True)
+
+    # SDSR: Synthetic data marking (PIN-370)
+    is_synthetic: bool = Field(default=False, description="True if created by synthetic scenario injection")
+    synthetic_scenario_id: Optional[str] = Field(default=None, description="Scenario ID for traceability")
 
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
@@ -1204,3 +1212,147 @@ class CostDailyAggregate(SQLModel, table=True):
     request_count: int = 0
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
+
+
+# =============================================================================
+# SDSR: Incidents Domain (PIN-370)
+# =============================================================================
+# Incidents are REACTIVE - created by the Incident Engine when runs fail.
+# Scenarios inject causes (failed runs), backend creates incidents.
+# UI observes incidents via PanelContentRegistry, never writes them.
+# =============================================================================
+
+
+class SDSRIncident(SQLModel, table=True):
+    """
+    SDSR Incident records created by the Incident Engine.
+
+    This table is separate from `incidents` (killswitch incidents).
+    - `incidents` table: KillSwitch proxy layer incidents (calls, rate limits)
+    - `sdsr_incidents` table: Run execution incidents (SDSR Activity → Incidents propagation)
+
+    SDSR Contract (PIN-370):
+    - Incidents are NEVER directly written by scenarios
+    - Incident Engine creates incidents when runs fail
+    - Source run must exist before incident is created
+    - UI observes via /api/v1/incidents endpoint
+
+    Category Types:
+    - EXECUTION_FAILURE: Run execution failed (timeout, error, etc.)
+    - POLICY_VIOLATION: Run violated a policy constraint
+    - BUDGET_EXCEEDED: Run exceeded budget limits
+    - RATE_LIMIT: Run hit rate limits
+    - RESOURCE_EXHAUSTION: System resource limits hit
+    - MANUAL: Manually created incident
+    """
+
+    __tablename__ = "sdsr_incidents"
+
+    id: str = Field(default_factory=lambda: f"inc_{uuid.uuid4().hex[:16]}", primary_key=True)
+
+    # Source linkage - what triggered this incident
+    source_run_id: Optional[str] = Field(default=None, index=True, description="Run that triggered this incident")
+    source_type: str = Field(default="run", description="Source type: run, policy, budget, manual")
+
+    # Incident classification
+    category: str = Field(index=True, description="EXECUTION_FAILURE, POLICY_VIOLATION, BUDGET_EXCEEDED, etc.")
+    severity: str = Field(default="MEDIUM", index=True, description="LOW, MEDIUM, HIGH, CRITICAL")
+    status: str = Field(default="OPEN", index=True, description="OPEN, ACKNOWLEDGED, INVESTIGATING, RESOLVED, CLOSED")
+
+    # Incident details
+    title: str = Field(description="Human-readable incident title")
+    description: Optional[str] = Field(default=None, description="Detailed description of the incident")
+    error_code: Optional[str] = Field(default=None, index=True, description="Error code (e.g., EXECUTION_TIMEOUT)")
+    error_message: Optional[str] = Field(default=None, description="Full error message from source")
+
+    # Impact assessment
+    impact_scope: Optional[str] = Field(default=None, description="Impact: single_run, agent, tenant, system")
+    affected_agent_id: Optional[str] = Field(default=None, index=True)
+    affected_count: int = Field(default=1, description="Number of affected runs/entities")
+
+    # Multi-tenancy
+    tenant_id: str = Field(index=True, description="Tenant scope")
+
+    # Resolution tracking
+    resolved_at: Optional[datetime] = Field(default=None)
+    resolved_by: Optional[str] = Field(default=None, description="User/system that resolved")
+    resolution_notes: Optional[str] = Field(default=None)
+
+    # Escalation
+    escalated: bool = Field(default=False)
+    escalated_at: Optional[datetime] = Field(default=None)
+    escalated_to: Optional[str] = Field(default=None, description="Who was escalated to")
+
+    # Metadata (JSON for flexible context)
+    metadata_json: Optional[str] = Field(default=None, description="Additional context as JSON")
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=utc_now, index=True)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+    # SDSR: Synthetic data marking (PIN-370)
+    is_synthetic: bool = Field(default=False, description="True if created during synthetic scenario")
+    synthetic_scenario_id: Optional[str] = Field(default=None, description="Scenario ID for traceability")
+
+    def get_metadata(self) -> dict:
+        """Parse metadata JSON."""
+        import json
+        if self.metadata_json:
+            return json.loads(self.metadata_json)
+        return {}
+
+    def set_metadata(self, metadata: dict) -> None:
+        """Set metadata as JSON."""
+        import json
+        self.metadata_json = json.dumps(metadata)
+
+    def acknowledge(self, by: str) -> None:
+        """Acknowledge the incident."""
+        self.status = "ACKNOWLEDGED"
+        self.updated_at = utc_now()
+
+    def resolve(self, by: str, notes: Optional[str] = None) -> None:
+        """Resolve the incident."""
+        self.status = "RESOLVED"
+        self.resolved_at = utc_now()
+        self.resolved_by = by
+        if notes:
+            self.resolution_notes = notes
+        self.updated_at = utc_now()
+
+    def escalate(self, to: str) -> None:
+        """Escalate the incident."""
+        self.escalated = True
+        self.escalated_at = utc_now()
+        self.escalated_to = to
+        self.updated_at = utc_now()
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for API responses."""
+        return {
+            "id": self.id,
+            "source_run_id": self.source_run_id,
+            "source_type": self.source_type,
+            "category": self.category,
+            "severity": self.severity,
+            "status": self.status,
+            "title": self.title,
+            "description": self.description,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+            "impact_scope": self.impact_scope,
+            "affected_agent_id": self.affected_agent_id,
+            "affected_count": self.affected_count,
+            "tenant_id": self.tenant_id,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "resolved_by": self.resolved_by,
+            "resolution_notes": self.resolution_notes,
+            "escalated": self.escalated,
+            "escalated_at": self.escalated_at.isoformat() if self.escalated_at else None,
+            "escalated_to": self.escalated_to,
+            "metadata": self.get_metadata(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "is_synthetic": self.is_synthetic,
+            "synthetic_scenario_id": self.synthetic_scenario_id,
+        }

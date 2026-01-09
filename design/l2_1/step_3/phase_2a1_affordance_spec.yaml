@@ -1,0 +1,276 @@
+# Phase-2A.1 Affordance Surfacing Specification
+# Reference: PIN-366, STEP-3 Scenario Validation
+#
+# PURPOSE: Define action controls that must be added to ui_projection_lock.json
+#          in BLOCKED state to satisfy scenario completeness.
+#
+# RULE: These controls exist visually but are disabled because
+#       the current surface (L21-EVD-R) is read-only.
+#
+# When full surfaces are enabled (L21-CTL-RW), these controls
+# will graduate to enabled: true.
+
+version: 1
+phase: 2A.1
+status: READY_FOR_IMPLEMENTATION
+
+# Control categories
+control_categories:
+  data_control:
+    description: "Controls for filtering, sorting, searching data"
+    examples: [FILTER, SORT, SEARCH]
+
+  selection:
+    description: "Controls for selecting items"
+    examples: [SELECT_SINGLE, SELECT_MULTI]
+
+  navigation:
+    description: "Controls for navigating between views"
+    examples: [NAVIGATE, EXPAND, COLLAPSE]
+
+  action:
+    description: "Controls that mutate state or trigger operations"
+    examples: [EXECUTE, STOP, RETRY, DELETE, TOGGLE, EXPORT]
+    requires_authority: true
+
+# Blocked state metadata
+blocked_state:
+  enabled: false
+  visibility: "ALWAYS"  # Show even when blocked
+  disabled_reason_template: "Action unavailable on read-only surface {surface_id}"
+
+# ─────────────────────────────────────────────────────────
+# ACTIVITY DOMAIN - Action Controls to Add
+# ─────────────────────────────────────────────────────────
+
+activity_domain:
+  target_panels:
+    - panel_id: ACT-EX-AR-O2
+      panel_name: "Active Runs List"
+      new_controls:
+        - type: STOP
+          order: 4  # After existing controls
+          icon: "stop-circle"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-ACT-EX-AR-STOP
+
+        - type: RETRY
+          order: 5
+          icon: "refresh-cw"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-ACT-EX-AR-RETRY
+
+    - panel_id: ACT-EX-RD-O5
+      panel_name: "Run Proof"
+      new_controls:
+        - type: REPLAY_EXPORT
+          order: 1  # After DOWNLOAD
+          icon: "file-export"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-ACT-EX-RD-EXPORT
+
+# ─────────────────────────────────────────────────────────
+# INCIDENTS DOMAIN - Action Controls to Add
+# ─────────────────────────────────────────────────────────
+
+incidents_domain:
+  target_panels:
+    - panel_id: INC-AI-OI-O2
+      panel_name: "Open Incidents List"
+      new_controls:
+        - type: MITIGATE
+          order: 5  # After ACKNOWLEDGE
+          icon: "shield"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-INC-AI-OI-MITIGATE
+
+        - type: CLOSE
+          order: 6
+          icon: "x-circle"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-INC-AI-OI-CLOSE
+
+    - panel_id: INC-AI-ID-O3
+      panel_name: "Incident Detail"
+      new_controls:
+        - type: ESCALATE
+          order: 4
+          icon: "alert-triangle"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-INC-AI-ID-ESCALATE
+
+# ─────────────────────────────────────────────────────────
+# POLICIES DOMAIN - Action Controls to Add
+# ─────────────────────────────────────────────────────────
+
+policies_domain:
+  target_panels:
+    - panel_id: POL-AP-BP-O2
+      panel_name: "Budget Policies List"
+      new_controls:
+        - type: TOGGLE
+          order: 4  # After NAVIGATE
+          icon: "toggle-left"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-POL-AP-BP-TOGGLE
+
+    - panel_id: POL-AP-RL-O2
+      panel_name: "Rate Limits List"
+      new_controls:
+        - type: TOGGLE
+          order: 4
+          icon: "toggle-left"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-POL-AP-RL-TOGGLE
+
+    - panel_id: POL-AP-AR-O2
+      panel_name: "Approval Rules List"
+      new_controls:
+        - type: TOGGLE
+          order: 4
+          icon: "toggle-left"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-POL-AP-AR-TOGGLE
+
+    - panel_id: POL-AP-BP-O3
+      panel_name: "Budget Policy Detail"
+      new_controls:
+        - type: EDIT
+          order: 1
+          icon: "edit-2"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-POL-AP-BP-EDIT
+
+# ─────────────────────────────────────────────────────────
+# LOGS DOMAIN - Action Controls to Add
+# ─────────────────────────────────────────────────────────
+
+logs_domain:
+  target_panels:
+    - panel_id: LOG-ET-TD-O2
+      panel_name: "Trace List"
+      new_controls:
+        - type: ARCHIVE
+          order: 5  # After NAVIGATE
+          icon: "archive"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-LOG-ET-TD-ARCHIVE
+
+        - type: DELETE
+          order: 6
+          icon: "trash-2"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-LOG-ET-TD-DELETE
+
+    - panel_id: LOG-AL-SA-O2
+      panel_name: "System Audit List"
+      new_controls:
+        - type: ARCHIVE
+          order: 5
+          icon: "archive"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-LOG-AL-SA-ARCHIVE
+
+    - panel_id: LOG-AL-UA-O2
+      panel_name: "User Audit List"
+      new_controls:
+        - type: ARCHIVE
+          order: 5
+          icon: "archive"
+          category: action
+          enabled: false
+          visibility: "ALWAYS"
+          disabled_reason: "Action unavailable on read-only surface L21-EVD-R"
+          graduation_surface: "L21-CTL-RW"
+          slot_reference: SLOT-LOG-AL-UA-ARCHIVE
+
+# ─────────────────────────────────────────────────────────
+# SUMMARY STATISTICS
+# ─────────────────────────────────────────────────────────
+
+summary:
+  domains_affected: 4
+  panels_modified: 12
+  new_controls_added: 15
+  all_controls_blocked: true
+  graduation_surface: "L21-CTL-RW"
+
+control_inventory:
+  Activity:
+    - STOP
+    - RETRY
+    - REPLAY_EXPORT
+  Incidents:
+    - MITIGATE
+    - CLOSE
+    - ESCALATE
+  Policies:
+    - TOGGLE (x3 panels)
+    - EDIT
+  Logs:
+    - ARCHIVE (x3 panels)
+    - DELETE
+
+# ─────────────────────────────────────────────────────────
+# GRADUATION RULES (Phase-3 Preview)
+# ─────────────────────────────────────────────────────────
+
+graduation:
+  trigger: "Surface upgrade from L21-EVD-R to L21-CTL-RW"
+  action: "Set enabled: true, remove disabled_reason"
+  simulation_phase:
+    description: "Before full enablement, controls enter SIMULATED state"
+    behavior: "onClick logs intent but does not execute"
+    duration: "Until Phase-3 validation complete"

@@ -268,13 +268,53 @@ async def get_tenant_context(
     """
     FastAPI dependency that validates API key and returns tenant context.
 
-    Accepts API key via:
-    - X-AOS-Key header (preferred)
-    - Authorization: Bearer aos_xxx header
+    Accepts authentication via:
+    - Gateway auth context (HumanAuthContext from Clerk JWT) - PREFERRED
+    - X-AOS-Key header (API key for machine clients)
+    - Authorization: Bearer aos_xxx header (API key)
 
-    Raises HTTPException on invalid/missing key.
+    Raises HTTPException on invalid/missing authentication.
     """
-    # Extract API key from headers
+    # FIRST: Check if Gateway middleware already authenticated this request
+    # This handles Clerk JWT auth for console users
+    gateway_ctx = getattr(request.state, "auth_context", None)
+    if gateway_ctx is not None:
+        # Import here to avoid circular dependency
+        from .contexts import HumanAuthContext, MachineCapabilityContext
+
+        if isinstance(gateway_ctx, HumanAuthContext):
+            # Create TenantContext from Clerk JWT claims
+            # The gateway already validated the JWT and extracted tenant_id
+            context = TenantContext(
+                tenant_id=gateway_ctx.tenant_id or "default",
+                tenant_slug=gateway_ctx.tenant_id or "default",
+                tenant_name=f"Clerk User: {gateway_ctx.display_name or gateway_ctx.actor_id}",
+                plan="pro",  # Default plan for Clerk users - should be looked up from DB
+                api_key_id=f"clerk:{gateway_ctx.session_id}",
+                api_key_name="Clerk Session",
+                user_id=gateway_ctx.actor_id,
+                permissions=["*"],  # Full access for authenticated Clerk users
+            )
+            request.state.tenant_context = context
+            logger.debug(f"Created TenantContext from Clerk JWT: tenant={context.tenant_id}, user={context.user_id}")
+            return context
+
+        elif isinstance(gateway_ctx, MachineCapabilityContext):
+            # Create TenantContext from API key (already validated by gateway)
+            context = TenantContext(
+                tenant_id=gateway_ctx.tenant_id,
+                tenant_slug=gateway_ctx.tenant_id,
+                tenant_name=gateway_ctx.key_name or "API Key",
+                plan="enterprise",  # API keys get full access
+                api_key_id=gateway_ctx.key_id,
+                api_key_name=gateway_ctx.key_name or "API Key",
+                permissions=list(gateway_ctx.scopes) if gateway_ctx.scopes else ["*"],
+            )
+            request.state.tenant_context = context
+            logger.debug(f"Created TenantContext from API key: tenant={context.tenant_id}")
+            return context
+
+    # FALLBACK: Extract API key from headers (for requests not going through gateway)
     api_key = None
 
     if x_aos_key:
@@ -286,7 +326,7 @@ async def get_tenant_context(
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API key required. Provide X-AOS-Key header or Authorization: Bearer <key>",
+            detail="Authentication required. Use Clerk login or provide X-AOS-Key header.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

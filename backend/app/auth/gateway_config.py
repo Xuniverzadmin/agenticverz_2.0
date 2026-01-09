@@ -115,6 +115,17 @@ def get_gateway_middleware_config() -> dict:
             # C2 Predictions (public advisory)
             "/api/v1/c2/predictions/",
             # =================================================================
+            # SDSR Activity API (PIN-370)
+            # Used for preflight SDSR validation. Route handler enforces API key.
+            # =================================================================
+            "/api/v1/activity/",
+            # =================================================================
+            # SDSR Incidents API (PIN-370)
+            # Used for preflight SDSR validation. Route handler enforces API key.
+            # =================================================================
+            "/api/v1/incidents",
+            "/api/v1/incidents/",
+            # =================================================================
             # FOUNDER ROUTES (PIN-336)
             # These routes use dedicated FOPS auth via verify_fops_token.
             # Gateway is bypassed; route handlers enforce FOPS token/key auth.

@@ -51,8 +51,14 @@ logger = logging.getLogger("nova.api.onboarding")
 router = APIRouter(prefix="/api/v1/auth", tags=["onboarding"])
 
 # Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
-JWT_ALGORITHM = "HS256"
+# CONSOLE_JWT_SECRET is the ONLY secret for console token issuance
+# No fallbacks - must be explicitly configured
+_console_secret = os.getenv("CONSOLE_JWT_SECRET")
+if not _console_secret:
+    raise RuntimeError("CONSOLE_JWT_SECRET must be set - no fallback allowed")
+CONSOLE_JWT_SECRET = _console_secret
+CONSOLE_JWT_ALGORITHM = "HS256"
+CONSOLE_TOKEN_ISSUER = "agenticverz-console"
 SESSION_TTL_HOURS = int(os.getenv("SESSION_TTL_HOURS", "24"))
 REFRESH_TTL_DAYS = int(os.getenv("REFRESH_TTL_DAYS", "7"))
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -175,22 +181,24 @@ class LogoutRequest(BaseModel):
 
 
 def create_tokens(user_id: str, tenant_id: Optional[str] = None) -> tuple[str, str]:
-    """Create access and refresh tokens."""
+    """Create access and refresh tokens for console authentication."""
     now = utc_now()
 
-    # Access token
+    # Access token - includes iss for issuer-based routing
     access_payload = {
+        "iss": CONSOLE_TOKEN_ISSUER,
         "sub": user_id,
         "tenant_id": tenant_id,
         "type": "access",
         "iat": now,
         "exp": now + timedelta(hours=SESSION_TTL_HOURS),
     }
-    access_token = jwt.encode(access_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    access_token = jwt.encode(access_payload, CONSOLE_JWT_SECRET, algorithm=CONSOLE_JWT_ALGORITHM)
 
-    # Refresh token
+    # Refresh token - also includes iss
     refresh_jti = secrets.token_urlsafe(16)
     refresh_payload = {
+        "iss": CONSOLE_TOKEN_ISSUER,
         "sub": user_id,
         "tenant_id": tenant_id,
         "type": "refresh",
@@ -198,7 +206,7 @@ def create_tokens(user_id: str, tenant_id: Optional[str] = None) -> tuple[str, s
         "iat": now,
         "exp": now + timedelta(days=REFRESH_TTL_DAYS),
     }
-    refresh_token = jwt.encode(refresh_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    refresh_token = jwt.encode(refresh_payload, CONSOLE_JWT_SECRET, algorithm=CONSOLE_JWT_ALGORITHM)
 
     # Store refresh token jti in Redis for revocation
     redis = get_redis()
@@ -208,9 +216,13 @@ def create_tokens(user_id: str, tenant_id: Optional[str] = None) -> tuple[str, s
 
 
 def verify_token(token: str, token_type: str = "access") -> dict:
-    """Verify and decode a JWT token."""
+    """Verify and decode a console JWT token."""
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, CONSOLE_JWT_SECRET, algorithms=[CONSOLE_JWT_ALGORITHM])
+
+        # Verify issuer
+        if payload.get("iss") != CONSOLE_TOKEN_ISSUER:
+            raise HTTPException(status_code=401, detail="Invalid token issuer")
 
         if payload.get("type") != token_type:
             raise HTTPException(status_code=401, detail="Invalid token type")
@@ -232,7 +244,7 @@ def verify_token(token: str, token_type: str = "access") -> dict:
 def revoke_refresh_token(token: str):
     """Revoke a refresh token."""
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, CONSOLE_JWT_SECRET, algorithms=[CONSOLE_JWT_ALGORITHM])
         jti = payload.get("jti")
         if jti:
             redis = get_redis()

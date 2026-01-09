@@ -1,0 +1,30 @@
+{
+  "scenario_id": "ACTIVITY-NEG-001",
+  "domain": "Activity",
+  "status": "FAIL",
+  "surfaces_tested": [
+    "L21-EVD-R"
+  ],
+  "slots_validated": [
+    "SLOT-ACT-EX-AR-O2"
+  ],
+  "assertions_passed": [
+    "surface_available",
+    "slot_visible"
+  ],
+  "assertions_failed": [
+    "action_blocked"
+  ],
+  "failures": [
+    {
+      "code": "SL-04",
+      "category": "SLOT",
+      "message": "Authority violation: EXECUTE action on 'REPLAY_EXPORT' attempted on read-only surface L21-EVD-R",
+      "scenario_id": "ACTIVITY-NEG-001",
+      "timestamp": "2026-01-09T05:03:07.706622+00:00"
+    }
+  ],
+  "timestamp": "2026-01-09T05:03:07.706627+00:00",
+  "duration_ms": 0,
+  "pipeline_version": "1.0.0"
+}

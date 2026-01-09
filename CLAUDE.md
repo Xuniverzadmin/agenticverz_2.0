@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2026-01-02
+**Last Updated:** 2026-01-09
 
 ---
 
@@ -41,6 +41,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - CLAUDE_ENGINEERING_AUTHORITY.md
   - RBAC_AUTHORITY_SEPARATION_DESIGN.md
   - PERMISSION_TAXONOMY_V1.md
+  - AUTH_ARCHITECTURE_BASELINE.md
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
@@ -108,7 +109,44 @@ SESSION_CONTINUATION_ACKNOWLEDGMENT
 | SELF-AUDIT | All Code Changes | Response INVALID if missing |
 | ARCH-GOV-001 to ARCH-GOV-006 | Architecture Gates | BLOCKING |
 | AC-001 to AC-004 | Artifact Class | BLOCKING |
-| Forbidden Assumptions | FA-001 to FA-006 | Response INVALID if violated |
+| Forbidden Assumptions | FA-001 to FA-007 | Response INVALID if violated |
+| SDSR-UI-001 to SDSR-UI-004 | UI Projection Architecture | BLOCKING |
+| **ARCH-CANON-001** | **Canonical-First Fix** | **BLOCKING** |
+| **ARCH-FRAG-ESCALATE-001** | **Fragmentation Escalation** | **BLOCKING** |
+
+### Canonical-First Fix Policy (HARD BLOCK - ARCH-CANON-001)
+
+**Status:** BLOCKING
+**Reference:** `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md` Section 13, PIN-370
+
+> Claude is **FORBIDDEN** from creating new database tables, schemas, or public APIs when addressing functional gaps, bugs, or missing behavior in an existing domain.
+
+**Mandatory Behavior:**
+
+If behavior is missing, Claude MUST fix the canonical structure:
+- Fix lifecycle hooks, state transitions, mappings
+- Fix queries, indexing, ownership boundaries
+- Add fields/handlers to existing structures
+
+**Explicitly Forbidden:**
+
+| Action | Why Forbidden |
+|--------|---------------|
+| Creating parallel tables (`sdsr_*`, `*_v2`) | Fragments analytics, policy, exports |
+| Creating shadow APIs | Duplicates maintenance |
+| "Temporary" structures | Temporary becomes permanent |
+
+**Hard Failure Response:**
+
+```
+ARCH-CANON-001 VIOLATION: Cannot create new table/API for existing domain.
+Canonical structure: [name] at [location]
+Must fix by extension, not duplication.
+Use Fragmentation Escalation Report if canonical fix is unsafe.
+Reference: docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md Section 13
+```
+
+**Rationale:** Fragmentation solves immediate errors but permanently damages analytics, policy reasoning, and trust.
 
 **Hard Failure Responses:**
 
@@ -300,7 +338,7 @@ RBAC ARCHITECTURE SELF-CHECK
 | Infer missing data | Violates truth-grade |
 | Skip SELF-AUDIT | Invalidates response |
 
-### Forbidden Assumptions (FA-001 to FA-006)
+### Forbidden Assumptions (FA-001 to FA-007)
 
 Claude must not invent architecture. If something is not explicitly declared, it must be treated as UNKNOWN and BLOCKED.
 
@@ -312,12 +350,360 @@ Claude must not invent architecture. If something is not explicitly declared, it
 | FA-004 | Inferring config from environment markers | All config explicit via environment variables |
 | FA-005 | Different consoles see different data | Same data, different visibility rules |
 | FA-006 | UI exposure without discovery | Discovery must precede visibility (DPC check) |
+| FA-007 | Custom pages for domain data | Use projection-driven DomainPage + PanelContentRegistry |
 
 **Enforcement:** If Claude introduces any forbidden assumption → Response is INVALID
+
+### SDSR UI Architecture Gate (BL-SDSR-UI-001)
+
+**Status:** BLOCKING
+**Effective:** 2026-01-09
+**Reference:** `docs/governance/SDSR.md`, PIN-370
+
+**Core Principle:**
+
+> UI renders projection. UI does not bypass projection.
+
+The L2.1 projection pipeline defines the canonical UI structure:
+```
+Domain → Subdomain → Topic Tabs → Panels
+```
+
+SDSR data binding happens at the **panel level** via PanelContentRegistry.
+Custom pages that bypass the projection structure are **FORBIDDEN**.
+
+**UI Architecture Rules:**
+
+| Rule ID | Name | Enforcement |
+|---------|------|-------------|
+| SDSR-UI-001 | Routes Use DomainPage | BLOCKING |
+| SDSR-UI-002 | Data Binding via PanelContentRegistry | BLOCKING |
+| SDSR-UI-003 | Panel ID Registration Required | BLOCKING |
+| SDSR-UI-004 | Projection Structure Preserved | BLOCKING |
+
+**Cross-Domain Propagation Rules:**
+
+| Rule ID | Name | Enforcement |
+|---------|------|-------------|
+| SDSR-PROP-001 | Scenarios Inject Causes Not Consequences | BLOCKING |
+| SDSR-PROP-002 | One Scenario One Domain | BLOCKING |
+| SDSR-PROP-003 | Expectations Not Cross-Domain Writes | BLOCKING |
+| SDSR-PROP-004 | Backend Owns Propagation | BLOCKING |
+
+**Cross-Domain Contract:**
+
+> Scenarios must NEVER simulate cross-domain behavior.
+> Cross-domain reflection must emerge ONLY from backend capabilities.
+
+If a failed Activity run does NOT create an Incident, influence Policies, or appear in Logs:
+- ❌ Scenario is correct
+- ❌ UI is correct
+- ✅ **Backend is broken**
+
+**Backend Responsibility Matrix:**
+
+| Effect | Owner | Scenario Role |
+|--------|-------|---------------|
+| Run → Incident | Incident Engine | EXPECT only |
+| Incident → Policy | Policy Engine | EXPECT only |
+| Run → Logs | Logging/Evidence | EXPECT only |
+
+**Conflict Resolution (MANDATORY):**
+
+When Claude is uncertain whether a UI change respects projection architecture:
+```
+UI ARCHITECTURE CONFLICT DETECTED
+
+I'm uncertain whether this change respects the projection-driven architecture.
+
+Options:
+1. Bind data at panel level via PanelContentRegistry (recommended)
+2. Create a custom page (requires explicit approval)
+3. Clarify the UI structure requirement
+
+Which approach should I take?
+```
+
+**Default:** Option 1 (PanelContentRegistry) unless explicitly told otherwise.
+
+### UI Pipeline Pre-Check (BL-UI-PIPELINE-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Effective:** 2026-01-09
+**Trigger:** Any request to add/modify UI panels, subdomains, or domain data
+
+**STOP. Before writing ANY UI code for panels:**
+
+```
+UI PIPELINE PRE-CHECK
+
+1. Does the panel_id exist in the projection?
+   → Check: design/l2_1/ui_contract/ui_projection_lock.json
+   → If NO → STOP, run pipeline first
+
+2. Does the intent row exist in the source CSV?
+   → Check: design/l2_1/supertable/L2_1_UI_INTENT_SUPERTABLE.csv
+   → If NO → Add rows there FIRST
+
+3. Has the pipeline been run after CSV changes?
+   → Run: python3 scripts/tools/l2_pipeline.py generate v{N}
+   → Then: python3 scripts/tools/l2_raw_intent_parser.py --input design/l2_1/supertable/l2_supertable_v{N}_cap_expanded.xlsx
+   → Then: ./scripts/tools/run_l2_pipeline.sh (remaining steps)
+
+4. Is projection copied to public/?
+   → Copy: cp design/l2_1/ui_contract/ui_projection_lock.json website/app-shell/public/projection/
+
+5. ONLY THEN add to PanelContentRegistry
+```
+
+**Canonical Pipeline Flow:**
+
+```
+L2_1_UI_INTENT_SUPERTABLE.csv  ← EDIT HERE (source of truth)
+        ↓
+l2_pipeline.py generate v{N}   ← generates Excel supertable
+        ↓
+l2_raw_intent_parser.py        ← Excel → ui_intent_ir_raw.json
+        ↓
+intent_normalizer.py           ← → ui_intent_ir_normalized.json
+        ↓
+surface_to_slot_resolver.py    ← → ui_intent_ir_slotted.json
+        ↓
+intent_compiler.py             ← → ui_intent_ir_compiled.json
+        ↓
+ui_projection_builder.py       ← → ui_projection_lock.json
+        ↓
+Copy to public/projection/     ← Frontend reads from here
+        ↓
+PanelContentRegistry.tsx       ← ONLY NOW add renderers
+```
+
+**Hard Failure Response:**
+
+If Claude is about to add UI panels without verifying the pipeline:
+```
+BL-UI-PIPELINE-001 VIOLATION: Cannot add UI panels without projection backing.
+
+Required steps:
+1. Add intent rows to: design/l2_1/supertable/L2_1_UI_INTENT_SUPERTABLE.csv
+2. Run: python3 scripts/tools/l2_pipeline.py generate v{N}
+3. Parse: python3 scripts/tools/l2_raw_intent_parser.py --input <new_xlsx>
+4. Run: ./scripts/tools/run_l2_pipeline.sh
+5. Copy projection to public/
+6. THEN add to PanelContentRegistry
+
+Reference: PIN-352, PIN-370
+```
+
+**Key Artifacts:**
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| Intent CSV (SOURCE) | `design/l2_1/supertable/L2_1_UI_INTENT_SUPERTABLE.csv` | Human/Claude edits here |
+| Pipeline Script | `scripts/tools/l2_pipeline.py` | Generates Excel versions |
+| Full Pipeline | `scripts/tools/run_l2_pipeline.sh` | Runs all stages |
+| Projection Lock | `design/l2_1/ui_contract/ui_projection_lock.json` | Generated output |
+| Public Projection | `website/app-shell/public/projection/ui_projection_lock.json` | Frontend reads |
+| Panel Registry | `src/components/panels/PanelContentRegistry.tsx` | Data binding (LAST step) |
+
+**Memory PIN:** PIN-352 (L2.1 UI Projection Pipeline)
 
 **Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` (forbidden_assumptions section)
 **Reference:** `docs/contracts/database_contract.yaml`
 **PIN:** PIN-209 (Claude Assumption Elimination)
+
+### Auth Pattern Enforcement (BL-AUTH-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Effective:** 2026-01-09
+**Trigger:** Any API endpoint auth modification, auth header usage, or auth debugging
+
+**STOP. This system uses Clerk + RBAC. NOT API keys for endpoints.**
+
+```
+AUTH PATTERN PRE-CHECK
+
+1. Is this a NEW API endpoint?
+   → Auth comes from Gateway Middleware (request.state.auth_context)
+   → Do NOT add Depends(get_jwt_auth()) or Depends(verify_api_key)
+   → Gateway handles ALL auth before your endpoint runs
+
+2. Am I debugging auth with X-AOS-Key or X-API-Key headers?
+   → STOP. This is the MACHINE plane (for SDK/CLI)
+   → Customer Console uses HUMAN plane (Clerk JWT)
+   → Test with: Authorization: Bearer <clerk_jwt_token>
+
+3. Am I adding auth to an endpoint?
+   → WRONG. Gateway middleware already authenticated the request
+   → Just use: request.state.auth_context (already populated)
+   → See: backend/app/auth/gateway_middleware.py:get_auth_context()
+
+4. Did the user get 401 "jwt_invalid" or "missing_auth"?
+   → Check which header they're sending
+   → Clerk users: Authorization: Bearer <jwt>
+   → Machine clients: X-AOS-Key: <api_key>
+   → NEVER both (mutual exclusivity enforced)
+```
+
+**Auth Architecture (MANDATORY UNDERSTANDING):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    REQUEST ARRIVES                          │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│              AuthGatewayMiddleware                          │
+│  • Extracts: Authorization header OR X-AOS-Key header       │
+│  • Mutual Exclusivity: JWT XOR API Key (not both)           │
+│  • Result: request.state.auth_context                       │
+│            (HumanAuthContext | MachineCapabilityContext)    │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│              YOUR ENDPOINT                                  │
+│  • Auth already done — don't add more                       │
+│  • Access via: get_auth_context(request)                    │
+│  • DO NOT: Depends(get_jwt_auth())  ← REDUNDANT             │
+│  • DO NOT: Depends(verify_api_key)  ← REDUNDANT             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Auth Planes (NEVER MIX):**
+
+| Plane | Header | Provider | Use Case |
+|-------|--------|----------|----------|
+| HUMAN | `Authorization: Bearer <jwt>` | Clerk | Console users |
+| MACHINE | `X-AOS-Key: <key>` | Gateway | SDK, CLI, workers |
+
+**Hard Failure Response:**
+
+If Claude is about to add auth dependencies to an endpoint:
+```
+BL-AUTH-001 VIOLATION: Cannot add auth dependency — Gateway handles this.
+
+The AuthGatewayMiddleware already authenticates ALL requests.
+Your endpoint receives pre-authenticated context in request.state.auth_context
+
+WRONG:
+  async def my_endpoint(auth: TokenPayload = Depends(get_jwt_auth())):
+
+RIGHT:
+  async def my_endpoint(request: Request):
+      ctx = get_auth_context(request)  # Already authenticated
+
+Reference: docs/architecture/AUTH_SEMANTIC_CONTRACT.md
+Gateway: backend/app/auth/gateway_middleware.py
+```
+
+If Claude is debugging auth with API keys for console endpoints:
+```
+BL-AUTH-001 VIOLATION: Wrong auth plane for console endpoints.
+
+Customer Console uses HUMAN plane (Clerk JWT), not MACHINE plane (API keys).
+
+WRONG: curl -H "X-AOS-Key: $KEY" /api/v1/policy-proposals
+RIGHT: curl -H "Authorization: Bearer $CLERK_JWT" /api/v1/policy-proposals
+
+For local testing without Clerk:
+  - Use stub tokens: Authorization: Bearer stub_admin_demo-tenant
+  - Requires: AUTH_STUB_ENABLED=true in backend env
+
+Reference: docs/infra/RBAC_STUB_DESIGN.md
+```
+
+**Key Artifacts:**
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| Gateway Middleware | `backend/app/auth/gateway_middleware.py` | Single auth entry point |
+| Gateway Core | `backend/app/auth/gateway.py` | Auth logic (JWT/API key) |
+| Auth Semantic Contract | `docs/architecture/AUTH_SEMANTIC_CONTRACT.md` | What auth means |
+| RBAC Design | `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md` | Permission model |
+| Stub Design | `docs/infra/RBAC_STUB_DESIGN.md` | Dev/CI auth patterns |
+| Clerk Provider | `backend/app/auth/clerk_provider.py` | Production JWT validation |
+
+**Memory Reference:** PIN-271 (RBAC Architecture Directive)
+
+### Auth Architecture Lock (BL-AUTH-002) — HARD BLOCK
+
+**Status:** LOCKED
+**Effective:** 2026-01-09
+**Reference:** `docs/architecture/auth/AUTH_ARCHITECTURE_BASELINE.md`
+
+**Core Principle:**
+
+> The authentication architecture is **finalized and locked**.
+> Claude is a maintainer, not an inventor.
+
+**Canonical Artifact:**
+
+```
+docs/architecture/auth/AUTH_ARCHITECTURE_BASELINE.md
+```
+
+This document is the **single source of truth** for:
+- Issuer-based routing model
+- Trust domain separation (Console vs Clerk)
+- Token contracts
+- Feature-flagged deprecation
+- Metrics definitions
+
+**Mandatory Pre-Check (Before Any Auth Change):**
+
+Claude must verify:
+- [ ] Change is explicitly allowed by the baseline
+- [ ] Change does NOT alter routing model
+- [ ] Change does NOT add new issuers, secrets, or auth paths
+- [ ] Change does NOT remove feature flags or metrics
+
+If any check fails → **STOP and ask for approval**.
+
+**Prohibited Changes (Without Owner Approval):**
+
+| Action | Why Prohibited |
+|--------|----------------|
+| Reintroduce algorithm-based routing | `alg` is attacker-controlled |
+| Add secret fallback chains | Violates single-source principle |
+| Merge Console and Clerk authenticators | They are separate trust domains |
+| Remove feature flags | Deprecation must remain controllable |
+| Remove metrics | Usage must remain observable |
+| Remove grace period prematurely | Wait for Phase 1 approval |
+
+**Allowed Changes (Safe Zone):**
+
+- Bug fixes inside an authenticator (no semantic change)
+- Logging improvements (no semantic change)
+- Additional metrics (non-breaking)
+- Test coverage
+- Documentation updates
+- Feature flag value changes (env-only)
+
+**Hard Failure Response:**
+
+If Claude is about to modify auth architecture:
+```
+BL-AUTH-002 VIOLATION: Auth architecture is LOCKED.
+
+Cannot modify authentication architecture without explicit approval.
+Reference: docs/architecture/auth/AUTH_ARCHITECTURE_BASELINE.md
+
+Required: Design Change Proposal (DCP) with:
+- Current baseline section affected
+- Reason change is required
+- Blast radius analysis
+- Migration plan
+```
+
+**Memory Constraint (Persistent):**
+
+```
+Auth architecture is finalized and locked.
+Issuer-based routing via TokenClassifier is mandatory.
+Console (HS256) and Clerk (RS256) are separate trust domains.
+All changes must conform to AUTH_ARCHITECTURE_BASELINE.md.
+Claude must not alter auth architecture without explicit approval.
+```
 
 ### Response Validation
 

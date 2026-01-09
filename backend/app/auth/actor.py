@@ -64,7 +64,8 @@ class IdentitySource(str, Enum):
     affect authorization decisions.
     """
 
-    CLERK = "clerk"  # Production Clerk JWT
+    CONSOLE = "console"  # Internal console HS256 JWT (transitional)
+    CLERK = "clerk"  # Production Clerk RS256 JWT
     OIDC = "oidc"  # Keycloak/generic OIDC
     INTERNAL = "internal"  # Internal service-to-service
     SYSTEM = "system"  # CI, workers, automation

@@ -1,0 +1,182 @@
+# STEP 3 UI Contract Guard
+# Reference: PIN-366
+# Phase-A CI Gating
+#
+# Exit codes:
+#   0 = All baseline scenarios pass, negative scenarios fail as expected
+#   1 = Baseline failure (regression) OR negative scenario passed (authority breach)
+#   2 = SYS-* contract breach (critical)
+#
+# This workflow:
+#   - Runs on PR and push to main
+#   - Hard-fails on baseline failures or SYS-* breaches
+#   - Reports symmetric coverage status
+#   - Publishes ledger diff as artifact
+
+name: STEP-3 UI Contract Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'design/l2_1/**'
+      - 'scripts/ops/step3_scenario_runner.py'
+      - 'website/app-shell/src/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'design/l2_1/**'
+      - 'scripts/ops/step3_scenario_runner.py'
+      - 'website/app-shell/src/**'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  step3-ui-contract:
+    name: UI Contract Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml openpyxl pandas
+
+      - name: Cache previous ledger
+        id: cache-ledger
+        uses: actions/cache@v4
+        with:
+          path: design/l2_1/step_3/STEP_3_LEDGER.csv.previous
+          key: step3-ledger-${{ github.sha }}
+          restore-keys: |
+            step3-ledger-
+
+      - name: Preserve previous ledger
+        run: |
+          if [ -f design/l2_1/step_3/STEP_3_LEDGER.csv ]; then
+            cp design/l2_1/step_3/STEP_3_LEDGER.csv design/l2_1/step_3/STEP_3_LEDGER.csv.previous
+          fi
+
+      - name: Clear ledger for fresh run
+        run: |
+          rm -f design/l2_1/step_3/STEP_3_LEDGER.csv
+
+      - name: Run STEP-3 Scenario Validation
+        id: step3
+        run: |
+          set +e
+          python3 scripts/ops/step3_scenario_runner.py 2>&1 | tee step3_output.txt
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          # Extract summary for PR comment
+          echo "## STEP-3 UI Contract Validation" > step3_summary.md
+          echo "" >> step3_summary.md
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "### Status: PASS" >> step3_summary.md
+            echo "All baseline scenarios passed. Negative scenarios failed as expected." >> step3_summary.md
+          elif [ $EXIT_CODE -eq 1 ]; then
+            echo "### Status: FAIL (Regression or Authority Breach)" >> step3_summary.md
+            echo "One or more baseline scenarios failed, or a negative scenario passed unexpectedly." >> step3_summary.md
+          elif [ $EXIT_CODE -eq 2 ]; then
+            echo "### Status: CRITICAL (Contract Breach)" >> step3_summary.md
+            echo "A SYS-* contract breach was detected. This requires immediate attention." >> step3_summary.md
+          fi
+
+          echo "" >> step3_summary.md
+          echo "### Ledger" >> step3_summary.md
+          echo "\`\`\`" >> step3_summary.md
+          cat design/l2_1/step_3/STEP_3_LEDGER.csv >> step3_summary.md
+          echo "\`\`\`" >> step3_summary.md
+
+          exit $EXIT_CODE
+
+      - name: Generate ledger diff
+        if: always()
+        run: |
+          echo "## Ledger Diff" > ledger_diff.md
+          if [ -f design/l2_1/step_3/STEP_3_LEDGER.csv.previous ]; then
+            echo "### Changes from previous run:" >> ledger_diff.md
+            echo "\`\`\`diff" >> ledger_diff.md
+            diff design/l2_1/step_3/STEP_3_LEDGER.csv.previous design/l2_1/step_3/STEP_3_LEDGER.csv >> ledger_diff.md || true
+            echo "\`\`\`" >> ledger_diff.md
+          else
+            echo "No previous ledger to compare." >> ledger_diff.md
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step3-results
+          path: |
+            design/l2_1/step_3/STEP_3_LEDGER.csv
+            design/l2_1/step_3/results/*.json
+            step3_output.txt
+            step3_summary.md
+            ledger_diff.md
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let summary = '';
+            if (fs.existsSync('step3_summary.md')) {
+              summary = fs.readFileSync('step3_summary.md', 'utf8');
+            }
+
+            let diff = '';
+            if (fs.existsSync('ledger_diff.md')) {
+              diff = fs.readFileSync('ledger_diff.md', 'utf8');
+            }
+
+            const exitCode = '${{ steps.step3.outputs.exit_code }}';
+            const status = exitCode === '0' ? ':white_check_mark:' :
+                          exitCode === '1' ? ':x:' : ':rotating_light:';
+
+            const body = `${status} **STEP-3 UI Contract Guard**
+
+            ${summary}
+
+            <details>
+            <summary>Ledger Diff</summary>
+
+            ${diff}
+            </details>
+
+            ---
+            *Reference: PIN-366*
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail on baseline regression
+        if: steps.step3.outputs.exit_code != '0'
+        run: |
+          EXIT_CODE=${{ steps.step3.outputs.exit_code }}
+          if [ "$EXIT_CODE" == "1" ]; then
+            echo "::error::STEP-3 FAILED: Baseline regression or authority breach detected"
+            exit 1
+          elif [ "$EXIT_CODE" == "2" ]; then
+            echo "::error::STEP-3 CRITICAL: SYS-* contract breach detected"
+            exit 2
+          fi

@@ -1,0 +1,478 @@
+# Layer: L4 — Domain Engine (System Truth)
+# Product: system-wide (NOT console-owned)
+# Temporal:
+#   Trigger: worker (run failure events)
+#   Execution: sync
+# Role: Incident creation decision-making (domain logic)
+# Authority: Incident generation from run failures (SDSR pattern)
+# Callers: Worker runtime, API endpoints
+# Allowed Imports: L5, L6
+# Forbidden Imports: L1, L2, L3
+# Contract: SDSR (PIN-370)
+# Reference: PIN-370 (Scenario-Driven System Realization)
+#
+# GOVERNANCE NOTE: This L4 engine owns INCIDENT CREATION logic.
+# Scenarios inject causes (failed runs), this engine creates incidents.
+# UI observes incidents, never writes them.
+
+"""
+Incident Engine (L4 Domain Logic)
+
+This engine implements the SDSR cross-domain propagation contract:
+- Run failure (Activity domain) → Incident creation (Incidents domain)
+
+Per PIN-370 Rule 6 (Scenarios Inject Causes, Not Consequences):
+- Scenarios inject a failed run
+- This engine AUTOMATICALLY creates incidents
+- If incident doesn't appear, the ENGINE is broken, not the scenario
+
+Reference: PIN-370, INCIDENTS-EXEC-FAILURE-001
+"""
+
+import logging
+import os
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlalchemy import create_engine, text
+
+logger = logging.getLogger("nova.services.incident_engine")
+
+
+def utc_now() -> datetime:
+    """Return timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
+
+
+# =============================================================================
+# Incident Engine (L4 Domain Logic)
+# =============================================================================
+
+# =============================================================================
+# NORMALIZATION CONTRACT (PIN-370)
+# =============================================================================
+# This engine is the SINGLE source of truth for incident field normalization.
+# All incidents created by this engine use:
+#   - severity: UPPERCASE (CRITICAL, HIGH, MEDIUM, LOW)
+#   - status: UPPERCASE (OPEN, ACKNOWLEDGED, RESOLVED, CLOSED)
+#   - category: UPPERCASE (EXECUTION_FAILURE, BUDGET_EXCEEDED, etc.)
+#
+# API response mappers may still normalize for backward compatibility with
+# legacy data, but NEW incidents created here are always uppercase.
+# =============================================================================
+
+# Severity mapping based on failure codes
+FAILURE_SEVERITY_MAP = {
+    # High severity - execution failures
+    "EXECUTION_TIMEOUT": "HIGH",
+    "AGENT_CRASH": "CRITICAL",
+    "STEP_FAILURE": "HIGH",
+    "SKILL_ERROR": "HIGH",
+
+    # Medium severity - resource issues
+    "BUDGET_EXCEEDED": "MEDIUM",
+    "RATE_LIMIT_EXCEEDED": "MEDIUM",
+    "RESOURCE_EXHAUSTION": "MEDIUM",
+
+    # Low severity - expected failures
+    "CANCELLED": "LOW",
+    "MANUAL_STOP": "LOW",
+    "RETRY_EXHAUSTED": "MEDIUM",
+
+    # Default
+    "UNKNOWN": "MEDIUM",
+}
+
+# Category mapping based on failure codes
+FAILURE_CATEGORY_MAP = {
+    "EXECUTION_TIMEOUT": "EXECUTION_FAILURE",
+    "AGENT_CRASH": "EXECUTION_FAILURE",
+    "STEP_FAILURE": "EXECUTION_FAILURE",
+    "SKILL_ERROR": "EXECUTION_FAILURE",
+    "BUDGET_EXCEEDED": "BUDGET_EXCEEDED",
+    "RATE_LIMIT_EXCEEDED": "RATE_LIMIT",
+    "RESOURCE_EXHAUSTION": "RESOURCE_EXHAUSTION",
+    "CANCELLED": "MANUAL",
+    "MANUAL_STOP": "MANUAL",
+    "RETRY_EXHAUSTED": "EXECUTION_FAILURE",
+    "UNKNOWN": "EXECUTION_FAILURE",
+}
+
+
+class IncidentEngine:
+    """
+    L4 Domain Engine for incident creation.
+
+    This engine implements the SDSR cross-domain propagation:
+    Activity (cause) → Incidents (reactive)
+
+    SDSR Contract (PIN-370):
+    - This engine is called when a run fails
+    - It creates an incident record automatically
+    - Incidents are NEVER created by scenarios directly
+    - If incidents don't appear for failed runs, THIS ENGINE is broken
+
+    Callers:
+    - Worker runtime (on run failure)
+    - inject_synthetic.py expectations validator
+    """
+
+    def __init__(self, db_url: Optional[str] = None):
+        """Initialize the incident engine."""
+        self._db_url = db_url or os.environ.get("DATABASE_URL")
+
+    def _get_engine(self):
+        """Get SQLAlchemy engine."""
+        if not self._db_url:
+            raise RuntimeError("DATABASE_URL not configured")
+        return create_engine(self._db_url)
+
+    def create_incident_for_failed_run(
+        self,
+        run_id: str,
+        tenant_id: str,
+        error_code: Optional[str] = None,
+        error_message: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        is_synthetic: bool = False,
+        synthetic_scenario_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Create an incident for a failed run.
+
+        This is the primary entry point for run → incident propagation.
+
+        Per SDSR Rule 6:
+        - This method is called when a run fails
+        - It creates an incident AUTOMATICALLY
+        - The incident links back to the source run
+
+        Args:
+            run_id: ID of the failed run
+            tenant_id: Tenant scope
+            error_code: Error code (e.g., EXECUTION_TIMEOUT)
+            error_message: Full error message
+            agent_id: Agent that was running
+            is_synthetic: True if from SDSR scenario
+            synthetic_scenario_id: Scenario ID for traceability
+
+        Returns:
+            incident_id if created, None if failed
+        """
+        try:
+            # Determine severity and category from error code
+            severity = FAILURE_SEVERITY_MAP.get(error_code or "UNKNOWN", "MEDIUM")
+            category = FAILURE_CATEGORY_MAP.get(error_code or "UNKNOWN", "EXECUTION_FAILURE")
+
+            # Generate incident title
+            title = self._generate_title(error_code, run_id)
+
+            # Generate incident ID
+            import uuid
+            incident_id = f"inc_{uuid.uuid4().hex[:16]}"
+
+            # Insert incident into canonical incidents table (PIN-370 consolidation)
+            engine = self._get_engine()
+            now = utc_now()
+
+            with engine.connect() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO incidents (
+                            id, tenant_id, title, severity, status,
+                            trigger_type, started_at, created_at, updated_at,
+                            source_run_id, source_type, category, description,
+                            error_code, error_message, impact_scope,
+                            affected_agent_id, affected_count,
+                            is_synthetic, synthetic_scenario_id
+                        ) VALUES (
+                            :id, :tenant_id, :title, :severity, :status,
+                            :trigger_type, :started_at, :created_at, :updated_at,
+                            :source_run_id, :source_type, :category, :description,
+                            :error_code, :error_message, :impact_scope,
+                            :affected_agent_id, :affected_count,
+                            :is_synthetic, :synthetic_scenario_id
+                        )
+                    """),
+                    {
+                        "id": incident_id,
+                        "tenant_id": tenant_id,
+                        "title": title,
+                        "severity": severity.upper(),  # NORMALIZED: always uppercase (CRITICAL, HIGH, MEDIUM, LOW)
+                        "status": "OPEN",  # NORMALIZED: always uppercase (OPEN, ACKNOWLEDGED, RESOLVED, CLOSED)
+                        "trigger_type": "run_failure",
+                        "started_at": now,
+                        "created_at": now,
+                        "updated_at": now,
+                        "source_run_id": run_id,
+                        "source_type": "run",
+                        "category": category,
+                        "description": f"Run {run_id} failed with error: {error_code or 'UNKNOWN'}",
+                        "error_code": error_code,
+                        "error_message": error_message,
+                        "impact_scope": "single_run",
+                        "affected_agent_id": agent_id,
+                        "affected_count": 1,
+                        "is_synthetic": is_synthetic,
+                        "synthetic_scenario_id": synthetic_scenario_id,
+                    }
+                )
+                conn.commit()
+
+            logger.info(
+                f"Created incident {incident_id} for failed run {run_id} "
+                f"(category={category}, severity={severity}, synthetic={is_synthetic})"
+            )
+
+            # PIN-373: Consider creating policy proposal for high-severity incidents
+            if severity.upper() in ("HIGH", "CRITICAL"):
+                self._maybe_create_policy_proposal(
+                    incident_id=incident_id,
+                    tenant_id=tenant_id,
+                    severity=severity,
+                    category=category,
+                    error_code=error_code,
+                    run_id=run_id,
+                    is_synthetic=is_synthetic,
+                    synthetic_scenario_id=synthetic_scenario_id,
+                )
+
+            return incident_id
+
+        except Exception as e:
+            logger.error(f"Failed to create incident for run {run_id}: {e}")
+            return None
+
+    def _maybe_create_policy_proposal(
+        self,
+        incident_id: str,
+        tenant_id: str,
+        severity: str,
+        category: str,
+        error_code: Optional[str],
+        run_id: str,
+        is_synthetic: bool = False,
+        synthetic_scenario_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Create a policy proposal for high-severity incidents.
+
+        PIN-373: Incidents MAY create policy proposals (draft).
+        - System proposes, human approves
+        - Only for HIGH/CRITICAL severity
+        - Creates DRAFT proposal, never auto-enforces
+
+        Returns:
+            proposal_id if created, None otherwise
+        """
+        try:
+            import json
+            import uuid
+            proposal_id = str(uuid.uuid4())
+
+            # Determine proposal type based on error pattern
+            proposal_type_map = {
+                "EXECUTION_TIMEOUT": "timeout_policy",
+                "AGENT_CRASH": "crash_recovery_policy",
+                "BUDGET_EXCEEDED": "cost_cap_policy",
+                "RATE_LIMIT_EXCEEDED": "rate_limit_policy",
+                "STEP_FAILURE": "retry_policy",
+            }
+            proposal_type = proposal_type_map.get(error_code or "", "failure_pattern_policy")
+
+            # Generate rationale
+            rationale = (
+                f"Auto-generated proposal based on {severity} severity incident.\n"
+                f"Category: {category}\n"
+                f"Error: {error_code or 'Unknown'}\n"
+                f"Source run: {run_id}\n\n"
+                f"This proposal requires human review and approval before activation."
+            )
+
+            # Generate proposed rule (simple template)
+            proposed_rule = {
+                "type": proposal_type,
+                "trigger": {
+                    "error_code": error_code,
+                    "severity_threshold": severity,
+                },
+                "action": {
+                    "type": "alert" if severity == "HIGH" else "block",
+                    "description": f"Proposed action for {error_code or 'unknown'} failures",
+                },
+                "auto_generated": True,
+                "source_incident_id": incident_id,
+            }
+
+            # Insert into policy_proposals
+            engine = self._get_engine()
+            now = utc_now()
+
+            with engine.connect() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO policy_proposals (
+                            id, tenant_id, proposal_name, proposal_type,
+                            rationale, proposed_rule, triggering_feedback_ids,
+                            status, created_at
+                        ) VALUES (
+                            :id, :tenant_id, :proposal_name, :proposal_type,
+                            :rationale, :proposed_rule, :triggering_feedback_ids,
+                            :status, :created_at
+                        )
+                    """),
+                    {
+                        "id": proposal_id,
+                        "tenant_id": tenant_id,
+                        "proposal_name": f"Auto: {proposal_type.replace('_', ' ').title()} ({incident_id[:12]})",
+                        "proposal_type": proposal_type,
+                        "rationale": rationale,
+                        "proposed_rule": json.dumps(proposed_rule),  # Proper JSON
+                        "triggering_feedback_ids": json.dumps([incident_id]),  # Proper JSON array
+                        "status": "draft",  # Always draft - human approval required
+                        "created_at": now,
+                    }
+                )
+                conn.commit()
+
+            logger.info(
+                f"Created policy proposal {proposal_id} for incident {incident_id} "
+                f"(type={proposal_type}, synthetic={is_synthetic})"
+            )
+            return proposal_id
+
+        except Exception as e:
+            # Don't fail incident creation if proposal fails
+            logger.warning(f"Failed to create policy proposal for incident {incident_id}: {e}")
+            return None
+
+    def _generate_title(self, error_code: Optional[str], run_id: str) -> str:
+        """Generate human-readable incident title."""
+        if error_code == "EXECUTION_TIMEOUT":
+            return f"Execution Timeout: Run {run_id[:8]}..."
+        elif error_code == "AGENT_CRASH":
+            return f"Agent Crash: Run {run_id[:8]}..."
+        elif error_code == "BUDGET_EXCEEDED":
+            return f"Budget Exceeded: Run {run_id[:8]}..."
+        elif error_code == "RATE_LIMIT_EXCEEDED":
+            return f"Rate Limit Hit: Run {run_id[:8]}..."
+        elif error_code == "STEP_FAILURE":
+            return f"Step Failure: Run {run_id[:8]}..."
+        elif error_code == "SKILL_ERROR":
+            return f"Skill Error: Run {run_id[:8]}..."
+        else:
+            return f"Run Failed: {run_id[:8]}..."
+
+    def check_and_create_incident(
+        self,
+        run_id: str,
+        status: str,
+        error_message: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        is_synthetic: bool = False,
+        synthetic_scenario_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Check if a run status warrants an incident and create one if so.
+
+        This is a convenience method that:
+        1. Checks if status is 'failed'
+        2. Extracts error code from error message
+        3. Calls create_incident_for_failed_run
+
+        Args:
+            run_id: Run ID
+            status: Run status
+            error_message: Error message (may contain error code)
+            tenant_id: Tenant scope
+            agent_id: Agent ID
+            is_synthetic: SDSR synthetic flag
+            synthetic_scenario_id: SDSR scenario ID
+
+        Returns:
+            incident_id if created, None otherwise
+        """
+        # Only create incidents for failed runs
+        if status != "failed":
+            return None
+
+        # Extract error code from error message
+        error_code = self._extract_error_code(error_message)
+
+        return self.create_incident_for_failed_run(
+            run_id=run_id,
+            tenant_id=tenant_id or "default",
+            error_code=error_code,
+            error_message=error_message,
+            agent_id=agent_id,
+            is_synthetic=is_synthetic,
+            synthetic_scenario_id=synthetic_scenario_id,
+        )
+
+    def _extract_error_code(self, error_message: Optional[str]) -> str:
+        """Extract error code from error message."""
+        if not error_message:
+            return "UNKNOWN"
+
+        # Check for known error codes in the message
+        for code in FAILURE_SEVERITY_MAP.keys():
+            if code in error_message.upper():
+                return code
+
+        return "UNKNOWN"
+
+    def get_incidents_for_run(self, run_id: str) -> list:
+        """
+        Get all incidents linked to a run.
+
+        Used by SDSR expectations validator to check if incidents were created.
+
+        Args:
+            run_id: Run ID to check
+
+        Returns:
+            List of incident dicts
+        """
+        try:
+            engine = self._get_engine()
+
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text("""
+                        SELECT id, category, severity, status, created_at, is_synthetic
+                        FROM incidents
+                        WHERE source_run_id = :run_id
+                        ORDER BY created_at DESC
+                    """),
+                    {"run_id": run_id}
+                )
+
+                incidents = []
+                for row in result:
+                    incidents.append({
+                        "id": row[0],
+                        "category": row[1],
+                        "severity": row[2],
+                        "status": row[3],
+                        "created_at": row[4].isoformat() if row[4] else None,
+                        "is_synthetic": row[5],
+                    })
+
+                return incidents
+
+        except Exception as e:
+            logger.error(f"Failed to get incidents for run {run_id}: {e}")
+            return []
+
+
+# Singleton instance for convenience
+_incident_engine: Optional[IncidentEngine] = None
+
+
+def get_incident_engine() -> IncidentEngine:
+    """Get or create singleton incident engine instance."""
+    global _incident_engine
+    if _incident_engine is None:
+        _incident_engine = IncidentEngine()
+    return _incident_engine

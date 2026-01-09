@@ -2,9 +2,9 @@
   "_meta": {
     "type": "ui_intent_ir_compiled",
     "version": "1.0.0",
-    "generated_at": "2026-01-07T19:20:52.200603+00:00",
-    "source": "design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx",
-    "row_count": 303,
+    "generated_at": "2026-01-09T15:48:18.934136+00:00",
+    "source": "design/l2_1/supertable/l2_supertable_v4_cap_expanded.xlsx",
+    "row_count": 311,
     "processing_stage": "COMPILED",
     "validation_passed": true,
     "validation_rules": [
@@ -394,7 +394,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -423,7 +423,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -452,7 +452,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -481,7 +481,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -562,7 +562,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": true,
       "selection_mode": "SINGLE",
@@ -593,7 +593,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": true,
       "selection_mode": "SINGLE",
@@ -622,7 +622,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -651,7 +651,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -680,7 +680,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -709,7 +709,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -737,7 +737,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -765,7 +765,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -793,7 +793,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -821,7 +821,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -849,7 +849,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -877,7 +877,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -1803,7 +1803,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -1833,7 +1833,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -1863,7 +1863,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -1893,7 +1893,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -1923,7 +1923,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -1953,7 +1953,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -1983,7 +1983,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2013,7 +2013,7 @@
         "NAVIGATE"
       ],
       "control_count": 3,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2044,7 +2044,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2075,7 +2075,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2106,7 +2106,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2137,7 +2137,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2168,7 +2168,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2199,7 +2199,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2230,7 +2230,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2261,7 +2261,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2292,7 +2292,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2323,7 +2323,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2354,7 +2354,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2385,7 +2385,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2416,7 +2416,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2447,7 +2447,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2478,7 +2478,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2509,7 +2509,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2540,7 +2540,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2571,7 +2571,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2602,7 +2602,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2633,7 +2633,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2664,7 +2664,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2695,7 +2695,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2726,7 +2726,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2757,7 +2757,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2788,7 +2788,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2819,7 +2819,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2850,7 +2850,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2881,7 +2881,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2912,7 +2912,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2943,7 +2943,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -2974,7 +2974,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3005,7 +3005,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3036,7 +3036,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3067,7 +3067,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3098,7 +3098,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3129,7 +3129,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3160,7 +3160,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3191,7 +3191,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3222,7 +3222,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3253,7 +3253,7 @@
         "NAVIGATE"
       ],
       "control_count": 4,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -3281,7 +3281,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -3309,7 +3309,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -3337,7 +3337,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -3365,7 +3365,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -3393,7 +3393,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -3421,7 +3421,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -3449,7 +3449,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -3477,7 +3477,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4202,7 +4202,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4231,7 +4231,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4260,7 +4260,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4289,7 +4289,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4318,7 +4318,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4347,7 +4347,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4376,7 +4376,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4405,7 +4405,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4434,7 +4434,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4463,7 +4463,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4492,7 +4492,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4521,7 +4521,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4550,7 +4550,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4579,7 +4579,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4608,7 +4608,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4637,7 +4637,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -4665,7 +4665,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4693,7 +4693,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4721,7 +4721,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4749,7 +4749,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4777,7 +4777,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4805,7 +4805,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4833,7 +4833,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4861,7 +4861,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4889,7 +4889,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4917,7 +4917,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4945,7 +4945,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -4973,7 +4973,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5001,7 +5001,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5029,7 +5029,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5057,7 +5057,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5085,7 +5085,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5113,7 +5113,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5141,7 +5141,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5169,7 +5169,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5197,7 +5197,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5225,7 +5225,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5253,7 +5253,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5281,7 +5281,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5309,7 +5309,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -5447,7 +5447,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5475,7 +5475,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5503,7 +5503,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5531,7 +5531,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5559,7 +5559,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5587,7 +5587,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5615,7 +5615,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5643,7 +5643,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5781,7 +5781,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5809,7 +5809,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5837,7 +5837,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5865,7 +5865,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5893,7 +5893,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5921,7 +5921,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5949,7 +5949,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -5977,7 +5977,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6115,7 +6115,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6143,7 +6143,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6171,7 +6171,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6199,7 +6199,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6227,7 +6227,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6255,7 +6255,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6283,7 +6283,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6311,7 +6311,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6339,7 +6339,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6367,7 +6367,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6570,7 +6570,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6599,7 +6599,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6628,7 +6628,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6657,7 +6657,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -6685,7 +6685,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6713,7 +6713,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6741,7 +6741,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6769,7 +6769,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6797,7 +6797,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6825,7 +6825,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -6837,6 +6837,248 @@
       "notes": "Immutable audit record (O5 terminal)",
       "enabled": false,
       "disabled_reason": "unspecified in L2.1",
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "3a56f1a0c9ac",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O1",
+      "panel_name": "Pending Proposals Summary",
+      "order": "O1",
+      "controls": [],
+      "control_count": 0,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": false,
+      "selection_mode": "NONE",
+      "ranking_dimension": "NONE",
+      "read": true,
+      "write": false,
+      "activate": false,
+      "action_layer": "L2_1",
+      "notes": "Count and status breakdown of pending policy proposals; PIN-373",
+      "enabled": true,
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "3a56f1a0c9ac",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O1",
+      "panel_name": "Pending Proposals Summary",
+      "order": "O1",
+      "controls": [],
+      "control_count": 0,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": false,
+      "selection_mode": "NONE",
+      "ranking_dimension": "NONE",
+      "read": true,
+      "write": false,
+      "activate": false,
+      "action_layer": "L2_1",
+      "notes": "Count and status breakdown of pending policy proposals; PIN-373",
+      "enabled": true,
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "7fa967bdd113",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O2",
+      "panel_name": "Pending Proposals List",
+      "order": "O2",
+      "controls": [
+        "FILTER",
+        "SORT",
+        "SELECT_SINGLE",
+        "APPROVE",
+        "REJECT",
+        "NAVIGATE"
+      ],
+      "control_count": 6,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": true,
+      "selection_mode": "SINGLE",
+      "ranking_dimension": "created_at",
+      "read": true,
+      "write": false,
+      "activate": true,
+      "action_layer": "GC_L",
+      "notes": "List of draft proposals with human approve/reject; PIN-373",
+      "enabled": true,
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "7fa967bdd113",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O2",
+      "panel_name": "Pending Proposals List",
+      "order": "O2",
+      "controls": [
+        "FILTER",
+        "SORT",
+        "SELECT_SINGLE",
+        "APPROVE",
+        "REJECT",
+        "NAVIGATE"
+      ],
+      "control_count": 6,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": true,
+      "selection_mode": "SINGLE",
+      "ranking_dimension": "created_at",
+      "read": true,
+      "write": false,
+      "activate": true,
+      "action_layer": "GC_L",
+      "notes": "List of draft proposals with human approve/reject; PIN-373",
+      "enabled": true,
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "7fa967bdd113",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O2",
+      "panel_name": "Pending Proposals List",
+      "order": "O2",
+      "controls": [
+        "FILTER",
+        "SORT",
+        "SELECT_SINGLE",
+        "APPROVE",
+        "REJECT",
+        "NAVIGATE"
+      ],
+      "control_count": 6,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": true,
+      "selection_mode": "SINGLE",
+      "ranking_dimension": "created_at",
+      "read": true,
+      "write": false,
+      "activate": true,
+      "action_layer": "GC_L",
+      "notes": "List of draft proposals with human approve/reject; PIN-373",
+      "enabled": true,
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "7fa967bdd113",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O2",
+      "panel_name": "Pending Proposals List",
+      "order": "O2",
+      "controls": [
+        "FILTER",
+        "SORT",
+        "SELECT_SINGLE",
+        "APPROVE",
+        "REJECT",
+        "NAVIGATE"
+      ],
+      "control_count": 6,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": true,
+      "selection_mode": "SINGLE",
+      "ranking_dimension": "created_at",
+      "read": true,
+      "write": false,
+      "activate": true,
+      "action_layer": "GC_L",
+      "notes": "List of draft proposals with human approve/reject; PIN-373",
+      "enabled": true,
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "7fa967bdd113",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O2",
+      "panel_name": "Pending Proposals List",
+      "order": "O2",
+      "controls": [
+        "FILTER",
+        "SORT",
+        "SELECT_SINGLE",
+        "APPROVE",
+        "REJECT",
+        "NAVIGATE"
+      ],
+      "control_count": 6,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": true,
+      "selection_mode": "SINGLE",
+      "ranking_dimension": "created_at",
+      "read": true,
+      "write": false,
+      "activate": true,
+      "action_layer": "GC_L",
+      "notes": "List of draft proposals with human approve/reject; PIN-373",
+      "enabled": true,
+      "render_mode": "FLAT",
+      "visibility": "ALWAYS"
+    },
+    {
+      "row_uid": "7fa967bdd113",
+      "domain": "Policies",
+      "subdomain": "PROPOSALS",
+      "topic": "PENDING_PROPOSALS",
+      "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+      "panel_id": "POL-PR-PP-O2",
+      "panel_name": "Pending Proposals List",
+      "order": "O2",
+      "controls": [
+        "FILTER",
+        "SORT",
+        "SELECT_SINGLE",
+        "APPROVE",
+        "REJECT",
+        "NAVIGATE"
+      ],
+      "control_count": 6,
+      "visible_by_default": "YES",
+      "nav_required": false,
+      "filtering": true,
+      "selection_mode": "SINGLE",
+      "ranking_dimension": "created_at",
+      "read": true,
+      "write": false,
+      "activate": true,
+      "action_layer": "GC_L",
+      "notes": "List of draft proposals with human approve/reject; PIN-373",
+      "enabled": true,
       "render_mode": "FLAT",
       "visibility": "ALWAYS"
     },
@@ -7115,7 +7357,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7144,7 +7386,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7173,7 +7415,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7202,7 +7444,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7231,7 +7473,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7260,7 +7502,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7288,7 +7530,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7316,7 +7558,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7344,7 +7586,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7372,7 +7614,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7400,7 +7642,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7428,7 +7670,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7718,7 +7960,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7747,7 +7989,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7776,7 +8018,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7805,7 +8047,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7834,7 +8076,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7863,7 +8105,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -7891,7 +8133,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7919,7 +8161,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7947,7 +8189,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -7975,7 +8217,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8003,7 +8245,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8031,7 +8273,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8321,7 +8563,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -8350,7 +8592,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -8379,7 +8621,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -8408,7 +8650,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -8437,7 +8679,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -8466,7 +8708,7 @@
         "NAVIGATE"
       ],
       "control_count": 2,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "SINGLE",
@@ -8494,7 +8736,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8522,7 +8764,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8550,7 +8792,7 @@
         "NAVIGATE"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8578,7 +8820,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8606,7 +8848,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8634,7 +8876,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8662,7 +8904,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8690,7 +8932,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",
@@ -8718,7 +8960,7 @@
         "DOWNLOAD"
       ],
       "control_count": 1,
-      "visible_by_default": "NO",
+      "visible_by_default": "YES",
       "nav_required": true,
       "filtering": false,
       "selection_mode": "NONE",

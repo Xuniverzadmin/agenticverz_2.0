@@ -1,5 +1,5 @@
 /**
- * PreCusLayout — Preflight Customer Console Layout (INSPECTOR MODE)
+ * PreCusLayout — Preflight Customer Console Layout
  *
  * Layer: L1 — Product Experience (UI)
  * Product: customer-console (preflight)
@@ -7,17 +7,19 @@
  *   Trigger: render
  *   Execution: sync
  * Role: Layout shell for /precus/* routes with L2.1 projection sidebar
- * Reference: PIN-352, PIN-356, Routing Authority Model
+ * Reference: PIN-352, PIN-356, PIN-359, Routing Authority Model
  *
- * VIEW MODE: INSPECTOR
- * - Full metadata visibility for developer triage
- * - Shows panel IDs, topic IDs, permissions, control types
- * - This is the "Projection Inspector Renderer" - not customer-facing
+ * VIEW MODE TOGGLE (PIN-359):
+ * - DEVELOPER mode: Full metadata visibility for developer triage
+ * - CUSTOMER mode: Clean UX, no developer metadata
+ * - Same route, same data, different render mode
+ * - Toggle in Header, NOT a route change
  *
  * INVARIANTS:
  * - This layout is ONLY for /precus/* routes (preflight customer console)
  * - Always uses ProjectionSidebar (L2.1 projection-driven navigation)
  * - Never used for /cus/*, /prefops/*, or /fops/* routes
+ * - View mode toggle keeps URL at /precus/...
  *
  * ROUTE AUTHORITY:
  * ┌──────────────┬─────────────┬───────────┬─────────────────────────────┐
@@ -34,7 +36,7 @@ import { ProjectionSidebar } from './ProjectionSidebar';
 import { StatusBar } from './StatusBar';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
-import { RendererProvider, INSPECTOR_MODE } from '@/contexts/RendererContext';
+import { RendererProvider, INSPECTOR_MODE, CUSTOMER_MODE } from '@/contexts/RendererContext';
 import { ProjectProvider } from '@/contexts/ProjectContext';
 
 /**
@@ -42,13 +44,24 @@ import { ProjectProvider } from '@/contexts/ProjectContext';
  *
  * Renders the L2.1 projection-driven UI for preflight customer console.
  * Uses ProjectionSidebar exclusively (no conditional - this IS the preflight layout).
+ *
+ * PIN-359: View mode toggle
+ * - DEVELOPER = INSPECTOR_MODE (full metadata)
+ * - CUSTOMER = CUSTOMER_MODE (clean UX)
+ * - Same route (/precus/*), different render mode
  */
 export function PreCusLayout() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
+  const viewMode = useUIStore((state) => state.viewMode);
+
+  // PIN-359: Map viewMode to renderer mode
+  // DEVELOPER → INSPECTOR_MODE (full metadata)
+  // CUSTOMER → CUSTOMER_MODE (clean UX)
+  const rendererMode = viewMode === 'DEVELOPER' ? INSPECTOR_MODE : CUSTOMER_MODE;
 
   return (
     <ProjectProvider>
-      <RendererProvider value={INSPECTOR_MODE}>
+      <RendererProvider value={rendererMode}>
         <div className="flex flex-col h-screen bg-gray-900">
           <Header />
           <div className="flex flex-1 overflow-hidden">

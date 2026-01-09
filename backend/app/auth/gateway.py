@@ -23,11 +23,17 @@ INVARIANTS:
 4. Session Revocation: Every human request checks revocation
 5. Headers Stripped: After gateway, auth headers are removed from request
 
+ROUTING (Issuer-Based):
+- Route based on `iss` claim, NEVER on `alg` header
+- `iss: "agenticverz-console"` → ConsoleAuthenticator (HS256)
+- `iss` in CLERK_ISSUERS → ClerkAuthenticator (RS256)
+- Unknown issuer → REJECT
+
 DESIGN:
-- Single authenticate() entry point
-- Returns GatewayResult (context | error)
-- Never raises exceptions for auth failures
-- All JWT parsing happens HERE ONLY
+- TokenClassifier parses claims without verification
+- Issuer determines which authenticator to use
+- Each authenticator is a separate trust domain
+- Deprecation controlled by feature flags
 """
 
 from __future__ import annotations
@@ -35,14 +41,20 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Set
 
 from .contexts import (
     AuthPlane,
     AuthSource,
     HumanAuthContext,
     MachineCapabilityContext,
+)
+from .gateway_metrics import (
+    record_console_grace_period,
+    record_token_rejected,
+    record_token_verified,
 )
 from .gateway_types import (
     GatewayResult,
@@ -58,9 +70,76 @@ from .gateway_types import (
 
 logger = logging.getLogger("nova.auth.gateway")
 
-# Environment configuration
+# =============================================================================
+# Configuration (No Fallback Chains)
+# =============================================================================
+
+# Console JWT secret - single source, no aliasing
+CONSOLE_JWT_SECRET = os.getenv("CONSOLE_JWT_SECRET", "")
+CONSOLE_TOKEN_ISSUER = "agenticverz-console"
+
+# Clerk issuers - explicit list, exact match only
+_clerk_issuers_raw = os.getenv("CLERK_ISSUERS", "")
+CLERK_ISSUERS: Set[str] = set(
+    iss.strip() for iss in _clerk_issuers_raw.split(",") if iss.strip()
+)
+
+# Warn if CLERK_ISSUERS is empty (Clerk auth will be effectively disabled)
+if not CLERK_ISSUERS:
+    logger.warning(
+        "CLERK_ISSUERS is empty - Clerk authentication is disabled. "
+        "Set CLERK_ISSUERS env var for production."
+    )
+
+# Feature flags for deprecation control
+AUTH_CONSOLE_ENABLED = os.getenv("AUTH_CONSOLE_ENABLED", "true").lower() == "true"
+AUTH_CONSOLE_ALLOW_MISSING_ISS = os.getenv("AUTH_CONSOLE_ALLOW_MISSING_ISS", "true").lower() == "true"
 AUTH_STUB_ENABLED = os.getenv("AUTH_STUB_ENABLED", "true").lower() == "true"
+
+# Machine auth
 AOS_API_KEY = os.getenv("AOS_API_KEY", "")
+
+
+# =============================================================================
+# TokenClassifier (Issuer-Based Routing)
+# =============================================================================
+
+@dataclass
+class TokenInfo:
+    """Parsed token information for routing decisions."""
+    issuer: Optional[str]
+    raw_token: str
+
+
+class TokenClassifier:
+    """
+    Classify tokens by issuer for routing to appropriate authenticator.
+
+    CRITICAL: This class NEVER routes based on `alg` header.
+    The `alg` header is attacker-controlled and must not influence routing.
+    """
+
+    def classify(self, token: str) -> TokenInfo:
+        """
+        Extract issuer from token without verification.
+
+        Returns TokenInfo with issuer (may be None for legacy tokens).
+        Does NOT validate the token - just extracts routing information.
+        """
+        try:
+            import jwt
+            # Decode WITHOUT verification to get claims for routing
+            payload = jwt.decode(
+                token,
+                options={"verify_signature": False},
+            )
+            return TokenInfo(
+                issuer=payload.get("iss"),
+                raw_token=token,
+            )
+        except Exception as e:
+            logger.warning(f"Token classification failed: {e}")
+            raise ValueError(f"Malformed JWT: {e}")
 
 
 class AuthGateway:
@@ -100,6 +179,7 @@ class AuthGateway:
         self._session_store = session_store
         self._api_key_service = api_key_service
         self._clerk_provider = None  # Lazy-loaded
+        self._classifier = TokenClassifier()
 
     async def authenticate(
         self,
@@ -143,8 +223,8 @@ class AuthGateway:
         """
         Human authentication flow (JWT).
 
-        Extracts JWT from Authorization header, validates it,
-        checks session revocation, and returns HumanAuthContext.
+        Routes to appropriate authenticator based on token issuer (iss claim).
+        NEVER routes based on algorithm (alg header).
         """
         # Extract token from Bearer header
         token = self._extract_bearer_token(authorization_header)
@@ -155,8 +235,135 @@ class AuthGateway:
         if AUTH_STUB_ENABLED and token.startswith("stub_"):
             return self._authenticate_stub(token)
 
-        # Production Clerk JWT flow
-        return await self._authenticate_clerk_jwt(token)
+        # Classify token by issuer
+        try:
+            token_info = self._classifier.classify(token)
+        except ValueError as e:
+            record_token_rejected("unknown", "malformed")
+            return error_jwt_invalid(str(e))
+
+        # Route based on issuer
+        return await self._route_by_issuer(token_info)
+
+    async def _route_by_issuer(self, token_info: TokenInfo) -> GatewayResult:
+        """
+        Route token to appropriate authenticator based on issuer.
+
+        Routing rules:
+        1. iss == "agenticverz-console" → ConsoleAuthenticator
+        2. iss in CLERK_ISSUERS → ClerkAuthenticator
+        3. iss == None AND grace period → ConsoleAuthenticator (with warning)
+        4. Unknown issuer → REJECT
+        """
+        issuer = token_info.issuer
+
+        # Route 1: Console tokens (explicit issuer)
+        if issuer == CONSOLE_TOKEN_ISSUER:
+            if not AUTH_CONSOLE_ENABLED:
+                record_token_rejected("console", "disabled")
+                return error_jwt_invalid("Console authentication is disabled")
+            return self._authenticate_console(token_info)
+
+        # Route 2: Clerk tokens (exact match against configured issuers)
+        if issuer and issuer in CLERK_ISSUERS:
+            return await self._authenticate_clerk(token_info)
+
+        # Route 3: Grace period for legacy tokens without iss claim
+        if issuer is None and AUTH_CONSOLE_ALLOW_MISSING_ISS and AUTH_CONSOLE_ENABLED:
+            # Try console auth with grace period logging
+            record_console_grace_period()
+            logger.warning(
+                "[DEPRECATED] Token missing iss claim - accepted via grace period. "
+                "This will be rejected after grace period ends."
+            )
+            return self._authenticate_console(token_info)
+
+        # Route 4: Unknown issuer - REJECT
+        record_token_rejected("unknown", "untrusted_issuer")
+        logger.warning(f"Untrusted token issuer: {issuer}")
+        return error_jwt_invalid(f"Untrusted token issuer: {issuer}")
+
+    def _authenticate_console(self, token_info: TokenInfo) -> GatewayResult:
+        """
+        Console Authenticator - HS256 tokens from agenticverz-console issuer.
+
+        TRANSITIONAL: This authenticator handles tokens from the custom login system.
+        Will be deprecated when Clerk is fully integrated.
+
+        Trust domain: Internal console authentication
+        Algorithm: HS256 (symmetric)
+        Secret: CONSOLE_JWT_SECRET
+        """
+        try:
+            import jwt
+        except ImportError:
+            logger.error("PyJWT not installed for console token verification")
+            record_token_rejected("console", "library_missing")
+            return error_internal("JWT library not available")
+
+        if not CONSOLE_JWT_SECRET:
+            logger.error("CONSOLE_JWT_SECRET not configured")
+            record_token_rejected("console", "secret_missing")
+            return error_internal("Console authentication not configured")
+
+        try:
+            # Verify and decode the token with HS256
+            payload = jwt.decode(
+                token_info.raw_token,
+                CONSOLE_JWT_SECRET,
+                algorithms=["HS256"],
+                options={
+                    "verify_exp": True,
+                    "verify_aud": False,  # Console tokens don't use audience
+                    "require": ["exp", "sub"],  # Required claims
+                },
+            )
+
+            # Verify issuer if present (grace period allows missing iss)
+            token_issuer = payload.get("iss")
+            if token_issuer and token_issuer != CONSOLE_TOKEN_ISSUER:
+                record_token_rejected("console", "issuer_mismatch")
+                return error_jwt_invalid(f"Invalid issuer: expected {CONSOLE_TOKEN_ISSUER}")
+
+            # Extract claims
+            user_id = payload.get("sub")
+            if not user_id:
+                record_token_rejected("console", "missing_sub")
+                return error_jwt_invalid("Missing subject claim")
+
+            # Generate session ID from token if not present
+            session_id = payload.get("sid", payload.get("jti", ""))
+            if not session_id:
+                session_id = hashlib.sha256(token_info.raw_token.encode()).hexdigest()[:32]
+
+            # Extract tenant
+            tenant_id = payload.get("org_id") or payload.get("tenant_id") or "default"
+
+            # Record successful verification
+            record_token_verified("console")
+
+            return HumanAuthContext(
+                actor_id=user_id,
+                session_id=session_id,
+                auth_source=AuthSource.CONSOLE,  # Explicit CONSOLE source
+                tenant_id=tenant_id,
+                account_id=payload.get("account_id"),
+                email=payload.get("email"),
+                display_name=payload.get("name"),
+                authenticated_at=datetime.utcnow(),
+            )
+
+        except jwt.ExpiredSignatureError:
+            record_token_rejected("console", "expired")
+            return error_jwt_expired()
+        except jwt.InvalidTokenError as e:
+            record_token_rejected("console", "invalid_signature")
+            logger.warning(f"Console JWT validation failed: {e}")
+            return error_jwt_invalid(str(e))
+        except Exception as e:
+            record_token_rejected("console", "internal_error")
+            logger.exception(f"Console JWT auth error: {e}")
+            return error_internal(str(e))
 
     def _extract_bearer_token(self, authorization_header: str) -> Optional[str]:
         """Extract token from 'Bearer <token>' format."""
@@ -199,11 +406,13 @@ class AuthGateway:
             authenticated_at=datetime.utcnow(),
         )
 
-    async def _authenticate_clerk_jwt(self, token: str) -> GatewayResult:
+    async def _authenticate_clerk(self, token_info: TokenInfo) -> GatewayResult:
         """
-        Authenticate using Clerk JWT.
+        Clerk Authenticator - RS256 tokens from Clerk IdP.
 
-        This is the production human authentication flow.
+        Trust domain: External identity provider (Clerk)
+        Algorithm: RS256 (asymmetric)
+        Verification: JWKS (public key)
         """
         try:
             # Lazy-load Clerk provider
@@ -215,15 +424,19 @@ class AuthGateway:
             # Check if Clerk is configured
             if not self._clerk_provider.is_configured:
                 logger.error("Clerk not configured for production JWT auth")
+                record_token_rejected("clerk", "not_configured")
                 return error_provider_unavailable("clerk")
 
-            # Verify JWT
+            # Verify JWT via JWKS
             try:
-                payload = self._clerk_provider.verify_token(token)
+                payload = self._clerk_provider.verify_token(token_info.raw_token)
             except Exception as e:
                 error_msg = str(e).lower()
+                logger.warning(f"Clerk JWT verify failed: {type(e).__name__}: {e}")
                 if "expired" in error_msg:
+                    record_token_rejected("clerk", "expired")
                     return error_jwt_expired()
+                record_token_rejected("clerk", "invalid_signature")
                 return error_jwt_invalid(str(e))
 
             # Extract claims
@@ -231,18 +444,23 @@ class AuthGateway:
             session_id = payload.get("sid", payload.get("jti", ""))
 
             if not user_id:
+                record_token_rejected("clerk", "missing_sub")
                 return error_jwt_invalid("Missing subject claim")
 
             # Check session revocation
             if self._session_store:
                 is_revoked = await self._session_store.is_revoked(session_id)
                 if is_revoked:
+                    record_token_rejected("clerk", "revoked")
                     logger.warning(f"Revoked session attempted: {session_id[:8]}...")
                     return error_session_revoked()
 
             # Extract tenant from org_id or metadata
             tenant_id = payload.get("org_id")
             account_id = payload.get("account_id")
+
+            # Record successful verification
+            record_token_verified("clerk")
 
             return HumanAuthContext(
                 actor_id=user_id,
@@ -256,6 +474,7 @@ class AuthGateway:
             )
 
         except Exception as e:
+            record_token_rejected("clerk", "internal_error")
             logger.exception(f"Clerk JWT auth error: {e}")
             return error_internal(str(e))
 

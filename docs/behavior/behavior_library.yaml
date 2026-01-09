@@ -95,6 +95,70 @@ library:
       Sessions must boot like systems, not humans.
 
   # =========================================================================
+  # BL-DEPLOY-001: Deploy After Rebuild (MANDATORY)
+  # Incident: Code rebuilt but not deployed, user could not see/test changes
+  # Principle: Build without deploy = invisible work = wasted time
+  # =========================================================================
+  - id: BL-DEPLOY-001
+    name: Deploy After Rebuild
+    severity: BLOCKER
+    class: deployment_discipline
+
+    triggers:
+      any_of:
+        - keyword: "npm run build"
+        - keyword: "npm build"
+        - keyword: "vite build"
+        - keyword: "docker compose up -d --build"
+        - keyword: "docker compose build"
+        - pattern: "built in \\d+\\.\\d+s"
+        - pattern: "Build complete"
+
+    requires:
+      sections:
+        - DEPLOYMENT_CONFIRMATION
+      commands_frontend:
+        - "npm run build"
+        - "cp -r dist/* dist-preflight/"
+        - "sudo systemctl reload apache2"
+      commands_backend:
+        - "docker compose up -d --build backend"
+        - "docker compose ps (verify healthy)"
+
+    forbid:
+      - "build without deploy"
+      - "rebuild complete (without deploy step)"
+      - "assuming user can see changes after build"
+
+    evidence:
+      required_fields:
+        - build_type: "frontend | backend | both"
+        - deploy_command_run: "YES"
+        - service_healthy: "YES"
+
+    deployment_commands:
+      frontend:
+        build: "cd /root/agenticverz2.0/website/app-shell && npm run build"
+        deploy: "cp -r dist/* dist-preflight/ && sudo systemctl reload apache2"
+      backend:
+        build_and_deploy: "docker compose up -d --build backend"
+        verify: "docker compose ps"
+
+    message_on_fail: >
+      BL-DEPLOY-001 VIOLATION: Build completed but not deployed.
+
+      After ANY rebuild, you MUST deploy:
+
+      Frontend:
+        cp -r dist/* dist-preflight/ && sudo systemctl reload apache2
+
+      Backend:
+        docker compose up -d --build backend
+
+      User cannot see/test changes until deployed.
+      Build without deploy = invisible work.
+
+  # =========================================================================
   # BL-ENV-001: Runtime Sync Before Test
   # Incident: Tested endpoint with stale container, wasted 2+ hours debugging
   # =========================================================================

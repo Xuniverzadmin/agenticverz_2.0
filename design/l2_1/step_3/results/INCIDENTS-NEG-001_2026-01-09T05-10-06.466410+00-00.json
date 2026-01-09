@@ -1,0 +1,31 @@
+{
+  "scenario_id": "INCIDENTS-NEG-001",
+  "domain": "Incidents",
+  "status": "FAIL",
+  "surfaces_tested": [
+    "L21-EVD-R"
+  ],
+  "slots_validated": [
+    "SLOT-INC-AI-OI-O2",
+    "SLOT-INC-AI-ID-O3"
+  ],
+  "assertions_passed": [
+    "surface_available",
+    "slot_visible"
+  ],
+  "assertions_failed": [
+    "action_blocked"
+  ],
+  "failures": [
+    {
+      "code": "SL-04",
+      "category": "SLOT",
+      "message": "Authority violation: EXECUTE action on 'INCIDENT_CLOSE' attempted on read-only surface L21-EVD-R",
+      "scenario_id": "INCIDENTS-NEG-001",
+      "timestamp": "2026-01-09T05:10:06.466404+00:00"
+    }
+  ],
+  "timestamp": "2026-01-09T05:10:06.466410+00:00",
+  "duration_ms": 0,
+  "pipeline_version": "1.0.0"
+}

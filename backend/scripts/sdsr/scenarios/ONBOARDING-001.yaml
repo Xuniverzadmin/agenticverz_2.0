@@ -1,0 +1,84 @@
+# SDSR Scenario: ONBOARDING-001 (Authoritative)
+# Reference: PIN-370 (Scenario-Driven System Realization)
+#
+# PURPOSE (NON-NEGOTIABLE):
+#   Establish control-plane truth so everything else has meaning.
+#
+# This scenario answers:
+#   - Who is the customer?
+#   - What API key exists?
+#   - What agent / SDK is registered?
+#   - What can the UI show?
+#
+# DEPENDS ON: Nothing (this is the root scenario)
+# ENABLES: ACTIVITY-RETRY-001, all domain scenarios
+
+scenario_id: ONBOARDING-001
+domain: Onboarding
+description: >
+  Synthetic onboarding to establish tenant, API key,
+  and SDK agent registration for SDSR testing.
+
+backend:
+  tables:
+    - tenants
+    - api_keys
+    - agents
+
+  writes:
+    # Synthetic Tenant
+    - create_tenant:
+        id: "synth-tenant-001"
+        name: "Synthetic Test Tenant"
+        slug: "synth-test-tenant"
+        plan: "developer"
+        status: "active"
+        max_workers: 10
+        max_runs_per_day: 1000
+        max_concurrent_runs: 10
+        max_tokens_per_month: 10000000
+        max_api_keys: 10
+
+    # Synthetic API Key
+    - create_api_key:
+        id: "synth-key-001"
+        tenant_id: "synth-tenant-001"
+        name: "Synthetic API Key"
+        key_prefix: "aos_synth"
+        key_hash: "b5c2d8e9f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8"
+        status: "active"
+
+    # Synthetic Agent (SDK registration)
+    - create_agent:
+        id: "synth-agent-001"
+        name: "Synthetic SDK Agent"
+        description: "Python SDK v0.4.x - SDSR test agent"
+        status: "active"
+        tenant_id: "synth-tenant-001"
+        rate_limit_rpm: 60
+        concurrent_runs_limit: 5
+        budget_alert_threshold: 80
+        spent_cents: 0
+
+# What this PROVES:
+#   - Auth works
+#   - Tenancy works
+#   - Capability gating can begin
+#   - UI can render Activity domain
+#   - Nothing downstream is "floating"
+
+assertions:
+  - table: tenants
+    where:
+      id: synth-tenant-001
+      is_synthetic: true
+
+  - table: api_keys
+    where:
+      id: synth-key-001
+      is_synthetic: true
+
+  - table: agents
+    where:
+      id: synth-agent-001
+      is_synthetic: true

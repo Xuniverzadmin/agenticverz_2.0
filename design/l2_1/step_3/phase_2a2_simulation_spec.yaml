@@ -1,0 +1,314 @@
+# Phase-2A.2 Simulation Specification
+# Reference: PIN-367 (Phase-2A.1), PIN-366 (STEP-3)
+#
+# PURPOSE: Define simulation behavior for blocked action controls.
+#          Controls move from BLOCKED to SIMULATED state.
+#
+# RULE: Simulated controls respond to clicks but DO NOT:
+#       - Mutate system state
+#       - Call backend APIs
+#       - Create/modify runs, incidents, policies, or logs
+#
+# They DO:
+#       - Show immediate UI feedback (toast, inline note)
+#       - Explain what WOULD happen
+#       - Log intent to console/trace panel
+
+version: 1
+phase: 2A.2
+status: IN_PROGRESS
+
+# ─────────────────────────────────────────────────────────────────
+# SIMULATION MODE DEFINITION
+# ─────────────────────────────────────────────────────────────────
+
+simulation_mode:
+  definition: |
+    Controls are enabled and respond to clicks, but no backend
+    state is mutated. All feedback is UI-only.
+
+  properties:
+    enabled: true
+    execution_mode: SIMULATED
+    mutation: false
+    backend_calls: false
+
+  required_feedback:
+    - toast_message: "Action requested (simulation only)"
+    - inline_note: "No actual change occurred. This is a preview."
+
+  optional_feedback:
+    - badge: "Simulated"
+    - trace_log: true  # Log to in-memory trace panel
+
+# ─────────────────────────────────────────────────────────────────
+# DOMAIN: ACTIVITY
+# Status: READY FOR IMPLEMENTATION
+# ─────────────────────────────────────────────────────────────────
+
+activity_domain:
+  intent: |
+    ACTIVITY answers:
+    1. What is running right now?
+    2. What completed?
+    3. How did it perform?
+    4. What can I do (or not do) about a run?
+
+  controls_to_simulate:
+    - RETRY
+    - STOP
+    - REPLAY_EXPORT
+
+  scenarios:
+
+    - scenario_id: ACT-SIM-001
+      name: "Retry a completed run"
+      purpose: "If this failed or completed, can I rerun it?"
+
+      preconditions:
+        run_state: [COMPLETED, FAILED]
+        control: RETRY
+
+      user_flow:
+        1: "User opens a completed/failed run"
+        2: "User clicks RETRY button"
+
+      required_behavior:
+        toast: "Retry requested (simulation only)"
+        inline_note: "No execution was triggered. This is a preview."
+        badge: "Retry planned (simulated)"
+
+      forbidden:
+        - "Changing run status"
+        - "Adding a new run to the list"
+        - "Calling execution engine"
+
+      success_criteria:
+        - "User understands what would happen"
+        - "User understands why it didn't happen"
+
+    - scenario_id: ACT-SIM-002
+      name: "Stop a running run"
+      purpose: "Do I have control over something running?"
+
+      preconditions:
+        run_state: [RUNNING]
+        control: STOP
+
+      user_flow:
+        1: "User opens a running run"
+        2: "User clicks STOP button"
+        3: "Confirmation modal appears"
+        4: "User confirms"
+
+      required_behavior:
+        confirmation_modal:
+          title: "Stop execution?"
+          subtitle: "(Simulation)"
+          confirm_text: "Stop (Preview)"
+          cancel_text: "Cancel"
+        on_confirm:
+          toast: "Stop requested (simulation only)"
+          inline_note: "Execution continues. No stop signal sent."
+
+      forbidden:
+        - "Changing run to STOPPED"
+        - "Removing run from list"
+        - "Sending stop signal to backend"
+
+      success_criteria:
+        - "Control exists and is visible"
+        - "Authority boundary is explicit"
+        - "No illusion of power"
+
+    - scenario_id: ACT-SIM-003
+      name: "Replay execution evidence"
+      purpose: "What actually happened inside this run?"
+
+      preconditions:
+        run_state: [ANY]
+        control: REPLAY_EXPORT
+
+      user_flow:
+        1: "User clicks REPLAY/EVIDENCE button"
+        2: "Evidence viewer opens"
+
+      required_behavior:
+        timeline_panel:
+          events:
+            - type: START
+              timestamp: synthetic
+            - type: STEP-1
+              timestamp: synthetic
+            - type: STEP-2
+              timestamp: synthetic
+            - type: END
+              timestamp: synthetic
+          properties:
+            ordered: true
+            timestamped: true
+            read_only: true
+
+      forbidden:
+        - "Edit affordances in timeline"
+        - "Export to real file"
+
+      success_criteria:
+        - "Timeline feels deterministic"
+        - "Ordering is obvious"
+        - "No edit controls visible"
+
+  freeze_criteria:
+    - "All 3 ACT-SIM scenarios work"
+    - "No new controls requested"
+    - "No confusion about run state"
+    - "No 'why didn't this actually run?' questions"
+
+# ─────────────────────────────────────────────────────────────────
+# DOMAIN: INCIDENTS
+# Status: PENDING (after ACTIVITY complete)
+# ─────────────────────────────────────────────────────────────────
+
+incidents_domain:
+  intent: |
+    INCIDENTS answers:
+    1. What went wrong?
+    2. How severe is it?
+    3. What can I do about it?
+    4. Has it been addressed?
+
+  controls_to_simulate:
+    - MITIGATE
+    - CLOSE
+    - ESCALATE
+
+  scenarios:
+
+    - scenario_id: INC-SIM-001
+      name: "Mitigate an active incident"
+      purpose: "Can I take action to reduce impact?"
+      status: PENDING
+
+    - scenario_id: INC-SIM-002
+      name: "Close a resolved incident"
+      purpose: "Can I mark this as resolved?"
+      status: PENDING
+
+    - scenario_id: INC-SIM-003
+      name: "Escalate a critical incident"
+      purpose: "Can I raise the priority?"
+      status: PENDING
+
+  freeze_criteria:
+    - "All 3 INC-SIM scenarios work"
+    - "No confusion about incident lifecycle"
+
+# ─────────────────────────────────────────────────────────────────
+# DOMAIN: POLICIES
+# Status: PENDING (after INCIDENTS complete)
+# ─────────────────────────────────────────────────────────────────
+
+policies_domain:
+  intent: |
+    POLICIES answers:
+    1. What rules govern behavior?
+    2. Are they active or inactive?
+    3. Can I change them?
+    4. What's the audit trail?
+
+  controls_to_simulate:
+    - TOGGLE
+    - EDIT
+
+  scenarios:
+
+    - scenario_id: POL-SIM-001
+      name: "Toggle a policy on/off"
+      purpose: "Can I enable/disable a rule?"
+      status: PENDING
+
+    - scenario_id: POL-SIM-002
+      name: "Edit policy parameters"
+      purpose: "Can I modify rule configuration?"
+      status: PENDING
+
+  freeze_criteria:
+    - "All POL-SIM scenarios work"
+    - "Toggle state is visually clear"
+    - "Edit modal shows preview, not commit"
+
+# ─────────────────────────────────────────────────────────────────
+# DOMAIN: LOGS
+# Status: PENDING (after POLICIES complete)
+# ─────────────────────────────────────────────────────────────────
+
+logs_domain:
+  intent: |
+    LOGS answers:
+    1. What is the raw truth?
+    2. Can I search/filter it?
+    3. Can I archive or delete?
+    4. Is there proof?
+
+  controls_to_simulate:
+    - ARCHIVE
+    - DELETE
+
+  scenarios:
+
+    - scenario_id: LOG-SIM-001
+      name: "Archive logs"
+      purpose: "Can I move logs to cold storage?"
+      status: PENDING
+
+    - scenario_id: LOG-SIM-002
+      name: "Delete logs"
+      purpose: "Can I remove logs? (spoiler: no)"
+      status: PENDING
+      note: "DELETE should show 'Logs are immutable'"
+
+  freeze_criteria:
+    - "All LOG-SIM scenarios work"
+    - "Immutability is clearly communicated"
+    - "Archive vs Delete distinction is obvious"
+
+# ─────────────────────────────────────────────────────────────────
+# PHASE-2A.2 COMPLETION CRITERIA
+# ─────────────────────────────────────────────────────────────────
+
+completion_criteria:
+  all_domains:
+    - "Every simulation scenario passes manual walkthrough"
+    - "No new controls discovered"
+    - "No confusion requiring verbal explanation"
+    - "Toast/inline feedback is consistent across domains"
+
+  freeze_condition: |
+    Phase-2A.2 is FROZEN when all domains complete simulation
+    and no UX issues remain unresolved.
+
+# ─────────────────────────────────────────────────────────────────
+# WHAT COMES AFTER (Phase-3 Preview)
+# ─────────────────────────────────────────────────────────────────
+
+phase_3_preview:
+  trigger: "Surface upgrade from L21-EVD-R to L21-CTL-RW"
+  requirements:
+    - "Authority model allows mutation"
+    - "Backend handlers exist"
+    - "Audit + rollback infrastructure ready"
+    - "DB schema supports the action"
+
+  graduation_per_control:
+    - control: RETRY
+      requires: "Execution engine restart capability"
+    - control: STOP
+      requires: "Execution engine cancellation capability"
+    - control: MITIGATE
+      requires: "Incident state machine"
+    - control: CLOSE
+      requires: "Incident state machine"
+    - control: TOGGLE
+      requires: "Policy enforcement engine"
+    - control: DELETE
+      requires: "NEVER - logs are immutable"

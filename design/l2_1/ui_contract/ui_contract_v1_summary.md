@@ -1,7 +1,7 @@
 # UI Contract v1 Summary Report
 
-**Generated:** 2026-01-07T16:12:16.688181+00:00
-**Source:** l2_supertable_v3_cap_expanded.xlsx
+**Generated:** 2026-01-09T15:47:28.887090+00:00
+**Source:** l2_supertable_v4_cap_expanded.xlsx
 **Status:** DRAFT_UI_DRIVING
 
 ---
@@ -13,10 +13,10 @@
 | Overview | 3 |
 | Activity | 10 |
 | Incidents | 11 |
-| Policies | 15 |
+| Policies | 17 |
 | Logs | 13 |
 
-**Total Panels:** 52
+**Total Panels:** 54
 
 ---
 
@@ -24,9 +24,9 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Controls | 145 |
-| Enabled Controls | 136 |
-| Disabled Controls | 9 |
+| Total Controls | 150 |
+| Enabled Controls | 140 |
+| Disabled Controls | 10 |
 
 ---
 
@@ -34,8 +34,8 @@
 
 | Status | Panels |
 |--------|--------|
-| SAFE | 38 |
-| QUESTIONABLE | 14 |
+| SAFE | 39 |
+| QUESTIONABLE | 15 |
 
 ---
 
@@ -49,6 +49,7 @@ controls are **disabled** in the UI with a visible reason:
 - **Policies / Budget Policy Detail**: UPDATE_THRESHOLD, ACTIVATE
 - **Policies / Rate Limit Detail**: UPDATE_LIMIT, ACTIVATE
 - **Policies / Approval Rule Detail**: UPDATE_RULE, ACTIVATE
+- **Policies / Pending Proposals List**: ACTIVATE
 
 ---
 
@@ -70,10 +71,10 @@ to understand system constraints without false confidence.
 ## Attestation
 
 ```
-✔ 52 panels transformed
-✔ 136 controls enabled
-✔ 9 controls disabled (with reasons)
-✔ 14 QUESTIONABLE panels surfaced
+✔ 54 panels transformed
+✔ 140 controls enabled
+✔ 10 controls disabled (with reasons)
+✔ 15 QUESTIONABLE panels surfaced
 ✔ Overview domain: READ + NAVIGATE only
 ✘ No business decisions made
 ✘ No semantics resolved

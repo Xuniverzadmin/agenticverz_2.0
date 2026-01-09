@@ -1,0 +1,72 @@
+# STEP 3 Slot Aliases
+# Maps human-readable scenario slot names to actual STEP 2A slot IDs
+# Reference: PIN-366 (STEP 3)
+#
+# Usage in scenario_spec.yaml:
+#   slots_expected:
+#     - ACTIVITY_RUN_LIST    # resolves to SLOT-ACT-EX-AR-O2
+#
+# Rule: Aliases are READ-ONLY lookups. They do not modify slot registry.
+
+version: 1
+owner: STEP-3
+
+# ─────────────────────────────────────────────
+# OVERVIEW DOMAIN
+# ─────────────────────────────────────────────
+aliases:
+  # Overview
+  OVERVIEW_STATUS_SUMMARY: SLOT-OVW-SH-CS-O1
+  OVERVIEW_HEALTH_SUMMARY: SLOT-OVW-SH-HM-O1
+  OVERVIEW_HEALTH_LIST: SLOT-OVW-SH-HM-O2
+
+  # ─────────────────────────────────────────────
+  # ACTIVITY DOMAIN
+  # ─────────────────────────────────────────────
+  ACTIVITY_RUN_SUMMARY: SLOT-ACT-EX-AR-O1
+  ACTIVITY_RUN_LIST: SLOT-ACT-EX-AR-O2
+  ACTIVITY_COMPLETED_SUMMARY: SLOT-ACT-EX-CR-O1
+  ACTIVITY_COMPLETED_LIST: SLOT-ACT-EX-CR-O2
+  ACTIVITY_COMPLETED_DETAIL: SLOT-ACT-EX-CR-O3
+  ACTIVITY_RUN_DETAIL_SUMMARY: SLOT-ACT-EX-RD-O1
+  ACTIVITY_RUN_STEPS: SLOT-ACT-EX-RD-O2
+  ACTIVITY_STEP_DETAIL: SLOT-ACT-EX-RD-O3
+  ACTIVITY_RUN_CONTEXT: SLOT-ACT-EX-RD-O4
+  ACTIVITY_REPLAY_VIEWER: SLOT-ACT-EX-RD-O5
+
+  # ─────────────────────────────────────────────
+  # INCIDENTS DOMAIN
+  # ─────────────────────────────────────────────
+  INCIDENT_OPEN_SUMMARY: SLOT-INC-AI-OI-O1
+  INCIDENT_LIST: SLOT-INC-AI-OI-O2
+  INCIDENT_SUMMARY: SLOT-INC-AI-ID-O1
+  INCIDENT_TIMELINE: SLOT-INC-AI-ID-O2
+  INCIDENT_DETAIL: SLOT-INC-AI-ID-O3
+  INCIDENT_IMPACT: SLOT-INC-AI-ID-O4
+  INCIDENT_RESOLVED_SUMMARY: SLOT-INC-HI-RI-O1
+  INCIDENT_RESOLVED_LIST: SLOT-INC-HI-RI-O2
+  INCIDENT_EVIDENCE_VIEW: SLOT-INC-AI-ID-O3
+
+  # ─────────────────────────────────────────────
+  # POLICIES DOMAIN
+  # ─────────────────────────────────────────────
+  POLICY_BUDGET_SUMMARY: SLOT-POL-AP-BP-O1
+  POLICY_BUDGET_LIST: SLOT-POL-AP-BP-O2
+  POLICY_RATE_SUMMARY: SLOT-POL-AP-RL-O1
+  POLICY_RATE_LIST: SLOT-POL-AP-RL-O2
+  POLICY_APPROVAL_SUMMARY: SLOT-POL-AP-AR-O1
+  POLICY_APPROVAL_LIST: SLOT-POL-AP-AR-O2
+  POLICY_LIST: SLOT-POL-AP-BP-O2
+  POLICY_DETAILS: SLOT-POL-AP-BP-O3
+
+  # ─────────────────────────────────────────────
+  # LOGS DOMAIN
+  # ─────────────────────────────────────────────
+  LOG_AUDIT_SUMMARY: SLOT-LOG-AL-SA-O1
+  LOG_AUDIT_LIST: SLOT-LOG-AL-SA-O2
+  LOG_USER_AUDIT_SUMMARY: SLOT-LOG-AL-UA-O1
+  LOG_USER_AUDIT_LIST: SLOT-LOG-AL-UA-O2
+  LOG_TRACE_SUMMARY: SLOT-LOG-ET-TD-O1
+  LOG_TRACE_LIST: SLOT-LOG-ET-TD-O2
+  LOG_EVENT_STREAM: SLOT-LOG-ET-TD-O2
+  LOG_REPLAY_WINDOW: SLOT-LOG-ET-TD-O5

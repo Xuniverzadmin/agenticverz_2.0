@@ -1,0 +1,53 @@
+# SDSR Scenario: ACTIVITY-RETRY-001 (Authoritative)
+# Reference: PIN-370, PIN-369 (Phase-2.5 RETRY)
+#
+# PURPOSE:
+#   Prove end-to-end realization:
+#   - Activity list shows a failed run
+#   - RETRY button is enabled
+#   - Clicking RETRY hits real API, writes real DB row, UI updates
+#
+# DEPENDS ON: ONBOARDING-001 (synth-tenant-001, synth-agent-001)
+
+scenario_id: ACTIVITY-RETRY-001
+domain: Activity
+description: >
+  Create a failed run to validate Activity UI and RETRY behavior.
+
+requires:
+  tenant_id: synth-tenant-001
+  api_key_id: synth-key-001
+  agent_id: synth-agent-001
+
+backend:
+  tables:
+    - runs
+
+  writes:
+    # Failed run for RETRY testing
+    - create_run:
+        id: "synth-run-failed-001"
+        agent_id: "synth-agent-001"
+        tenant_id: "synth-tenant-001"
+        goal: "Synthetic goal for RETRY validation"
+        status: "failed"
+        error_message: "Synthetic failure for retry test"
+        max_attempts: 3
+        attempts: 1
+        priority: 0
+
+# Expected RETRY behavior:
+#   1. Call real API: POST /runs/{id}/retry
+#   2. Create new run row:
+#      - parent_run_id = synth-run-failed-001
+#      - status = queued
+#      - is_synthetic = false (real action creates real data)
+#   3. UI refresh shows new run with clear lineage
+
+assertions:
+  - table: runs
+    where:
+      id: synth-run-failed-001
+      status: failed
+      is_synthetic: true
+      synthetic_scenario_id: ACTIVITY-RETRY-001

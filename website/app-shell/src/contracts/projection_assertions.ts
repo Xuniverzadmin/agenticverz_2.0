@@ -225,9 +225,10 @@ export function assertValidProjection(projection: unknown): asserts projection i
 
   const p = projection as Record<string, unknown>;
 
-  // Check version
-  if (typeof p.version !== 'string') {
-    throw new Error('PROJECTION_ASSERTION_FAILED: Projection must have version string');
+  // Check version (in _meta.version per L2.1 schema)
+  const meta = p._meta as Record<string, unknown> | undefined;
+  if (!meta || typeof meta.version !== 'string') {
+    throw new Error('PROJECTION_ASSERTION_FAILED: Projection must have _meta.version string');
   }
 
   // Check domains array

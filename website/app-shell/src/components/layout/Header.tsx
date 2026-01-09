@@ -1,7 +1,8 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Bell, User, LogOut, Settings, ChevronDown, Monitor, Beaker, Users, Wrench } from 'lucide-react';
+import { Bell, User, LogOut, Settings, ChevronDown, Monitor, Beaker, Users, Wrench, Eye, Code } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/common/Button';
 import { cn } from '@/lib/utils';
 import { ProjectionBreadcrumb } from '@/navigation/ProjectionBreadcrumb';
@@ -76,6 +77,49 @@ function getActiveConsole(pathname: string): ConsoleDefinition | undefined {
   if (pathname.startsWith('/prefops')) return CONSOLES.find(c => c.id === 'prefops');
   if (pathname.startsWith('/fops')) return CONSOLES.find(c => c.id === 'fops');
   return undefined;
+}
+
+// ============================================================================
+// View Mode Toggle (PIN-359)
+// Same route, same data, different render mode
+// DEVELOPER: Full metadata visibility
+// CUSTOMER: Clean UX, no developer metadata
+// ============================================================================
+
+function ViewModeToggle() {
+  const location = useLocation();
+  const viewMode = useUIStore((state) => state.viewMode);
+  const toggleViewMode = useUIStore((state) => state.toggleViewMode);
+
+  // Only show toggle in /precus/* routes (preflight customer console)
+  if (!location.pathname.startsWith('/precus')) return null;
+
+  const isDeveloper = viewMode === 'DEVELOPER';
+
+  return (
+    <button
+      onClick={toggleViewMode}
+      className={cn(
+        'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium',
+        isDeveloper
+          ? 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50'
+          : 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
+      )}
+      title={isDeveloper ? 'Switch to Customer View' : 'Switch to Developer View'}
+    >
+      {isDeveloper ? (
+        <>
+          <Code size={16} />
+          <span>Developer</span>
+        </>
+      ) : (
+        <>
+          <Eye size={16} />
+          <span>Customer</span>
+        </>
+      )}
+    </button>
+  );
 }
 
 // ============================================================================
@@ -213,6 +257,10 @@ export function Header() {
         {/* Console Switcher - Cross-Console Navigation */}
         <div className="h-6 w-px bg-gray-600 mx-2" />
         <ConsoleSwitcher />
+
+        {/* View Mode Toggle - PIN-359: Same route, different render mode */}
+        <div className="h-6 w-px bg-gray-600 mx-2" />
+        <ViewModeToggle />
 
         {/* Project Selector - Global scope (NOT L2.1) */}
         <div className="h-6 w-px bg-gray-600 mx-2" />

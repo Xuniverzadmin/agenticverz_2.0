@@ -7,9 +7,10 @@ import './index.css';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000,
+      staleTime: 15000,  // Data considered stale after 15s
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,  // FIX: Auto-refresh when returning to tab (PIN-370)
+      refetchOnMount: true,        // Refresh on component mount
     },
   },
 });

@@ -2,16 +2,16 @@
   "_meta": {
     "type": "ui_projection_lock",
     "version": "1.0.0",
-    "generated_at": "2026-01-08T05:41:58.621940+00:00",
-    "source": "design/l2_1/supertable/l2_supertable_v3_cap_expanded.xlsx",
+    "generated_at": "2026-01-09T15:48:19.079887+00:00",
+    "source": "design/l2_1/supertable/l2_supertable_v4_cap_expanded.xlsx",
     "processing_stage": "LOCKED",
     "frozen": true,
     "editable": false
   },
   "_statistics": {
     "domain_count": 5,
-    "panel_count": 52,
-    "control_count": 95
+    "panel_count": 54,
+    "control_count": 101
   },
   "_contract": {
     "renderer_must_consume_only_this_file": true,
@@ -1074,6 +1074,29 @@
           "view_type": "PANEL_VIEW"
         },
         {
+          "panel_id": "POL-PR-PP-O1",
+          "panel_name": "Pending Proposals Summary",
+          "order": "O1",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [],
+          "control_count": 0,
+          "topic": "PENDING_PROPOSALS",
+          "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+          "subdomain": "PROPOSALS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": false,
+            "read": true,
+            "write": false,
+            "activate": false
+          },
+          "route": "/precus/policies/pol-pr-pp-o1",
+          "view_type": "PANEL_VIEW"
+        },
+        {
           "panel_id": "POL-AP-BP-O2",
           "panel_name": "Budget Policies List",
           "order": "O2",
@@ -1303,6 +1326,78 @@
             "activate": false
           },
           "route": "/precus/policies/pol-pa-pc-o2",
+          "view_type": "PANEL_VIEW"
+        },
+        {
+          "panel_id": "POL-PR-PP-O2",
+          "panel_name": "Pending Proposals List",
+          "order": "O2",
+          "render_mode": "FLAT",
+          "visibility": "ALWAYS",
+          "enabled": true,
+          "disabled_reason": null,
+          "controls": [
+            {
+              "type": "FILTER",
+              "order": 0,
+              "icon": "filter",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SORT",
+              "order": 1,
+              "icon": "sort",
+              "category": "data_control",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "SELECT_SINGLE",
+              "order": 2,
+              "icon": "radio",
+              "category": "selection",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "APPROVE",
+              "order": 3,
+              "icon": "check-circle",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "REJECT",
+              "order": 4,
+              "icon": "x-circle",
+              "category": "action",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            },
+            {
+              "type": "NAVIGATE",
+              "order": 5,
+              "icon": "arrow-right",
+              "category": "navigation",
+              "enabled": true,
+              "visibility": "ALWAYS"
+            }
+          ],
+          "control_count": 6,
+          "topic": "PENDING_PROPOSALS",
+          "topic_id": "POLICIES.PROPOSALS.PENDING_PROPOSALS",
+          "subdomain": "PROPOSALS",
+          "permissions": {
+            "nav_required": false,
+            "filtering": true,
+            "read": true,
+            "write": false,
+            "activate": true
+          },
+          "route": "/precus/policies/pol-pr-pp-o2",
           "view_type": "PANEL_VIEW"
         },
         {
@@ -1538,8 +1633,8 @@
           "view_type": "PANEL_VIEW"
         }
       ],
-      "panel_count": 15,
-      "total_controls": 25,
+      "panel_count": 17,
+      "total_controls": 31,
       "route": "/precus/policies"
     },
     {

@@ -272,6 +272,23 @@ class Incident(SQLModel, table=True):
     resolved_at: Optional[datetime] = None
     resolved_by: Optional[str] = Field(default=None, max_length=100)
 
+    # SDSR fields (PIN-370) - for run-failure incidents
+    source_run_id: Optional[str] = Field(default=None, index=True)
+    source_type: Optional[str] = Field(default="killswitch")  # run, killswitch, policy, manual
+    category: Optional[str] = None  # EXECUTION_FAILURE, POLICY_VIOLATION, etc.
+    description: Optional[str] = None
+    error_code: Optional[str] = None  # EXECUTION_TIMEOUT, AGENT_CRASH, etc.
+    error_message: Optional[str] = None
+    impact_scope: Optional[str] = None  # single_run, agent, tenant, system
+    affected_agent_id: Optional[str] = None
+    affected_count: int = Field(default=1)
+    resolution_notes: Optional[str] = None
+    escalated: bool = Field(default=False)
+    escalated_at: Optional[datetime] = None
+    escalated_to: Optional[str] = None
+    is_synthetic: bool = Field(default=False)
+    synthetic_scenario_id: Optional[str] = None
+
     def add_related_call(self, call_id: str):
         """Add a related call ID."""
         ids = self.get_related_call_ids()

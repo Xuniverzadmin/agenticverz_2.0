@@ -89,10 +89,18 @@ def gateway_context_to_actor(context: GatewayContext) -> ActorContext:
         else:
             actor_type = ActorType.EXTERNAL_PAID
 
+        # Map AuthSource to IdentitySource
+        source_map = {
+            "console": IdentitySource.CONSOLE,
+            "clerk": IdentitySource.CLERK,
+            "stub": IdentitySource.DEV,
+        }
+        identity_source = source_map.get(context.auth_source.value, IdentitySource.DEV)
+
         return ActorContext(
             actor_id=context.actor_id,
             actor_type=actor_type,
-            source=IdentitySource.CLERK if context.auth_source.value == "clerk" else IdentitySource.DEV,
+            source=identity_source,
             tenant_id=context.tenant_id,
             account_id=context.account_id,
             team_id=None,

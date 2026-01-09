@@ -114,6 +114,9 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
         authorization = request.headers.get("Authorization")
         api_key = request.headers.get("X-AOS-Key")
 
+        # Log auth attempt at debug level
+        logger.debug(f"Auth check: path={path}, has_auth={bool(authorization)}, has_key={bool(api_key)}")
+
         # Authenticate through gateway
         result = await self._gateway.authenticate(
             authorization_header=authorization,
@@ -122,6 +125,7 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
 
         # Handle errors
         if is_error(result):
+            logger.warning(f"Auth failed: path={path}, error={result.error_code}")
             return self._error_response(result)
 
         # Inject context into request state

@@ -86,6 +86,9 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         refreshToken: state.refreshToken,
         tenantId: state.tenantId,
+        // FIX: Persist user and isAuthenticated for session persistence (PIN-370)
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
         onboardingComplete: state.onboardingComplete,
         onboardingStep: state.onboardingStep,
         // PIN-318: Persist authority

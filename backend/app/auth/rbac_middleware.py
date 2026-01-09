@@ -336,17 +336,21 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         "/metrics",  # MUST remain tenant-agnostic (see security note above)
         "/api/v1/auth/",  # Login/register endpoints
         "/api/v1/c2/predictions/",  # C2 Prediction Plane (advisory only, no enforcement)
+        "/api/v1/activity/",  # SDSR Activity API (PIN-370, preflight validation)
+        "/api/v1/policy-proposals/",  # SDSR Policy Proposals API (PIN-373, preflight validation)
         "/docs",
         "/openapi.json",
         "/redoc",
         # =================================================================
         # FOUNDER ROUTES (PIN-336)
         # These routes use dedicated FOPS auth via verify_fops_token.
-        # RBAC is bypassed; route handlers enforce FOPS token/key auth.
+        # RBAC mapping still applies for shadow audit purposes.
+        # Actual auth enforcement is handled by route handlers.
         # =================================================================
         "/founder/",  # Contract review, evidence review, timeline
-        "/ops/",  # Ops console actions (freeze, throttle, override)
         "/platform/",  # Platform health (founder-only)
+        # NOTE: /ops/ and /api/v1/incidents/ are NOT public - they have
+        # RBAC mappings for shadow audit (see OPS ROUTES and INCIDENTS sections)
     ]
 
     for public_path in PUBLIC_PATHS:

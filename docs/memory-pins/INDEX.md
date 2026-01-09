@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-08 (PIN-359 Sidebar & Workspace Realignment - Wireframe Compliance)
+**Last Updated:** 2026-01-09 (PIN-376 Auth Pattern Enforcement - Clerk/RBAC Gateway)
 
 ---
 
@@ -361,6 +361,19 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-357](PIN-357-view-mode-layer-architecture-renderercontext.md) | **View Mode Layer Architecture (RendererContext)** | Frontend / Architecture | **✅ COMPLETE** | 2026-01-08 |
 | [PIN-358](PIN-358-precus-gap-closure-task-tracker.md) | **PreCus Gap Closure Task Tracker** | Frontend / Implementation | **🏗️ IN_PROGRESS** | 2026-01-08 |
 | [PIN-359](PIN-359-sidebar-workspace-realignment---wireframe-compliance.md) | **Sidebar & Workspace Realignment - Wireframe Compliance** | Frontend / UI Governance | **✅ COMPLETE** | 2026-01-08 |
+| [PIN-360](PIN-360-step-0b-directional-capability-normalization.md) | **STEP 0B — Directional Capability Normalization** | Governance / Capability Intelligence | **✅ COMPLETE** | 2026-01-08 |
+| [PIN-361](PIN-361-step-1-domain-applicability-matrix.md) | **STEP 1 — Domain Applicability Matrix** | Governance / Capability Intelligence | **✅ COMPLETE** | 2026-01-08 |
+| [PIN-362](PIN-362-step-1b-l21-compatibility-scan.md) | **STEP 1B — L2.1 Capability Compatibility Scan** | Governance / Capability Intelligence | **✅ COMPLETE** | 2026-01-08 |
+| [PIN-363](PIN-363-step-1b-r-l21-surface-rebaselining.md) | **STEP 1B-R — L2.1 Surface Rebaselining** | Governance / Capability Intelligence | **🔒 FROZEN** | 2026-01-08 |
+| [PIN-364](PIN-364-step-x-capability-opportunity-mapping.md) | **STEP X — Capability Opportunity Mapping** | Governance / Roadmap Intelligence | **📦 ARCHIVED** | 2026-01-08 |
+| [PIN-365](PIN-365-step-2a-ui-slot-population.md) | **STEP 2A — UI Slot Population** | Governance / UI Pipeline Evolution | **✅ COMPLETE** | 2026-01-08 |
+| [PIN-366](PIN-366-step-3-scenario-generation-execution-validation.md) | **STEP 3 — Scenario Generation, Execution & Validation** | Governance / Validation Pipeline | **🔒 FROZEN + CI GATED** | 2026-01-09 |
+| [PIN-367](PIN-367-phase-2a1-affordance-surfacing---blocked-action-controls.md) | **Phase-2A.1 Affordance Surfacing - Blocked Action Controls** | UI Pipeline / Phase-2A.1 | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-368](PIN-368-phase-2a2-simulation-mode---domain-by-domain-rollout.md) | **Phase-2A.2 Simulation Mode - Domain-by-Domain Rollout** | UI Pipeline / Phase-2A.2 | **🏗️ IN_PROGRESS** | 2026-01-09 |
+| [PIN-369](PIN-369-phase-25-retry-real-action.md) | **Phase-2.5 RETRY Real Action** | UI Pipeline / Phase-2.5 | **🏗️ IN_PROGRESS** | 2026-01-09 |
+| [PIN-374](PIN-374-l21-ui-projection-pipeline-mastery.md) | **L2.1 UI Projection Pipeline Mastery** | UI Architecture / Pipeline | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-375](PIN-375-policy-proposals-ui---sdsr-policy-002-complete.md) | **Policy Proposals UI - SDSR-POLICY-002 Complete** | SDSR / Policy Domain | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-376](PIN-376-auth-pattern-enforcement---clerkrbac-gateway.md) | **Auth Pattern Enforcement - Clerk/RBAC Gateway** | Auth Architecture / RBAC | **✅ COMPLETE** | 2026-01-09 |
 
 ---
 
@@ -1130,6 +1143,26 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-09 | **PIN-376 Auth Pattern Enforcement - Clerk/RBAC Gateway** - Created via memory_trail. |
+| 2026-01-09 | **PIN-375 Policy Proposals UI - SDSR-POLICY-002 Complete** - Created via memory_trail. |
+| 2026-01-09 | **PIN-374 L2.1 UI Projection Pipeline Mastery** - Created via memory_trail. |
+| 2026-01-09 | **PIN-370 Scenario-Driven System Realization (SDSR)** - Updated: Updates |
+| 2026-01-09 | **PIN-370 Scenario-Driven System Realization (SDSR)** - Updated: Updates |
+| 2026-01-09 | **PIN-369 Phase-2.5 RETRY Real Action** - Created via memory_trail. |
+| 2026-01-09 | **PIN-368 Phase-2A.2 Simulation Mode - Domain-by-Domain Rollout** - Updated: Updates |
+| 2026-01-09 | **PIN-368 Phase-2A.2 Simulation Mode - Domain-by-Domain Rollout** - Created via memory_trail. |
+| 2026-01-09 | **PIN-367 Phase-2A.1 Affordance Surfacing - Blocked Action Controls** - Created via memory_trail. |
+| 2026-01-09 | **PIN-366 STEP 3 — Scenario Generation, Execution & Validation** - Updated: Updates |
+| 2026-01-09 | **PIN-366 STEP 3 — Scenario Generation, Execution & Validation** - Updated: Updates |
+| 2026-01-09 | **PIN-366 STEP 3 — Scenario Generation, Execution & Validation** - CI GATED: Phase-A CI gating complete |
+| 2026-01-09 | **PIN-366 STEP 3 — Scenario Generation, Execution & Validation** - Updated: Updates |
+| 2026-01-09 | **PIN-366 STEP 3 — Scenario Generation, Execution & Validation** - FROZEN: Symmetric coverage complete (8 scenarios) |
+| 2026-01-08 | **PIN-366 STEP 3 — Scenario Generation, Execution & Validation** - Updated: Updates |
+| 2026-01-08 | **PIN-365 STEP 2A — UI Slot Population (Surface-Aligned)** - Updated: Updates |
+| 2026-01-08 | **PIN-365 STEP 2A — UI Slot Population (Surface-Aligned)** - Updated: Updates |
+| 2026-01-08 | **PIN-361 STEP 1 — Domain Applicability Matrix** - Updated: Updates |
+| 2026-01-08 | **PIN-361 STEP 1 — Domain Applicability Matrix** - Updated: Updates |
+| 2026-01-08 | **PIN-360 STEP 0B — Directional Capability Normalization** - Updated: Updates |
 | 2026-01-08 | **PIN-359 Sidebar & Workspace Realignment - Wireframe Compliance** - Created via memory_trail. |
 | 2026-01-08 | **PIN-358 PreCus Gap Closure Task Tracker** - Created via memory_trail. |
 | 2026-01-08 | **PIN-357 View Mode Layer Architecture (RendererContext)** - Created via memory_trail. |

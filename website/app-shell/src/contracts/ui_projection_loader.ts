@@ -248,9 +248,11 @@ function validateProjection(data: unknown): asserts data is UIProjectionLock {
     );
   }
 
-  if (meta.processing_stage !== "LOCKED") {
+  // Accept LOCKED and Phase-2A stages (affordance surfacing, simulation)
+  const validStages = ["LOCKED", "PHASE_2A1_APPLIED", "PHASE_2A2_SIMULATED"];
+  if (!validStages.includes(meta.processing_stage)) {
     throw new Error(
-      `Invalid projection: expected stage 'LOCKED', got '${meta.processing_stage}'`
+      `Invalid projection: expected stage in [${validStages.join(", ")}], got '${meta.processing_stage}'`
     );
   }
 

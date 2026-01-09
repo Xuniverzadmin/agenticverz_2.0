@@ -18,7 +18,7 @@
  */
 
 import { useEffect, useState, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   LayoutDashboard,
   Activity,
@@ -48,6 +48,10 @@ import {
 import type { Domain, Panel, DomainName, RenderMode } from '@/contracts/ui_projection_types';
 import { preflightLogger } from '@/lib/preflightLogger';
 import { useRenderer, InspectorOnly } from '@/contexts/RendererContext';
+import { SimulatedControl } from '@/components/simulation/SimulatedControl';
+import { useSimulation } from '@/contexts/SimulationContext';
+import { Beaker } from 'lucide-react';
+import { PanelContent, hasPanelContent } from '@/components/panels/PanelContentRegistry';
 
 // ============================================================================
 // Constants
@@ -93,14 +97,6 @@ function getPanelsForTopic(panels: NormalizedPanel[], topic: string): Normalized
 }
 
 // ============================================================================
-// Helper: Check if panel is Order-1
-// ============================================================================
-
-function isOrder1Panel(panel: NormalizedPanel): boolean {
-  return panel.order === 'O1';
-}
-
-// ============================================================================
 // Helper: Format label (remove underscores, title case)
 // ============================================================================
 
@@ -109,65 +105,36 @@ function formatLabel(str: string): string {
 }
 
 // ============================================================================
-// Panel Card Component (For O2-O5 panels - navigable)
+// REMOVED: PanelCard Component
+// ============================================================================
+// Per PIN-359: Topic tabs are content contexts, not navigation.
+// ALL panels under a topic must render as FULL_PANEL_SURFACE.
+// There is NO "card vs surface" decision inside topic context.
+// Panel inference is KILLED - all panels are surfaces.
 // ============================================================================
 
-interface PanelCardProps {
+// ============================================================================
+// Full Panel Surface Component (PIN-359: ALL panels render as surfaces)
+// Topic tabs are content contexts - panels are already selected by topic.
+// NO inference, NO card mode, NO click-to-expand inside topic context.
+// ============================================================================
+
+interface FullPanelSurfaceProps {
   panel: NormalizedPanel;
 }
 
-function PanelCard({ panel }: PanelCardProps) {
+function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
   const RenderIcon = RENDER_MODE_ICONS[panel.render_mode] || List;
   const isAutoDescription = panel._normalization?.auto_description;
+  const simulation = useSimulation();
+  const renderer = useRenderer();
 
-  return (
-    <Link
-      to={panel.route}
-      className="block bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-primary-600 hover:bg-gray-750 transition-all group"
-    >
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-gray-700/50 rounded-lg group-hover:bg-primary-900/30 transition-colors">
-          <RenderIcon size={20} className="text-gray-400 group-hover:text-primary-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-gray-100 group-hover:text-white mb-1">
-            {panel.panel_name}
-          </h4>
-          {panel.short_description && (
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-gray-400 line-clamp-2">{panel.short_description}</p>
-              {/* Auto-description marker - Inspector only */}
-              {isAutoDescription && (
-                <InspectorOnly>
-                  <span className="text-xs px-1 py-0.5 bg-amber-900/30 text-amber-500 rounded font-mono flex-shrink-0">
-                    AUTO
-                  </span>
-                </InspectorOnly>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-// ============================================================================
-// Order-1 Inline Panel Component (TODO-2: Render inline, no button/CTA)
-// O1 panels are content surfaces, NOT navigation targets
-// ============================================================================
-
-interface Order1PanelProps {
-  panel: NormalizedPanel;
-}
-
-function Order1Panel({ panel }: Order1PanelProps) {
-  const RenderIcon = RENDER_MODE_ICONS[panel.render_mode] || List;
-  const isAutoDescription = panel._normalization?.auto_description;
+  // Get action controls for simulation
+  const actionControls = panel.controls?.filter(c => c.category === 'action') || [];
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-      {/* Panel Header - NO button, NO click handler */}
+      {/* Panel Header - NO button, NO click handler, NO menu */}
       <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary-900/30 rounded-lg">
@@ -192,23 +159,68 @@ function Order1Panel({ panel }: Order1PanelProps) {
         {/* Order badge - Inspector only */}
         <InspectorOnly>
           <span className="text-xs px-2 py-1 bg-emerald-900/30 text-emerald-400 rounded font-mono">
-            O1
+            {panel.order}
           </span>
         </InspectorOnly>
       </div>
 
-      {/* Panel Content - Inline render placeholder */}
-      <div className="p-5">
-        <div className="bg-gray-900/50 border border-dashed border-gray-600 rounded-lg p-8 text-center">
-          <p className="text-gray-500 text-sm">
-            Content surface — awaiting backend binding
-          </p>
-          <InspectorOnly>
-            <p className="text-gray-600 text-xs mt-2 font-mono">
-              render_mode: {panel.render_mode} | controls: {panel.control_count}
-            </p>
-          </InspectorOnly>
+      {/* Controls Section - Phase-2A.2 Simulation */}
+      {actionControls.length > 0 && (
+        <div className="px-5 py-4 border-b border-gray-700 bg-gray-800/50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              Actions
+              {simulation.isSimulationEnabled && (
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-900/50 text-amber-400 border border-amber-700/50">
+                  <Beaker size={12} />
+                  SIMULATION
+                </span>
+              )}
+            </h4>
+            <InspectorOnly>
+              <span className="text-xs text-gray-500">
+                {actionControls.length} action{actionControls.length !== 1 ? 's' : ''}
+              </span>
+            </InspectorOnly>
+          </div>
+          <div className="space-y-2">
+            {actionControls.map((control, idx) => (
+              <SimulatedControl
+                key={`${control.type}-${idx}`}
+                control={control}
+                panelId={panel.panel_id}
+                showType={renderer.showControlTypes}
+              />
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* Panel Content - SDSR data binding via PanelContentRegistry */}
+      <div className="p-5">
+        {hasPanelContent(panel.panel_id) ? (
+          <>
+            <PanelContent panel={panel} />
+            <InspectorOnly>
+              <div className="mt-3 pt-3 border-t border-gray-700/50">
+                <span className="text-xs px-2 py-1 bg-green-900/30 text-green-400 rounded font-mono">
+                  SDSR BOUND
+                </span>
+              </div>
+            </InspectorOnly>
+          </>
+        ) : (
+          <div className="bg-gray-900/50 border border-dashed border-gray-600 rounded-lg p-8 text-center">
+            <p className="text-gray-500 text-sm">
+              Content surface — awaiting backend binding
+            </p>
+            <InspectorOnly>
+              <p className="text-gray-600 text-xs mt-2 font-mono">
+                render_mode: {panel.render_mode} | controls: {panel.control_count}
+              </p>
+            </InspectorOnly>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -251,8 +263,9 @@ function TopicTabs({ topics, activeTopic, onSelectTopic }: TopicTabsProps) {
 
 // ============================================================================
 // Panels Grid (Under Selected Topic)
-// Order-1 panels: Render inline (no click, no CTA)
-// Order 2-5 panels: Render as navigable cards
+// PIN-359: ALL panels render as FULL_PANEL_SURFACE inside topic context.
+// NO card mode. NO click-to-expand. NO inference.
+// Topic tabs are content contexts - panels are already selected by topic.
 // ============================================================================
 
 interface PanelsGridProps {
@@ -268,29 +281,13 @@ function PanelsGrid({ panels }: PanelsGridProps) {
     );
   }
 
-  // Separate O1 panels from deeper order panels
-  const o1Panels = panels.filter(isOrder1Panel);
-  const deeperPanels = panels.filter(p => !isOrder1Panel(p));
-
+  // PIN-359: ALL panels render as full surfaces - no O1 vs O2-O5 distinction
+  // Topic context = surface mode. Panel inference is KILLED.
   return (
-    <div className="space-y-6">
-      {/* Order-1 Panels: Render inline (content surfaces) */}
-      {o1Panels.length > 0 && (
-        <div className="space-y-4">
-          {o1Panels.map((panel) => (
-            <Order1Panel key={panel.panel_id} panel={panel} />
-          ))}
-        </div>
-      )}
-
-      {/* Order 2-5 Panels: Render as navigable cards */}
-      {deeperPanels.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {deeperPanels.map((panel) => (
-            <PanelCard key={panel.panel_id} panel={panel} />
-          ))}
-        </div>
-      )}
+    <div className="space-y-4">
+      {panels.map((panel) => (
+        <FullPanelSurface key={panel.panel_id} panel={panel} />
+      ))}
     </div>
   );
 }
