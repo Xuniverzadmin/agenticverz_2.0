@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-09 (PIN-376 Auth Pattern Enforcement - Clerk/RBAC Gateway)
+**Last Updated:** 2026-01-09 (PIN-377 Auth Architecture: Issuer-Based Routing Implementation)
 
 ---
 
@@ -374,6 +374,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-374](PIN-374-l21-ui-projection-pipeline-mastery.md) | **L2.1 UI Projection Pipeline Mastery** | UI Architecture / Pipeline | **✅ COMPLETE** | 2026-01-09 |
 | [PIN-375](PIN-375-policy-proposals-ui---sdsr-policy-002-complete.md) | **Policy Proposals UI - SDSR-POLICY-002 Complete** | SDSR / Policy Domain | **✅ COMPLETE** | 2026-01-09 |
 | [PIN-376](PIN-376-auth-pattern-enforcement---clerkrbac-gateway.md) | **Auth Pattern Enforcement - Clerk/RBAC Gateway** | Auth Architecture / RBAC | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-377](PIN-377-auth-architecture-issuer-based-routing-implementation.md) | **Auth Architecture: Issuer-Based Routing Implementation** | Auth / Architecture | **✅ COMPLETE** | 2026-01-09 |
 
 ---
 
@@ -1143,6 +1144,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-09 | **PIN-377 Auth Architecture: Issuer-Based Routing Implementation** - Created via memory_trail. |
 | 2026-01-09 | **PIN-376 Auth Pattern Enforcement - Clerk/RBAC Gateway** - Created via memory_trail. |
 | 2026-01-09 | **PIN-375 Policy Proposals UI - SDSR-POLICY-002 Complete** - Created via memory_trail. |
 | 2026-01-09 | **PIN-374 L2.1 UI Projection Pipeline Mastery** - Created via memory_trail. |
