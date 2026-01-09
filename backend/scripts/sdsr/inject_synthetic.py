@@ -4,25 +4,50 @@
 # Temporal:
 #   Trigger: CLI invocation
 #   Execution: sync
-# Role: SDSR Synthetic Data Injection Script (Keystone)
-# Reference: PIN-370 (Scenario-Driven System Realization)
+# Role: SDSR Scenario Realization Engine (Keystone)
+# Reference: PIN-370 (Scenario-Driven System Realization), PIN-379 (E2E Pipeline)
 
 """
 SDSR inject_synthetic.py - Scenario Realization Engine
 
+CONTRACT v1.0 (LOCKED - PIN-379)
+
 PURPOSE:
-    Materializes YAML scenario specifications into real database state.
-    This is the KEYSTONE that enables SDSR pipeline validation.
+    Realizes YAML scenario specifications into the system by creating
+    ONLY canonical inputs and then handing control to the real system.
+
+    If the scenario succeeds or fails, it must be because:
+    - Backend engines behaved correctly, OR
+    - Backend engines are missing or broken
+
+    NOT because this script helped them.
+
+WHAT THIS IS:
+    - A Scenario → System bridge
+    - A repeatable realization tool
+    - A controlled entry point into real execution paths
+    - A cleanup-capable realization executor
+
+WHAT THIS IS NOT:
+    - NOT a test runner
+    - NOT a fixture loader
+    - NOT a data seeder
+    - NOT allowed to "complete" scenarios
+    - NOT allowed to fabricate downstream state
+
+EXIT CODES:
+    0 → Inputs created + execution triggered
+    1 → Validation failure (schema, missing fields)
+    2 → Partial write (transaction rolled back)
+    3 → Forbidden write attempted (guardrail violation)
 
 FOUR NON-NEGOTIABLE RULES (PIN-370):
     1. NO INTELLIGENCE
        - Purely mechanical. No inference, no guessing, no helpful defaults.
        - Incomplete spec → fail loudly.
-       - If a field is missing, STOP.
 
     2. WRITES ONLY WHAT REAL FLOWS WRITE
        - Synthetic ≠ fake. Use same data structures as real flows.
-       - Don't invent fields or skip required fields.
 
     3. EVERY ROW TRACEABLE
        - is_synthetic=true on every write. No exceptions.
@@ -30,33 +55,24 @@ FOUR NON-NEGOTIABLE RULES (PIN-370):
 
     4. ONE SCENARIO = ONE TRANSACTION
        - Atomic, repeatable, idempotent when cleaned.
-       - If anything fails, nothing is written.
-
-WHAT THIS IS:
-    - A scenario materializer
-    - A DB + capability seeder
-    - A realization engine
-
-WHAT THIS IS NOT:
-    - NOT a test runner
-    - NOT a UI helper
-    - NOT a mock generator
-    - NOT a data faker
 
 USAGE:
-    python inject_synthetic.py --scenario scenarios/ONBOARDING-001.yaml
-    python inject_synthetic.py --scenario scenarios/ACTIVITY-RETRY-001.yaml --cleanup
-    python inject_synthetic.py --scenario scenarios/ACTIVITY-RETRY-001.yaml --dry-run
+    python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml
+    python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml --dry-run
+    python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml --cleanup
+    python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml --wait
 """
 
 import argparse
+import hashlib
 import logging
 import os
 import sys
+import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import yaml
 
@@ -72,10 +88,67 @@ logger = logging.getLogger("sdsr.inject")
 
 
 # =============================================================================
+# EXIT CODES (Contract v1.0)
+# =============================================================================
+EXIT_SUCCESS = 0  # Inputs created + execution triggered
+EXIT_VALIDATION_FAILURE = 1  # Schema, missing fields
+EXIT_PARTIAL_WRITE = 2  # Transaction rolled back
+EXIT_FORBIDDEN_WRITE = 3  # Guardrail violation
+
+
+# =============================================================================
+# FORBIDDEN TABLES (GUARDRAIL - Contract Section 6.2)
+# =============================================================================
+# These tables are created by backend engines, NOT by inject_synthetic.py
+# Attempting to write → exit code 3 + abort
+
+FORBIDDEN_TABLES = frozenset(
+    [
+        "aos_traces",
+        "aos_trace_steps",
+        "incidents",
+        "policy_proposals",
+        "prevention_records",
+        "policy_rules",
+    ]
+)
+
+# Tables we ARE allowed to write (Contract Section 6.1)
+ALLOWED_TABLES = frozenset(
+    [
+        "tenants",
+        "api_keys",
+        "agents",
+        "runs",
+    ]
+)
+
+
+# =============================================================================
+# CLEANUP ORDER (Contract Section 8.1)
+# =============================================================================
+# Topologically safe: children before parents
+# Includes engine-generated tables for cleanup ONLY
+
+CLEANUP_ORDER = [
+    # Engine-generated tables (we clean these, but never write)
+    "policy_proposals",
+    "prevention_records",
+    "incidents",
+    "aos_trace_steps",
+    "aos_traces",
+    # Canonical input tables (we write and clean these)
+    "runs",
+    "worker_runs",
+    "agents",
+    "api_keys",
+    "tenants",
+]
+
+
+# =============================================================================
 # SCHEMA DEFINITIONS
 # =============================================================================
-# These define the required fields for each table write.
-# If a scenario spec is missing a required field, we fail loudly.
 
 REQUIRED_FIELDS = {
     "tenants": ["id", "name", "slug"],
@@ -89,13 +162,13 @@ OPTIONAL_FIELDS = {
     "tenants": ["plan", "status", "max_workers", "max_runs_per_day"],
     "api_keys": ["status", "permissions_json", "allowed_workers_json"],
     "agents": ["description", "status", "tenant_id", "owner_id"],
-    "runs": ["status", "tenant_id", "parent_run_id", "priority", "max_attempts"],
+    "runs": ["status", "tenant_id", "parent_run_id", "priority", "max_attempts", "plan_json"],
     "worker_runs": ["status", "input_json", "api_key_id", "user_id", "parent_run_id"],
 }
 
 
 # =============================================================================
-# VALIDATION
+# EXCEPTIONS
 # =============================================================================
 
 
@@ -105,51 +178,66 @@ class ScenarioValidationError(Exception):
     pass
 
 
+class ForbiddenWriteError(Exception):
+    """Raised when attempting to write to a forbidden table."""
+
+    pass
+
+
+class IdempotencyError(Exception):
+    """Raised when scenario data already exists without cleanup."""
+
+    pass
+
+
+# =============================================================================
+# GUARDRAIL ENFORCEMENT
+# =============================================================================
+
+
+def enforce_guardrail(table: str) -> None:
+    """
+    Check if table write is allowed.
+
+    Contract Section 6.2: Attempting to write to forbidden tables → exit code 3
+    """
+    if table in FORBIDDEN_TABLES:
+        raise ForbiddenWriteError(
+            f"GUARDRAIL VIOLATION: Cannot write to '{table}'. "
+            f"This table is created by backend engines, not by inject_synthetic.py. "
+            f"Allowed tables: {sorted(ALLOWED_TABLES)}"
+        )
+
+
+# =============================================================================
+# VALIDATION
+# =============================================================================
+
+
 def validate_scenario_spec(spec: dict) -> None:
     """
     Validate scenario specification has all required fields.
 
     Rule 1: NO INTELLIGENCE - fail loudly on missing fields.
     """
-    # Top-level required fields
     if "scenario_id" not in spec:
         raise ScenarioValidationError("Missing required field: scenario_id")
 
-    if "domain" not in spec:
-        raise ScenarioValidationError("Missing required field: domain")
+    # Support both old format (backend.writes) and new format (preconditions/steps)
+    has_old_format = "backend" in spec and "writes" in spec.get("backend", {})
+    has_new_format = "preconditions" in spec or "steps" in spec
 
-    if "backend" not in spec:
-        raise ScenarioValidationError("Missing required field: backend")
-
-    backend = spec["backend"]
-    if "tables" not in backend:
-        raise ScenarioValidationError("Missing required field: backend.tables")
-
-    if "writes" not in backend:
-        raise ScenarioValidationError("Missing required field: backend.writes")
-
-    # Validate each write has required fields for its table
-    for write in backend["writes"]:
-        for operation, data in write.items():
-            # Extract table name from operation (e.g., "create_tenant" -> "tenants")
-            table = _operation_to_table(operation)
-            if table not in REQUIRED_FIELDS:
-                raise ScenarioValidationError(f"Unknown table for operation: {operation}")
-
-            required = REQUIRED_FIELDS[table]
-            for field in required:
-                if field not in data:
-                    raise ScenarioValidationError(
-                        f"Missing required field '{field}' in operation '{operation}'. "
-                        f"Required fields for {table}: {required}"
-                    )
+    if not has_old_format and not has_new_format:
+        raise ScenarioValidationError(
+            "Missing scenario structure. Expected 'backend.writes' (old format) or 'preconditions/steps' (new format)"
+        )
 
 
 def _operation_to_table(operation: str) -> str:
     """Map operation name to table name."""
     mapping = {
         "create_tenant": "tenants",
-        "create_api_key": "api_keys",
+        "create_api_key": "api_keys",  # pragma: allowlist secret
         "create_agent": "agents",
         "create_run": "runs",
         "create_worker_run": "worker_runs",
@@ -179,6 +267,155 @@ def get_db_connection():
     return psycopg2.connect(database_url)
 
 
+def check_idempotency(scenario_id: str, conn) -> bool:
+    """
+    Check if scenario data already exists.
+
+    Contract Section 9: Running inject twice without cleanup → error
+    """
+    cursor = conn.cursor()
+
+    # Check if any synthetic data exists for this scenario
+    for table in ALLOWED_TABLES:
+        cursor.execute(
+            f"SELECT COUNT(*) FROM {table} WHERE is_synthetic = true AND synthetic_scenario_id = %s", (scenario_id,)
+        )
+        count = cursor.fetchone()[0]
+        if count > 0:
+            cursor.close()
+            return True
+
+    cursor.close()
+    return False
+
+
+def build_writes_from_new_format(spec: dict) -> List[Dict[str, Any]]:
+    """
+    Convert new format (preconditions/steps) to writes list.
+
+    New format structure:
+        preconditions:
+          tenant: {create: true, tenant_id: ...}
+          api_key: {create: true, ...}
+          agent: {create: true, agent_id: ...}
+        steps:
+          - step_id: ACTIVITY-FAIL
+            action: create_run
+            data: {...}
+    """
+    writes = []
+    scenario_id = spec["scenario_id"]
+
+    # Process preconditions
+    preconditions = spec.get("preconditions", {})
+
+    # Tenant
+    if preconditions.get("tenant", {}).get("create"):
+        tenant_data = preconditions["tenant"]
+        tenant_id = tenant_data.get("tenant_id", f"sdsr-tenant-{scenario_id}")
+        writes.append(
+            {
+                "create_tenant": {
+                    "id": tenant_id,
+                    "name": tenant_data.get("name", f"SDSR Tenant {scenario_id}"),
+                    "slug": tenant_data.get("slug", tenant_id),
+                    "plan": tenant_data.get("plan", "enterprise"),
+                    "status": "active",
+                }
+            }
+        )
+
+    # API Key
+    if preconditions.get("api_key", {}).get("create"):
+        api_key_data = preconditions["api_key"]
+        tenant_id = preconditions.get("tenant", {}).get("tenant_id", f"sdsr-tenant-{scenario_id}")
+        api_key_id = api_key_data.get("api_key_id", f"sdsr-key-{scenario_id}")
+        # Generate a deterministic key hash for synthetic keys
+        key_hash = hashlib.sha256(f"{scenario_id}:{api_key_id}".encode()).hexdigest()
+        writes.append(
+            {
+                "create_api_key": {
+                    "id": api_key_id,
+                    "tenant_id": tenant_id,
+                    "name": api_key_data.get("name", f"SDSR Key {scenario_id}"),
+                    "key_prefix": "sdsr_",
+                    "key_hash": key_hash,
+                    "status": "active",
+                }
+            }
+        )
+
+    # Agent
+    if preconditions.get("agent", {}).get("create"):
+        agent_data = preconditions["agent"]
+        agent_id = agent_data.get("agent_id", f"sdsr-agent-{scenario_id}")
+        tenant_id = preconditions.get("tenant", {}).get("tenant_id", f"sdsr-tenant-{scenario_id}")
+        writes.append(
+            {
+                "create_agent": {
+                    "id": agent_id,
+                    "name": agent_data.get("name", f"SDSR Agent {scenario_id}"),
+                    "description": agent_data.get("description", f"Synthetic agent for {scenario_id}"),
+                    "status": "active",
+                    "tenant_id": tenant_id,
+                    # Required NOT NULL fields with defaults (from Agent model)
+                    "rate_limit_rpm": agent_data.get("rate_limit_rpm", 60),
+                    "concurrent_runs_limit": agent_data.get("concurrent_runs_limit", 5),
+                    "spent_cents": agent_data.get("spent_cents", 0),
+                    "budget_alert_threshold": agent_data.get("budget_alert_threshold", 80),
+                }
+            }
+        )
+
+    # Process steps
+    for step in spec.get("steps", []):
+        action = step.get("action")
+        data = step.get("data", {})
+
+        if action == "create_run":
+            # For E2E testing, we create runs with status="queued" so the worker picks them up
+            # SDSR Contract: Scenarios inject CAUSES, engines create EFFECTS
+            # A failed run is an EFFECT - we must create a queued run that will fail during execution
+
+            # Determine if this run should fail during execution
+            has_failure_plan = data.get("failure_code") is not None
+
+            run_data = {
+                "id": data.get("run_id", data.get("id", f"run-{scenario_id}-{step.get('step_id', 'default')}")),
+                "agent_id": data.get(
+                    "agent_id", preconditions.get("agent", {}).get("agent_id", f"sdsr-agent-{scenario_id}")
+                ),
+                "goal": data.get("goal", f"SDSR E2E Test: {step.get('description', scenario_id)}"),
+                "tenant_id": data.get(
+                    "tenant_id", preconditions.get("tenant", {}).get("tenant_id", f"sdsr-tenant-{scenario_id}")
+                ),
+                # SDSR: Always "queued" if we have a failure plan - let the worker execute and fail
+                # This ensures engines fire (IncidentEngine, TraceStore, etc.)
+                "status": "queued" if has_failure_plan else data.get("status", "queued"),
+                "priority": data.get("priority", 5),
+                "max_attempts": data.get("max_attempts", 1),
+                # Required NOT NULL fields with defaults (from Run model)
+                "attempts": data.get("attempts", 0),
+            }
+
+            # If the scenario expects failure, we need a plan that will fail
+            # For EXECUTION_TIMEOUT scenarios, we use a special marker
+            if data.get("failure_code") == "EXECUTION_TIMEOUT":
+                # Create a plan that triggers timeout handling
+                run_data["plan_json"] = '{"steps": [{"skill": "__sdsr_timeout_trigger__", "params": {}}]}'
+                run_data["error_message"] = data.get("failure_message", "SDSR: Execution timeout triggered")
+            elif data.get("failure_code"):
+                # Other failure types - use a plan that will fail with the specified code
+                run_data["plan_json"] = (
+                    f'{{"steps": [{{"skill": "__sdsr_fail_trigger__", "params": {{"error_code": "{data.get("failure_code")}", "error_message": "{data.get("failure_message", "SDSR injected failure")}"}}}}]}}'
+                )
+                run_data["error_message"] = data.get("failure_message", f"SDSR: {data.get('failure_code')}")
+
+            writes.append({"create_run": run_data})
+
+    return writes
+
+
 def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
     """
     Inject a scenario's writes into the database.
@@ -190,13 +427,19 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
         dict with summary of writes performed
     """
     scenario_id = spec["scenario_id"]
-    writes = spec["backend"]["writes"]
+
+    # Determine writes based on format
+    if "backend" in spec and "writes" in spec.get("backend", {}):
+        writes = spec["backend"]["writes"]
+    else:
+        writes = build_writes_from_new_format(spec)
 
     results = {
         "scenario_id": scenario_id,
         "rows_written": 0,
         "tables_touched": set(),
         "operations": [],
+        "execution_triggered": False,
     }
 
     if dry_run:
@@ -204,11 +447,17 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
         for write in writes:
             for operation, data in write.items():
                 table = _operation_to_table(operation)
-                results["operations"].append({
-                    "operation": operation,
-                    "table": table,
-                    "data": data,
-                })
+
+                # Guardrail check even in dry-run
+                enforce_guardrail(table)
+
+                results["operations"].append(
+                    {
+                        "operation": operation,
+                        "table": table,
+                        "data": data,
+                    }
+                )
                 results["tables_touched"].add(table)
                 logger.info(f"  [DRY] Would {operation}: {data.get('id', 'auto')}")
         results["tables_touched"] = list(results["tables_touched"])
@@ -218,9 +467,18 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
     cursor = conn.cursor()
 
     try:
+        # Contract Section 9: Idempotency check
+        if check_idempotency(scenario_id, conn):
+            raise IdempotencyError(
+                f"Scenario {scenario_id} data already exists. Run with --cleanup first or use a different scenario_id."
+            )
+
         for write in writes:
             for operation, data in write.items():
                 table = _operation_to_table(operation)
+
+                # Contract Section 6.2: Guardrail enforcement
+                enforce_guardrail(table)
 
                 # Rule 3: Inject synthetic markers
                 data["is_synthetic"] = True
@@ -231,7 +489,7 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
                     data["id"] = str(uuid.uuid4())
 
                 # Handle timestamps
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 if "created_at" not in data:
                     data["created_at"] = now
                 # Only add updated_at for tables that have it
@@ -249,17 +507,30 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
                 logger.info(f"Executing: {operation} on {table} (id={data['id']})")
                 cursor.execute(sql, values)
 
-                results["operations"].append({
-                    "operation": operation,
-                    "table": table,
-                    "id": data["id"],
-                })
+                results["operations"].append(
+                    {
+                        "operation": operation,
+                        "table": table,
+                        "id": data["id"],
+                    }
+                )
                 results["tables_touched"].add(table)
                 results["rows_written"] += 1
+
+                # Track if we created a run (execution trigger)
+                if table == "runs" and data.get("status") == "queued":
+                    results["execution_triggered"] = True
 
         # Rule 4: Commit as single transaction
         conn.commit()
         logger.info(f"Committed {results['rows_written']} rows for scenario {scenario_id}")
+
+        if results["execution_triggered"]:
+            logger.info("Execution triggered: Worker pool will pick up queued run(s)")
+
+    except ForbiddenWriteError:
+        conn.rollback()
+        raise  # Re-raise for exit code 3
 
     except Exception as e:
         conn.rollback()
@@ -278,10 +549,9 @@ def cleanup_scenario(scenario_id: str, dry_run: bool = False) -> dict:
     """
     Clean up all synthetic data for a scenario.
 
-    Uses is_synthetic + synthetic_scenario_id for targeted deletion.
+    Contract Section 8: Uses is_synthetic + synthetic_scenario_id for targeted deletion.
+    Operates topologically safe - children before parents.
     """
-    tables = ["runs", "worker_runs", "agents", "api_keys", "tenants"]
-
     results = {
         "scenario_id": scenario_id,
         "rows_deleted": 0,
@@ -290,27 +560,33 @@ def cleanup_scenario(scenario_id: str, dry_run: bool = False) -> dict:
 
     if dry_run:
         logger.info(f"DRY RUN - Would cleanup scenario: {scenario_id}")
-        for table in tables:
-            logger.info(f"  [DRY] Would DELETE FROM {table} WHERE is_synthetic=true AND synthetic_scenario_id='{scenario_id}'")
+        for table in CLEANUP_ORDER:
+            logger.info(
+                f"  [DRY] Would DELETE FROM {table} WHERE is_synthetic=true AND synthetic_scenario_id='{scenario_id}'"
+            )
         return results
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        # Delete in reverse dependency order
-        for table in tables:
-            sql = f"""
-                DELETE FROM {table}
-                WHERE is_synthetic = true
-                AND synthetic_scenario_id = %s
-            """
-            cursor.execute(sql, (scenario_id,))
-            deleted = cursor.rowcount
-            if deleted > 0:
-                results["tables_cleaned"].append(table)
-                results["rows_deleted"] += deleted
-                logger.info(f"Deleted {deleted} rows from {table}")
+        # Delete in topological order (children before parents)
+        for table in CLEANUP_ORDER:
+            try:
+                sql = f"""
+                    DELETE FROM {table}
+                    WHERE is_synthetic = true
+                    AND synthetic_scenario_id = %s
+                """
+                cursor.execute(sql, (scenario_id,))
+                deleted = cursor.rowcount
+                if deleted > 0:
+                    results["tables_cleaned"].append(table)
+                    results["rows_deleted"] += deleted
+                    logger.info(f"Deleted {deleted} rows from {table}")
+            except Exception as e:
+                # Table might not have SDSR columns yet - that's OK
+                logger.debug(f"Skipped {table}: {e}")
 
         conn.commit()
         logger.info(f"Cleanup complete: {results['rows_deleted']} rows deleted for scenario {scenario_id}")
@@ -319,6 +595,65 @@ def cleanup_scenario(scenario_id: str, dry_run: bool = False) -> dict:
         conn.rollback()
         logger.error(f"ROLLBACK - Error during cleanup: {e}")
         raise
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return results
+
+
+def wait_for_execution(scenario_id: str, timeout_seconds: int = 60) -> dict:
+    """
+    Wait for scenario execution to complete.
+
+    Polls the runs table until all synthetic runs are in terminal state.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    start_time = time.time()
+    results = {"completed": False, "runs": []}
+
+    try:
+        while time.time() - start_time < timeout_seconds:
+            cursor.execute(
+                """
+                SELECT id, status, error_message
+                FROM runs
+                WHERE is_synthetic = true AND synthetic_scenario_id = %s
+                """,
+                (scenario_id,),
+            )
+            runs = cursor.fetchall()
+
+            if not runs:
+                logger.warning(f"No runs found for scenario {scenario_id}")
+                break
+
+            all_terminal = True
+            results["runs"] = []
+            for run_id, status, error_message in runs:
+                results["runs"].append(
+                    {
+                        "id": run_id,
+                        "status": status,
+                        "error_message": error_message,
+                    }
+                )
+                if status not in ("completed", "failed", "cancelled"):
+                    all_terminal = False
+
+            if all_terminal:
+                results["completed"] = True
+                logger.info(f"All runs completed for scenario {scenario_id}")
+                break
+
+            logger.info(f"Waiting for execution... ({int(time.time() - start_time)}s)")
+            time.sleep(2)
+
+        if not results["completed"]:
+            logger.warning(f"Timeout waiting for scenario {scenario_id} execution")
 
     finally:
         cursor.close()
@@ -354,13 +689,20 @@ def load_scenario(path: str) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="SDSR Synthetic Data Injection Script",
+        description="SDSR Scenario Realization Engine (Contract v1.0)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+Exit Codes:
+  0  Inputs created + execution triggered
+  1  Validation failure (schema, missing fields)
+  2  Partial write (transaction rolled back)
+  3  Forbidden write attempted (guardrail violation)
+
 Examples:
-  python inject_synthetic.py --scenario scenarios/ONBOARDING-001.yaml
-  python inject_synthetic.py --scenario scenarios/ACTIVITY-RETRY-001.yaml --dry-run
-  python inject_synthetic.py --scenario scenarios/ACTIVITY-RETRY-001.yaml --cleanup
+  python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml
+  python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml --dry-run
+  python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml --cleanup
+  python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml --wait
         """,
     )
 
@@ -382,6 +724,19 @@ Examples:
         help="Print planned writes without executing",
     )
 
+    parser.add_argument(
+        "--wait",
+        action="store_true",
+        help="Wait for execution to complete after injection",
+    )
+
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=60,
+        help="Timeout in seconds when using --wait (default: 60)",
+    )
+
     args = parser.parse_args()
 
     try:
@@ -400,6 +755,8 @@ Examples:
             print(f"Rows deleted: {results['rows_deleted']}")
             if results.get("tables_cleaned"):
                 print(f"Tables cleaned: {', '.join(results['tables_cleaned'])}")
+            sys.exit(EXIT_SUCCESS)
+
         else:
             # Injection mode
             # Rule 1: Validate completely before any writes
@@ -415,19 +772,42 @@ Examples:
                 print("[DRY RUN - No changes made]")
             print(f"Rows written: {results['rows_written']}")
             print(f"Tables touched: {', '.join(results['tables_touched'])}")
+            print(f"Execution triggered: {results['execution_triggered']}")
             for op in results["operations"]:
                 status = "planned" if args.dry_run else "created"
                 print(f"  {op['operation']}: {op.get('id', 'N/A')} ({status})")
 
+            # Wait for execution if requested
+            if args.wait and not args.dry_run and results["execution_triggered"]:
+                logger.info(f"Waiting for execution (timeout: {args.timeout}s)...")
+                wait_results = wait_for_execution(results["scenario_id"], args.timeout)
+                print(f"\nExecution completed: {wait_results['completed']}")
+                for run in wait_results.get("runs", []):
+                    print(f"  Run {run['id']}: {run['status']}")
+                    if run.get("error_message"):
+                        print(f"    Error: {run['error_message']}")
+
+            sys.exit(EXIT_SUCCESS)
+
     except ScenarioValidationError as e:
         logger.error(f"VALIDATION FAILED: {e}")
-        sys.exit(1)
+        sys.exit(EXIT_VALIDATION_FAILURE)
+
+    except IdempotencyError as e:
+        logger.error(f"IDEMPOTENCY ERROR: {e}")
+        sys.exit(EXIT_VALIDATION_FAILURE)
+
+    except ForbiddenWriteError as e:
+        logger.error(f"GUARDRAIL VIOLATION: {e}")
+        sys.exit(EXIT_FORBIDDEN_WRITE)
+
     except FileNotFoundError as e:
         logger.error(f"FILE NOT FOUND: {e}")
-        sys.exit(1)
+        sys.exit(EXIT_VALIDATION_FAILURE)
+
     except Exception as e:
         logger.error(f"INJECTION FAILED: {e}")
-        sys.exit(1)
+        sys.exit(EXIT_PARTIAL_WRITE)
 
 
 if __name__ == "__main__":

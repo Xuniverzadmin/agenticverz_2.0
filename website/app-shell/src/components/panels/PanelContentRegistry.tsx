@@ -22,6 +22,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchActivityRuns, type RunSummary } from '@/api/activity';
 import { fetchIncidents, fetchIncidentsMetrics, type IncidentSummary } from '@/api/incidents';
 import { fetchProposals, approveProposal, rejectProposal, type ProposalSummary } from '@/api/proposals';
+import { getTraces, getTrace, type Trace, type TraceStep, type LogLevel } from '@/api/traces';
 import type { NormalizedPanel } from '@/contracts/ui_projection_loader';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -541,6 +542,291 @@ function IncidentListItem({ incident }: { incident: IncidentSummary }) {
 }
 
 // =============================================================================
+// Logs Domain Content Renderers - EXECUTION_TRACES (L2.1 Intent: PIN-378)
+// =============================================================================
+
+/**
+ * Trace Summary (O1) - Shows trace stats with SDSR filtering
+ */
+function TraceSummary({ panel }: PanelContentProps) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['traces', 'all'],
+    queryFn: () => getTraces({ limit: 100 }),
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+
+  if (isLoading) {
+    return <div className="text-slate-400 text-sm">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-400 text-sm">Failed to load trace summary</div>;
+  }
+
+  const traces = data ?? [];
+  const totalCount = traces.length;
+  const syntheticCount = traces.filter(t => t.is_synthetic).length;
+
+  // Count by status
+  const completedCount = traces.filter(t => t.status === 'completed').length;
+  const runningCount = traces.filter(t => t.status === 'running').length;
+  const failedCount = traces.filter(t => t.status === 'failed').length;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4">
+        <div className="text-4xl font-bold text-white">{totalCount}</div>
+        <div className="text-slate-400 text-sm">total traces</div>
+      </div>
+      <div className="flex items-center gap-3 flex-wrap">
+        {runningCount > 0 && (
+          <span className="px-2 py-1 rounded border text-xs font-medium bg-blue-500/10 text-blue-400 border-blue-400/40">
+            {runningCount} running
+          </span>
+        )}
+        {completedCount > 0 && (
+          <span className="px-2 py-1 rounded border text-xs font-medium bg-green-500/10 text-green-400 border-green-400/40">
+            {completedCount} completed
+          </span>
+        )}
+        {failedCount > 0 && (
+          <span className="px-2 py-1 rounded border text-xs font-medium bg-red-500/10 text-red-400 border-red-400/40">
+            {failedCount} failed
+          </span>
+        )}
+      </div>
+      {syntheticCount > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-1 rounded border text-xs font-medium bg-purple-500/10 text-purple-400 border-purple-400/40">
+            SDSR
+          </span>
+          <span className="text-xs text-purple-300">{syntheticCount} synthetic</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Trace List (O2) - Shows list of traces with SDSR markers
+ */
+function TraceList({ panel }: PanelContentProps) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['traces', 'list'],
+    queryFn: () => getTraces({ limit: 20 }),
+    refetchInterval: 15000,
+    staleTime: 5000,
+  });
+
+  if (isLoading) {
+    return <div className="text-slate-400 text-sm">Loading traces...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-400 text-sm">Failed to load traces</div>;
+  }
+
+  const traces = data ?? [];
+
+  if (traces.length === 0) {
+    return <div className="text-slate-500 text-sm">No traces found</div>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {traces.map((trace) => (
+        <TraceListItem key={trace.trace_id || trace.run_id} trace={trace} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Trace Detail (O3) - Shows trace with step timeline
+ */
+function TraceDetail({ panel }: PanelContentProps) {
+  // In a real implementation, this would get the trace ID from context
+  // For now, we show the most recent trace with steps
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['traces', 'latest-detail'],
+    queryFn: async () => {
+      const traces = await getTraces({ limit: 1 });
+      if (traces.length === 0) return null;
+      return getTrace(traces[0].run_id);
+    },
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+
+  if (isLoading) {
+    return <div className="text-slate-400 text-sm">Loading trace details...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-400 text-sm">Failed to load trace details</div>;
+  }
+
+  if (!data) {
+    return <div className="text-slate-500 text-sm">No trace selected</div>;
+  }
+
+  const trace = data;
+  const steps = trace.steps ?? [];
+
+  return (
+    <div className="space-y-4">
+      {/* Trace header */}
+      <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-700/50">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-xs text-slate-400">
+            {trace.run_id.slice(0, 12)}...
+          </span>
+          <TraceStatusBadge status={trace.status} />
+          {trace.is_synthetic && (
+            <span className="px-2 py-0.5 rounded border text-xs font-medium bg-purple-500/10 text-purple-400 border-purple-400/40">
+              SDSR
+            </span>
+          )}
+        </div>
+        {trace.incident_id && (
+          <div className="text-xs text-orange-400 mt-2 font-mono">
+            Incident: {trace.incident_id.slice(0, 16)}...
+          </div>
+        )}
+        <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+          <span>{trace.total_steps ?? steps.length} steps</span>
+          {trace.total_duration_ms && (
+            <span>{(trace.total_duration_ms / 1000).toFixed(2)}s</span>
+          )}
+          {trace.total_cost_cents !== undefined && (
+            <span>${(trace.total_cost_cents / 100).toFixed(4)}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Step timeline */}
+      {steps.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs text-slate-400 font-medium mb-2">Step Timeline</div>
+          {steps.map((step, idx) => (
+            <StepTimelineItem key={step.step_index ?? idx} step={step} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Shared Trace List Item Component
+ */
+function TraceListItem({ trace }: { trace: Trace }) {
+  return (
+    <div className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg border border-gray-700/50">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-xs text-slate-400">
+            {trace.run_id.slice(0, 8)}...
+          </span>
+          <TraceStatusBadge status={trace.status} />
+          {trace.is_synthetic && (
+            <span className="px-2 py-0.5 rounded border text-xs font-medium bg-purple-500/10 text-purple-400 border-purple-400/40">
+              SDSR
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+          <span>{trace.total_steps ?? 0} steps</span>
+          {trace.total_duration_ms && (
+            <span>{(trace.total_duration_ms / 1000).toFixed(2)}s</span>
+          )}
+          {trace.incident_id && (
+            <span className="text-orange-400 font-mono">
+              inc: {trace.incident_id.slice(0, 8)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="text-xs text-slate-500 ml-4">
+        {new Date(trace.started_at || trace.created_at).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Trace Status Badge Component
+ */
+function TraceStatusBadge({ status }: { status: string }) {
+  const statusColors: Record<string, string> = {
+    completed: 'text-green-400 border-green-400/40',
+    running: 'text-blue-400 border-blue-400/40',
+    failed: 'text-red-400 border-red-400/40',
+    pending: 'text-yellow-400 border-yellow-400/40',
+  };
+
+  const color = statusColors[status] || 'text-slate-400 border-slate-600';
+
+  return (
+    <span className={`px-2 py-0.5 rounded border text-xs font-medium bg-transparent ${color}`}>
+      {status}
+    </span>
+  );
+}
+
+/**
+ * Step Timeline Item Component (PIN-378 SDSR extension)
+ */
+function StepTimelineItem({ step }: { step: TraceStep }) {
+  const levelColors: Record<LogLevel, string> = {
+    INFO: 'text-slate-400 border-slate-600',
+    WARN: 'text-yellow-400 border-yellow-400/40',
+    ERROR: 'text-red-400 border-red-400/40',
+  };
+
+  const levelColor = levelColors[step.level] || 'text-slate-400 border-slate-600';
+
+  const sourceColors: Record<string, string> = {
+    engine: 'text-blue-400',
+    external: 'text-cyan-400',
+    replay: 'text-purple-400',
+  };
+
+  const sourceColor = sourceColors[step.source] || 'text-slate-400';
+
+  return (
+    <div className="flex items-center gap-2 p-2 bg-gray-800/50 rounded border border-gray-700/30">
+      <span className="text-xs font-mono text-slate-500 w-6">
+        {String(step.step_index).padStart(2, '0')}
+      </span>
+      <span className={`px-1.5 py-0.5 rounded border text-xs font-medium bg-transparent ${levelColor}`}>
+        {step.level}
+      </span>
+      <span className={`text-xs ${sourceColor}`}>
+        {step.source}
+      </span>
+      <span className="text-xs text-white flex-1 truncate">
+        {step.skill_name}
+      </span>
+      <span className="text-xs text-slate-500">
+        {step.duration_ms}ms
+      </span>
+      {step.retry_count > 0 && (
+        <span className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/10 text-yellow-400">
+          R{step.retry_count}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
 // Policies Domain Content Renderers - PROPOSALS (L2.1 Intent: PIN-373)
 // =============================================================================
 
@@ -797,6 +1083,12 @@ const PANEL_CONTENT_REGISTRY: Record<string, ContentRenderer> = {
   // Topic: PENDING_PROPOSALS
   'POL-PR-PP-O1': PendingProposalsSummary,
   'POL-PR-PP-O2': ProposalsList,
+
+  // Logs Domain - EXECUTION_TRACES Subdomain (L2.1 intent: PIN-378)
+  // Topic: TRACE_DETAILS
+  'LOG-ET-TD-O1': TraceSummary,
+  'LOG-ET-TD-O2': TraceList,
+  'LOG-ET-TD-O3': TraceDetail,
 };
 
 /**

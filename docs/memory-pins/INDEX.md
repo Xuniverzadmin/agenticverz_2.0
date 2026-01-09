@@ -375,6 +375,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-375](PIN-375-policy-proposals-ui---sdsr-policy-002-complete.md) | **Policy Proposals UI - SDSR-POLICY-002 Complete** | SDSR / Policy Domain | **✅ COMPLETE** | 2026-01-09 |
 | [PIN-376](PIN-376-auth-pattern-enforcement---clerkrbac-gateway.md) | **Auth Pattern Enforcement - Clerk/RBAC Gateway** | Auth Architecture / RBAC | **✅ COMPLETE** | 2026-01-09 |
 | [PIN-377](PIN-377-auth-architecture-issuer-based-routing-implementation.md) | **Auth Architecture: Issuer-Based Routing Implementation** | Auth / Architecture | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-378](PIN-378-canonical-logs-system-sdsr-extension.md) | **Canonical Logs System - SDSR Extension** | Logs / SDSR Integration | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-379](PIN-379-sdsr-e2e-pipeline-gap-closure.md) | **SDSR E2E Pipeline & Gap Closure** | SDSR / E2E Pipeline | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-380](PIN-380-sdsr-e2e-001-stability-fixes.md) | **SDSR-E2E-001 Stability Fixes** | SDSR / Bug Fixes | **✅ COMPLETE** | 2026-01-09 |
 
 ---
 
@@ -1144,6 +1147,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-09 | **PIN-378 Canonical Logs System - SDSR Extension** - Created. aos_traces + aos_trace_steps SDSR columns, pg_store.py updated. |
 | 2026-01-09 | **PIN-377 Auth Architecture: Issuer-Based Routing Implementation** - Created via memory_trail. |
 | 2026-01-09 | **PIN-376 Auth Pattern Enforcement - Clerk/RBAC Gateway** - Created via memory_trail. |
 | 2026-01-09 | **PIN-375 Policy Proposals UI - SDSR-POLICY-002 Complete** - Created via memory_trail. |

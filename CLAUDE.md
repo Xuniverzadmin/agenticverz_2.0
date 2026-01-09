@@ -42,6 +42,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - RBAC_AUTHORITY_SEPARATION_DESIGN.md
   - PERMISSION_TAXONOMY_V1.md
   - AUTH_ARCHITECTURE_BASELINE.md
+  - SDSR_SYSTEM_CONTRACT.md
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
@@ -64,6 +65,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
 - engineering_authority_loaded: YES
 - rbac_architecture_loaded: YES
 - permission_taxonomy_loaded: YES
+- sdsr_contract_loaded: YES
 - forbidden_assumptions_acknowledged: YES
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
@@ -113,6 +115,53 @@ SESSION_CONTINUATION_ACKNOWLEDGMENT
 | SDSR-UI-001 to SDSR-UI-004 | UI Projection Architecture | BLOCKING |
 | **ARCH-CANON-001** | **Canonical-First Fix** | **BLOCKING** |
 | **ARCH-FRAG-ESCALATE-001** | **Fragmentation Escalation** | **BLOCKING** |
+| **SDSR-CONTRACT-001 to 003** | **SDSR System Contract** | **BLOCKING** |
+
+### SDSR System Contract (SESSION-INVARIANT - HARD BLOCK)
+
+**Status:** LOCKED
+**Effective:** 2026-01-09
+**Reference:** `docs/governance/SDSR_SYSTEM_CONTRACT.md`, PIN-370, PIN-379
+
+> **Scenarios inject causes. Engines create effects. UI reveals truth.**
+
+**Claude MUST:**
+- Reference the SDSR pipeline, never re-derive it
+- Treat `inject_synthetic.py` contract as immutable
+- Never create new tables or APIs without explicit user approval
+- Fix canonical structures, not fork them
+- Stop and ask when unsure
+
+**Claude MUST NOT:**
+- Simulate system behavior in scripts
+- Create shortcut UI-only flows
+- Invent transitional or "temporary" paths
+- Write to engine-owned tables from any script
+- Bypass L2.1 → projection → UI pipeline
+
+**Engine-Owned Tables (FORBIDDEN to write from scripts):**
+- `aos_traces`, `aos_trace_steps` → TraceStore
+- `incidents` → IncidentEngine
+- `policy_proposals` → PolicyProposalEngine
+- `prevention_records`, `policy_rules` → PolicyEngine
+
+**STOP-AND-ASK Rule:** Claude MUST pause and ask for approval when:
+1. Need to create a new table
+2. Need to add a new API
+3. Need to bypass L2.1 → projection → UI pipeline
+4. Need to write data that an engine should generate
+
+When this happens, Claude must respond with:
+```
+SDSR CONTRACT CHECK
+1. Problem: [what I need to do]
+2. Why canonical structure is insufficient: [reason]
+3. Options: A/B/C with tradeoffs
+4. Recommendation: [which option and why]
+5. Question: [explicit yes/no question]
+```
+
+**No implementation before approval.**
 
 ### Canonical-First Fix Policy (HARD BLOCK - ARCH-CANON-001)
 

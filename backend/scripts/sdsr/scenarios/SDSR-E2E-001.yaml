@@ -1,0 +1,168 @@
+scenario_id: SDSR-E2E-001
+name: Failed Activity propagates to Incident, Policy Proposal, and Logs
+domain: CROSS_DOMAIN
+purpose: >
+  Validate full backend-first causality:
+  Activity failure → Incident Engine → Policy Proposal Engine → Logs,
+  with UI rendering via projection only.
+
+tags:
+  - e2e
+  - cross-domain
+  - sdsr
+  - baseline
+
+synthetic:
+  enabled: true
+  cleanup_required: true
+
+# ─────────────────────────────────────────────
+# Preconditions (Must exist or be created here)
+# ─────────────────────────────────────────────
+preconditions:
+  tenant:
+    create: true
+    tenant_id: sdsr-tenant-e2e
+  api_key:
+    create: true
+    scopes: [activity:write, incidents:read, policies:read]
+  agent:
+    create: true
+    agent_id: sdsr-agent-e2e
+
+# ─────────────────────────────────────────────
+# Scenario Steps (CAUSE only)
+# ─────────────────────────────────────────────
+steps:
+
+  - step_id: ACTIVITY-FAIL
+    description: Create a failed activity run
+    action: create_run
+    data:
+      run_id: run-sdsr-e2e-001
+      agent_id: sdsr-agent-e2e
+      status: failed
+      failure_code: EXECUTION_TIMEOUT
+      failure_message: "Execution timed out during step execution"
+    expectations:
+      db:
+        table: runs
+        conditions:
+          id: run-sdsr-e2e-001
+          status: failed
+          is_synthetic: true
+          synthetic_scenario_id: SDSR-E2E-001
+
+# ─────────────────────────────────────────────
+# Expected Backend Propagation (ENGINES ONLY)
+# ─────────────────────────────────────────────
+expected_propagation:
+
+  - from: runs
+    via: IncidentEngine
+    creates:
+      table: incidents
+      conditions:
+        source_run_id: run-sdsr-e2e-001
+        severity: HIGH
+        status: OPEN
+        is_synthetic: true
+        synthetic_scenario_id: SDSR-E2E-001
+
+  - from: incidents
+    via: PolicyProposalEngine
+    creates:
+      table: policy_proposals
+      conditions:
+        status: draft
+        proposal_type: PREVENTION
+        triggering_feedback_ids:
+          contains: incident.id
+        is_synthetic: true
+        synthetic_scenario_id: SDSR-E2E-001
+
+  - from: runs
+    via: ExecutionEngine
+    creates:
+      table: aos_traces
+      conditions:
+        run_id: run-sdsr-e2e-001
+        status: failed
+        is_synthetic: true
+        synthetic_scenario_id: SDSR-E2E-001
+
+  - from: aos_traces
+    via: ExecutionEngine
+    creates:
+      table: aos_trace_steps
+      conditions:
+        level:
+          one_of: [ERROR]
+        source: engine
+
+# ─────────────────────────────────────────────
+# Expected UI Observation (READ ONLY)
+# ─────────────────────────────────────────────
+expected_ui:
+
+  activity:
+    panel_id: ACT-EX-AR-O2
+    observes:
+      table: runs
+      conditions:
+        id: run-sdsr-e2e-001
+        status: failed
+        has_sdsr_badge: true
+
+  incidents:
+    panel_id: INC-AI-OI-O2
+    observes:
+      table: incidents
+      conditions:
+        source_run_id: run-sdsr-e2e-001
+        severity: HIGH
+        has_sdsr_badge: true
+
+  policies:
+    panel_id: POL-PR-PP-O2
+    observes:
+      table: policy_proposals
+      conditions:
+        status: draft
+        has_approve_reject_controls: true
+        has_sdsr_badge: true
+
+  logs:
+    panel_id: LOG-ET-TD-O3
+    observes:
+      table: aos_trace_steps
+      conditions:
+        level: ERROR
+        source: engine
+        has_sdsr_badge: true
+
+# ─────────────────────────────────────────────
+# Non-Goals (Enforced)
+# ─────────────────────────────────────────────
+forbidden:
+  - directly_create_incidents
+  - directly_create_policy_rules
+  - directly_write_logs
+  - bypass_engines
+  - simulate_ui_state
+
+# ─────────────────────────────────────────────
+# Cleanup (MANDATORY)
+# ─────────────────────────────────────────────
+cleanup:
+  order:
+    - policy_proposals
+    - incidents
+    - aos_trace_steps
+    - aos_traces
+    - runs
+    - agents
+    - api_keys
+    - tenants
+  where:
+    synthetic_scenario_id: SDSR-E2E-001

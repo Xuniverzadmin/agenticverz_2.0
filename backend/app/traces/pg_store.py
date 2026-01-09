@@ -37,6 +37,25 @@ from .models import TraceRecord, TraceStatus, TraceStep, TraceSummary
 from .redact import redact_trace_data
 
 
+def _status_to_level(status: str) -> str:
+    """
+    Derive log level from step status.
+
+    Mapping per PIN-378 (Canonical Logs System):
+    - success → INFO
+    - skipped → INFO
+    - retry → WARN
+    - failure → ERROR
+    """
+    status_lower = status.lower() if isinstance(status, str) else str(status).lower()
+    if status_lower in ("failure", "error"):
+        return "ERROR"
+    elif status_lower in ("retry", "retrying"):
+        return "WARN"
+    else:
+        return "INFO"
+
+
 class PostgresTraceStore:
     """
     PostgreSQL-based trace storage for production.
@@ -82,11 +101,20 @@ class PostgresTraceStore:
         tenant_id: str,
         agent_id: str | None,
         plan: list[dict[str, Any]],
+        *,
+        # SDSR columns (PIN-378)
+        is_synthetic: bool = False,
+        synthetic_scenario_id: str | None = None,
+        incident_id: str | None = None,
     ) -> None:
         """Start a new trace record (for replay compatibility).
 
         S6 IMMUTABILITY: Traces are append-only. If a trace already exists
         for this run_id, the insert is ignored (idempotent).
+
+        SDSR Inheritance (PIN-378):
+        - is_synthetic and synthetic_scenario_id should be passed from run
+        - incident_id links trace to an incident for cross-domain correlation
         """
         pool = await self._get_pool()
         now = datetime.now(timezone.utc)
@@ -99,8 +127,9 @@ class PostgresTraceStore:
                 """
                 INSERT INTO aos_traces (
                     trace_id, run_id, correlation_id, tenant_id, agent_id,
-                    root_hash, plan, trace, schema_version, status, started_at, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    root_hash, plan, trace, schema_version, status, started_at, created_at,
+                    is_synthetic, synthetic_scenario_id, incident_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 ON CONFLICT (trace_id) DO NOTHING
                 """,
                 trace_id,  # trace_id
@@ -115,6 +144,9 @@ class PostgresTraceStore:
                 "running",  # status
                 now,  # started_at
                 now,  # created_at
+                is_synthetic,  # is_synthetic (SDSR)
+                synthetic_scenario_id,  # synthetic_scenario_id (SDSR)
+                incident_id,  # incident_id (cross-domain correlation)
             )
 
     async def record_step(
@@ -130,16 +162,26 @@ class PostgresTraceStore:
         cost_cents: float,
         duration_ms: float,
         retry_count: int,
+        *,
+        # SDSR columns (PIN-378)
+        source: str = "engine",
     ) -> None:
         """Record a step in the trace (for replay compatibility).
 
         S6 IMMUTABILITY: Steps are append-only. Duplicate inserts are ignored.
+
+        SDSR (PIN-378):
+        - source: Origin of step (engine, external, replay)
+        - level: Derived from status (INFO/WARN/ERROR)
         """
         pool = await self._get_pool()
         now = datetime.now(timezone.utc)
 
         # Convert status if it's an enum
         status_val = status.value if hasattr(status, "value") else status
+
+        # Derive level from status (PIN-378)
+        level = _status_to_level(status_val)
 
         # Derive trace_id from run_id
         trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith("run_") else f"trace_{run_id}"
@@ -151,8 +193,9 @@ class PostgresTraceStore:
                 INSERT INTO aos_trace_steps (
                     trace_id, step_index, skill_id, skill_name, params,
                     status, outcome_category, outcome_code, outcome_data,
-                    cost_cents, duration_ms, retry_count, replay_behavior, timestamp
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                    cost_cents, duration_ms, retry_count, replay_behavior, timestamp,
+                    source, level
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                 ON CONFLICT (trace_id, step_index) DO NOTHING
                 """,
                 trace_id,  # trace_id
@@ -169,6 +212,8 @@ class PostgresTraceStore:
                 retry_count,  # retry_count
                 "execute",  # replay_behavior (default)
                 now,  # timestamp
+                source,  # source (SDSR)
+                level,  # level (derived from status)
             )
 
     async def complete_trace(
@@ -200,6 +245,11 @@ class PostgresTraceStore:
         tenant_id: str,
         stored_by: str | None = None,
         redact_pii: bool = True,
+        *,
+        # SDSR columns (PIN-378)
+        is_synthetic: bool = False,
+        synthetic_scenario_id: str | None = None,
+        incident_id: str | None = None,
     ) -> str:
         """
         Store a trace from SDK or simulation.
@@ -212,6 +262,9 @@ class PostgresTraceStore:
             tenant_id: Tenant for isolation
             stored_by: User ID who stored the trace
             redact_pii: Apply PII redaction before storage
+            is_synthetic: SDSR marker (inherited from run)
+            synthetic_scenario_id: Scenario ID for traceability
+            incident_id: Cross-domain correlation to incidents
 
         Returns:
             trace_id
@@ -221,6 +274,11 @@ class PostgresTraceStore:
         # Generate trace_id if not present
         trace_id = trace.get("trace_id") or f"trace_{uuid.uuid4().hex[:16]}"
         run_id = trace.get("run_id") or trace.get("trace_id") or trace_id
+
+        # SDSR: Allow trace dict to override parameters
+        is_synthetic = trace.get("is_synthetic", is_synthetic)
+        synthetic_scenario_id = trace.get("synthetic_scenario_id", synthetic_scenario_id)
+        incident_id = trace.get("incident_id", incident_id)
 
         # Redact PII before storage
         if redact_pii:
@@ -234,8 +292,9 @@ class PostgresTraceStore:
                     trace_id, run_id, correlation_id, tenant_id, agent_id,
                     plan_id, seed, frozen_timestamp, root_hash, plan_hash,
                     schema_version, plan, trace, metadata, status,
-                    started_at, completed_at, stored_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                    started_at, completed_at, stored_by,
+                    is_synthetic, synthetic_scenario_id, incident_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                 ON CONFLICT (trace_id) DO NOTHING
                 """,
                 trace_id,
@@ -256,12 +315,19 @@ class PostgresTraceStore:
                 datetime.fromisoformat(trace["started_at"]) if trace.get("started_at") else datetime.now(timezone.utc),
                 datetime.fromisoformat(trace["completed_at"]) if trace.get("completed_at") else None,
                 stored_by,
+                is_synthetic,  # SDSR
+                synthetic_scenario_id,  # SDSR
+                incident_id,  # Cross-domain correlation
             )
 
             # Store steps separately for efficient querying
             # S6 IMMUTABILITY: Steps are append-only. Duplicate inserts are ignored.
             steps = trace.get("steps", [])
             for step in steps:
+                step_status = step.get("status", "success")
+                step_level = _status_to_level(step_status)
+                step_source = step.get("source", "engine")
+
                 await conn.execute(
                     """
                     INSERT INTO aos_trace_steps (
@@ -269,8 +335,9 @@ class PostgresTraceStore:
                         status, outcome_category, outcome_code, outcome_data,
                         cost_cents, duration_ms, retry_count,
                         input_hash, output_hash, rng_state_before,
-                        idempotency_key, replay_behavior, timestamp
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                        idempotency_key, replay_behavior, timestamp,
+                        source, level
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                     ON CONFLICT (trace_id, step_index) DO NOTHING
                     """,
                     trace_id,
@@ -278,7 +345,7 @@ class PostgresTraceStore:
                     step.get("skill_id", step.get("skill_name", "unknown")),
                     step.get("skill_name", "unknown"),
                     json.dumps(step.get("params", {})),
-                    step.get("status", "success"),
+                    step_status,
                     step.get("outcome_category", "SUCCESS"),
                     step.get("outcome_code"),
                     json.dumps(step.get("outcome_data")) if step.get("outcome_data") else None,
@@ -291,6 +358,8 @@ class PostgresTraceStore:
                     step.get("idempotency_key"),
                     step.get("replay_behavior", "execute"),
                     datetime.fromisoformat(step["timestamp"]) if step.get("timestamp") else datetime.now(timezone.utc),
+                    step_source,  # source (SDSR)
+                    step_level,  # level (derived from status)
                 )
 
         return trace_id

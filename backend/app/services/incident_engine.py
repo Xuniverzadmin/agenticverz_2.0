@@ -68,17 +68,14 @@ FAILURE_SEVERITY_MAP = {
     "AGENT_CRASH": "CRITICAL",
     "STEP_FAILURE": "HIGH",
     "SKILL_ERROR": "HIGH",
-
     # Medium severity - resource issues
     "BUDGET_EXCEEDED": "MEDIUM",
     "RATE_LIMIT_EXCEEDED": "MEDIUM",
     "RESOURCE_EXHAUSTION": "MEDIUM",
-
     # Low severity - expected failures
     "CANCELLED": "LOW",
     "MANUAL_STOP": "LOW",
     "RETRY_EXHAUSTED": "MEDIUM",
-
     # Default
     "UNKNOWN": "MEDIUM",
 }
@@ -169,6 +166,7 @@ class IncidentEngine:
 
             # Generate incident ID
             import uuid
+
             incident_id = f"inc_{uuid.uuid4().hex[:16]}"
 
             # Insert incident into canonical incidents table (PIN-370 consolidation)
@@ -215,7 +213,7 @@ class IncidentEngine:
                         "affected_count": 1,
                         "is_synthetic": is_synthetic,
                         "synthetic_scenario_id": synthetic_scenario_id,
-                    }
+                    },
                 )
                 conn.commit()
 
@@ -223,6 +221,25 @@ class IncidentEngine:
                 f"Created incident {incident_id} for failed run {run_id} "
                 f"(category={category}, severity={severity}, synthetic={is_synthetic})"
             )
+
+            # GAP-PROP-001 FIX: Propagate incident_id to aos_traces (PIN-378 cross-domain correlation)
+            # This enables Logs → Incidents deep linking in UI
+            try:
+                engine_conn = self._get_engine()
+                with engine_conn.connect() as conn:
+                    conn.execute(
+                        text("""
+                            UPDATE aos_traces
+                            SET incident_id = :incident_id
+                            WHERE run_id = :run_id
+                        """),
+                        {"incident_id": incident_id, "run_id": run_id},
+                    )
+                    conn.commit()
+                logger.debug(f"Propagated incident_id {incident_id} to trace for run {run_id}")
+            except Exception as e:
+                # Don't fail incident creation if trace update fails
+                logger.warning(f"Failed to propagate incident_id to trace: {e}")
 
             # PIN-373: Consider creating policy proposal for high-severity incidents
             if severity.upper() in ("HIGH", "CRITICAL"):
@@ -268,6 +285,7 @@ class IncidentEngine:
         try:
             import json
             import uuid
+
             proposal_id = str(uuid.uuid4())
 
             # Determine proposal type based on error pattern
@@ -331,7 +349,7 @@ class IncidentEngine:
                         "triggering_feedback_ids": json.dumps([incident_id]),  # Proper JSON array
                         "status": "draft",  # Always draft - human approval required
                         "created_at": now,
-                    }
+                    },
                 )
                 conn.commit()
 
@@ -445,19 +463,21 @@ class IncidentEngine:
                         WHERE source_run_id = :run_id
                         ORDER BY created_at DESC
                     """),
-                    {"run_id": run_id}
+                    {"run_id": run_id},
                 )
 
                 incidents = []
                 for row in result:
-                    incidents.append({
-                        "id": row[0],
-                        "category": row[1],
-                        "severity": row[2],
-                        "status": row[3],
-                        "created_at": row[4].isoformat() if row[4] else None,
-                        "is_synthetic": row[5],
-                    })
+                    incidents.append(
+                        {
+                            "id": row[0],
+                            "category": row[1],
+                            "severity": row[2],
+                            "status": row[3],
+                            "created_at": row[4].isoformat() if row[4] else None,
+                            "is_synthetic": row[5],
+                        }
+                    )
 
                 return incidents
 

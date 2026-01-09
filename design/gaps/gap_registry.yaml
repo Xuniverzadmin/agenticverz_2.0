@@ -1,0 +1,198 @@
+# Gap Registry — SDSR Causality Gap Tracking
+#
+# Purpose: Track broken causal contracts, not bugs
+# Contract: Run → Incident → Proposal → Logs → UI
+#
+# A gap exists when a downstream artifact is missing
+# even though its upstream cause exists.
+#
+# Reference: SDSR E2E Contract, PIN-370, PIN-378
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAP TAXONOMY (LOCKED - no new classes without explicit approval)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# | Class | Name              | Meaning                                   |
+# |-------|-------------------|-------------------------------------------|
+# | G1    | ENGINE_MISSING    | Required engine does not exist            |
+# | G2    | ENGINE_NOT_WIRED  | Engine exists but not invoked             |
+# | G3    | CONTRACT_MISMATCH | Engine called but violates contract       |
+# | G4    | DATA_PROPAGATION  | SDSR metadata not propagated              |
+# | G5    | OBSERVABILITY_GAP | Backend correct, UI shows nothing         |
+# | G6    | SCENARIO_GAP      | Scenario expects behavior not yet defined |
+# | G7    | GOVERNANCE_BLOCK  | Behavior intentionally forbidden          |
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# FIX RULES BY GAP CLASS (Claude must follow)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# | Gap Class         | Allowed Fix          | Forbidden                  |
+# |-------------------|----------------------|----------------------------|
+# | ENGINE_MISSING    | Create engine        | Writing directly to tables |
+# | ENGINE_NOT_WIRED  | Wire existing engine | New tables, fake calls     |
+# | CONTRACT_MISMATCH | Fix mapping logic    | Scenario changes           |
+# | DATA_PROPAGATION  | Propagate fields     | New metadata sources       |
+# | OBSERVABILITY_GAP | UI binding only      | Backend hacks              |
+# | SCENARIO_GAP      | Update scenario      | Engine shortcuts           |
+# | GOVERNANCE_BLOCK  | Ask user             | Silent enablement          |
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+gaps:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # LOGS DOMAIN GAPS
+  # ───────────────────────────────────────────────────────────────────────────
+
+  - gap_id: GAP-LOG-001
+    class: ENGINE_NOT_WIRED
+    domain: LOGS
+    engine: TraceStore (pg_store.py)
+    created: 2026-01-09
+    expected_contract:
+      when: run executes (start, step, complete/fail)
+      must_create:
+        - aos_traces (one per run)
+        - aos_trace_steps (one per step)
+      must_propagate:
+        - is_synthetic from run
+        - synthetic_scenario_id from run
+        - incident_id (if incident created)
+    actual_state:
+      observed: false
+      reason: >
+        Worker runner (runner.py) never calls pg_store.start_trace() or
+        pg_store.record_step(). Traces are only created via API or replay module.
+    severity: BLOCKING
+    affects_scenarios:
+      - SDSR-E2E-001
+    affects_panels:
+      - LOG-ET-TD-O1 (TraceSummary)
+      - LOG-ET-TD-O2 (TraceList)
+      - LOG-ET-TD-O3 (TraceDetail)
+    allowed_fixes:
+      - wire_existing_engine
+    forbidden_actions:
+      - create_new_table
+      - bypass_runner
+      - inject_traces_from_scenario
+    owner: backend
+    status: CLOSED
+    closed_date: 2026-01-09
+    fix_location: backend/app/worker/runner.py
+    fix_approach: |
+      Add trace lifecycle to RunExecutor:
+      1. start_trace() at run start
+      2. record_step() after each skill execution
+      3. finalize_trace() at run complete/fail
+      Pass SDSR fields from run to trace.
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SCENARIO EXECUTION GAPS
+  # ───────────────────────────────────────────────────────────────────────────
+
+  - gap_id: GAP-SDSR-001
+    class: ENGINE_MISSING
+    domain: SDSR
+    engine: inject_synthetic.py
+    created: 2026-01-09
+    expected_contract:
+      when: scenario YAML is provided
+      must:
+        - parse scenario YAML
+        - create preconditions (tenant, agent, api_key)
+        - execute steps (create_run)
+        - validate expectations
+        - cleanup on completion
+    actual_state:
+      observed: false
+      reason: inject_synthetic.py does not exist
+    severity: BLOCKING
+    affects_scenarios:
+      - SDSR-E2E-001
+      - All future SDSR scenarios
+    allowed_fixes:
+      - create_engine
+    forbidden_actions:
+      - bypass_canonical_tables
+      - direct_incident_creation
+      - direct_trace_creation
+    owner: backend
+    status: CLOSED
+    closed_date: 2026-01-09
+    fix_location: backend/scripts/sdsr/inject_synthetic.py
+    fix_approach: |
+      Created Scenario Realization Engine (Contract v1.0):
+      1. Reads YAML scenario (supports old and new formats)
+      2. Creates preconditions (tenant, api_key, agent) with is_synthetic=true
+      3. Creates runs with status="queued" to trigger real worker execution
+      4. FORBIDDEN_TABLES guardrail prevents writing to engine-owned tables
+      5. Idempotency check prevents duplicate injection
+      6. Cleanup supports engine-generated tables
+      7. --wait flag polls for execution completion
+      8. Exit codes: 0 (success), 1 (validation), 2 (partial), 3 (guardrail)
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # CROSS-DOMAIN PROPAGATION STATUS
+  # ───────────────────────────────────────────────────────────────────────────
+
+  - gap_id: GAP-PROP-001
+    class: DATA_PROPAGATION
+    domain: CROSS_DOMAIN
+    engine: TraceStore
+    created: 2026-01-09
+    expected_contract:
+      when: incident is created for a run
+      must_propagate:
+        - incident_id to aos_traces row
+    actual_state:
+      observed: partial
+      reason: >
+        IncidentEngine creates incidents but doesn't update aos_traces.incident_id.
+        The column exists (PIN-378) but is never populated.
+    severity: MEDIUM
+    affects_scenarios:
+      - SDSR-E2E-001 (cross-domain correlation)
+    affects_panels:
+      - LOG-ET-TD-O2 (incident link in trace list)
+      - LOG-ET-TD-O3 (incident link in trace detail)
+    allowed_fixes:
+      - propagate_fields
+    forbidden_actions:
+      - new_metadata_sources
+      - duplicate_incident_id_storage
+    owner: backend
+    status: CLOSED
+    closed_date: 2026-01-09
+    depends_on:
+      - GAP-LOG-001  # Traces must be created first (CLOSED)
+    fix_location: backend/app/services/incident_engine.py
+    fix_approach: |
+      After incident creation, update aos_traces.incident_id:
+      UPDATE aos_traces SET incident_id = :incident_id
+      WHERE run_id = :run_id
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CLOSED GAPS (history)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+closed_gaps: []
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GAP METRICS (computed)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+metrics:
+  total_open: 0
+  total_closed: 3
+  by_class:
+    ENGINE_MISSING: 0    # GAP-SDSR-001 closed
+    ENGINE_NOT_WIRED: 0  # GAP-LOG-001 closed
+    DATA_PROPAGATION: 0  # GAP-PROP-001 closed
+  by_domain:
+    LOGS: 0         # GAP-LOG-001 closed
+    SDSR: 0         # GAP-SDSR-001 closed
+    CROSS_DOMAIN: 0 # GAP-PROP-001 closed
+  by_severity:
+    BLOCKING: 0     # GAP-SDSR-001 closed, GAP-LOG-001 closed
+    MEDIUM: 0       # GAP-PROP-001 closed
