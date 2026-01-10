@@ -2,7 +2,7 @@
   "_meta": {
     "type": "ui_projection_lock",
     "version": "1.0.0",
-    "generated_at": "2026-01-10T19:14:23.396304+00:00",
+    "generated_at": "2026-01-10T19:53:21.783910+00:00",
     "source": "AURORA_L2 Intent Compiler",
     "generator": "AURORA_L2_COMPILER",
     "generator_version": "2.0.0",
@@ -11,7 +11,11 @@
     "contract_version": "ui_projection@2.0",
     "processing_stage": "LOCKED",
     "frozen": true,
-    "editable": false
+    "editable": false,
+    "environment": "preflight",
+    "approval_status": "EXPERIMENTAL",
+    "sdsr_verified": true,
+    "routes_relative": true
   },
   "_statistics": {
     "domain_count": 5,
@@ -101,7 +105,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/overview/ovw-sh-cs-o1",
+          "route": "/overview/ovw-sh-cs-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -162,7 +166,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/overview/ovw-sh-hm-o1",
+          "route": "/overview/ovw-sh-hm-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -268,7 +272,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/overview/ovw-sh-hm-o2",
+          "route": "/overview/ovw-sh-hm-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -278,7 +282,7 @@
       "panel_count": 3,
       "total_controls": 4,
       "short_description": null,
-      "route": "/cus/overview"
+      "route": "/overview"
     },
     {
       "domain": "Activity",
@@ -339,7 +343,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-ar-o1",
+          "route": "/activity/act-ex-ar-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -400,7 +404,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-cr-o1",
+          "route": "/activity/act-ex-cr-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -461,7 +465,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-rd-o1",
+          "route": "/activity/act-ex-rd-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -567,7 +571,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-ar-o2",
+          "route": "/activity/act-ex-ar-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -682,7 +686,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-cr-o2",
+          "route": "/activity/act-ex-cr-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -788,7 +792,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-rd-o2",
+          "route": "/activity/act-ex-rd-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -877,7 +881,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-cr-o3",
+          "route": "/activity/act-ex-cr-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -966,7 +970,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-rd-o3",
+          "route": "/activity/act-ex-rd-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1045,7 +1049,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-rd-o4",
+          "route": "/activity/act-ex-rd-o4",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1125,7 +1129,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/activity/act-ex-rd-o5",
+          "route": "/activity/act-ex-rd-o5",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1135,7 +1139,7 @@
       "panel_count": 10,
       "total_controls": 19,
       "short_description": null,
-      "route": "/cus/activity"
+      "route": "/activity"
     },
     {
       "domain": "Incidents",
@@ -1196,7 +1200,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-ai-id-o1",
+          "route": "/incidents/inc-ai-id-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1257,7 +1261,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-ai-oi-o1",
+          "route": "/incidents/inc-ai-oi-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1318,7 +1322,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-hi-ri-o1",
+          "route": "/incidents/inc-hi-ri-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1415,7 +1419,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-ai-id-o2",
+          "route": "/incidents/inc-ai-id-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1529,7 +1533,7 @@
             "write": false,
             "activate": true
           },
-          "route": "/cus/incidents/inc-ai-oi-o2",
+          "route": "/incidents/inc-ai-oi-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "DRAFT",
           "review_status": "UNREVIEWED",
@@ -1644,7 +1648,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-hi-ri-o2",
+          "route": "/incidents/inc-hi-ri-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1749,7 +1753,7 @@
             "write": true,
             "activate": true
           },
-          "route": "/cus/incidents/inc-ai-id-o3",
+          "route": "/incidents/inc-ai-id-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "DRAFT",
           "review_status": "UNREVIEWED",
@@ -1838,7 +1842,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-hi-ri-o3",
+          "route": "/incidents/inc-hi-ri-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1917,7 +1921,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-ai-id-o4",
+          "route": "/incidents/inc-ai-id-o4",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -1996,7 +2000,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-hi-ri-o4",
+          "route": "/incidents/inc-hi-ri-o4",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2076,7 +2080,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/incidents/inc-hi-ri-o5",
+          "route": "/incidents/inc-hi-ri-o5",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2086,7 +2090,7 @@
       "panel_count": 11,
       "total_controls": 22,
       "short_description": null,
-      "route": "/cus/incidents"
+      "route": "/incidents"
     },
     {
       "domain": "Policies",
@@ -2147,7 +2151,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-ap-ar-o1",
+          "route": "/policies/pol-ap-ar-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2208,7 +2212,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-ap-bp-o1",
+          "route": "/policies/pol-ap-bp-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2269,7 +2273,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-ap-rl-o1",
+          "route": "/policies/pol-ap-rl-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2330,7 +2334,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-pa-pc-o1",
+          "route": "/policies/pol-pa-pc-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2391,7 +2395,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-pr-pp-o1",
+          "route": "/policies/pol-pr-pp-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2497,7 +2501,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-ap-ar-o2",
+          "route": "/policies/pol-ap-ar-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2603,7 +2607,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-ap-bp-o2",
+          "route": "/policies/pol-ap-bp-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2709,7 +2713,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-ap-rl-o2",
+          "route": "/policies/pol-ap-rl-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2824,7 +2828,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-pa-pc-o2",
+          "route": "/policies/pol-pa-pc-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -2946,7 +2950,7 @@
             "write": false,
             "activate": true
           },
-          "route": "/cus/policies/pol-pr-pp-o2",
+          "route": "/policies/pol-pr-pp-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "BOUND",
           "review_status": "UNREVIEWED",
@@ -3043,7 +3047,7 @@
             "write": true,
             "activate": true
           },
-          "route": "/cus/policies/pol-ap-ar-o3",
+          "route": "/policies/pol-ap-ar-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "DRAFT",
           "review_status": "UNREVIEWED",
@@ -3122,7 +3126,7 @@
             "write": true,
             "activate": true
           },
-          "route": "/cus/policies/pol-ap-bp-o3",
+          "route": "/policies/pol-ap-bp-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "DRAFT",
           "review_status": "UNREVIEWED",
@@ -3201,7 +3205,7 @@
             "write": true,
             "activate": true
           },
-          "route": "/cus/policies/pol-ap-rl-o3",
+          "route": "/policies/pol-ap-rl-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "DRAFT",
           "review_status": "UNREVIEWED",
@@ -3290,7 +3294,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-pa-pc-o3",
+          "route": "/policies/pol-pa-pc-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3369,7 +3373,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-ap-ar-o4",
+          "route": "/policies/pol-ap-ar-o4",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3448,7 +3452,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-pa-pc-o4",
+          "route": "/policies/pol-pa-pc-o4",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3528,7 +3532,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/policies/pol-pa-pc-o5",
+          "route": "/policies/pol-pa-pc-o5",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3538,7 +3542,7 @@
       "panel_count": 17,
       "total_controls": 31,
       "short_description": null,
-      "route": "/cus/policies"
+      "route": "/policies"
     },
     {
       "domain": "Logs",
@@ -3599,7 +3603,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-sa-o1",
+          "route": "/logs/log-al-sa-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3660,7 +3664,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-ua-o1",
+          "route": "/logs/log-al-ua-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3721,7 +3725,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-et-td-o1",
+          "route": "/logs/log-et-td-o1",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3836,7 +3840,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-sa-o2",
+          "route": "/logs/log-al-sa-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -3951,7 +3955,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-ua-o2",
+          "route": "/logs/log-al-ua-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4066,7 +4070,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-et-td-o2",
+          "route": "/logs/log-et-td-o2",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4155,7 +4159,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-sa-o3",
+          "route": "/logs/log-al-sa-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4244,7 +4248,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-ua-o3",
+          "route": "/logs/log-al-ua-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4333,7 +4337,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-et-td-o3",
+          "route": "/logs/log-et-td-o3",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4412,7 +4416,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-et-td-o4",
+          "route": "/logs/log-et-td-o4",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4492,7 +4496,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-sa-o5",
+          "route": "/logs/log-al-sa-o5",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4572,7 +4576,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-al-ua-o5",
+          "route": "/logs/log-al-ua-o5",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4652,7 +4656,7 @@
             "write": false,
             "activate": false
           },
-          "route": "/cus/logs/log-et-td-o5",
+          "route": "/logs/log-et-td-o5",
           "view_type": "PANEL_VIEW",
           "binding_status": "INFO",
           "review_status": "UNREVIEWED",
@@ -4662,7 +4666,7 @@
       "panel_count": 13,
       "total_controls": 25,
       "short_description": null,
-      "route": "/cus/logs"
+      "route": "/logs"
     }
   ]
 }

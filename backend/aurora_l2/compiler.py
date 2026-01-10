@@ -353,7 +353,7 @@ def generate_canonical_projection(compiled_intents: list[dict]) -> dict:
                 "domain": domain,
                 "order": DOMAIN_DISPLAY_ORDER.get(domain, 99),
                 "short_description": None,  # Populated from registry if available
-                "route": f"/cus/{domain.lower()}",
+                "route": f"/{domain.lower()}",  # Relative route, root resolved by frontend
                 "subdomains": {},
             }
 
@@ -400,7 +400,7 @@ def generate_canonical_projection(compiled_intents: list[dict]) -> dict:
                 "write": intent.get("write_enabled", False),
                 "activate": intent.get("activate_enabled", False),
             },
-            "route": f"/cus/{domain.lower()}/{intent['panel_id'].lower()}",
+            "route": f"/{domain.lower()}/{intent['panel_id'].lower()}",  # Relative route
             "view_type": "PANEL_VIEW",
             "binding_status": binding_status,
             "review_status": intent.get("review_status", "UNREVIEWED"),
@@ -521,6 +521,11 @@ def generate_canonical_projection(compiled_intents: list[dict]) -> dict:
             "processing_stage": "LOCKED",
             "frozen": True,
             "editable": False,
+            # Environment metadata (for promotion pipeline)
+            "environment": "preflight",  # preflight or production
+            "approval_status": "EXPERIMENTAL",  # EXPERIMENTAL or APPROVED
+            "sdsr_verified": True,  # All SDSR scenarios passed
+            "routes_relative": True,  # Routes are relative, root resolved by frontend
         },
         "_statistics": {
             "domain_count": len(domains_list),

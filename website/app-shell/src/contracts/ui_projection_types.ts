@@ -213,6 +213,11 @@ export interface ProjectionMeta {
   processing_stage: "LOCKED" | "PHASE_2A1_APPLIED" | "PHASE_2A2_SIMULATED";
   frozen: true;
   editable: false;
+  // Environment metadata (for promotion pipeline - PIN-388)
+  environment: "preflight" | "production";
+  approval_status: "EXPERIMENTAL" | "APPROVED";
+  sdsr_verified: boolean;
+  routes_relative: boolean;  // Routes are relative, resolved by frontend
 }
 
 export interface ProjectionStatistics {

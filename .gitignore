@@ -50,3 +50,4 @@ node_modules/
 dist/
 .next/
 *.tsbuildinfo
+dist-preflight/

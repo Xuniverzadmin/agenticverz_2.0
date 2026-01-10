@@ -30,6 +30,52 @@ import {
   validateProjection as validateProjectionStructure,
   type ValidationResult,
 } from "./projection_assertions";
+import { CONSOLE_ROOT } from "@/routing/consoleRoots";
+
+// ============================================================================
+// Route Resolution (Single Source of Truth)
+// ============================================================================
+
+/**
+ * Resolve a relative route to an absolute route using CONSOLE_ROOT.
+ *
+ * This is the ONLY place where environment-aware route resolution happens.
+ * Projection routes are environment-agnostic (e.g., "/activity").
+ * This function adds the console root (e.g., "/precus" or "/cus").
+ *
+ * Examples:
+ *   resolveRoute("/activity") → "/precus/activity" (preflight)
+ *   resolveRoute("/activity") → "/cus/activity" (production)
+ */
+function resolveRoute(relativeRoute: string): string {
+  // Handle legacy absolute routes (already have /cus or /precus)
+  if (relativeRoute.startsWith('/cus/') || relativeRoute.startsWith('/precus/')) {
+    // Transform to relative first, then resolve
+    const stripped = relativeRoute.replace(/^\/(cus|precus)/, '');
+    return `${CONSOLE_ROOT}${stripped}`;
+  }
+
+  // Normal case: relative route
+  return `${CONSOLE_ROOT}${relativeRoute}`;
+}
+
+/**
+ * Transform all routes in the projection to absolute routes.
+ * Called once at load time.
+ */
+function resolveProjectionRoutes(projection: UIProjectionLock): UIProjectionLock {
+  return {
+    ...projection,
+    domains: projection.domains.map(domain => ({
+      ...domain,
+      route: resolveRoute(domain.route),
+      panels: domain.panels.map(panel => ({
+        ...panel,
+        route: resolveRoute(panel.route),
+      })),
+    })),
+  };
+}
 
 // ============================================================================
 // Loader State
@@ -73,10 +119,17 @@ export async function loadProjection(): Promise<UIProjectionLock> {
     }
 
     preflightLogger.api.success(projectionUrl, response.status);
-    const data = (await response.json()) as UIProjectionLock;
+    const rawData = (await response.json()) as UIProjectionLock;
 
     // Runtime validation
-    validateProjection(data);
+    validateProjection(rawData);
+
+    // Resolve routes based on CONSOLE_ROOT (single point of transformation)
+    const data = resolveProjectionRoutes(rawData);
+
+    // Log route resolution for debugging
+    preflightLogger.projection.loadStart();
+    console.log(`[PROJECTION] Routes resolved with CONSOLE_ROOT: ${CONSOLE_ROOT}`);
 
     cachedProjection = data;
 
