@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-10 (PIN-381 SDSR E2E Testing Protocol Implementation)
+**Last Updated:** 2026-01-10 (PIN-381 SDSR E2E Testing Protocol Implementation - Scenario Classification)
 
 ---
 
@@ -1148,6 +1148,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-10 | **PIN-381 SDSR E2E Testing Protocol Implementation** - Updated: Scenario Classification |
 | 2026-01-10 | **PIN-381 SDSR E2E Testing Protocol Implementation** - Created via memory_trail. |
 | 2026-01-09 | **PIN-378 Canonical Logs System - SDSR Extension** - Created. aos_traces + aos_trace_steps SDSR columns, pg_store.py updated. |
 | 2026-01-09 | **PIN-377 Auth Architecture: Issuer-Based Routing Implementation** - Created via memory_trail. |

@@ -144,6 +144,49 @@ Read-only, zero side effects, updates immediately after cleanup.
 - SDSR-E2E-004: Policy proposal approval/rejection
 - SDSR-E2E-005: Worker execution with trace generation
 
+
+---
+
+## Scenario Classification
+
+### Update (2026-01-10)
+
+## Scenario Classification (MANDATORY)
+
+### Execution Modes
+
+| Mode | Description |
+|------|-------------|
+| **WORKER_EXECUTION** | Run goes through worker, traces generated |
+| **STATE_INJECTION** | State directly injected, bypasses worker |
+
+### Coverage Matrix
+
+| Scenario | Class | Worker Exec | Traces | Engine Validation |
+|----------|-------|-------------|--------|-------------------|
+| SDSR-E2E-001 | STATE_INJECTION | ❌ | ❌ (injected) | ✅ Failure propagation |
+| SDSR-E2E-002 | STATE_INJECTION | ❌ | ❌ | ✅ Non-propagation |
+| SDSR-E2E-005 | WORKER_EXECUTION | ✅ | ✅ | ✅ Success path |
+
+### Correct Execution Order
+
+1. ✅ SDSR-E2E-001 — Failure → Incident → Policy (STATE_INJECTION)
+2. ✅ SDSR-E2E-002 — Success → No Incident/Policy (STATE_INJECTION)
+3. 🔜 SDSR-E2E-005 — Success + Worker + Traces (WORKER_EXECUTION)
+4. 🔜 SDSR-E2E-003 — Incident severity thresholds
+5. 🔜 SDSR-E2E-004 — Policy approval/rejection
+
+**Rule:** SDSR-E2E-005 MUST complete before SDSR-E2E-003/004.
+
+### Gap Closed
+
+SDSR-E2E-002 was previously ambiguous. It is now explicitly classified as:
+- scenario_class: STATE_INJECTION
+- execution_mode: non_executable
+- coverage.trace_generation: false
+
+This prevents future misinterpretation that "success path is trace-validated".
+
 ## Related PINs
 
 - PIN-370: SDSR Architecture
