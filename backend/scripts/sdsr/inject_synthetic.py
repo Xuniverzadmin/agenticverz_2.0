@@ -94,6 +94,7 @@ EXIT_SUCCESS = 0  # Inputs created + execution triggered
 EXIT_VALIDATION_FAILURE = 1  # Schema, missing fields
 EXIT_PARTIAL_WRITE = 2  # Transaction rolled back
 EXIT_FORBIDDEN_WRITE = 3  # Guardrail violation
+EXIT_IDENTITY_REUSE = 4  # RG-SDSR-01: run_id already exists (LOCKED contract)
 
 
 # =============================================================================
@@ -145,6 +146,23 @@ CLEANUP_ORDER = [
     "tenants",
 ]
 
+# =============================================================================
+# ARCHIVE-ONLY TABLES (S6 Immutability Contract)
+# =============================================================================
+# These tables are protected by S6 immutability triggers.
+# DELETE is forbidden. SDSR cleanup uses soft-archive (UPDATE archived_at).
+#
+# Contract Resolution:
+# - S6 Immutability: Prohibits DELETE, not archival state transitions
+# - SDSR Cleanup: Archives synthetic trace data instead of deleting
+
+ARCHIVE_ONLY_TABLES = frozenset(
+    [
+        "aos_traces",
+        "aos_trace_steps",
+    ]
+)
+
 
 # =============================================================================
 # SCHEMA DEFINITIONS
@@ -190,9 +208,64 @@ class IdempotencyError(Exception):
     pass
 
 
+class IdentityReuseError(Exception):
+    """RG-SDSR-01: Raised when run_id already exists (active or archived).
+
+    LOCKED CONTRACT: run_id must be execution-unique.
+    No auto-fix, no suffixing, no bypass.
+    """
+
+    pass
+
+
 # =============================================================================
 # GUARDRAIL ENFORCEMENT
 # =============================================================================
+
+
+def enforce_run_id_uniqueness(run_id: str, conn) -> None:
+    """RG-SDSR-01: Preflight guard for run_id uniqueness.
+
+    LOCKED CONTRACT:
+    - run_id must be execution-unique
+    - Fails hard if run_id already exists (active OR archived)
+    - No auto-fix, no suffixing, no bypass
+    - Exit code 4 blocks injection
+
+    This guard prevents identity reuse which causes silent trace collisions
+    due to S6 immutability's ON CONFLICT DO NOTHING behavior.
+    """
+    cursor = conn.cursor()
+    try:
+        # Check if run_id exists in runs table (any state)
+        cursor.execute("SELECT id FROM runs WHERE id = %s", (run_id,))
+        existing = cursor.fetchone()
+        if existing:
+            raise IdentityReuseError(
+                f"RG-SDSR-01 VIOLATION: run_id '{run_id}' already exists.\n"
+                f"LOCKED CONTRACT: run_id must be execution-unique.\n"
+                f"This is a HARD FAIL. No auto-fix, no bypass.\n"
+                f"Possible causes:\n"
+                f"  - Clock skew (two executions in same second)\n"
+                f"  - Incomplete cleanup\n"
+                f"  - Manual database insertion\n"
+                f"Resolution: Wait 1 second and retry, or investigate the duplicate."
+            )
+
+        # Also check aos_traces for archived traces with matching run_id
+        # (belt-and-suspenders: trace might exist even if run was deleted)
+        cursor.execute("SELECT run_id FROM aos_traces WHERE run_id = %s", (run_id,))
+        existing_trace = cursor.fetchone()
+        if existing_trace:
+            raise IdentityReuseError(
+                f"RG-SDSR-01 VIOLATION: Trace for run_id '{run_id}' already exists.\n"
+                f"LOCKED CONTRACT: run_id must be execution-unique.\n"
+                f"A trace (active or archived) exists with this run_id.\n"
+                f"This would cause silent trace creation failure due to S6 immutability.\n"
+                f"Resolution: Use a different run_id or wait and retry."
+            )
+    finally:
+        cursor.close()
 
 
 def enforce_guardrail(table: str) -> None:
@@ -302,9 +375,16 @@ def build_writes_from_new_format(spec: dict) -> List[Dict[str, Any]]:
           - step_id: ACTIVITY-FAIL
             action: create_run
             data: {...}
+
+    SDSR Identity Rule (PIN-379):
+        run_id is execution-unique; scenario IDs may repeat.
+        Format: run-{scenario_id}-{UTC_YYYYMMDDTHHMMSSZ}
     """
     writes = []
     scenario_id = spec["scenario_id"]
+
+    # Generate execution timestamp for unique run_id (SDSR Identity Rule)
+    execution_timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     # Process preconditions
     preconditions = spec.get("preconditions", {})
@@ -380,8 +460,15 @@ def build_writes_from_new_format(spec: dict) -> List[Dict[str, Any]]:
             # Determine if this run should fail during execution
             has_failure_plan = data.get("failure_code") is not None
 
+            # SDSR Identity Rule (MANDATORY): run_id must be execution-unique
+            # Format: run-{scenario_id}-{UTC_YYYYMMDDTHHMMSSZ}
+            # This prevents trace_id conflicts on re-execution (S6 immutability)
+            #
+            # IMPORTANT: We ALWAYS generate unique run_id, ignoring any YAML override.
+            # run_id is execution identity, not scenario configuration.
+            unique_run_id = f"run-{scenario_id.lower()}-{execution_timestamp}"
             run_data = {
-                "id": data.get("run_id", data.get("id", f"run-{scenario_id}-{step.get('step_id', 'default')}")),
+                "id": unique_run_id,  # Always unique per execution (SDSR Identity Rule)
                 "agent_id": data.get(
                     "agent_id", preconditions.get("agent", {}).get("agent_id", f"sdsr-agent-{scenario_id}")
                 ),
@@ -480,6 +567,12 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
                 # Contract Section 6.2: Guardrail enforcement
                 enforce_guardrail(table)
 
+                # RG-SDSR-01: Execution identity guard (runs table only)
+                # LOCKED CONTRACT: run_id must be execution-unique
+                # Must check BEFORE insert, fails hard on reuse
+                if table == "runs":
+                    enforce_run_id_uniqueness(data["id"], conn)
+
                 # Rule 3: Inject synthetic markers
                 data["is_synthetic"] = True
                 data["synthetic_scenario_id"] = scenario_id
@@ -561,32 +654,56 @@ def cleanup_scenario(scenario_id: str, dry_run: bool = False) -> dict:
     if dry_run:
         logger.info(f"DRY RUN - Would cleanup scenario: {scenario_id}")
         for table in CLEANUP_ORDER:
-            logger.info(
-                f"  [DRY] Would DELETE FROM {table} WHERE is_synthetic=true AND synthetic_scenario_id='{scenario_id}'"
-            )
+            if table in ARCHIVE_ONLY_TABLES:
+                logger.info(
+                    f"  [DRY] Would ARCHIVE {table} SET archived_at=NOW() WHERE is_synthetic=true AND synthetic_scenario_id='{scenario_id}' (S6 immutability)"
+                )
+            else:
+                logger.info(
+                    f"  [DRY] Would DELETE FROM {table} WHERE is_synthetic=true AND synthetic_scenario_id='{scenario_id}'"
+                )
         return results
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        # Delete in topological order (children before parents)
+        # Clean in topological order (children before parents)
         for table in CLEANUP_ORDER:
             try:
-                sql = f"""
-                    DELETE FROM {table}
-                    WHERE is_synthetic = true
-                    AND synthetic_scenario_id = %s
-                """
-                cursor.execute(sql, (scenario_id,))
-                deleted = cursor.rowcount
-                if deleted > 0:
-                    results["tables_cleaned"].append(table)
-                    results["rows_deleted"] += deleted
-                    logger.info(f"Deleted {deleted} rows from {table}")
+                if table in ARCHIVE_ONLY_TABLES:
+                    # S6 Immutability: Use soft-archive (UPDATE) instead of DELETE
+                    # This preserves trace integrity while satisfying SDSR cleanup
+                    sql = f"""
+                        UPDATE {table}
+                        SET archived_at = NOW()
+                        WHERE is_synthetic = true
+                        AND synthetic_scenario_id = %s
+                        AND archived_at IS NULL
+                    """
+                    cursor.execute(sql, (scenario_id,))
+                    affected = cursor.rowcount
+                    if affected > 0:
+                        results["tables_cleaned"].append(table)
+                        results["rows_deleted"] += affected  # Count as "cleaned" for reporting
+                        logger.info(f"Archived {affected} rows from {table} (S6 immutability)")
+                else:
+                    # Standard DELETE for non-trace tables
+                    sql = f"""
+                        DELETE FROM {table}
+                        WHERE is_synthetic = true
+                        AND synthetic_scenario_id = %s
+                    """
+                    cursor.execute(sql, (scenario_id,))
+                    deleted = cursor.rowcount
+                    if deleted > 0:
+                        results["tables_cleaned"].append(table)
+                        results["rows_deleted"] += deleted
+                        logger.info(f"Deleted {deleted} rows from {table}")
             except Exception as e:
-                # Table might not have SDSR columns yet - that's OK
-                logger.debug(f"Skipped {table}: {e}")
+                # Fail loudly - do not swallow errors
+                logger.error(f"CLEANUP FAILED on {table}: {e}")
+                raise
 
         conn.commit()
         logger.info(f"Cleanup complete: {results['rows_deleted']} rows deleted for scenario {scenario_id}")
@@ -800,6 +917,10 @@ Examples:
     except ForbiddenWriteError as e:
         logger.error(f"GUARDRAIL VIOLATION: {e}")
         sys.exit(EXIT_FORBIDDEN_WRITE)
+
+    except IdentityReuseError as e:
+        logger.error(f"IDENTITY REUSE BLOCKED: {e}")
+        sys.exit(EXIT_IDENTITY_REUSE)
 
     except FileNotFoundError as e:
         logger.error(f"FILE NOT FOUND: {e}")

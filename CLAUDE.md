@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-10
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Status:** ACTIVE
 **Effective:** 2026-01-02
-**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
 
 ### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001, BL-BOOT-002)
 
@@ -43,6 +43,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - PERMISSION_TAXONOMY_V1.md
   - AUTH_ARCHITECTURE_BASELINE.md
   - SDSR_SYSTEM_CONTRACT.md
+  - SDSR_E2E_TESTING_PROTOCOL.md
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
@@ -66,6 +67,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
 - rbac_architecture_loaded: YES
 - permission_taxonomy_loaded: YES
 - sdsr_contract_loaded: YES
+- sdsr_e2e_protocol_loaded: YES
 - forbidden_assumptions_acknowledged: YES
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
@@ -474,6 +476,89 @@ Which approach should I take?
 ```
 
 **Default:** Option 1 (PanelContentRegistry) unless explicitly told otherwise.
+
+### SDSR E2E Testing Protocol (BL-SDSR-E2E-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Effective:** 2026-01-10
+**Trigger:** Any SDSR E2E scenario execution, cross-domain validation, or system realization testing
+**Reference:** `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
+
+**Core Principle:**
+
+> UI is observational only. Backend execution is the source of truth.
+> Validate real system behavior: Activity → Incident → Policy Proposal → Logs
+
+**Hard Guardrails (GR-1 through GR-6):**
+
+| Guardrail | Rule | Enforcement |
+|-----------|------|-------------|
+| GR-1 | No Direct DB Mutation Outside Alembic | BLOCKING |
+| GR-2 | No Trigger/Constraint Changes Without Approval | BLOCKING |
+| GR-3 | Canonical Tables Only (no `*sdsr*` copies) | BLOCKING |
+| GR-4 | No Silent Compatibility Fallbacks | BLOCKING |
+| GR-5 | No "Fix While Investigating" | BLOCKING |
+| GR-6 | UI Never Drives State | BLOCKING |
+
+**Schema Reality Gate (Mandatory Pre-Check):**
+
+Before ANY E2E run, Claude MUST execute and verify:
+
+```bash
+# SR-1: Migration Consistency
+./scripts/preflight/sdsr_e2e_preflight.sh
+```
+
+If preflight fails → STOP. No E2E execution allowed.
+
+**Required Columns (SR-2):**
+
+| Table | Required Columns |
+|-------|------------------|
+| runs | is_synthetic, synthetic_scenario_id |
+| incidents | source_run_id, is_synthetic, synthetic_scenario_id |
+| policy_proposals | status, triggering_feedback_ids |
+| aos_traces | run_id, incident_id, is_synthetic, synthetic_scenario_id, status |
+| aos_trace_steps | trace_id, level, source |
+
+**Execution Discipline (GR-5):**
+
+```
+1. Diagnose
+2. Summarize root cause
+3. Propose fix
+4. Wait for approval
+5. Implement
+6. Verify
+```
+
+Never skip steps 3-4. "Fixed it to unblock progress" is a FAILURE, not progress.
+
+**Hard Failure Response:**
+
+If Claude is about to violate any SDSR E2E guardrail:
+```
+SDSR E2E GUARDRAIL VIOLATION
+
+Guardrail: GR-{N}
+Action attempted: {description}
+Reason blocked: {explanation}
+
+STATUS: BLOCKED
+REQUIRED ACTION: {what is needed to proceed safely}
+```
+
+**Cleanup Protocol:**
+
+Claude may cleanup ONLY IF:
+- is_synthetic = true
+- synthetic_scenario_id matches
+
+Cleanup order: policy_proposals → incidents → aos_trace_steps → aos_traces → runs → agents → api_keys → tenants
+
+If blocked → REPORT, do NOT bypass.
+
+**Reference:** `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
 
 ### UI Pipeline Pre-Check (BL-UI-PIPELINE-001) — HARD BLOCK
 
