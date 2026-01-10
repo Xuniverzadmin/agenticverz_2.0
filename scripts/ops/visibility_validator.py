@@ -49,6 +49,13 @@ import os
 import sys
 from pathlib import Path
 
+# Add backend to path for guard import
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../backend"))
+
+# DB-AUTH-001: Require Neon authority (HIGH - visibility validation)
+from scripts._db_guard import require_neon  # noqa: E402
+require_neon()
+
 import yaml
 
 # Contract file location

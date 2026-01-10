@@ -45,6 +45,10 @@ from typing import Dict, Optional, Set
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# DB-AUTH-001: Require Neon authority (HIGH - reconciliation)
+from scripts._db_guard import require_neon
+require_neon()
+
 logger = logging.getLogger("nova.ops.reconcile_dl")
 
 # Leader election settings

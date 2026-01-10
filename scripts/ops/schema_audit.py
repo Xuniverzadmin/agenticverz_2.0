@@ -26,6 +26,10 @@ from datetime import datetime
 # Ensure backend is in path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
+# DB-AUTH-001: Declare local-only authority
+from scripts._db_guard import assert_db_authority
+assert_db_authority("local")
+
 from sqlalchemy import create_engine, text
 
 # Required schema elements for production

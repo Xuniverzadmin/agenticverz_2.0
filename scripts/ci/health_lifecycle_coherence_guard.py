@@ -60,6 +60,11 @@ from typing import Any
 
 import yaml
 
+# DB-AUTH-001: Declare local-only authority
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+from scripts._db_guard import assert_db_authority  # noqa: E402
+assert_db_authority("local")
+
 # File paths relative to repo root
 LIFECYCLE_PATH = Path("docs/governance/CAPABILITY_LIFECYCLE.yaml")
 

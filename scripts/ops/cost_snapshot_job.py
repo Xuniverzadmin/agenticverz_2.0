@@ -20,6 +20,10 @@ from datetime import datetime, timezone
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../backend"))
 
+# DB-AUTH-001: Require Neon authority (HIGH - cost snapshot job)
+from scripts._db_guard import require_neon  # noqa: E402
+require_neon()
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker

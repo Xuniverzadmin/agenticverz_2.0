@@ -36,6 +36,13 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import uuid4
 
+# Add backend to path for guard import
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../backend"))
+
+# DB-AUTH-001: Require Neon authority (CRITICAL - C2 regression testing)
+from scripts._db_guard import require_neon  # noqa: E402
+require_neon()
+
 
 @dataclass
 class TestResult:

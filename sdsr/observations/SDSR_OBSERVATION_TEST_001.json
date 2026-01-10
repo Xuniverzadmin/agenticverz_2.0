@@ -1,0 +1,47 @@
+{
+  "scenario_id": "SDSR-TEST-001",
+  "status": "PASSED",
+  "observed_at": "2026-01-10T15:00:00Z",
+  "environment": "preflight",
+
+  "capabilities_observed": [
+    {
+      "capability_id": "APPROVE",
+      "ui_panel": "POL-PR-PP-O2",
+      "ui_action": "Approve",
+      "endpoint": "/api/v1/policy-proposals/{id}/approve",
+      "method": "POST",
+      "response_status": 200,
+      "observed_effects": [
+        {
+          "entity": "policy_proposal",
+          "field": "status",
+          "from": "PENDING",
+          "to": "APPROVED"
+        }
+      ]
+    },
+    {
+      "capability_id": "REJECT",
+      "ui_panel": "POL-PR-PP-O2",
+      "ui_action": "Reject",
+      "endpoint": "/api/v1/policy-proposals/{id}/reject",
+      "method": "POST",
+      "response_status": 200,
+      "observed_effects": [
+        {
+          "entity": "policy_proposal",
+          "field": "status",
+          "from": "PENDING",
+          "to": "REJECTED"
+        }
+      ]
+    }
+  ],
+
+  "metadata": {
+    "run_id": "test-run-001",
+    "runner_version": "inject_synthetic.py v1.0",
+    "notes": "Test observation for APPROVE and REJECT capabilities"
+  }
+}

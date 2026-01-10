@@ -7,7 +7,7 @@
  *   Trigger: runtime (navigation)
  *   Execution: async (projection load)
  * Role: Render a domain with subdomains and topics from L2.1 UI Projection Lock
- * Reference: L2.1 UI Projection Pipeline, PIN-352
+ * Reference: L2.1 UI Projection Pipeline, PIN-352, PIN-386
  *
  * GOVERNANCE RULES (LOCKED):
  * - Header hierarchy: Domain → Subdomain → Short Description → Topic Tabs
@@ -15,6 +15,28 @@
  * - Panels render ONLY under selected topic
  * - NO internal IDs in customer-facing header
  * - NO kebab menus
+ *
+ * ORDERING GOVERNANCE (LOCKED):
+ * The UI never decides "what comes first." It only reflects what the system
+ * declares should be first. Ordering is semantic intent, not a UI concern.
+ *
+ * | Layer    | Order Source               | Sort Method                |
+ * |----------|----------------------------|----------------------------|
+ * | Domains  | domain.order (numeric)     | a.order - b.order          |
+ * | Topics   | topic_display_order (num)  | a.display_order - b.display_order |
+ * | Panels   | panel.order (alphanumeric) | String.localeCompare       |
+ * | Controls | control.order (numeric)    | a.order - b.order          |
+ *
+ * FORBIDDEN:
+ * - Alphabetical sorting (has zero semantic signal)
+ * - Encoding order in IDs (IDs identify, not govern layout)
+ * - Deriving order in React (order comes from AURORA_L2 compiler)
+ *
+ * BINDING AUTHORITY (PIN-386):
+ * - binding_status === "BOUND" → controls enabled
+ * - binding_status === "DRAFT" → controls disabled
+ * - binding_status === "INFO" → no controls rendered
+ * - binding_status === "UNBOUND" → panel hidden
  */
 
 import { useEffect, useState, useMemo } from 'react';
@@ -75,17 +97,41 @@ const RENDER_MODE_ICONS: Record<RenderMode, React.ElementType> = {
 };
 
 // ============================================================================
-// Helper: Get unique topics for a subdomain
+// Topic with display order (LOCKED - ordering governance)
+// ============================================================================
+// UI sorts topics by display_order, NOT alphabetically.
+// Alphabetical sorting answers "what comes first lexicographically?"
+// But users care about "what should I look at first?"
+// display_order is semantic intent from AURORA_L2, not a UI concern.
 // ============================================================================
 
-function getTopicsForSubdomain(panels: NormalizedPanel[]): string[] {
-  const topics = new Set<string>();
+interface TopicWithOrder {
+  topic: string;
+  display_order: number;
+}
+
+// ============================================================================
+// Helper: Get unique topics for a subdomain (sorted by display_order)
+// ============================================================================
+
+function getTopicsForSubdomain(panels: NormalizedPanel[]): TopicWithOrder[] {
+  const topicMap = new Map<string, number>();
+
   for (const panel of panels) {
     if (panel.topic) {
-      topics.add(panel.topic);
+      // Use the first panel's display_order for each topic
+      // If not set, default to 0
+      if (!topicMap.has(panel.topic)) {
+        topicMap.set(panel.topic, panel.topic_display_order ?? 0);
+      }
     }
   }
-  return Array.from(topics).sort();
+
+  // Convert to array and sort by display_order (numeric, ascending)
+  // NEVER alphabetically - that has zero semantic signal
+  return Array.from(topicMap.entries())
+    .map(([topic, display_order]) => ({ topic, display_order }))
+    .sort((a, b) => a.display_order - b.display_order);
 }
 
 // ============================================================================
@@ -118,6 +164,19 @@ function formatLabel(str: string): string {
 // Topic tabs are content contexts - panels are already selected by topic.
 // NO inference, NO card mode, NO click-to-expand inside topic context.
 // ============================================================================
+//
+// BINDING STATUS GATE (LOCKED - PIN-386)
+// ============================================================================
+// | binding_status | Meaning                          | UI Behavior              |
+// |----------------|----------------------------------|--------------------------|
+// | INFO           | Display only (no actions)        | No controls rendered     |
+// | DRAFT          | Actions exist but unverified     | Controls DISABLED        |
+// | BOUND          | SDSR verified (OBSERVED/TRUSTED) | Controls ENABLED         |
+// | UNBOUND        | Capability deprecated/missing    | Panel hidden             |
+// ============================================================================
+// This is the SOLE authority for enabling controls. No exceptions.
+// If binding_status !== "BOUND", action controls MUST be disabled.
+// ============================================================================
 
 interface FullPanelSurfaceProps {
   panel: NormalizedPanel;
@@ -129,8 +188,33 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
   const simulation = useSimulation();
   const renderer = useRenderer();
 
+  // ============================================================================
+  // BINDING AUTHORITY GATE (LOCKED - PIN-386)
+  // This is the centralized, sole authority for enabling/disabling controls.
+  // No exceptions. No overrides. No feature flags.
+  // Default: "INFO" (safe - display only, no controls enabled)
+  // ============================================================================
+  const bindingStatus = panel.binding_status ?? 'INFO';
+  const controlsEnabled = bindingStatus === 'BOUND';
+  const isDraft = bindingStatus === 'DRAFT';
+
   // Get action controls for simulation
   const actionControls = panel.controls?.filter(c => c.category === 'action') || [];
+
+  // ============================================================================
+  // DEV-ONLY: Console warning for DRAFT controls (helps backend teams diagnose)
+  // This warning appears when action controls exist but are disabled due to
+  // missing SDSR verification. Run SDSR scenario to move capability to OBSERVED.
+  // ============================================================================
+  if (import.meta.env.DEV && isDraft && actionControls.length > 0) {
+    console.warn(
+      `[AURORA_L2] Panel "${panel.panel_id}" has DRAFT binding status.\n` +
+      `  → ${actionControls.length} action control(s) are DISABLED.\n` +
+      `  → Controls: ${actionControls.map(c => c.type).join(', ')}\n` +
+      `  → To enable: Run SDSR scenario that exercises these capabilities.\n` +
+      `  → Reference: PIN-386 (SDSR → AURORA_L2 Observation Schema Contract)`
+    );
+  }
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
@@ -165,21 +249,47 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
       </div>
 
       {/* Controls Section - Phase-2A.2 Simulation */}
-      {actionControls.length > 0 && (
+      {/* BINDING GATE: Only render controls if binding_status !== UNBOUND */}
+      {actionControls.length > 0 && bindingStatus !== 'UNBOUND' && (
         <div className="px-5 py-4 border-b border-gray-700 bg-gray-800/50">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
               Actions
-              {simulation.isSimulationEnabled && (
+              {simulation.isSimulationEnabled && controlsEnabled && (
                 <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-900/50 text-amber-400 border border-amber-700/50">
                   <Beaker size={12} />
                   SIMULATION
                 </span>
               )}
+              {/* DRAFT indicator: Controls exist but unverified by SDSR */}
+              {isDraft && (
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/50">
+                  AWAITING VERIFICATION
+                </span>
+              )}
+              {/* BOUND indicator: System-verified controls */}
+              {controlsEnabled && (
+                <InspectorOnly>
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-green-900/50 text-green-400 border border-green-700/50">
+                    VERIFIED
+                  </span>
+                  {/* SDSR observation metadata - makes truth inspectable */}
+                  {panel.binding_metadata?.scenario_ids && panel.binding_metadata.scenario_ids.length > 0 && (
+                    <span className="text-xs text-green-400/70 ml-2 font-mono">
+                      {panel.binding_metadata.scenario_ids.join(', ')}
+                      {panel.binding_metadata.observed_at && (
+                        <span className="text-gray-500 ml-1">
+                          @ {new Date(panel.binding_metadata.observed_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </InspectorOnly>
+              )}
             </h4>
             <InspectorOnly>
               <span className="text-xs text-gray-500">
-                {actionControls.length} action{actionControls.length !== 1 ? 's' : ''}
+                {actionControls.length} action{actionControls.length !== 1 ? 's' : ''} | {bindingStatus}
               </span>
             </InspectorOnly>
           </div>
@@ -190,6 +300,7 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
                 control={control}
                 panelId={panel.panel_id}
                 showType={renderer.showControlTypes}
+                disabled={!controlsEnabled}
               />
             ))}
           </div>
@@ -231,7 +342,7 @@ function FullPanelSurface({ panel }: FullPanelSurfaceProps) {
 // ============================================================================
 
 interface TopicTabsProps {
-  topics: string[];
+  topics: TopicWithOrder[];
   activeTopic: string | null;
   onSelectTopic: (topic: string) => void;
 }
@@ -242,7 +353,8 @@ function TopicTabs({ topics, activeTopic, onSelectTopic }: TopicTabsProps) {
   return (
     <div className="border-b border-gray-700">
       <div className="flex gap-1 overflow-x-auto">
-        {topics.map((topic) => (
+        {/* Topics rendered in display_order (semantic intent, not alphabetical) */}
+        {topics.map(({ topic, display_order }) => (
           <button
             key={topic}
             onClick={() => onSelectTopic(topic)}
@@ -252,6 +364,7 @@ function TopicTabs({ topics, activeTopic, onSelectTopic }: TopicTabsProps) {
                 ? 'text-primary-400 border-primary-400 bg-primary-900/10'
                 : 'text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-600'
             )}
+            title={`Order: ${display_order}`}
           >
             {formatLabel(topic)}
           </button>
@@ -381,10 +494,10 @@ export function DomainPage({ domainName }: DomainPageProps) {
           const panels = getNormalizedPanelsForSubdomain(domainName, activeSubdomain);
           setSubdomainPanels(panels.filter(p => p.enabled));
 
-          // Auto-select first topic
+          // Auto-select first topic (by display_order, not alphabetical)
           const topics = getTopicsForSubdomain(panels);
           if (topics.length > 0 && !activeTopic) {
-            setActiveTopic(topics[0]);
+            setActiveTopic(topics[0].topic);
           }
         } else if (subdomains.length > 0) {
           // Auto-select first subdomain if none specified
@@ -395,7 +508,7 @@ export function DomainPage({ domainName }: DomainPageProps) {
 
           const topics = getTopicsForSubdomain(panels);
           if (topics.length > 0) {
-            setActiveTopic(topics[0]);
+            setActiveTopic(topics[0].topic);
           }
         } else {
           setSubdomainPanels([]);
@@ -420,10 +533,11 @@ export function DomainPage({ domainName }: DomainPageProps) {
     return getTopicsForSubdomain(subdomainPanels);
   }, [subdomainPanels]);
 
-  // Auto-select first topic when topics change
+  // Auto-select first topic when topics change (by display_order)
   useEffect(() => {
-    if (topics.length > 0 && (!activeTopic || !topics.includes(activeTopic))) {
-      setActiveTopic(topics[0]);
+    const topicExists = topics.some(t => t.topic === activeTopic);
+    if (topics.length > 0 && (!activeTopic || !topicExists)) {
+      setActiveTopic(topics[0].topic);
     }
   }, [topics, activeTopic]);
 

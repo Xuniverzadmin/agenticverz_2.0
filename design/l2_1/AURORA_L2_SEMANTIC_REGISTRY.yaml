@@ -1,0 +1,264 @@
+# AURORA_L2 Semantic Vocabulary Registry
+# Status: LOCKED
+# Version: 1.0
+# Purpose: Defines the closed semantic vocabulary for intent specs
+#
+# This file contains the ONLY valid verbs, objects, and effects.
+# Any semantic not in this registry is INVALID.
+
+version: "1.0.0"
+status: LOCKED
+
+# =============================================================================
+# VERBS - Actions that can be performed
+# =============================================================================
+verbs:
+  # Observational verbs (no state change)
+  VIEW:
+    description: "Display data without modification"
+    requires_target: true
+    side_effects: false
+    category: OBSERVE
+
+  FILTER:
+    description: "Narrow displayed data by criteria"
+    requires_target: true
+    side_effects: false
+    category: OBSERVE
+
+  SORT:
+    description: "Reorder displayed data"
+    requires_target: true
+    side_effects: false
+    category: OBSERVE
+
+  NAVIGATE:
+    description: "Move to a different view or panel"
+    requires_target: true
+    side_effects: false
+    category: OBSERVE
+
+  DOWNLOAD:
+    description: "Export data to file"
+    requires_target: true
+    side_effects: false
+    category: EXPORT
+
+  EXPORT:
+    description: "Generate exportable artifact"
+    requires_target: true
+    side_effects: false
+    category: EXPORT
+
+  # Mutational verbs (state change)
+  APPROVE:
+    description: "Accept a proposal or request"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: true
+
+  REJECT:
+    description: "Decline a proposal or request"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: true
+
+  ACKNOWLEDGE:
+    description: "Mark as seen/noted without resolution"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: false
+
+  RESOLVE:
+    description: "Close an incident or issue"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: true
+
+  ACTIVATE:
+    description: "Enable a policy or rule"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: true
+
+  DEACTIVATE:
+    description: "Disable a policy or rule"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: true
+
+  UPDATE:
+    description: "Modify existing data"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: true
+
+  ADD:
+    description: "Create new data"
+    requires_target: true
+    side_effects: true
+    category: MUTATE
+    requires_confirmation: false
+
+# =============================================================================
+# OBJECTS - Things that verbs act upon
+# =============================================================================
+objects:
+  # Activity domain
+  RUN:
+    description: "Execution run"
+    backend_table: runs
+    api_endpoint: /api/v1/runs
+    domain: Activity
+
+  TRACE:
+    description: "Execution trace"
+    backend_table: aos_traces
+    api_endpoint: /api/v1/traces
+    domain: Logs
+
+  TRACE_STEP:
+    description: "Individual trace step"
+    backend_table: aos_trace_steps
+    api_endpoint: /api/v1/traces/{id}/steps
+    domain: Logs
+
+  # Incidents domain
+  INCIDENT:
+    description: "System incident"
+    backend_table: incidents
+    api_endpoint: /api/v1/incidents
+    domain: Incidents
+
+  # Policies domain
+  POLICY:
+    description: "Policy definition"
+    backend_table: null  # Abstract
+    api_endpoint: null
+    domain: Policies
+
+  POLICY_RULE:
+    description: "Active policy rule"
+    backend_table: policy_rules
+    api_endpoint: /api/v1/policy-rules
+    domain: Policies
+
+  POLICY_PROPOSAL:
+    description: "Proposed policy change"
+    backend_table: policy_proposals
+    api_endpoint: /api/v1/policy-proposals
+    domain: Policies
+
+  BUDGET_POLICY:
+    description: "Budget constraint policy"
+    backend_table: null  # Placeholder
+    api_endpoint: null
+    domain: Policies
+
+  RATE_LIMIT:
+    description: "Rate limit policy"
+    backend_table: null  # Placeholder
+    api_endpoint: null
+    domain: Policies
+
+  APPROVAL_RULE:
+    description: "Approval workflow rule"
+    backend_table: null  # Placeholder
+    api_endpoint: null
+    domain: Policies
+
+  # Logs domain
+  AUDIT_LOG:
+    description: "Audit log entry"
+    backend_table: null  # Placeholder
+    api_endpoint: null
+    domain: Logs
+
+  SYSTEM_AUDIT:
+    description: "System-level audit entry"
+    backend_table: null  # Placeholder
+    api_endpoint: null
+    domain: Logs
+
+  USER_AUDIT:
+    description: "User-level audit entry"
+    backend_table: null  # Placeholder
+    api_endpoint: null
+    domain: Logs
+
+  # Overview domain
+  HEALTH_METRIC:
+    description: "System health metric"
+    backend_table: null  # Placeholder
+    api_endpoint: /api/v1/health
+    domain: Overview
+
+# =============================================================================
+# EFFECTS - Outcomes of verb+object combinations
+# =============================================================================
+effects:
+  STATE_CHANGE:
+    description: "Backend state is modified"
+    requires_refresh: true
+    category: MUTATE
+
+  FILE_DOWNLOAD:
+    description: "File is downloaded to client"
+    requires_refresh: false
+    category: EXPORT
+
+  CONTEXT_SWITCH:
+    description: "UI context changes (e.g., selected item)"
+    requires_refresh: false
+    category: UI
+
+  NAVIGATION:
+    description: "User navigates to different view"
+    requires_refresh: false
+    category: UI
+
+  SELECTION:
+    description: "User selects item(s)"
+    requires_refresh: false
+    category: UI
+
+  FILTER_APPLIED:
+    description: "Display is filtered"
+    requires_refresh: false
+    category: UI
+
+  SORT_APPLIED:
+    description: "Display is reordered"
+    requires_refresh: false
+    category: UI
+
+# =============================================================================
+# INTERACTION CLASSIFICATIONS
+# =============================================================================
+interaction_types:
+  INFO:
+    description: "Display-only, no user action"
+    has_controls: false
+    requires_binding: false
+
+  CONTROL:
+    description: "User can filter, sort, select"
+    has_controls: true
+    requires_binding: false
+
+  ACTION:
+    description: "User can trigger state changes"
+    has_controls: true
+    requires_binding: true
+
+  NAV:
+    description: "User can navigate to other views"
+    has_controls: true
+    requires_binding: false

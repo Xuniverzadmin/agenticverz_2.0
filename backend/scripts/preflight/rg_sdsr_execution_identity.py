@@ -39,6 +39,10 @@ from pathlib import Path
 # Add backend to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# DB-AUTH-001: Require Neon authority (CRITICAL - execution identity check)
+from scripts._db_guard import require_neon
+require_neon()
+
 EXIT_PASS = 0
 EXIT_IDENTITY_REUSE = 4
 

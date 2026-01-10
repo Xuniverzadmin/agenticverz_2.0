@@ -47,6 +47,10 @@ from typing import Dict, List, Optional, Tuple
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
+# DB-AUTH-001: Declare local-only authority
+from scripts._db_guard import assert_db_authority
+assert_db_authority("local")
+
 from app.auth.actor import ActorContext, ActorType, IdentitySource
 from app.auth.authorization import AuthorizationEngine, get_authorization_engine
 

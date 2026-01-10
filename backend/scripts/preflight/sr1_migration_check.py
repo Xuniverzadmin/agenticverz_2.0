@@ -25,6 +25,10 @@ import sys
 # Ensure we can import from backend
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# DB-AUTH-001: Require Neon authority (HIGH - migration check)
+from scripts._db_guard import require_neon
+require_neon()
+
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory

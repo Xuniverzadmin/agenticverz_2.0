@@ -33,6 +33,10 @@ from urllib.parse import urlparse
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# DB-AUTH-001: Require Neon authority (HIGH - truth verification)
+from scripts._db_guard import require_neon
+require_neon()
+
 # =============================================================================
 # Invariant #12: asyncpg + PgBouncer Guard
 # =============================================================================

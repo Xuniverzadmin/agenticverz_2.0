@@ -23,6 +23,13 @@ import os
 import sys
 from datetime import datetime, timezone
 
+# Add backend to path for guard import
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../backend"))
+
+# DB-AUTH-001: Require Neon authority (HIGH - prediction cleanup)
+from scripts._db_guard import require_neon  # noqa: E402
+require_neon()
+
 import psycopg2
 
 

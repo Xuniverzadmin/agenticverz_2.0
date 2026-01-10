@@ -1,0 +1,161 @@
+# DB-AUTH-001 Enforcement Workflow
+# Reference: docs/governance/DB_AUTH_001_INVARIANT.md
+#
+# This workflow ensures:
+# 1. DB_AUTHORITY is declared in all env files
+# 2. DB-touching scripts invoke _db_guard.py
+# 3. No script connects to DB without declaring authority
+
+name: DB Authority Guard
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**/*.py'
+      - '.env*'
+      - 'scripts/**/*.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**/*.py'
+      - '.env*'
+      - 'scripts/**/*.py'
+
+jobs:
+  db-authority-check:
+    name: DB-AUTH-001 Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check DB_AUTHORITY in env files
+        id: check_env
+        run: |
+          echo "=== Checking env files for DB_AUTHORITY ==="
+          VIOLATIONS=0
+
+          for envfile in .env .env.example .env.local .env.test; do
+            if [ -f "$envfile" ]; then
+              if ! grep -q "^DB_AUTHORITY=" "$envfile"; then
+                echo "VIOLATION: $envfile missing DB_AUTHORITY"
+                VIOLATIONS=$((VIOLATIONS + 1))
+              else
+                echo "OK: $envfile has DB_AUTHORITY"
+              fi
+            fi
+          done
+
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "::error::DB-AUTH-001 VIOLATION: $VIOLATIONS env file(s) missing DB_AUTHORITY"
+            exit 1
+          fi
+
+      - name: Scan scripts for DB guard compliance
+        id: check_scripts
+        run: |
+          echo "=== Scanning scripts for DB authority compliance ==="
+
+          # Find Python scripts that likely touch DB
+          DB_PATTERNS="psycopg|DATABASE_URL|sqlalchemy|session\.execute|conn\.execute|cursor\.execute"
+
+          VIOLATIONS=0
+          VIOLATION_FILES=""
+
+          # Scan backend scripts
+          for script in $(find backend/scripts -name "*.py" -type f 2>/dev/null); do
+            # Skip the guard itself
+            if [[ "$script" == *"_db_guard.py"* ]]; then
+              continue
+            fi
+
+            # Check if script touches DB
+            if grep -qE "$DB_PATTERNS" "$script" 2>/dev/null; then
+              # Check if it imports _db_guard
+              if ! grep -qE "from.*_db_guard|import.*_db_guard|assert_db_authority|require_neon|require_local" "$script" 2>/dev/null; then
+                echo "VIOLATION: $script touches DB but doesn't use _db_guard"
+                VIOLATIONS=$((VIOLATIONS + 1))
+                VIOLATION_FILES="$VIOLATION_FILES $script"
+              else
+                echo "OK: $script uses _db_guard"
+              fi
+            fi
+          done
+
+          # Also check scripts/ directory at root
+          for script in $(find scripts -name "*.py" -type f 2>/dev/null); do
+            if [[ "$script" == *"_db_guard.py"* ]]; then
+              continue
+            fi
+
+            if grep -qE "$DB_PATTERNS" "$script" 2>/dev/null; then
+              if ! grep -qE "from.*_db_guard|import.*_db_guard|assert_db_authority|require_neon|require_local" "$script" 2>/dev/null; then
+                echo "VIOLATION: $script touches DB but doesn't use _db_guard"
+                VIOLATIONS=$((VIOLATIONS + 1))
+                VIOLATION_FILES="$VIOLATION_FILES $script"
+              else
+                echo "OK: $script uses _db_guard"
+              fi
+            fi
+          done
+
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "::error::DB-AUTH-001 VIOLATION: $VIOLATIONS script(s) touch DB without _db_guard"
+            echo "Files:$VIOLATION_FILES"
+            exit 1
+          fi
+
+      - name: Check for dual-connection anti-patterns
+        id: check_dual
+        run: |
+          echo "=== Checking for dual-connection anti-patterns ==="
+
+          # Pattern: scripts that reference both neon.tech AND localhost/docker
+          DUAL_PATTERN="(neon\.tech.*localhost|localhost.*neon\.tech|neon\.tech.*127\.0\.0\.1|127\.0\.0\.1.*neon\.tech)"
+
+          VIOLATIONS=0
+
+          for script in $(find . -name "*.py" -type f 2>/dev/null | grep -v __pycache__ | grep -v ".venv"); do
+            # Check for dual connection strings in same file
+            if grep -qE "$DUAL_PATTERN" "$script" 2>/dev/null; then
+              echo "VIOLATION: $script contains dual-connection pattern"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+
+            # Check for "try neon, fallback local" patterns
+            if grep -qE "try.*neon.*except.*local|fallback.*local|retry.*different.*db" "$script" 2>/dev/null; then
+              echo "VIOLATION: $script contains fallback anti-pattern"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "::error::DB-AUTH-001 VIOLATION: Dual-connection anti-pattern detected"
+            exit 1
+          fi
+
+          echo "OK: No dual-connection anti-patterns found"
+
+      - name: Validate _db_guard.py exists
+        run: |
+          if [ ! -f "backend/scripts/_db_guard.py" ]; then
+            echo "::error::DB-AUTH-001 VIOLATION: _db_guard.py not found"
+            exit 1
+          fi
+          echo "OK: _db_guard.py exists"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "=== DB-AUTH-001 Compliance Summary ==="
+          echo "Reference: docs/governance/DB_AUTH_001_INVARIANT.md"
+          echo ""
+          echo "Rule: Authority is declared, not discovered."
+          echo "Rule: If CI doesn't know which DB is authoritative, the build is invalid."

@@ -1,0 +1,113 @@
+# AURORA_L2 Expansion Mode Registry
+# Status: LOCKED
+# Version: 1.0
+# Purpose: Defines how panels expand/contract in the UI
+#
+# Expansion modes are a CLOSED ENUM.
+# Any mode not in this registry is INVALID.
+
+version: "1.0.0"
+status: LOCKED
+
+# =============================================================================
+# EXPANSION MODES (Closed Enum)
+# =============================================================================
+modes:
+  INLINE:
+    description: "Content replaces current view inline"
+    css_class: "aurora-expansion-inline"
+    transition: "fade"
+    default_for_orders: [O1, O2]
+    behavior:
+      - "Content appears in same container"
+      - "No overlay or modal"
+      - "Scrolls with page"
+    use_cases:
+      - "Summaries (O1)"
+      - "Lists (O2)"
+      - "Primary content"
+
+  COLLAPSIBLE:
+    description: "Content expands/collapses in place"
+    css_class: "aurora-expansion-collapsible"
+    transition: "slide-down"
+    default_for_orders: []
+    behavior:
+      - "Toggle button shows/hides content"
+      - "Accordion-style expansion"
+      - "Maintains position in layout"
+    use_cases:
+      - "Grouped topics with many panels"
+      - "Secondary details"
+      - "Optional information"
+
+  CONTEXTUAL:
+    description: "Side panel overlay"
+    css_class: "aurora-expansion-contextual"
+    transition: "slide-right"
+    default_for_orders: [O3]
+    behavior:
+      - "Opens in side panel (right)"
+      - "Main content remains visible"
+      - "Can be dismissed"
+    use_cases:
+      - "Detail views (O3)"
+      - "Quick inspection"
+      - "Context without navigation"
+
+  OVERLAY:
+    description: "Modal dialog"
+    css_class: "aurora-expansion-overlay"
+    transition: "fade-scale"
+    default_for_orders: [O4]
+    behavior:
+      - "Centers on screen"
+      - "Dims background"
+      - "Requires explicit close"
+    use_cases:
+      - "Context/impact views (O4)"
+      - "Confirmation dialogs"
+      - "Focused interactions"
+
+  NAVIGATE:
+    description: "Full page navigation"
+    css_class: "aurora-expansion-navigate"
+    transition: "page-transition"
+    default_for_orders: [O5]
+    behavior:
+      - "Full page change"
+      - "Updates URL"
+      - "Back button returns"
+    use_cases:
+      - "Proof/raw data views (O5)"
+      - "Deep detail pages"
+      - "Printable views"
+
+# =============================================================================
+# ORDER-TO-MODE DEFAULT MAPPING
+# =============================================================================
+order_defaults:
+  O1: INLINE       # Summary - always inline
+  O2: INLINE       # List - primary navigation
+  O3: CONTEXTUAL   # Detail - side panel
+  O4: OVERLAY      # Context - modal
+  O5: NAVIGATE     # Proof - full page
+
+# =============================================================================
+# PROJECTION RULES
+# =============================================================================
+projection_rules:
+  unreviewed_normalization:
+    description: "UNREVIEWED intents have expansion mode normalized to order default"
+    enabled: true
+    emit_warning: true
+
+  reviewed_override:
+    description: "REVIEWED intents can override default expansion mode"
+    enabled: true
+    emit_warning: false
+
+  invalid_mode_fallback:
+    description: "Invalid or missing expansion mode falls back to INLINE"
+    fallback: INLINE
+    emit_error: true

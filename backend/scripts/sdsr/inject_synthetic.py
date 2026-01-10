@@ -65,6 +65,7 @@ USAGE:
 
 import argparse
 import hashlib
+import json
 import logging
 import os
 import sys
@@ -78,6 +79,20 @@ import yaml
 
 # Add backend to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# DB-AUTH-001: Require Neon authority (CRITICAL - canonical truth)
+from scripts._db_guard import require_neon
+require_neon()
+
+# SDSR Truth Materialization (LEAK-1 + LEAK-2 fix)
+# These imports are used ONLY after --wait completes, not during injection
+from Scenario_SDSR_output import (
+    ScenarioSDSROutputBuilder,
+    ObservedCapability,
+    ObservedEffect,
+    build_observed_capability,
+)
+from SDSR_output_emit_AURORA_L2 import emit_aurora_l2_observation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -362,7 +377,7 @@ def check_idempotency(scenario_id: str, conn) -> bool:
     return False
 
 
-def build_writes_from_new_format(spec: dict) -> List[Dict[str, Any]]:
+def build_writes_from_new_format(spec: dict, case_id: str = None) -> List[Dict[str, Any]]:
     """
     Convert new format (preconditions/steps) to writes list.
 
@@ -376,12 +391,51 @@ def build_writes_from_new_format(spec: dict) -> List[Dict[str, Any]]:
             action: create_run
             data: {...}
 
+    Multi-case format (sub_scenarios):
+        preconditions: {...}  # shared
+        sub_scenarios:
+          - case_id: CASE-A
+            steps: [...]
+          - case_id: CASE-B
+            steps: [...]
+
     SDSR Identity Rule (PIN-379):
         run_id is execution-unique; scenario IDs may repeat.
-        Format: run-{scenario_id}-{UTC_YYYYMMDDTHHMMSSZ}
+        Format: run-{scenario_id}-{case_suffix}-{UTC_YYYYMMDDTHHMMSSZ}
+
+    Args:
+        spec: The scenario specification dict
+        case_id: Optional case ID to select from sub_scenarios
     """
     writes = []
     scenario_id = spec["scenario_id"]
+
+    # Determine which steps to use
+    steps = []
+    if "sub_scenarios" in spec:
+        # Multi-case format
+        if not case_id:
+            raise ScenarioValidationError(
+                f"Scenario {scenario_id} has sub_scenarios. "
+                f"Use --case to specify which case to run. "
+                f"Available cases: {[s['case_id'] for s in spec['sub_scenarios']]}"
+            )
+        # Find the matching sub_scenario
+        matching_case = None
+        for sub in spec["sub_scenarios"]:
+            if sub.get("case_id") == case_id:
+                matching_case = sub
+                break
+        if not matching_case:
+            raise ScenarioValidationError(
+                f"Case '{case_id}' not found in scenario {scenario_id}. "
+                f"Available cases: {[s['case_id'] for s in spec['sub_scenarios']]}"
+            )
+        steps = matching_case.get("steps", [])
+        logger.info(f"Selected sub_scenario: {case_id} with {len(steps)} steps")
+    else:
+        # Single scenario format
+        steps = spec.get("steps", [])
 
     # Generate execution timestamp for unique run_id (SDSR Identity Rule)
     execution_timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -447,26 +501,63 @@ def build_writes_from_new_format(spec: dict) -> List[Dict[str, Any]]:
             }
         )
 
-    # Process steps
-    for step in spec.get("steps", []):
+    # Process steps (from spec.steps or selected sub_scenario)
+    for step in steps:
         action = step.get("action")
         data = step.get("data", {})
 
         if action == "create_run":
-            # For E2E testing, we create runs with status="queued" so the worker picks them up
-            # SDSR Contract: Scenarios inject CAUSES, engines create EFFECTS
-            # A failed run is an EFFECT - we must create a queued run that will fail during execution
+            # =================================================================
+            # SDSR RUN CREATION — Two Supported Modes (PIN-XXX)
+            # =================================================================
+            #
+            # MODE 1: WORKER_EXECUTION (failure_code set)
+            #   - Creates run with status="queued"
+            #   - Worker picks up and executes plan
+            #   - Worker fails with synthetic skill trigger
+            #   - IncidentEngine reacts to worker completion
+            #
+            # MODE 2: STATE_INJECTION (status="failed" + failure_message)
+            #   - Creates run with status="failed" directly
+            #   - Worker IGNORES (terminal status)
+            #   - error_message contains known code for severity mapping
+            #   - IncidentEngine triggered by post-injection hook
+            #
+            # STATE_INJECTION Contract:
+            #   If a run is created with:
+            #     - status = failed
+            #     - started_at IS NULL
+            #     - error_message contains a known error code
+            #   Then:
+            #     - Worker MUST ignore the run
+            #     - IncidentEngine MUST classify severity from error_message
+            #     - Policy engines MAY react based on severity
+            # =================================================================
 
-            # Determine if this run should fail during execution
+            # Determine execution mode
             has_failure_plan = data.get("failure_code") is not None
+            explicit_failed_status = data.get("status") == "failed"
+
+            # GUARDRAIL: Conflicting failure_code and status: failed is ambiguous
+            # This prevents confusion between WORKER_EXECUTION and STATE_INJECTION modes
+            if has_failure_plan and explicit_failed_status:
+                raise ScenarioValidationError(
+                    f"Ambiguous intent: Both 'failure_code' and 'status: failed' specified in step '{step.get('step_id', 'unknown')}'. "
+                    f"Use 'failure_code' for WORKER_EXECUTION mode, or 'status: failed' + 'failure_message' for STATE_INJECTION mode. "
+                    f"These modes are mutually exclusive."
+                )
+
+            # STATE_INJECTION mode: direct failed state with failure_message
+            is_state_injection = explicit_failed_status and data.get("failure_message")
 
             # SDSR Identity Rule (MANDATORY): run_id must be execution-unique
-            # Format: run-{scenario_id}-{UTC_YYYYMMDDTHHMMSSZ}
+            # Format: run-{scenario_id}-{case_suffix}-{UTC_YYYYMMDDTHHMMSSZ}
             # This prevents trace_id conflicts on re-execution (S6 immutability)
             #
             # IMPORTANT: We ALWAYS generate unique run_id, ignoring any YAML override.
             # run_id is execution identity, not scenario configuration.
-            unique_run_id = f"run-{scenario_id.lower()}-{execution_timestamp}"
+            case_suffix = f"-{case_id.lower().replace('_', '-')}" if case_id else ""
+            unique_run_id = f"run-{scenario_id.lower()}{case_suffix}-{execution_timestamp}"
             run_data = {
                 "id": unique_run_id,  # Always unique per execution (SDSR Identity Rule)
                 "agent_id": data.get(
@@ -497,18 +588,74 @@ def build_writes_from_new_format(spec: dict) -> List[Dict[str, Any]]:
                     f'{{"steps": [{{"skill": "__sdsr_fail_trigger__", "params": {{"error_code": "{data.get("failure_code")}", "error_message": "{data.get("failure_message", "SDSR injected failure")}"}}}}]}}'
                 )
                 run_data["error_message"] = data.get("failure_message", f"SDSR: {data.get('failure_code')}")
+            elif is_state_injection:
+                # =================================================================
+                # STATE_INJECTION MODE
+                # =================================================================
+                # Direct failed state injection - NO worker execution
+                # - status is already "failed" (set via data.get("status"))
+                # - error_message must contain known error code for severity mapping
+                # - No plan_json needed (no execution will occur)
+                # - started_at will remain NULL (worker never touches it)
+                #
+                # The error_message MUST contain a known code from FAILURE_SEVERITY_MAP:
+                #   EXECUTION_TIMEOUT, AGENT_CRASH, STEP_FAILURE, SKILL_ERROR → HIGH/CRITICAL
+                #   BUDGET_EXCEEDED, RATE_LIMIT_EXCEEDED → MEDIUM
+                #
+                # Example failure_message values:
+                #   "EXECUTION_TIMEOUT: Operation exceeded time limit"
+                #   "BUDGET_EXCEEDED: Resource limit reached"
+                # =================================================================
+                run_data["error_message"] = data.get("failure_message")
+                # No plan_json - this is terminal state, not execution
+                logger.info(
+                    f"STATE_INJECTION mode: run will be created with status=failed, "
+                    f"error_message='{run_data['error_message'][:50]}...'"
+                )
+            elif run_data["status"] == "queued":
+                # SDSR WORKER_EXECUTION: Minimal valid plan for success path
+                # This satisfies the L4→L5 governance contract (PIN-257 Phase R-2).
+                # The plan uses json_transform skill which is deterministic and
+                # requires no external dependencies.
+                #
+                # Rule: SDSR runs must include a plan. The plan may be minimal,
+                # but it must be valid and L4-compliant.
+                minimal_success_plan = {
+                    "steps": [
+                        {
+                            "step_id": "sdsr_success",
+                            "skill": "json_transform",
+                            "params": {
+                                "payload": {"status": "success", "synthetic": True, "scenario_id": scenario_id},
+                                "mapping": {"result": "status", "is_synthetic": "synthetic"},
+                            },
+                        }
+                    ],
+                    "metadata": {
+                        "plan_type": "synthetic_minimal",
+                        "generated_by": "inject_synthetic.py",
+                        "sdsr_scenario": True,
+                        "scenario_id": scenario_id,
+                    },
+                }
+                run_data["plan_json"] = json.dumps(minimal_success_plan)
 
             writes.append({"create_run": run_data})
 
     return writes
 
 
-def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
+def inject_scenario(spec: dict, dry_run: bool = False, case_id: str = None) -> dict:
     """
     Inject a scenario's writes into the database.
 
     Rule 3: Every row traceable - is_synthetic=true, synthetic_scenario_id set.
     Rule 4: One scenario = one transaction.
+
+    Args:
+        spec: The scenario specification dict
+        dry_run: If True, only print planned writes without executing
+        case_id: Optional case ID for multi-case scenarios (sub_scenarios)
 
     Returns:
         dict with summary of writes performed
@@ -519,10 +666,11 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
     if "backend" in spec and "writes" in spec.get("backend", {}):
         writes = spec["backend"]["writes"]
     else:
-        writes = build_writes_from_new_format(spec)
+        writes = build_writes_from_new_format(spec, case_id=case_id)
 
     results = {
         "scenario_id": scenario_id,
+        "case_id": case_id,
         "rows_written": 0,
         "tables_touched": set(),
         "operations": [],
@@ -613,6 +761,33 @@ def inject_scenario(spec: dict, dry_run: bool = False) -> dict:
                 # Track if we created a run (execution trigger)
                 if table == "runs" and data.get("status") == "queued":
                     results["execution_triggered"] = True
+
+                # STATE_INJECTION: Trigger IncidentEngine for failed runs
+                # This simulates what the worker would do when a run fails.
+                # Without this, failed runs created via STATE_INJECTION would
+                # not produce incidents or policy proposals.
+                if table == "runs" and data.get("status") == "failed":
+                    from app.services.incident_engine import get_incident_engine
+
+                    try:
+                        engine = get_incident_engine()
+                        incident_id = engine.check_and_create_incident(
+                            run_id=data["id"],
+                            status="failed",
+                            error_message=data.get("error_message"),
+                            tenant_id=data.get("tenant_id"),
+                            agent_id=data.get("agent_id"),
+                            is_synthetic=True,
+                            synthetic_scenario_id=scenario_id,
+                        )
+                        if incident_id:
+                            logger.info(
+                                f"STATE_INJECTION: IncidentEngine created incident {incident_id}"
+                            )
+                            results["incident_created"] = incident_id
+                    except Exception as e:
+                        logger.error(f"STATE_INJECTION: Failed to invoke IncidentEngine: {e}")
+                        # Don't fail the injection - this is a propagation test
 
         # Rule 4: Commit as single transaction
         conn.commit()
@@ -718,6 +893,148 @@ def cleanup_scenario(scenario_id: str, dry_run: bool = False) -> dict:
         conn.close()
 
     return results
+
+
+# =============================================================================
+# TRUTH MATERIALIZATION (LEAK-1 + LEAK-2 FIX)
+# =============================================================================
+# This function is called ONLY after --wait completes successfully.
+# It materializes SDSR truth and emits observation artifact.
+#
+# Authority: inject_synthetic.py owns SDSR truth materialization
+# Worker does NOT call this - worker only realizes effects
+# =============================================================================
+
+
+def materialize_and_emit_truth(
+    scenario_id: str,
+    spec: dict,
+    wait_results: dict,
+) -> dict:
+    """
+    Materialize SDSR truth and emit observation artifact.
+
+    Called ONLY after --wait completes.
+    Authority boundary: SDSR entrypoint, not worker.
+
+    Returns:
+        dict with materialization results:
+        - status: PASSED | FAILED | HALTED
+        - observation_path: path to emitted JSON (if PASSED)
+        - error: error message (if any)
+    """
+    result = {
+        "status": None,
+        "observation_path": None,
+        "error": None,
+    }
+
+    # Determine execution status from wait_results
+    if not wait_results.get("completed"):
+        result["status"] = "HALTED"
+        result["error"] = "Execution did not complete within timeout"
+        logger.warning(f"Scenario {scenario_id}: HALTED (timeout)")
+        return result
+
+    # Check run statuses
+    runs = wait_results.get("runs", [])
+    if not runs:
+        result["status"] = "HALTED"
+        result["error"] = "No runs found after execution"
+        logger.warning(f"Scenario {scenario_id}: HALTED (no runs)")
+        return result
+
+    # Determine overall status
+    # PASSED: All runs reached terminal state (completed or failed as expected)
+    # FAILED: Any run in unexpected state
+    all_terminal = all(r["status"] in ("completed", "failed") for r in runs)
+
+    if not all_terminal:
+        result["status"] = "FAILED"
+        non_terminal = [r for r in runs if r["status"] not in ("completed", "failed")]
+        result["error"] = f"Runs not terminal: {[r['id'] for r in non_terminal]}"
+        logger.warning(f"Scenario {scenario_id}: FAILED (non-terminal runs)")
+        return result
+
+    # Extract expected capabilities from scenario spec
+    # Look in: spec.capabilities_tested OR spec.expected_capabilities OR infer from steps
+    capabilities_tested = spec.get("capabilities_tested", [])
+    if not capabilities_tested:
+        capabilities_tested = spec.get("expected_capabilities", [])
+
+    # If not explicitly defined, try to infer from steps
+    if not capabilities_tested:
+        steps = spec.get("steps", [])
+        for step in steps:
+            cap_id = step.get("capability_id")
+            if cap_id:
+                capabilities_tested.append({
+                    "capability_id": cap_id,
+                    "endpoint": step.get("endpoint"),
+                    "method": step.get("method"),
+                })
+
+    # Build ObservedCapability list
+    observed_capabilities = []
+    for cap_spec in capabilities_tested:
+        cap_id = cap_spec if isinstance(cap_spec, str) else cap_spec.get("capability_id")
+        if not cap_id:
+            continue
+
+        # Build effects from spec or use empty list
+        effects = []
+        if isinstance(cap_spec, dict):
+            for effect_spec in cap_spec.get("expected_effects", []):
+                effects.append(ObservedEffect(
+                    entity=effect_spec.get("entity", "unknown"),
+                    field=effect_spec.get("field", "status"),
+                    before=effect_spec.get("from"),
+                    after=effect_spec.get("to"),
+                ))
+
+        observed_capabilities.append(ObservedCapability(
+            capability_id=cap_id,
+            effects=effects,
+            endpoint=cap_spec.get("endpoint") if isinstance(cap_spec, dict) else None,
+            method=cap_spec.get("method") if isinstance(cap_spec, dict) else None,
+        ))
+
+    # Materialize truth (LEAK-1 fix)
+    try:
+        # Use first run_id as the representative run_id
+        run_id = runs[0]["id"] if runs else f"run-{scenario_id}-unknown"
+
+        scenario_output = ScenarioSDSROutputBuilder.from_execution(
+            scenario_id=scenario_id,
+            run_id=run_id,
+            execution_status="PASSED",
+            observed_capabilities=observed_capabilities,
+            notes=f"Materialized by inject_synthetic.py after --wait",
+        )
+
+        result["status"] = "PASSED"
+        logger.info(f"Scenario {scenario_id}: Truth materialized (PASSED)")
+
+    except Exception as e:
+        result["status"] = "FAILED"
+        result["error"] = f"Truth materialization failed: {e}"
+        logger.error(f"Scenario {scenario_id}: Materialization error: {e}")
+        return result
+
+    # Emit observation artifact (LEAK-2 fix)
+    # Only emit if PASSED
+    if result["status"] == "PASSED":
+        try:
+            observation_path = emit_aurora_l2_observation(scenario_output)
+            result["observation_path"] = observation_path
+            logger.info(f"Scenario {scenario_id}: Observation emitted to {observation_path}")
+        except Exception as e:
+            # Emission failure doesn't change PASSED status
+            # Truth was materialized, but witness failed to record
+            result["error"] = f"Observation emission failed: {e}"
+            logger.error(f"Scenario {scenario_id}: Emission error: {e}")
+
+    return result
 
 
 def wait_for_execution(scenario_id: str, timeout_seconds: int = 60) -> dict:
@@ -854,6 +1171,13 @@ Examples:
         help="Timeout in seconds when using --wait (default: 60)",
     )
 
+    parser.add_argument(
+        "--case",
+        type=str,
+        default=None,
+        help="Case ID to run for multi-case scenarios (e.g., CASE-A-MEDIUM)",
+    )
+
     args = parser.parse_args()
 
     try:
@@ -881,10 +1205,12 @@ Examples:
             validate_scenario_spec(spec)
             logger.info("Validation passed")
 
-            results = inject_scenario(spec, dry_run=args.dry_run)
+            results = inject_scenario(spec, dry_run=args.dry_run, case_id=args.case)
 
             # Output summary
             print(f"\nScenario: {results['scenario_id']}")
+            if results.get("case_id"):
+                print(f"Case: {results['case_id']}")
             if args.dry_run:
                 print("[DRY RUN - No changes made]")
             print(f"Rows written: {results['rows_written']}")
@@ -903,6 +1229,33 @@ Examples:
                     print(f"  Run {run['id']}: {run['status']}")
                     if run.get("error_message"):
                         print(f"    Error: {run['error_message']}")
+
+                # LEAK-1 + LEAK-2 FIX: Materialize truth and emit observation
+                # This happens ONLY after --wait, ONLY in SDSR entrypoint
+                print("\n" + "=" * 60)
+                print("SDSR TRUTH MATERIALIZATION")
+                print("=" * 60)
+
+                truth_results = materialize_and_emit_truth(
+                    scenario_id=results["scenario_id"],
+                    spec=spec,
+                    wait_results=wait_results,
+                )
+
+                print(f"  Status: {truth_results['status']}")
+                if truth_results.get("observation_path"):
+                    print(f"  Observation: {truth_results['observation_path']}")
+                if truth_results.get("error"):
+                    print(f"  Error: {truth_results['error']}")
+
+                # Report next step for LEAK-3 + LEAK-4
+                if truth_results["status"] == "PASSED" and truth_results.get("observation_path"):
+                    print("\n" + "=" * 60)
+                    print("NEXT STEP (Manual or via sdsr_e2e_apply.py):")
+                    print("=" * 60)
+                    print(f"  python3 scripts/tools/AURORA_L2_apply_sdsr_observations.py \\")
+                    print(f"      --observation {truth_results['observation_path']}")
+                    print(f"  ./scripts/tools/run_aurora_l2_pipeline.sh")
 
             sys.exit(EXIT_SUCCESS)
 

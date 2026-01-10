@@ -1,0 +1,485 @@
+scenario_id: SDSR-E2E-003
+name: Incident Severity Thresholds and Policy Proposal Discrimination
+domain: CROSS_DOMAIN
+
+# -----------------------------------------
+# SCENARIO CLASSIFICATION (REFRAMED)
+# -----------------------------------------
+# REFRAME NOTE (Option 1 Compliance - 2026-01-10):
+# Changed from WORKER_EXECUTION to STATE_INJECTION.
+# This scenario tests severity DISCRIMINATION, not worker failure paths.
+# Worker execution is covered by SDSR-E2E-005 (CERTIFIED).
+#
+# RATIONALE:
+# - No synthetic failure skills exist in current system
+# - Severity mapping is what we're testing (not worker behavior)
+# - STATE_INJECTION mode validated by SDSR-E2E-001 (CERTIFIED)
+# -----------------------------------------
+scenario_class: STATE_INJECTION
+execution_mode: non_executable
+
+# This scenario relies exclusively on naturally occurring worker failure modes.
+# No synthetic failure injection is used.
+
+coverage:
+  engine_propagation: true
+  worker_execution: false  # REFRAMED: Not tested here (see E2E-005)
+  trace_generation: false  # Traces are expectations, not generated
+  severity_discrimination: true
+  policy_proposal_discrimination: true
+  ui_observation: true
+
+purpose: >
+  Validate incident severity thresholds for policy proposal creation.
+
+  INVARIANT UNDER TEST:
+  "Only incidents at or above configured severity thresholds (HIGH/CRITICAL)
+  should produce policy proposals. MEDIUM/LOW incidents do NOT trigger proposals."
+
+  This validates DISCRIMINATION via state injection.
+  The failed run state is injected; engines react to it.
+
+  REFRAME RATIONALE:
+  This scenario uses STATE_INJECTION (like E2E-001) because:
+  1. No synthetic failure skills exist
+  2. Severity mapping is what we're testing (not worker behavior)
+  3. E2E-005 already validates worker execution path
+
+  ENGINE INVOCATION ASSUMPTION (REQUIRED CLARIFICATION):
+  This scenario assumes IncidentEngine evaluation is triggered synchronously
+  upon creation of a failed run in STATE_INJECTION mode. If engine invocation
+  becomes async or event-driven, this assumption must be revisited.
+
+tags:
+  - e2e
+  - cross-domain
+  - sdsr
+  - severity-thresholds
+  - state-injection
+  - policy-discrimination
+  - engine-validation
+  - reframed
+
+synthetic:
+  enabled: true
+  cleanup_required: true
+
+# -----------------------------------------
+# SINGLE CAUSAL VARIABLE (MANDATORY)
+# -----------------------------------------
+# The ONLY difference between Case A and Case B is error_code in error_message.
+# All other inputs are IDENTICAL.
+controlled_variable:
+  name: error_code
+  case_a: BUDGET_EXCEEDED
+  case_b: EXECUTION_TIMEOUT
+  mapping:
+    BUDGET_EXCEEDED: MEDIUM    # From incident_engine.py FAILURE_SEVERITY_MAP
+    EXECUTION_TIMEOUT: HIGH    # From incident_engine.py FAILURE_SEVERITY_MAP
+
+# -----------------------------------------
+# Shared Preconditions (Both Cases)
+# -----------------------------------------
+preconditions:
+  tenant:
+    create: true
+    tenant_id: sdsr-tenant-e2e-003
+  api_key:
+    create: true
+    scopes: [activity:write, incidents:read, policies:read, logs:read]
+  agent:
+    create: true
+    agent_id: sdsr-agent-e2e-003
+
+  # CRITICAL: Clean state required
+  clean_state:
+    - table: policy_proposals
+      conditions:
+        tenant_id: sdsr-tenant-e2e-003
+      expected_count: 0
+    - table: incidents
+      conditions:
+        tenant_id: sdsr-tenant-e2e-003
+      expected_count: 0
+
+# =========================================
+# SUB-SCENARIO A: MEDIUM SEVERITY (No Proposal)
+# =========================================
+# error_code: BUDGET_EXCEEDED
+# Expected: Incident created, NO policy proposal
+# =========================================
+
+sub_scenarios:
+  - case_id: CASE-A-MEDIUM
+    description: MEDIUM severity incident - NO policy proposal
+
+    steps:
+      - step_id: ACTIVITY-FAIL-MEDIUM
+        description: Inject failed run state with MEDIUM severity error
+        action: create_run
+        data:
+          # run_id auto-generated per RG-SDSR-01
+          agent_id: sdsr-agent-e2e-003
+          status: failed  # STATE_INJECTION: Direct failed state
+          goal: "SDSR E2E-003 Case A: MEDIUM severity test"
+          failure_message: "BUDGET_EXCEEDED: Resource limit reached during operation"
+        expectations:
+          db:
+            table: runs
+            conditions:
+              status: failed
+              is_synthetic: true
+              synthetic_scenario_id: SDSR-E2E-003
+
+    # -----------------------------------------
+    # CAUSAL CHAIN — CASE A (MEDIUM)
+    # -----------------------------------------
+    causal_chain:
+      - step: 1
+        event: Run created with status=failed (state injection)
+        table: runs
+        verify: status=failed, error_message contains BUDGET_EXCEEDED
+
+      - step: 2
+        event: IncidentEngine evaluates failed run
+        table: incidents
+        verify: count=1, severity=MEDIUM
+
+      - step: 3
+        event: PolicyProposalEngine evaluates incident
+        table: policy_proposals
+        verify: count=0 (MEDIUM below threshold)
+
+    # -----------------------------------------
+    # EXPECTED PROPAGATION — CASE A
+    # -----------------------------------------
+    expected_propagation:
+      - from: runs
+        via: IncidentEngine
+        creates:
+          table: incidents
+          conditions:
+            severity: MEDIUM  # BUDGET_EXCEEDED maps to MEDIUM
+            status: OPEN
+            category: BUDGET_EXCEEDED
+            is_synthetic: true
+            synthetic_scenario_id: SDSR-E2E-003
+
+    # -----------------------------------------
+    # EXPECTED NON-PROPAGATION — CASE A
+    # -----------------------------------------
+    expected_non_propagation:
+      - via: PolicyProposalEngine
+        must_not_create:
+          table: policy_proposals
+          conditions:
+            synthetic_scenario_id: SDSR-E2E-003
+        reason: "MEDIUM severity is BELOW threshold (HIGH/CRITICAL required)"
+
+    # -----------------------------------------
+    # UI EXPECTATIONS — CASE A
+    # -----------------------------------------
+    expected_ui:
+      activity:
+        panel_id: ACT-EX-AR-O2
+        observes:
+          table: runs
+          conditions:
+            status: failed
+            has_sdsr_badge: true
+        visible: true
+
+      incidents:
+        panel_id: INC-AI-OI-O2
+        observes:
+          table: incidents
+          conditions:
+            severity: MEDIUM
+            count: 1
+        visible: true
+
+      policies:
+        panel_id: POL-PR-PP-O2
+        observes:
+          table: policy_proposals
+          conditions:
+            count: 0
+        visible: false
+        note: "No policy proposal should exist"
+
+# =========================================
+# SUB-SCENARIO B: HIGH SEVERITY (Draft Proposal)
+# =========================================
+# error_code: EXECUTION_TIMEOUT
+# Expected: Incident created, draft policy proposal created
+# =========================================
+
+  - case_id: CASE-B-HIGH
+    description: HIGH severity incident - draft policy proposal created
+
+    steps:
+      - step_id: ACTIVITY-FAIL-HIGH
+        description: Inject failed run state with HIGH severity error
+        action: create_run
+        data:
+          # run_id auto-generated per RG-SDSR-01
+          agent_id: sdsr-agent-e2e-003
+          status: failed  # STATE_INJECTION: Direct failed state
+          goal: "SDSR E2E-003 Case B: HIGH severity test"
+          failure_message: "EXECUTION_TIMEOUT: Operation exceeded time limit"
+        expectations:
+          db:
+            table: runs
+            conditions:
+              status: failed
+              is_synthetic: true
+              synthetic_scenario_id: SDSR-E2E-003
+
+    # -----------------------------------------
+    # CAUSAL CHAIN — CASE B (HIGH)
+    # -----------------------------------------
+    causal_chain:
+      - step: 1
+        event: Run created with status=failed (state injection)
+        table: runs
+        verify: status=failed, error_message contains EXECUTION_TIMEOUT
+
+      - step: 2
+        event: IncidentEngine evaluates failed run
+        table: incidents
+        verify: count=1, severity=HIGH
+
+      - step: 3
+        event: PolicyProposalEngine creates draft proposal
+        table: policy_proposals
+        verify: count=1, status=draft, auto_generated=true
+
+      - step: 4
+        event: Proposal awaits human approval
+        table: policy_proposals
+        verify: status=draft (NOT approved, NOT enforced)
+
+    # -----------------------------------------
+    # EXPECTED PROPAGATION — CASE B
+    # -----------------------------------------
+    expected_propagation:
+      - from: runs
+        via: IncidentEngine
+        creates:
+          table: incidents
+          conditions:
+            severity: HIGH  # EXECUTION_TIMEOUT maps to HIGH
+            status: OPEN
+            category: EXECUTION_FAILURE
+            is_synthetic: true
+            synthetic_scenario_id: SDSR-E2E-003
+
+      - from: incidents
+        via: PolicyProposalEngine
+        creates:
+          table: policy_proposals
+          conditions:
+            status: draft
+            is_synthetic: true
+            synthetic_scenario_id: SDSR-E2E-003
+
+    # -----------------------------------------
+    # EXPECTED NON-PROPAGATION — CASE B
+    # -----------------------------------------
+    expected_non_propagation:
+      - via: PolicyProposalEngine
+        must_not_create:
+          table: policy_rules
+          conditions:
+            synthetic_scenario_id: SDSR-E2E-003
+        reason: "Draft proposal requires human approval - no auto-enforcement"
+
+    # -----------------------------------------
+    # UI EXPECTATIONS — CASE B
+    # -----------------------------------------
+    expected_ui:
+      activity:
+        panel_id: ACT-EX-AR-O2
+        observes:
+          table: runs
+          conditions:
+            status: failed
+            has_sdsr_badge: true
+        visible: true
+
+      incidents:
+        panel_id: INC-AI-OI-O2
+        observes:
+          table: incidents
+          conditions:
+            severity: HIGH
+            count: 1
+        visible: true
+        note: "Incident shown with escalated severity indicator"
+
+      policies:
+        panel_id: POL-PR-PP-O2
+        observes:
+          table: policy_proposals
+          conditions:
+            status: draft
+            count: 1
+        visible: true
+        note: "Draft proposal with approve/reject controls"
+
+      approval_controls:
+        visible: true
+        state: pending_human_action
+        note: "Approve/Reject buttons must be visible, system cannot auto-approve"
+
+# -----------------------------------------
+# ACCEPTANCE CRITERIA (BINARY - ALL CASES)
+# -----------------------------------------
+acceptance_criteria:
+  # Case A (MEDIUM) criteria
+  - id: AC-001
+    name: Case A (MEDIUM) produces exactly 1 incident
+    metric: incidents.count == 1 for CASE-A-MEDIUM
+    threshold: 100%
+    applies_to: [CASE-A-MEDIUM]
+
+  - id: AC-002
+    name: Case A (MEDIUM) produces NO proposal
+    metric: policy_proposals.count == 0 for CASE-A-MEDIUM
+    threshold: 0
+    applies_to: [CASE-A-MEDIUM]
+
+  # Case B (HIGH) criteria
+  - id: AC-003
+    name: Case B (HIGH) produces exactly 1 incident
+    metric: incidents.count == 1 for CASE-B-HIGH
+    threshold: 100%
+    applies_to: [CASE-B-HIGH]
+
+  - id: AC-004
+    name: Case B (HIGH) produces exactly 1 proposal
+    metric: policy_proposals.count == 1 for CASE-B-HIGH
+    threshold: 1
+    applies_to: [CASE-B-HIGH]
+
+  - id: AC-005
+    name: Proposal status is draft (no auto-approval)
+    metric: policy_proposals.status == 'draft' for CASE-B-HIGH
+    threshold: 100%
+    applies_to: [CASE-B-HIGH]
+
+  # Shared criteria
+  - id: AC-006
+    name: No active traces created (state injection mode)
+    metric: aos_traces WHERE synthetic_scenario_id = 'SDSR-E2E-003' AND archived_at IS NULL count
+    threshold: 0
+    applies_to: [CASE-A-MEDIUM, CASE-B-HIGH]
+    note: "STATE_INJECTION does not generate traces; worker path tested in E2E-005"
+
+  - id: AC-007
+    name: No policy_rules created (human approval required)
+    metric: policy_rules WHERE synthetic_scenario_id = 'SDSR-E2E-003' count
+    threshold: 0
+    applies_to: [CASE-A-MEDIUM, CASE-B-HIGH]
+
+# -----------------------------------------
+# AGGREGATE KPIs
+# -----------------------------------------
+kpis:
+  - name: incidents_created_total
+    expected: 2
+    description: "One incident per case"
+
+  - name: policy_proposals_created_total
+    expected: 1
+    description: "Only HIGH case creates proposal"
+
+  - name: severity_distribution
+    expected:
+      MEDIUM: 1
+      HIGH: 1
+    description: "One incident at each tested severity level"
+
+  - name: proposal_status_distribution
+    expected:
+      draft: 1
+    description: "All proposals must be draft (no auto-approval)"
+
+# -----------------------------------------
+# FORBIDDEN OUTCOMES
+# -----------------------------------------
+forbidden:
+  - description: Proposal for MEDIUM severity
+    condition: policy_proposals WHERE source_incident.severity = 'MEDIUM'
+    violation: "Threshold bypass - MEDIUM should not trigger proposal"
+
+  - description: No proposal for HIGH severity
+    condition: policy_proposals WHERE source_incident.severity = 'HIGH' count = 0
+    violation: "Threshold failure - HIGH must trigger proposal"
+
+  - description: Incident-less proposal
+    condition: policy_proposals WHERE triggering_incident_id IS NULL
+    violation: "Orphan proposal - all proposals must trace to incident"
+
+  - description: Auto-approved proposal
+    condition: policy_proposals.status IN ('approved', 'enforced')
+    violation: "Auto-approval violation - proposals require human decision"
+
+  - description: Historical aggregation applied
+    condition: incidents WHERE synthetic_scenario_id = 'SDSR-E2E-003' AND aggregation_level != 'single'
+    violation: "Aggregation leakage - E2E-003 must evaluate single-run severity only"
+    note: "FO-005: Incident aggregation MUST NOT be evaluated in this scenario"
+
+  - description: Active traces created (state injection mode)
+    condition: aos_traces WHERE synthetic_scenario_id = 'SDSR-E2E-003' AND archived_at IS NULL count > 0
+    violation: "Trace leak - STATE_INJECTION mode should not create active traces"
+
+# -----------------------------------------
+# NON-GOALS (Enforced Boundaries)
+# -----------------------------------------
+non_goals:
+  - directly_create_traces
+  - directly_create_incidents
+  - directly_create_policy_proposals
+  - directly_create_policy_rules
+  - bypass_engines
+  - simulate_ui_state
+  - test_worker_execution  # Covered by E2E-005
+  - test_trace_generation  # Covered by E2E-005
+  - test_aggregation_logic  # Separate scenario needed
+
+# -----------------------------------------
+# CLEANUP (MANDATORY)
+# -----------------------------------------
+cleanup:
+  order:
+    - policy_proposals
+    - policy_rules
+    - prevention_records
+    - incidents
+    # NOTE: Traces are expected to be zero in STATE_INJECTION mode.
+    # Archival logic applies if any exist (S6 immutability contract).
+    - aos_trace_steps
+    - aos_traces
+    - runs
+    - agents
+    - api_keys
+    - tenants
+  where:
+    synthetic_scenario_id: SDSR-E2E-003
+  archive_traces: true
+  record_metrics_before_cleanup: true
+  note: >
+    Traces are expected to be zero; archival logic applies if any exist.
+    This aligns with S6 immutability semantics.
+
+# -----------------------------------------
+# EXECUTION NOTES
+# -----------------------------------------
+execution_notes:
+  - Run Case A first, verify, then run Case B
+  - Use unique run_ids per case (RG-SDSR-01 compliance)
+  - State injection mode - no worker execution
+  - IncidentEngine triggers synchronously on failed run creation
+  - Record metrics before and after each case
+  - Archive traces on cleanup (do not delete)

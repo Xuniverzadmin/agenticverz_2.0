@@ -44,6 +44,8 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - AUTH_ARCHITECTURE_BASELINE.md
   - SDSR_SYSTEM_CONTRACT.md
   - SDSR_E2E_TESTING_PROTOCOL.md
+  - DB_AUTHORITY.md
+  - DB_AUTH_001_INVARIANT.md
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
@@ -68,6 +70,7 @@ SESSION_BOOTSTRAP_CONFIRMATION
 - permission_taxonomy_loaded: YES
 - sdsr_contract_loaded: YES
 - sdsr_e2e_protocol_loaded: YES
+- db_authority_contract_loaded: YES
 - forbidden_assumptions_acknowledged: YES
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
@@ -645,6 +648,127 @@ Reference: PIN-352, PIN-370
 **Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` (forbidden_assumptions section)
 **Reference:** `docs/contracts/database_contract.yaml`
 **PIN:** PIN-209 (Claude Assumption Elimination)
+
+### Database Authority Enforcement (DB-AUTH-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Severity:** CRITICAL
+**Effective:** 2026-01-10
+**Trigger:** Any database query, validation, script execution, or data access
+**Reference:** `docs/governance/DB_AUTH_001_INVARIANT.md`, `docs/runtime/DB_AUTHORITY.md`
+
+**Core Invariant:**
+
+> **At any point in time, for any session, task, script, or reasoning chain, the authoritative database MUST be explicitly declared and MUST NOT be inferred.**
+
+Authority is **declared**, **validated**, and **enforced** — never discovered.
+
+**The Rule:**
+
+> **Claude must never infer database authority from evidence. Authority is declared, not discovered.**
+
+Discovery is forbidden. Inference is a violation. Guessing is not intelligence.
+
+**Authority Assignment (Static):**
+
+| Database | Authority Level | Role |
+|----------|-----------------|------|
+| **Neon** | Authoritative | Canonical truth |
+| **Local / Docker** | Non-authoritative | Ephemeral, disposable |
+
+**Mandatory Pre-Check (Before ANY DB Operation):**
+
+Claude MUST internally establish before any database operation:
+
+```
+DB AUTHORITY DECLARATION
+- Declared Authority: <neon | local>
+- Intended Operation: <read | write | validate | test>
+- Justification: <single sentence>
+```
+
+If not established → **session invalid**.
+
+**Permitted Operations Matrix:**
+
+| Operation Type | Neon | Local |
+|----------------|------|-------|
+| Read canonical history | ✅ | ❌ |
+| Validate runs | ✅ | ❌ |
+| Capability registry | ✅ | ❌ |
+| Governance checks | ✅ | ❌ |
+| SDSR scenario execution | ✅ | ❌ |
+| Trace/incident verification | ✅ | ❌ |
+| Schema experiments | ❌ | ✅ |
+| Migration dry-runs | ❌ | ✅ |
+| Disposable tests | ❌ | ✅ |
+| Unit tests | ❌ | ✅ |
+
+**Prohibited Behaviors (Explicit):**
+
+The following are **governance violations**:
+
+1. Inferring authority from data age
+2. Switching databases mid-session
+3. "Checking both" to decide correctness
+4. Retrying against a different DB
+5. Discovering authority after execution
+6. Silent fallback from Neon → Local or vice-versa
+7. Querying Docker DB when task requires canonical truth
+8. Assuming localhost because "it's running"
+
+**Conflict Resolution:**
+
+> **Reachability is irrelevant. Authority is absolute.**
+
+If multiple databases are reachable, connectivity does not imply legitimacy.
+
+**Never Do This:**
+
+```
+❌ "Let me check which database has the data"
+❌ "I see Neon has more recent records, so..."
+❌ "The Docker DB is running, let me query it"
+❌ "Let me try local first, then Neon"
+```
+
+**Always Do This:**
+
+```
+✅ "DB_AUTHORITY=neon, querying Neon for canonical truth"
+✅ "This is a migration test, using local DB as declared"
+✅ "SDSR verification requires Neon (authoritative)"
+```
+
+**Hard Failure Response:**
+
+```
+DB-AUTH-001 VIOLATION: Database authority mismatch or inference detected.
+
+Expected authority: <declared>
+Attempted operation: <description>
+Violation type: <inference | mismatch | undeclared>
+
+STATUS: BLOCKED
+REQUIRED ACTION: Declare authority explicitly before proceeding.
+Reference: docs/governance/DB_AUTH_001_INVARIANT.md
+```
+
+**Environment Variables (Required):**
+
+```env
+DB_AUTHORITY=neon
+DB_ENV=prod-like
+DATABASE_URL=postgresql://...neon.tech/...
+```
+
+**Key Artifacts:**
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| Authority Contract | `docs/runtime/DB_AUTHORITY.md` | Law |
+| Governance Invariant | `docs/governance/DB_AUTH_001_INVARIANT.md` | Formal specification |
+| Enforcement Script | `backend/scripts/_db_guard.py` | Hard gate |
 
 ### Auth Pattern Enforcement (BL-AUTH-001) — HARD BLOCK
 

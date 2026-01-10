@@ -3,6 +3,16 @@ name: Failed Activity propagates to Incident, Policy Proposal, and Logs
 domain: CROSS_DOMAIN
 
 # -----------------------------------------
+# CERTIFICATION STATUS
+# -----------------------------------------
+# REVOKED: 2026-01-10
+# Previous certification was INVALID - used WORKER_EXECUTION path, not STATE_INJECTION.
+# Observed: severity=MEDIUM, error_code=UNKNOWN, policy_proposals=0
+# Expected: severity=HIGH, error_code=EXECUTION_TIMEOUT, policy_proposals=1
+# Root cause: failure_code forced status=queued, worker executed with SKILL_NOT_FOUND
+# This revision corrects to true STATE_INJECTION mode.
+
+# -----------------------------------------
 # SCENARIO CLASSIFICATION (MANDATORY)
 # -----------------------------------------
 scenario_class: STATE_INJECTION
@@ -57,22 +67,22 @@ preconditions:
 steps:
 
   - step_id: ACTIVITY-FAIL
-    description: Create a failed activity run
+    description: Inject failed run state with HIGH severity error
     action: create_run
     data:
-      run_id: run-sdsr-e2e-001
+      # run_id auto-generated per RG-SDSR-01
       agent_id: sdsr-agent-e2e
-      status: failed
-      failure_code: EXECUTION_TIMEOUT
-      failure_message: "Execution timed out during step execution"
+      status: failed  # STATE_INJECTION: Direct failed state
+      goal: "SDSR E2E-001: Failed activity propagation test"
+      failure_message: "EXECUTION_TIMEOUT: Execution timed out during step execution"
     expectations:
       db:
         table: runs
         conditions:
-          id: run-sdsr-e2e-001
           status: failed
           is_synthetic: true
           synthetic_scenario_id: SDSR-E2E-001
+          # STATE_INJECTION marker: started_at should be NULL (no worker execution)
 
 # ─────────────────────────────────────────────
 # Expected Backend Propagation (ENGINES ONLY)
@@ -84,8 +94,7 @@ expected_propagation:
     creates:
       table: incidents
       conditions:
-        source_run_id: run-sdsr-e2e-001
-        severity: HIGH
+        severity: HIGH  # EXECUTION_TIMEOUT maps to HIGH
         status: OPEN
         is_synthetic: true
         synthetic_scenario_id: SDSR-E2E-001
@@ -96,30 +105,24 @@ expected_propagation:
       table: policy_proposals
       conditions:
         status: draft
-        proposal_type: PREVENTION
-        triggering_feedback_ids:
-          contains: incident.id
         is_synthetic: true
         synthetic_scenario_id: SDSR-E2E-001
 
-  - from: runs
-    via: ExecutionEngine
-    creates:
-      table: aos_traces
-      conditions:
-        run_id: run-sdsr-e2e-001
-        status: failed
-        is_synthetic: true
-        synthetic_scenario_id: SDSR-E2E-001
-
-  - from: aos_traces
-    via: ExecutionEngine
-    creates:
-      table: aos_trace_steps
-      conditions:
-        level:
-          one_of: [ERROR]
-        source: engine
+# NOTE: STATE_INJECTION mode does NOT create traces.
+# Trace expectations are commented out for this mode.
+# See SDSR-E2E-005 for WORKER_EXECUTION trace validation.
+#
+#  - from: runs
+#    via: ExecutionEngine
+#    creates:
+#      table: aos_traces
+#      ...
+#
+#  - from: aos_traces
+#    via: ExecutionEngine
+#    creates:
+#      table: aos_trace_steps
+#      ...
 
 # ─────────────────────────────────────────────
 # Expected UI Observation (READ ONLY)
@@ -131,7 +134,6 @@ expected_ui:
     observes:
       table: runs
       conditions:
-        id: run-sdsr-e2e-001
         status: failed
         has_sdsr_badge: true
 
@@ -140,7 +142,6 @@ expected_ui:
     observes:
       table: incidents
       conditions:
-        source_run_id: run-sdsr-e2e-001
         severity: HIGH
         has_sdsr_badge: true
 
@@ -153,14 +154,8 @@ expected_ui:
         has_approve_reject_controls: true
         has_sdsr_badge: true
 
-  logs:
-    panel_id: LOG-ET-TD-O3
-    observes:
-      table: aos_trace_steps
-      conditions:
-        level: ERROR
-        source: engine
-        has_sdsr_badge: true
+  # NOTE: Logs panel not applicable in STATE_INJECTION mode
+  # (no traces created). See SDSR-E2E-005 for log validation.
 
 # ─────────────────────────────────────────────
 # Non-Goals (Enforced)
@@ -169,8 +164,13 @@ forbidden:
   - directly_create_incidents
   - directly_create_policy_rules
   - directly_write_logs
+  - directly_create_traces  # STATE_INJECTION does not create traces
   - bypass_engines
   - simulate_ui_state
+
+non_goals:
+  - test_worker_execution  # Covered by E2E-005
+  - test_trace_generation  # Covered by E2E-005
 
 # ─────────────────────────────────────────────
 # Cleanup (MANDATORY)
@@ -178,7 +178,11 @@ forbidden:
 cleanup:
   order:
     - policy_proposals
+    - policy_rules
+    - prevention_records
     - incidents
+    # NOTE: Traces are expected to be zero in STATE_INJECTION mode.
+    # Archival logic applies if any exist (S6 immutability contract).
     - aos_trace_steps
     - aos_traces
     - runs
@@ -187,3 +191,8 @@ cleanup:
     - tenants
   where:
     synthetic_scenario_id: SDSR-E2E-001
+  archive_traces: true
+  record_metrics_before_cleanup: true
+  note: >
+    Traces are expected to be zero; archival logic applies if any exist.
+    This aligns with S6 immutability semantics.

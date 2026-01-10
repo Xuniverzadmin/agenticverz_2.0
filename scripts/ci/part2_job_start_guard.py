@@ -35,6 +35,11 @@ import re
 import sys
 from pathlib import Path
 
+# DB-AUTH-001: Declare local-only authority
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+from scripts._db_guard import assert_db_authority  # noqa: E402
+assert_db_authority("local")
+
 
 def get_repo_root() -> Path:
     """Get repository root directory."""

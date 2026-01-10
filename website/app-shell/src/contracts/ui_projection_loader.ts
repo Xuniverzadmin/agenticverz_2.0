@@ -534,4 +534,4 @@ export function getNormalizedDomain(name: DomainName): NormalizedDomain | undefi
 // Exports
 // ============================================================================
 
-export type { UIProjectionLock, Domain, Panel, Control, DomainContext };
+export type { UIProjectionLock, Domain, Panel, Control, BindingStatus } from "./ui_projection_types";

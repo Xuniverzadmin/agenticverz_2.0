@@ -48,6 +48,10 @@ from typing import Dict, Optional
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# DB-AUTH-001: Require Neon authority (MEDIUM - retention cleanup)
+from scripts._db_guard import require_neon
+require_neon()
+
 logger = logging.getLogger("nova.ops.retention_cleanup")
 
 # Configuration
