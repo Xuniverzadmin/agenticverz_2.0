@@ -29,6 +29,11 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
+# DB-AUTH-001: Declare local-only authority
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+from scripts._db_guard import assert_db_authority  # noqa: E402
+assert_db_authority("local")
+
 
 class InfraReference(NamedTuple):
     """A reference to infrastructure in code."""

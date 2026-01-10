@@ -1,6 +1,6 @@
 # Claude Context File - AOS / Agenticverz 2.0
 
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-10
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Status:** ACTIVE
 **Effective:** 2026-01-02
-**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`
+**Reference:** `CLAUDE_BOOT_CONTRACT.md`, `CLAUDE_PRE_CODE_DISCIPLINE.md`, `CLAUDE_BEHAVIOR_LIBRARY.md`, `docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md`, `docs/governance/CLAUDE_ENGINEERING_AUTHORITY.md`, `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`, `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
 
 ### Session Playbook Bootstrap (REQUIRED - BL-BOOT-001, BL-BOOT-002)
 
@@ -43,6 +43,9 @@ SESSION_BOOTSTRAP_CONFIRMATION
   - PERMISSION_TAXONOMY_V1.md
   - AUTH_ARCHITECTURE_BASELINE.md
   - SDSR_SYSTEM_CONTRACT.md
+  - SDSR_E2E_TESTING_PROTOCOL.md
+  - DB_AUTHORITY.md
+  - DB_AUTH_001_INVARIANT.md
   - behavior_library.yaml
   - visibility_contract.yaml
   - visibility_lifecycle.yaml
@@ -66,6 +69,8 @@ SESSION_BOOTSTRAP_CONFIRMATION
 - rbac_architecture_loaded: YES
 - permission_taxonomy_loaded: YES
 - sdsr_contract_loaded: YES
+- sdsr_e2e_protocol_loaded: YES
+- db_authority_contract_loaded: YES
 - forbidden_assumptions_acknowledged: YES
 - restrictions_acknowledged: YES
 - execution_discipline_loaded: YES
@@ -475,6 +480,89 @@ Which approach should I take?
 
 **Default:** Option 1 (PanelContentRegistry) unless explicitly told otherwise.
 
+### SDSR E2E Testing Protocol (BL-SDSR-E2E-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Effective:** 2026-01-10
+**Trigger:** Any SDSR E2E scenario execution, cross-domain validation, or system realization testing
+**Reference:** `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
+
+**Core Principle:**
+
+> UI is observational only. Backend execution is the source of truth.
+> Validate real system behavior: Activity → Incident → Policy Proposal → Logs
+
+**Hard Guardrails (GR-1 through GR-6):**
+
+| Guardrail | Rule | Enforcement |
+|-----------|------|-------------|
+| GR-1 | No Direct DB Mutation Outside Alembic | BLOCKING |
+| GR-2 | No Trigger/Constraint Changes Without Approval | BLOCKING |
+| GR-3 | Canonical Tables Only (no `*sdsr*` copies) | BLOCKING |
+| GR-4 | No Silent Compatibility Fallbacks | BLOCKING |
+| GR-5 | No "Fix While Investigating" | BLOCKING |
+| GR-6 | UI Never Drives State | BLOCKING |
+
+**Schema Reality Gate (Mandatory Pre-Check):**
+
+Before ANY E2E run, Claude MUST execute and verify:
+
+```bash
+# SR-1: Migration Consistency
+./scripts/preflight/sdsr_e2e_preflight.sh
+```
+
+If preflight fails → STOP. No E2E execution allowed.
+
+**Required Columns (SR-2):**
+
+| Table | Required Columns |
+|-------|------------------|
+| runs | is_synthetic, synthetic_scenario_id |
+| incidents | source_run_id, is_synthetic, synthetic_scenario_id |
+| policy_proposals | status, triggering_feedback_ids |
+| aos_traces | run_id, incident_id, is_synthetic, synthetic_scenario_id, status |
+| aos_trace_steps | trace_id, level, source |
+
+**Execution Discipline (GR-5):**
+
+```
+1. Diagnose
+2. Summarize root cause
+3. Propose fix
+4. Wait for approval
+5. Implement
+6. Verify
+```
+
+Never skip steps 3-4. "Fixed it to unblock progress" is a FAILURE, not progress.
+
+**Hard Failure Response:**
+
+If Claude is about to violate any SDSR E2E guardrail:
+```
+SDSR E2E GUARDRAIL VIOLATION
+
+Guardrail: GR-{N}
+Action attempted: {description}
+Reason blocked: {explanation}
+
+STATUS: BLOCKED
+REQUIRED ACTION: {what is needed to proceed safely}
+```
+
+**Cleanup Protocol:**
+
+Claude may cleanup ONLY IF:
+- is_synthetic = true
+- synthetic_scenario_id matches
+
+Cleanup order: policy_proposals → incidents → aos_trace_steps → aos_traces → runs → agents → api_keys → tenants
+
+If blocked → REPORT, do NOT bypass.
+
+**Reference:** `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
+
 ### UI Pipeline Pre-Check (BL-UI-PIPELINE-001) — HARD BLOCK
 
 **Status:** BLOCKING
@@ -560,6 +648,127 @@ Reference: PIN-352, PIN-370
 **Reference:** `docs/playbooks/SESSION_PLAYBOOK.yaml` (forbidden_assumptions section)
 **Reference:** `docs/contracts/database_contract.yaml`
 **PIN:** PIN-209 (Claude Assumption Elimination)
+
+### Database Authority Enforcement (DB-AUTH-001) — HARD BLOCK
+
+**Status:** BLOCKING
+**Severity:** CRITICAL
+**Effective:** 2026-01-10
+**Trigger:** Any database query, validation, script execution, or data access
+**Reference:** `docs/governance/DB_AUTH_001_INVARIANT.md`, `docs/runtime/DB_AUTHORITY.md`
+
+**Core Invariant:**
+
+> **At any point in time, for any session, task, script, or reasoning chain, the authoritative database MUST be explicitly declared and MUST NOT be inferred.**
+
+Authority is **declared**, **validated**, and **enforced** — never discovered.
+
+**The Rule:**
+
+> **Claude must never infer database authority from evidence. Authority is declared, not discovered.**
+
+Discovery is forbidden. Inference is a violation. Guessing is not intelligence.
+
+**Authority Assignment (Static):**
+
+| Database | Authority Level | Role |
+|----------|-----------------|------|
+| **Neon** | Authoritative | Canonical truth |
+| **Local / Docker** | Non-authoritative | Ephemeral, disposable |
+
+**Mandatory Pre-Check (Before ANY DB Operation):**
+
+Claude MUST internally establish before any database operation:
+
+```
+DB AUTHORITY DECLARATION
+- Declared Authority: <neon | local>
+- Intended Operation: <read | write | validate | test>
+- Justification: <single sentence>
+```
+
+If not established → **session invalid**.
+
+**Permitted Operations Matrix:**
+
+| Operation Type | Neon | Local |
+|----------------|------|-------|
+| Read canonical history | ✅ | ❌ |
+| Validate runs | ✅ | ❌ |
+| Capability registry | ✅ | ❌ |
+| Governance checks | ✅ | ❌ |
+| SDSR scenario execution | ✅ | ❌ |
+| Trace/incident verification | ✅ | ❌ |
+| Schema experiments | ❌ | ✅ |
+| Migration dry-runs | ❌ | ✅ |
+| Disposable tests | ❌ | ✅ |
+| Unit tests | ❌ | ✅ |
+
+**Prohibited Behaviors (Explicit):**
+
+The following are **governance violations**:
+
+1. Inferring authority from data age
+2. Switching databases mid-session
+3. "Checking both" to decide correctness
+4. Retrying against a different DB
+5. Discovering authority after execution
+6. Silent fallback from Neon → Local or vice-versa
+7. Querying Docker DB when task requires canonical truth
+8. Assuming localhost because "it's running"
+
+**Conflict Resolution:**
+
+> **Reachability is irrelevant. Authority is absolute.**
+
+If multiple databases are reachable, connectivity does not imply legitimacy.
+
+**Never Do This:**
+
+```
+❌ "Let me check which database has the data"
+❌ "I see Neon has more recent records, so..."
+❌ "The Docker DB is running, let me query it"
+❌ "Let me try local first, then Neon"
+```
+
+**Always Do This:**
+
+```
+✅ "DB_AUTHORITY=neon, querying Neon for canonical truth"
+✅ "This is a migration test, using local DB as declared"
+✅ "SDSR verification requires Neon (authoritative)"
+```
+
+**Hard Failure Response:**
+
+```
+DB-AUTH-001 VIOLATION: Database authority mismatch or inference detected.
+
+Expected authority: <declared>
+Attempted operation: <description>
+Violation type: <inference | mismatch | undeclared>
+
+STATUS: BLOCKED
+REQUIRED ACTION: Declare authority explicitly before proceeding.
+Reference: docs/governance/DB_AUTH_001_INVARIANT.md
+```
+
+**Environment Variables (Required):**
+
+```env
+DB_AUTHORITY=neon
+DB_ENV=prod-like
+DATABASE_URL=postgresql://...neon.tech/...
+```
+
+**Key Artifacts:**
+
+| Artifact | Location | Role |
+|----------|----------|------|
+| Authority Contract | `docs/runtime/DB_AUTHORITY.md` | Law |
+| Governance Invariant | `docs/governance/DB_AUTH_001_INVARIANT.md` | Formal specification |
+| Enforcement Script | `backend/scripts/_db_guard.py` | Hard gate |
 
 ### Auth Pattern Enforcement (BL-AUTH-001) — HARD BLOCK
 

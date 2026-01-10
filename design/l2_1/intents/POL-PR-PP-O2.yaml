@@ -1,0 +1,48 @@
+panel_id: POL-PR-PP-O2
+version: 1.0.0
+metadata:
+  domain: Policies
+  subdomain: PROPOSALS
+  topic: PENDING_PROPOSALS
+  topic_id: POLICIES.PROPOSALS.PENDING_PROPOSALS
+  order: O2
+  action_layer: GC_L
+  migrated_from: CSV
+  migration_date: '2026-01-10'
+  migration_status: UNREVIEWED
+display:
+  name: Pending Proposals List
+  ranking_dimension: created_at
+  visible_by_default: true
+  nav_required: false
+  expansion_mode: INLINE
+data:
+  read: true
+  download: false
+  write: false
+  replay: true
+controls:
+  filtering: true
+  selection_mode: SINGLE
+  activate: true
+  activate_actions:
+  - APPROVE
+  - REJECT
+  confirmation_required: true
+  control_set:
+  - FILTER
+  - SORT
+  - SELECT_SINGLE
+  - APPROVE
+  - REJECT
+  - NAVIGATE
+notes: List of draft proposals with human approve/reject; PIN-373
+observation_trace:
+- scenario_id: SDSR-TEST-001
+  observed_on: '2026-01-10T15:00:00Z'
+  capability_id: APPROVE
+  observed_effects:
+  - entity: policy_proposal
+    field: status
+    from: PENDING
+    to: APPROVED

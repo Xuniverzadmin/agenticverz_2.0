@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-01-10T19:14:23.882316+00:00",
+  "pipeline_version": "2.0.0",
+  "db_authority": "neon",
+  "stages": {
+    "prerequisites": "PASS",
+    "structure_validation": "PASS",
+    "semantic_validation": "PASS",
+    "compilation": "PASS",
+    "projection_validation": "PASS",
+    "deployment": "PASS"
+  },
+  "canonical_design": {
+    "single_projection_file": true,
+    "location": "design/l2_1/ui_contract/ui_projection_lock.json",
+    "no_merge_scripts": true,
+    "no_adapters": true
+  },
+  "artifacts": [
+    "design/l2_1/ui_contract/ui_projection_lock.json",
+    "website/app-shell/public/projection/ui_projection_lock.json",
+    "design/l2_1/exports/intent_store_compiled.json",
+    "design/l2_1/exports/intent_store_seed.sql"
+  ],
+  "errors": 0,
+  "warnings": 0
+}

@@ -31,6 +31,10 @@ import sys
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# DB-AUTH-001: Require Neon authority (HIGH - truth verification)
+from scripts._db_guard import require_neon
+require_neon()
+
 from sqlalchemy import text
 
 # CANONICAL IMPORTS: Use centralized DB access

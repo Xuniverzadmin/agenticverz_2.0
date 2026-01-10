@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-09 (PIN-377 Auth Architecture: Issuer-Based Routing Implementation)
+**Last Updated:** 2026-01-10 (PIN-387 Canonical Projection Design Implementation - Status)
 
 ---
 
@@ -378,6 +378,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-378](PIN-378-canonical-logs-system-sdsr-extension.md) | **Canonical Logs System - SDSR Extension** | Logs / SDSR Integration | **✅ COMPLETE** | 2026-01-09 |
 | [PIN-379](PIN-379-sdsr-e2e-pipeline-gap-closure.md) | **SDSR E2E Pipeline & Gap Closure** | SDSR / E2E Pipeline | **✅ COMPLETE** | 2026-01-09 |
 | [PIN-380](PIN-380-sdsr-e2e-001-stability-fixes.md) | **SDSR-E2E-001 Stability Fixes** | SDSR / Bug Fixes | **✅ COMPLETE** | 2026-01-09 |
+| [PIN-381](PIN-381-sdsr-e2e-testing-protocol-implementation.md) | **SDSR E2E Testing Protocol Implementation** | SDSR / E2E Testing | **🏗️ ACTIVE** | 2026-01-10 |
+| [PIN-383](PIN-383-db-auth-001-debt-burn-down-complete.md) | **DB-AUTH-001 Debt Burn-Down Complete** | Governance / Database Authority | **✅ COMPLETE** | 2026-01-10 |
+| [PIN-384](PIN-384-sdsr-e2e-004-policy-approval-lifecycle-certification.md) | **SDSR-E2E-004 Policy Approval Lifecycle Certification** | SDSR / E2E Testing | **✅ COMPLETE** | 2026-01-10 |
+| [PIN-385](PIN-385-sdsr-ui-pipeline-integration-status.md) | **SDSR UI Pipeline Integration Status** | SDSR / UI Pipeline | **🔄 IN PROGRESS** | 2026-01-10 |
+| [PIN-386](PIN-386-sdsr-aurora-l2-observation-schema-contract.md) | **SDSR → AURORA_L2 Observation Schema Contract** | SDSR / Schema Contract | **🔒 LOCKED** | 2026-01-10 |
 
 ---
 
@@ -1147,6 +1152,13 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-10 | **PIN-387 Canonical Projection Design Implementation** - Updated: Status |
+| 2026-01-10 | **PIN-385 SDSR UI Pipeline Integration Status** - Created. Gap exposure for E2E-001/003/004 → UI mapping. |
+| 2026-01-10 | **PIN-381 SDSR E2E Testing Protocol Implementation** - Updated: Updates |
+| 2026-01-10 | **PIN-384 SDSR-E2E-004 Policy Approval Lifecycle Certification** - Created via memory_trail. |
+| 2026-01-10 | **PIN-383 DB-AUTH-001 Debt Burn-Down Complete** - Created via memory_trail. |
+| 2026-01-10 | **PIN-381 SDSR E2E Testing Protocol Implementation** - Updated: Scenario Classification |
+| 2026-01-10 | **PIN-381 SDSR E2E Testing Protocol Implementation** - Created via memory_trail. |
 | 2026-01-09 | **PIN-378 Canonical Logs System - SDSR Extension** - Created. aos_traces + aos_trace_steps SDSR columns, pg_store.py updated. |
 | 2026-01-09 | **PIN-377 Auth Architecture: Issuer-Based Routing Implementation** - Created via memory_trail. |
 | 2026-01-09 | **PIN-376 Auth Pattern Enforcement - Clerk/RBAC Gateway** - Created via memory_trail. |

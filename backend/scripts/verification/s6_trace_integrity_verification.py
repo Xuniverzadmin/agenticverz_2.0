@@ -35,6 +35,10 @@ from urllib.parse import urlparse
 # Add backend to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+# DB-AUTH-001: Require Neon authority (HIGH - truth verification)
+from scripts._db_guard import require_neon
+require_neon()
+
 from sqlalchemy import text
 
 from app.db import get_async_session_factory

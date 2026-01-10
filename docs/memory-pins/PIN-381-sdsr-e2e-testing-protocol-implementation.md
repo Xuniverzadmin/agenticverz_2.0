@@ -1,0 +1,280 @@
+# PIN-381: SDSR E2E Testing Protocol Implementation
+
+**Status:** 📋 ACTIVE
+**Created:** 2026-01-10
+**Category:** SDSR / E2E Testing
+**Milestone:** SDSR-E2E
+
+---
+
+## Summary
+
+Complete chronology of SDSR E2E testing infrastructure implementation, from protocol design through scenario certification
+
+---
+
+## Details
+
+## Overview
+
+This PIN documents the implementation of the SDSR (Scenario-Driven System Realization) E2E Testing Protocol, establishing a production-grade testing infrastructure for backend-first causality validation.
+
+## Chronology of Implementation
+
+### Phase 1: Protocol Foundation
+
+**Governance Document Created:**
+- `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md`
+- Established 6 hard guardrails (GR-1 through GR-6)
+- Defined Schema Reality Gates (SR-1, SR-2, SR-3)
+- Specified verification checklist format
+
+**Core Principles Locked:**
+- UI is observational only
+- Backend execution is source of truth
+- Validate: Activity → Incident → Policy Proposal → Logs
+
+### Phase 2: Schema Migrations
+
+**Migration 079: SDSR Column Parity**
+- Added `is_synthetic` and `synthetic_scenario_id` to all relevant tables
+- Tables: runs, incidents, policy_proposals, aos_traces, aos_trace_steps
+
+**Migration 080: Trace Archival Columns**
+- Added `archived_at` to aos_traces and aos_trace_steps
+- Created partial indexes for efficient exclusion queries
+- Enabled soft-archive pattern for S6 immutability compliance
+
+### Phase 3: Injection Infrastructure
+
+**inject_synthetic.py Contract:**
+- Rule 1: No intelligence (fail loudly on missing fields)
+- Rule 2: No engine bypass (only inject causes)
+- Rule 3: Every row traceable (is_synthetic=true, synthetic_scenario_id set)
+- Rule 4: One scenario = one transaction
+- Section 6: S6 immutability compliance (archive traces, don't delete)
+
+**SDSR Identity Rule (PIN-379):**
+- run_id must be execution-unique
+- Format: `run-{scenario_id}-{UTC_YYYYMMDDTHHMMSSZ}`
+- Prevents trace_id conflicts on re-execution
+
+### Phase 4: Preflight Hardening
+
+**SR-1: Migration Consistency Check**
+- `backend/scripts/preflight/sr1_migration_check.py`
+- Uses Alembic runtime APIs (no CLI parsing)
+- Verifies single head, current revision matches
+
+**SR-2: Required Columns Assertion**
+- Validates all SDSR columns exist
+- Hard failure if any missing
+
+**SR-3: Worker Version Check**
+- Capability-based validation (not path-specific)
+- Checks TraceStore integration present
+
+**RG-SDSR-01: Execution Identity Guard**
+- `backend/scripts/preflight/rg_sdsr_execution_identity.py`
+- Exit code 4 on run_id reuse
+- LOCKED CONTRACT: No auto-fix, no bypass
+
+### Phase 5: Observability
+
+**Trace Metrics Added:**
+- `aos_traces_active_total` (archived_at IS NULL)
+- `aos_traces_archived_total` (archived_at IS NOT NULL)
+- `aos_trace_steps_active_total`
+- `aos_trace_steps_archived_total`
+
+Read-only, zero side effects, updates immediately after cleanup.
+
+### Phase 6: Baseline Freeze
+
+**Tag: sdsr-e2e-stable-1**
+- Frozen known-good contract
+- Reference point for regression detection
+
+### Phase 7: Scenario Certification
+
+**SDSR-E2E-001: Failed Activity Propagation**
+- Intent: Failed run → Incident → Policy Proposal → Logs
+- Status: CERTIFIED
+- Validates full backend-first causality
+
+**SDSR-E2E-002: Success Path Negative Test**
+- Intent: Successful run → NO Incident → NO Proposal
+- Status: CERTIFIED
+- Validates engine selectivity (only fire on failure)
+
+### Phase 8: WORKER_EXECUTION Scenario Implementation
+
+**Problem Encountered:**
+- SDSR-E2E-005 failed with governance violation: L5_GOVERNANCE_VIOLATION_NO_PLAN
+- Runs require pre-generated execution plans per PIN-257 Phase R-2
+- inject_synthetic.py only created plans for failure scenarios
+
+**Solution Implemented (Option C - Minimal Valid Plan Template):**
+- Added minimal valid plan for WORKER_EXECUTION scenarios in inject_synthetic.py
+- Uses `json_transform` skill (deterministic, no LLM required)
+- Plan satisfies L4→L5 governance contract without synthetic fabrication
+- Added `import json` to support plan serialization
+
+**Plan Template:**
+```python
+minimal_success_plan = {
+    "steps": [{
+        "step_id": "sdsr_success",
+        "skill": "json_transform",
+        "params": {
+            "payload": {"status": "success", "synthetic": True, "scenario_id": scenario_id},
+            "mapping": {"result": "status", "is_synthetic": "synthetic"}
+        }
+    }],
+    "metadata": {
+        "plan_type": "synthetic_minimal",
+        "generated_by": "inject_synthetic.py",
+        "sdsr_scenario": True,
+        "scenario_id": scenario_id
+    }
+}
+```
+
+**SDSR-E2E-005: Worker Execution with Trace Generation**
+- Intent: Queued run → Worker picks up → Executes minimal plan → Traces created → NO Incident/Proposal
+- Status: CERTIFIED (2026-01-10)
+- Validates full success-path with real worker execution
+- Acceptance Criteria:
+  - AC-1: Run started without governance error ✅
+  - AC-2: Worker executed the plan (status=succeeded) ✅
+  - AC-3: Traces created (trace status: completed) ✅
+  - AC-4: Run status = succeeded ✅
+  - AC-5: No ERROR level trace steps ✅
+  - AC-6: incidents = 0 ✅
+  - AC-7: policy_proposals = 0 ✅
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `docs/governance/SDSR_E2E_TESTING_PROTOCOL.md` | Protocol specification |
+| `docs/governance/WHY_SDSR_EXECUTION_WORKS.md` | Design rationale |
+| `backend/scripts/sdsr/inject_synthetic.py` | Scenario injection |
+| `backend/scripts/preflight/sdsr_e2e_preflight.sh` | Full preflight suite |
+| `backend/scripts/preflight/sr1_migration_check.py` | Migration consistency |
+| `backend/scripts/preflight/rg_sdsr_execution_identity.py` | Identity guard |
+| `backend/scripts/sdsr/scenarios/SDSR-E2E-001.yaml` | Failure scenario (STATE_INJECTION) |
+| `backend/scripts/sdsr/scenarios/SDSR-E2E-002.yaml` | Success scenario (STATE_INJECTION) |
+| `backend/scripts/sdsr/scenarios/SDSR-E2E-005.yaml` | Worker execution scenario (WORKER_EXECUTION) |
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Validation error (SR-1 fail, missing columns) |
+| 2 | Partial write detected |
+| 3 | Guardrail violation |
+| 4 | RG-SDSR-01: Identity reuse (HARD FAIL) |
+
+## Invariants Established
+
+1. **Identity Safety:** run_id reuse is impossible
+2. **Immutability:** Traces are append-only; cleanup archives, never deletes
+3. **Cleanup Truthfulness:** Fails loudly; no silent no-ops
+4. **Preflight Determinism:** SR-1/2/3 are semantic, not CLI-based
+5. **Observability:** Archived vs active counts available
+
+## Next Scenarios (Candidates)
+
+- SDSR-E2E-003: Incident severity thresholds
+- SDSR-E2E-004: Policy proposal approval/rejection
+- ~~SDSR-E2E-005: Worker execution with trace generation~~ → CERTIFIED
+
+
+---
+
+## Scenario Classification
+
+### Update (2026-01-10)
+
+## Scenario Classification (MANDATORY)
+
+### Execution Modes
+
+| Mode | Description |
+|------|-------------|
+| **WORKER_EXECUTION** | Run goes through worker, traces generated |
+| **STATE_INJECTION** | State directly injected, bypasses worker |
+
+### Coverage Matrix
+
+| Scenario | Class | Worker Exec | Traces | Engine Validation |
+|----------|-------|-------------|--------|-------------------|
+| SDSR-E2E-001 | STATE_INJECTION | ❌ | ❌ (injected) | ✅ Failure propagation |
+| SDSR-E2E-002 | STATE_INJECTION | ❌ | ❌ | ✅ Non-propagation |
+| SDSR-E2E-005 | WORKER_EXECUTION | ✅ | ✅ | ✅ Success path |
+
+### Correct Execution Order
+
+1. ✅ SDSR-E2E-001 — Failure → Incident → Policy (STATE_INJECTION) — CERTIFIED
+2. ✅ SDSR-E2E-002 — Success → No Incident/Policy (STATE_INJECTION) — CERTIFIED
+3. ✅ SDSR-E2E-005 — Success + Worker + Traces (WORKER_EXECUTION) — CERTIFIED (2026-01-10)
+4. 🔜 SDSR-E2E-003 — Incident severity thresholds
+5. 🔜 SDSR-E2E-004 — Policy approval/rejection
+
+**Rule:** SDSR-E2E-005 MUST complete before SDSR-E2E-003/004. ✅ COMPLETE
+
+### Gap Closed
+
+SDSR-E2E-002 was previously ambiguous. It is now explicitly classified as:
+- scenario_class: STATE_INJECTION
+- execution_mode: non_executable
+- coverage.trace_generation: false
+
+This prevents future misinterpretation that "success path is trace-validated".
+
+
+---
+
+## Updates
+
+### Update (2026-01-10)
+
+## 2026-01-10: E2E-004 Certified
+
+SDSR-E2E-004 (Policy Approval Lifecycle) has been certified.
+
+**Structural Fixes Applied:**
+- Post-approval hook in `policy_proposal.py` (creates policy_rule on approval)
+- Suppression check in `incident_engine.py` (enforces active policies)
+- Prevention record writing (documents suppression)
+
+**Both Paths Validated:**
+- CASE-A (Approve): policy_rule created → second run suppressed → prevention_record written
+- CASE-B (Reject): NO policy_rule → second run NOT suppressed → both incidents visible
+
+See **PIN-384** for full certification details.
+
+## 2026-01-10: UI Validation Spec Created
+
+SDSR → UI Pipeline Integration completed. See `docs/governance/SDSR_UI_VALIDATION_SPEC.md`.
+
+**Key Findings:**
+- E2E-001, E2E-003: Fully UI-validatable
+- E2E-004: Partial (POL-RU-O2 not in projection)
+
+**Critical Gaps Identified:**
+- GAP-003: POL-RU-O2 panel_id does not exist in ui_projection_lock.json
+- GAP-001: POL-RU-O2 not bound in PanelContentRegistry
+- Control gap: ACKNOWLEDGE action not implemented for incidents
+
+**No fixes applied** - gap exposure only per governance.
+
+---
+
+## Related PINs
+
+- PIN-370: SDSR Architecture
+- PIN-379: SDSR E2E Protocol
+- PIN-384: E2E-004 Certification

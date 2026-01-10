@@ -1,0 +1,37 @@
+capability_id: REJECT
+status: OBSERVED
+implementation:
+  endpoint: /api/v1/policy-proposals/{id}/reject
+  method: POST
+  handler: app.api.policies.reject_proposal
+auth:
+  roles:
+  - admin
+  - policy_approver
+  permissions:
+  - policy:reject
+side_effects:
+- Changes proposal status from PENDING to REJECTED
+- Records rejection timestamp
+- Records rejection reason
+source_panels:
+- POL-PR-PP-O2
+metadata:
+  generated_by: AURORA_L2_seed_capability_registry.py
+  generated_on: 2026-01-10
+  declared_by: backend-team
+  declared_on: 2026-01-10
+  observed_by: SDSR-TEST-001
+  observed_on: '2026-01-10T15:00:00Z'
+  observed_effects:
+  - 'policy_proposal.status: PENDING → REJECTED'
+  observed_ui_panel: POL-PR-PP-O2
+  observed_endpoint: /api/v1/policy-proposals/{id}/reject
+notes: 'Capability declared by backend team.
+
+  Awaiting SDSR verification to advance to OBSERVED.
+
+
+  Button remains DISABLED until system verifies behavior.
+
+  '

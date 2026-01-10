@@ -18,12 +18,13 @@ PB-S4 Contract:
 Rule: Propose → Review → Decide (Human)
 """
 
+import json
 import logging
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_async_session
@@ -150,6 +151,119 @@ async def create_policy_proposal(
     return record
 
 
+async def _create_policy_rule_from_proposal(
+    session: AsyncSession,
+    proposal: PolicyProposal,
+    version_id: Optional[UUID],
+    approved_by: str,
+) -> str:
+    """
+    Create a policy_rule from an approved proposal.
+
+    POST-APPROVAL HOOK (PB-S4 Bridge):
+    - Called only when a human approves a proposal
+    - Creates exactly 1 policy_rule per proposal (idempotent via ON CONFLICT)
+    - Rule is immediately active for enforcement
+    - No SDSR-specific logic - works identically for real and synthetic
+
+    Args:
+        session: Database session
+        proposal: The approved PolicyProposal
+        version_id: The PolicyVersion ID (for provenance)
+        approved_by: User who approved
+
+    Returns:
+        policy_rule ID (deterministic from proposal_id)
+    """
+    # Deterministic rule_id from proposal_id (idempotency)
+    rule_id = f"rule_{str(proposal.id).replace('-', '')[:16]}"
+
+    # Extract conditions and actions from proposed_rule
+    proposed_rule = proposal.proposed_rule or {}
+    conditions = proposed_rule.get("trigger", proposed_rule.get("conditions", {}))
+    actions = proposed_rule.get("action", proposed_rule.get("actions", {}))
+
+    # Build rule metadata
+    now = datetime.utcnow()
+
+    # Check if rule already exists (idempotency)
+    existing = await session.execute(
+        text("SELECT id FROM policy_rules WHERE id = :rule_id"),
+        {"rule_id": rule_id},
+    )
+    if existing.scalar_one_or_none():
+        logger.info(
+            "policy_rule_already_exists",
+            extra={"rule_id": rule_id, "proposal_id": str(proposal.id)},
+        )
+        return rule_id
+
+    # Extract source incident ID from triggering_feedback_ids if present
+    triggering_ids = proposal.triggering_feedback_ids or []
+    source_incident_id = triggering_ids[0] if triggering_ids else None
+
+    # Insert policy_rule
+    await session.execute(
+        text("""
+            INSERT INTO policy_rules (
+                id, tenant_id, name, description, rule_type,
+                conditions, actions, priority, is_active,
+                source_type, source_incident_id,
+                mode, confirmations_required, confirmations_received,
+                regret_count, shadow_evaluations, shadow_would_block,
+                activated_at, created_at, updated_at,
+                is_synthetic, synthetic_scenario_id
+            ) VALUES (
+                :id, :tenant_id, :name, :description, :rule_type,
+                CAST(:conditions AS jsonb), CAST(:actions AS jsonb),
+                :priority, :is_active,
+                :source_type, :source_incident_id,
+                :mode, :confirmations_required, :confirmations_received,
+                0, 0, 0,
+                :activated_at, :created_at, :updated_at,
+                :is_synthetic, :synthetic_scenario_id
+            )
+        """),
+        {
+            "id": rule_id,
+            "tenant_id": str(proposal.tenant_id),
+            "name": str(proposal.proposal_name),
+            "description": str(proposal.rationale)[:500] if proposal.rationale else "",
+            "rule_type": str(proposal.proposal_type),
+            "conditions": json.dumps(conditions),
+            "actions": json.dumps(actions),
+            "priority": 100,
+            "is_active": True,
+            "source_type": "proposal",
+            "source_incident_id": source_incident_id,
+            "mode": "active",
+            "confirmations_required": 0,  # Already approved by human
+            "confirmations_received": 1,  # Human approval counts
+            "activated_at": now,
+            "created_at": now,
+            "updated_at": now,
+            # Propagate synthetic flags from proposal (works for both real and SDSR)
+            # Note: SQLAlchemy columns are accessed directly, not via getattr
+            "is_synthetic": proposal.is_synthetic if hasattr(proposal, 'is_synthetic') and proposal.is_synthetic else False,
+            "synthetic_scenario_id": proposal.synthetic_scenario_id if hasattr(proposal, 'synthetic_scenario_id') else None,
+        },
+    )
+
+    logger.info(
+        "policy_rule_created_from_proposal",
+        extra={
+            "rule_id": rule_id,
+            "proposal_id": str(proposal.id),
+            "proposal_type": str(proposal.proposal_type),
+            "tenant_id": str(proposal.tenant_id),
+            "approved_by": approved_by,
+            "is_synthetic": getattr(proposal, 'is_synthetic', False),
+        },
+    )
+
+    return rule_id
+
+
 async def review_policy_proposal(
     session: AsyncSession,
     proposal_id: UUID,
@@ -198,6 +312,24 @@ async def review_policy_proposal(
         )
         session.add(version)
 
+        # =====================================================================
+        # POST-APPROVAL HOOK: Create policy_rule from approved proposal
+        # =====================================================================
+        # This bridges the gap between policy_proposals and policy_rules.
+        # When a proposal is approved, it becomes an enforceable rule.
+        #
+        # Contract:
+        # - Exactly 1 policy_rule per approved proposal (idempotent)
+        # - Rule is_active=true, mode='active' (enforcement ready)
+        # - No auto-approval logic - this only runs on human action
+        # =====================================================================
+        rule_id = await _create_policy_rule_from_proposal(
+            session=session,
+            proposal=proposal,
+            version_id=version.id if hasattr(version, 'id') else None,
+            approved_by=review.reviewed_by,
+        )
+
         logger.info(
             "policy_proposal_approved",
             extra={
@@ -205,6 +337,7 @@ async def review_policy_proposal(
                 "reviewed_by": review.reviewed_by,
                 "effective_from": proposal.effective_from.isoformat(),
                 "version": version_count + 1,
+                "policy_rule_id": rule_id,
             },
         )
 

@@ -124,6 +124,152 @@ class IncidentEngine:
             raise RuntimeError("DATABASE_URL not configured")
         return create_engine(self._db_url)
 
+    def _check_policy_suppression(
+        self,
+        tenant_id: str,
+        error_code: Optional[str],
+        category: str,
+    ) -> Optional[dict]:
+        """
+        Check if an active policy_rule suppresses this incident pattern.
+
+        POLICY ENFORCEMENT (Keystone):
+        - Called BEFORE incident creation (read-before-write)
+        - Returns matching policy_rule if suppression applies
+        - Returns None if no suppression (proceed with incident)
+
+        Matching criteria:
+        - Same tenant_id
+        - is_active = true
+        - mode = 'active'
+        - conditions match error_code pattern
+
+        This is NOT SDSR-specific logic. It applies to ALL runs,
+        both real and synthetic. The policy_rule itself may be
+        synthetic (for testing) but the enforcement logic is identical.
+
+        Args:
+            tenant_id: Tenant scope
+            error_code: Error code to match against policy conditions
+            category: Error category
+
+        Returns:
+            dict with policy_rule info if suppressed, None otherwise
+        """
+        try:
+            engine = self._get_engine()
+            with engine.connect() as conn:
+                # Find active policy_rules for this tenant that match the error pattern
+                # The conditions JSONB contains trigger.error_code or similar
+                result = conn.execute(
+                    text("""
+                        SELECT id, name, conditions, source_incident_id
+                        FROM policy_rules
+                        WHERE tenant_id = :tenant_id
+                          AND is_active = true
+                          AND mode = 'active'
+                          AND (
+                            -- Match if conditions contain the error_code
+                            conditions::text LIKE :error_pattern
+                            OR conditions::text LIKE :category_pattern
+                          )
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """),
+                    {
+                        "tenant_id": tenant_id,
+                        "error_pattern": f"%{error_code or 'UNKNOWN'}%",
+                        "category_pattern": f"%{category}%",
+                    },
+                )
+                row = result.fetchone()
+
+                if row:
+                    return {
+                        "policy_id": row[0],
+                        "policy_name": row[1],
+                        "conditions": row[2],
+                        "source_incident_id": row[3],
+                    }
+                return None
+
+        except Exception as e:
+            logger.warning(f"Error checking policy suppression: {e}")
+            # On error, default to NOT suppressing (fail open for incident creation)
+            return None
+
+    def _write_prevention_record(
+        self,
+        policy_id: str,
+        run_id: str,
+        tenant_id: str,
+        error_code: Optional[str],
+        source_incident_id: Optional[str],
+        is_synthetic: bool = False,
+        synthetic_scenario_id: Optional[str] = None,
+    ) -> str:
+        """
+        Write a prevention_record when a run is suppressed by an active policy.
+
+        EXACTLY ONE SIDE EFFECT:
+        - Either an incident is created (in create_incident_for_failed_run)
+        - OR a prevention_record is created (here)
+        - NEVER both
+
+        Args:
+            policy_id: The policy_rule that caused suppression
+            run_id: The run that was suppressed (blocked_incident_id)
+            tenant_id: Tenant scope
+            error_code: The error pattern that was matched
+            source_incident_id: The original incident that created this policy
+            is_synthetic: Synthetic flag for SDSR traceability
+            synthetic_scenario_id: Scenario ID for SDSR traceability
+
+        Returns:
+            prevention_record ID
+        """
+        import uuid
+
+        prevention_id = f"prev_{uuid.uuid4().hex[:16]}"
+        now = utc_now()
+
+        engine = self._get_engine()
+        with engine.connect() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO prevention_records (
+                        id, policy_id, pattern_id, original_incident_id,
+                        blocked_incident_id, tenant_id, outcome,
+                        signature_match_confidence, created_at,
+                        is_synthetic, synthetic_scenario_id
+                    ) VALUES (
+                        :id, :policy_id, :pattern_id, :original_incident_id,
+                        :blocked_incident_id, :tenant_id, :outcome,
+                        :signature_match_confidence, :created_at,
+                        :is_synthetic, :synthetic_scenario_id
+                    )
+                """),
+                {
+                    "id": prevention_id,
+                    "policy_id": policy_id,
+                    "pattern_id": error_code or "UNKNOWN",
+                    "original_incident_id": source_incident_id or policy_id,
+                    "blocked_incident_id": run_id,
+                    "tenant_id": tenant_id,
+                    "outcome": "prevented",
+                    "signature_match_confidence": 1.0,
+                    "created_at": now,
+                    "is_synthetic": is_synthetic,
+                    "synthetic_scenario_id": synthetic_scenario_id,
+                },
+            )
+            conn.commit()
+
+        logger.info(
+            f"Prevention record {prevention_id}: run {run_id} suppressed by policy {policy_id}"
+        )
+        return prevention_id
+
     def create_incident_for_failed_run(
         self,
         run_id: str,
@@ -139,9 +285,14 @@ class IncidentEngine:
 
         This is the primary entry point for run → incident propagation.
 
+        POLICY ENFORCEMENT (added for E2E-004):
+        - BEFORE creating an incident, check if an active policy_rule suppresses it
+        - If suppressed: write prevention_record, return None
+        - If not suppressed: create incident normally
+
         Per SDSR Rule 6:
         - This method is called when a run fails
-        - It creates an incident AUTOMATICALLY
+        - It creates an incident AUTOMATICALLY (unless suppressed by policy)
         - The incident links back to the source run
 
         Args:
@@ -154,12 +305,42 @@ class IncidentEngine:
             synthetic_scenario_id: Scenario ID for traceability
 
         Returns:
-            incident_id if created, None if failed
+            incident_id if created, None if suppressed or failed
         """
         try:
             # Determine severity and category from error code
             severity = FAILURE_SEVERITY_MAP.get(error_code or "UNKNOWN", "MEDIUM")
             category = FAILURE_CATEGORY_MAP.get(error_code or "UNKNOWN", "EXECUTION_FAILURE")
+
+            # =====================================================================
+            # POLICY ENFORCEMENT CHECK (read-before-write)
+            # =====================================================================
+            # Check if an active policy_rule suppresses this incident pattern.
+            # This is NOT SDSR-specific - it applies to ALL runs.
+            # =====================================================================
+            suppressing_policy = self._check_policy_suppression(
+                tenant_id=tenant_id,
+                error_code=error_code,
+                category=category,
+            )
+
+            if suppressing_policy:
+                # Policy suppresses this incident - write prevention_record instead
+                logger.info(
+                    f"Run {run_id} suppressed by policy {suppressing_policy['policy_id']} "
+                    f"(pattern: {error_code})"
+                )
+                self._write_prevention_record(
+                    policy_id=suppressing_policy["policy_id"],
+                    run_id=run_id,
+                    tenant_id=tenant_id,
+                    error_code=error_code,
+                    source_incident_id=suppressing_policy.get("source_incident_id"),
+                    is_synthetic=is_synthetic,
+                    synthetic_scenario_id=synthetic_scenario_id,
+                )
+                # Return None to indicate no incident was created
+                return None
 
             # Generate incident title
             title = self._generate_title(error_code, run_id)
@@ -332,11 +513,11 @@ class IncidentEngine:
                         INSERT INTO policy_proposals (
                             id, tenant_id, proposal_name, proposal_type,
                             rationale, proposed_rule, triggering_feedback_ids,
-                            status, created_at
+                            status, created_at, is_synthetic, synthetic_scenario_id
                         ) VALUES (
                             :id, :tenant_id, :proposal_name, :proposal_type,
                             :rationale, :proposed_rule, :triggering_feedback_ids,
-                            :status, :created_at
+                            :status, :created_at, :is_synthetic, :synthetic_scenario_id
                         )
                     """),
                     {
@@ -349,6 +530,8 @@ class IncidentEngine:
                         "triggering_feedback_ids": json.dumps([incident_id]),  # Proper JSON array
                         "status": "draft",  # Always draft - human approval required
                         "created_at": now,
+                        "is_synthetic": is_synthetic,  # SDSR traceability
+                        "synthetic_scenario_id": synthetic_scenario_id,  # SDSR traceability
                     },
                 )
                 conn.commit()

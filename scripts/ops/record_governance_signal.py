@@ -55,6 +55,10 @@ from datetime import datetime, timezone
 # Add backend to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
+# DB-AUTH-001: Require Neon authority (HIGH - governance signal recording)
+from scripts._db_guard import require_neon  # noqa: E402
+require_neon()
+
 from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 

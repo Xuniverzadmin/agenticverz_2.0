@@ -32,6 +32,10 @@ from typing import Any, Callable, Optional
 # Add backend to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../backend"))
 
+# DB-AUTH-001: Require Neon authority (CRITICAL - telemetry verification)
+from scripts._db_guard import require_neon  # noqa: E402
+require_neon()
+
 
 @dataclass
 class ProbeResult:

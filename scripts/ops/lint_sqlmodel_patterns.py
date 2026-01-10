@@ -45,6 +45,11 @@ from typing import List, Set
 from dataclasses import dataclass
 from enum import Enum
 
+# DB-AUTH-001: Declare local-only authority
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+from scripts._db_guard import assert_db_authority  # noqa: E402
+assert_db_authority("local")
+
 
 class Severity(Enum):
     WARNING = "warning"

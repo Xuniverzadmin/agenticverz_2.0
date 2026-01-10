@@ -41,6 +41,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
 
+# DB-AUTH-001: Declare local-only authority
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+from scripts._db_guard import assert_db_authority  # noqa: E402
+assert_db_authority("local")
+
 # =============================================================================
 # CONFIGURATION - Customer-Facing L2→L3 Mappings
 # =============================================================================

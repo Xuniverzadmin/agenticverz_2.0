@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "SDSR_OBSERVATION_SCHEMA",
+  "title": "SDSR Observation Contract",
+  "description": "Schema for SDSR observation artifacts that advance AURORA_L2 capability state from DECLARED to OBSERVED. Only SDSR may emit these files. Only the system applier may consume them.",
+  "type": "object",
+  "required": ["scenario_id", "status", "observed_at", "capabilities_observed"],
+  "additionalProperties": false,
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "description": "SDSR scenario identifier (e.g., SDSR-E2E-004)",
+      "pattern": "^[A-Z0-9-]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PASSED"],
+      "description": "Observation status. Only PASSED observations may advance capability state."
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when observation was recorded"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["preflight", "production"],
+      "default": "preflight",
+      "description": "Environment where observation occurred"
+    },
+    "capabilities_observed": {
+      "type": "array",
+      "minItems": 1,
+      "description": "List of capabilities observed during scenario execution",
+      "items": {
+        "type": "object",
+        "required": ["capability_id", "ui_panel", "ui_action", "endpoint", "method", "observed_effects"],
+        "additionalProperties": false,
+        "properties": {
+          "capability_id": {
+            "type": "string",
+            "description": "Capability identifier from AURORA_L2_CAPABILITY_REGISTRY (e.g., APPROVE, REJECT)",
+            "pattern": "^[A-Z_]+$"
+          },
+          "ui_panel": {
+            "type": "string",
+            "description": "Panel ID where action was invoked (e.g., POL-PR-PP-O2)",
+            "pattern": "^[A-Z]+-[A-Z]+-[A-Z]+-O[1-5]$"
+          },
+          "ui_action": {
+            "type": "string",
+            "description": "Action name as displayed in UI"
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "API endpoint invoked",
+            "pattern": "^/api/"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            "description": "HTTP method used"
+          },
+          "request_sample": {
+            "type": "object",
+            "description": "Optional sample request payload (for documentation)",
+            "additionalProperties": true
+          },
+          "response_status": {
+            "type": "integer",
+            "description": "HTTP response status code",
+            "minimum": 200,
+            "maximum": 299
+          },
+          "observed_effects": {
+            "type": "array",
+            "minItems": 1,
+            "description": "State transitions observed after action",
+            "items": {
+              "type": "object",
+              "required": ["entity", "field", "from", "to"],
+              "additionalProperties": false,
+              "properties": {
+                "entity": {
+                  "type": "string",
+                  "description": "Entity type affected (e.g., policy, incident, run)"
+                },
+                "field": {
+                  "type": "string",
+                  "description": "Field that changed (e.g., status)"
+                },
+                "from": {
+                  "type": "string",
+                  "description": "Value before action"
+                },
+                "to": {
+                  "type": "string",
+                  "description": "Value after action"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for traceability",
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "description": "SDSR execution run ID"
+        },
+        "runner_version": {
+          "type": "string",
+          "description": "inject_synthetic.py version"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the observation"
+        }
+      }
+    }
+  }
+}

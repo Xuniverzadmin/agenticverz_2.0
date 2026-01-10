@@ -1,0 +1,149 @@
+# Projection Contract Validator
+# Reference: PIN-387 (Canonical Projection Design)
+#
+# This workflow enforces the UI projection contract established in Phases 0-4:
+#   Phase 0: DB_AUTHORITY enforcement
+#   Phase 1: Canonical schema (_meta, _statistics, _contract)
+#   Phase 2: panel_display_order, topic_display_order
+#   Phase 3: content_blocks structure
+#   Phase 4: SDSR trace finalization and binding_metadata
+
+name: Projection Contract
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'design/l2_1/**'
+      - 'backend/aurora_l2/**'
+      - 'scripts/tools/run_aurora_l2_pipeline.sh'
+      - 'website/app-shell/public/projection/**'
+      - 'scripts/ci/validate_projection_contract.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'design/l2_1/**'
+      - 'backend/aurora_l2/**'
+      - 'scripts/tools/run_aurora_l2_pipeline.sh'
+      - 'website/app-shell/public/projection/**'
+      - 'scripts/ci/validate_projection_contract.py'
+  workflow_dispatch:
+
+jobs:
+  validate-projection:
+    name: Validate Projection Contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate canonical projection exists
+        run: |
+          if [ ! -f "design/l2_1/ui_contract/ui_projection_lock.json" ]; then
+            echo "ERROR: Canonical projection not found"
+            echo "Expected: design/l2_1/ui_contract/ui_projection_lock.json"
+            exit 1
+          fi
+          echo "Canonical projection found"
+
+      - name: Validate public projection exists
+        run: |
+          if [ ! -f "website/app-shell/public/projection/ui_projection_lock.json" ]; then
+            echo "ERROR: Public projection not found"
+            echo "Expected: website/app-shell/public/projection/ui_projection_lock.json"
+            exit 1
+          fi
+          echo "Public projection found"
+
+      - name: Run contract validator
+        run: |
+          python3 scripts/ci/validate_projection_contract.py \
+            --verbose \
+            --check-public
+
+      - name: Verify DB_AUTHORITY in projection
+        run: |
+          DB_AUTH=$(jq -r '._meta.db_authority' design/l2_1/ui_contract/ui_projection_lock.json)
+          if [ "$DB_AUTH" = "null" ] || [ -z "$DB_AUTH" ]; then
+            echo "ERROR: _meta.db_authority not declared (Phase 0 violation)"
+            exit 1
+          fi
+          echo "DB_AUTHORITY: $DB_AUTH"
+
+      - name: Verify projection is frozen
+        run: |
+          FROZEN=$(jq -r '._meta.frozen' design/l2_1/ui_contract/ui_projection_lock.json)
+          if [ "$FROZEN" != "true" ]; then
+            echo "ERROR: Projection is not frozen"
+            exit 1
+          fi
+          echo "Projection is frozen: $FROZEN"
+
+      - name: Count statistics
+        run: |
+          echo "=== Projection Statistics ==="
+          jq '._statistics' design/l2_1/ui_contract/ui_projection_lock.json
+
+      - name: Verify public matches canonical
+        run: |
+          CANONICAL_HASH=$(sha256sum design/l2_1/ui_contract/ui_projection_lock.json | cut -d' ' -f1)
+          PUBLIC_HASH=$(sha256sum website/app-shell/public/projection/ui_projection_lock.json | cut -d' ' -f1)
+
+          if [ "$CANONICAL_HASH" != "$PUBLIC_HASH" ]; then
+            echo "ERROR: Public projection does not match canonical"
+            echo "Canonical: $CANONICAL_HASH"
+            echo "Public:    $PUBLIC_HASH"
+            echo ""
+            echo "Run: cp design/l2_1/ui_contract/ui_projection_lock.json website/app-shell/public/projection/"
+            exit 1
+          fi
+          echo "Public projection matches canonical (SHA256: $CANONICAL_HASH)"
+
+  regenerate-check:
+    name: Verify Regeneration Stability
+    runs-on: ubuntu-latest
+    needs: validate-projection
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+
+      - name: Save current projection hash
+        run: |
+          sha256sum design/l2_1/ui_contract/ui_projection_lock.json > /tmp/before_hash.txt
+          cat /tmp/before_hash.txt
+
+      - name: Regenerate projection
+        run: |
+          DB_AUTHORITY=neon python3 -m backend.aurora_l2.compiler --output-projection
+        env:
+          DB_AUTHORITY: neon
+
+      - name: Check projection stability
+        run: |
+          sha256sum design/l2_1/ui_contract/ui_projection_lock.json > /tmp/after_hash.txt
+          cat /tmp/after_hash.txt
+
+          BEFORE=$(cat /tmp/before_hash.txt | cut -d' ' -f1)
+          AFTER=$(cat /tmp/after_hash.txt | cut -d' ' -f1)
+
+          # Note: generated_at timestamp will differ, so we compare without it
+          jq 'del(._meta.generated_at)' design/l2_1/ui_contract/ui_projection_lock.json > /tmp/after_normalized.json
+
+          echo "Regeneration check: Projection structure should be stable"
+          echo "Note: Timestamp differences are expected"

@@ -53,6 +53,22 @@ export type ControlCategory =
   | "action"
   | "unknown";
 
+// ============================================================================
+// Binding Status (AURORA_L2 Authority Gate)
+// ============================================================================
+// LOCKED: This type defines the sole authority for enabling UI controls.
+// See PIN-386: SDSR → AURORA_L2 Observation Schema Contract
+//
+// | Status | Meaning                          | UI Behavior              |
+// |--------|----------------------------------|--------------------------|
+// | INFO   | Display only (no actions)        | No controls rendered     |
+// | DRAFT  | Actions exist but unverified     | Controls DISABLED        |
+// | BOUND  | SDSR verified (OBSERVED/TRUSTED) | Controls ENABLED         |
+// | UNBOUND| Capability deprecated/missing    | Panel hidden             |
+// ============================================================================
+
+export type BindingStatus = "INFO" | "DRAFT" | "BOUND" | "UNBOUND";
+
 export interface Control {
   type: ControlType;
   order: number;
@@ -80,6 +96,40 @@ export interface PanelPermissions {
 
 export type ViewType = "DOMAIN_HOME" | "PANEL_VIEW";
 
+// ============================================================================
+// Content Block Types (Phase 3 - PIN-387)
+// ============================================================================
+
+export type ContentBlockType = "HEADER" | "DATA" | "CONTROLS" | "FOOTER";
+
+export interface ContentBlock {
+  type: ContentBlockType;
+  order: number;
+  visibility: Visibility;
+  enabled: boolean;
+  components: string[];
+  render_mode?: RenderMode;  // Only on DATA blocks
+}
+
+// ============================================================================
+// Binding Metadata (Phase 4 - SDSR Trace Finalization)
+// ============================================================================
+
+export interface ObservedEffect {
+  entity: string;
+  field: string;
+  from: string;
+  to: string;
+}
+
+export interface BindingMetadata {
+  scenario_ids: string[];           // SDSR scenarios that observed capabilities
+  observed_at: string | null;       // ISO timestamp of latest observation
+  capability_ids: string[];         // List of capability IDs that were observed
+  trace_count: number;              // Number of observation traces
+  observed_effects: ObservedEffect[]; // State changes observed by SDSR
+}
+
 export interface Panel {
   panel_id: string;
   panel_name: string;
@@ -94,6 +144,16 @@ export interface Panel {
   topic: string | null;
   topic_id: string | null;
   subdomain: string | null;
+  // Topic display order (LOCKED - ordering governance)
+  // UI sorts topics by this value, NOT alphabetically.
+  // If absent, defaults to 0 (first). Lower values appear first.
+  topic_display_order: number;
+  // Panel display order (Phase 2 - PIN-387)
+  // Global sequential ordering across all domains (0 to N-1)
+  panel_display_order: number;
+  // Content blocks (Phase 3 - PIN-387)
+  // Defines in-panel layout structure: HEADER, DATA, CONTROLS, FOOTER
+  content_blocks: ContentBlock[];
   // Short description for customer-facing display (Group D)
   short_description: string | null;
   // Permissions
@@ -101,6 +161,15 @@ export interface Panel {
   // Navigation (Phase 1.1 - projection-driven routing)
   route: string;
   view_type: ViewType;
+  // AURORA_L2 Binding Authority (LOCKED - PIN-386)
+  // This field is the SOLE authority for enabling/disabling controls.
+  // BOUND = controls enabled, DRAFT = controls disabled, INFO = no controls
+  binding_status: BindingStatus;
+  // Review status from intent pipeline
+  review_status: string;
+  // SDSR observation metadata (Phase 4 - populated when binding_status = BOUND)
+  // Makes truth inspectable: which SDSR scenario verified this panel's capabilities
+  binding_metadata?: BindingMetadata;
 }
 
 // ============================================================================
@@ -135,7 +204,13 @@ export interface ProjectionMeta {
   version: string;
   generated_at: string;
   source: string;
-  processing_stage: "LOCKED";
+  // Phase 0-1 additions (PIN-387)
+  generator: string;
+  generator_version: string;
+  db_authority: "neon" | "local";
+  source_of_truth: string;
+  contract_version: string;
+  processing_stage: "LOCKED" | "PHASE_2A1_APPLIED" | "PHASE_2A2_SIMULATED";
   frozen: true;
   editable: false;
 }
@@ -144,6 +219,15 @@ export interface ProjectionStatistics {
   domain_count: number;
   panel_count: number;
   control_count: number;
+  // Binding status counts
+  bound_panels: number;
+  draft_panels: number;
+  info_panels: number;
+  unbound_panels: number;
+  // SDSR trace statistics (Phase 4 - PIN-387)
+  sdsr_trace_count: number;
+  panels_with_traces: number;
+  unique_scenario_count: number;
 }
 
 export interface ProjectionContract {
@@ -153,6 +237,18 @@ export interface ProjectionContract {
   all_controls_have_type: true;
   all_panels_have_render_mode: true;
   all_items_have_visibility: true;
+  // Phase 1 additions
+  binding_status_required: true;
+  ordering_semantic: "numeric_only";
+  // Phase 2 additions (PIN-387)
+  panel_display_order_required: true;
+  topic_display_order_required: true;
+  // Phase 3 additions (PIN-387)
+  content_blocks_required: true;
+  // Phase 4 additions (PIN-387)
+  binding_metadata_on_bound_panels: true;
+  sdsr_trace_provenance: true;
+  ui_must_not_infer: true;
 }
 
 export interface UIProjectionLock {

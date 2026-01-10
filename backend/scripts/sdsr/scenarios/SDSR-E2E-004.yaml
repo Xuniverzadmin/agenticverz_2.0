@@ -1,0 +1,613 @@
+scenario_id: SDSR-E2E-004
+name: Policy Approval and Rejection (Human-in-the-Loop)
+domain: CROSS_DOMAIN
+
+# -----------------------------------------
+# SCENARIO CLASSIFICATION
+# -----------------------------------------
+# This scenario tests the HUMAN APPROVAL WORKFLOW:
+# - Approving a proposal creates a policy_rule (enforced)
+# - Rejecting a proposal does NOT create a policy_rule
+# - Prevention records are written ONLY after approval
+#
+# Uses STATE_INJECTION for run failure, then API calls
+# for human approval/rejection actions.
+# -----------------------------------------
+scenario_class: STATE_INJECTION
+execution_mode: non_executable
+
+coverage:
+  engine_propagation: true
+  worker_execution: false  # STATE_INJECTION mode
+  trace_generation: false  # Not tested here
+  policy_approval: true
+  policy_rule_creation: true
+  suppression_evaluation: true
+
+purpose: >
+  Validate human-in-the-loop policy approval workflow.
+
+  CORE INVARIANTS UNDER TEST:
+  1. Policies are NEVER auto-approved
+  2. Only explicit human action changes proposal state
+  3. Approved proposals create exactly 1 policy_rule
+  4. Rejected proposals create 0 policy_rules
+  5. Prevention records are written ONLY after approval
+
+  CAUSAL CHAIN (APPROVE PATH):
+  Run (failed) → Incident → policy_proposal (draft)
+  → Human APPROVES via API
+  → policy_rule (is_active=true, mode=active)
+  → Next matching run → suppressed
+  → prevention_record written
+  → UI shows enforced state
+
+  CAUSAL CHAIN (REJECT PATH):
+  Run (failed) → Incident → policy_proposal (draft)
+  → Human REJECTS via API
+  → NO policy_rule
+  → Next matching run → NOT suppressed
+  → Incident created again
+  → UI shows rejection + continued incidents
+
+tags:
+  - e2e
+  - cross-domain
+  - sdsr
+  - human-in-the-loop
+  - policy-approval
+  - policy-rejection
+  - state-injection
+
+synthetic:
+  enabled: true
+  cleanup_required: true
+
+# -----------------------------------------
+# CONTROLLED VARIABLE
+# -----------------------------------------
+# The ONLY difference between Case A and Case B is the human decision.
+# All other inputs are IDENTICAL.
+controlled_variable:
+  name: human_decision
+  case_a: approve
+  case_b: reject
+  mapping:
+    approve: policy_rule_created
+    reject: no_policy_rule
+
+# -----------------------------------------
+# Shared Preconditions (Both Cases)
+# -----------------------------------------
+preconditions:
+  tenant:
+    create: true
+    tenant_id: sdsr-tenant-e2e-004
+  api_key:
+    create: true
+    scopes: [activity:write, incidents:read, policies:read, policies:write]
+  agent:
+    create: true
+    agent_id: sdsr-agent-e2e-004
+
+  clean_state:
+    - table: policy_rules
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-004
+      expected_count: 0
+    - table: policy_proposals
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-004
+      expected_count: 0
+    - table: incidents
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-004
+      expected_count: 0
+    - table: prevention_records
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-004
+      expected_count: 0
+
+# =========================================
+# SUB-SCENARIO A: APPROVE PATH
+# =========================================
+# Human approves → policy_rule created → future runs suppressed
+# =========================================
+
+sub_scenarios:
+  - case_id: CASE-A-APPROVE
+    description: Human approves draft proposal - policy_rule created
+
+    steps:
+      # Step 1: Create failed run to generate incident and proposal
+      - step_id: INJECT-FAILURE-A
+        description: Inject failed run with HIGH severity (STATE_INJECTION)
+        action: create_run
+        data:
+          agent_id: sdsr-agent-e2e-004
+          status: failed
+          goal: "SDSR E2E-004 Case A: Approval test"
+          failure_message: "EXECUTION_TIMEOUT: Operation exceeded time limit"
+        expectations:
+          db:
+            - table: runs
+              conditions:
+                status: failed
+                is_synthetic: true
+                synthetic_scenario_id: SDSR-E2E-004
+            - table: incidents
+              conditions:
+                severity: HIGH
+                is_synthetic: true
+                synthetic_scenario_id: SDSR-E2E-004
+            - table: policy_proposals
+              conditions:
+                status: draft
+                is_synthetic: true
+                synthetic_scenario_id: SDSR-E2E-004
+
+      # Step 2: Human approves the proposal via API
+      - step_id: HUMAN-APPROVE
+        description: Human approves the draft proposal
+        action: api_call
+        data:
+          method: POST
+          endpoint: /api/v1/policy-proposals/{proposal_id}/approve
+          body:
+            reviewed_by: sdsr-human-approver
+            review_notes: "SDSR E2E-004 Case A: Testing approval flow"
+        expectations:
+          response:
+            status_code: 200
+            body:
+              status: approved
+          db:
+            - table: policy_proposals
+              conditions:
+                status: approved
+            - table: policy_rules
+              count: 1
+              conditions:
+                source_type: proposal
+                is_active: true
+                mode: active
+                is_synthetic: true
+                synthetic_scenario_id: SDSR-E2E-004
+
+      # Step 3: Create second failed run (should be suppressed)
+      - step_id: INJECT-SECOND-FAILURE-A
+        description: Inject second failed run - should be suppressed by policy_rule
+        action: create_run
+        data:
+          agent_id: sdsr-agent-e2e-004
+          status: failed
+          goal: "SDSR E2E-004 Case A: Second run - should be suppressed"
+          failure_message: "EXECUTION_TIMEOUT: Operation exceeded time limit"
+        expectations:
+          db:
+            - table: runs
+              conditions:
+                status: failed
+                count: 2  # Two runs total
+            - table: incidents
+              conditions:
+                count: 1  # Only first incident (second suppressed)
+                new_count: 0  # No new incidents created by second run
+            - table: prevention_records
+              conditions:
+                count: 1  # Prevention record written
+                outcome: prevented
+                policy_rule_id: NOT NULL  # Suppression attributed to specific rule
+          suppression_attribution:
+            source: policy_rule
+            note: "Suppression MUST be policy-driven, not accidental (rate-limit, dedupe, etc.)"
+
+    # -----------------------------------------
+    # CAUSAL CHAIN — CASE A (APPROVE)
+    # -----------------------------------------
+    causal_chain:
+      - step: 1
+        event: Run created with status=failed
+        table: runs
+        verify: status=failed, error_message contains EXECUTION_TIMEOUT
+
+      - step: 2
+        event: IncidentEngine creates incident
+        table: incidents
+        verify: severity=HIGH, count=1
+
+      - step: 3
+        event: PolicyProposalEngine creates draft proposal
+        table: policy_proposals
+        verify: status=draft, count=1
+
+      - step: 4
+        event: Human approves proposal via API
+        table: policy_proposals
+        verify: status=approved
+
+      - step: 5
+        event: Post-approval hook creates policy_rule
+        table: policy_rules
+        verify: count=1, is_active=true, mode=active
+
+      - step: 6
+        event: Second run fails (same pattern)
+        table: runs
+        verify: count=2, second run has status=failed
+
+      - step: 7
+        event: Policy_rule matches second run - suppressed
+        table: incidents
+        verify: count=1 (no new incident)
+
+      - step: 8
+        event: Prevention record written
+        table: prevention_records
+        verify: count=1, outcome=prevented
+
+    # -----------------------------------------
+    # EXPECTED UI — CASE A
+    # -----------------------------------------
+    expected_ui:
+      activity:
+        panel_id: ACT-EX-AR-O2
+        observes:
+          table: runs
+          conditions:
+            status: failed
+            count: 2
+            has_sdsr_badge: true
+
+      incidents:
+        panel_id: INC-AI-OI-O2
+        observes:
+          table: incidents
+          conditions:
+            severity: HIGH
+            count: 1
+        visible: true
+
+      policies:
+        panel_id: POL-PR-PP-O2
+        observes:
+          table: policy_proposals
+          conditions:
+            status: approved
+        visible: true
+        note: "Approved proposal with enforcement indicator"
+
+      policy_rules:
+        panel_id: POL-RU-O2
+        observes:
+          table: policy_rules
+          conditions:
+            is_active: true
+            count: 1
+        visible: true
+        note: "Active policy rule with prevention count"
+
+# =========================================
+# SUB-SCENARIO B: REJECT PATH
+# =========================================
+# Human rejects → NO policy_rule → future runs NOT suppressed
+# =========================================
+
+  - case_id: CASE-B-REJECT
+    description: Human rejects draft proposal - NO policy_rule created
+
+    steps:
+      # Step 1: Create failed run to generate incident and proposal
+      - step_id: INJECT-FAILURE-B
+        description: Inject failed run with HIGH severity (STATE_INJECTION)
+        action: create_run
+        data:
+          agent_id: sdsr-agent-e2e-004
+          status: failed
+          goal: "SDSR E2E-004 Case B: Rejection test"
+          failure_message: "EXECUTION_TIMEOUT: Operation exceeded time limit"
+        expectations:
+          db:
+            - table: runs
+              conditions:
+                status: failed
+                is_synthetic: true
+            - table: incidents
+              conditions:
+                severity: HIGH
+            - table: policy_proposals
+              conditions:
+                status: draft
+
+      # Step 2: Human rejects the proposal via API
+      - step_id: HUMAN-REJECT
+        description: Human rejects the draft proposal
+        action: api_call
+        data:
+          method: POST
+          endpoint: /api/v1/policy-proposals/{proposal_id}/reject
+          body:
+            reviewed_by: sdsr-human-rejector
+            review_notes: "SDSR E2E-004 Case B: Testing rejection flow"
+        expectations:
+          response:
+            status_code: 200
+            body:
+              status: rejected
+          db:
+            - table: policy_proposals
+              conditions:
+                status: rejected
+            - table: policy_rules
+              count: 0  # NO policy_rule created
+
+      # Step 3: Create second failed run (should NOT be suppressed)
+      - step_id: INJECT-SECOND-FAILURE-B
+        description: Inject second failed run - NOT suppressed (no policy_rule)
+        action: create_run
+        data:
+          agent_id: sdsr-agent-e2e-004
+          status: failed
+          goal: "SDSR E2E-004 Case B: Second run - NOT suppressed"
+          failure_message: "EXECUTION_TIMEOUT: Operation exceeded time limit"
+        expectations:
+          db:
+            - table: runs
+              conditions:
+                status: failed
+                count: 2
+            - table: incidents
+              conditions:
+                count: 2  # BOTH incidents created (no suppression)
+            - table: prevention_records
+              conditions:
+                count: 0  # NO prevention records
+
+    # -----------------------------------------
+    # CAUSAL CHAIN — CASE B (REJECT)
+    # -----------------------------------------
+    causal_chain:
+      - step: 1
+        event: Run created with status=failed
+        table: runs
+        verify: status=failed
+
+      - step: 2
+        event: IncidentEngine creates incident
+        table: incidents
+        verify: severity=HIGH, count=1
+
+      - step: 3
+        event: PolicyProposalEngine creates draft proposal
+        table: policy_proposals
+        verify: status=draft
+
+      - step: 4
+        event: Human rejects proposal via API
+        table: policy_proposals
+        verify: status=rejected
+
+      - step: 5
+        event: NO policy_rule created (rejection)
+        table: policy_rules
+        verify: count=0
+
+      - step: 6
+        event: Second run fails (same pattern)
+        table: runs
+        verify: count=2
+
+      - step: 7
+        event: No policy_rule → no suppression
+        table: incidents
+        verify: count=2 (both runs create incidents)
+
+      - step: 8
+        event: No prevention records written
+        table: prevention_records
+        verify: count=0
+
+    # -----------------------------------------
+    # EXPECTED UI — CASE B
+    # -----------------------------------------
+    expected_ui:
+      activity:
+        panel_id: ACT-EX-AR-O2
+        observes:
+          table: runs
+          conditions:
+            status: failed
+            count: 2
+            has_sdsr_badge: true
+
+      incidents:
+        panel_id: INC-AI-OI-O2
+        observes:
+          table: incidents
+          conditions:
+            count: 2  # Both incidents visible
+        visible: true
+        note: "Both incidents visible - rejection means no suppression"
+
+      policies:
+        panel_id: POL-PR-PP-O2
+        observes:
+          table: policy_proposals
+          conditions:
+            status: rejected
+        visible: true
+        note: "Rejected proposal with reason visible"
+
+      policy_rules:
+        panel_id: POL-RU-O2
+        observes:
+          table: policy_rules
+          conditions:
+            count: 0
+        visible: false
+        note: "No policy rule panel (nothing to show)"
+
+# -----------------------------------------
+# ACCEPTANCE CRITERIA (BINARY - ALL CASES)
+# -----------------------------------------
+acceptance_criteria:
+  # Case A (APPROVE) criteria
+  - id: AC-001
+    name: Approval creates exactly 1 policy_rule
+    metric: policy_rules.count == 1 for CASE-A-APPROVE
+    threshold: 100%
+    applies_to: [CASE-A-APPROVE]
+
+  - id: AC-002
+    name: Approved policy_rule is active
+    metric: policy_rules.is_active == true AND mode == 'active'
+    threshold: 100%
+    applies_to: [CASE-A-APPROVE]
+
+  - id: AC-003
+    name: Second run suppressed after approval
+    metric: incidents.count_new == 0 after second run (suppressed by policy_rule)
+    threshold: 100%
+    applies_to: [CASE-A-APPROVE]
+    note: "Suppression MUST be attributed to policy_rule_id created from the approved proposal"
+
+  - id: AC-004
+    name: Prevention record written after suppression
+    metric: prevention_records.count == 1
+    threshold: 100%
+    applies_to: [CASE-A-APPROVE]
+
+  # Case B (REJECT) criteria
+  - id: AC-005
+    name: Rejection creates 0 policy_rules
+    metric: policy_rules.count == 0 for CASE-B-REJECT
+    threshold: 0
+    applies_to: [CASE-B-REJECT]
+
+  - id: AC-006
+    name: Second run NOT suppressed after rejection
+    metric: incidents.count == 2 when runs.count == 2
+    threshold: 100%
+    applies_to: [CASE-B-REJECT]
+
+  - id: AC-007
+    name: No prevention records after rejection
+    metric: prevention_records.count == 0
+    threshold: 0
+    applies_to: [CASE-B-REJECT]
+
+  # Shared criteria
+  - id: AC-008
+    name: No auto-approval anywhere
+    metric: policy_proposals WHERE status='approved' AND reviewed_by IS NULL count
+    threshold: 0
+    applies_to: [CASE-A-APPROVE, CASE-B-REJECT]
+    note: "All approvals must have reviewed_by populated"
+
+# -----------------------------------------
+# AGGREGATE KPIs
+# -----------------------------------------
+kpis:
+  - name: runs_created_total
+    expected: 4
+    description: "Two runs per case"
+
+  - name: incidents_created_total
+    expected: 3
+    description: "Case A: 1, Case B: 2"
+
+  - name: policy_rules_created_total
+    expected: 1
+    description: "Only Case A creates a rule"
+
+  - name: prevention_records_total
+    expected: 1
+    description: "Only Case A writes prevention"
+
+# -----------------------------------------
+# FORBIDDEN OUTCOMES
+# -----------------------------------------
+forbidden:
+  - description: Auto-approved proposal
+    condition: policy_proposals.status = 'approved' AND reviewed_by IS NULL
+    violation: "Auto-approval detected - human action is MANDATORY"
+
+  - description: Policy_rule without approval
+    condition: policy_rules WHERE source_type = 'proposal' AND NOT EXISTS approved_proposal
+    violation: "Policy_rule created without human approval"
+
+  - description: Prevention record without policy_rule
+    condition: prevention_records WHERE policy_id NOT IN (SELECT id FROM policy_rules)
+    violation: "Orphan prevention record - must link to policy_rule"
+
+  - description: Suppression without policy_rule
+    condition: "Second run suppressed but policy_rules.count = 0"
+    violation: "Suppression occurred without policy_rule"
+
+  - description: Policy_rule from rejected proposal
+    condition: policy_rules WHERE proposal_id IN (SELECT id FROM policy_proposals WHERE status = 'rejected')
+    violation: "Policy_rule created from rejected proposal"
+
+  - description: Rejected proposal re-approved
+    condition: policy_proposals WHERE status = 'approved' AND previous_status = 'rejected'
+    violation: "A rejected proposal MUST NOT be re-approvable without a new proposal"
+    note: "Human decision finality - rejection is immutable"
+
+# -----------------------------------------
+# NON-GOALS
+# -----------------------------------------
+non_goals:
+  - directly_create_policy_rules
+  - directly_write_prevention_records
+  - bypass_human_approval
+  - auto_approve_proposals
+  - simulate_suppression_logic
+  - test_worker_execution
+  - test_trace_generation
+
+# -----------------------------------------
+# CLEANUP (MANDATORY)
+# -----------------------------------------
+cleanup:
+  order:
+    - prevention_records
+    - policy_rules
+    - policy_versions
+    - policy_proposals
+    - incidents
+    - runs
+    - agents
+    - api_keys
+    - tenants
+  where:
+    synthetic_scenario_id: SDSR-E2E-004
+  archive_traces: true
+  record_metrics_before_cleanup: true
+
+# -----------------------------------------
+# EXECUTION NOTES
+# -----------------------------------------
+execution_notes:
+  - Run Case A first (approve path), verify, then run Case B (reject path)
+  - Each case requires cleanup between runs
+  - API calls are BLOCKING - wait for response before proceeding
+  - Verify policy_rule creation logs appear in backend
+  - Verify prevention_record creation for Case A only
+  - UI verification requires manual observation (not automated)
+
+# -----------------------------------------
+# IMPLEMENTATION GAP CLOSURE
+# -----------------------------------------
+implementation_gap_closure:
+  gap_identified: 2026-01-10
+  gap_description: >
+    Policy approval API updated proposal status but did NOT create policy_rule.
+    The bridge from proposal → rule was missing.
+  fix_applied: 2026-01-10
+  fix_location:
+    - backend/app/services/policy_proposal.py (post-approval hook)
+    - backend/app/models/policy.py (synthetic column additions)
+  fix_verified: true
+  verification_evidence:
+    - Approved E2E-003 proposal → policy_rule created with synthetic flags
+    - Idempotency verified (second approval rejected)

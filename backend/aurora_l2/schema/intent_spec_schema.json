@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aurora_l2_intent_spec_v1",
+  "title": "AURORA_L2 Intent Spec Schema",
+  "description": "JSON Schema for validating AURORA_L2 intent YAML files. Enforces STRUCTURAL validity only, NOT semantic correctness.",
+  "type": "object",
+  "required": ["panel_id", "version", "metadata", "display", "data", "controls"],
+  "properties": {
+    "panel_id": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,4}-[A-Z]{2}-[A-Z]{2,3}-O[1-5]$",
+      "description": "Panel identifier following pattern: DOMAIN-SUBDOMAIN-TOPIC-ORDER"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of the intent spec"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["domain", "subdomain", "topic", "topic_id", "order", "action_layer", "migrated_from", "migration_date", "migration_status"],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": ["Overview", "Activity", "Incidents", "Policies", "Logs"],
+          "description": "Top-level domain (frozen per Customer Console Constitution)"
+        },
+        "subdomain": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Subdomain within the domain"
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Topic within the subdomain"
+        },
+        "topic_id": {
+          "type": "string",
+          "pattern": "^[A-Z_]+\\.[A-Z_]+\\.[A-Z_]+$",
+          "description": "Fully qualified topic ID"
+        },
+        "order": {
+          "type": "string",
+          "enum": ["O1", "O2", "O3", "O4", "O5"],
+          "description": "Epistemic depth order"
+        },
+        "action_layer": {
+          "type": "string",
+          "description": "Action layer (L2_1, GC_L, etc.)"
+        },
+        "migrated_from": {
+          "type": "string",
+          "enum": ["CSV", "MANUAL", "GENERATED"],
+          "description": "Migration source"
+        },
+        "migration_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Date of migration"
+        },
+        "migration_status": {
+          "type": "string",
+          "enum": ["UNREVIEWED", "REVIEWED", "APPROVED", "DEPRECATED"],
+          "description": "Review status of the migrated intent"
+        },
+        "reviewed_by": {
+          "type": ["string", "null"],
+          "description": "Name of reviewer (null if unreviewed)"
+        },
+        "reviewed_at": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Date of review (null if unreviewed)"
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "required": ["name", "visible_by_default", "nav_required", "expansion_mode"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable panel name"
+        },
+        "ranking_dimension": {
+          "type": ["string", "null"],
+          "description": "Column used for default sorting"
+        },
+        "visible_by_default": {
+          "type": "boolean",
+          "description": "Whether panel is visible by default"
+        },
+        "nav_required": {
+          "type": "boolean",
+          "description": "Whether navigation is required to reach this panel"
+        },
+        "expansion_mode": {
+          "type": "string",
+          "enum": ["INLINE", "COLLAPSIBLE", "CONTEXTUAL", "OVERLAY", "NAVIGATE"],
+          "description": "How the panel expands/contracts"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["read", "replay"],
+      "properties": {
+        "read": {
+          "type": "boolean",
+          "description": "Whether data can be read"
+        },
+        "download": {
+          "type": "boolean",
+          "description": "Whether data can be downloaded"
+        },
+        "write": {
+          "type": "boolean",
+          "description": "Whether data can be written"
+        },
+        "write_action": {
+          "type": ["string", "null"],
+          "description": "Write action type (ADD_NOTE, UPDATE_THRESHOLD, etc.)"
+        },
+        "replay": {
+          "type": "boolean",
+          "description": "Whether panel supports replay"
+        }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "properties": {
+        "filtering": {
+          "type": "boolean",
+          "description": "Whether filtering is enabled"
+        },
+        "selection_mode": {
+          "type": ["string", "null"],
+          "enum": ["SINGLE", "MULTI", null],
+          "description": "Selection mode (SINGLE, MULTI, or null for none)"
+        },
+        "activate": {
+          "type": "boolean",
+          "description": "Whether activate actions are enabled"
+        },
+        "activate_actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of activate actions (APPROVE, REJECT, ACKNOWLEDGE, etc.)"
+        },
+        "confirmation_required": {
+          "type": "boolean",
+          "description": "Whether actions require confirmation"
+        },
+        "control_set": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["FILTER", "SORT", "SELECT_SINGLE", "SELECT_MULTI", "DOWNLOAD", "NAVIGATE", "APPROVE", "REJECT", "ACKNOWLEDGE", "RESOLVE"]
+          },
+          "description": "Explicit list of controls available"
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form notes from CSV migration"
+    }
+  },
+  "additionalProperties": false
+}

@@ -58,6 +58,8 @@ _SKILL_MODULES = {
     "SlackSendSkill": ".slack_send",
     "WebhookSendSkill": ".webhook_send",
     "VoyageEmbedSkill": ".voyage_embed",
+    # SDSR Testing Skills
+    "SDSRFailTriggerSkill": ".sdsr_fail_trigger",
 }
 
 _loaded_skills = {}

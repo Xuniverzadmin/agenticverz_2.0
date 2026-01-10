@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aurora_l2_compiled_intent_v1",
+  "title": "AURORA_L2 Compiled Intent Schema",
+  "description": "JSON Schema for compiled intent output. Matches SQL intent_store table structure.",
+  "type": "object",
+  "required": [
+    "panel_id",
+    "domain",
+    "subdomain",
+    "topic",
+    "topic_id",
+    "order_level",
+    "panel_name",
+    "action_layer",
+    "visible_by_default",
+    "nav_required",
+    "expansion_mode",
+    "read_enabled",
+    "download_enabled",
+    "write_enabled",
+    "replay_enabled",
+    "filtering_enabled",
+    "control_set",
+    "review_status",
+    "compiled_at"
+  ],
+  "properties": {
+    "panel_id": {
+      "type": "string",
+      "description": "Primary key - panel identifier"
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["Overview", "Activity", "Incidents", "Policies", "Logs"],
+      "description": "Top-level domain"
+    },
+    "subdomain": {
+      "type": "string",
+      "description": "Subdomain within domain"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic within subdomain"
+    },
+    "topic_id": {
+      "type": "string",
+      "description": "Fully qualified topic ID"
+    },
+    "order_level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Epistemic depth order (1-5)"
+    },
+    "panel_name": {
+      "type": "string",
+      "description": "Human-readable panel name"
+    },
+    "action_layer": {
+      "type": "string",
+      "description": "Action layer code"
+    },
+    "ranking_dimension": {
+      "type": ["string", "null"],
+      "description": "Default sort column"
+    },
+    "visible_by_default": {
+      "type": "boolean",
+      "description": "Default visibility"
+    },
+    "nav_required": {
+      "type": "boolean",
+      "description": "Requires navigation to reach"
+    },
+    "expansion_mode": {
+      "type": "string",
+      "enum": ["INLINE", "COLLAPSIBLE", "CONTEXTUAL", "OVERLAY", "NAVIGATE"],
+      "description": "Panel expansion behavior"
+    },
+    "read_enabled": {
+      "type": "boolean",
+      "description": "Data read allowed"
+    },
+    "download_enabled": {
+      "type": "boolean",
+      "description": "Data download allowed"
+    },
+    "write_enabled": {
+      "type": "boolean",
+      "description": "Data write allowed"
+    },
+    "write_action": {
+      "type": ["string", "null"],
+      "description": "Write action type"
+    },
+    "replay_enabled": {
+      "type": "boolean",
+      "description": "Replay supported"
+    },
+    "filtering_enabled": {
+      "type": "boolean",
+      "description": "Filtering controls available"
+    },
+    "selection_mode": {
+      "type": ["string", "null"],
+      "enum": ["SINGLE", "MULTI", null],
+      "description": "Selection mode"
+    },
+    "activate_enabled": {
+      "type": "boolean",
+      "description": "Activate actions available"
+    },
+    "activate_actions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "List of activate actions"
+    },
+    "confirmation_required": {
+      "type": "boolean",
+      "description": "Actions require confirmation"
+    },
+    "control_set": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Explicit control list"
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "description": "Migration notes"
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["UNREVIEWED", "REVIEWED", "APPROVED", "DEPRECATED"],
+      "description": "Review status"
+    },
+    "migrated_from": {
+      "type": "string",
+      "description": "Migration source"
+    },
+    "migration_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Migration date"
+    },
+    "compiled_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Compilation timestamp"
+    }
+  },
+  "additionalProperties": false
+}

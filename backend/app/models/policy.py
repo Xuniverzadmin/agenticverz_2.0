@@ -28,7 +28,7 @@ from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import declarative_base, relationship
@@ -75,6 +75,10 @@ class PolicyProposal(Base):
 
     # Effective date (only set if approved, future-dated)
     effective_from = Column(DateTime, nullable=True)
+
+    # SDSR traceability (PIN-370)
+    is_synthetic = Column(Boolean, nullable=True, default=False)
+    synthetic_scenario_id = Column(String(64), nullable=True)
 
     # Relationship to versions
     versions = relationship("PolicyVersion", back_populates="proposal")

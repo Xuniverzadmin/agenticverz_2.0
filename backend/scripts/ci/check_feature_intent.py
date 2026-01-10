@@ -58,6 +58,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
+# DB-AUTH-001: Declare local-only authority
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts._db_guard import assert_db_authority  # noqa: E402
+assert_db_authority("local")
+
 # Patterns that indicate persistence usage
 PERSISTENCE_PATTERNS = [
     r"from\s+app\.db\s+import",
