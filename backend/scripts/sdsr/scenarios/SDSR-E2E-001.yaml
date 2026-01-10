@@ -1,15 +1,36 @@
 scenario_id: SDSR-E2E-001
 name: Failed Activity propagates to Incident, Policy Proposal, and Logs
 domain: CROSS_DOMAIN
+
+# -----------------------------------------
+# SCENARIO CLASSIFICATION (MANDATORY)
+# -----------------------------------------
+scenario_class: STATE_INJECTION
+execution_mode: non_executable
+
+# This scenario injects a failed run state directly.
+# Engine propagation (Incident, Policy) is verified, but traces are injected.
+
+coverage:
+  engine_propagation: true
+  worker_execution: false
+  trace_generation: false  # Traces are expectation, not generated
+  ui_observation: true
+
 purpose: >
-  Validate full backend-first causality:
+  Validate full backend-first causality via state injection:
   Activity failure → Incident Engine → Policy Proposal Engine → Logs,
   with UI rendering via projection only.
+
+  NOTE: This scenario injects failure state directly. It verifies that
+  engines react correctly to failure, but does not validate worker
+  execution or trace creation. See SDSR-E2E-005 for execution path.
 
 tags:
   - e2e
   - cross-domain
   - sdsr
+  - state-injection
   - baseline
 
 synthetic:

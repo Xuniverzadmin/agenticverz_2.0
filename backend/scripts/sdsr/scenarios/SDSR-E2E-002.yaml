@@ -1,18 +1,40 @@
 scenario_id: SDSR-E2E-002
 name: Successful Activity does NOT propagate to Incident or Policy Proposal
 domain: CROSS_DOMAIN
+
+# -----------------------------------------
+# SCENARIO CLASSIFICATION (MANDATORY)
+# -----------------------------------------
+scenario_class: STATE_INJECTION
+execution_mode: non_executable
+
+# IMPORTANT: This scenario validates engine non-propagation behavior
+# but does NOT validate worker execution or trace generation.
+# For full success-path execution with traces, see SDSR-E2E-005.
+
+coverage:
+  engine_non_propagation: true
+  worker_execution: false
+  trace_generation: false
+  ui_observation: false
+
 purpose: >
-  Validate engine selectivity:
-  A successful Activity run produces a completed trace but does NOT trigger
-  Incident Engine or Policy Proposal Engine. This tests the negative path
-  to ensure engines only fire on failure conditions.
+  Validate engine selectivity via state injection:
+  A directly-injected successful run does NOT trigger Incident Engine
+  or Policy Proposal Engine. This tests engine non-propagation behavior
+  in isolation from worker execution.
+
+  LIMITATION: This scenario bypasses worker execution. It does NOT prove
+  that successful worker execution produces traces. See SDSR-E2E-005 for
+  full success-path validation with trace generation.
 
 tags:
   - e2e
   - cross-domain
   - sdsr
-  - success-path
+  - state-injection
   - negative-test
+  - non-executable
 
 synthetic:
   enabled: true

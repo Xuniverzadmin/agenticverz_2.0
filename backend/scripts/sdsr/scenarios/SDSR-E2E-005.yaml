@@ -1,0 +1,294 @@
+scenario_id: SDSR-E2E-005
+name: Successful Worker Execution with Trace Generation
+domain: CROSS_DOMAIN
+
+# -----------------------------------------
+# SCENARIO CLASSIFICATION (MANDATORY)
+# -----------------------------------------
+scenario_class: WORKER_EXECUTION
+execution_mode: executable
+
+# This scenario validates the FULL success path:
+# Worker picks up run → Executes → Completes → Traces created → No incidents
+
+coverage:
+  engine_non_propagation: true
+  worker_execution: true
+  trace_generation: true
+  ui_observation: true
+
+purpose: >
+  Validate full success-path causality with worker execution:
+  1. Activity run created with status=queued
+  2. Worker picks up and executes the run
+  3. Execution succeeds (no failure)
+  4. TraceStore creates trace with status=completed
+  5. Trace steps are recorded (no ERROR level)
+  6. Incident Engine does NOT fire (success = no incident)
+  7. Policy Proposal Engine does NOT fire (no incident = no trigger)
+  8. UI shows completed run with traces in Logs panel
+
+  This is the foundational success-path guarantee that SDSR-E2E-002
+  (state injection) cannot provide.
+
+tags:
+  - e2e
+  - cross-domain
+  - sdsr
+  - success-path
+  - worker-execution
+  - trace-validation
+  - baseline
+
+synthetic:
+  enabled: true
+  cleanup_required: true
+
+# -----------------------------------------
+# Preconditions (Must exist or be created here)
+# -----------------------------------------
+preconditions:
+  tenant:
+    create: true
+    tenant_id: sdsr-tenant-e2e-005
+  api_key:
+    create: true
+    scopes: [activity:write, incidents:read, policies:read, logs:read]
+  agent:
+    create: true
+    agent_id: sdsr-agent-e2e-005
+    # Agent configured for minimal execution
+    config:
+      max_steps: 1
+      timeout_seconds: 30
+
+# -----------------------------------------
+# Scenario Steps (CAUSE only)
+# -----------------------------------------
+steps:
+
+  - step_id: ACTIVITY-EXECUTE-SUCCESS
+    description: Create a run that worker will execute successfully
+    action: create_run
+    data:
+      agent_id: sdsr-agent-e2e-005
+      status: queued
+      # Minimal goal that should complete without LLM failure
+      goal: "Return immediately with success status"
+      # No failure_code = success path
+      max_attempts: 1
+      priority: 10
+    expectations:
+      db:
+        table: runs
+        conditions:
+          status: queued
+          is_synthetic: true
+          synthetic_scenario_id: SDSR-E2E-005
+    wait_for:
+      table: runs
+      conditions:
+        status: completed
+      timeout_seconds: 60
+
+# -----------------------------------------
+# Expected Backend Propagation (SUCCESS PATH)
+# -----------------------------------------
+expected_propagation:
+
+  # Run completes via worker execution
+  - from: worker
+    via: Runner
+    updates:
+      table: runs
+      conditions:
+        status: completed
+        is_synthetic: true
+        synthetic_scenario_id: SDSR-E2E-005
+
+  # Trace MUST exist (created by worker execution)
+  - from: runs
+    via: TraceStore
+    creates:
+      table: aos_traces
+      conditions:
+        status: completed
+        is_synthetic: true
+        synthetic_scenario_id: SDSR-E2E-005
+
+  # Trace steps MUST exist (no ERROR level)
+  - from: aos_traces
+    via: TraceStore
+    creates:
+      table: aos_trace_steps
+      conditions:
+        level:
+          none_of: [ERROR]
+        source: engine
+
+# -----------------------------------------
+# Expected NON-Propagation (NEGATIVE ASSERTIONS)
+# -----------------------------------------
+expected_non_propagation:
+
+  # Incident Engine MUST NOT fire on success
+  - via: IncidentEngine
+    must_not_create:
+      table: incidents
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-005
+    reason: "Successful execution does not trigger incident creation"
+
+  # Policy Proposal Engine MUST NOT fire (no incident trigger)
+  - via: PolicyProposalEngine
+    must_not_create:
+      table: policy_proposals
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-005
+    reason: "No incident means no policy proposal trigger"
+
+# -----------------------------------------
+# Expected UI Observation (READ ONLY)
+# -----------------------------------------
+expected_ui:
+
+  activity:
+    panel_id: ACT-EX-AR-O2
+    observes:
+      table: runs
+      conditions:
+        status: completed
+        has_sdsr_badge: true
+
+  incidents:
+    panel_id: INC-AI-OI-O2
+    observes:
+      table: incidents
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-005
+        count: 0
+    note: "No incidents should appear for this scenario"
+
+  policies:
+    panel_id: POL-PR-PP-O2
+    observes:
+      table: policy_proposals
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-005
+        count: 0
+    note: "No proposals should appear for this scenario"
+
+  logs:
+    panel_id: LOG-ET-TD-O3
+    observes:
+      table: aos_trace_steps
+      conditions:
+        level:
+          one_of: [INFO, DEBUG]
+        has_sdsr_badge: true
+    note: "Trace steps visible with INFO/DEBUG levels, no ERROR"
+
+# -----------------------------------------
+# Acceptance Criteria (KPIs)
+# -----------------------------------------
+acceptance_criteria:
+
+  - id: AC-001
+    name: Run completes successfully
+    metric: runs.status == 'completed'
+    threshold: 100%
+
+  - id: AC-002
+    name: Trace created with completed status
+    metric: aos_traces.status == 'completed' AND aos_traces.run_id matches
+    threshold: 100%
+
+  - id: AC-003
+    name: Trace steps exist
+    metric: aos_trace_steps.count > 0 for trace
+    threshold: 100%
+
+  - id: AC-004
+    name: No ERROR level steps
+    metric: aos_trace_steps WHERE level = 'ERROR' count
+    threshold: 0
+
+  - id: AC-005
+    name: No incidents created
+    metric: incidents WHERE synthetic_scenario_id = 'SDSR-E2E-005' count
+    threshold: 0
+
+  - id: AC-006
+    name: No policy proposals created
+    metric: policy_proposals WHERE synthetic_scenario_id = 'SDSR-E2E-005' count
+    threshold: 0
+
+# -----------------------------------------
+# Causal Chain (Verification Order)
+# -----------------------------------------
+causal_chain:
+  - step: 1
+    event: Run created with status=queued
+    table: runs
+    verify: id exists, status=queued
+
+  - step: 2
+    event: Worker picks up run
+    table: runs
+    verify: status changes from queued
+
+  - step: 3
+    event: TraceStore starts trace
+    table: aos_traces
+    verify: trace created for run_id
+
+  - step: 4
+    event: Execution completes
+    table: runs
+    verify: status=completed
+
+  - step: 5
+    event: TraceStore completes trace
+    table: aos_traces
+    verify: status=completed
+
+  - step: 6
+    event: Trace steps recorded
+    table: aos_trace_steps
+    verify: steps exist, no ERROR level
+
+  - step: 7
+    event: No incident created
+    table: incidents
+    verify: count=0 for scenario
+
+  - step: 8
+    event: No policy proposal created
+    table: policy_proposals
+    verify: count=0 for scenario
+
+# -----------------------------------------
+# Non-Goals (Enforced)
+# -----------------------------------------
+forbidden:
+  - directly_create_traces
+  - directly_create_incidents
+  - directly_create_policy_rules
+  - bypass_worker_execution
+  - simulate_ui_state
+
+# -----------------------------------------
+# Cleanup (MANDATORY)
+# -----------------------------------------
+cleanup:
+  order:
+    - policy_proposals
+    - incidents
+    - aos_trace_steps
+    - aos_traces
+    - runs
+    - agents
+    - api_keys
+    - tenants
+  where:
+    synthetic_scenario_id: SDSR-E2E-005
