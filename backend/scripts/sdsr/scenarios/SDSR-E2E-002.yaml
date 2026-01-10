@@ -1,0 +1,166 @@
+scenario_id: SDSR-E2E-002
+name: Successful Activity does NOT propagate to Incident or Policy Proposal
+domain: CROSS_DOMAIN
+purpose: >
+  Validate engine selectivity:
+  A successful Activity run produces a completed trace but does NOT trigger
+  Incident Engine or Policy Proposal Engine. This tests the negative path
+  to ensure engines only fire on failure conditions.
+
+tags:
+  - e2e
+  - cross-domain
+  - sdsr
+  - success-path
+  - negative-test
+
+synthetic:
+  enabled: true
+  cleanup_required: true
+
+# -----------------------------------------
+# Preconditions (Must exist or be created here)
+# -----------------------------------------
+preconditions:
+  tenant:
+    create: true
+    tenant_id: sdsr-tenant-e2e-002
+  api_key:
+    create: true
+    scopes: [activity:write, incidents:read, policies:read]
+  agent:
+    create: true
+    agent_id: sdsr-agent-e2e-002
+
+# -----------------------------------------
+# Scenario Steps (CAUSE only)
+# -----------------------------------------
+steps:
+
+  - step_id: ACTIVITY-SUCCESS
+    description: Create a successful activity run
+    action: create_run
+    data:
+      agent_id: sdsr-agent-e2e-002
+      status: completed
+      result: |
+        {"output": "Task completed successfully", "steps_executed": 3}
+    expectations:
+      db:
+        table: runs
+        conditions:
+          status: completed
+          is_synthetic: true
+          synthetic_scenario_id: SDSR-E2E-002
+
+# -----------------------------------------
+# Expected Backend Propagation (SUCCESS PATH)
+# -----------------------------------------
+expected_propagation:
+
+  # Trace SHOULD exist
+  - from: runs
+    via: ExecutionEngine
+    creates:
+      table: aos_traces
+      conditions:
+        status: completed
+        is_synthetic: true
+        synthetic_scenario_id: SDSR-E2E-002
+
+  # Trace steps SHOULD exist (but no ERROR level)
+  - from: aos_traces
+    via: ExecutionEngine
+    creates:
+      table: aos_trace_steps
+      conditions:
+        level:
+          none_of: [ERROR]
+        source: engine
+
+# -----------------------------------------
+# Expected NON-Propagation (NEGATIVE ASSERTIONS)
+# -----------------------------------------
+expected_non_propagation:
+
+  # Incident Engine MUST NOT fire on success
+  - via: IncidentEngine
+    must_not_create:
+      table: incidents
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-002
+    reason: "Successful runs do not trigger incident creation"
+
+  # Policy Proposal Engine MUST NOT fire (no incident trigger)
+  - via: PolicyProposalEngine
+    must_not_create:
+      table: policy_proposals
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-002
+    reason: "No incident means no policy proposal trigger"
+
+# -----------------------------------------
+# Expected UI Observation (READ ONLY)
+# -----------------------------------------
+expected_ui:
+
+  activity:
+    panel_id: ACT-EX-AR-O2
+    observes:
+      table: runs
+      conditions:
+        status: completed
+        has_sdsr_badge: true
+
+  incidents:
+    panel_id: INC-AI-OI-O2
+    observes:
+      table: incidents
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-002
+        count: 0
+    note: "No incidents should appear for this scenario"
+
+  policies:
+    panel_id: POL-PR-PP-O2
+    observes:
+      table: policy_proposals
+      conditions:
+        synthetic_scenario_id: SDSR-E2E-002
+        count: 0
+    note: "No proposals should appear for this scenario"
+
+  logs:
+    panel_id: LOG-ET-TD-O3
+    observes:
+      table: aos_trace_steps
+      conditions:
+        level:
+          none_of: [ERROR]
+        has_sdsr_badge: true
+
+# -----------------------------------------
+# Non-Goals (Enforced)
+# -----------------------------------------
+forbidden:
+  - directly_create_incidents
+  - directly_create_policy_rules
+  - directly_write_logs
+  - bypass_engines
+  - simulate_ui_state
+
+# -----------------------------------------
+# Cleanup (MANDATORY)
+# -----------------------------------------
+cleanup:
+  order:
+    - policy_proposals
+    - incidents
+    - aos_trace_steps
+    - aos_traces
+    - runs
+    - agents
+    - api_keys
+    - tenants
+  where:
+    synthetic_scenario_id: SDSR-E2E-002
