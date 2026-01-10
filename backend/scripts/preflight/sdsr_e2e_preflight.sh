@@ -19,7 +19,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+BACKEND_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$BACKEND_DIR/.." && pwd)"
 
 echo "=============================================="
 echo "SDSR E2E Preflight Checks"
@@ -51,7 +52,7 @@ echo "-------------------------------------------"
 
 # Use canonical Python implementation (no regex parsing of CLI output)
 # Reference: backend/scripts/preflight/sr1_migration_check.py
-cd "$REPO_ROOT/backend"
+cd "$BACKEND_DIR"
 if python3 scripts/preflight/sr1_migration_check.py; then
     echo ""
 else
@@ -154,6 +155,25 @@ else
         echo -e "${GREEN}[SR-3 PASS] TraceStore integration present${NC}"
     fi
 fi
+echo ""
+
+# ============================================
+# Trace Metrics (Read-Only)
+# Reference: SDSR_E2E_TESTING_PROTOCOL.md
+# ============================================
+echo "Trace Metrics (Archived vs Active)"
+echo "-------------------------------------------"
+
+# Get trace counts
+TRACES_ACTIVE=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM aos_traces WHERE archived_at IS NULL" 2>/dev/null | tr -d ' ')
+TRACES_ARCHIVED=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM aos_traces WHERE archived_at IS NOT NULL" 2>/dev/null | tr -d ' ')
+STEPS_ACTIVE=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM aos_trace_steps WHERE archived_at IS NULL" 2>/dev/null | tr -d ' ')
+STEPS_ARCHIVED=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM aos_trace_steps WHERE archived_at IS NOT NULL" 2>/dev/null | tr -d ' ')
+
+echo "  aos_traces_active_total:       ${TRACES_ACTIVE:-0}"
+echo "  aos_traces_archived_total:     ${TRACES_ARCHIVED:-0}"
+echo "  aos_trace_steps_active_total:  ${STEPS_ACTIVE:-0}"
+echo "  aos_trace_steps_archived_total: ${STEPS_ARCHIVED:-0}"
 echo ""
 
 # ============================================
