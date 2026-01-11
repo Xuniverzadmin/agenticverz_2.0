@@ -8,7 +8,7 @@
 # Reference: AURORA_L2 Mechanical Truth Bridge
 
 """
-SDSR End-to-End Apply Orchestrator
+SDSR End-to-End Orchestrator
 
 PURPOSE:
     Orchestrate the complete SDSR → AURORA_L2 → UI pipeline.
@@ -42,10 +42,10 @@ EXIT CODES:
     4 → Pipeline failed
 
 USAGE:
-    python3 scripts/sdsr/sdsr_e2e_apply.py --scenario <path>
-    python3 scripts/sdsr/sdsr_e2e_apply.py --scenario <path> --case CASE-A
-    python3 scripts/sdsr/sdsr_e2e_apply.py --scenario <path> --dry-run
-    python3 scripts/sdsr/sdsr_e2e_apply.py --observation <path>  # Skip injection
+    python3 scripts/sdsr/sdsr_e2e_orchestrator.py --scenario <path>
+    python3 scripts/sdsr/sdsr_e2e_orchestrator.py --scenario <path> --case CASE-A
+    python3 scripts/sdsr/sdsr_e2e_orchestrator.py --scenario <path> --dry-run
+    python3 scripts/sdsr/sdsr_e2e_orchestrator.py --observation <path>  # Skip injection
 """
 
 import argparse
@@ -304,16 +304,16 @@ Pipeline:
 
 Examples:
   # Full E2E from scenario
-  python3 scripts/sdsr/sdsr_e2e_apply.py --scenario backend/scripts/sdsr/scenarios/SDSR-E2E-001.yaml
+  python3 scripts/sdsr/sdsr_e2e_orchestrator.py --scenario backend/scripts/sdsr/scenarios/SDSR-E2E-001.yaml
 
   # With case selection
-  python3 scripts/sdsr/sdsr_e2e_apply.py --scenario scenarios/multi.yaml --case CASE-A
+  python3 scripts/sdsr/sdsr_e2e_orchestrator.py --scenario scenarios/multi.yaml --case CASE-A
 
   # Skip injection, apply existing observation
-  python3 scripts/sdsr/sdsr_e2e_apply.py --observation sdsr/observations/SDSR_OBSERVATION_E2E_001.json
+  python3 scripts/sdsr/sdsr_e2e_orchestrator.py --observation sdsr/observations/SDSR_OBSERVATION_E2E_001.json
 
   # Dry run
-  python3 scripts/sdsr/sdsr_e2e_apply.py --scenario scenarios/test.yaml --dry-run
+  python3 scripts/sdsr/sdsr_e2e_orchestrator.py --scenario scenarios/test.yaml --dry-run
         """,
     )
 

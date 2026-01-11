@@ -87,11 +87,19 @@ def _serialize_output(scenario_output: ScenarioSDSROutput) -> Dict[str, Any]:
     """Serialize ScenarioSDSROutput to observation dict.
 
     Output conforms to SDSR_OBSERVATION_SCHEMA.json.
+
+    CRITICAL: observation_class is the mechanical discriminator that
+    tells Aurora whether to expect capabilities or not.
     """
     return {
         "scenario_id": scenario_output.scenario_id,
         "status": scenario_output.status,  # Required: PASSED | FAILED | HALTED
+        "observation_class": scenario_output.observation_class,  # INFRASTRUCTURE | EFFECT
         "observed_at": scenario_output.observed_at.isoformat(),
+        "observed_effects": [
+            _serialize_effect(e)
+            for e in scenario_output.observed_effects
+        ],
         "capabilities_observed": [
             _serialize_capability(cap)
             for cap in scenario_output.realized_capabilities
@@ -174,10 +182,24 @@ def validate_observation_file(filepath: str) -> Dict[str, Any]:
         observation = json.load(f)
 
     # Validate required fields (per SDSR_OBSERVATION_SCHEMA.json)
-    required_fields = ["scenario_id", "status", "observed_at", "capabilities_observed"]
+    required_fields = [
+        "scenario_id",
+        "status",
+        "observation_class",  # CRITICAL: mechanical discriminator
+        "observed_at",
+        "observed_effects",
+        "capabilities_observed",
+    ]
     missing = [f for f in required_fields if f not in observation]
     if missing:
         raise ValueError(f"Observation missing required fields: {missing}")
+
+    # Validate observation_class is valid
+    if observation.get("observation_class") not in ("INFRASTRUCTURE", "EFFECT"):
+        raise ValueError(
+            f"Invalid observation_class: {observation.get('observation_class')}. "
+            "Must be INFRASTRUCTURE or EFFECT."
+        )
 
     return observation
 

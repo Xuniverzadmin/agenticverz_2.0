@@ -21,17 +21,9 @@ metadata:
   generated_on: 2026-01-10
   declared_by: backend-team
   declared_on: 2026-01-10
-  observed_by: SDSR-TEST-001
-  observed_on: '2026-01-10T15:00:00Z'
+  observed_by: SDSR-E2E-004
+  observed_on: '2026-01-11T16:54:11.693928+00:00'
   observed_effects:
   - 'policy_proposal.status: PENDING → REJECTED'
-  observed_ui_panel: POL-PR-PP-O2
-  observed_endpoint: /api/v1/policy-proposals/{id}/reject
-notes: 'Capability declared by backend team.
-
-  Awaiting SDSR verification to advance to OBSERVED.
-
-
-  Button remains DISABLED until system verifies behavior.
-
-  '
+notes: Capability declared by backend team. Awaiting SDSR verification to advance
+  to OBSERVED. Button remains DISABLED until system verifies behavior.

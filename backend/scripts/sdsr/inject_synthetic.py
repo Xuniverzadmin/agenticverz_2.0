@@ -4,8 +4,9 @@
 # Temporal:
 #   Trigger: CLI invocation
 #   Execution: sync
-# Role: SDSR Scenario Realization Engine (Keystone)
-# Reference: PIN-370 (Scenario-Driven System Realization), PIN-379 (E2E Pipeline)
+# Role: SDSR Injector + Truth Producer (SDSR Pipeline Contract Section 3.2)
+# Reference: PIN-370, PIN-379, PIN-391, PIN-392
+# Contract: docs/governance/SDSR_PIPELINE_CONTRACT.md
 
 """
 SDSR inject_synthetic.py - Scenario Realization Engine
@@ -35,11 +36,12 @@ WHAT THIS IS NOT:
     - NOT allowed to "complete" scenarios
     - NOT allowed to fabricate downstream state
 
-EXIT CODES:
-    0 → Inputs created + execution triggered
-    1 → Validation failure (schema, missing fields)
-    2 → Partial write (transaction rolled back)
-    3 → Forbidden write attempted (guardrail violation)
+EXIT CODES (SDSR Pipeline Contract):
+    0 → Execution + truth materialization + observation emission succeeded
+    2 → Execution terminal but truth could not be materialized
+    3 → Execution did not reach terminal state (timeout / infra)
+    4 → Scenario invalid / preconditions failed
+    5 → Internal injector error
 
 FOUR NON-NEGOTIABLE RULES (PIN-370):
     1. NO INTELLIGENCE
@@ -78,7 +80,9 @@ from typing import Any, Dict, List
 import yaml
 
 # Add backend to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+BACKEND_ROOT = Path(__file__).parent.parent.parent
+REPO_ROOT = BACKEND_ROOT.parent
+sys.path.insert(0, str(BACKEND_ROOT))
 
 # DB-AUTH-001: Require Neon authority (CRITICAL - canonical truth)
 from scripts._db_guard import require_neon
@@ -88,9 +92,7 @@ require_neon()
 # These imports are used ONLY after --wait completes, not during injection
 from Scenario_SDSR_output import (
     ScenarioSDSROutputBuilder,
-    ObservedCapability,
     ObservedEffect,
-    build_observed_capability,
 )
 from SDSR_output_emit_AURORA_L2 import emit_aurora_l2_observation
 
@@ -105,11 +107,27 @@ logger = logging.getLogger("sdsr.inject")
 # =============================================================================
 # EXIT CODES (Contract v1.0)
 # =============================================================================
-EXIT_SUCCESS = 0  # Inputs created + execution triggered
+EXIT_SUCCESS = 0  # Inputs created + execution triggered (observation emitted)
 EXIT_VALIDATION_FAILURE = 1  # Schema, missing fields
-EXIT_PARTIAL_WRITE = 2  # Transaction rolled back
-EXIT_FORBIDDEN_WRITE = 3  # Guardrail violation
-EXIT_IDENTITY_REUSE = 4  # RG-SDSR-01: run_id already exists (LOCKED contract)
+EXIT_TRUTH_NOT_MATERIALIZED = 2  # Execution terminal but truth could not be materialized
+EXIT_EXECUTION_NOT_TERMINAL = 3  # Execution did not reach terminal state (timeout / infra)
+EXIT_SCENARIO_INVALID = 4  # Scenario invalid / preconditions failed
+EXIT_INTERNAL_ERROR = 5  # Internal injector error
+EXIT_FORBIDDEN_WRITE = 6  # Guardrail violation (legacy, remapped)
+EXIT_IDENTITY_REUSE = 7  # RG-SDSR-01: run_id already exists (LOCKED contract)
+
+# =============================================================================
+# TERMINAL RUN STATUS VOCABULARY (SDSR Pipeline Contract - LOCKED)
+# =============================================================================
+# Reference: docs/governance/SDSR_PIPELINE_CONTRACT.md Section 6
+#
+# These are the CANONICAL terminal statuses from runs.status.
+# SDSR observes this vocabulary; it does NOT impose its own.
+#
+# Source of truth: backend/app/worker/runner.py (status mutations)
+# Source of truth: backend/app/db.py (Run model status field)
+
+TERMINAL_RUN_STATUSES = frozenset({"succeeded", "failed", "halted"})
 
 
 # =============================================================================
@@ -502,6 +520,9 @@ def build_writes_from_new_format(spec: dict, case_id: str = None) -> List[Dict[s
         )
 
     # Process steps (from spec.steps or selected sub_scenario)
+    # Track run index for multi-run scenarios
+    run_index = 0
+
     for step in steps:
         action = step.get("action")
         data = step.get("data", {})
@@ -551,13 +572,20 @@ def build_writes_from_new_format(spec: dict, case_id: str = None) -> List[Dict[s
             is_state_injection = explicit_failed_status and data.get("failure_message")
 
             # SDSR Identity Rule (MANDATORY): run_id must be execution-unique
-            # Format: run-{scenario_id}-{case_suffix}-{UTC_YYYYMMDDTHHMMSSZ}
+            # Format: run-{scenario_id}-{case_suffix}-{step_id_or_index}-{UTC_YYYYMMDDTHHMMSSZ}
             # This prevents trace_id conflicts on re-execution (S6 immutability)
             #
             # IMPORTANT: We ALWAYS generate unique run_id, ignoring any YAML override.
             # run_id is execution identity, not scenario configuration.
+            #
+            # FIX (2026-01-11): Multi-run scenarios need distinct run_ids per step.
+            # Without step_id in run_id, INJECT-FAILURE-A and INJECT-SECOND-FAILURE-A
+            # would collide because they share the same timestamp.
             case_suffix = f"-{case_id.lower().replace('_', '-')}" if case_id else ""
-            unique_run_id = f"run-{scenario_id.lower()}{case_suffix}-{execution_timestamp}"
+            step_id = step.get("step_id", f"run{run_index}")
+            step_suffix = f"-{step_id.lower().replace('_', '-').replace(' ', '-')}"
+            unique_run_id = f"run-{scenario_id.lower()}{case_suffix}{step_suffix}-{execution_timestamp}"
+            run_index += 1
             run_data = {
                 "id": unique_run_id,  # Always unique per execution (SDSR Identity Rule)
                 "agent_id": data.get(
@@ -762,6 +790,10 @@ def inject_scenario(spec: dict, dry_run: bool = False, case_id: str = None) -> d
                 if table == "runs" and data.get("status") == "queued":
                     results["execution_triggered"] = True
 
+                # Track STATE_INJECTION runs (already terminal, no worker execution needed)
+                if table == "runs" and data.get("status") == "failed":
+                    results["state_injection_runs"] = results.get("state_injection_runs", 0) + 1
+
                 # STATE_INJECTION: Trigger IncidentEngine for failed runs
                 # This simulates what the worker would do when a run fails.
                 # Without this, failed runs created via STATE_INJECTION would
@@ -945,61 +977,103 @@ def materialize_and_emit_truth(
         return result
 
     # Determine overall status
-    # PASSED: All runs reached terminal state (completed or failed as expected)
-    # FAILED: Any run in unexpected state
-    all_terminal = all(r["status"] in ("completed", "failed") for r in runs)
+    # Terminal: All runs reached terminal state (succeeded, failed, halted)
+    # Non-terminal: Any run in unexpected state
+    # Reference: SDSR Pipeline Contract Section 6 (Status Semantics)
+    all_terminal = all(r["status"] in TERMINAL_RUN_STATUSES for r in runs)
 
     if not all_terminal:
         result["status"] = "FAILED"
-        non_terminal = [r for r in runs if r["status"] not in ("completed", "failed")]
+        non_terminal = [r for r in runs if r["status"] not in TERMINAL_RUN_STATUSES]
         result["error"] = f"Runs not terminal: {[r['id'] for r in non_terminal]}"
         logger.warning(f"Scenario {scenario_id}: FAILED (non-terminal runs)")
         return result
 
-    # Extract expected capabilities from scenario spec
-    # Look in: spec.capabilities_tested OR spec.expected_capabilities OR infer from steps
-    capabilities_tested = spec.get("capabilities_tested", [])
-    if not capabilities_tested:
-        capabilities_tested = spec.get("expected_capabilities", [])
+    # =========================================================================
+    # OBSERVE EFFECTS FROM DATABASE (NEW ARCHITECTURE)
+    # =========================================================================
+    # We observe actual state transitions from canonical tables.
+    # The ScenarioSDSROutputBuilder will:
+    # 1. Classify observation (INFRASTRUCTURE vs EFFECT)
+    # 2. Infer capabilities from effects using acceptance criteria
+    # Reference: SDSR Execution Protocol Section 13.3
+    # =========================================================================
 
-    # If not explicitly defined, try to infer from steps
-    if not capabilities_tested:
-        steps = spec.get("steps", [])
-        for step in steps:
-            cap_id = step.get("capability_id")
-            if cap_id:
-                capabilities_tested.append({
-                    "capability_id": cap_id,
-                    "endpoint": step.get("endpoint"),
-                    "method": step.get("method"),
-                })
+    observed_effects: list[ObservedEffect] = []
 
-    # Build ObservedCapability list
-    observed_capabilities = []
-    for cap_spec in capabilities_tested:
-        cap_id = cap_spec if isinstance(cap_spec, str) else cap_spec.get("capability_id")
-        if not cap_id:
-            continue
+    # Get database connection for observing effects
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        # Build effects from spec or use empty list
-        effects = []
-        if isinstance(cap_spec, dict):
-            for effect_spec in cap_spec.get("expected_effects", []):
-                effects.append(ObservedEffect(
-                    entity=effect_spec.get("entity", "unknown"),
-                    field=effect_spec.get("field", "status"),
-                    before=effect_spec.get("from"),
-                    after=effect_spec.get("to"),
+    try:
+        # Query policy_proposals for status transitions (APPROVE/REJECT capabilities)
+        cursor.execute(
+            """
+            SELECT id, status, created_at
+            FROM policy_proposals
+            WHERE is_synthetic = true AND synthetic_scenario_id = %s
+            """,
+            (scenario_id,),
+        )
+        proposals = cursor.fetchall()
+
+        for proposal in proposals:
+            prop_status = proposal[1]
+            # Normalize to uppercase for comparison (DB stores lowercase)
+            prop_status_upper = prop_status.upper() if prop_status else ""
+            # APPROVE: PENDING → APPROVED
+            if prop_status_upper == "APPROVED":
+                observed_effects.append(ObservedEffect(
+                    entity="policy_proposal",
+                    field="status",
+                    before="PENDING",
+                    after="APPROVED",
+                ))
+            # REJECT: PENDING → REJECTED
+            elif prop_status_upper == "REJECTED":
+                observed_effects.append(ObservedEffect(
+                    entity="policy_proposal",
+                    field="status",
+                    before="PENDING",
+                    after="REJECTED",
                 ))
 
-        observed_capabilities.append(ObservedCapability(
-            capability_id=cap_id,
-            effects=effects,
-            endpoint=cap_spec.get("endpoint") if isinstance(cap_spec, dict) else None,
-            method=cap_spec.get("method") if isinstance(cap_spec, dict) else None,
-        ))
+        # Query incidents for status transitions (future capabilities)
+        cursor.execute(
+            """
+            SELECT id, status, severity
+            FROM incidents
+            WHERE is_synthetic = true AND synthetic_scenario_id = %s
+            """,
+            (scenario_id,),
+        )
+        incidents = cursor.fetchall()
+
+        for incident in incidents:
+            # For now, just record incident creation as an effect
+            # Future: track status transitions
+            inc_status = incident[1]
+            if inc_status:
+                observed_effects.append(ObservedEffect(
+                    entity="incident",
+                    field="status",
+                    before=None,  # Created (no prior state)
+                    after=inc_status,
+                ))
+
+        logger.info(
+            f"Scenario {scenario_id}: Observed {len(observed_effects)} effects "
+            f"(proposals: {len(proposals)}, incidents: {len(incidents)})"
+        )
+
+    finally:
+        cursor.close()
+        conn.close()
 
     # Materialize truth (LEAK-1 fix)
+    # The builder will:
+    # 1. Classify observation (INFRASTRUCTURE if no effects, EFFECT otherwise)
+    # 2. Infer capabilities from effects using acceptance criteria
     try:
         # Use first run_id as the representative run_id
         run_id = runs[0]["id"] if runs else f"run-{scenario_id}-unknown"
@@ -1008,12 +1082,18 @@ def materialize_and_emit_truth(
             scenario_id=scenario_id,
             run_id=run_id,
             execution_status="PASSED",
-            observed_capabilities=observed_capabilities,
-            notes=f"Materialized by inject_synthetic.py after --wait",
+            observed_effects=observed_effects,  # NEW: pass effects, not capabilities
+            notes="Materialized by inject_synthetic.py after --wait",
         )
 
         result["status"] = "PASSED"
-        logger.info(f"Scenario {scenario_id}: Truth materialized (PASSED)")
+        result["observation_class"] = scenario_output.observation_class
+        result["capabilities_count"] = len(scenario_output.realized_capabilities)
+        logger.info(
+            f"Scenario {scenario_id}: Truth materialized (PASSED, "
+            f"class={scenario_output.observation_class}, "
+            f"capabilities={len(scenario_output.realized_capabilities)})"
+        )
 
     except Exception as e:
         result["status"] = "FAILED"
@@ -1075,7 +1155,8 @@ def wait_for_execution(scenario_id: str, timeout_seconds: int = 60) -> dict:
                         "error_message": error_message,
                     }
                 )
-                if status not in ("completed", "failed", "cancelled"):
+                # SDSR Pipeline Contract Section 6: Use canonical run status vocabulary
+                if status not in TERMINAL_RUN_STATUSES:
                     all_terminal = False
 
             if all_terminal:
@@ -1126,11 +1207,12 @@ def main():
         description="SDSR Scenario Realization Engine (Contract v1.0)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Exit Codes:
-  0  Inputs created + execution triggered
-  1  Validation failure (schema, missing fields)
-  2  Partial write (transaction rolled back)
-  3  Forbidden write attempted (guardrail violation)
+Exit Codes (SDSR Pipeline Contract):
+  0  Execution + truth materialization + observation emission succeeded
+  2  Execution terminal but truth could not be materialized
+  3  Execution did not reach terminal state (timeout / infra)
+  4  Scenario invalid / preconditions failed
+  5  Internal injector error
 
 Examples:
   python inject_synthetic.py --scenario scenarios/SDSR-E2E-001.yaml
@@ -1216,12 +1298,17 @@ Examples:
             print(f"Rows written: {results['rows_written']}")
             print(f"Tables touched: {', '.join(results['tables_touched'])}")
             print(f"Execution triggered: {results['execution_triggered']}")
+            if results.get("state_injection_runs"):
+                print(f"State injection runs: {results['state_injection_runs']} (already terminal)")
             for op in results["operations"]:
                 status = "planned" if args.dry_run else "created"
                 print(f"  {op['operation']}: {op.get('id', 'N/A')} ({status})")
 
             # Wait for execution if requested
-            if args.wait and not args.dry_run and results["execution_triggered"]:
+            # For WORKER_EXECUTION: wait for runs to become terminal
+            # For STATE_INJECTION: runs are already terminal, proceed directly
+            has_runs_to_materialize = results["execution_triggered"] or results.get("state_injection_runs", 0) > 0
+            if args.wait and not args.dry_run and has_runs_to_materialize:
                 logger.info(f"Waiting for execution (timeout: {args.timeout}s)...")
                 wait_results = wait_for_execution(results["scenario_id"], args.timeout)
                 print(f"\nExecution completed: {wait_results['completed']}")
@@ -1248,15 +1335,65 @@ Examples:
                 if truth_results.get("error"):
                     print(f"  Error: {truth_results['error']}")
 
-                # Report next step for LEAK-3 + LEAK-4
+                # =================================================================
+                # SDSR OBSERVATION READY SIGNAL (Clean Architecture)
+                # =================================================================
+                # inject_synthetic.py ONLY:
+                #   - Creates state, waits, observes, materializes truth
+                #   - Emits observation.json
+                #   - Writes .sdsr_observation_ready signal
+                #
+                # inject_synthetic.py DOES NOT:
+                #   - Call Aurora scripts directly (violates one-way causality)
+                #   - Orchestrate downstream pipelines
+                #
+                # The signal is consumed by sdsr_observation_watcher.sh which:
+                #   - Applies observation to capability registry
+                #   - Triggers preflight rebuild
+                #   - Clears signals
+                #
+                # Reference: SDSR-Aurora Capability Proof Pipeline v1.0
+                # =================================================================
                 if truth_results["status"] == "PASSED" and truth_results.get("observation_path"):
-                    print("\n" + "=" * 60)
-                    print("NEXT STEP (Manual or via sdsr_e2e_apply.py):")
-                    print("=" * 60)
-                    print(f"  python3 scripts/tools/AURORA_L2_apply_sdsr_observations.py \\")
-                    print(f"      --observation {truth_results['observation_path']}")
-                    print(f"  ./scripts/tools/run_aurora_l2_pipeline.sh")
+                    # Write the observation ready signal
+                    signal_file = REPO_ROOT / ".sdsr_observation_ready"
+                    try:
+                        signal_content = (
+                            f"observation_path={truth_results['observation_path']}\n"
+                            f"scenario_id={results['scenario_id']}\n"
+                            f"observation_class={truth_results.get('observation_class', 'UNKNOWN')}\n"
+                            f"capabilities_count={truth_results.get('capabilities_count', 0)}\n"
+                        )
+                        signal_file.write_text(signal_content)
+                        logger.info(f"Signal written: {signal_file}")
+                    except Exception as e:
+                        logger.warning(f"Failed to write signal file: {e}")
 
+                    print("\n" + "=" * 60)
+                    print("SDSR OBSERVATION READY")
+                    print("=" * 60)
+                    print(f"  Observation: {truth_results['observation_path']}")
+                    print(f"  Class: {truth_results.get('observation_class', 'UNKNOWN')}")
+                    print(f"  Capabilities: {truth_results.get('capabilities_count', 0)}")
+                    print(f"  Signal: {signal_file}")
+                    print("")
+                    print("NEXT STEP (run the watcher to apply and rebuild):")
+                    print("  ./scripts/tools/sdsr_observation_watcher.sh")
+
+                # SDSR Pipeline Contract: Exit code discipline
+                # Exit code 0 is ILLEGAL unless observation exists
+                if truth_results["status"] == "PASSED" and truth_results.get("observation_path"):
+                    sys.exit(EXIT_SUCCESS)
+                elif truth_results["status"] == "HALTED":
+                    # Execution did not reach terminal state
+                    logger.error(f"Exit code {EXIT_EXECUTION_NOT_TERMINAL}: {truth_results.get('error')}")
+                    sys.exit(EXIT_EXECUTION_NOT_TERMINAL)
+                else:
+                    # Truth could not be materialized (FAILED or PASSED without observation)
+                    logger.error(f"Exit code {EXIT_TRUTH_NOT_MATERIALIZED}: {truth_results.get('error')}")
+                    sys.exit(EXIT_TRUTH_NOT_MATERIALIZED)
+
+            # No --wait: injection only, exit success
             sys.exit(EXIT_SUCCESS)
 
     except ScenarioValidationError as e:
@@ -1281,7 +1418,7 @@ Examples:
 
     except Exception as e:
         logger.error(f"INJECTION FAILED: {e}")
-        sys.exit(EXIT_PARTIAL_WRITE)
+        sys.exit(EXIT_INTERNAL_ERROR)
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.175949+00:00",
+    "compiled_at": "2026-01-11T17:23:39.651264+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -64,7 +64,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.179231+00:00",
+    "compiled_at": "2026-01-11T17:23:39.655151+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -96,7 +96,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.182161+00:00",
+    "compiled_at": "2026-01-11T17:23:39.658103+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -134,7 +134,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.186759+00:00",
+    "compiled_at": "2026-01-11T17:23:39.662201+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -169,7 +169,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.190784+00:00",
+    "compiled_at": "2026-01-11T17:23:39.670970+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -201,7 +201,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.193634+00:00",
+    "compiled_at": "2026-01-11T17:23:39.673882+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -238,7 +238,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.197370+00:00",
+    "compiled_at": "2026-01-11T17:23:39.677332+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -273,7 +273,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.200970+00:00",
+    "compiled_at": "2026-01-11T17:23:39.681303+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -307,7 +307,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.204024+00:00",
+    "compiled_at": "2026-01-11T17:23:39.684492+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -341,7 +341,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.207275+00:00",
+    "compiled_at": "2026-01-11T17:23:39.687773+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -373,7 +373,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.209876+00:00",
+    "compiled_at": "2026-01-11T17:23:39.690916+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -409,7 +409,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.213358+00:00",
+    "compiled_at": "2026-01-11T17:23:39.694676+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -449,7 +449,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.216994+00:00",
+    "compiled_at": "2026-01-11T17:23:39.698313+00:00",
     "binding_status": "DRAFT",
     "observation_trace": []
   },
@@ -483,7 +483,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.220102+00:00",
+    "compiled_at": "2026-01-11T17:23:39.701651+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -515,7 +515,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.226272+00:00",
+    "compiled_at": "2026-01-11T17:23:39.705143+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -555,7 +555,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.233557+00:00",
+    "compiled_at": "2026-01-11T17:23:39.708931+00:00",
     "binding_status": "DRAFT",
     "observation_trace": []
   },
@@ -587,7 +587,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.245617+00:00",
+    "compiled_at": "2026-01-11T17:23:39.712200+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -625,7 +625,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.249130+00:00",
+    "compiled_at": "2026-01-11T17:23:39.715739+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -660,7 +660,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.252667+00:00",
+    "compiled_at": "2026-01-11T17:23:39.719571+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -694,7 +694,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.255914+00:00",
+    "compiled_at": "2026-01-11T17:23:39.722481+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -728,7 +728,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.259431+00:00",
+    "compiled_at": "2026-01-11T17:23:39.725224+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -760,7 +760,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.262306+00:00",
+    "compiled_at": "2026-01-11T17:23:39.727942+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -798,7 +798,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.265579+00:00",
+    "compiled_at": "2026-01-11T17:23:39.731509+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -833,7 +833,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.268620+00:00",
+    "compiled_at": "2026-01-11T17:23:39.734417+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -867,7 +867,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.271640+00:00",
+    "compiled_at": "2026-01-11T17:23:39.737330+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -899,7 +899,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.274521+00:00",
+    "compiled_at": "2026-01-11T17:23:39.740026+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -937,7 +937,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.277857+00:00",
+    "compiled_at": "2026-01-11T17:23:39.743094+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -972,7 +972,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.280992+00:00",
+    "compiled_at": "2026-01-11T17:23:39.745948+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1006,7 +1006,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.284145+00:00",
+    "compiled_at": "2026-01-11T17:23:39.748650+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1038,7 +1038,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.287244+00:00",
+    "compiled_at": "2026-01-11T17:23:39.751364+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1076,7 +1076,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.290875+00:00",
+    "compiled_at": "2026-01-11T17:23:39.754485+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1111,7 +1111,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.294024+00:00",
+    "compiled_at": "2026-01-11T17:23:39.757928+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1145,7 +1145,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.297042+00:00",
+    "compiled_at": "2026-01-11T17:23:39.762409+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1179,7 +1179,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.300530+00:00",
+    "compiled_at": "2026-01-11T17:23:39.766134+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1211,7 +1211,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.303505+00:00",
+    "compiled_at": "2026-01-11T17:23:39.768871+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1243,7 +1243,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.306543+00:00",
+    "compiled_at": "2026-01-11T17:23:39.771310+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1280,7 +1280,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.310014+00:00",
+    "compiled_at": "2026-01-11T17:23:39.775115+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1312,7 +1312,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.313140+00:00",
+    "compiled_at": "2026-01-11T17:23:39.778240+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1349,7 +1349,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.316536+00:00",
+    "compiled_at": "2026-01-11T17:23:39.781912+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1386,7 +1386,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.320019+00:00",
+    "compiled_at": "2026-01-11T17:23:39.785207+00:00",
     "binding_status": "DRAFT",
     "observation_trace": []
   },
@@ -1420,7 +1420,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.332283+00:00",
+    "compiled_at": "2026-01-11T17:23:39.788336+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1452,7 +1452,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.346317+00:00",
+    "compiled_at": "2026-01-11T17:23:39.791037+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1489,7 +1489,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.349665+00:00",
+    "compiled_at": "2026-01-11T17:23:39.794230+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1526,7 +1526,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.353125+00:00",
+    "compiled_at": "2026-01-11T17:23:39.797648+00:00",
     "binding_status": "DRAFT",
     "observation_trace": []
   },
@@ -1558,7 +1558,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.355493+00:00",
+    "compiled_at": "2026-01-11T17:23:39.800474+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1595,7 +1595,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.358854+00:00",
+    "compiled_at": "2026-01-11T17:23:39.804043+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1632,7 +1632,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.362339+00:00",
+    "compiled_at": "2026-01-11T17:23:39.807742+00:00",
     "binding_status": "DRAFT",
     "observation_trace": []
   },
@@ -1664,7 +1664,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.365387+00:00",
+    "compiled_at": "2026-01-11T17:23:39.810650+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1702,7 +1702,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.369043+00:00",
+    "compiled_at": "2026-01-11T17:23:39.814076+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1737,7 +1737,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.372803+00:00",
+    "compiled_at": "2026-01-11T17:23:39.817186+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1771,7 +1771,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.375995+00:00",
+    "compiled_at": "2026-01-11T17:23:39.821047+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1805,7 +1805,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.380060+00:00",
+    "compiled_at": "2026-01-11T17:23:39.824204+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1837,7 +1837,7 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.384318+00:00",
+    "compiled_at": "2026-01-11T17:23:39.827343+00:00",
     "binding_status": "INFO",
     "observation_trace": []
   },
@@ -1879,12 +1879,12 @@
     "review_status": "UNREVIEWED",
     "migrated_from": "CSV",
     "migration_date": "2026-01-10",
-    "compiled_at": "2026-01-10T19:14:23.389047+00:00",
+    "compiled_at": "2026-01-11T17:23:39.834518+00:00",
     "binding_status": "BOUND",
     "observation_trace": [
       {
-        "scenario_id": "SDSR-TEST-001",
-        "observed_on": "2026-01-10T15:00:00Z",
+        "scenario_id": "SDSR-E2E-004",
+        "observed_on": "2026-01-11T16:33:06.607878+00:00",
         "capability_id": "APPROVE",
         "observed_effects": [
           {
@@ -1892,6 +1892,19 @@
             "field": "status",
             "from": "PENDING",
             "to": "APPROVED"
+          }
+        ]
+      },
+      {
+        "scenario_id": "SDSR-E2E-004",
+        "observed_on": "2026-01-11T16:54:11.693928+00:00",
+        "capability_id": "REJECT",
+        "observed_effects": [
+          {
+            "entity": "policy_proposal",
+            "field": "status",
+            "from": "PENDING",
+            "to": "REJECTED"
           }
         ]
       }

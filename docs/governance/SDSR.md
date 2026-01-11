@@ -402,12 +402,71 @@ If any answer is NO → STOP and resolve before proceeding.
 | Component | Location |
 |-----------|----------|
 | Scenario specs | `scripts/sdsr/scenarios/*.yaml` |
-| Injection script | `scripts/sdsr/inject_synthetic.py` |
+| Injection script | `backend/scripts/sdsr/inject_synthetic.py` |
+| **Observation watcher** | `scripts/tools/sdsr_observation_watcher.sh` |
+| Aurora applier | `scripts/tools/AURORA_L2_apply_sdsr_observations.py` |
+| Preflight pipeline | `scripts/tools/run_aurora_l2_pipeline_preflight.sh` |
 | Panel content registry | `website/app-shell/src/components/panels/PanelContentRegistry.tsx` |
 | DomainPage | `website/app-shell/src/pages/domains/DomainPage.tsx` |
 | Projection lock | `website/app-shell/public/projection/ui_projection_lock.json` |
 | Activity API | `backend/app/api/activity.py` |
 | API client | `website/app-shell/src/api/activity.ts` |
+
+---
+
+## Pipeline Automation (One-Way Causality)
+
+### Architecture (PIN-394)
+
+The SDSR-Aurora pipeline follows one-way causality:
+
+```
+inject_synthetic.py (upstream)
+    ├─ Creates state
+    ├─ Waits for execution
+    ├─ Observes effects
+    ├─ Materializes truth
+    └─ Emits .sdsr_observation_ready signal ◄── ONLY DOWNSTREAM OUTPUT
+                │
+                ▼
+sdsr_observation_watcher.sh (downstream)
+    ├─ Detects signal
+    ├─ Applies observation to Aurora registry
+    ├─ Triggers preflight compile
+    └─ Clears signals
+```
+
+### Usage
+
+```bash
+# Step 1: Run SDSR scenario (manual)
+python3 backend/scripts/sdsr/inject_synthetic.py --scenario SDSR-E2E-004
+
+# Step 2: Process observation (watcher handles downstream)
+./scripts/tools/sdsr_observation_watcher.sh
+
+# Step 2 (dry run mode):
+./scripts/tools/sdsr_observation_watcher.sh --dry-run
+
+# Step 3: Verify at preflight
+# URL: https://preflight-console.agenticverz.com/precus/policies
+
+# Step 4: Promote to production (manual)
+./scripts/tools/promote_projection.sh
+```
+
+### Manual vs Automatic
+
+| Operation | Type | Rationale |
+|-----------|------|-----------|
+| Scenario selection | **MANUAL** | Human judgment |
+| inject_synthetic.py | **MANUAL** | Human initiates |
+| Truth materialization | **AUTO** | Called by injector |
+| Signal emission | **AUTO** | Written by injector |
+| Registry update | **AUTO** | Via watcher |
+| Preflight compile | **AUTO** | Via watcher |
+| Preflight verification | **MANUAL** | Human verifies |
+| Production promotion | **MANUAL** | Human approval |
 
 ---
 
@@ -482,6 +541,12 @@ Logs (evidence) ← PENDING
 ## Related Documents
 
 - [PIN-370](../memory-pins/PIN-370-sdsr-scenario-driven-system-realization.md) - Full implementation details
+- [PIN-394](../memory-pins/PIN-394-sdsr-aurora-one-way-causality-pipeline.md) - One-Way Causality Pipeline
+- [PIN-395](../memory-pins/PIN-395-sdsr-scenario-taxonomy-and-capability-court-of-law.md) - Scenario Taxonomy
+- [SDSR_SCENARIO_TAXONOMY.md](SDSR_SCENARIO_TAXONOMY.md) - 13 Scenario Classes
+- [SDSR_CAPABILITY_COVERAGE_MATRIX.md](SDSR_CAPABILITY_COVERAGE_MATRIX.md) - Capability → Scenario Mapping
+- [SDSR_EXECUTION_PLAN.md](SDSR_EXECUTION_PLAN.md) - Concrete Execution Plan
+- [SDSR_PIPELINE_CONTRACT.md](SDSR_PIPELINE_CONTRACT.md) - Detailed pipeline contract
 - [SESSION_PLAYBOOK.yaml](../playbooks/SESSION_PLAYBOOK.yaml) - Governance rules
 - [CLAUDE_ENGINEERING_AUTHORITY.md](CLAUDE_ENGINEERING_AUTHORITY.md) - Engineering constraints
 
@@ -491,6 +556,8 @@ Logs (evidence) ← PENDING
 
 | Date | Change |
 |------|--------|
+| 2026-01-11 | Added Scenario Taxonomy (13 classes), Capability Coverage Matrix, Execution Plan (PIN-395) |
+| 2026-01-11 | Added Pipeline Automation section, sdsr_observation_watcher.sh (PIN-394) |
 | 2026-01-09 | Initial creation - SDSR governance document |
 | 2026-01-09 | Added Rules 6-8, Cross-Domain Propagation section |
 | 2026-01-09 | Added Domain Status section, Incidents gaps identified |

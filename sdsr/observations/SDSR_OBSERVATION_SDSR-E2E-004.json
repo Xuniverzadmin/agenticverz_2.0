@@ -1,0 +1,46 @@
+{
+  "capabilities_observed": [
+    {
+      "capability_id": "REJECT",
+      "endpoint": null,
+      "method": null,
+      "observed_effects": [
+        {
+          "entity": "policy_proposal",
+          "field": "status",
+          "from": "PENDING",
+          "to": "REJECTED"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "notes": "Materialized by inject_synthetic.py after --wait",
+    "run_id": "run-sdsr-e2e-004-case-b-reject-inject-failure-b-20260111T165137Z",
+    "runner_version": "inject_synthetic.py v1.0"
+  },
+  "observation_class": "EFFECT",
+  "observed_at": "2026-01-11T16:54:11.693928+00:00",
+  "observed_effects": [
+    {
+      "entity": "policy_proposal",
+      "field": "status",
+      "from": "PENDING",
+      "to": "REJECTED"
+    },
+    {
+      "entity": "incident",
+      "field": "status",
+      "from": null,
+      "to": "OPEN"
+    },
+    {
+      "entity": "incident",
+      "field": "status",
+      "from": null,
+      "to": "OPEN"
+    }
+  ],
+  "scenario_id": "SDSR-E2E-004",
+  "status": "PASSED"
+}

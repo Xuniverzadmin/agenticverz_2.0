@@ -2,7 +2,7 @@
   "_meta": {
     "type": "ui_projection_lock",
     "version": "1.0.0",
-    "generated_at": "2026-01-10T19:53:21.783910+00:00",
+    "generated_at": "2026-01-11T17:23:39.841240+00:00",
     "source": "AURORA_L2 Intent Compiler",
     "generator": "AURORA_L2_COMPILER",
     "generator_version": "2.0.0",
@@ -25,7 +25,7 @@
     "draft_panels": 5,
     "info_panels": 48,
     "unbound_panels": 0,
-    "sdsr_trace_count": 1,
+    "sdsr_trace_count": 2,
     "panels_with_traces": 1,
     "unique_scenario_count": 1
   },
@@ -2956,19 +2956,26 @@
           "review_status": "UNREVIEWED",
           "binding_metadata": {
             "scenario_ids": [
-              "SDSR-TEST-001"
+              "SDSR-E2E-004"
             ],
-            "observed_at": "2026-01-10T15:00:00Z",
+            "observed_at": "2026-01-11T16:54:11.693928+00:00",
             "capability_ids": [
-              "APPROVE"
+              "APPROVE",
+              "REJECT"
             ],
-            "trace_count": 1,
+            "trace_count": 2,
             "observed_effects": [
               {
                 "entity": "policy_proposal",
                 "field": "status",
                 "from": "PENDING",
                 "to": "APPROVED"
+              },
+              {
+                "entity": "policy_proposal",
+                "field": "status",
+                "from": "PENDING",
+                "to": "REJECTED"
               }
             ]
           },

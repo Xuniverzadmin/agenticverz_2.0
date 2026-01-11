@@ -38,11 +38,19 @@ controls:
   - NAVIGATE
 notes: List of draft proposals with human approve/reject; PIN-373
 observation_trace:
-- scenario_id: SDSR-TEST-001
-  observed_on: '2026-01-10T15:00:00Z'
+- scenario_id: SDSR-E2E-004
+  observed_on: '2026-01-11T16:33:06.607878+00:00'
   capability_id: APPROVE
   observed_effects:
   - entity: policy_proposal
     field: status
     from: PENDING
     to: APPROVED
+- scenario_id: SDSR-E2E-004
+  observed_on: '2026-01-11T16:54:11.693928+00:00'
+  capability_id: REJECT
+  observed_effects:
+  - entity: policy_proposal
+    field: status
+    from: PENDING
+    to: REJECTED

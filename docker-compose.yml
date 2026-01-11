@@ -31,6 +31,8 @@ services:
     volumes:
       # Mount auth module for hot-reload during development
       - ./backend/app/auth:/app/app/auth:ro
+      # PIN-391: Mount design folder for RBAC_RULES.yaml runtime access
+      - ./design:/design:ro
     environment:
       # NOTE: Using Neon PostgreSQL (managed, pooled) - M8 migration
       DATABASE_URL: ${DATABASE_URL}
@@ -120,6 +122,9 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
+    volumes:
+      # PIN-391: Mount design folder for RBAC_RULES.yaml runtime access
+      - ./design:/design:ro
     environment:
       # NOTE: Using Neon PostgreSQL (managed, pooled) - M8 migration
       DATABASE_URL: ${DATABASE_URL}

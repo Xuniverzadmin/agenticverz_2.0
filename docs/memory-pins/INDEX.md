@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-11 (PIN-392 Query Authority — Data Access Privileges)
+**Last Updated:** 2026-01-11 (PIN-395 SDSR Scenario Taxonomy and Capability Court of Law)
 
 ---
 
@@ -387,6 +387,9 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-390](PIN-390-four-console-query-authority-model.md) | **Four-Console Query Authority Model** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
 | [PIN-391](PIN-391-rbac-unification-schema-first-authorization.md) | **RBAC Unification — Schema-First Authorization** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
 | [PIN-392](PIN-392-query-authority-data-access-privileges.md) | **Query Authority — Data Access Privileges** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
+| [PIN-393](PIN-393-sdsr-observation-class-mechanical-discriminator.md) | **SDSR Observation Class Mechanical Discriminator** | SDSR / Architecture | **✅ COMPLETE** | 2026-01-11 |
+| [PIN-394](PIN-394-sdsr-aurora-one-way-causality-pipeline.md) | **SDSR-Aurora One-Way Causality Pipeline** | SDSR / Pipeline Architecture | **✅ COMPLETE** | 2026-01-11 |
+| [PIN-395](PIN-395-sdsr-scenario-taxonomy-and-capability-court-of-law.md) | **SDSR Scenario Taxonomy and Capability Court of Law** | SDSR / System Design | **✅ COMPLETE** | 2026-01-11 |
 
 ---
 
@@ -1156,6 +1159,9 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-11 | **PIN-395 SDSR Scenario Taxonomy and Capability Court of Law** - Created via memory_trail. |
+| 2026-01-11 | **PIN-394 SDSR-Aurora One-Way Causality Pipeline** - Created via memory_trail. |
+| 2026-01-11 | **PIN-393 SDSR Observation Class Mechanical Discriminator** - Created via memory_trail. |
 | 2026-01-11 | **PIN-392 Query Authority — Data Access Privileges** - Created. Query authority constraints, enforcement helpers, CI validation. |
 | 2026-01-11 | **PIN-391 RBAC Unification — Schema-First Authorization** - Created. Canonical RBAC schema, loader, CI guard. |
 | 2026-01-11 | **PIN-390 Four-Console Query Authority Model** - Created. Query authority schema, CI guard, governance docs. |

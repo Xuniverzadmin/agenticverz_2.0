@@ -186,4 +186,4 @@ inject_synthetic.py --wait
 - Template: `sdsr/observations/_TEMPLATE_OBSERVATION.json`
 - Producer: `backend/scripts/sdsr/SDSR_output_emit_AURORA_L2.py`
 - Consumer: `scripts/tools/AURORA_L2_apply_sdsr_observations.py`
-- Orchestrator: `scripts/sdsr/sdsr_e2e_apply.py`
+- Orchestrator: `scripts/sdsr/sdsr_e2e_orchestrator.py`

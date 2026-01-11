@@ -54,6 +54,13 @@ CAPABILITY_REGISTRY_DIR = REPO_ROOT / "backend/AURORA_L2_CAPABILITY_REGISTRY"
 INTENTS_DIR = REPO_ROOT / "design/l2_1/intents"
 OBSERVATION_SCHEMA_PATH = REPO_ROOT / "sdsr/SDSR_OBSERVATION_SCHEMA.json"
 
+# =============================================================================
+# PREFLIGHT RECOMPILE SIGNAL (Phase 1 Automation)
+# =============================================================================
+# When capability status changes, this file signals that preflight needs recompile.
+# The preflight pipeline checks for this and auto-triggers Aurora compilation.
+PREFLIGHT_RECOMPILE_SIGNAL = REPO_ROOT / ".aurora_needs_preflight_recompile"
+
 # Only PASSED observations may advance state
 REQUIRED_SCENARIO_STATUS = "PASSED"
 
@@ -206,6 +213,10 @@ def validate_observation(obs: dict) -> list[str]:
     """
     Validate observation structure.
     Returns list of error messages (empty if valid).
+
+    CRITICAL: observation_class is the mechanical discriminator.
+    - INFRASTRUCTURE: Empty capabilities_observed is VALID
+    - EFFECT: Non-empty capabilities_observed is REQUIRED
     """
     errors = []
 
@@ -218,15 +229,30 @@ def validate_observation(obs: dict) -> list[str]:
     if not obs.get("observed_at"):
         errors.append("Missing observed_at timestamp")
 
-    capabilities = obs.get("capabilities_observed", [])
-    if not capabilities:
-        errors.append("No capabilities_observed in observation")
+    # Validate observation_class (CRITICAL mechanical discriminator)
+    observation_class = obs.get("observation_class")
+    if observation_class not in ("INFRASTRUCTURE", "EFFECT"):
+        errors.append(f"Invalid or missing observation_class: '{observation_class}'. Must be INFRASTRUCTURE or EFFECT")
+        return errors  # Can't continue validation without class
 
-    for i, cap in enumerate(capabilities):
-        if not cap.get("capability_id"):
-            errors.append(f"capabilities_observed[{i}]: Missing capability_id")
-        if not cap.get("observed_effects"):
-            errors.append(f"capabilities_observed[{i}]: Missing observed_effects")
+    capabilities = obs.get("capabilities_observed", [])
+
+    # INFRASTRUCTURE: Empty capabilities is VALID - no capability-level validation needed
+    if observation_class == "INFRASTRUCTURE":
+        # This is explicitly valid - infrastructure scenarios don't observe capabilities
+        # They validate worker execution, trace generation, etc.
+        return errors
+
+    # EFFECT: Non-empty capabilities is REQUIRED
+    if observation_class == "EFFECT":
+        if not capabilities:
+            errors.append("EFFECT observation must have at least one capability_observed")
+
+        for i, cap in enumerate(capabilities):
+            if not cap.get("capability_id"):
+                errors.append(f"capabilities_observed[{i}]: Missing capability_id")
+            if not cap.get("observed_effects"):
+                errors.append(f"capabilities_observed[{i}]: Missing observed_effects")
 
     return errors
 
@@ -257,6 +283,10 @@ def apply_observation(observation_path: Path, dry_run: bool) -> bool:
     Apply a single SDSR observation file.
 
     Returns True if successful, False if errors occurred.
+
+    CRITICAL: observation_class determines behavior:
+    - INFRASTRUCTURE: Valid with empty capabilities, no registry updates
+    - EFFECT: Requires capabilities, updates registry
     """
     print("=" * 60)
     info(f"Processing observation: {observation_path.name}")
@@ -270,12 +300,24 @@ def apply_observation(observation_path: Path, dry_run: bool) -> bool:
 
     scenario_id = obs["scenario_id"]
     observed_at = obs["observed_at"]
-    capabilities = obs["capabilities_observed"]
+    observation_class = obs["observation_class"]
+    capabilities = obs.get("capabilities_observed", [])
 
     info(f"Scenario: {scenario_id}")
+    info(f"Observation class: {observation_class}")
     info(f"Observed at: {observed_at}")
     info(f"Capabilities to process: {len(capabilities)}")
     print()
+
+    # INFRASTRUCTURE observations are valid but don't update capabilities
+    if observation_class == "INFRASTRUCTURE":
+        print("=" * 60)
+        print("INFRASTRUCTURE OBSERVATION")
+        print("=" * 60)
+        info("This is an infrastructure scenario validation")
+        info("No capability registry updates required")
+        info("Observation is VALID (empty capabilities expected)")
+        return True
 
     # Track results
     promoted = []
@@ -503,7 +545,24 @@ Core Invariant:
         info("Dry run complete. No files modified.")
     else:
         success("Observation application complete.")
-        info("Next: Run ./scripts/tools/run_aurora_l2_pipeline.sh to recompute bindings")
+
+        # =================================================================
+        # PREFLIGHT RECOMPILE SIGNAL (Phase 1 Automation)
+        # =================================================================
+        # Create signal file to indicate preflight needs recompile.
+        # The preflight pipeline checks for this and auto-triggers Aurora.
+        # =================================================================
+        try:
+            PREFLIGHT_RECOMPILE_SIGNAL.write_text(
+                f"Triggered by observation application\n"
+                f"Observation: {args.observation if args.observation else 'all'}\n"
+            )
+            info(f"Signal created: {PREFLIGHT_RECOMPILE_SIGNAL}")
+            info("Next: Run ./scripts/tools/run_aurora_l2_pipeline_preflight.sh")
+            info("      (will auto-detect signal and recompile)")
+        except Exception as e:
+            warn(f"Failed to create signal file: {e}")
+            info("Next: Run ./scripts/tools/run_aurora_l2_pipeline.sh to recompute bindings")
 
 
 if __name__ == "__main__":
