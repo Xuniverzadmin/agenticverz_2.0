@@ -15,11 +15,20 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.41"
+session_playbook_version: "2.42"
 created: "2025-12-27"
 last_updated: "2026-01-11"
 
 # Changelog:
+#   2.42 - QUERY AUTHORITY CI GUARD (Section 41 enhancement, PIN-390).
+#          Added ci_guard subsection to query_authority_model.
+#          Script: scripts/ci/query_authority_guard.py (BLOCKING enforcement).
+#          Validations: contract declaration, panel presence, schema compliance,
+#          hard invariants (SYNTHETIC/INTERNAL), matrix compliance.
+#          Exit codes: 0=pass, 1=violations, 2=file error.
+#          Usage: --verbose, --strict, --path options.
+#          Enforcement: Query authority violations now fail CI.
+#          Reference: PIN-390, docs/schemas/query_authority_schema.json
 #   2.41 - QUERY AUTHORITY MODEL (Section 41, BL-QUERY-AUTH-001, PIN-390).
 #          Added query_authority_model section for four-console authority.
 #          Prime directive: Query authority is declarative, not inferred.
@@ -8464,6 +8473,36 @@ query_authority_model:
       - Infer from domain placement
       - Infer from console kind
       - Use implicit fallbacks
+
+  # ---------------------------------------------------------------------------
+  # CI Guard (Enforcement)
+  # ---------------------------------------------------------------------------
+  ci_guard:
+    script: scripts/ci/query_authority_guard.py
+    trigger: Any CI run, projection changes, or manual validation
+    enforcement: BLOCKING
+
+    validations:
+      - name: Contract Declaration
+        check: _contract declares query_authority_required
+      - name: Panel Presence
+        check: Every panel has query_authority field
+      - name: Schema Compliance
+        check: All fields match query_authority_schema.json
+      - name: Hard Invariants
+        check: No SYNTHETIC in production, no INTERNAL exposed
+      - name: Matrix Compliance
+        check: allow_in values match four-console matrix
+
+    usage:
+      verbose: python3 scripts/ci/query_authority_guard.py --verbose
+      strict: python3 scripts/ci/query_authority_guard.py --strict
+      custom_path: python3 scripts/ci/query_authority_guard.py --path /custom/path.json
+
+    exit_codes:
+      0: All validations passed
+      1: Query authority violations detected
+      2: File not found or invalid JSON
 
   # ---------------------------------------------------------------------------
   # Key Distinctions

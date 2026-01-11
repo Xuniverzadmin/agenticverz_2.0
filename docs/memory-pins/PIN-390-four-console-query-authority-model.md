@@ -150,7 +150,38 @@ When authority is unknown:
 |----------|----------|---------|
 | JSON Schema | `docs/schemas/query_authority_schema.json` | Machine-parseable law |
 | Governance Doc | `docs/governance/QUERY_AUTHORITY_MODEL.md` | Human-readable specification |
+| CI Guard | `scripts/ci/query_authority_guard.py` | CI enforcement script |
 | PIN-390 | This document | Memory pin reference |
+
+---
+
+## CI Guard (Enforcement)
+
+The query authority guard validates projections in CI:
+
+```bash
+# Verbose output
+python3 scripts/ci/query_authority_guard.py --verbose
+
+# Strict mode (warnings as errors)
+python3 scripts/ci/query_authority_guard.py --strict
+```
+
+### Validations Performed
+
+1. **Contract Declaration** - `_contract.query_authority_required` is true
+2. **Panel Presence** - Every panel has `query_authority` field
+3. **Schema Compliance** - All fields match the JSON schema
+4. **Hard Invariants** - No SYNTHETIC in production, no INTERNAL exposed
+5. **Matrix Compliance** - `allow_in` values match four-console matrix
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All validations passed |
+| 1 | Query authority violations detected |
+| 2 | File not found or invalid JSON |
 
 ---
 
