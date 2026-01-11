@@ -22,7 +22,7 @@ Usage:
     # Get all rules
     rules = load_rbac_rules()
 
-    # Resolve a specific request
+    # Resolve a specific request (raises RBACSchemaViolation if no rule)
     rule = resolve_rbac_rule("/api/v1/incidents/", "GET", "customer", "preflight")
 
     # Get PUBLIC paths for backward compatibility
@@ -270,7 +270,7 @@ def resolve_rbac_rule(
     console_kind: str,
     environment: str,
     *,
-    strict: bool = False,
+    strict: bool = True,
 ) -> Optional[RBACRule]:
     """
     Find the RBAC rule that matches the given request context.
@@ -280,8 +280,8 @@ def resolve_rbac_rule(
         method: HTTP method (e.g., "GET")
         console_kind: Console type ("customer" or "founder")
         environment: Environment ("preflight" or "production")
-        strict: If True, raise RBACSchemaViolation when no rule matches.
-                If False (default), return None for backward compatibility.
+        strict: If True (default), raise RBACSchemaViolation when no rule matches.
+                If False, return None for backward compatibility with legacy code.
 
     Returns:
         Matching RBACRule or None if no rule matches (and strict=False).
@@ -293,12 +293,16 @@ def resolve_rbac_rule(
         First matching rule wins. Rules are evaluated in order.
         More specific rules should be defined before general ones.
 
+        INVARIANT (PIN-391): strict=True is the default. Missing rules are
+        governance violations, not silent failures. Use strict=False only
+        during migration or in explicitly backward-compatible code paths.
+
     Example:
-        # Legacy behavior (returns None)
+        # Default behavior (raises exception if no rule)
         rule = resolve_rbac_rule("/api/v1/foo/", "GET", "customer", "preflight")
 
-        # Strict mode (raises exception if no rule)
-        rule = resolve_rbac_rule("/api/v1/foo/", "GET", "customer", "preflight", strict=True)
+        # Legacy behavior (returns None for backward compatibility)
+        rule = resolve_rbac_rule("/api/v1/foo/", "GET", "customer", "preflight", strict=False)
     """
     rules = load_rbac_rules()
     method_upper = method.upper()
@@ -346,8 +350,10 @@ def is_path_public(
 
     Returns:
         True if the path is PUBLIC tier, False otherwise.
+        Unknown paths return False (not an exception).
     """
-    rule = resolve_rbac_rule(path, method, console_kind, environment)
+    # Use strict=False because unknown paths should return False, not raise
+    rule = resolve_rbac_rule(path, method, console_kind, environment, strict=False)
     if rule is None:
         return False
     return rule.access_tier == AccessTier.PUBLIC

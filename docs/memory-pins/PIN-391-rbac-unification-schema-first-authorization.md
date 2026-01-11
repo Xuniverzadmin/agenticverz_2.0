@@ -115,12 +115,14 @@ from app.auth.rbac_rules_loader import (
     is_path_public,
     RBACRule,
     AccessTier,
+    RBACSchemaViolation,
 )
 
 # Get all rules
 rules = load_rbac_rules()
 
-# Resolve for specific context
+# Resolve for specific context (raises RBACSchemaViolation if no rule)
+# NOTE: strict=True is the default — missing rules are governance violations
 rule = resolve_rbac_rule(
     path="/api/v1/incidents/",
     method="GET",
@@ -128,10 +130,19 @@ rule = resolve_rbac_rule(
     environment="preflight",
 )
 
+# Legacy mode (returns None instead of raising)
+rule = resolve_rbac_rule(
+    path="/api/v1/foo/",
+    method="GET",
+    console_kind="customer",
+    environment="preflight",
+    strict=False,  # Only for backward compatibility during migration
+)
+
 # Get PUBLIC paths for backward compatibility
 public_paths = get_public_paths(environment="preflight")
 
-# Check if path is public
+# Check if path is public (uses strict=False internally)
 if is_path_public("/api/v1/incidents/", "GET", "customer", "preflight"):
     # Skip auth
 ```
@@ -213,6 +224,11 @@ python3 scripts/ci/check_rbac_alignment.py --fix-suggestions
 - [x] Create `RBAC_READ_BEFORE_EDITING.md` stop file
 - [x] Add LEGACY warning block to rbac_middleware.py
 - [x] Add `claude_constraints` enforcement to SESSION_PLAYBOOK.yaml
+
+### Phase 0.6: strict=True Default (COMPLETE)
+- [x] Change `resolve_rbac_rule()` default from `strict=False` to `strict=True`
+- [x] Update `is_path_public()` to use explicit `strict=False`
+- [x] Update documentation to reflect new behavior
 
 ### Phase 1 (TODO)
 - [ ] Replace hardcoded PUBLIC_PATHS with `get_public_paths()`
