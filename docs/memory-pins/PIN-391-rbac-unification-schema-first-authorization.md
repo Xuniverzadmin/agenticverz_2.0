@@ -287,6 +287,17 @@ The fix (adding to PUBLIC_PATHS) was tactical. This PIN establishes the structur
 - [PIN-373](PIN-373-sdsr-policy-proposal-lifecycle.md) - SDSR Policy Proposal Lifecycle
 - [PIN-390](PIN-390-four-console-query-authority-model.md) - Four-Console Query Authority Model
 - [PIN-271](PIN-271-rbac-architecture-directive.md) - RBAC Architecture Directive
+- [PIN-392](PIN-392-query-authority-data-access-privileges.md) - Query Authority
+
+---
+
+## Governance
+
+This PIN is governed by the **Authorization Constitution**:
+
+**Location:** `docs/governance/AUTHORIZATION_CONSTITUTION.md`
+
+The constitution formalizes the principles, invariants, and enforcement mechanisms established by this PIN. It is the permanent governance framework for authorization in AOS.
 
 ---
 

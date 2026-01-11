@@ -382,6 +382,57 @@ RBAC ARCHITECTURE SELF-CHECK
 
 **Reference:** `docs/governance/RBAC_AUTHORITY_SEPARATION_DESIGN.md`, `docs/governance/PERMISSION_TAXONOMY_V1.md`
 
+### Authorization Constitution (PIN-391, PIN-392) — MANDATORY
+
+**Status:** RATIFIED
+**Effective:** 2026-01-11
+**Reference:** `docs/governance/AUTHORIZATION_CONSTITUTION.md`
+
+The Authorization Constitution formalizes the permanent governance framework for authorization in AOS. It supersedes ad-hoc authorization decisions and establishes mechanical enforcement.
+
+#### Constitutional Principles (LOCKED)
+
+| Principle | Rule |
+|-----------|------|
+| **Declared, Not Inferred** | Rules MUST be in RBAC_RULES.yaml. Missing = BLOCKED. |
+| **Schema is Truth** | All enforcement derives from schema. No independent lists. |
+| **Fail Closed** | Missing rule = DENIED. Uncertain = DENIED. |
+| **Route ≠ Data** | RBAC controls WHO. Query Authority controls HOW MUCH. |
+| **Prod ⊆ Preflight** | Production constraints must be subset of preflight. |
+
+#### Hard Invariants (Cannot Be Violated)
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| INV-001: No Silent Auth Bypass | `strict=True` default |
+| INV-002: No Inferred Access | Claude guardrail |
+| INV-003: No Undocumented PUBLIC | CI guard |
+| INV-004: No Expired Rules | Expiry check in CI |
+| INV-005: No Schema-Code Drift | Shadow logging → hard block |
+
+#### Claude Authorization Rules (CONSTITUTIONAL)
+
+| Rule | Description |
+|------|-------------|
+| RBAC-001 | MUST NOT classify endpoints by inference |
+| RBAC-002 | MUST NOT modify PUBLIC_PATHS without schema update |
+| RBAC-003 | All decisions reference RBAC_RULES.yaml |
+| RBAC-004 | If no rule exists, report "RBAC RULE MISSING" |
+
+**Hard Failure Response:**
+
+```
+AUTHORIZATION CONSTITUTION VIOLATION
+
+Invariant: INV-{N}
+Action attempted: {description}
+Constitutional article: {article}
+
+STATUS: BLOCKED
+REQUIRED: {action needed}
+Reference: docs/governance/AUTHORIZATION_CONSTITUTION.md
+```
+
 ### Forbidden Actions (ABSOLUTE)
 
 | Action | Reason |

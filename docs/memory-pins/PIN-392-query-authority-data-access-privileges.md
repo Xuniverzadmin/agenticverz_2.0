@@ -197,6 +197,16 @@ Each layer does **one job**.
 
 ---
 
+## Governance
+
+This PIN is governed by the **Authorization Constitution**:
+
+**Location:** `docs/governance/AUTHORIZATION_CONSTITUTION.md`
+
+Query Authority is Article IV of the constitution. The promotion rules and enforcement mechanisms are constitutional invariants.
+
+---
+
 ## Key Insight
 
 > **Route access ≠ data access.**
