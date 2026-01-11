@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-11 (PIN-391 RBAC Unification — Schema-First Authorization)
+**Last Updated:** 2026-01-11 (PIN-392 Query Authority — Data Access Privileges)
 
 ---
 
@@ -386,6 +386,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-389](PIN-389-projection-route-separation-and-console-isolation.md) | **Projection Route Separation and Console Isolation** | Architecture / Routing | **✅ COMPLETE** | 2026-01-11 |
 | [PIN-390](PIN-390-four-console-query-authority-model.md) | **Four-Console Query Authority Model** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
 | [PIN-391](PIN-391-rbac-unification-schema-first-authorization.md) | **RBAC Unification — Schema-First Authorization** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
+| [PIN-392](PIN-392-query-authority-data-access-privileges.md) | **Query Authority — Data Access Privileges** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
 
 ---
 
@@ -1155,6 +1156,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-11 | **PIN-392 Query Authority — Data Access Privileges** - Created. Query authority constraints, enforcement helpers, CI validation. |
 | 2026-01-11 | **PIN-391 RBAC Unification — Schema-First Authorization** - Created. Canonical RBAC schema, loader, CI guard. |
 | 2026-01-11 | **PIN-390 Four-Console Query Authority Model** - Created. Query authority schema, CI guard, governance docs. |
 | 2026-01-11 | **PIN-389 Projection Route Separation and Console Isolation** - Created via memory_trail. |

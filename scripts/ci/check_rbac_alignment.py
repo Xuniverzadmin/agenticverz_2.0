@@ -200,6 +200,14 @@ class RBACAlignmentGuard:
         print("\n[3] Auditing temporary RBAC rules...")
         self._audit_temporary_rules()
 
+        # Check 4: Query authority validation (PIN-392)
+        print("\n[4] Validating query_authority declarations (PIN-392)...")
+        self._validate_query_authority()
+
+        # Check 5: Expired rules enforcement
+        print("\n[5] Checking for expired temporary rules...")
+        self._check_expired_rules()
+
         # Summary
         print()
         print("=" * 60)
@@ -245,6 +253,90 @@ class RBACAlignmentGuard:
             self.ok("No temporary RBAC rules")
         else:
             self.warn(f"{temp_count} temporary RBAC rule(s) require review")
+
+    def _validate_query_authority(self):
+        """Validate query_authority declarations (PIN-392)."""
+        try:
+            with RBAC_RULES_PATH.open(encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except Exception:
+            self.warn("Could not parse RBAC_RULES.yaml for query_authority validation")
+            return
+
+        # Check that query_authority_defaults exists
+        if "query_authority_defaults" not in data:
+            self.warn("query_authority_defaults not declared in schema")
+
+        # Data-reading paths that should have query_authority
+        data_paths = ["/api/v1/"]
+
+        for rule in data.get("rules", []):
+            path = rule.get("path_prefix", "")
+            methods = rule.get("methods", [])
+            environment = rule.get("allow_environment", [])
+
+            # Only check GET endpoints under /api/v1/
+            if "GET" not in methods:
+                continue
+            if not any(path.startswith(dp) for dp in data_paths):
+                continue
+
+            # Check 1: Production rules must not allow include_synthetic
+            if "production" in environment:
+                qa = rule.get("query_authority", {})
+                if qa.get("include_synthetic", False):
+                    self.error(
+                        f"CRITICAL: {rule['rule_id']} allows include_synthetic in production"
+                    )
+
+            # Check 2: Preflight data endpoints should declare query_authority
+            if "preflight" in environment and path.startswith("/api/v1/"):
+                if "query_authority" not in rule:
+                    self.warn(
+                        f"{rule['rule_id']} has no query_authority (using defaults)"
+                    )
+
+        self.ok("Query authority validation complete")
+
+    def _check_expired_rules(self):
+        """Check for expired temporary rules (BLOCKING after expiry)."""
+        from datetime import datetime
+
+        try:
+            with RBAC_RULES_PATH.open(encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except Exception:
+            self.warn("Could not parse RBAC_RULES.yaml for expiry check")
+            return
+
+        today = datetime.now().date()
+        expired_count = 0
+
+        for rule in data.get("rules", []):
+            if not rule.get("temporary"):
+                continue
+
+            expires = rule.get("expires")
+            if not expires:
+                self.warn(f"Temporary rule {rule['rule_id']} has no expiry date")
+                continue
+
+            try:
+                expiry_date = datetime.strptime(expires, "%Y-%m-%d").date()
+                if today > expiry_date:
+                    self.error(
+                        f"EXPIRED: {rule['rule_id']} expired on {expires} - must be removed or renewed"
+                    )
+                    expired_count += 1
+            except ValueError:
+                self.warn(
+                    f"Invalid expiry date format for {rule['rule_id']}: {expires}"
+                )
+
+        if expired_count == 0:
+            self.ok("No expired temporary rules")
+        else:
+            self.error(f"{expired_count} expired rule(s) must be addressed")
 
 
 def print_fix_suggestions(errors: list[str]):

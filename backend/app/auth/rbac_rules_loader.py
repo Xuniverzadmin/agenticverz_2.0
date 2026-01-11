@@ -110,9 +110,64 @@ class Environment(str, Enum):
     PRODUCTION = "production"
 
 
+class AggregationLevel(str, Enum):
+    """Query aggregation levels (PIN-392)."""
+
+    NONE = "NONE"  # No aggregation, raw records only
+    BASIC = "BASIC"  # Count, sum, avg on non-sensitive fields
+    FULL = "FULL"  # All aggregations including sensitive metrics
+
+
 # =============================================================================
 # DATA CLASSES
 # =============================================================================
+
+
+@dataclass(frozen=True)
+class QueryAuthority:
+    """
+    Query authority constraints for data access (PIN-392).
+
+    Controls WHAT KIND OF DATA a request may ask for.
+    Orthogonal to route access (WHO may touch WHAT).
+
+    INVARIANT: Data queries are privileges.
+               They must be declared, authorized, constrained — not inferred.
+    """
+
+    include_synthetic: bool = False
+    include_deleted: bool = False
+    include_internal: bool = False
+    max_rows: int = 100
+    max_time_range_days: int = 7
+    aggregation: AggregationLevel = AggregationLevel.NONE
+    export_allowed: bool = False
+
+    @classmethod
+    def from_dict(cls, data: dict | None, defaults: dict | None = None) -> "QueryAuthority":
+        """Create QueryAuthority from YAML dict, merging with defaults."""
+        if data is None and defaults is None:
+            return cls()
+
+        merged = {}
+        if defaults:
+            merged.update(defaults)
+        if data:
+            merged.update(data)
+
+        aggregation = merged.get("aggregation", "NONE")
+        if isinstance(aggregation, str):
+            aggregation = AggregationLevel(aggregation)
+
+        return cls(
+            include_synthetic=merged.get("include_synthetic", False),
+            include_deleted=merged.get("include_deleted", False),
+            include_internal=merged.get("include_internal", False),
+            max_rows=merged.get("max_rows", 100),
+            max_time_range_days=merged.get("max_time_range_days", 7),
+            aggregation=aggregation,
+            export_allowed=merged.get("export_allowed", False),
+        )
 
 
 @dataclass(frozen=True)
@@ -131,10 +186,19 @@ class RBACRule:
     description: str = ""
     temporary: bool = False
     expires: Optional[str] = None
+    query_authority: QueryAuthority = None  # type: ignore[assignment]
+
+    def __post_init__(self):
+        # Ensure query_authority is never None
+        if self.query_authority is None:
+            object.__setattr__(self, "query_authority", QueryAuthority())
 
     @classmethod
-    def from_dict(cls, data: dict) -> "RBACRule":
+    def from_dict(cls, data: dict, qa_defaults: dict | None = None) -> "RBACRule":
         """Create RBACRule from YAML dict."""
+        qa_data = data.get("query_authority")
+        query_authority = QueryAuthority.from_dict(qa_data, qa_defaults)
+
         return cls(
             rule_id=data["rule_id"],
             path_prefix=data["path_prefix"],
@@ -148,6 +212,7 @@ class RBACRule:
             description=data.get("description", ""),
             temporary=data.get("temporary", False),
             expires=data.get("expires"),
+            query_authority=query_authority,
         )
 
 
@@ -177,8 +242,11 @@ def load_rbac_rules() -> tuple[RBACRule, ...]:
     with RBAC_RULES_PATH.open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
+    # Load query_authority_defaults (PIN-392)
+    qa_defaults = data.get("query_authority_defaults")
+
     rules = data.get("rules", [])
-    return tuple(RBACRule.from_dict(rule) for rule in rules)
+    return tuple(RBACRule.from_dict(rule, qa_defaults) for rule in rules)
 
 
 def reload_rbac_rules() -> tuple[RBACRule, ...]:
