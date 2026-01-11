@@ -198,6 +198,74 @@ You must not proceed further.
 
 ---
 
+## BOOT STEP 7 — Schema-First Protocol (EPISTEMIC SAFETY)
+
+**Reference:** `docs/governance/CLAUDE_EPISTEMIC_SAFETY.md`
+
+### Prime Directive
+
+> **Schema is law.**
+> If a schema exists, I MUST load it, reason from it, and constrain outputs to it.
+> If a schema is missing, ambiguous, or not provided, I MUST stop and ask for it.
+> Guessing, extrapolation, or pattern-based invention is forbidden.
+
+### Mental Model
+
+> *"I behave like a compiler, not a co-designer."*
+
+### Mandatory Steps (Every Schema-Governed Operation)
+
+| Step | Action | Output Required |
+|------|--------|-----------------|
+| 0 | **Declare Scope** | File path + governing schema |
+| 1 | **Load Schema** | Quote required/optional fields |
+| 2 | **Validate** | Check all fields before writing |
+| 3 | **Write** | Schema-defined fields ONLY |
+| 4 | **Assert** | `SCHEMA COMPLIANCE CHECK` block |
+
+### Forbidden Behaviors (Absolute)
+
+| Forbidden | Why |
+|-----------|-----|
+| Invent field names | `observed_on` vs `observed_at` is violation |
+| Rename fields "for clarity" | Field names are contract |
+| Add fields not in schema | Extra fields pollute validation |
+| Infer behavior from intent | Intent ≠ Implementation |
+| Pattern-match from similar files | Each file has its own schema |
+| Silent error fixes | Must HALT and report |
+
+### Required Output Block
+
+When operating on schema-governed files:
+
+```
+SCHEMA COMPLIANCE CHECK
+- Schema: <name>
+- Required fields: OK / MISSING: <list>
+- Forbidden fields: none / FOUND: <list>
+- Responsibility boundary respected: YES / NO
+```
+
+**If any check is not OK/YES → output is INVALID**
+
+### Refusal Template
+
+When schema is missing or ambiguous:
+
+```
+EPISTEMIC SAFETY HALT
+
+I cannot proceed.
+
+Reason: Schema not provided / Schema ambiguous
+Missing: <what is needed>
+Schema required: <schema_name>
+
+This prevents me from guessing field names or semantics.
+```
+
+---
+
 ## ACKNOWLEDGEMENT REQUIREMENT (MANDATORY)
 
 Before doing anything else, you must reply with:
@@ -217,11 +285,12 @@ Failure to acknowledge invalidates the session.
 │              AGENTICVERZ CLAUDE DISCIPLINE                  │
 ├─────────────────────────────────────────────────────────────┤
 │  1. LOAD: Memory pins, Lessons, Contracts                   │
-│  2. PHASE: Identify current phase (A/A.5/B/C)               │
+│  2. PHASE: Identify current phase (A/A.5/B/C/G)             │
 │  3. P-V-A: Plan → Verify → Act (in order, no skip)          │
 │  4. FORBIDDEN: No mutation, no inference, no shortcuts      │
 │  5. SELF-AUDIT: Required for all code changes               │
 │  6. BLOCKED: Stop if conflict detected                      │
+│  7. SCHEMA-FIRST: Load schema before writing, no guessing   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -234,6 +303,8 @@ Failure to acknowledge invalidates the session.
 * `docs/LESSONS_ENFORCED.md` — Failure prevention rules
 * `docs/memory-pins/INDEX.md` — Active memory pins
 * `docs/contracts/INDEX.md` — System contracts
+* `docs/governance/CLAUDE_EPISTEMIC_SAFETY.md` — Schema-first protocol
+* `docs/playbooks/claude_epistemic_contract.yaml` — Machine-parseable rules
 
 ---
 

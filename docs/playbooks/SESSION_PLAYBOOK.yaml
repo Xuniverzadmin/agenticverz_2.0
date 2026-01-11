@@ -15,11 +15,21 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.39"
+session_playbook_version: "2.40"
 created: "2025-12-27"
-last_updated: "2026-01-09"
+last_updated: "2026-01-11"
 
 # Changelog:
+#   2.40 - EPISTEMIC SAFETY PROTOCOL (Section 40, BL-EPISTEMIC-001, PIN-389).
+#          Added epistemic_safety_protocol section enforcing schema-first behavior.
+#          Prime directive: Schema is law. No guessing, no extrapolation.
+#          Mental model: Claude behaves like a compiler, not a co-designer.
+#          Mandatory steps: Declare Scope → Load Schema → Validate → Write → Assert.
+#          Forbidden behaviors: field invention, silent fixes, pattern-matching.
+#          Layer boundary guardrails for SDSR → UI pipeline.
+#          Adds rules EPISTEMIC-001 to EPISTEMIC-005.
+#          Root cause: Claude enforced runtime invariants at design time.
+#          Reference: PIN-389, docs/governance/CLAUDE_EPISTEMIC_SAFETY.md
 #   2.39 - CANONICAL-FIRST FIX POLICY (Section 39, ARCH-CANON-001, PIN-370).
 #          Added canonical_first_policy section enforcing extension over duplication.
 #          Core principle: Claude is FORBIDDEN from creating new tables/APIs for existing domains.
@@ -8055,6 +8065,231 @@ canonical_first_policy:
     This rule was created after the sdsr_incidents incident (PIN-370)
     where a parallel table was created instead of extending the canonical
     incidents table, requiring emergency consolidation.
+
+# =============================================================================
+# Section 40: EPISTEMIC SAFETY PROTOCOL (PIN-389)
+# =============================================================================
+#
+# Reference: docs/governance/CLAUDE_EPISTEMIC_SAFETY.md
+# Enforcement: claude_epistemic_contract.yaml
+# Root Cause: Claude invented field names by pattern-matching, causing validation failures
+#
+# Prime Directive:
+#   Schema is law.
+#   If a schema exists, Claude MUST load it, reason from it, and constrain outputs to it.
+#   If a schema is missing, ambiguous, or not provided, Claude MUST stop and ask for it.
+#   Guessing, extrapolation, or pattern-based invention is forbidden.
+#
+# Mental Model: Claude behaves like a compiler, not a co-designer.
+#
+
+epistemic_safety_protocol:
+  id: BL-EPISTEMIC-001
+  name: Schema-First Protocol
+  effective: "2026-01-11"
+  reference: PIN-389
+  status: BLOCKING
+
+  # ---------------------------------------------------------------------------
+  # Core Principle
+  # ---------------------------------------------------------------------------
+  prime_directive: |
+    Schema is law.
+    If a schema exists, I MUST load it, reason from it, and constrain outputs to it.
+    If a schema is missing, ambiguous, or not provided, I MUST stop and ask for it.
+    Guessing, extrapolation, or pattern-based invention is forbidden.
+
+  mental_model: |
+    "I behave like a compiler, not a co-designer."
+
+    This reframes all interactions:
+    - Compilers don't guess missing tokens
+    - Compilers don't rename fields "for clarity"
+    - Compilers halt on invalid input
+    - Compilers produce deterministic output
+
+  # ---------------------------------------------------------------------------
+  # Mandatory Operating Protocol (Every Schema-Governed Operation)
+  # ---------------------------------------------------------------------------
+  mandatory_steps:
+    - step: 0
+      name: Declare Scope
+      action: |
+        Claude must explicitly state:
+        - Which file(s) it is operating on
+        - Which schema(s) govern those files
+        If it cannot name the schema → STOP
+      output_format: |
+        SCOPE DECLARATION
+        - Operating on: <file_path>
+        - Governing schema: <schema_name>
+        - Schema location: <schema_path>
+
+    - step: 1
+      name: Load Schema
+      action: |
+        Claude must do one of the following:
+        - Quote the schema fields it is using
+        - Or explicitly say: "Schema not provided — cannot proceed"
+      forbidden: |
+        "Typically an observation would include…"
+        "Based on similar files…"
+
+    - step: 2
+      name: Validate Before Writing
+      checks:
+        - Required fields: Are all required fields present?
+        - Field names: Are field names exact (no synonyms)?
+        - Enum values: Are enum values valid per schema?
+        - Responsibilities: Is this layer allowed to write this?
+      rule: If any check fails → refuse output
+
+    - step: 3
+      name: Write Output (Zero Creativity)
+      constraints:
+        - Only schema-defined fields allowed
+        - No inferred fields
+        - No renamed fields
+        - No "extra helpful metadata"
+
+    - step: 4
+      name: Post-Write Assertion
+      output_format: |
+        SCHEMA COMPLIANCE CHECK
+        - Schema: <name>
+        - Required fields: OK / MISSING: <list>
+        - Forbidden fields: none / FOUND: <list>
+        - Responsibility boundary respected: YES / NO
+      rule: If it cannot say "OK" and "YES" → output is INVALID
+
+  # ---------------------------------------------------------------------------
+  # Forbidden Behaviors (Absolute)
+  # ---------------------------------------------------------------------------
+  forbidden_behaviors:
+    - action: Invent field names
+      example: "observed_on vs observed_at is a schema violation"
+    - action: Rename fields "for clarity"
+      reason: "Field names are contract, not style"
+    - action: Add fields not in schema
+      reason: "Extra fields pollute validation"
+    - action: Infer backend behavior from intent
+      reason: "Intent ≠ Implementation"
+    - action: Infer UI behavior from projection
+      reason: "UI reads projection, doesn't derive it"
+    - action: Write relative + absolute routes in same layer
+      reason: "Layer separation is absolute"
+    - action: Fix errors silently
+      reason: "Must report and stop"
+    - action: Guess missing values
+      reason: "Missing = STOP, not invent"
+    - action: Pattern-match from similar files
+      reason: "Each file has its own schema"
+    - action: Assume schema from filename
+      reason: "Schema must be explicitly loaded"
+
+  # ---------------------------------------------------------------------------
+  # Layer Boundary Guardrails
+  # ---------------------------------------------------------------------------
+  layer_boundaries:
+    description: Claude must name the layer before acting.
+    layers:
+      - layer: SDSR Scenario
+        may_read: YAML scenario
+        may_write: DB (synthetic only)
+        forbidden: AURORA_L2
+      - layer: Scenario_SDSR_output
+        may_read: Runner state
+        may_write: In-memory struct
+        forbidden: Files, DB
+      - layer: SDSR_output_emit
+        may_read: Scenario output
+        may_write: Observation JSON
+        forbidden: Inference
+      - layer: AURORA_L2_apply
+        may_read: Observation JSON
+        may_write: Capability + Intent YAML
+        forbidden: Guessing
+      - layer: Compiler
+        may_read: Intent + Capability
+        may_write: Projection
+        forbidden: Runtime logic
+      - layer: UI
+        may_read: Projection
+        may_write: Rendering only
+        forbidden: Decisions
+      - layer: Projection Assertions
+        may_read: Projection JSON
+        may_write: Validation errors
+        forbidden: Route resolution
+      - layer: Route Resolution
+        may_read: Relative routes
+        may_write: Absolute routes
+        forbidden: Projection mutation
+
+    cross_layer_rule: Cross-layer writes are forbidden without explicit approval.
+
+  # ---------------------------------------------------------------------------
+  # Refusal Template
+  # ---------------------------------------------------------------------------
+  refusal_template: |
+    EPISTEMIC SAFETY HALT
+
+    I cannot proceed.
+
+    Reason: <specific reason>
+    Missing: <what is needed>
+    Schema required: <schema_name>
+
+    This prevents me from guessing field names or semantics.
+    Please provide the schema or clarify the requirement.
+
+  # ---------------------------------------------------------------------------
+  # Blocking Rules
+  # ---------------------------------------------------------------------------
+  blocking_rules:
+    - rule_id: EPISTEMIC-001
+      name: Schema Declaration Required
+      trigger: Any schema-governed file operation
+      enforcement: Output without schema declaration is INVALID
+
+    - rule_id: EPISTEMIC-002
+      name: No Field Invention
+      trigger: Writing JSON, YAML, or structured data
+      enforcement: Invented field names invalidate response
+
+    - rule_id: EPISTEMIC-003
+      name: Cross-Layer Write Block
+      trigger: Attempting to write outside layer boundary
+      enforcement: Response is BLOCKED
+
+    - rule_id: EPISTEMIC-004
+      name: Silent Fix Prohibition
+      trigger: Any error correction
+      enforcement: Must HALT and report, never silently fix
+
+    - rule_id: EPISTEMIC-005
+      name: Pattern Inference Block
+      trigger: Reasoning from similar files
+      enforcement: Response INVALID if based on pattern-matching
+
+  # ---------------------------------------------------------------------------
+  # Rationale
+  # ---------------------------------------------------------------------------
+  rationale: |
+    Claude failed earlier not because it lacked intelligence, but because:
+    - It treated schema as documentation, not authority
+    - It inferred intent from filenames and patterns
+    - It "helpfully" filled gaps instead of refusing to proceed
+
+    The fix is NOT "be more careful" —
+    the fix is procedural refusal unless schema is loaded and validated.
+
+    This rule was created after PIN-389 (Projection Route Separation) where
+    Claude was enforcing runtime invariants (console prefixes) at design time
+    (projection routes), causing validation failures for correct relative routes.
+
+    A halted response is correct.
+    A guessed response is a bug.
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

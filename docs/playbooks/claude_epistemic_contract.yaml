@@ -1,0 +1,325 @@
+# =============================================================================
+# CLAUDE EPISTEMIC CONTRACT (Machine-Parseable)
+# =============================================================================
+#
+# Purpose: Machine-parseable rules for Claude epistemic safety enforcement.
+# This contract can be loaded by validators, hooks, and response checkers.
+#
+# Reference: docs/governance/CLAUDE_EPISTEMIC_SAFETY.md
+# Session Playbook: Section 40 (epistemic_safety_protocol)
+# Trigger: PIN-389 (Projection Route Separation)
+#
+# Created: 2026-01-11
+# Status: ACTIVE
+# =============================================================================
+
+contract_version: "1.0.0"
+contract_id: EPISTEMIC_CONTRACT_V1
+effective_date: "2026-01-11"
+reference_pin: PIN-389
+
+# =============================================================================
+# PRIME DIRECTIVE
+# =============================================================================
+prime_directive:
+  statement: |
+    Schema is law.
+    If a schema exists, Claude MUST load it, reason from it, and constrain outputs to it.
+    If a schema is missing, ambiguous, or not provided, Claude MUST stop and ask for it.
+    Guessing, extrapolation, or pattern-based invention is forbidden.
+
+  mental_model: "I behave like a compiler, not a co-designer."
+
+  compiler_properties:
+    - "Compilers don't guess missing tokens"
+    - "Compilers don't rename fields for clarity"
+    - "Compilers halt on invalid input"
+    - "Compilers produce deterministic output"
+
+# =============================================================================
+# RULES (Machine-Parseable)
+# =============================================================================
+rules:
+
+  # ---------------------------------------------------------------------------
+  # EPISTEMIC-001: Schema Declaration Required
+  # ---------------------------------------------------------------------------
+  - rule_id: EPISTEMIC-001
+    name: Schema Declaration Required
+    severity: BLOCKING
+    triggers:
+      - pattern: "operating on schema-governed file"
+        file_patterns:
+          - "*.json"
+          - "*.yaml"
+          - "*.yml"
+        directories:
+          - "design/"
+          - "public/projection/"
+          - "src/contracts/"
+    required_output:
+      section_name: SCOPE DECLARATION
+      required_fields:
+        - field: "Operating on"
+          description: File path being modified
+        - field: "Governing schema"
+          description: Name of schema governing this file
+        - field: "Schema location"
+          description: Path to schema definition
+    violation_response: |
+      EPISTEMIC-001 VIOLATION: Schema declaration missing.
+      Cannot operate on structured file without declaring governing schema.
+      Required: SCOPE DECLARATION block before any file operation.
+
+  # ---------------------------------------------------------------------------
+  # EPISTEMIC-002: No Field Invention
+  # ---------------------------------------------------------------------------
+  - rule_id: EPISTEMIC-002
+    name: No Field Invention
+    severity: BLOCKING
+    triggers:
+      - pattern: "writing structured data"
+        file_types:
+          - json
+          - yaml
+          - yml
+    forbidden_patterns:
+      - "typically includes"
+      - "usually has"
+      - "similar to"
+      - "based on the pattern"
+      - "I'll add a"
+      - "should probably have"
+    validation:
+      requirement: All field names must be quoted from loaded schema
+      method: Compare output fields against schema.required_fields + schema.optional_fields
+    violation_response: |
+      EPISTEMIC-002 VIOLATION: Field invention detected.
+      Field names must come from schema, not inference.
+      Load schema first, quote required fields, write only those.
+
+  # ---------------------------------------------------------------------------
+  # EPISTEMIC-003: Cross-Layer Write Block
+  # ---------------------------------------------------------------------------
+  - rule_id: EPISTEMIC-003
+    name: Cross-Layer Write Block
+    severity: BLOCKING
+    triggers:
+      - pattern: "writing to file in different layer"
+    layer_matrix:
+      - layer: "SDSR Scenario"
+        may_write: ["DB synthetic records"]
+        forbidden_write: ["AURORA_L2", "projection", "UI"]
+      - layer: "Projection Assertions"
+        may_write: ["validation errors"]
+        forbidden_write: ["routes", "projection files"]
+      - layer: "Route Resolution"
+        may_write: ["absolute routes"]
+        forbidden_write: ["projection", "relative routes"]
+      - layer: "UI"
+        may_write: ["rendering"]
+        forbidden_write: ["projection", "routes", "backend state"]
+    validation:
+      requirement: Declare layer before acting, verify write is permitted
+    violation_response: |
+      EPISTEMIC-003 VIOLATION: Cross-layer write attempted.
+      Layer: <current_layer> may not write to <target>.
+      Cross-layer writes require explicit approval.
+
+  # ---------------------------------------------------------------------------
+  # EPISTEMIC-004: Silent Fix Prohibition
+  # ---------------------------------------------------------------------------
+  - rule_id: EPISTEMIC-004
+    name: Silent Fix Prohibition
+    severity: BLOCKING
+    triggers:
+      - pattern: "fixing an error"
+      - pattern: "correcting a value"
+      - pattern: "updating to fix"
+    forbidden_behaviors:
+      - description: "Changing field value without reporting"
+        example: "The route was wrong so I fixed it"
+      - description: "Auto-correcting schema violations"
+        example: "I noticed a typo and corrected it"
+      - description: "Silent normalization"
+        example: "I updated the format to match expected pattern"
+    required_action:
+      must_include: "HALT and report"
+      template: |
+        ERROR DETECTED: <description>
+        Current value: <value>
+        Expected per schema: <expected>
+        Proposed fix: <fix>
+        WAITING FOR APPROVAL
+    violation_response: |
+      EPISTEMIC-004 VIOLATION: Silent fix detected.
+      Errors must be reported, not silently corrected.
+      HALT and report the issue, wait for approval.
+
+  # ---------------------------------------------------------------------------
+  # EPISTEMIC-005: Pattern Inference Block
+  # ---------------------------------------------------------------------------
+  - rule_id: EPISTEMIC-005
+    name: Pattern Inference Block
+    severity: BLOCKING
+    triggers:
+      - pattern: "based on similar file"
+      - pattern: "following the pattern"
+      - pattern: "like the other"
+      - pattern: "consistent with"
+    forbidden_reasoning:
+      - pattern: "Looking at similar files..."
+        reason: "Each file has its own schema"
+      - pattern: "Based on the naming convention..."
+        reason: "Schema must be loaded, not inferred from names"
+      - pattern: "Other files in this directory have..."
+        reason: "Directory location is not schema"
+      - pattern: "Typically this type of file..."
+        reason: "Typicality is not authority"
+    required_action:
+      must_do: "Load and quote the actual schema"
+      must_not_do: "Derive fields from file patterns"
+    violation_response: |
+      EPISTEMIC-005 VIOLATION: Pattern-based inference detected.
+      Cannot derive schema from similar files or naming patterns.
+      Load the actual schema file and quote its fields.
+
+# =============================================================================
+# MANDATORY OUTPUT BLOCKS
+# =============================================================================
+required_outputs:
+
+  scope_declaration:
+    trigger: "Before any schema-governed file operation"
+    template: |
+      SCOPE DECLARATION
+      - Operating on: <file_path>
+      - Governing schema: <schema_name>
+      - Schema location: <schema_path>
+    required_fields:
+      - Operating on
+      - Governing schema
+      - Schema location
+
+  schema_fields_loaded:
+    trigger: "After loading schema, before writing"
+    template: |
+      SCHEMA FIELDS LOADED
+      - Required: <comma-separated list>
+      - Optional: <comma-separated list>
+      - Enums: <enum_field>: [<values>]
+    required_fields:
+      - Required
+
+  schema_compliance_check:
+    trigger: "After writing to schema-governed file"
+    template: |
+      SCHEMA COMPLIANCE CHECK
+      - Schema: <name>
+      - Required fields: OK / MISSING: <list>
+      - Forbidden fields: none / FOUND: <list>
+      - Responsibility boundary respected: YES / NO
+    required_fields:
+      - Schema
+      - Required fields
+      - Forbidden fields
+      - Responsibility boundary respected
+    validation:
+      pass_conditions:
+        - "'Required fields' must be 'OK'"
+        - "'Forbidden fields' must be 'none'"
+        - "'Responsibility boundary respected' must be 'YES'"
+
+  epistemic_safety_halt:
+    trigger: "When schema missing or ambiguous"
+    template: |
+      EPISTEMIC SAFETY HALT
+
+      I cannot proceed.
+
+      Reason: <specific reason>
+      Missing: <what is needed>
+      Schema required: <schema_name>
+
+      This prevents me from guessing field names or semantics.
+      Please provide the schema or clarify the requirement.
+    required_fields:
+      - Reason
+      - Missing
+      - Schema required
+
+# =============================================================================
+# VALIDATION HOOKS
+# =============================================================================
+validation:
+  pre_response_check:
+    enabled: true
+    checks:
+      - name: scope_declaration_present
+        condition: "If modifying structured file, SCOPE DECLARATION must exist"
+      - name: no_forbidden_patterns
+        condition: "Response must not contain forbidden inference patterns"
+      - name: schema_compliance_present
+        condition: "If wrote structured data, SCHEMA COMPLIANCE CHECK must exist"
+
+  post_response_check:
+    enabled: true
+    checks:
+      - name: compliance_check_valid
+        condition: "All SCHEMA COMPLIANCE CHECK fields must be OK/YES/none"
+      - name: no_silent_fixes
+        condition: "No value changes without explicit reporting"
+
+# =============================================================================
+# INTEGRATION POINTS
+# =============================================================================
+integration:
+  enforced_by:
+    - file: scripts/ops/claude_response_validator.py
+      check: epistemic_rules
+    - file: docs/playbooks/SESSION_PLAYBOOK.yaml
+      section: Section 40 (epistemic_safety_protocol)
+    - file: CLAUDE_BOOT_CONTRACT.md
+      section: BOOT STEP 7
+
+  triggered_by:
+    - file_patterns:
+        - "design/**/*.json"
+        - "design/**/*.yaml"
+        - "public/projection/*.json"
+        - "src/contracts/**/*.ts"
+    - operations:
+        - "create file"
+        - "edit file"
+        - "write structured data"
+
+# =============================================================================
+# RATIONALE
+# =============================================================================
+rationale:
+  why_this_exists: |
+    Claude failed earlier not because it lacked intelligence, but because:
+    - It treated schema as documentation, not authority
+    - It inferred intent from filenames and patterns
+    - It "helpfully" filled gaps instead of refusing to proceed
+
+    The fix is NOT "be more careful" —
+    the fix is procedural refusal unless schema is loaded and validated.
+
+  incident_reference: |
+    PIN-389: Projection Route Separation
+    Claude was enforcing runtime invariants (console prefixes like /precus/, /cus/)
+    at design time (projection routes), causing validation failures for correct
+    relative routes (/overview, /activity).
+
+    The layer separation principle was violated:
+    - Projection (design): Relative routes only
+    - Runtime (navigation): Console prefixes applied
+
+  core_lesson: |
+    A halted response is correct.
+    A guessed response is a bug.
+
+# =============================================================================
+# END OF CONTRACT
+# =============================================================================
