@@ -33,6 +33,7 @@ INVARIANTS:
 from __future__ import annotations
 
 import logging
+import os
 import re
 from typing import Callable, Optional, Sequence
 
@@ -44,19 +45,39 @@ from starlette.types import ASGIApp
 from .contexts import AuthPlane, GatewayContext
 from .gateway import AuthGateway, get_auth_gateway
 from .gateway_types import GatewayAuthError, is_error
+from .rbac_rules_loader import get_public_paths
 
 logger = logging.getLogger("nova.auth.gateway_middleware")
 
-# Default public paths (no auth required)
-DEFAULT_PUBLIC_PATHS = [
-    "/health",
-    "/metrics",
-    "/docs",
-    "/redoc",
-    "/openapi.json",
-    "/api/v1/auth/",
-    "/api/v1/c2/predictions/",
-]
+# PIN-391: Environment detection for schema-driven RBAC
+_CURRENT_ENVIRONMENT = os.getenv("AOS_ENVIRONMENT", "preflight")
+
+
+def _get_default_public_paths() -> list[str]:
+    """
+    Get default public paths from RBAC_RULES.yaml schema (PIN-391).
+
+    Returns paths marked as PUBLIC tier for the current environment.
+    Falls back to hardcoded list if schema loading fails.
+    """
+    try:
+        return get_public_paths(environment=_CURRENT_ENVIRONMENT)
+    except Exception as e:
+        logger.warning("Failed to load public paths from schema, using fallback: %s", e)
+        # Fallback for resilience (remove after Phase 2B validation)
+        return [
+            "/health",
+            "/metrics",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/api/v1/auth/",
+            "/api/v1/c2/predictions/",
+        ]
+
+
+# PIN-391: Schema-driven public paths (loaded at module import)
+DEFAULT_PUBLIC_PATHS = _get_default_public_paths()
 
 
 class AuthGatewayMiddleware(BaseHTTPMiddleware):

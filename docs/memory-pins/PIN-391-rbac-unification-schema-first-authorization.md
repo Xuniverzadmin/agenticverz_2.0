@@ -231,17 +231,24 @@ python3 scripts/ci/check_rbac_alignment.py --fix-suggestions
 - [x] Update documentation to reflect new behavior
 
 ### Phase 1 (TODO)
-- [ ] Replace hardcoded PUBLIC_PATHS with `get_public_paths()`
 - [ ] Wire resolve_rbac_rule into authorization flow
 - [ ] Add all API routes to RBAC_RULES.yaml
 
-### Phase 2 (TODO)
-- [ ] Remove temporary SDSR rules (after hardening)
-- [ ] Deprecate PUBLIC_PATHS behind feature flag
+### Phase 2A: Schema-Driven PUBLIC_PATHS (COMPLETE)
+- [x] Replace hardcoded PUBLIC_PATHS in rbac_middleware.py with `get_public_paths()`
+- [x] Replace DEFAULT_PUBLIC_PATHS in gateway_middleware.py with schema-driven loader
+- [x] Replace PUBLIC_PATHS in tenancy.py with schema-driven loader
+- [x] Add shadow comparison logging to detect discrepancies
+- [x] Fallback to hardcoded list if schema loading fails (resilience)
+
+### Phase 2B (TODO)
+- [ ] Monitor shadow logs for discrepancies
+- [ ] Remove legacy fallback lists after validation
+- [ ] Remove shadow comparison logging
 - [ ] Full schema-driven enforcement
 
 ### Phase 3 (TODO)
-- [ ] Generate query_authority from RBAC_RULES
+- [ ] Remove temporary SDSR rules (after hardening)
 - [ ] Unify gateway_config.py with schema
 - [ ] Remove all legacy mappers
 

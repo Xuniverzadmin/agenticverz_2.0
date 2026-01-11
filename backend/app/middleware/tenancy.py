@@ -24,17 +24,45 @@ logger = logging.getLogger("nova.middleware.tenancy")
 # Header name for tenant identification
 TENANT_HEADER = os.getenv("TENANT_HEADER", "X-Tenant-Id")
 
-# Paths that don't require tenant context
-PUBLIC_PATHS = {
-    "/health",
-    "/healthz",
-    "/healthz/worker_pool",
-    "/metrics",
-    "/version",
-    "/openapi.json",
-    "/docs",
-    "/redoc",
-}
+
+def _get_tenant_bypass_paths() -> set[str]:
+    """
+    Get paths that don't require tenant context (PIN-391).
+
+    These are infrastructure/system paths that are inherently tenant-agnostic.
+    Uses RBAC schema PUBLIC paths as base, plus infrastructure-specific paths.
+    """
+    try:
+        from app.auth.rbac_rules_loader import get_public_paths
+
+        environment = os.getenv("AOS_ENVIRONMENT", "preflight")
+        schema_paths = set(get_public_paths(environment=environment))
+
+        # Add infrastructure-specific paths not in RBAC schema
+        # These are health/version endpoints that exist outside API layer
+        infra_paths = {
+            "/healthz",
+            "/healthz/worker_pool",
+            "/version",
+        }
+        return schema_paths | infra_paths
+    except Exception as e:
+        logger.warning("Failed to load tenant bypass paths from schema, using fallback: %s", e)
+        # Fallback for resilience
+        return {
+            "/health",
+            "/healthz",
+            "/healthz/worker_pool",
+            "/metrics",
+            "/version",
+            "/openapi.json",
+            "/docs",
+            "/redoc",
+        }
+
+
+# PIN-391: Schema-driven tenant bypass paths
+PUBLIC_PATHS = _get_tenant_bypass_paths()
 
 
 class TenancyMiddleware(BaseHTTPMiddleware):

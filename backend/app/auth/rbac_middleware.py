@@ -49,6 +49,7 @@ from .oidc_provider import (
     map_keycloak_roles_to_aos,
     validate_token,
 )
+from .rbac_rules_loader import get_public_paths
 from .shadow_audit import (
     record_shadow_audit_metric,
     shadow_aggregator,
@@ -87,6 +88,10 @@ RBAC_ENFORCE = os.getenv("RBAC_ENFORCE", "false").lower() == "true"
 MACHINE_SECRET_TOKEN = os.getenv("MACHINE_SECRET_TOKEN", "")
 JWT_SECRET = os.getenv("JWT_SECRET", "")  # For signature verification (optional)
 JWT_VERIFY_SIGNATURE = os.getenv("JWT_VERIFY_SIGNATURE", "false").lower() == "true"
+
+# PIN-391: Environment detection for schema-driven RBAC
+# RBAC_RULES.yaml has different rules for preflight vs production
+CURRENT_ENVIRONMENT = os.getenv("AOS_ENVIRONMENT", "preflight")
 
 # Prometheus metrics - using idempotent registration (PIN-120 PREV-1)
 RBAC_DECISIONS = get_or_create_counter(
@@ -323,77 +328,63 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
     Returns None ONLY for explicitly public paths.
     """
     # =========================================================================
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # LEGACY CODE BLOCK — SCHEDULED FOR DEPRECATION
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    #
-    # STATUS: LEGACY (PIN-391)
-    # AUTHORITY: design/auth/RBAC_RULES.yaml is the SINGLE SOURCE OF TRUTH
-    # MIGRATION: Phase 1 (in progress) → Phase 2 (schema-driven)
-    #
-    # DO NOT MODIFY THIS LIST WITHOUT:
-    # 1. Reading design/auth/RBAC_READ_BEFORE_EDITING.md
-    # 2. Updating RBAC_RULES.yaml FIRST
-    # 3. Running scripts/ci/check_rbac_alignment.py
-    #
-    # FUTURE STATE (Phase 2):
-    #   from app.auth.rbac_rules_loader import get_public_paths
-    #   PUBLIC_PATHS = get_public_paths(environment=CURRENT_ENVIRONMENT)
-    #
+    # PIN-391 PHASE 2: SCHEMA-DRIVEN PUBLIC PATHS
     # =========================================================================
-    # PUBLIC PATHS (No RBAC required)
     #
-    # ARCHITECTURE NOTE (PIN-391):
-    # This list MUST be kept in sync with design/auth/RBAC_RULES.yaml.
-    # The canonical source of truth is RBAC_RULES.yaml.
-    # This hardcoded list exists for backward compatibility during migration.
+    # STATUS: ACTIVE (Phase 2 - schema-driven with shadow comparison)
+    # AUTHORITY: design/auth/RBAC_RULES.yaml is the SINGLE SOURCE OF TRUTH
     #
-    # SECURITY INVARIANTS for public paths:
+    # PUBLIC_PATHS is now loaded from RBAC_RULES.yaml via get_public_paths().
+    # The legacy hardcoded list is kept for shadow comparison only.
+    #
+    # SECURITY INVARIANTS:
     # - /health: No sensitive data, system status only
-    # - /metrics: GLOBAL metrics, NO tenant_id in labels (see Prometheus section)
+    # - /metrics: GLOBAL metrics, NO tenant_id in labels
     # - /api/v1/auth/: Login flow, unauthenticated by definition
     # - /docs: OpenAPI spec, no sensitive data
     # =========================================================================
-    #
-    # ==========================================================================
-    # TEMPORARY RBAC EXCEPTIONS (PIN-370, PIN-373, PIN-391)
-    #
-    # The following SDSR endpoints are PUBLIC *only* for preflight validation.
-    # This is a tactical fix to align gateway_config.py and rbac_middleware.py.
-    #
-    # WARNING:
-    # - These MUST be removed once RBAC_RULES becomes the single source of truth.
-    # - Do NOT add new endpoints here without updating RBAC_RULES.yaml first.
-    # - All new access MUST go through canonical RBAC_RULES.
-    #
-    # Owner: Governance
-    # Expires: 2026-03-01 (review and migrate to schema-driven)
-    # ==========================================================================
-    PUBLIC_PATHS = [
+
+    # Schema-driven public paths (PIN-391)
+    PUBLIC_PATHS = get_public_paths(environment=CURRENT_ENVIRONMENT)
+
+    # Legacy list for shadow comparison (remove after Phase 2B validation)
+    _LEGACY_PUBLIC_PATHS = [
         "/health",
-        "/metrics",  # MUST remain tenant-agnostic (see security note above)
-        "/api/v1/auth/",  # Login/register endpoints
-        "/api/v1/c2/predictions/",  # C2 Prediction Plane (advisory only, no enforcement)
-        "/api/v1/activity/",  # SDSR Activity API (PIN-370, preflight validation) — TEMPORARY
-        "/api/v1/policy-proposals/",  # SDSR Policy Proposals API (PIN-373, preflight validation) — TEMPORARY
-        "/api/v1/incidents/",  # SDSR Incidents API (PIN-370, preflight validation) — TEMPORARY
+        "/metrics",
+        "/api/v1/auth/",
+        "/api/v1/c2/predictions/",
+        "/api/v1/activity/",
+        "/api/v1/policy-proposals/",
+        "/api/v1/incidents/",
         "/docs",
         "/openapi.json",
         "/redoc",
-        # =================================================================
-        # FOUNDER ROUTES (PIN-336)
-        # These routes use dedicated FOPS auth via verify_fops_token.
-        # RBAC mapping still applies for shadow audit purposes.
-        # Actual auth enforcement is handled by route handlers.
-        # =================================================================
-        "/founder/",  # Contract review, evidence review, timeline
-        "/platform/",  # Platform health (founder-only)
-        # NOTE: /ops/ is NOT public - it has RBAC mappings for shadow audit
+        "/founder/",
+        "/platform/",
     ]
 
-    for public_path in PUBLIC_PATHS:
-        if path.startswith(public_path) or path == public_path.rstrip("/"):
-            return None
+    # Check if path matches schema-driven public paths
+    is_public_schema = any(
+        path.startswith(public_path) or path == public_path.rstrip("/") for public_path in PUBLIC_PATHS
+    )
+
+    # Shadow comparison: detect discrepancies between legacy and schema
+    is_public_legacy = any(
+        path.startswith(public_path) or path == public_path.rstrip("/") for public_path in _LEGACY_PUBLIC_PATHS
+    )
+
+    if is_public_schema != is_public_legacy:
+        # Log discrepancy for monitoring (PIN-391 shadow mode)
+        logger.warning(
+            "RBAC_PUBLIC_PATH_DISCREPANCY: path=%s schema=%s legacy=%s env=%s",
+            path,
+            is_public_schema,
+            is_public_legacy,
+            CURRENT_ENVIRONMENT,
+        )
+
+    if is_public_schema:
+        return None
 
     # =========================================================================
     # MEMORY PINS (/api/v1/memory/pins)
