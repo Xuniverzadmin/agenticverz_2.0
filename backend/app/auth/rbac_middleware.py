@@ -325,20 +325,43 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
     # =========================================================================
     # PUBLIC PATHS (No RBAC required)
     #
+    # ARCHITECTURE NOTE (PIN-391):
+    # This list MUST be kept in sync with design/auth/RBAC_RULES.yaml.
+    # The canonical source of truth is RBAC_RULES.yaml.
+    # This hardcoded list exists for backward compatibility during migration.
+    #
+    # TODO (PIN-391): Replace this list with:
+    #   PUBLIC_PATHS = get_public_paths(environment=CURRENT_ENVIRONMENT)
+    #
     # SECURITY INVARIANTS for public paths:
     # - /health: No sensitive data, system status only
     # - /metrics: GLOBAL metrics, NO tenant_id in labels (see Prometheus section)
     # - /api/v1/auth/: Login flow, unauthenticated by definition
     # - /docs: OpenAPI spec, no sensitive data
     # =========================================================================
+    #
+    # ==========================================================================
+    # TEMPORARY RBAC EXCEPTIONS (PIN-370, PIN-373, PIN-391)
+    #
+    # The following SDSR endpoints are PUBLIC *only* for preflight validation.
+    # This is a tactical fix to align gateway_config.py and rbac_middleware.py.
+    #
+    # WARNING:
+    # - These MUST be removed once RBAC_RULES becomes the single source of truth.
+    # - Do NOT add new endpoints here without updating RBAC_RULES.yaml first.
+    # - All new access MUST go through canonical RBAC_RULES.
+    #
+    # Owner: Governance
+    # Expires: 2026-03-01 (review and migrate to schema-driven)
+    # ==========================================================================
     PUBLIC_PATHS = [
         "/health",
         "/metrics",  # MUST remain tenant-agnostic (see security note above)
         "/api/v1/auth/",  # Login/register endpoints
         "/api/v1/c2/predictions/",  # C2 Prediction Plane (advisory only, no enforcement)
-        "/api/v1/activity/",  # SDSR Activity API (PIN-370, preflight validation)
-        "/api/v1/policy-proposals/",  # SDSR Policy Proposals API (PIN-373, preflight validation)
-        "/api/v1/incidents/",  # SDSR Incidents API (PIN-370, preflight validation)
+        "/api/v1/activity/",  # SDSR Activity API (PIN-370, preflight validation) — TEMPORARY
+        "/api/v1/policy-proposals/",  # SDSR Policy Proposals API (PIN-373, preflight validation) — TEMPORARY
+        "/api/v1/incidents/",  # SDSR Incidents API (PIN-370, preflight validation) — TEMPORARY
         "/docs",
         "/openapi.json",
         "/redoc",

@@ -15,11 +15,21 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.42"
+session_playbook_version: "2.43"
 created: "2025-12-27"
 last_updated: "2026-01-11"
 
 # Changelog:
+#   2.43 - RBAC GUARDRAIL (Section 26, PIN-391).
+#          Added rbac_guardrail section enforcing schema-first authorization.
+#          Invariant: Authorization is declared, not inferred.
+#          Canonical source: design/auth/RBAC_RULES.yaml (single source of truth).
+#          Hard rules: RBAC-001 to RBAC-004 (no inference, schema first).
+#          Decision ladder: Check RBAC_RULES.yaml before modifying auth.
+#          Self-check: Prevent PUBLIC_PATHS drift from schema.
+#          New artifacts: design/auth/RBAC_RULES.yaml, backend/app/auth/rbac_rules_loader.py.
+#          Root cause: Dual authority (gateway + middleware) caused 403 drift.
+#          Reference: PIN-391, design/auth/RBAC_RULES.yaml
 #   2.42 - QUERY AUTHORITY CI GUARD (Section 41 enhancement, PIN-390).
 #          Added ci_guard subsection to query_authority_model.
 #          Script: scripts/ci/query_authority_guard.py (BLOCKING enforcement).
@@ -6702,7 +6712,122 @@ decision_guardrails:
     incident: "M10 function overload incident (2026-01-02)"
 
 # =============================================================================
-# SECTION 26: PRE-COMMIT LOCALITY RULES (PIN-269)
+# SECTION 26: RBAC GUARDRAIL (PIN-391)
+# =============================================================================
+# Authorization is declared, not inferred.
+# Claude must not guess access control rules.
+#
+# Reference: PIN-391 (RBAC Unification), design/auth/RBAC_RULES.yaml
+
+rbac_guardrail:
+
+  status: ENFORCED
+  version: v1
+  effective_date: 2026-01-11
+  reference: PIN-391
+
+  # ---------------------------------------------------------------------------
+  # Core Invariant (LOCKED)
+  # ---------------------------------------------------------------------------
+  invariant: |
+    Authorization is declared, not inferred.
+    Code may mirror rules temporarily, but must not invent them.
+
+  # ---------------------------------------------------------------------------
+  # Canonical Source of Truth
+  # ---------------------------------------------------------------------------
+  canonical_source:
+    file: design/auth/RBAC_RULES.yaml
+    description: |
+      All RBAC rules MUST be declared in RBAC_RULES.yaml.
+      This file is the single source of truth for authorization.
+
+  # ---------------------------------------------------------------------------
+  # Hard Rules (No Exceptions)
+  # ---------------------------------------------------------------------------
+  hard_rules:
+
+    - rule_id: RBAC-001
+      name: "No Inference"
+      description: |
+        Claude MUST NOT classify endpoints as public/private by inference.
+        If no rule exists, report "RBAC rule missing" — not guess.
+
+    - rule_id: RBAC-002
+      name: "No PUBLIC_PATHS Modification"
+      description: |
+        Claude MUST NOT modify PUBLIC_PATHS in rbac_middleware.py
+        unless explicitly instructed AND the change is first declared
+        in RBAC_RULES.yaml.
+
+    - rule_id: RBAC-003
+      name: "Schema First"
+      description: |
+        All access decisions MUST reference RBAC_RULES.yaml.
+        Code may mirror the schema temporarily, but schema is authority.
+
+    - rule_id: RBAC-004
+      name: "Report Missing Rules"
+      description: |
+        If an endpoint has no RBAC rule, Claude MUST report:
+        "RBAC RULE MISSING: {method} {path}"
+        Do not proceed with implementation.
+
+  # ---------------------------------------------------------------------------
+  # Decision Ladder (When Touching Auth)
+  # ---------------------------------------------------------------------------
+  decision_ladder:
+    - step: 1
+      question: "Is this endpoint already in RBAC_RULES.yaml?"
+      if_yes: "Modify rule in RBAC_RULES.yaml"
+      if_no: "STOP and propose a new rule for approval"
+
+    - step: 2
+      question: "Is this preflight-only?"
+      if_yes: "Use SYSTEM tier with preflight-only environment"
+      default: "Never PUBLIC by default"
+
+    - step: 3
+      question: "Is PUBLIC_PATHS involved?"
+      if_yes: "Only as a temporary mirror of RBAC_RULES.yaml"
+      requirement: "Must reference a PIN"
+
+  # ---------------------------------------------------------------------------
+  # Self-Check (Run Before Auth-Related Code)
+  # ---------------------------------------------------------------------------
+  self_check:
+    - question: "Did I check RBAC_RULES.yaml before modifying auth?"
+      if_no: "STOP - check schema first"
+
+    - question: "Did I add to PUBLIC_PATHS without updating RBAC_RULES.yaml?"
+      if_yes: "STOP - update schema first"
+
+    - question: "Did I infer access level from endpoint name or behavior?"
+      if_yes: "STOP - inference is forbidden"
+
+    - question: "Did I create a new endpoint without an RBAC rule?"
+      if_yes: "STOP - propose rule for approval"
+
+  # ---------------------------------------------------------------------------
+  # Hard Failure Response
+  # ---------------------------------------------------------------------------
+  hard_failure_response: |
+    RBAC GUARDRAIL VIOLATION
+
+    Claude attempted to: {action}
+    Rule violated: {rule_id}
+
+    STATUS: BLOCKED
+
+    Required action:
+    1. Check design/auth/RBAC_RULES.yaml for existing rules
+    2. If no rule exists, propose a new rule for approval
+    3. Only after rule is approved, update rbac_middleware.py
+
+    Reference: PIN-391, design/auth/RBAC_RULES.yaml
+
+# =============================================================================
+# SECTION 27: PRE-COMMIT LOCALITY RULES (PIN-269)
 # =============================================================================
 # Pre-commit hooks must only evaluate what the commit is responsible for.
 # Surfacing unrelated violations trains developers to skip hooks.

@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-11 (PIN-389 Projection Route Separation and Console Isolation)
+**Last Updated:** 2026-01-11 (PIN-391 RBAC Unification — Schema-First Authorization)
 
 ---
 
@@ -384,6 +384,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-385](PIN-385-sdsr-ui-pipeline-integration-status.md) | **SDSR UI Pipeline Integration Status** | SDSR / UI Pipeline | **🔄 IN PROGRESS** | 2026-01-10 |
 | [PIN-386](PIN-386-sdsr-aurora-l2-observation-schema-contract.md) | **SDSR → AURORA_L2 Observation Schema Contract** | SDSR / Schema Contract | **🔒 LOCKED** | 2026-01-10 |
 | [PIN-389](PIN-389-projection-route-separation-and-console-isolation.md) | **Projection Route Separation and Console Isolation** | Architecture / Routing | **✅ COMPLETE** | 2026-01-11 |
+| [PIN-390](PIN-390-four-console-query-authority-model.md) | **Four-Console Query Authority Model** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
+| [PIN-391](PIN-391-rbac-unification-schema-first-authorization.md) | **RBAC Unification — Schema-First Authorization** | Architecture / Security | **✅ ACTIVE** | 2026-01-11 |
 
 ---
 
@@ -1153,6 +1155,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-11 | **PIN-391 RBAC Unification — Schema-First Authorization** - Created. Canonical RBAC schema, loader, CI guard. |
+| 2026-01-11 | **PIN-390 Four-Console Query Authority Model** - Created. Query authority schema, CI guard, governance docs. |
 | 2026-01-11 | **PIN-389 Projection Route Separation and Console Isolation** - Created via memory_trail. |
 | 2026-01-10 | **PIN-387 Canonical Projection Design Implementation** - Updated: Status |
 | 2026-01-10 | **PIN-385 SDSR UI Pipeline Integration Status** - Created. Gap exposure for E2E-001/003/004 → UI mapping. |

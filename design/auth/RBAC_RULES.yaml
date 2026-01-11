@@ -1,0 +1,292 @@
+# =============================================================================
+# RBAC_RULES.yaml — Canonical Authorization Rules
+# =============================================================================
+#
+# Layer: L4 — Domain Engines (Authorization)
+# Product: system-wide
+# Reference: PIN-391
+#
+# INVARIANT: Authorization is declared, not inferred.
+#            Code may mirror rules temporarily, but must not invent them.
+#
+# This file is the SINGLE SOURCE OF TRUTH for RBAC rules.
+# All authorization decisions must be derivable from this file.
+#
+# =============================================================================
+
+version: "1.0"
+schema_version: "2026-01-11"
+
+# -----------------------------------------------------------------------------
+# ACCESS TIER DEFINITIONS
+# -----------------------------------------------------------------------------
+#
+# PUBLIC     - Unauthenticated access. Extremely rare. Must have explicit PIN.
+# SESSION    - Authenticated user session required.
+# PRIVILEGED - Specific permission or role required.
+# SYSTEM     - Engine / SDSR / control-plane only. Never user-accessible.
+#
+# -----------------------------------------------------------------------------
+
+access_tiers:
+  PUBLIC:
+    description: "Unauthenticated access. Extremely rare."
+    requires_auth: false
+    requires_permissions: false
+  SESSION:
+    description: "Authenticated user session required."
+    requires_auth: true
+    requires_permissions: false
+  PRIVILEGED:
+    description: "Permission or role required."
+    requires_auth: true
+    requires_permissions: true
+  SYSTEM:
+    description: "Engine / SDSR / control-plane only."
+    requires_auth: true
+    requires_permissions: true
+    system_only: true
+
+# -----------------------------------------------------------------------------
+# DIMENSION DEFINITIONS
+# -----------------------------------------------------------------------------
+
+dimensions:
+  console_kind:
+    - customer
+    - founder
+  environment:
+    - preflight
+    - production
+
+# -----------------------------------------------------------------------------
+# RULES
+# -----------------------------------------------------------------------------
+#
+# Each rule MUST have:
+#   - rule_id: Unique identifier
+#   - path_prefix: URL path prefix to match
+#   - methods: HTTP methods this rule applies to
+#   - access_tier: One of PUBLIC, SESSION, PRIVILEGED, SYSTEM
+#   - allow_console: Which console kinds can access
+#   - allow_environment: Which environments can access
+#
+# Optional:
+#   - pin: Reference PIN for governance traceability
+#   - required_permissions: List of permissions (for PRIVILEGED tier)
+#   - required_roles: List of roles (for PRIVILEGED tier)
+#   - description: Human-readable explanation
+#   - temporary: true if this is a tactical exception
+#   - expires: Date when temporary rules should be reviewed
+#
+# -----------------------------------------------------------------------------
+
+rules:
+
+  # ===========================================================================
+  # INFRASTRUCTURE / HEALTH
+  # ===========================================================================
+
+  - rule_id: HEALTH_CHECK
+    path_prefix: /health
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Health check endpoint for load balancers and monitoring."
+
+  - rule_id: METRICS_ENDPOINT
+    path_prefix: /metrics
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Prometheus metrics endpoint."
+
+  # ===========================================================================
+  # DOCUMENTATION
+  # ===========================================================================
+
+  - rule_id: OPENAPI_DOCS
+    path_prefix: /docs
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Swagger UI documentation."
+
+  - rule_id: OPENAPI_JSON
+    path_prefix: /openapi.json
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "OpenAPI schema JSON."
+
+  - rule_id: REDOC_DOCS
+    path_prefix: /redoc
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "ReDoc documentation."
+
+  # ===========================================================================
+  # AUTHENTICATION
+  # ===========================================================================
+
+  - rule_id: AUTH_ENDPOINTS
+    path_prefix: /api/v1/auth/
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Authentication endpoints (login, token refresh, etc.)."
+
+  # ===========================================================================
+  # SDSR PREFLIGHT VALIDATION (TEMPORARY)
+  # ===========================================================================
+  #
+  # These rules exist for SDSR preflight validation.
+  # They allow unauthenticated reads in preflight environment only.
+  # MUST be removed or tightened post-SDSR hardening.
+  #
+
+  - rule_id: C2_PREDICTIONS_PREFLIGHT
+    pin: PIN-370
+    path_prefix: /api/v1/c2/predictions/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "C2 predictions for UI rendering."
+
+  - rule_id: ACTIVITY_READ_PREFLIGHT
+    pin: PIN-370
+    path_prefix: /api/v1/activity/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    description: >
+      SDSR Activity API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: POLICY_PROPOSALS_READ_PREFLIGHT
+    pin: PIN-373
+    path_prefix: /api/v1/policy-proposals/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    description: >
+      SDSR Policy Proposals API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  - rule_id: INCIDENTS_READ_PREFLIGHT
+    pin: PIN-370
+    path_prefix: /api/v1/incidents/
+    methods: [GET]
+    access_tier: PUBLIC
+    allow_console: [customer]
+    allow_environment: [preflight]
+    temporary: true
+    expires: "2026-03-01"
+    description: >
+      SDSR Incidents API for preflight validation.
+      TEMPORARY - must be SESSION tier in production.
+
+  # ===========================================================================
+  # FOUNDER CONSOLE
+  # ===========================================================================
+
+  - rule_id: FOUNDER_ENDPOINTS
+    path_prefix: /founder/
+    methods: [GET, POST, PUT, DELETE]
+    access_tier: PUBLIC
+    allow_console: [founder]
+    allow_environment: [preflight, production]
+    description: "Founder console endpoints. Auth handled by console boundary."
+
+  - rule_id: PLATFORM_ENDPOINTS
+    path_prefix: /platform/
+    methods: [GET, POST, PUT, DELETE]
+    access_tier: PUBLIC
+    allow_console: [founder]
+    allow_environment: [preflight, production]
+    description: "Platform endpoints. Auth handled by console boundary."
+
+  # ===========================================================================
+  # PRODUCTION AUTHENTICATED ENDPOINTS
+  # ===========================================================================
+
+  - rule_id: ACTIVITY_READ_PRODUCTION
+    path_prefix: /api/v1/activity/
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer, founder]
+    allow_environment: [production]
+    required_permissions: [activity.read]
+    description: "Activity API for production - requires authentication."
+
+  - rule_id: INCIDENTS_READ_PRODUCTION
+    path_prefix: /api/v1/incidents/
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer, founder]
+    allow_environment: [production]
+    required_permissions: [incident.read]
+    description: "Incidents API for production - requires authentication."
+
+  - rule_id: POLICY_PROPOSALS_READ_PRODUCTION
+    path_prefix: /api/v1/policy-proposals/
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer, founder]
+    allow_environment: [production]
+    required_permissions: [policy.read]
+    description: "Policy Proposals API for production - requires authentication."
+
+  - rule_id: RUNS_READ
+    path_prefix: /api/v1/runs/
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    required_permissions: [run.read]
+    description: "Runs API - requires authentication."
+
+  - rule_id: RUNS_CREATE
+    path_prefix: /api/v1/runs/
+    methods: [POST]
+    access_tier: PRIVILEGED
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    required_permissions: [run.create]
+    description: "Create runs - requires run.create permission."
+
+  - rule_id: AGENTS_READ
+    path_prefix: /api/v1/agents/
+    methods: [GET]
+    access_tier: SESSION
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    required_permissions: [agent.read]
+    description: "Agents API - requires authentication."
+
+  - rule_id: AGENTS_WRITE
+    path_prefix: /api/v1/agents/
+    methods: [POST, PUT, DELETE]
+    access_tier: PRIVILEGED
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    required_permissions: [agent.write]
+    description: "Agent mutations - requires agent.write permission."
+
+# =============================================================================
+# END OF RULES
+# =============================================================================
