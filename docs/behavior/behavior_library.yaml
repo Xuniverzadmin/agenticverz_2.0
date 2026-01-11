@@ -734,6 +734,114 @@ library:
 
       Truth anchor: If data exists, its visibility must be contractual - not accidental.
 
+  # =========================================================================
+  # BL-QUERY-AUTH-001: Query Authority Required (BLOCKING)
+  # Incident: Panels queried backend without authority check, caused 403 noise
+  # Root Cause: Four consoles without explicit query authority = 403 factory
+  # Solution: query_authority in projection, checked before API call
+  # Principle: Query authority is declarative. 403 is truth, not error.
+  # Reference: PIN-390, docs/governance/QUERY_AUTHORITY_MODEL.md
+  # =========================================================================
+  - id: BL-QUERY-AUTH-001
+    name: Query Authority Required
+    severity: BLOCKER
+    class: query_authority
+    priority: 5
+
+    triggers:
+      # Triggers when working with projection panels or UI data fetching
+      patterns:
+        - "panel"
+        - "query_authority"
+        - "canQuery"
+        - "403"
+        - "permission denied"
+        - "API call"
+        - "data fetch"
+
+    requires:
+      sections:
+        - QUERY_AUTHORITY_CHECK
+      fields:
+        - panel_id
+        - authority_level
+        - console_kind
+        - environment
+        - allowed
+        - failure_mode
+
+    authority_levels:
+      - USER        # Tenant-scoped, customer-safe data
+      - SYSTEM      # Engine / control-plane derived data
+      - SYNTHETIC   # Test, injected, SDSR-derived data
+      - INTERNAL    # Staff-only / governance / debugging (never in projection)
+
+    four_console_matrix:
+      customer_preflight:
+        USER: true
+        SYSTEM: false
+        SYNTHETIC: false
+        INTERNAL: false
+      customer_production:
+        USER: true
+        SYSTEM: false
+        SYNTHETIC: false
+        INTERNAL: false
+      founder_preflight:
+        USER: true
+        SYSTEM: true
+        SYNTHETIC: true
+        INTERNAL: false
+      founder_production:
+        USER: true
+        SYSTEM: true
+        SYNTHETIC: false  # SYNTHETIC is NEVER allowed in production
+        INTERNAL: false
+
+    forbid:
+      - "inferring query authority from endpoint name"
+      - "guessing authority from domain placement"
+      - "assuming founder has all access"
+      - "retrying on 403"
+      - "logging 403 as error"
+      - "SYNTHETIC in production"
+      - "INTERNAL in projection"
+      - "API call before authority check"
+
+    evidence:
+      required_fields:
+        - panel_id
+        - authority_level
+        - console_kind
+        - environment
+        - matrix_lookup
+        - allowed
+        - failure_mode
+
+    validator:
+      schema: docs/schemas/query_authority_schema.json
+      governance: docs/governance/QUERY_AUTHORITY_MODEL.md
+
+    message_on_fail: |
+      BL-QUERY-AUTH-001 VIOLATION: Query authority not satisfied.
+
+      Panel attempted API call without proper authority check.
+
+      Required action:
+      1. Verify panel has query_authority in projection
+      2. Check authority level: USER, SYSTEM, SYNTHETIC, INTERNAL
+      3. Verify allow_in matrix for console × environment
+      4. Use canQuery() before any API call
+      5. Show appropriate boundary if denied (HIDE, DISABLE, EXPLAIN)
+
+      Key invariants:
+      - SYNTHETIC is NEVER allowed in production
+      - INTERNAL is never projection-exposed
+      - 403 is truth, not error
+      - UI must check before calling, not retry after denial
+
+      Reference: PIN-390, docs/governance/QUERY_AUTHORITY_MODEL.md
+
 # Section templates for Claude output
 section_templates:
   RUNTIME_SYNC: |
@@ -875,3 +983,31 @@ section_templates:
     - All assertions pass: YES / NO
 
     Truth anchor: If data exists, its visibility must be contractual.
+
+  QUERY_AUTHORITY_CHECK: |
+    QUERY AUTHORITY CHECK (BL-QUERY-AUTH-001)
+    Panel: <panel_id>
+
+    Authority Declaration:
+    - Level: USER / SYSTEM / SYNTHETIC / INTERNAL
+    - Permissions required: <list>
+    - Roles required: <list or "none">
+
+    Console Context:
+    - Console kind: customer / founder
+    - Environment: preflight / production
+
+    Matrix Lookup:
+    - <console>_<environment> + <level> = ALLOWED / DENIED
+
+    Result:
+    - Query allowed: YES / NO
+    - Failure mode: HIDE / DISABLE / EXPLAIN / N/A
+    - API call made: YES / NO (must be NO if denied)
+
+    Invariants verified:
+    - SYNTHETIC in production: NO (must be NO)
+    - INTERNAL in projection: NO (must be NO)
+    - Authority check before API call: YES
+
+    Truth anchor: 403 is truth, not error. Check before call, not after.

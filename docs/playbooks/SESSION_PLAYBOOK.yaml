@@ -15,11 +15,24 @@
 # Reference: Last Mile Guarantee / Session-Level Inevitability
 # =============================================================================
 
-session_playbook_version: "2.40"
+session_playbook_version: "2.41"
 created: "2025-12-27"
 last_updated: "2026-01-11"
 
 # Changelog:
+#   2.41 - QUERY AUTHORITY MODEL (Section 41, BL-QUERY-AUTH-001, PIN-390).
+#          Added query_authority_model section for four-console authority.
+#          Prime directive: Query authority is declarative, not inferred.
+#          Authority levels: USER, SYSTEM, SYNTHETIC, INTERNAL (locked semantics).
+#          Four-console matrix: customer×preflight, customer×prod, founder×preflight, founder×prod.
+#          Failure modes: HIDE, DISABLE, EXPLAIN.
+#          Fail-closed default: SYSTEM level, all consoles denied.
+#          UI contract: canQuery() before any API call.
+#          Compiler contract: must emit query_authority for every panel.
+#          Adds rules QUERY-AUTH-001 to QUERY-AUTH-005.
+#          Key distinctions: Visibility ≠ Queryability ≠ Executability.
+#          Root cause: Four consoles without explicit authority = 403 factory.
+#          Reference: PIN-390, docs/governance/QUERY_AUTHORITY_MODEL.md
 #   2.40 - EPISTEMIC SAFETY PROTOCOL (Section 40, BL-EPISTEMIC-001, PIN-389).
 #          Added epistemic_safety_protocol section enforcing schema-first behavior.
 #          Prime directive: Schema is law. No guessing, no extrapolation.
@@ -8290,6 +8303,221 @@ epistemic_safety_protocol:
 
     A halted response is correct.
     A guessed response is a bug.
+
+# =============================================================================
+# Section 41: QUERY AUTHORITY MODEL (PIN-390)
+# =============================================================================
+#
+# Reference: docs/governance/QUERY_AUTHORITY_MODEL.md
+# Schema: docs/schemas/query_authority_schema.json
+# Root Cause: Four consoles without explicit query authority = 403 factory
+#
+# Prime Directive:
+#   Query authority is declarative.
+#   UI MUST NOT infer query permissions.
+#   Backend MUST NOT be relaxed for preflight.
+#   Projection MUST declare query_authority.
+#   Any panel without query_authority is INVALID.
+#
+
+query_authority_model:
+  id: BL-QUERY-AUTH-001
+  name: Four-Console Query Authority
+  effective: "2026-01-11"
+  reference: PIN-390
+  status: BLOCKING
+
+  # ---------------------------------------------------------------------------
+  # Prime Directive
+  # ---------------------------------------------------------------------------
+  prime_directive: |
+    Query authority is declarative.
+    UI MUST NOT infer query permissions.
+    Backend MUST NOT be relaxed for preflight.
+    Projection MUST declare query_authority.
+    Claude MUST NOT guess authority based on endpoint names.
+    Any panel without query_authority is INVALID.
+
+  # ---------------------------------------------------------------------------
+  # Authority Levels (Locked Semantics)
+  # ---------------------------------------------------------------------------
+  authority_levels:
+    USER:
+      meaning: Tenant-scoped, customer-safe data
+      examples: ["Activity runs", "Policies", "Logs"]
+    SYSTEM:
+      meaning: Engine / control-plane derived data
+      examples: ["Incidents", "System health", "Metrics"]
+    SYNTHETIC:
+      meaning: Test, injected, SDSR-derived data
+      examples: ["Scenarios", "Synthetic runs", "Test fixtures"]
+    INTERNAL:
+      meaning: Staff-only / governance / debugging
+      examples: ["Admin tools", "Governance data"]
+
+  forbidden_shortcuts:
+    - "SYSTEM ≠ USER in preflight"
+    - "SYNTHETIC ≠ SYSTEM"
+    - "INTERNAL ≠ founder by default"
+    - "No collapsing allowed"
+
+  # ---------------------------------------------------------------------------
+  # Four-Console Authority Matrix (Core Truth)
+  # ---------------------------------------------------------------------------
+  authority_matrix:
+    description: |
+      This table must be hardcoded in UI runtime, not inferred.
+      SYNTHETIC is NEVER allowed in production.
+      INTERNAL is never projection-exposed.
+      Founder ≠ god mode.
+
+    consoles:
+      - console: customer
+        environment: preflight
+        USER: true
+        SYSTEM: false
+        SYNTHETIC: false
+        INTERNAL: false
+
+      - console: customer
+        environment: production
+        USER: true
+        SYSTEM: false
+        SYNTHETIC: false
+        INTERNAL: false
+
+      - console: founder
+        environment: preflight
+        USER: true
+        SYSTEM: true
+        SYNTHETIC: true
+        INTERNAL: false
+
+      - console: founder
+        environment: production
+        USER: true
+        SYSTEM: true
+        SYNTHETIC: false
+        INTERNAL: false
+
+  # ---------------------------------------------------------------------------
+  # Failure Modes
+  # ---------------------------------------------------------------------------
+  failure_modes:
+    HIDE:
+      behavior: Panel is not rendered at all
+      use_when: User should not know panel exists
+    DISABLE:
+      behavior: Panel visible but non-interactive (grayed)
+      use_when: User should see but not interact
+    EXPLAIN:
+      behavior: Panel shows explanation of access denial
+      use_when: User should understand why denied
+
+  # ---------------------------------------------------------------------------
+  # Fail-Closed Default
+  # ---------------------------------------------------------------------------
+  fail_closed_default:
+    description: When authority is unknown, use this default
+    value:
+      level: SYSTEM
+      allow_in:
+        customer:
+          preflight: false
+          production: false
+        founder:
+          preflight: false
+          production: false
+      failure_mode: HIDE
+      notes: "Fail-closed default - requires explicit promotion"
+
+  # ---------------------------------------------------------------------------
+  # UI Contract
+  # ---------------------------------------------------------------------------
+  ui_contract:
+    before_any_api_call: |
+      if (!canQuery(panel.query_authority, consoleContext, authContext)) {
+        return renderBoundary(panel.query_authority.failure_mode);
+      }
+
+    ui_must_never:
+      - action: Retry on 403
+        reason: 403 is truth, not transient error
+      - action: Infer permission from response
+        reason: Check before call
+      - action: Log denied queries as errors
+        reason: Denied is expected behavior
+      - action: Mask as backend error
+        reason: Show appropriate boundary
+
+  # ---------------------------------------------------------------------------
+  # Compiler Contract (AURORA_L2)
+  # ---------------------------------------------------------------------------
+  compiler_contract:
+    must_do:
+      - Emit query_authority for every panel
+      - Use fail-closed default if unsure
+      - Fail compilation if missing
+
+    must_not_do:
+      - Infer from endpoint name
+      - Infer from domain placement
+      - Infer from console kind
+      - Use implicit fallbacks
+
+  # ---------------------------------------------------------------------------
+  # Key Distinctions
+  # ---------------------------------------------------------------------------
+  key_distinctions:
+    - distinction: "Visibility ≠ Queryability"
+      meaning: A panel can be visible in projection but not queryable by user
+
+    - distinction: "Queryability ≠ Executability"
+      meaning: A user can see data but not take action on it
+
+  # ---------------------------------------------------------------------------
+  # Blocking Rules
+  # ---------------------------------------------------------------------------
+  blocking_rules:
+    - rule_id: QUERY-AUTH-001
+      name: Query Authority Required
+      trigger: Any panel in projection
+      enforcement: Panel without query_authority is INVALID
+
+    - rule_id: QUERY-AUTH-002
+      name: No Authority Inference
+      trigger: Writing query_authority
+      enforcement: Must declare explicitly, no guessing from context
+
+    - rule_id: QUERY-AUTH-003
+      name: Synthetic Production Block
+      trigger: allow_in with SYNTHETIC
+      enforcement: SYNTHETIC + production must always be false
+
+    - rule_id: QUERY-AUTH-004
+      name: Internal Projection Block
+      trigger: INTERNAL level in projection
+      enforcement: INTERNAL data never in projection output
+
+    - rule_id: QUERY-AUTH-005
+      name: UI Authority Check
+      trigger: Before API call
+      enforcement: canQuery() must pass before fetch
+
+  # ---------------------------------------------------------------------------
+  # Rationale
+  # ---------------------------------------------------------------------------
+  rationale: |
+    With four consoles, implicit permission logic becomes lethal:
+    - Panel exists → UI queries → backend denies → UI retries → 403 noise
+
+    With explicit query_authority:
+    - Panel exists → authority check → boundary shown → NO API CALL
+
+    This eliminates false 403s and makes authority declarative.
+
+    Created after PIN-389 (Epistemic Safety) to extend schema-first
+    principles to query authority. Claude cannot guess anymore.
 
 # =============================================================================
 # END OF SESSION PLAYBOOK

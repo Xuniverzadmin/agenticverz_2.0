@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agenticverz.com/schemas/query_authority_v1.json",
+  "title": "Query Authority Schema V1",
+  "description": "Canonical schema for panel query authority in the four-console model. This schema is LAW - no inference, no guessing.",
+  "version": "1.0.0",
+  "effective_date": "2026-01-11",
+  "reference": "PIN-390",
+
+  "type": "object",
+  "required": ["level", "requires", "allow_in", "failure_mode"],
+  "additionalProperties": false,
+
+  "properties": {
+    "level": {
+      "type": "string",
+      "enum": ["USER", "SYSTEM", "SYNTHETIC", "INTERNAL"],
+      "description": "What kind of data is being queried. USER=tenant-scoped customer-safe. SYSTEM=engine/control-plane. SYNTHETIC=test/SDSR. INTERNAL=staff-only."
+    },
+
+    "requires": {
+      "type": "object",
+      "required": ["permissions"],
+      "additionalProperties": false,
+      "properties": {
+        "permissions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Backend permissions required to query this data"
+        },
+        "roles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional role constraints (e.g., ['admin', 'operator'])"
+        }
+      }
+    },
+
+    "allow_in": {
+      "type": "object",
+      "required": ["customer", "founder"],
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "$ref": "#/$defs/console_environment_gate"
+        },
+        "founder": {
+          "$ref": "#/$defs/console_environment_gate"
+        }
+      },
+      "description": "Hard console/environment gate. This is the four-console authority matrix."
+    },
+
+    "failure_mode": {
+      "type": "string",
+      "enum": ["HIDE", "DISABLE", "EXPLAIN"],
+      "description": "How UI must behave if query is denied. HIDE=remove from view. DISABLE=show but non-interactive. EXPLAIN=show with explanation."
+    },
+
+    "notes": {
+      "type": "string",
+      "description": "Human-readable, non-functional notes"
+    }
+  },
+
+  "$defs": {
+    "console_environment_gate": {
+      "type": "object",
+      "required": ["preflight", "production"],
+      "additionalProperties": false,
+      "properties": {
+        "preflight": {
+          "type": "boolean",
+          "description": "Whether this query is allowed in preflight environment"
+        },
+        "production": {
+          "type": "boolean",
+          "description": "Whether this query is allowed in production environment"
+        }
+      }
+    }
+  },
+
+  "$comment": "INVARIANTS: SYNTHETIC is NEVER allowed in production. INTERNAL is never projection-exposed. Founder != god mode. This table must be hardcoded in UI runtime, not inferred."
+}
