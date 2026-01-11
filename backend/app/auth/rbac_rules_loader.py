@@ -38,6 +38,43 @@ from typing import Optional
 import yaml
 
 # =============================================================================
+# EXCEPTIONS
+# =============================================================================
+
+
+class RBACSchemaViolation(Exception):
+    """
+    Raised when an RBAC rule is missing for a given request context.
+
+    This exception enforces the PIN-391 invariant:
+    "If a rule is missing, access is DENIED."
+
+    The caller must handle this exception explicitly.
+    Catching and ignoring it is a governance violation.
+    """
+
+    def __init__(
+        self,
+        path: str,
+        method: str,
+        console_kind: str,
+        environment: str,
+        message: str | None = None,
+    ):
+        self.path = path
+        self.method = method
+        self.console_kind = console_kind
+        self.environment = environment
+        if message is None:
+            message = (
+                f"RBAC RULE MISSING: No rule covers {method} {path} "
+                f"for console={console_kind}, env={environment}. "
+                f"Add rule to design/auth/RBAC_RULES.yaml (PIN-391)"
+            )
+        super().__init__(message)
+
+
+# =============================================================================
 # CONFIGURATION
 # =============================================================================
 
@@ -164,6 +201,8 @@ def resolve_rbac_rule(
     method: str,
     console_kind: str,
     environment: str,
+    *,
+    strict: bool = False,
 ) -> Optional[RBACRule]:
     """
     Find the RBAC rule that matches the given request context.
@@ -173,13 +212,25 @@ def resolve_rbac_rule(
         method: HTTP method (e.g., "GET")
         console_kind: Console type ("customer" or "founder")
         environment: Environment ("preflight" or "production")
+        strict: If True, raise RBACSchemaViolation when no rule matches.
+                If False (default), return None for backward compatibility.
 
     Returns:
-        Matching RBACRule or None if no rule matches.
+        Matching RBACRule or None if no rule matches (and strict=False).
+
+    Raises:
+        RBACSchemaViolation: If strict=True and no rule matches.
 
     Note:
         First matching rule wins. Rules are evaluated in order.
         More specific rules should be defined before general ones.
+
+    Example:
+        # Legacy behavior (returns None)
+        rule = resolve_rbac_rule("/api/v1/foo/", "GET", "customer", "preflight")
+
+        # Strict mode (raises exception if no rule)
+        rule = resolve_rbac_rule("/api/v1/foo/", "GET", "customer", "preflight", strict=True)
     """
     rules = load_rbac_rules()
     method_upper = method.upper()
@@ -202,6 +253,10 @@ def resolve_rbac_rule(
             continue
 
         return rule
+
+    # No rule matched
+    if strict:
+        raise RBACSchemaViolation(path, method, console_kind, environment)
 
     return None
 

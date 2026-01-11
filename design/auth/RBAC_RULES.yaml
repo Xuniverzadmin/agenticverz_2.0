@@ -14,6 +14,23 @@
 #
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# SCHEMA METADATA (MACHINE-READABLE AUTHORITY)
+# -----------------------------------------------------------------------------
+_meta:
+  schema: RBAC_RULES
+  version: "1.0"
+  authority: CANONICAL
+  enforcement: BLOCKING
+  interpretation:
+    - "If a rule is missing, access is DENIED"
+    - "No fallback inference is permitted"
+    - "Temporary rules MUST have expiry"
+    - "Claude MUST read this file before any RBAC change"
+  stop_file: design/auth/RBAC_READ_BEFORE_EDITING.md
+  ci_guard: scripts/ci/check_rbac_alignment.py
+  pin: PIN-391
+
 version: "1.0"
 schema_version: "2026-01-11"
 

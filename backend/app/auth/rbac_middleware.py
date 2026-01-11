@@ -323,15 +323,30 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
     Returns None ONLY for explicitly public paths.
     """
     # =========================================================================
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # LEGACY CODE BLOCK — SCHEDULED FOR DEPRECATION
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    #
+    # STATUS: LEGACY (PIN-391)
+    # AUTHORITY: design/auth/RBAC_RULES.yaml is the SINGLE SOURCE OF TRUTH
+    # MIGRATION: Phase 1 (in progress) → Phase 2 (schema-driven)
+    #
+    # DO NOT MODIFY THIS LIST WITHOUT:
+    # 1. Reading design/auth/RBAC_READ_BEFORE_EDITING.md
+    # 2. Updating RBAC_RULES.yaml FIRST
+    # 3. Running scripts/ci/check_rbac_alignment.py
+    #
+    # FUTURE STATE (Phase 2):
+    #   from app.auth.rbac_rules_loader import get_public_paths
+    #   PUBLIC_PATHS = get_public_paths(environment=CURRENT_ENVIRONMENT)
+    #
+    # =========================================================================
     # PUBLIC PATHS (No RBAC required)
     #
     # ARCHITECTURE NOTE (PIN-391):
     # This list MUST be kept in sync with design/auth/RBAC_RULES.yaml.
     # The canonical source of truth is RBAC_RULES.yaml.
     # This hardcoded list exists for backward compatibility during migration.
-    #
-    # TODO (PIN-391): Replace this list with:
-    #   PUBLIC_PATHS = get_public_paths(environment=CURRENT_ENVIRONMENT)
     #
     # SECURITY INVARIANTS for public paths:
     # - /health: No sensitive data, system status only

@@ -207,6 +207,13 @@ python3 scripts/ci/check_rbac_alignment.py --fix-suggestions
 - [x] Create CI alignment guard
 - [x] Add Claude guardrail to playbook
 
+### Phase 0.5: Hardening (COMPLETE)
+- [x] Add `_meta` header to RBAC_RULES.yaml (machine-readable authority)
+- [x] Add `RBACSchemaViolation` exception with strict mode
+- [x] Create `RBAC_READ_BEFORE_EDITING.md` stop file
+- [x] Add LEGACY warning block to rbac_middleware.py
+- [x] Add `claude_constraints` enforcement to SESSION_PLAYBOOK.yaml
+
 ### Phase 1 (TODO)
 - [ ] Replace hardcoded PUBLIC_PATHS with `get_public_paths()`
 - [ ] Wire resolve_rbac_rule into authorization flow

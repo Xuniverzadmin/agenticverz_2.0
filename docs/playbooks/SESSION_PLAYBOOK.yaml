@@ -6826,6 +6826,60 @@ rbac_guardrail:
 
     Reference: PIN-391, design/auth/RBAC_RULES.yaml
 
+  # ---------------------------------------------------------------------------
+  # Claude Constraints (Machine-Enforced)
+  # ---------------------------------------------------------------------------
+  # These constraints are checked by CI and must be enforced in Claude output.
+  #
+  claude_constraints:
+
+    schema_read_first:
+      enforcement: BLOCKING
+      description: |
+        Before ANY RBAC modification, Claude MUST read:
+        1. design/auth/RBAC_READ_BEFORE_EDITING.md (stop file)
+        2. design/auth/RBAC_RULES.yaml (_meta section)
+
+    stop_file_required:
+      file: design/auth/RBAC_READ_BEFORE_EDITING.md
+      enforcement: BLOCKING
+      description: |
+        This file MUST be read before any RBAC change.
+        Claude must confirm reading it in the response.
+
+    exception_on_missing:
+      module: backend/app/auth/rbac_rules_loader.py
+      class: RBACSchemaViolation
+      enforcement: BLOCKING
+      description: |
+        When strict=True, resolve_rbac_rule raises RBACSchemaViolation
+        for missing rules. Callers MUST NOT catch and ignore.
+
+    ci_guard_required:
+      script: scripts/ci/check_rbac_alignment.py
+      enforcement: BLOCKING
+      on_failure: |
+        RBAC alignment violation detected.
+        Run: python3 scripts/ci/check_rbac_alignment.py --verbose
+
+    legacy_block_warning:
+      file: backend/app/auth/rbac_middleware.py
+      pattern: "LEGACY CODE BLOCK"
+      enforcement: WARNING
+      description: |
+        PUBLIC_PATHS is a legacy list scheduled for deprecation.
+        All modifications must update RBAC_RULES.yaml first.
+
+  # ---------------------------------------------------------------------------
+  # Acknowledgment Template (For Claude Responses)
+  # ---------------------------------------------------------------------------
+  acknowledgment_template: |
+    RBAC GUARDRAIL ACKNOWLEDGMENT
+    - stop_file_read: YES
+    - schema_checked: YES
+    - rule_exists: YES / NO (if NO, proposing new rule)
+    - ci_guard_will_run: YES
+
 # =============================================================================
 # SECTION 27: PRE-COMMIT LOCALITY RULES (PIN-269)
 # =============================================================================
