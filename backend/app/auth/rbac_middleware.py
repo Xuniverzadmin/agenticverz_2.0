@@ -338,6 +338,7 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         "/api/v1/c2/predictions/",  # C2 Prediction Plane (advisory only, no enforcement)
         "/api/v1/activity/",  # SDSR Activity API (PIN-370, preflight validation)
         "/api/v1/policy-proposals/",  # SDSR Policy Proposals API (PIN-373, preflight validation)
+        "/api/v1/incidents/",  # SDSR Incidents API (PIN-370, preflight validation)
         "/docs",
         "/openapi.json",
         "/redoc",
@@ -349,8 +350,7 @@ def get_policy_for_path(path: str, method: str) -> Optional[PolicyObject]:
         # =================================================================
         "/founder/",  # Contract review, evidence review, timeline
         "/platform/",  # Platform health (founder-only)
-        # NOTE: /ops/ and /api/v1/incidents/ are NOT public - they have
-        # RBAC mappings for shadow audit (see OPS ROUTES and INCIDENTS sections)
+        # NOTE: /ops/ is NOT public - it has RBAC mappings for shadow audit
     ]
 
     for public_path in PUBLIC_PATHS:
