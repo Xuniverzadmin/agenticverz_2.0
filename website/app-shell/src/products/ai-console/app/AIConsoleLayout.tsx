@@ -22,6 +22,7 @@ import { HealthIndicator } from '@/components/HealthIndicator';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { healthMonitor } from '@/lib/healthCheck';
 import { useAuthStore } from '@/stores/authStore';
+import { ConsoleIsolationGuard } from '@/routing';
 
 // ============== NAVIGATION STRUCTURE ==============
 // Customer Console v1 Constitution (v1.2.0)
@@ -148,6 +149,7 @@ export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, us
 
   return (
     <ErrorBoundary>
+      <ConsoleIsolationGuard>
       <div className="min-h-screen bg-navy-app text-slate-100 flex">
         {/* ============== SIDEBAR ============== */}
         <aside className="w-64 bg-navy-surface border-r border-navy-border flex flex-col">
@@ -324,6 +326,7 @@ export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, us
           </main>
         </div>
       </div>
+      </ConsoleIsolationGuard>
     </ErrorBoundary>
   );
 }

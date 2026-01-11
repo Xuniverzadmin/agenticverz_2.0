@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-10 (PIN-387 Canonical Projection Design Implementation - Status)
+**Last Updated:** 2026-01-11 (PIN-389 Projection Route Separation and Console Isolation)
 
 ---
 
@@ -383,6 +383,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-384](PIN-384-sdsr-e2e-004-policy-approval-lifecycle-certification.md) | **SDSR-E2E-004 Policy Approval Lifecycle Certification** | SDSR / E2E Testing | **✅ COMPLETE** | 2026-01-10 |
 | [PIN-385](PIN-385-sdsr-ui-pipeline-integration-status.md) | **SDSR UI Pipeline Integration Status** | SDSR / UI Pipeline | **🔄 IN PROGRESS** | 2026-01-10 |
 | [PIN-386](PIN-386-sdsr-aurora-l2-observation-schema-contract.md) | **SDSR → AURORA_L2 Observation Schema Contract** | SDSR / Schema Contract | **🔒 LOCKED** | 2026-01-10 |
+| [PIN-389](PIN-389-projection-route-separation-and-console-isolation.md) | **Projection Route Separation and Console Isolation** | Architecture / Routing | **✅ COMPLETE** | 2026-01-11 |
 
 ---
 
@@ -1152,6 +1153,7 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-11 | **PIN-389 Projection Route Separation and Console Isolation** - Created via memory_trail. |
 | 2026-01-10 | **PIN-387 Canonical Projection Design Implementation** - Updated: Status |
 | 2026-01-10 | **PIN-385 SDSR UI Pipeline Integration Status** - Created. Gap exposure for E2E-001/003/004 → UI mapping. |
 | 2026-01-10 | **PIN-381 SDSR E2E Testing Protocol Implementation** - Updated: Updates |

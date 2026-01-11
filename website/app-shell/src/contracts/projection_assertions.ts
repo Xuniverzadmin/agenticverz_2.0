@@ -70,8 +70,43 @@ export type OrderLevel = (typeof VALID_ORDER_LEVELS)[number];
 // ============================================================================
 
 /**
+ * Assert that a route is a valid relative projection route.
+ * Projection routes MUST be environment-agnostic.
+ *
+ * IMPORTANT:
+ * Projection routes MUST be relative.
+ * Console prefixes (/precus, /cus) are applied at runtime only.
+ * Never validate runtime prefixes in projection assertions.
+ */
+export function assertValidRelativeRoute(
+  route: unknown,
+  context: string
+): asserts route is string {
+  if (typeof route !== 'string') {
+    throw new Error(
+      `PROJECTION_ASSERTION_FAILED: ${context} route must be a string`
+    );
+  }
+
+  if (!route.startsWith('/')) {
+    throw new Error(
+      `PROJECTION_ASSERTION_FAILED: ${context} route must start with '/': "${route}"`
+    );
+  }
+
+  if (route.startsWith('/precus/') || route.startsWith('/cus/')) {
+    throw new Error(
+      `PROJECTION_ASSERTION_FAILED: ${context} route must be relative (no console prefix): "${route}"`
+    );
+  }
+}
+
+/**
  * Assert that a route has a valid console prefix.
  * @throws Error if route doesn't start with valid prefix
+ *
+ * NOTE: Use this for RUNTIME route validation only (after route resolution).
+ * For PROJECTION validation, use assertValidRelativeRoute instead.
  */
 export function assertValidRoutePrefix(route: string): void {
   const hasValidPrefix = VALID_ROUTE_PREFIXES.some((prefix) =>
@@ -177,11 +212,8 @@ export function assertValidPanel(panel: unknown): asserts panel is Panel {
     );
   }
 
-  if (typeof p.route !== 'string') {
-    throw new Error('PROJECTION_ASSERTION_FAILED: Panel route must be a string');
-  }
-
-  assertValidRoutePrefix(p.route as string);
+  // Projection routes must be relative (no /precus or /cus prefix)
+  assertValidRelativeRoute(p.route, `Panel "${p.panel_id}"`);
 
   if (!VALID_RENDER_MODES.includes(p.render_mode as RenderMode)) {
     throw new Error(
@@ -263,11 +295,8 @@ export function assertValidDomain(domain: unknown): asserts domain is Domain {
 
   assertValidDomainName(d.domain);
 
-  if (typeof d.route !== 'string') {
-    throw new Error('PROJECTION_ASSERTION_FAILED: Domain must have route');
-  }
-
-  assertValidRoutePrefix(d.route);
+  // Projection routes must be relative (no /precus or /cus prefix)
+  assertValidRelativeRoute(d.route, `Domain "${d.domain}"`);
 
   if (!Array.isArray(d.panels)) {
     throw new Error('PROJECTION_ASSERTION_FAILED: Domain must have panels array');
@@ -317,7 +346,5 @@ export function validateProjection(projection: unknown): ValidationResult {
 }
 
 // ============================================================================
-// Exports
+// Exports (OrderLevel already exported at definition)
 // ============================================================================
-
-export type { OrderLevel };

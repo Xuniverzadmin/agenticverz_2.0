@@ -63,3 +63,6 @@ export type { DomainKey, SecondaryKey } from './consoleRoots';
 
 // Runtime Assertion (dev/preflight only)
 export { RouteGuardAssertion } from './RouteGuardAssertion';
+
+// Console Isolation Guard (hard enforcement)
+export { ConsoleIsolationGuard } from './ConsoleIsolationGuard';

@@ -38,6 +38,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import { RendererProvider, INSPECTOR_MODE, CUSTOMER_MODE } from '@/contexts/RendererContext';
 import { ProjectProvider } from '@/contexts/ProjectContext';
+import { ConsoleIsolationGuard } from '@/routing';
 
 /**
  * PreCusLayout — Preflight Customer Console Layout
@@ -60,26 +61,28 @@ export function PreCusLayout() {
   const rendererMode = viewMode === 'DEVELOPER' ? INSPECTOR_MODE : CUSTOMER_MODE;
 
   return (
-    <ProjectProvider>
-      <RendererProvider value={rendererMode}>
-        <div className="flex flex-col h-screen bg-gray-900">
-          <Header />
-          <div className="flex flex-1 overflow-hidden">
-            {/* L2.1 Projection Sidebar - always used in PreCusLayout */}
-            <ProjectionSidebar collapsed={sidebarCollapsed} />
-            <main
-              className={cn(
-                'flex-1 overflow-auto p-6 transition-all duration-200',
-                sidebarCollapsed ? 'ml-16' : 'ml-60'
-              )}
-            >
-              <Outlet />
-            </main>
+    <ConsoleIsolationGuard>
+      <ProjectProvider>
+        <RendererProvider value={rendererMode}>
+          <div className="flex flex-col h-screen bg-gray-900">
+            <Header />
+            <div className="flex flex-1 overflow-hidden">
+              {/* L2.1 Projection Sidebar - always used in PreCusLayout */}
+              <ProjectionSidebar collapsed={sidebarCollapsed} />
+              <main
+                className={cn(
+                  'flex-1 overflow-auto p-6 transition-all duration-200',
+                  sidebarCollapsed ? 'ml-16' : 'ml-60'
+                )}
+              >
+                <Outlet />
+              </main>
+            </div>
+            <StatusBar />
           </div>
-          <StatusBar />
-        </div>
-      </RendererProvider>
-    </ProjectProvider>
+        </RendererProvider>
+      </ProjectProvider>
+    </ConsoleIsolationGuard>
   );
 }
 
