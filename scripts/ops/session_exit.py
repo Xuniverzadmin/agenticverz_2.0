@@ -56,7 +56,11 @@ def get_latest_artifact(
     if not artifact_dir.exists():
         return None, None
 
-    artifacts = sorted(artifact_dir.glob(f"{prefix}*.yaml"), reverse=True)
+    artifacts = sorted(
+        artifact_dir.glob(f"{prefix}*.yaml"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     if not artifacts:
         return None, None
 
