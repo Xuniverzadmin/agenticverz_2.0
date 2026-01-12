@@ -369,10 +369,13 @@ def trigger_incident_for_run(
         )
 
     # Trigger incident creation via Incident Engine
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+    if not run.tenant_id:
+        raise HTTPException(status_code=400, detail="Run has no tenant_id. Cannot create incident.")
     engine = get_incident_engine()
     incident_id = engine.create_incident_for_failed_run(
         run_id=run.id,
-        tenant_id=run.tenant_id or "default",
+        tenant_id=run.tenant_id,
         error_code=_extract_error_code(run.error_message),
         error_message=run.error_message,
         agent_id=run.agent_id,

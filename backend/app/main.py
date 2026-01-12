@@ -480,11 +480,17 @@ from .api.founder_explorer import router as explorer_router  # H3 Founder Explor
 from .api.founder_review import router as founder_review_router  # /founder/review/* - Evidence review
 from .api.founder_timeline import router as founder_timeline_router  # Phase 4C-1 Founder Timeline
 
+# PIN-399 Phase-4: Founder onboarding recovery (force-complete)
+from .api.founder_onboarding import router as founder_onboarding_router
+
 # M22.1 UI Console - Dual-console architecture (Customer + Operator)
 from .api.guard import router as guard_router  # Customer Console (/guard/*)
 from .api.guard_logs import router as guard_logs_router  # PIN-281: Customer Logs (/guard/logs/*)
 from .api.guard_policies import router as guard_policies_router  # PIN-281: Customer Policies (/guard/policies/*)
 from .api.health import router as health_router
+
+# PIN-399: SDK handshake and registration endpoints
+from .api.sdk import router as sdk_router
 
 # M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
 from .api.integration import router as integration_router  # M25 Pillar Integration Loop
@@ -509,7 +515,7 @@ from .api.status_history import router as status_history_router
 from .api.traces import router as traces_router
 from .api.v1_killswitch import router as v1_killswitch_router  # Kill switch, incidents, replay
 
-# from .api.tenants import router as tenants_router  # M21 - DISABLED: Premature for beta stage
+from .api.tenants import router as tenants_router  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
 # M22 KillSwitch MVP - OpenAI-compatible proxy with safety controls
 from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacement
 from .api.workers import router as workers_router  # Business Builder Worker v0.2
@@ -533,7 +539,8 @@ app.include_router(agents_router)  # M12 Multi-Agent System
 app.include_router(policy_layer_router, prefix="/api/v1")  # M19 Policy Layer
 app.include_router(embedding_router, prefix="/api/v1")  # PIN-047 Embedding Quota
 app.include_router(workers_router)  # Business Builder Worker v0.2
-# app.include_router(tenants_router)  # M21 - DISABLED: Premature for beta stage
+app.include_router(tenants_router)  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
+app.include_router(sdk_router)  # PIN-399: SDK handshake and registration
 
 # M22 KillSwitch MVP - OpenAI-compatible proxy (THE FRONT DOOR)
 app.include_router(v1_proxy_router)  # /v1/chat/completions, /v1/embeddings, /v1/status
@@ -554,6 +561,7 @@ app.include_router(founder_review_router)  # PIN-333: /founder/review/* - AUTO_E
 app.include_router(
     founder_contract_review_router
 )  # CRM: /founder/contracts/* - Contract approval/rejection (FOPS auth)
+app.include_router(founder_onboarding_router)  # PIN-399 Phase-4: /founder/onboarding/* - Force-complete (FOPS auth)
 app.include_router(customer_visibility_router)  # Phase 4C-2 Customer Visibility (predictability)
 app.include_router(onboarding_router)  # /api/v1/auth/* - M24 Customer Onboarding
 app.include_router(integration_router)  # /integration/* - M25 Pillar Integration Loop
@@ -608,6 +616,18 @@ app.add_middleware(RBACMiddleware)
 # Central authentication entry point - JWT XOR API Key, session revocation
 # Must run BEFORE RBAC so auth context is available
 from .auth.gateway_config import AUTH_GATEWAY_ENABLED, setup_auth_middleware
+
+# Onboarding Gate middleware (PIN-399)
+# Enforces onboarding state requirements per endpoint
+# Must run AFTER Auth (needs tenant_id) but BEFORE RBAC
+from .auth.onboarding_gate import OnboardingGateMiddleware
+
+# Middleware execution order (Starlette runs in reverse of add order):
+# 1. AuthGateway (authenticates, sets auth_context)
+# 2. OnboardingGate (checks tenant.onboarding_state)
+# 3. RBAC (checks permissions - only after COMPLETE state)
+# 4. Tenant (propagates tenant context)
+app.add_middleware(OnboardingGateMiddleware)
 
 if AUTH_GATEWAY_ENABLED:
     setup_auth_middleware(app)
@@ -1033,7 +1053,10 @@ async def post_goal(
         )
 
     # 3. Rate limit check (per tenant, 100 req/min)
-    rate_key = f"tenant:{tenant_id or 'default'}"
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required for rate limiting")
+    rate_key = f"tenant:{tenant_id}"
     if not rate_limiter.allow(rate_key, rate_per_min=100):
         logger.warning("rate_limit_exceeded", extra={"tenant_id": tenant_id, "agent_id": agent_id})
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")

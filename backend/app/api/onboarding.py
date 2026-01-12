@@ -1,759 +1,386 @@
+# Layer: L2 — Product APIs
+# Product: system-wide
+# Temporal:
+#   Trigger: external (HTTP)
+#   Execution: async
+# Role: Onboarding status and progression endpoints
+# Callers: Console UI, SDK clients
+# Allowed Imports: L3, L4, L6
+# Forbidden Imports: L1, L5
+# Reference: PIN-399 (Onboarding State Machine v1)
+
 """
-Customer Onboarding API - M24
+Onboarding Status API
 
-Provides OAuth (Google, Azure) and email-based signup with OTP verification.
+PIN-399: Provides deterministic onboarding status for UI consumption.
 
-Endpoints:
-    POST /api/v1/auth/login/google     - Initiate Google OAuth
-    GET  /api/v1/auth/callback/google  - Google OAuth callback
-    POST /api/v1/auth/login/azure      - Initiate Azure OAuth
-    GET  /api/v1/auth/callback/azure   - Azure OAuth callback
-    POST /api/v1/auth/signup/email     - Email signup (sends OTP)
-    POST /api/v1/auth/verify/email     - Verify email OTP
-    POST /api/v1/auth/refresh          - Refresh session token
-    POST /api/v1/auth/logout           - Logout (invalidate session)
+This API surfaces:
+1. Current onboarding state
+2. Next required action (action_id only - console-agnostic)
+3. Blocked capabilities at current state (not routes)
+
+DESIGN INVARIANTS:
+- State is the sole authority (ONBOARD-001)
+- Instructions are deterministic, not guessed
+- No bypass, retry, or skip options exposed
+- Backend emits capabilities, consoles map to routes (CONSOLE-001)
+- No progress percentages (consoles interpret step_index)
+
+CONSOLE SEPARATION:
+- This API is console-agnostic
+- Each console maps action_id → route locally
+- Each console maps capability → UI affordance locally
 """
 
-import hashlib
 import logging
-import os
-import re
-import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
-import jwt
-from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field, field_validator
-from redis import Redis
-from sqlmodel import Session, select
+from fastapi import APIRouter, HTTPException, Request, status
+from pydantic import BaseModel, Field
 
-from ..auth.oauth_providers import (
-    OAuthError,
-    OAuthUserInfo,
-    get_azure_provider,
-    get_google_provider,
-)
-from ..db import engine
-from ..models.tenant import User
-from ..services.email_verification import (
-    EmailVerificationError,
-    get_email_verification_service,
-)
-
-# Phase 2B: Write services for DB operations
-from ..services.tenant_service import TenantService
-from ..services.user_write_service import UserWriteService
+from ..auth.gateway_middleware import get_auth_context
+from ..auth.onboarding_state import OnboardingState
 
 logger = logging.getLogger("nova.api.onboarding")
 
-router = APIRouter(prefix="/api/v1/auth", tags=["onboarding"])
-
-# Configuration
-# CONSOLE_JWT_SECRET is the ONLY secret for console token issuance
-# No fallbacks - must be explicitly configured
-_console_secret = os.getenv("CONSOLE_JWT_SECRET")
-if not _console_secret:
-    raise RuntimeError("CONSOLE_JWT_SECRET must be set - no fallback allowed")
-CONSOLE_JWT_SECRET = _console_secret
-CONSOLE_JWT_ALGORITHM = "HS256"
-CONSOLE_TOKEN_ISSUER = "agenticverz-console"
-SESSION_TTL_HOURS = int(os.getenv("SESSION_TTL_HOURS", "24"))
-REFRESH_TTL_DAYS = int(os.getenv("REFRESH_TTL_DAYS", "7"))
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://agenticverz.com")
-
-# Dev-only password login (for preflight convenience)
-DEV_LOGIN_PASSWORD = os.getenv("DEV_LOGIN_PASSWORD", "")
-DEV_LOGIN_ENABLED = bool(DEV_LOGIN_PASSWORD)
-
-# Redis for state storage
-_redis: Optional[Redis] = None
+router = APIRouter(prefix="/api/v1/onboarding", tags=["Onboarding"])
 
 
-def get_redis() -> Redis:
-    """Get Redis client singleton."""
-    global _redis
-    if _redis is None:
-        import redis
+# =============================================================================
+# CAPABILITY VOCABULARY (Console-Agnostic)
+# =============================================================================
+# These are product capabilities, not backend routes.
+# Consoles map these to their own UI affordances.
 
-        _redis = redis.from_url(REDIS_URL, decode_responses=True)
-    return _redis
-
-
-def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-# ============== Request/Response Schemas ==============
-
-
-class OAuthLoginRequest(BaseModel):
-    """OAuth login request (optional redirect_url)."""
-
-    redirect_url: Optional[str] = None
+CAPABILITY_API_KEY_MANAGEMENT = "api_key_management"
+CAPABILITY_POLICY_MANAGEMENT = "policy_management"
+CAPABILITY_AGENT_EXECUTION = "agent_execution"
+CAPABILITY_RUN_MANAGEMENT = "run_management"
+CAPABILITY_SDK_CONNECTION = "sdk_connection"
+CAPABILITY_GUARD_ACCESS = "guard_access"
+CAPABILITY_BILLING = "billing"
+CAPABILITY_LIMITS = "limits"
 
 
-class OAuthLoginResponse(BaseModel):
-    """OAuth login response with authorization URL."""
+# =============================================================================
+# ACTION TYPE VOCABULARY (Console-Agnostic)
+# =============================================================================
+# Action types categorize the kind of step, not the specific route.
 
-    authorization_url: str
-    state: str
-
-
-class EmailSignupRequest(BaseModel):
-    """Email signup request."""
-
-    email: str = Field(..., min_length=5, max_length=255)
-    name: Optional[str] = None
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: str) -> str:
-        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        if not re.match(email_regex, v):
-            raise ValueError("Invalid email format")
-        return v.lower().strip()
+ACTION_TYPE_TENANT_BOOTSTRAP = "tenant_bootstrap"
+ACTION_TYPE_CREDENTIAL_SETUP = "credential_setup"
+ACTION_TYPE_INTEGRATION = "integration"
+ACTION_TYPE_FINALIZATION = "finalization"
 
 
-class PasswordLoginRequest(BaseModel):
-    """Password-based login request (for development convenience)."""
+# =============================================================================
+# STATE → ACTION MAPPING (Deterministic, Console-Agnostic)
+# =============================================================================
+# Each state maps to exactly one next action.
+# Backend emits action_id and action_type only.
+# Each console maps action_id → route locally.
 
-    email: str = Field(..., min_length=5, max_length=255)
-    password: str = Field(..., min_length=1)
+STATE_ACTIONS: dict[OnboardingState, dict] = {
+    OnboardingState.CREATED: {
+        "action_id": "enter_console",
+        "action_type": ACTION_TYPE_TENANT_BOOTSTRAP,
+    },
+    OnboardingState.IDENTITY_VERIFIED: {
+        "action_id": "create_api_key",
+        "action_type": ACTION_TYPE_CREDENTIAL_SETUP,
+    },
+    OnboardingState.API_KEY_CREATED: {
+        "action_id": "connect_sdk",
+        "action_type": ACTION_TYPE_INTEGRATION,
+    },
+    OnboardingState.SDK_CONNECTED: {
+        "action_id": "complete_setup",
+        "action_type": ACTION_TYPE_FINALIZATION,
+    },
+    OnboardingState.COMPLETE: {
+        "action_id": None,
+        "action_type": None,
+    },
+}
 
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: str) -> str:
-        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        if not re.match(email_regex, v):
-            raise ValueError("Invalid email format")
-        return v.lower().strip()
+
+# =============================================================================
+# STATE → CAPABILITIES (Console-Agnostic)
+# =============================================================================
+# Which capabilities are allowed/blocked at each state.
+# Consoles map capabilities → UI sections locally.
+
+STATE_ALLOWED_CAPABILITIES: dict[OnboardingState, list[str]] = {
+    OnboardingState.CREATED: [],
+    OnboardingState.IDENTITY_VERIFIED: [
+        CAPABILITY_API_KEY_MANAGEMENT,
+    ],
+    OnboardingState.API_KEY_CREATED: [
+        CAPABILITY_API_KEY_MANAGEMENT,
+        CAPABILITY_SDK_CONNECTION,
+    ],
+    OnboardingState.SDK_CONNECTED: [
+        CAPABILITY_API_KEY_MANAGEMENT,
+        CAPABILITY_SDK_CONNECTION,
+        CAPABILITY_POLICY_MANAGEMENT,
+        CAPABILITY_AGENT_EXECUTION,
+        CAPABILITY_RUN_MANAGEMENT,
+        CAPABILITY_GUARD_ACCESS,
+    ],
+    OnboardingState.COMPLETE: [
+        CAPABILITY_API_KEY_MANAGEMENT,
+        CAPABILITY_SDK_CONNECTION,
+        CAPABILITY_POLICY_MANAGEMENT,
+        CAPABILITY_AGENT_EXECUTION,
+        CAPABILITY_RUN_MANAGEMENT,
+        CAPABILITY_GUARD_ACCESS,
+        CAPABILITY_BILLING,
+        CAPABILITY_LIMITS,
+    ],
+}
+
+STATE_BLOCKED_CAPABILITIES: dict[OnboardingState, list[str]] = {
+    OnboardingState.CREATED: [
+        CAPABILITY_API_KEY_MANAGEMENT,
+        CAPABILITY_POLICY_MANAGEMENT,
+        CAPABILITY_AGENT_EXECUTION,
+        CAPABILITY_RUN_MANAGEMENT,
+        CAPABILITY_SDK_CONNECTION,
+        CAPABILITY_GUARD_ACCESS,
+        CAPABILITY_BILLING,
+        CAPABILITY_LIMITS,
+    ],
+    OnboardingState.IDENTITY_VERIFIED: [
+        CAPABILITY_POLICY_MANAGEMENT,
+        CAPABILITY_AGENT_EXECUTION,
+        CAPABILITY_RUN_MANAGEMENT,
+        CAPABILITY_SDK_CONNECTION,
+        CAPABILITY_GUARD_ACCESS,
+        CAPABILITY_BILLING,
+        CAPABILITY_LIMITS,
+    ],
+    OnboardingState.API_KEY_CREATED: [
+        CAPABILITY_POLICY_MANAGEMENT,
+        CAPABILITY_AGENT_EXECUTION,
+        CAPABILITY_RUN_MANAGEMENT,
+        CAPABILITY_GUARD_ACCESS,
+        CAPABILITY_BILLING,
+        CAPABILITY_LIMITS,
+    ],
+    OnboardingState.SDK_CONNECTED: [
+        CAPABILITY_BILLING,
+        CAPABILITY_LIMITS,
+    ],
+    OnboardingState.COMPLETE: [],
+}
+
+# Total number of onboarding steps (for step_index/total_steps)
+TOTAL_ONBOARDING_STEPS = 5  # CREATED(0) through COMPLETE(4)
 
 
-class EmailSignupResponse(BaseModel):
-    """Email signup response."""
+# =============================================================================
+# REQUEST/RESPONSE SCHEMAS (Console-Agnostic)
+# =============================================================================
 
-    success: bool
+
+class NextAction(BaseModel):
+    """Next required action for onboarding progression (console-agnostic)."""
+
+    action_id: str = Field(..., description="Action identifier (console maps to route)")
+    action_type: str = Field(..., description="Action category (tenant_bootstrap, credential_setup, etc.)")
+
+
+class OnboardingStatusResponse(BaseModel):
+    """Complete onboarding status for a tenant (console-agnostic)."""
+
+    tenant_id: str = Field(..., description="Tenant identifier")
+    current_state: str = Field(..., description="Current onboarding state name")
+    state_value: int = Field(..., description="Numeric state value (0-4)")
+    is_complete: bool = Field(..., description="Whether onboarding is complete")
+    step_index: int = Field(..., description="Current step (0-based index)")
+    total_steps: int = Field(..., description="Total onboarding steps")
+    next_action: Optional[NextAction] = Field(None, description="Next required action")
+    allowed_capabilities: list[str] = Field(
+        default_factory=list, description="Capabilities allowed at current state"
+    )
+    blocked_capabilities: list[str] = Field(
+        default_factory=list, description="Capabilities blocked at current state"
+    )
+    timestamp: str = Field(..., description="Response timestamp")
+
+
+class OnboardingVerifyResponse(BaseModel):
+    """Response for identity verification check."""
+
+    verified: bool
+    tenant_id: str
+    current_state: str
     message: str
-    expires_in: int
 
 
-class EmailVerifyRequest(BaseModel):
-    """Email verification request."""
-
-    email: str = Field(..., min_length=5, max_length=255)
-    otp: str = Field(..., min_length=6, max_length=6)
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: str) -> str:
-        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        if not re.match(email_regex, v):
-            raise ValueError("Invalid email format")
-        return v.lower().strip()
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
 
 
-class AuthResponse(BaseModel):
-    """Authentication response with tokens."""
-
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int
-    user: dict
-
-
-class RefreshRequest(BaseModel):
-    """Token refresh request."""
-
-    refresh_token: str
-
-
-class LogoutRequest(BaseModel):
-    """Logout request."""
-
-    refresh_token: Optional[str] = None
-
-
-# ============== Token Management ==============
-
-
-def create_tokens(user_id: str, tenant_id: Optional[str] = None) -> tuple[str, str]:
-    """Create access and refresh tokens for console authentication."""
-    now = utc_now()
-
-    # Access token - includes iss for issuer-based routing
-    access_payload = {
-        "iss": CONSOLE_TOKEN_ISSUER,
-        "sub": user_id,
-        "tenant_id": tenant_id,
-        "type": "access",
-        "iat": now,
-        "exp": now + timedelta(hours=SESSION_TTL_HOURS),
-    }
-    access_token = jwt.encode(access_payload, CONSOLE_JWT_SECRET, algorithm=CONSOLE_JWT_ALGORITHM)
-
-    # Refresh token - also includes iss
-    refresh_jti = secrets.token_urlsafe(16)
-    refresh_payload = {
-        "iss": CONSOLE_TOKEN_ISSUER,
-        "sub": user_id,
-        "tenant_id": tenant_id,
-        "type": "refresh",
-        "jti": refresh_jti,
-        "iat": now,
-        "exp": now + timedelta(days=REFRESH_TTL_DAYS),
-    }
-    refresh_token = jwt.encode(refresh_payload, CONSOLE_JWT_SECRET, algorithm=CONSOLE_JWT_ALGORITHM)
-
-    # Store refresh token jti in Redis for revocation
-    redis = get_redis()
-    redis.setex(f"refresh_token:{refresh_jti}", REFRESH_TTL_DAYS * 86400, user_id)
-
-    return access_token, refresh_token
-
-
-def verify_token(token: str, token_type: str = "access") -> dict:
-    """Verify and decode a console JWT token."""
-    try:
-        payload = jwt.decode(token, CONSOLE_JWT_SECRET, algorithms=[CONSOLE_JWT_ALGORITHM])
-
-        # Verify issuer
-        if payload.get("iss") != CONSOLE_TOKEN_ISSUER:
-            raise HTTPException(status_code=401, detail="Invalid token issuer")
-
-        if payload.get("type") != token_type:
-            raise HTTPException(status_code=401, detail="Invalid token type")
-
-        # For refresh tokens, verify it hasn't been revoked
-        if token_type == "refresh":
-            jti = payload.get("jti")
-            redis = get_redis()
-            if not redis.exists(f"refresh_token:{jti}"):
-                raise HTTPException(status_code=401, detail="Token has been revoked")
-
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidTokenError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
-
-
-def revoke_refresh_token(token: str):
-    """Revoke a refresh token."""
-    try:
-        payload = jwt.decode(token, CONSOLE_JWT_SECRET, algorithms=[CONSOLE_JWT_ALGORITHM])
-        jti = payload.get("jti")
-        if jti:
-            redis = get_redis()
-            redis.delete(f"refresh_token:{jti}")
-    except jwt.InvalidTokenError:
-        pass  # Token already invalid
-
-
-# ============== User/Tenant Management ==============
-
-
-def get_or_create_user_from_oauth(user_info: OAuthUserInfo) -> tuple[dict, bool]:
-    """Get or create user from OAuth provider info.
-
-    Returns a dict with user data (not the ORM object) to avoid detached session issues.
+@router.get("/status", response_model=OnboardingStatusResponse)
+async def get_onboarding_status(request: Request):
     """
-    with Session(engine) as session:
-        # Try to find existing user by email
-        statement = select(User).where(User.email == user_info.email)
-        result = session.exec(statement).first()
-        # Handle both Row tuple and direct model return (SQLModel version differences)
-        user = result if isinstance(result, User) else (result[0] if result else None)
+    Get current onboarding status for the authenticated tenant.
 
-        # Phase 2B: Use write service for DB operations
-        user_service = UserWriteService(session)
+    Returns console-agnostic data:
+    - Current state and step index
+    - Next required action (action_id only - console maps to route)
+    - Allowed/blocked capabilities (console maps to UI sections)
 
-        is_new = False
-        if not user:
-            # Create new user via write service
-            user = user_service.create_user(
-                email=user_info.email,
-                clerk_user_id=f"{user_info.provider}_{user_info.provider_user_id}",
-                name=user_info.name or user_info.given_name,
-                avatar_url=user_info.picture,
-                status="active",
-            )
-            is_new = True
-
-            logger.info(f"Created new user via OAuth: {user.id[:8]}... ({user_info.provider})")
-        else:
-            # Update last login via write service
-            user = user_service.update_user_login(user)
-
-        # Extract values before session closes to avoid DetachedInstanceError
-        user_data = user_service.user_to_dict(user)
-        return user_data, is_new
-
-
-def get_or_create_user_from_email(email: str, name: Optional[str] = None) -> tuple[dict, bool]:
-    """Get or create user from email verification.
-
-    Returns a dict with user data (not the ORM object) to avoid detached session issues.
+    This endpoint is the single source of truth for onboarding UI.
+    Each console interprets this data according to its own routing.
     """
-    with Session(engine) as session:
-        # Try to find existing user
-        statement = select(User).where(User.email == email)
-        result = session.exec(statement).first()
-        # Handle both Row tuple and direct model return (SQLModel version differences)
-        user = result if isinstance(result, User) else (result[0] if result else None)
-
-        # Phase 2B: Use write service for DB operations
-        user_service = UserWriteService(session)
-
-        is_new = False
-        if not user:
-            # Create new user via write service
-            user = user_service.create_user(
-                email=email,
-                clerk_user_id=f"email_{hashlib.sha256(email.encode()).hexdigest()[:16]}",
-                name=name,
-                status="active",
-            )
-            is_new = True
-
-            logger.info(f"Created new user via email: {user.id[:8]}...")
-        else:
-            # Update last login via write service
-            user = user_service.update_user_login(user)
-
-        # Extract values before session closes to avoid DetachedInstanceError
-        user_data = user_service.user_to_dict(user)
-        return user_data, is_new
-
-
-def create_default_tenant_for_user(user_data: dict) -> dict:
-    """Create a default personal tenant for a new user.
-
-    Args:
-        user_data: Dict with user info (id, email, name)
-
-    Returns:
-        Dict with tenant_id
-    """
-    with Session(engine) as session:
-        user_id = user_data["id"]
-        user_name = user_data.get("name")
-        user_email = user_data.get("email")
-
-        # Phase 2B: Use write services for DB operations
-        tenant_service = TenantService(session)
-
-        # Create personal tenant via service
-        slug = f"personal-{user_id[:8]}"
-        tenant = tenant_service.create_tenant(
-            name=f"{user_name or user_email}'s Workspace",
-            slug=slug,
-            plan="free",
-            status="active",
-        )
-
-        # Create membership (owner) and set as default tenant via service
-        tenant_service.create_membership_with_default(
-            tenant=tenant,
-            user_id=user_id,
-            role="owner",
-            set_as_default=True,
-        )
-
-        logger.info(f"Created default tenant for user: {tenant.id[:8]}...")
-
-        return {"tenant_id": tenant.id}
-
-
-def user_to_dict(user: User) -> dict:
-    """Convert user to dict for response."""
-    return {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "avatar_url": user.avatar_url,
-        "default_tenant_id": user.default_tenant_id,
-        "status": user.status,
-        "created_at": user.created_at.isoformat() if user.created_at else None,
-    }
-
-
-# ============== OAuth Endpoints ==============
-
-
-@router.post("/login/google", response_model=OAuthLoginResponse)
-async def login_google(request: OAuthLoginRequest = None):
-    """
-    Initiate Google OAuth login flow.
-
-    Returns authorization URL to redirect user to.
-    """
-    provider = get_google_provider()
-
-    if not provider.is_configured:
-        raise HTTPException(status_code=503, detail="Google OAuth not configured")
-
-    try:
-        auth_url, state = provider.get_authorization_url()
-
-        # Store state in Redis for verification
-        redis = get_redis()
-        state_data = {
-            "provider": "google",
-            "redirect_url": request.redirect_url if request else None,
-        }
-        redis.setex(f"oauth_state:{state}", 600, str(state_data))  # 10 min TTL
-
-        return OAuthLoginResponse(authorization_url=auth_url, state=state)
-
-    except OAuthError as e:
-        raise HTTPException(status_code=400, detail=e.message)
-
-
-@router.get("/callback/google")
-async def callback_google(
-    code: str = Query(...),
-    state: str = Query(...),
-    error: Optional[str] = Query(None),
-):
-    """
-    Google OAuth callback handler.
-
-    Called by Google after user authorization.
-    """
-    if error:
-        logger.warning(f"Google OAuth error: {error}")
-        return RedirectResponse(f"{FRONTEND_URL}/auth/error?error={error}")
-
-    # Verify state
-    redis = get_redis()
-    stored_state = redis.get(f"oauth_state:{state}")
-    if not stored_state:
-        return RedirectResponse(f"{FRONTEND_URL}/auth/error?error=invalid_state")
-
-    redis.delete(f"oauth_state:{state}")
-
-    provider = get_google_provider()
-
-    try:
-        # Exchange code for tokens
-        tokens = await provider.exchange_code(code)
-        access_token = tokens.get("access_token")
-
-        # Get user info
-        user_info = await provider.get_user_info(access_token)
-
-        if not user_info.email_verified:
-            return RedirectResponse(f"{FRONTEND_URL}/auth/error?error=email_not_verified")
-
-        # Create or get user (returns dict to avoid DetachedInstanceError)
-        user_data, is_new = get_or_create_user_from_oauth(user_info)
-
-        # Create default tenant for new users
-        if is_new:
-            tenant_result = create_default_tenant_for_user(user_data)
-            user_data["default_tenant_id"] = tenant_result["tenant_id"]
-
-        # Create session tokens
-        access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
-
-        # Redirect to frontend with tokens
-        redirect_url = (
-            f"{FRONTEND_URL}/auth/callback?access_token={access_token}&refresh_token={refresh_token}&is_new={is_new}"
-        )
-        return RedirectResponse(redirect_url)
-
-    except OAuthError as e:
-        logger.error(f"Google OAuth error: {e.message}")
-        return RedirectResponse(f"{FRONTEND_URL}/auth/error?error={e.error_code}")
-
-
-@router.post("/login/azure", response_model=OAuthLoginResponse)
-async def login_azure(request: OAuthLoginRequest = None):
-    """
-    Initiate Azure AD OAuth login flow.
-
-    Returns authorization URL to redirect user to.
-    """
-    provider = get_azure_provider()
-
-    if not provider.is_configured:
-        raise HTTPException(status_code=503, detail="Azure OAuth not configured")
-
-    try:
-        auth_url, state = provider.get_authorization_url()
-
-        # Store state in Redis for verification
-        redis = get_redis()
-        state_data = {
-            "provider": "azure",
-            "redirect_url": request.redirect_url if request else None,
-        }
-        redis.setex(f"oauth_state:{state}", 600, str(state_data))  # 10 min TTL
-
-        return OAuthLoginResponse(authorization_url=auth_url, state=state)
-
-    except OAuthError as e:
-        raise HTTPException(status_code=400, detail=e.message)
-
-
-@router.get("/callback/azure")
-async def callback_azure(
-    code: str = Query(...),
-    state: str = Query(...),
-    error: Optional[str] = Query(None),
-    error_description: Optional[str] = Query(None),
-):
-    """
-    Azure AD OAuth callback handler.
-
-    Called by Azure AD after user authorization.
-    """
-    if error:
-        logger.warning(f"Azure OAuth error: {error} - {error_description}")
-        return RedirectResponse(f"{FRONTEND_URL}/auth/error?error={error}")
-
-    # Verify state
-    redis = get_redis()
-    stored_state = redis.get(f"oauth_state:{state}")
-    if not stored_state:
-        return RedirectResponse(f"{FRONTEND_URL}/auth/error?error=invalid_state")
-
-    redis.delete(f"oauth_state:{state}")
-
-    provider = get_azure_provider()
-
-    try:
-        # Exchange code for tokens
-        tokens = await provider.exchange_code(code)
-        access_token = tokens.get("access_token")
-
-        # Get user info
-        user_info = await provider.get_user_info(access_token)
-
-        # Create or get user (returns dict to avoid DetachedInstanceError)
-        user_data, is_new = get_or_create_user_from_oauth(user_info)
-
-        # Create default tenant for new users
-        if is_new:
-            tenant_result = create_default_tenant_for_user(user_data)
-            user_data["default_tenant_id"] = tenant_result["tenant_id"]
-
-        # Create session tokens
-        access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
-
-        # Redirect to frontend with tokens
-        redirect_url = (
-            f"{FRONTEND_URL}/auth/callback?access_token={access_token}&refresh_token={refresh_token}&is_new={is_new}"
-        )
-        return RedirectResponse(redirect_url)
-
-    except OAuthError as e:
-        logger.error(f"Azure OAuth error: {e.message}")
-        return RedirectResponse(f"{FRONTEND_URL}/auth/error?error={e.error_code}")
-
-
-# ============== Email Verification Endpoints ==============
-
-
-@router.post("/signup/email", response_model=EmailSignupResponse)
-async def signup_email(request: EmailSignupRequest):
-    """
-    Initiate email-based signup.
-
-    Sends OTP to provided email address.
-    """
-    service = get_email_verification_service()
-
-    try:
-        result = await service.send_otp(request.email, request.name)
-        return EmailSignupResponse(
-            success=result["success"],
-            message=result["message"],
-            expires_in=result["expires_in"],
-        )
-    except EmailVerificationError as e:
-        raise HTTPException(status_code=400, detail=e.message)
-
-
-@router.post("/verify/email", response_model=AuthResponse)
-async def verify_email(request: EmailVerifyRequest):
-    """
-    Verify email OTP and complete signup.
-
-    Returns access and refresh tokens on success.
-    """
-    service = get_email_verification_service()
-
-    result = service.verify_otp(request.email, request.otp)
-
-    if not result.success:
-        error_detail = {
-            "message": result.message,
-            "attempts_remaining": result.attempts_remaining,
-        }
-        raise HTTPException(status_code=400, detail=error_detail)
-
-    # Create or get user (returns dict to avoid DetachedInstanceError)
-    user_data, is_new = get_or_create_user_from_email(result.email)
-
-    # Create default tenant for new users
-    if is_new:
-        tenant_result = create_default_tenant_for_user(user_data)
-        user_data["default_tenant_id"] = tenant_result["tenant_id"]
-
-    # Create session tokens
-    access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
-
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        expires_in=SESSION_TTL_HOURS * 3600,
-        user=user_data,
-    )
-
-
-# ============== Dev Password Login (Preflight Only) ==============
-
-
-@router.post("/login/password", response_model=AuthResponse)
-async def login_password(request: PasswordLoginRequest):
-    """
-    Password-based login for development convenience.
-
-    This endpoint is ONLY available when DEV_LOGIN_PASSWORD is set.
-    Use for preflight testing to avoid OTP flow on every rebuild.
-
-    The password is verified against the DEV_LOGIN_PASSWORD env variable.
-    Browser can save and autofill credentials.
-    """
-    if not DEV_LOGIN_ENABLED:
+    # Get auth context
+    auth_context = get_auth_context(request)
+    if auth_context is None:
         raise HTTPException(
-            status_code=403, detail="Password login is not enabled. Set DEV_LOGIN_PASSWORD env variable."
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
         )
 
-    # Verify password
-    if request.password != DEV_LOGIN_PASSWORD:
-        logger.warning(f"Failed password login attempt for {request.email}")
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    tenant_id = getattr(auth_context, "tenant_id", None)
+    if not tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant context required",
+        )
 
-    # Create or get user (same as email verification flow)
-    user_data, is_new = get_or_create_user_from_email(request.email)
+    # Get current state from database
+    from ..auth.onboarding_transitions import get_onboarding_service
 
-    # Create default tenant for new users
-    if is_new:
-        tenant_result = create_default_tenant_for_user(user_data)
-        user_data["default_tenant_id"] = tenant_result["tenant_id"]
+    service = get_onboarding_service()
+    current_state = await service.get_current_state(tenant_id)
 
-    # Create session tokens
-    access_token, refresh_token = create_tokens(user_data["id"], user_data["default_tenant_id"])
+    if current_state is None:
+        # Tenant not found - default to CREATED
+        current_state = OnboardingState.CREATED
 
-    logger.info(f"Password login successful for {request.email}")
+    # Get next action (action_id and action_type only)
+    action_data = STATE_ACTIONS.get(current_state, STATE_ACTIONS[OnboardingState.CREATED])
+    next_action = None
+    if action_data["action_id"] is not None:
+        next_action = NextAction(
+            action_id=action_data["action_id"],
+            action_type=action_data["action_type"],
+        )
 
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        expires_in=SESSION_TTL_HOURS * 3600,
-        user=user_data,
+    # Get capabilities (console-agnostic)
+    allowed_capabilities = STATE_ALLOWED_CAPABILITIES.get(current_state, [])
+    blocked_capabilities = STATE_BLOCKED_CAPABILITIES.get(current_state, [])
+
+    return OnboardingStatusResponse(
+        tenant_id=tenant_id,
+        current_state=current_state.name,
+        state_value=current_state.value,
+        is_complete=current_state == OnboardingState.COMPLETE,
+        step_index=current_state.value,
+        total_steps=TOTAL_ONBOARDING_STEPS,
+        next_action=next_action,
+        allowed_capabilities=allowed_capabilities,
+        blocked_capabilities=blocked_capabilities,
+        timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
 
-# ============== Session Management ==============
-
-
-@router.post("/refresh", response_model=AuthResponse)
-async def refresh_token(request: RefreshRequest):
+@router.post("/verify", response_model=OnboardingVerifyResponse)
+async def verify_identity(request: Request):
     """
-    Refresh access token using refresh token.
+    Verify identity and advance to IDENTITY_VERIFIED state.
+
+    Called after successful identity verification (e.g., email confirmation,
+    SSO completion). This is an explicit verification endpoint, not automatic.
+
+    Note: In production, this would be called by the auth callback handler
+    after Clerk confirms identity. For now, it's a manual trigger.
     """
-    # Verify refresh token
-    payload = verify_token(request.refresh_token, token_type="refresh")
+    # Get auth context
+    auth_context = get_auth_context(request)
+    if auth_context is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
 
-    user_id = payload.get("sub")
-    tenant_id = payload.get("tenant_id")
+    tenant_id = getattr(auth_context, "tenant_id", None)
+    if not tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant context required",
+        )
 
-    # Get user and extract data before session closes
-    with Session(engine) as session:
-        user = session.get(User, user_id)
-        if not user or user.status != "active":
-            raise HTTPException(status_code=401, detail="User not found or inactive")
-        # Extract user data before session closes
-        user_data = user_to_dict(user)
-
-    # Revoke old refresh token
-    revoke_refresh_token(request.refresh_token)
-
-    # Create new tokens
-    access_token, new_refresh_token = create_tokens(user_id, tenant_id)
-
-    return AuthResponse(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-        expires_in=SESSION_TTL_HOURS * 3600,
-        user=user_data,
+    # Trigger transition
+    from ..auth.onboarding_transitions import (
+        TransitionTrigger,
+        get_onboarding_service,
     )
 
+    service = get_onboarding_service()
+    result = await service.advance_to_identity_verified(
+        tenant_id=tenant_id,
+        trigger=TransitionTrigger.FIRST_HUMAN_AUTH,
+    )
 
-@router.post("/logout")
-async def logout(request: LogoutRequest = None):
+    if result.success:
+        return OnboardingVerifyResponse(
+            verified=True,
+            tenant_id=tenant_id,
+            current_state=result.to_state.name,
+            message="Identity verified successfully",
+        )
+    else:
+        return OnboardingVerifyResponse(
+            verified=False,
+            tenant_id=tenant_id,
+            current_state=result.from_state.name,
+            message=result.message,
+        )
+
+
+@router.post("/advance/api-key")
+async def advance_api_key_created(request: Request):
     """
-    Logout and invalidate refresh token.
+    Advance to API_KEY_CREATED state.
+
+    Called after first API key is created. This is typically triggered
+    automatically by the API key creation endpoint.
+
+    Returns the new onboarding status.
     """
-    if request and request.refresh_token:
-        revoke_refresh_token(request.refresh_token)
+    auth_context = get_auth_context(request)
+    if auth_context is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
 
-    return {"success": True, "message": "Logged out successfully"}
+    tenant_id = getattr(auth_context, "tenant_id", None)
+    if not tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant context required",
+        )
 
+    from ..auth.onboarding_transitions import (
+        TransitionTrigger,
+        get_onboarding_service,
+    )
 
-@router.get("/me")
-async def get_current_user(request: Request):
-    """
-    Get current authenticated user from Authorization header.
-    """
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing authorization header")
-
-    token = auth_header.replace("Bearer ", "")
-    payload = verify_token(token, token_type="access")
-
-    user_id = payload.get("sub")
-
-    with Session(engine) as session:
-        user = session.get(User, user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        return {"user": user_to_dict(user)}
-
-
-@router.get("/providers")
-async def get_auth_providers():
-    """
-    Get available authentication providers.
-    """
-    google = get_google_provider()
-    azure = get_azure_provider()
+    service = get_onboarding_service()
+    result = await service.advance_to_api_key_created(
+        tenant_id=tenant_id,
+        trigger=TransitionTrigger.FIRST_API_KEY_CREATED,
+    )
 
     return {
-        "providers": [
-            {
-                "id": "google",
-                "name": "Google",
-                "enabled": google.is_configured,
-            },
-            {
-                "id": "azure",
-                "name": "Microsoft",
-                "enabled": azure.is_configured,
-            },
-            {
-                "id": "email",
-                "name": "Email",
-                "enabled": True,  # Always enabled
-            },
-        ]
+        "success": result.success,
+        "from_state": result.from_state.name,
+        "to_state": result.to_state.name,
+        "was_no_op": result.was_no_op,
     }

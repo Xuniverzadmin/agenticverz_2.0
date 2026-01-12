@@ -41,6 +41,7 @@ logger = logging.getLogger("nova.auth.oidc")
 
 # Configuration
 OIDC_ISSUER_URL = os.getenv("OIDC_ISSUER_URL", "")
+OIDC_JWKS_URL = os.getenv("OIDC_JWKS_URL", "")  # Explicit JWKS URL (preferred)
 OIDC_CLIENT_ID = os.getenv("OIDC_CLIENT_ID", "aos-backend")
 OIDC_VERIFY_SSL = os.getenv("OIDC_VERIFY_SSL", "true").lower() == "true"
 OIDC_ENABLED = bool(OIDC_ISSUER_URL)
@@ -83,7 +84,14 @@ def _get_jwks_client() -> PyJWKClient:
 
     now = time.time()
     if _jwks_client is None or (now - _jwks_client_timestamp) > JWKS_CACHE_TTL:
-        jwks_url = f"{OIDC_ISSUER_URL}/protocol/openid-connect/certs"
+        # Use explicit JWKS URL if set (for Clerk, Auth0, etc.)
+        # Otherwise fall back to standard OIDC discovery path
+        if OIDC_JWKS_URL:
+            jwks_url = OIDC_JWKS_URL
+        else:
+            # Standard OIDC: /.well-known/jwks.json (Clerk, Auth0, Okta)
+            # Keycloak uses /protocol/openid-connect/certs - set OIDC_JWKS_URL explicitly for Keycloak
+            jwks_url = f"{OIDC_ISSUER_URL.rstrip('/')}/.well-known/jwks.json"
         logger.info(f"Initializing JWKS client from {jwks_url}")
 
         _jwks_client = PyJWKClient(jwks_url, cache_keys=True, lifespan=JWKS_CACHE_TTL)

@@ -464,6 +464,7 @@ class TestRBACAudit:
 # =============================================================================
 
 
+@requires_auth_backend
 class TestCostSimMemory:
     """Test CostSim memory integration."""
 

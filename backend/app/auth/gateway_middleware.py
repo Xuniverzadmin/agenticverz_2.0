@@ -111,11 +111,21 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
             gateway: AuthGateway instance (uses singleton if not provided)
             public_paths: Paths that don't require authentication
             public_patterns: Regex patterns for public paths
+
+        NOTE: If gateway is None, the singleton is looked up at request time.
+        This allows configure_auth_gateway() to be called after middleware setup.
         """
         super().__init__(app)
-        self._gateway = gateway or get_auth_gateway()
+        # Store explicit gateway, or None to use singleton at request time
+        self._explicit_gateway = gateway
         self._public_paths = set(public_paths or DEFAULT_PUBLIC_PATHS)
         self._public_patterns = [re.compile(p) for p in (public_patterns or [])]
+
+    def _get_gateway(self) -> AuthGateway:
+        """Get the gateway, using singleton if not explicitly provided."""
+        if self._explicit_gateway is not None:
+            return self._explicit_gateway
+        return get_auth_gateway()
 
     async def dispatch(
         self,
@@ -138,8 +148,9 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
         # Log auth attempt at debug level
         logger.debug(f"Auth check: path={path}, has_auth={bool(authorization)}, has_key={bool(api_key)}")
 
-        # Authenticate through gateway
-        result = await self._gateway.authenticate(
+        # Authenticate through gateway (lookup at request time for proper init order)
+        gateway = self._get_gateway()
+        result = await gateway.authenticate(
             authorization_header=authorization,
             api_key_header=api_key,
         )
@@ -151,6 +162,9 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
 
         # Inject context into request state
         request.state.auth_context = result
+
+        # PIN-399: Trigger onboarding state transition on first human auth
+        await self._maybe_advance_onboarding(result)
 
         # Emit audit event
         await self._emit_audit(request, result)
@@ -227,6 +241,53 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
             return request.client.host
 
         return "unknown"
+
+    async def _maybe_advance_onboarding(self, context: GatewayContext) -> None:
+        """
+        PIN-399: Trigger onboarding state transition on first human auth.
+
+        Called after successful authentication to potentially advance
+        a tenant from CREATED to IDENTITY_VERIFIED.
+
+        TRIGGER: First authenticated human request for a tenant.
+
+        This is idempotent - if tenant is already at or past IDENTITY_VERIFIED,
+        this is a no-op.
+        """
+        try:
+            # Only trigger for human auth with tenant context
+            if context.plane != AuthPlane.HUMAN:
+                return
+
+            tenant_id = getattr(context, "tenant_id", None)
+            if not tenant_id:
+                return
+
+            # Import here to avoid circular dependency
+            from .onboarding_transitions import (
+                TransitionTrigger,
+                get_onboarding_service,
+            )
+
+            service = get_onboarding_service()
+            result = await service.advance_to_identity_verified(
+                tenant_id=tenant_id,
+                trigger=TransitionTrigger.FIRST_HUMAN_AUTH,
+            )
+
+            if result.success and not result.was_no_op:
+                logger.info(
+                    "onboarding_advanced_on_first_human_auth",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "from_state": result.from_state.name,
+                        "to_state": result.to_state.name,
+                    },
+                )
+
+        except Exception as e:
+            # Onboarding transition failure should not block request
+            logger.warning(f"Failed to advance onboarding state: {e}")
 
 
 def get_auth_context(request: Request) -> Optional[GatewayContext]:

@@ -76,11 +76,14 @@ def _load_lua_script() -> str:
             _LUA_SCRIPT = _LUA_SCRIPT_PATH.read_text()
         else:
             # Inline fallback
+            # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
+            # Lua script requires tenant_id to be passed in; empty string preserved for backwards compat
+            # but should never be used for production queries.
             _LUA_SCRIPT = """
 local key = KEYS[1]
 local request_hash = ARGV[1]
 local ttl = tonumber(ARGV[2]) or 86400
-local tenant_id = ARGV[3] or "default"
+local tenant_id = ARGV[3] or ""
 local trace_id = ARGV[4] or ""
 
 local existing = redis.call("HGETALL", key)

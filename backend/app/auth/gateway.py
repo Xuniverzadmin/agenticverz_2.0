@@ -16,24 +16,17 @@ Auth Gateway - Central Authentication Entry Point
 This module is the ONLY place where authentication headers are parsed.
 All downstream code consumes contexts, never raw headers.
 
-INVARIANTS:
+INVARIANTS (AUTH_DESIGN.md):
 1. Mutual Exclusivity: JWT XOR API Key (both = HARD FAIL)
-2. Human Flow: JWT → HumanAuthContext (no permissions)
-3. Machine Flow: API Key → MachineCapabilityContext (scopes, no RBAC)
+2. Human Flow: Clerk JWT (RS256) → HumanAuthContext
+3. Machine Flow: API Key → MachineCapabilityContext
 4. Session Revocation: Every human request checks revocation
 5. Headers Stripped: After gateway, auth headers are removed from request
 
-ROUTING (Issuer-Based):
-- Route based on `iss` claim, NEVER on `alg` header
-- `iss: "agenticverz-console"` → ConsoleAuthenticator (HS256)
-- `iss` in CLERK_ISSUERS → ClerkAuthenticator (RS256)
+ROUTING:
+- All human JWTs must be from Clerk (RS256, JWKS-verified)
 - Unknown issuer → REJECT
-
-DESIGN:
-- TokenClassifier parses claims without verification
-- Issuer determines which authenticator to use
-- Each authenticator is a separate trust domain
-- Deprecation controlled by feature flags
+- No fallbacks. No grace periods.
 """
 
 from __future__ import annotations
@@ -48,11 +41,11 @@ from typing import Optional, Set
 from .contexts import (
     AuthPlane,
     AuthSource,
+    FounderAuthContext,
     HumanAuthContext,
     MachineCapabilityContext,
 )
 from .gateway_metrics import (
-    record_console_grace_period,
     record_token_rejected,
     record_token_verified,
 )
@@ -71,12 +64,8 @@ from .gateway_types import (
 logger = logging.getLogger("nova.auth.gateway")
 
 # =============================================================================
-# Configuration (No Fallback Chains)
+# Configuration
 # =============================================================================
-
-# Console JWT secret - single source, no aliasing
-CONSOLE_JWT_SECRET = os.getenv("CONSOLE_JWT_SECRET", "")
-CONSOLE_TOKEN_ISSUER = "agenticverz-console"
 
 # Clerk issuers - explicit list, exact match only
 _clerk_issuers_raw = os.getenv("CLERK_ISSUERS", "")
@@ -84,20 +73,25 @@ CLERK_ISSUERS: Set[str] = set(
     iss.strip() for iss in _clerk_issuers_raw.split(",") if iss.strip()
 )
 
-# Warn if CLERK_ISSUERS is empty (Clerk auth will be effectively disabled)
+# Require Clerk to be configured for human auth
 if not CLERK_ISSUERS:
     logger.warning(
-        "CLERK_ISSUERS is empty - Clerk authentication is disabled. "
+        "CLERK_ISSUERS is empty - human authentication is disabled. "
         "Set CLERK_ISSUERS env var for production."
     )
 
-# Feature flags for deprecation control
-AUTH_CONSOLE_ENABLED = os.getenv("AUTH_CONSOLE_ENABLED", "true").lower() == "true"
-AUTH_CONSOLE_ALLOW_MISSING_ISS = os.getenv("AUTH_CONSOLE_ALLOW_MISSING_ISS", "true").lower() == "true"
-AUTH_STUB_ENABLED = os.getenv("AUTH_STUB_ENABLED", "true").lower() == "true"
-
-# Machine auth
+# Machine auth - legacy env var support (to be migrated to DB-only)
 AOS_API_KEY = os.getenv("AOS_API_KEY", "")
+
+# Founder auth - FOPS tokens (control plane)
+AOS_FOPS_SECRET = os.getenv("AOS_FOPS_SECRET", "")
+FOPS_ISSUER = "agenticverz-fops"
+
+if not AOS_FOPS_SECRET:
+    logger.warning(
+        "AOS_FOPS_SECRET is empty - founder authentication is disabled. "
+        "Set AOS_FOPS_SECRET env var for production."
+    )
 
 
 # =============================================================================
@@ -123,7 +117,7 @@ class TokenClassifier:
         """
         Extract issuer from token without verification.
 
-        Returns TokenInfo with issuer (may be None for legacy tokens).
+        Returns TokenInfo with issuer.
         Does NOT validate the token - just extracts routing information.
         """
         try:
@@ -150,18 +144,10 @@ class AuthGateway:
     All JWT parsing, API key validation, and session checking
     happens here and nowhere else.
 
-    Usage:
-        gateway = AuthGateway()
-        result = await gateway.authenticate(
-            authorization_header=request.headers.get("Authorization"),
-            api_key_header=request.headers.get("X-AOS-Key"),
-        )
-
-        if isinstance(result, GatewayAuthError):
-            return error_response(result)
-
-        # result is now HumanAuthContext or MachineCapabilityContext
-        request.state.auth_context = result
+    DESIGN (AUTH_DESIGN.md):
+    - Humans authenticate via Clerk only
+    - Machines authenticate via API key only
+    - No fallbacks, no grace periods, no alternative paths
     """
 
     def __init__(
@@ -223,17 +209,13 @@ class AuthGateway:
         """
         Human authentication flow (JWT).
 
-        Routes to appropriate authenticator based on token issuer (iss claim).
-        NEVER routes based on algorithm (alg header).
+        All human JWTs must be from Clerk.
+        No other human authentication path exists.
         """
         # Extract token from Bearer header
         token = self._extract_bearer_token(authorization_header)
         if token is None:
             return error_jwt_invalid("Malformed Authorization header")
-
-        # Check for stub token first (development/CI)
-        if AUTH_STUB_ENABLED and token.startswith("stub_"):
-            return self._authenticate_stub(token)
 
         # Classify token by issuer
         try:
@@ -242,127 +224,91 @@ class AuthGateway:
             record_token_rejected("unknown", "malformed")
             return error_jwt_invalid(str(e))
 
-        # Route based on issuer
+        # Route based on issuer - Clerk only
         return await self._route_by_issuer(token_info)
 
     async def _route_by_issuer(self, token_info: TokenInfo) -> GatewayResult:
         """
         Route token to appropriate authenticator based on issuer.
 
-        Routing rules:
-        1. iss == "agenticverz-console" → ConsoleAuthenticator
-        2. iss in CLERK_ISSUERS → ClerkAuthenticator
-        3. iss == None AND grace period → ConsoleAuthenticator (with warning)
-        4. Unknown issuer → REJECT
+        Routes:
+        - FOPS issuer → Founder auth (control plane)
+        - Clerk issuers → Human auth (tenant-scoped)
+        - All others → REJECT
+
+        No fallbacks. No grace periods.
         """
         issuer = token_info.issuer
 
-        # Route 1: Console tokens (explicit issuer)
-        if issuer == CONSOLE_TOKEN_ISSUER:
-            if not AUTH_CONSOLE_ENABLED:
-                record_token_rejected("console", "disabled")
-                return error_jwt_invalid("Console authentication is disabled")
-            return self._authenticate_console(token_info)
+        # Route 1: FOPS tokens (founder/control plane)
+        if issuer == FOPS_ISSUER:
+            return self._authenticate_fops_token(token_info.raw_token)
 
-        # Route 2: Clerk tokens (exact match against configured issuers)
+        # Route 2: Clerk tokens (human/tenant-scoped)
         if issuer and issuer in CLERK_ISSUERS:
             return await self._authenticate_clerk(token_info)
 
-        # Route 3: Grace period for legacy tokens without iss claim
-        if issuer is None and AUTH_CONSOLE_ALLOW_MISSING_ISS and AUTH_CONSOLE_ENABLED:
-            # Try console auth with grace period logging
-            record_console_grace_period()
-            logger.warning(
-                "[DEPRECATED] Token missing iss claim - accepted via grace period. "
-                "This will be rejected after grace period ends."
-            )
-            return self._authenticate_console(token_info)
-
-        # Route 4: Unknown issuer - REJECT
+        # All other issuers are rejected
         record_token_rejected("unknown", "untrusted_issuer")
         logger.warning(f"Untrusted token issuer: {issuer}")
         return error_jwt_invalid(f"Untrusted token issuer: {issuer}")
 
-    def _authenticate_console(self, token_info: TokenInfo) -> GatewayResult:
+    def _authenticate_fops_token(self, token: str) -> GatewayResult:
         """
-        Console Authenticator - HS256 tokens from agenticverz-console issuer.
+        Founder (FOPS) token authentication.
 
-        TRANSITIONAL: This authenticator handles tokens from the custom login system.
-        Will be deprecated when Clerk is fully integrated.
+        FOPS tokens are control-plane only:
+        - No tenant_id
+        - No roles
+        - No scopes
+        - reason is required (audit trail)
 
-        Trust domain: Internal console authentication
+        Trust domain: Internal FOPS infrastructure
         Algorithm: HS256 (symmetric)
-        Secret: CONSOLE_JWT_SECRET
         """
-        try:
-            import jwt
-        except ImportError:
-            logger.error("PyJWT not installed for console token verification")
-            record_token_rejected("console", "library_missing")
-            return error_internal("JWT library not available")
+        import jwt
 
-        if not CONSOLE_JWT_SECRET:
-            logger.error("CONSOLE_JWT_SECRET not configured")
-            record_token_rejected("console", "secret_missing")
-            return error_internal("Console authentication not configured")
+        if not AOS_FOPS_SECRET:
+            record_token_rejected("fops", "not_configured")
+            logger.error("FOPS authentication not configured")
+            return error_provider_unavailable("fops")
 
         try:
-            # Verify and decode the token with HS256
             payload = jwt.decode(
-                token_info.raw_token,
-                CONSOLE_JWT_SECRET,
+                token,
+                AOS_FOPS_SECRET,
                 algorithms=["HS256"],
-                options={
-                    "verify_exp": True,
-                    "verify_aud": False,  # Console tokens don't use audience
-                    "require": ["exp", "sub"],  # Required claims
-                },
+                options={"require": ["exp", "iat", "sub", "iss", "reason"]},
             )
 
-            # Verify issuer if present (grace period allows missing iss)
-            token_issuer = payload.get("iss")
-            if token_issuer and token_issuer != CONSOLE_TOKEN_ISSUER:
-                record_token_rejected("console", "issuer_mismatch")
-                return error_jwt_invalid(f"Invalid issuer: expected {CONSOLE_TOKEN_ISSUER}")
+            if payload.get("iss") != FOPS_ISSUER:
+                record_token_rejected("fops", "invalid_issuer")
+                return error_jwt_invalid("Invalid FOPS issuer")
 
-            # Extract claims
-            user_id = payload.get("sub")
-            if not user_id:
-                record_token_rejected("console", "missing_sub")
-                return error_jwt_invalid("Missing subject claim")
+            # Validate reason is present and non-empty
+            reason = payload.get("reason", "")
+            if not reason or not reason.strip():
+                record_token_rejected("fops", "missing_reason")
+                return error_jwt_invalid("FOPS token missing reason")
 
-            # Generate session ID from token if not present
-            session_id = payload.get("sid", payload.get("jti", ""))
-            if not session_id:
-                session_id = hashlib.sha256(token_info.raw_token.encode()).hexdigest()[:32]
+            record_token_verified("fops")
 
-            # Extract tenant
-            tenant_id = payload.get("org_id") or payload.get("tenant_id") or "default"
-
-            # Record successful verification
-            record_token_verified("console")
-
-            return HumanAuthContext(
-                actor_id=user_id,
-                session_id=session_id,
-                auth_source=AuthSource.CONSOLE,  # Explicit CONSOLE source
-                tenant_id=tenant_id,
-                account_id=payload.get("account_id"),
-                email=payload.get("email"),
-                display_name=payload.get("name"),
-                authenticated_at=datetime.utcnow(),
+            return FounderAuthContext(
+                actor_id=payload["sub"],
+                reason=reason.strip(),
+                issued_at=datetime.utcfromtimestamp(payload["iat"]),
             )
 
         except jwt.ExpiredSignatureError:
-            record_token_rejected("console", "expired")
+            record_token_rejected("fops", "expired")
             return error_jwt_expired()
         except jwt.InvalidTokenError as e:
-            record_token_rejected("console", "invalid_signature")
-            logger.warning(f"Console JWT validation failed: {e}")
+            record_token_rejected("fops", "invalid")
+            logger.warning(f"FOPS token validation failed: {e}")
             return error_jwt_invalid(str(e))
         except Exception as e:
-            record_token_rejected("console", "internal_error")
-            logger.exception(f"Console JWT auth error: {e}")
+            record_token_rejected("fops", "internal_error")
+            logger.exception(f"FOPS auth error: {e}")
             return error_internal(str(e))
 
     def _extract_bearer_token(self, authorization_header: str) -> Optional[str]:
@@ -380,35 +326,11 @@ class AuthGateway:
 
         return token.strip() if token.strip() else None
 
-    def _authenticate_stub(self, token: str) -> GatewayResult:
-        """
-        Authenticate using stub token (development/CI only).
-
-        Stub tokens have format: stub_<role>_<tenant>
-        """
-        from .stub import parse_stub_token
-
-        claims = parse_stub_token(token)
-        if claims is None:
-            return error_jwt_invalid("Invalid stub token format")
-
-        # Generate deterministic session ID from token
-        session_id = hashlib.sha256(token.encode()).hexdigest()[:32]
-
-        return HumanAuthContext(
-            actor_id=claims.sub,
-            session_id=session_id,
-            auth_source=AuthSource.STUB,
-            tenant_id=claims.org_id,
-            account_id=None,
-            email=None,
-            display_name=f"Stub User ({claims.roles[0]})" if claims.roles else "Stub User",
-            authenticated_at=datetime.utcnow(),
-        )
-
     async def _authenticate_clerk(self, token_info: TokenInfo) -> GatewayResult:
         """
         Clerk Authenticator - RS256 tokens from Clerk IdP.
+
+        This is the ONLY human authentication path.
 
         Trust domain: External identity provider (Clerk)
         Algorithm: RS256 (asymmetric)
@@ -423,7 +345,7 @@ class AuthGateway:
 
             # Check if Clerk is configured
             if not self._clerk_provider.is_configured:
-                logger.error("Clerk not configured for production JWT auth")
+                logger.error("Clerk not configured for human authentication")
                 record_token_rejected("clerk", "not_configured")
                 return error_provider_unavailable("clerk")
 
@@ -455,8 +377,13 @@ class AuthGateway:
                     logger.warning(f"Revoked session attempted: {session_id[:8]}...")
                     return error_session_revoked()
 
-            # Extract tenant from org_id or metadata
+            # Extract tenant from org_id - NO FALLBACK
             tenant_id = payload.get("org_id")
+            if not tenant_id:
+                # Tenant resolution from membership lookup will happen downstream
+                # But we don't provide a "default" - that's a governance violation
+                pass
+
             account_id = payload.get("account_id")
 
             # Record successful verification
@@ -492,22 +419,23 @@ class AuthGateway:
 
         api_key = api_key_header.strip()
 
-        # Check against simple environment key (legacy compatibility)
-        if AOS_API_KEY and api_key == AOS_API_KEY:
-            return self._create_legacy_machine_context(api_key)
-
-        # Use API key service if available
+        # Use API key service if available (production path)
         if self._api_key_service:
             return await self._validate_api_key_service(api_key)
 
-        # No API key service and key doesn't match env var
+        # Legacy: Check against environment key
+        if AOS_API_KEY and api_key == AOS_API_KEY:
+            return self._create_legacy_machine_context(api_key)
+
+        # No valid key
         return error_api_key_invalid()
 
     def _create_legacy_machine_context(self, api_key: str) -> MachineCapabilityContext:
         """
         Create machine context for legacy AOS_API_KEY.
 
-        Legacy keys get full access for backward compatibility.
+        This path exists for backward compatibility during migration.
+        Production should use database-validated API keys.
         """
         key_fingerprint = hashlib.sha256(api_key.encode()).hexdigest()[:16]
 
@@ -515,7 +443,7 @@ class AuthGateway:
             key_id=key_fingerprint,
             key_name="legacy_aos_key",
             auth_source=AuthSource.API_KEY,
-            tenant_id="default",  # Legacy keys are not tenant-scoped
+            tenant_id=None,  # Legacy keys require tenant lookup
             scopes=frozenset({"*"}),  # Full access for backward compatibility
             rate_limit=1000,  # Default rate limit
             authenticated_at=datetime.utcnow(),
@@ -560,6 +488,8 @@ class AuthGateway:
             return AuthPlane.HUMAN
         elif isinstance(result, MachineCapabilityContext):
             return AuthPlane.MACHINE
+        elif isinstance(result, FounderAuthContext):
+            return AuthPlane.HUMAN  # Founders are humans, but control-plane
         return None
 
 

@@ -280,6 +280,75 @@ rules:
     description: "Platform endpoints. Auth handled by console boundary."
 
   # ===========================================================================
+  # SDK ENDPOINTS (PIN-399)
+  # ===========================================================================
+
+  - rule_id: SDK_ENDPOINTS
+    path_prefix: /sdk/
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "SDK handshake and registration. Auth handled by API key gateway."
+
+  # ===========================================================================
+  # ONBOARDING ENDPOINTS (PIN-399)
+  # ===========================================================================
+
+  - rule_id: ONBOARDING_STATUS
+    path_prefix: /api/v1/onboarding/
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Onboarding status and progression. Auth handled by gateway."
+
+  # ===========================================================================
+  # LEGACY ROUTES (410 GONE)
+  # PIN-153: Legacy routes must be public so they can return 410 before auth
+  # ===========================================================================
+
+  - rule_id: LEGACY_DASHBOARD
+    path_prefix: /dashboard
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Legacy route - returns 410 Gone."
+
+  - rule_id: LEGACY_OPERATOR
+    path_prefix: /operator
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Legacy route - returns 410 Gone."
+
+  - rule_id: LEGACY_DEMO
+    path_prefix: /demo
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Legacy route - returns 410 Gone."
+
+  - rule_id: LEGACY_SIMULATION
+    path_prefix: /simulation
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Legacy route - returns 410 Gone."
+
+  - rule_id: LEGACY_API_OPERATOR
+    path_prefix: /api/v1/operator
+    methods: [GET, POST]
+    access_tier: PUBLIC
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: "Legacy route - returns 410 Gone."
+
+  # ===========================================================================
   # PRODUCTION AUTHENTICATED ENDPOINTS
   # ===========================================================================
 
@@ -324,6 +393,17 @@ rules:
       max_time_range_days: 7
       aggregation: "NONE"
     description: "Policy Proposals API for production - requires authentication."
+
+  - rule_id: API_KEYS_MANAGE
+    pin: PIN-397
+    path_prefix: /api/v1/api-keys
+    methods: [GET, POST, PUT, DELETE]
+    access_tier: SESSION
+    allow_console: [customer, founder]
+    allow_environment: [preflight, production]
+    description: >
+      API key management endpoints. Tenant from JWT context (AUTH-001).
+      Users can list, create, rotate, and revoke their own API keys.
 
   - rule_id: RUNS_READ
     path_prefix: /api/v1/runs/

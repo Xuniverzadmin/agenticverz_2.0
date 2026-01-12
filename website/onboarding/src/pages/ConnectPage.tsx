@@ -9,7 +9,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 export default function ConnectPage() {
   const navigate = useNavigate();
-  const { token, tenantId, setOnboardingStep } = useAuthStore();
+  const { token, setOnboardingStep } = useAuthStore();
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -23,7 +23,8 @@ export default function ConnectPage() {
   const fetchOrCreateApiKey = async () => {
     try {
       // First try to get existing API key
-      const response = await axios.get(`${API_BASE}/api/v1/tenants/${tenantId}/api-keys`, {
+      // AUTH-001: Tenant resolved from JWT claims, not URL path
+      const response = await axios.get(`${API_BASE}/api/v1/api-keys`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -31,8 +32,9 @@ export default function ConnectPage() {
         setApiKey(response.data.keys[0].key);
       } else {
         // Create a new API key
+        // AUTH-001: Tenant resolved from JWT claims, not URL path
         const createResponse = await axios.post(
-          `${API_BASE}/api/v1/tenants/${tenantId}/api-keys`,
+          `${API_BASE}/api/v1/api-keys`,
           { name: 'Default API Key' },
           { headers: { Authorization: `Bearer ${token}` } }
         );

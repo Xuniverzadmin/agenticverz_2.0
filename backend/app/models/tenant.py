@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, SQLModel
 
 if TYPE_CHECKING:
+    from ..auth.onboarding_state import OnboardingState
     from ..auth.tier_gating import TenantTier
 
 
@@ -79,6 +80,10 @@ class Tenant(SQLModel, table=True):
     # Status
     status: str = Field(default="active", max_length=50)  # active, suspended, churned
     suspended_reason: Optional[str] = None
+
+    # Onboarding State (PIN-399)
+    # 0=CREATED, 1=IDENTITY_VERIFIED, 2=API_KEY_CREATED, 3=SDK_CONNECTED, 4=COMPLETE
+    onboarding_state: int = Field(default=0, description="PIN-399: Onboarding state machine position")
 
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
@@ -151,6 +156,32 @@ class Tenant(SQLModel, table=True):
         from ..auth.tier_gating import get_tier_features
 
         return get_tier_features(self.tier)
+
+    @property
+    def onboarding(self) -> "OnboardingState":
+        """
+        Get the tenant's onboarding state as an enum.
+
+        PIN-399: Onboarding state machine.
+        Returns OnboardingState enum for type-safe comparisons.
+        """
+        from ..auth.onboarding_state import OnboardingState
+
+        return OnboardingState(self.onboarding_state)
+
+    def has_completed_onboarding(self) -> bool:
+        """Check if tenant has completed onboarding."""
+        from ..auth.onboarding_state import OnboardingState
+
+        return self.onboarding_state >= OnboardingState.COMPLETE
+
+    def can_access_endpoint(self, required_state: int) -> bool:
+        """
+        Check if tenant's onboarding state allows access to an endpoint.
+
+        PIN-399: Monotonic comparison - current >= required means allowed.
+        """
+        return self.onboarding_state >= required_state
 
 
 # Plan quotas reference

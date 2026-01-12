@@ -192,7 +192,12 @@ class BudgetEnforcementEngine:
 
                 for row in result:
                     run_id = row[0]
-                    tenant_id = row[1] or "default"
+                    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
+                    # Skip rows without tenant_id (legacy data) rather than using fake tenant.
+                    tenant_id = row[1]
+                    if not tenant_id:
+                        logger.warning("Skipping run without tenant_id", extra={"run_id": run_id})
+                        continue
                     error_message = row[2] or ""
                     plan_json_str = row[3]
                     tool_calls_json_str = row[4]

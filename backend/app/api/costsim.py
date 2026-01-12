@@ -465,7 +465,10 @@ async def simulate_v2(request: SimulateRequest):
 
     # M7: Determine if memory should be injected
     use_memory = request.inject_memory if request.inject_memory is not None else MEMORY_CONTEXT_INJECTION
-    tenant_id = request.tenant_id or "default"
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+    tenant_id = request.tenant_id
 
     # M7: Get memory context if enabled
     memory_context = {}

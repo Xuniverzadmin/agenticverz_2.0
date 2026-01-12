@@ -52,6 +52,48 @@ def get_services(
     }
 
 
+# ============== Onboarding Transition Helpers ==============
+
+
+async def _maybe_advance_to_api_key_created(tenant_id: str) -> None:
+    """
+    PIN-399: Trigger onboarding state transition on first API key creation.
+
+    Called after successful API key creation to potentially advance
+    a tenant from IDENTITY_VERIFIED to API_KEY_CREATED.
+
+    TRIGGER: First successful API key creation.
+
+    This is idempotent - if tenant is already at or past API_KEY_CREATED,
+    this is a no-op.
+    """
+    try:
+        from ..auth.onboarding_transitions import (
+            TransitionTrigger,
+            get_onboarding_service,
+        )
+
+        service = get_onboarding_service()
+        result = await service.advance_to_api_key_created(
+            tenant_id=tenant_id,
+            trigger=TransitionTrigger.FIRST_API_KEY_CREATED,
+        )
+
+        if result.success and not result.was_no_op:
+            logger.info(
+                "onboarding_advanced_on_api_key_creation",
+                extra={
+                    "tenant_id": tenant_id,
+                    "from_state": result.from_state.name,
+                    "to_state": result.to_state.name,
+                },
+            )
+
+    except Exception as e:
+        # Onboarding transition failure should not block API key creation
+        logger.warning(f"Failed to advance onboarding state on API key creation: {e}")
+
+
 # ============== Request/Response Schemas ==============
 
 
@@ -335,6 +377,9 @@ async def create_api_key(
             rate_limit_rpm=request.rate_limit_rpm,
             max_concurrent_runs=request.max_concurrent_runs,
         )
+
+        # PIN-399: Trigger onboarding state transition on first API key creation
+        await _maybe_advance_to_api_key_created(ctx.tenant_id)
 
         return APIKeyCreatedResponse(
             id=api_key.id,

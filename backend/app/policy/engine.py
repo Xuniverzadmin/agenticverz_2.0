@@ -286,15 +286,18 @@ class PolicyEngine:
                 elif max_sev >= 0.3:
                     severity = "warning"
 
-            emit_policy_decision(
-                run_id=None,  # Policy evaluated before run assignment
-                policy_id=f"evaluation:{request.request_id}",
-                evaluated=True,
-                violated=decision == PolicyDecision.BLOCK,
-                severity=severity,
-                reason=decision_reason,
-                tenant_id=request.tenant_id or "default",
-            )
+            # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant for telemetry.
+            # If tenant_id is missing, skip policy decision telemetry rather than using fake tenant.
+            if request.tenant_id:
+                emit_policy_decision(
+                    run_id=None,  # Policy evaluated before run assignment
+                    policy_id=f"evaluation:{request.request_id}",
+                    evaluated=True,
+                    violated=decision == PolicyDecision.BLOCK,
+                    severity=severity,
+                    reason=decision_reason,
+                    tenant_id=request.tenant_id,
+                )
 
         return result
 

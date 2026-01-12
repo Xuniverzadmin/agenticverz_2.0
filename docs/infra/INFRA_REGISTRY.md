@@ -136,14 +136,14 @@ Changing infra state requires:
 **Completed:** 2026-01-01
 
 **Deliverables:**
-- `app/auth/stub.py` — Deterministic role/claim issuer
+- Auth configured via CLERK_SECRET_KEY or DEV_AUTH_ENABLED
 - Contract shape matches Clerk response format
-- No external API keys required
-- Test fixtures in `tests/conftest.py` (stub_admin_headers, etc.)
+- No external API keys required for dev mode
+- Test fixtures in `tests/conftest.py` (test_admin_headers, etc.)
 
 **Success Criteria:** ✅
-- Stub module implemented with StubClaims dataclass
-- Parse/validate stub tokens
+- Dev auth mode implemented
+- DEV_AUTH_ENABLED env var controls dev mode
 - Permission checking helpers
 - CI fixture integration
 

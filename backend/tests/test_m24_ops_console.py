@@ -10,16 +10,15 @@ Tests:
 5. Silent churn detection
 """
 
-import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import text
 
-# Set FOPS test authentication before imports
-os.environ.setdefault("AOS_FOPS_KEY", "test_fops_key_m24_ops_console")
+# PIN-398: FOPS auth configured via conftest.py (AOS_FOPS_SECRET)
 
 from app.services.event_emitter import (
     EntityType,
@@ -150,11 +149,15 @@ class TestEventEmitter:
 
 
 class TestOpsAPIEndpoints:
-    """Test Ops Console API endpoints."""
+    """Test Ops Console API endpoints.
 
-    def test_system_pulse_returns_healthy(self, client, session):
+    PIN-398: Uses real FOPS tokens via founder_headers fixture.
+    Tests go through the gateway with actual JWT verification.
+    """
+
+    def test_system_pulse_returns_healthy(self, client, session, founder_headers):
         """Test system pulse endpoint."""
-        response = client.get("/ops/pulse")
+        response = client.get("/ops/pulse", headers=founder_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -163,17 +166,17 @@ class TestOpsAPIEndpoints:
         assert "system_state" in data
         assert data["system_state"] in ["healthy", "degraded", "critical"]
 
-    def test_customer_segments_empty(self, client, session):
+    def test_customer_segments_empty(self, client, session, founder_headers):
         """Test customer segments with no data."""
-        response = client.get("/ops/customers")
+        response = client.get("/ops/customers", headers=founder_headers)
 
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
 
-    def test_event_stream(self, client, session):
+    def test_event_stream(self, client, session, founder_headers):
         """Test event stream endpoint."""
-        response = client.get("/ops/events?hours=24&limit=10")
+        response = client.get("/ops/events?hours=24&limit=10", headers=founder_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -182,25 +185,25 @@ class TestOpsAPIEndpoints:
         assert "total" in data
         assert "window_hours" in data
 
-    def test_stickiness_by_feature(self, client, session):
+    def test_stickiness_by_feature(self, client, session, founder_headers):
         """Test stickiness by feature endpoint."""
-        response = client.get("/ops/stickiness")
+        response = client.get("/ops/stickiness", headers=founder_headers)
 
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
 
-    def test_incident_patterns(self, client, session):
+    def test_incident_patterns(self, client, session, founder_headers):
         """Test incident patterns endpoint."""
-        response = client.get("/ops/incidents/patterns")
+        response = client.get("/ops/incidents/patterns", headers=founder_headers)
 
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
 
-    def test_revenue_risk(self, client, session):
+    def test_revenue_risk(self, client, session, founder_headers):
         """Test revenue and risk endpoint."""
-        response = client.get("/ops/revenue")
+        response = client.get("/ops/revenue", headers=founder_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -209,9 +212,9 @@ class TestOpsAPIEndpoints:
         assert "at_risk_tenants" in data
         assert "revenue_alerts" in data
 
-    def test_infra_limits(self, client, session):
+    def test_infra_limits(self, client, session, founder_headers):
         """Test infrastructure limits endpoint."""
-        response = client.get("/ops/infra")
+        response = client.get("/ops/infra", headers=founder_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -344,14 +347,16 @@ class TestSilentChurnDetection:
 # Fixtures
 @pytest.fixture
 def client():
-    """Create test client with FOPS authentication."""
+    """Create test client for ops console tests.
+
+    PIN-398: Auth headers are passed per-request via founder_headers fixture.
+    Client itself has no default headers - tests must pass headers explicitly.
+    """
     from fastapi.testclient import TestClient
 
     from app.main import app
 
-    # Use X-API-Key header with FOPS key for authentication
-    fops_key = os.environ.get("AOS_FOPS_KEY", "test_fops_key_m24_ops_console")
-    return TestClient(app, headers={"X-API-Key": fops_key})
+    return TestClient(app)
 
 
 @pytest.fixture

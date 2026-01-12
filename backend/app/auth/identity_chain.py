@@ -47,7 +47,6 @@ from app.auth.identity_adapter import (
     ClerkAdapter,
     DevIdentityAdapter,
     IdentityAdapter,
-    StubIdentityAdapter,
     SystemIdentityAdapter,
 )
 
@@ -63,9 +62,10 @@ class IdentityChain:
 
     Adapter Order (important):
     1. SystemIdentityAdapter - Machine tokens (CI, workers)
-    2. ClerkAdapter - Production user auth
+    2. ClerkAdapter - Production user auth (Clerk RS256 JWKS)
     3. DevIdentityAdapter - Local development
-    4. StubIdentityAdapter - Legacy compatibility (deprecated)
+
+    Reference: AUTH_DESIGN.md (AUTH-HUMAN-001, AUTH-MACHINE-001)
 
     Layer: L6 (Platform Substrate)
     """
@@ -135,7 +135,10 @@ def create_identity_chain() -> IdentityChain:
     - SystemIdentityAdapter: Always active (machine tokens)
     - ClerkAdapter: Active if CLERK_SECRET_KEY is set
     - DevIdentityAdapter: Active if DEV_AUTH_ENABLED=true
-    - StubIdentityAdapter: Active if AUTH_STUB_ENABLED=true (deprecated)
+
+    Reference: AUTH_DESIGN.md
+    - AUTH-HUMAN-001: All human users authenticate via Clerk (RS256 JWKS)
+    - AUTH-MACHINE-001: Machine clients authenticate via API Key
     """
     adapters: List[IdentityAdapter] = []
 
@@ -143,7 +146,7 @@ def create_identity_chain() -> IdentityChain:
     adapters.append(SystemIdentityAdapter())
     logger.debug("Added SystemIdentityAdapter")
 
-    # 2. Clerk in production
+    # 2. Clerk in production (human auth)
     clerk_key = os.getenv("CLERK_SECRET_KEY", "")
     if clerk_key:
         adapters.append(ClerkAdapter())
@@ -155,11 +158,8 @@ def create_identity_chain() -> IdentityChain:
         adapters.append(DevIdentityAdapter())
         logger.debug("Added DevIdentityAdapter (dev mode enabled)")
 
-    # 4. Stub adapter for legacy compatibility (deprecated)
-    stub_enabled = os.getenv("AUTH_STUB_ENABLED", "").lower() == "true"
-    if stub_enabled:
-        adapters.append(StubIdentityAdapter())
-        logger.debug("Added StubIdentityAdapter (legacy, deprecated)")
+    # StubIdentityAdapter DELETED - AUTH_DESIGN.md (AUTH-HUMAN-004)
+    # Stub authentication does not exist.
 
     return IdentityChain(adapters)
 

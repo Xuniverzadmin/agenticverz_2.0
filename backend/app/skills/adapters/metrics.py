@@ -111,9 +111,12 @@ def track_llm_response(
     if metrics is None:
         return
 
-    # Default to "default" tenant/agent if not provided (for backwards compatibility)
-    tenant_id = tenant_id or "default"
-    agent_id = agent_id or "default"
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
+    # Skip metrics for calls without tenant_id rather than using fake tenant.
+    if not tenant_id:
+        return
+    # Default to "unknown" agent if not provided (agent is less critical than tenant)
+    agent_id = agent_id or "unknown"
 
     try:
         # Extract token counts

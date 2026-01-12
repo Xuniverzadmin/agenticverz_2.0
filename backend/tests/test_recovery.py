@@ -24,9 +24,11 @@ from app.services.recovery_matcher import (
     RecoveryMatcher,
 )
 
+
 # =============================================================================
 # Unit Tests - Matcher Service
 # =============================================================================
+# PIN-398: Founder auth via real FOPS tokens (founder_headers fixture from conftest.py)
 
 
 class TestConfidenceScoring:
@@ -171,15 +173,20 @@ def test_client():
 
 
 class TestRecoveryAPI:
-    """Test recovery API endpoints."""
+    """Test recovery API endpoints.
 
-    def test_suggest_endpoint_basic(self, test_client):
+    PIN-398: Uses real FOPS tokens via founder_headers fixture.
+    Tests go through the gateway with actual JWT verification.
+    """
+
+    def test_suggest_endpoint_basic(self, test_client, founder_headers):
         """Test POST /api/v1/recovery/suggest returns valid response."""
         # Create a test failure match first
         failure_match_id = str(uuid4())
 
         response = test_client.post(
             "/api/v1/recovery/suggest",
+            headers=founder_headers,
             json={
                 "failure_match_id": failure_match_id,
                 "failure_payload": {"error_type": "TIMEOUT", "raw": "Connection timed out after 30s"},
@@ -197,9 +204,13 @@ class TestRecoveryAPI:
         assert "explain" in data
         assert 0 <= data["confidence"] <= 1
 
-    def test_candidates_endpoint(self, test_client):
+    def test_candidates_endpoint(self, test_client, founder_headers):
         """Test GET /api/v1/recovery/candidates returns list."""
-        response = test_client.get("/api/v1/recovery/candidates", params={"status": "all", "limit": 10})
+        response = test_client.get(
+            "/api/v1/recovery/candidates",
+            headers=founder_headers,
+            params={"status": "all", "limit": 10},
+        )
 
         if response.status_code == 500:
             pytest.skip("Database not available")
@@ -209,9 +220,9 @@ class TestRecoveryAPI:
         assert "candidates" in data
         assert isinstance(data["candidates"], list)
 
-    def test_stats_endpoint(self, test_client):
+    def test_stats_endpoint(self, test_client, founder_headers):
         """Test GET /api/v1/recovery/stats returns stats."""
-        response = test_client.get("/api/v1/recovery/stats")
+        response = test_client.get("/api/v1/recovery/stats", headers=founder_headers)
 
         if response.status_code == 500:
             pytest.skip("Database not available")
@@ -272,12 +283,16 @@ class TestAcceptanceCriteria:
             },
         ]
 
-    def test_ac1_suggests_for_5_entries(self, test_client, sample_failures):
+    def test_ac1_suggests_for_5_entries(self, test_client, sample_failures, founder_headers):
         """AC1: API suggests corrections for at least 5 catalog entries."""
         successful_suggestions = 0
 
         for failure in sample_failures:
-            response = test_client.post("/api/v1/recovery/suggest", json=failure)
+            response = test_client.post(
+                "/api/v1/recovery/suggest",
+                headers=founder_headers,
+                json=failure,
+            )
 
             if response.status_code == 500:
                 pytest.skip("Database not available")
@@ -315,60 +330,82 @@ class TestAcceptanceCriteria:
 
 
 class TestCLI:
-    """Test CLI commands via mocking."""
+    """Test CLI commands via mocking.
 
-    @patch("cli.aos.api_request")
-    def test_cli_recovery_candidates(self, mock_api):
+    NOTE: These tests clear the cli module cache to avoid conflicts with app.cli.
+    The app/cli.py module can get cached as 'cli' when other tests run first,
+    which causes 'cli.aos' imports to fail. We use context managers for patching
+    instead of decorators to ensure the module cache is cleared first.
+    """
+
+    @staticmethod
+    def _clear_cli_modules():
+        """Clear cli modules from sys.modules to avoid conflicts with app.cli."""
+        import sys
+
+        modules_to_remove = [k for k in list(sys.modules.keys()) if k == "cli" or k.startswith("cli.")]
+        for mod in modules_to_remove:
+            del sys.modules[mod]
+
+    def test_cli_recovery_candidates(self):
         """Test recovery candidates CLI command."""
-        mock_api.return_value = {
-            "candidates": [
-                {
-                    "id": 1,
-                    "confidence": 0.85,
-                    "decision": "pending",
-                    "error_code": "TIMEOUT",
-                    "suggestion": "Implement retry logic",
-                }
-            ],
-            "total": 1,
-        }
+        # Clear module cache BEFORE importing or patching
+        self._clear_cli_modules()
 
-        # Import after patch
-        from cli.aos import cmd_recovery_candidates
+        # Now import the module fresh
+        from cli import aos
 
-        # Create mock args
-        args = Mock()
-        args.status = "pending"
-        args.limit = 50
-        args.offset = 0
-        args.verbose = False
+        with patch.object(aos, "api_request") as mock_api:
+            mock_api.return_value = {
+                "candidates": [
+                    {
+                        "id": 1,
+                        "confidence": 0.85,
+                        "decision": "pending",
+                        "error_code": "TIMEOUT",
+                        "suggestion": "Implement retry logic",
+                    }
+                ],
+                "total": 1,
+            }
 
-        # Should not raise
-        cmd_recovery_candidates(args)
+            # Create mock args
+            args = Mock()
+            args.status = "pending"
+            args.limit = 50
+            args.offset = 0
+            args.verbose = False
 
-        mock_api.assert_called_once()
+            # Should not raise
+            aos.cmd_recovery_candidates(args)
 
-    @patch("cli.aos.api_request")
-    def test_cli_recovery_approve(self, mock_api):
+            mock_api.assert_called_once()
+
+    def test_cli_recovery_approve(self):
         """Test recovery approve CLI command."""
-        mock_api.return_value = {
-            "id": 1,
-            "decision": "approved",
-            "approved_by_human": "test_user",
-            "approved_at": "2025-12-08T12:00:00Z",
-        }
+        # Clear module cache BEFORE importing or patching
+        self._clear_cli_modules()
 
-        from cli.aos import cmd_recovery_approve
+        # Now import the module fresh
+        from cli import aos
 
-        args = Mock()
-        args.id = 1
-        args.by = "test_user"
-        args.note = "looks good"
-        args.reject = False
+        with patch.object(aos, "api_request") as mock_api:
+            mock_api.return_value = {
+                "id": 1,
+                "decision": "approved",
+                "approved_by_human": "test_user",
+                "approved_at": "2025-12-08T12:00:00Z",
+            }
 
-        cmd_recovery_approve(args)
+            args = Mock()
+            args.id = 1
+            args.by = "test_user"
+            args.note = "looks good"
+            args.reject = False
 
-        mock_api.assert_called_once()
+            aos.cmd_recovery_approve(args)
+
+            mock_api.assert_called_once()
 
 
 if __name__ == "__main__":

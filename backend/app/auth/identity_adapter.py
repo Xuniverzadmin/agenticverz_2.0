@@ -382,63 +382,6 @@ class DevIdentityAdapter(IdentityAdapter):
         )
 
 
-class StubIdentityAdapter(IdentityAdapter):
-    """
-    Stub identity adapter for CI testing.
-
-    DEPRECATED: Use SystemIdentityAdapter instead.
-
-    This adapter exists only for migration compatibility.
-    It converts legacy stub tokens to proper system actors.
-
-    Layer: L3 (Boundary Adapter)
-    """
-
-    def __init__(self) -> None:
-        self.enabled = os.getenv("AUTH_STUB_ENABLED", "").lower() == "true"
-
-    def get_source(self) -> IdentitySource:
-        return IdentitySource.SYSTEM
-
-    async def extract_actor(self, request: Request) -> Optional[ActorContext]:
-        """
-        Convert legacy stub tokens to system actors.
-
-        Checks X-Roles header for legacy stub format.
-        """
-        if not self.enabled:
-            return None
-
-        # Check for legacy X-Roles header
-        roles_header = request.headers.get("X-Roles", "")
-        if not roles_header:
-            return None
-
-        # Parse roles
-        roles = [r.strip() for r in roles_header.split(",") if r.strip()]
-        if not roles:
-            return None
-
-        # Map to system actor based on primary role
-        primary_role = roles[0].lower()
-
-        if primary_role in ("founder", "operator", "admin"):
-            return create_operator_actor(
-                actor_id=f"stub:{primary_role}",
-                email="stub@localhost",
-                display_name=f"Stub {primary_role.title()}",
-            )
-
-        # Default to CI actor with specified roles
-        return ActorContext(
-            actor_id=f"stub:{primary_role}",
-            actor_type=ActorType.SYSTEM,
-            source=IdentitySource.SYSTEM,
-            tenant_id=request.headers.get("X-Tenant-ID"),
-            account_id=None,
-            team_id=None,
-            roles=frozenset(roles),
-            permissions=frozenset(),
-            email="stub@localhost",
-            display_name=f"Stub {primary_role.title()}",
-        )
+# StubIdentityAdapter DELETED
+# Reference: AUTH_DESIGN.md (AUTH-HUMAN-004)
+# Stub authentication does not exist. Use SystemIdentityAdapter or DevIdentityAdapter.

@@ -225,11 +225,13 @@ export default function LoginPage() {
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       const detail = error.response?.data?.detail;
-      if (detail === 'Password login is not enabled. Set DEV_LOGIN_PASSWORD env variable.') {
-        toastError('Password login not available. Use OTP instead.');
+      // AUTH_DESIGN.md: Password login removed. All human auth via Clerk.
+      // This handler is legacy - entire page should be replaced with Clerk components.
+      if (detail?.includes('Password login is not enabled')) {
+        toastError('Password login not available. Please use Clerk authentication.');
         setUsePassword(false);
       } else {
-        toastError(detail || 'Invalid email or password');
+        toastError(detail || 'Authentication failed');
       }
     } finally {
       setLoading(false);

@@ -694,7 +694,10 @@ async def _execute_worker_async(run_id: str, request: WorkerRunRequest) -> None:
     Phase F-3: Uses L3 adapter instead of direct L5 worker import.
     F-W-RULE-4: L3 Adapter Is the Only Entry.
     """
-    tenant_id = request.tenant_id or "default"
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+    tenant_id = request.tenant_id
     adapter = _get_workers_adapter()
     try:
         await _store_run(
@@ -875,7 +878,7 @@ async def run_worker(
             request_id=request_id,
             agent_id="business-builder",
             goal=request.task,
-            tenant_id=request.tenant_id or "default",
+            tenant_id=request.tenant_id  # Validated by caller (AUTH_DESIGN.md: AUTH-TENANT-005),
         )
 
         policy_status.passed = pre_check_result["passed"]
@@ -910,7 +913,7 @@ async def run_worker(
         passed=policy_status.passed,
         service_available=policy_status.service_available,
         violations=policy_status.violations,
-        tenant_id=request.tenant_id or "default",
+        tenant_id=request.tenant_id  # Validated by caller (AUTH_DESIGN.md: AUTH-TENANT-005),
     )
 
     # Block run if strict mode and pre-check failed or service unavailable
@@ -937,7 +940,10 @@ async def run_worker(
     # End Phase 5B Pre-Check
     # =========================================================================
 
-    tenant_id = request.tenant_id or "default"
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+    tenant_id = request.tenant_id
 
     if request.async_mode:
         # Queue for background execution
@@ -1437,7 +1443,10 @@ async def _execute_worker_with_events(run_id: str, request: WorkerRunRequest) ->
     F-W-RULE-4: L3 Adapter Is the Only Entry.
     """
     event_bus = get_event_bus()
-    tenant_id = request.tenant_id or "default"
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+    tenant_id = request.tenant_id
     adapter = _get_workers_adapter()
 
     try:
@@ -1536,7 +1545,10 @@ async def run_worker_streaming(
     """
     run_id = str(uuid.uuid4())
 
-    tenant_id = request.tenant_id or "default"
+    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+    tenant_id = request.tenant_id
 
     logger.info(
         "worker_streaming_run_requested",

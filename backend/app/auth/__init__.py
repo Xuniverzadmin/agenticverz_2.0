@@ -1,13 +1,13 @@
 """
 Auth module for AOS.
 
-Provides RBAC integration, Clerk auth (M8+), OIDC/Keycloak (legacy),
-RBAC stub for CI/development, and authentication utilities.
+Provides Clerk-based authentication (the ONLY human auth path) and
+authorization utilities.
 
-Auth Provider Hierarchy (per docs/infra/RBAC_STUB_DESIGN.md):
-1. Production: Clerk (CLERK_ENABLED=true)
-2. Staging: Clerk + stub fallback (CLERK_ENABLED=true, AUTH_STUB_ENABLED=true)
-3. CI/Development: Stub only (CLERK_ENABLED=false, AUTH_STUB_ENABLED=true)
+Reference: AUTH_DESIGN.md
+- AUTH-HUMAN-001: All human users authenticate via Clerk (RS256 JWKS)
+- AUTH-HUMAN-002: No other human authentication mechanism exists
+- AUTH-MACHINE-001: Machine clients authenticate via API Key
 """
 
 import os
@@ -91,19 +91,9 @@ from .shadow_audit import (
     shadow_audit,
 )
 
-# RBAC Stub for CI/Development (PIN-271)
-from .stub import (
-    AUTH_STUB_ENABLED,
-    STUB_ROLES,
-    StubClaims,
-    get_stub_token_for_role,
-    is_stub_token,
-    parse_stub_token,
-    stub_claims_to_dict,
-    stub_has_permission,
-    stub_has_role,
-    validate_stub_or_skip,
-)
+# STUB AUTHENTICATION REMOVED
+# Reference: AUTH_DESIGN.md (AUTH-HUMAN-004)
+# Stub tokens are not valid in any environment.
 
 # M21 Tenant Auth - DISABLED for beta stage
 # from .tenant_auth import (
@@ -148,17 +138,6 @@ __all__ = [
     "get_authz_phase",
     "is_strict_mode",
     "require_permission",
-    # RBAC Stub (CI/Development - PIN-271)
-    "AUTH_STUB_ENABLED",
-    "STUB_ROLES",
-    "StubClaims",
-    "parse_stub_token",
-    "is_stub_token",
-    "get_stub_token_for_role",
-    "stub_claims_to_dict",
-    "stub_has_permission",
-    "stub_has_role",
-    "validate_stub_or_skip",
     # RBAC
     "ApprovalLevel",
     "RBACError",

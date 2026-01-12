@@ -601,9 +601,14 @@ class IncidentEngine:
         # Extract error code from error message
         error_code = self._extract_error_code(error_message)
 
+        # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
+        # Skip incident creation for runs without tenant_id (legacy data).
+        if not tenant_id:
+            logger.warning("Cannot create incident for run without tenant_id", extra={"run_id": run_id})
+            return None
         return self.create_incident_for_failed_run(
             run_id=run_id,
-            tenant_id=tenant_id or "default",
+            tenant_id=tenant_id,
             error_code=error_code,
             error_message=error_message,
             agent_id=agent_id,

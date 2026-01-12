@@ -24,6 +24,8 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from ..auth.gateway_middleware import get_auth_context
+from ..auth.role_guard import require_role
+from ..auth.tenant_roles import TenantRole
 from ..db import get_async_session
 from ..models.policy import PolicyApprovalRequest, PolicyProposal, PolicyVersion
 from ..services.policy_proposal import review_policy_proposal
@@ -344,6 +346,7 @@ async def approve_proposal(
     http_request: Request,
     proposal_id: str,
     request: ApproveRejectRequest,
+    role: TenantRole = Depends(require_role(TenantRole.MEMBER, TenantRole.ADMIN, TenantRole.OWNER)),
 ):
     """
     Approve a policy proposal (PIN-373).
@@ -398,6 +401,7 @@ async def reject_proposal(
     http_request: Request,
     proposal_id: str,
     request: ApproveRejectRequest,
+    role: TenantRole = Depends(require_role(TenantRole.MEMBER, TenantRole.ADMIN, TenantRole.OWNER)),
 ):
     """
     Reject a policy proposal (PIN-373).

@@ -92,24 +92,22 @@ def _check_auth_backend() -> bool:
         return False
 
 
-def _check_stub_auth() -> bool:
-    """Check if RBAC stub is available (always True when module loads).
+def _check_clerk_auth() -> bool:
+    """Check if Clerk auth is configured.
 
-    The stub is a pure Python module with no external dependencies.
-    If this module can be imported, the stub is available.
+    AUTH_DESIGN.md: AUTH-HUMAN-001 - All human users authenticate via Clerk.
+    For tests, we check if CLERK_SECRET_KEY is set or if DEV_AUTH_ENABLED is true.
     """
-    try:
-        from app.auth.stub import AUTH_STUB_ENABLED, parse_stub_token
-
-        # Verify stub is enabled and functional
-        if not AUTH_STUB_ENABLED:
-            return False
-
-        # Verify basic parsing works
-        claims = parse_stub_token("stub_admin_test")
-        return claims is not None
-    except Exception:
-        return False
+    # Production: Clerk key is set
+    if os.environ.get("CLERK_SECRET_KEY"):
+        return True
+    # Development: Dev auth mode enabled
+    if os.environ.get("DEV_AUTH_ENABLED", "").lower() == "true":
+        return True
+    # Tests can proceed if API key is configured
+    if os.environ.get("AOS_API_KEY"):
+        return True
+    return False
 
 
 def _check_prometheus() -> bool:
@@ -149,10 +147,10 @@ INFRA_REGISTRY: dict[str, InfraItem] = {
     "Clerk": InfraItem(
         name="Clerk",
         purpose="RBAC/Auth",
-        state=InfraState.B,  # Promoted A→B via stub (PIN-272)
-        bucket=None,  # No longer in Bucket B1
-        local_strategy="Stub (app/auth/stub.py)",
-        check_fn=_check_stub_auth,  # Use stub check, not backend check
+        state=InfraState.B,  # Configured via env vars
+        bucket=None,
+        local_strategy="DEV_AUTH_ENABLED=true or CLERK_SECRET_KEY",
+        check_fn=_check_clerk_auth,  # Check Clerk or dev auth config
     ),
     "Prometheus": InfraItem(
         name="Prometheus",

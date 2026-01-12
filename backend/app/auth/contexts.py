@@ -36,11 +36,16 @@ from typing import FrozenSet, Optional
 
 
 class AuthSource(str, Enum):
-    """How authentication was established."""
+    """How authentication was established.
 
-    CONSOLE = "console"  # Internal console HS256 JWT (transitional)
-    CLERK = "clerk"  # Production Clerk RS256 JWT
-    STUB = "stub"  # Development stub token
+    Only two valid auth sources exist:
+    - CLERK: Humans authenticate via Clerk RS256 JWT
+    - API_KEY: Machines authenticate via API key
+
+    Reference: AUTH_DESIGN.md (AUTH-HUMAN-001, AUTH-MACHINE-001)
+    """
+
+    CLERK = "clerk"  # Production Clerk RS256 JWT (ONLY human auth)
     API_KEY = "api_key"  # Machine API key
 
 
@@ -168,5 +173,37 @@ class MachineCapabilityContext:
         return f"MachineCapabilityContext(key={self.key_id[:8]}..., tenant={self.tenant_id}, scopes={set(self.scopes)})"
 
 
+@dataclass(frozen=True)
+class FounderAuthContext:
+    """
+    Context for founder (FOPS) authentication flow.
+
+    Created by the gateway when a valid FOPS token is presented.
+    Founders operate at control-plane level, outside tenant context.
+
+    INVARIANTS:
+    - No tenant_id (founders are not tenant-scoped)
+    - No roles (type is authority)
+    - No scopes (not capability-based)
+    - No permissions (not RBAC-controlled)
+    - reason is always required (audit trail)
+
+    Reference: PIN-398 (Founder Auth Architecture)
+    """
+
+    # Identity
+    actor_id: str  # Founder identifier from token sub claim
+    reason: str  # Required reason for FOPS access (audit)
+    issued_at: datetime  # Token issue time
+
+    @property
+    def plane(self) -> AuthPlane:
+        """Return the auth plane for this context."""
+        return AuthPlane.HUMAN  # Founders are humans, but control-plane
+
+    def __repr__(self) -> str:
+        return f"FounderAuthContext(actor={self.actor_id}, reason={self.reason})"
+
+
 # Type alias for gateway result context
-GatewayContext = HumanAuthContext | MachineCapabilityContext
+GatewayContext = HumanAuthContext | MachineCapabilityContext | FounderAuthContext

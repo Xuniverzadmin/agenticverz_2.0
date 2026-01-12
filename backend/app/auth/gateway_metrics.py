@@ -12,12 +12,13 @@
 """
 Auth Gateway Metrics
 
-Provides Prometheus metrics for token verification and deprecation tracking.
+Provides Prometheus metrics for token verification.
 
 Metrics:
     auth_tokens_verified_total: Counter for successful token verifications
     auth_tokens_rejected_total: Counter for rejected tokens
-    auth_console_missing_iss_total: Counter for grace-period tokens (missing iss)
+
+Reference: AUTH_DESIGN.md
 """
 
 from __future__ import annotations
@@ -45,20 +46,14 @@ if PROMETHEUS_AVAILABLE:
     AUTH_TOKENS_VERIFIED = Counter(
         "auth_tokens_verified_total",
         "Count of successfully verified auth tokens",
-        ["source"],  # console, clerk, stub
+        ["source"],  # clerk only (for humans)
     )
 
     # Counter: Track rejected tokens by source and reason
     AUTH_TOKENS_REJECTED = Counter(
         "auth_tokens_rejected_total",
         "Count of rejected auth tokens",
-        ["source", "reason"],  # source: console, clerk, unknown; reason: expired, invalid_signature, etc.
-    )
-
-    # Counter: Track console tokens using grace period (missing iss)
-    AUTH_CONSOLE_GRACE_PERIOD = Counter(
-        "auth_console_missing_iss_total",
-        "Count of console tokens accepted via grace period (missing iss claim)",
+        ["source", "reason"],  # source: clerk, unknown; reason: expired, invalid_signature, etc.
     )
 
 
@@ -79,10 +74,3 @@ def record_token_rejected(source: str, reason: str) -> None:
     if PROMETHEUS_AVAILABLE:
         AUTH_TOKENS_REJECTED.labels(source=source, reason=reason).inc()
     logger.debug(f"Token rejected: source={source}, reason={reason}")
-
-
-def record_console_grace_period() -> None:
-    """Record a console token accepted via grace period (missing iss)."""
-    if PROMETHEUS_AVAILABLE:
-        AUTH_CONSOLE_GRACE_PERIOD.inc()
-    logger.warning("[DEPRECATED] Console token accepted via grace period (missing iss claim)")

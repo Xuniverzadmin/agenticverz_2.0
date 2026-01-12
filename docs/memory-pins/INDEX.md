@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-11 (PIN-395 SDSR Scenario Taxonomy and Capability Court of Law)
+**Last Updated:** 2026-01-12 (PIN-402 Scenario Test Infrastructure - Pre-Scenario Readiness)
 
 ---
 
@@ -390,6 +390,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-393](PIN-393-sdsr-observation-class-mechanical-discriminator.md) | **SDSR Observation Class Mechanical Discriminator** | SDSR / Architecture | **✅ COMPLETE** | 2026-01-11 |
 | [PIN-394](PIN-394-sdsr-aurora-one-way-causality-pipeline.md) | **SDSR-Aurora One-Way Causality Pipeline** | SDSR / Pipeline Architecture | **✅ COMPLETE** | 2026-01-11 |
 | [PIN-395](PIN-395-sdsr-scenario-taxonomy-and-capability-court-of-law.md) | **SDSR Scenario Taxonomy and Capability Court of Law** | SDSR / System Design | **✅ COMPLETE** | 2026-01-11 |
+| [PIN-396](PIN-396-sdsr-scenario-coverage-matrix-locked.md) | **SDSR Scenario Coverage Matrix — LOCKED** | SDSR / Governance | **🔒 LOCKED** | 2026-01-11 |
+| [PIN-397](PIN-397-auth-invariants-locked.md) | **Authentication Invariants — LOCKED** | Auth / Governance | **🔒 LOCKED** | 2026-01-11 |
+| [PIN-398](PIN-398-auth-design-sanitization---authdesignmd-enforcement.md) | **Auth Design Sanitization - AUTH_DESIGN.md Enforcement** | Architecture / Auth | **✅ COMPLETE** | 2026-01-12 |
+| [PIN-399](PIN-399-onboarding-state-machine-v1---linear-production-grade-design.md) | **Onboarding State Machine v1 - Linear Production-Grade Design** | Architecture / Onboarding | **🏗️ APPROVED** | 2026-01-12 |
+| [PIN-402](PIN-402-scenario-test-infrastructure---pre-scenario-readiness.md) | **Scenario Test Infrastructure - Pre-Scenario Readiness** | Testing / Scenarios | **🏗️ PLANNED** | 2026-01-12 |
 
 ---
 
@@ -1159,6 +1164,12 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-12 | **PIN-402 Scenario Test Infrastructure - Pre-Scenario Readiness** - Created via memory_trail. |
+| 2026-01-12 | **PIN-336 Auth Gateway Founder Routes Fix** - Updated: Updates |
+| 2026-01-12 | **PIN-399 Onboarding State Machine v1 - Linear Production-Grade Design** - Created via memory_trail. |
+| 2026-01-12 | **PIN-398 Auth Design Sanitization - AUTH_DESIGN.md Enforcement** - Created via memory_trail. |
+| 2026-01-11 | **PIN-397 Authentication Invariants — LOCKED** - 4 auth invariants locked (AUTH-001 to AUTH-004). Frontend guardrail added. |
+| 2026-01-11 | **PIN-396 SDSR Scenario Coverage Matrix — LOCKED** - System contract locked. 12 scenario classes, yield matrix, execution order. |
 | 2026-01-11 | **PIN-395 SDSR Scenario Taxonomy and Capability Court of Law** - Created via memory_trail. |
 | 2026-01-11 | **PIN-394 SDSR-Aurora One-Way Causality Pipeline** - Created via memory_trail. |
 | 2026-01-11 | **PIN-393 SDSR Observation Class Mechanical Discriminator** - Created via memory_trail. |

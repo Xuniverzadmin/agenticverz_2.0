@@ -36,6 +36,10 @@ os.environ.setdefault("AOS_API_KEY", "test-key-for-testing")
 os.environ.setdefault("ENFORCE_TENANCY", "false")
 os.environ.setdefault("MACHINE_SECRET_TOKEN", "46bff817a6bb074b4322db92d5652905816597d741eea5b787ef990c1674c9ff")
 
+# PIN-398: FOPS authentication for founder-only tests
+# This secret must match what the gateway expects for FOPS token verification
+os.environ.setdefault("AOS_FOPS_SECRET", "test-fops-secret-for-testing-only")
+
 # PIN-276: Reduce connection pool sizes for testing to prevent exhaustion
 # These are set before any database imports to ensure they take effect
 os.environ.setdefault("DB_POOL_SIZE", "5")
@@ -325,31 +329,60 @@ def isolated_async_session():
 # RBAC STUB FIXTURES (PIN-271 / Phase C prep)
 # =============================================================================
 # These fixtures provide deterministic auth headers for tests without
-# requiring external auth infrastructure (Clerk). See docs/infra/RBAC_STUB_DESIGN.md
+# requiring external auth infrastructure (Clerk).
+# Reference: AUTH_DESIGN.md - Tests use API keys (machine auth) or dev mode.
 
 
 @pytest.fixture
-def stub_admin_headers():
+def test_admin_headers():
     """Headers for admin access in tests."""
-    return {"X-AOS-Key": "stub_admin_test_tenant"}
+    return {"X-AOS-Key": "test_admin_test_tenant"}
 
 
 @pytest.fixture
-def stub_developer_headers():
+def test_developer_headers():
     """Headers for developer access in tests."""
-    return {"X-AOS-Key": "stub_developer_test_tenant"}
+    return {"X-AOS-Key": "test_developer_test_tenant"}
 
 
 @pytest.fixture
-def stub_viewer_headers():
+def test_viewer_headers():
     """Headers for read-only access in tests."""
-    return {"X-AOS-Key": "stub_viewer_test_tenant"}
+    return {"X-AOS-Key": "test_viewer_test_tenant"}
 
 
 @pytest.fixture
-def stub_machine_headers():
+def test_machine_headers():
     """Headers for machine/API access in tests."""
-    return {"X-AOS-Key": "stub_machine_test_tenant"}
+    return {"X-AOS-Key": "test_machine_test_tenant"}
+
+
+# =============================================================================
+# FOUNDER (FOPS) AUTH FIXTURES (PIN-398)
+# =============================================================================
+# Real FOPS tokens for founder-only routes. NO MOCKING.
+# These tokens go through the gateway and are verified by HS256.
+
+
+@pytest.fixture
+def founder_headers():
+    """
+    Authorization headers with a valid FOPS token for founder-only tests.
+
+    PIN-398: Tests MUST use real FOPS tokens, not mocked auth contexts.
+    The token is verified by the gateway using AOS_FOPS_SECRET.
+
+    Usage:
+        def test_founder_endpoint(client, founder_headers):
+            response = client.get("/ops/pulse", headers=founder_headers)
+            assert response.status_code == 200
+    """
+    from tests.fixtures.fops_tokens import get_founder_headers
+
+    return get_founder_headers(
+        sub="founder-test",
+        reason="test-suite",
+    )
 
 
 # =============================================================================

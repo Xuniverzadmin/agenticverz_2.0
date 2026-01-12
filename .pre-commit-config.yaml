@@ -176,3 +176,19 @@ repos:
             docs/capabilities/l21_bounded/.*|
             scripts/ci/surface_slot_coverage_guard\.py
           )$
+
+      # Auth Invariant Scanner
+      # AUTH_DESIGN.md enforcement — Blocks commits with forbidden auth patterns
+      # Reference: docs/AUTH_DESIGN.md
+      - id: auth-invariant-scanner
+        name: Auth Invariant Scanner
+        entry: python scripts/ops/auth_invariant_scanner.py --files
+        language: python
+        pass_filenames: true
+        stages: [pre-commit]
+        files: |
+          (?x)^(
+            backend/app/auth/.*|
+            backend/app/api/.*|
+            backend/app/services/.*
+          )$

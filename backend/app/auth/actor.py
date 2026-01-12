@@ -62,11 +62,14 @@ class IdentitySource(str, Enum):
 
     This is metadata for audit/debugging - it does NOT
     affect authorization decisions.
+
+    Reference: AUTH_DESIGN.md
+    - AUTH-HUMAN-001: All human users authenticate via Clerk (RS256 JWKS)
+    - AUTH-MACHINE-001: Machine clients authenticate via API Key
     """
 
-    CONSOLE = "console"  # Internal console HS256 JWT (transitional)
-    CLERK = "clerk"  # Production Clerk RS256 JWT
-    OIDC = "oidc"  # Keycloak/generic OIDC
+    CLERK = "clerk"  # Production Clerk RS256 JWT (ONLY human auth)
+    OIDC = "oidc"  # Keycloak/generic OIDC (legacy)
     INTERNAL = "internal"  # Internal service-to-service
     SYSTEM = "system"  # CI, workers, automation
     DEV = "dev"  # Local development

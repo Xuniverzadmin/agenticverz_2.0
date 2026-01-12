@@ -257,15 +257,18 @@ class RecoveryEvaluationEngine:
 
         Reference: DECISION_RECORD_CONTRACT v0.2
         """
-        emit_recovery_decision(
-            run_id=decision.run_id,
-            evaluated=evaluated,
-            triggered=triggered,
-            action=decision.suggested_action,
-            candidates_count=1 if decision.candidate_id else 0,
-            reason=f"Confidence: {decision.combined_confidence:.2f}, action: {decision.suggested_action or 'none'}",
-            tenant_id=decision.tenant_id or "default",
-        )
+        # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant for telemetry.
+        # Skip telemetry for decisions without tenant_id rather than using fake tenant.
+        if decision.tenant_id:
+            emit_recovery_decision(
+                run_id=decision.run_id,
+                evaluated=evaluated,
+                triggered=triggered,
+                action=decision.suggested_action,
+                candidates_count=1 if decision.candidate_id else 0,
+                reason=f"Confidence: {decision.combined_confidence:.2f}, action: {decision.suggested_action or 'none'}",
+                tenant_id=decision.tenant_id,
+            )
 
 
 # =============================================================================

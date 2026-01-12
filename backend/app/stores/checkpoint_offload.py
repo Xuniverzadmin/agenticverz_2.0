@@ -257,7 +257,12 @@ async def offload_old_checkpoints(
 
                     # Build R2 key with date partitioning
                     created_at = row["created_at"]
-                    tenant_id = row["tenant_id"] or "default"
+                    # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
+                    # Skip checkpoints without tenant_id (legacy data) rather than using fake tenant.
+                    tenant_id = row["tenant_id"]
+                    if not tenant_id:
+                        logger.warning("Skipping checkpoint without tenant_id", extra={"run_id": run_id})
+                        continue
                     key = f"checkpoints/{tenant_id}/{created_at.strftime('%Y/%m/%d')}/{run_id}.json.gz"
 
                     if not dry_run:

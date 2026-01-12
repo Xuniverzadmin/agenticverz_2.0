@@ -285,15 +285,25 @@ async def get_tenant_context(
         if isinstance(gateway_ctx, HumanAuthContext):
             # Create TenantContext from Clerk JWT claims
             # The gateway already validated the JWT and extracted tenant_id
+
+            # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant. Missing tenant is hard failure.
+            if not gateway_ctx.tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Tenant not resolved. User must belong to an organization.",
+                )
+
+            # AUTH_DESIGN.md: AUTH-PERM-001 - Permissions are not assigned during authentication.
+            # Permissions derive from roles via RBAC layer downstream.
             context = TenantContext(
-                tenant_id=gateway_ctx.tenant_id or "default",
-                tenant_slug=gateway_ctx.tenant_id or "default",
+                tenant_id=gateway_ctx.tenant_id,
+                tenant_slug=gateway_ctx.tenant_id,
                 tenant_name=f"Clerk User: {gateway_ctx.display_name or gateway_ctx.actor_id}",
                 plan="pro",  # Default plan for Clerk users - should be looked up from DB
                 api_key_id=f"clerk:{gateway_ctx.session_id}",
                 api_key_name="Clerk Session",
                 user_id=gateway_ctx.actor_id,
-                permissions=["*"],  # Full access for authenticated Clerk users
+                permissions=[],  # No permissions assigned here - RBAC derives from roles
             )
             request.state.tenant_context = context
             logger.debug(f"Created TenantContext from Clerk JWT: tenant={context.tenant_id}, user={context.user_id}")
@@ -352,20 +362,9 @@ async def get_tenant_context(
     finally:
         session.close()
 
-    # If DB validation fails, try legacy fallback
-    if error and _USE_LEGACY_AUTH and _LEGACY_API_KEY and api_key == _LEGACY_API_KEY:
-        # Create a synthetic context for legacy key
-        context = TenantContext(
-            tenant_id="legacy",
-            tenant_slug="legacy",
-            tenant_name="Legacy API Key",
-            plan="enterprise",  # Legacy keys get full access
-            api_key_id="legacy",
-            api_key_name="Environment API Key",
-            permissions=["*"],  # Full access
-        )
-        request.state.tenant_context = context
-        return context
+    # Legacy fallback REMOVED per AUTH_DESIGN.md
+    # AUTH-MACHINE-002: API keys are database-validated, not environment-variable matched.
+    # All API keys must be in the database with proper tenant and scope assignment.
 
     if error:
         raise HTTPException(
@@ -471,20 +470,9 @@ async def verify_api_key_with_fallback(
     except Exception:
         pass  # Fall through to legacy
 
-    # Legacy fallback
-    if _USE_LEGACY_AUTH and _LEGACY_API_KEY and api_key == _LEGACY_API_KEY:
-        # Create a synthetic context for legacy key
-        context = TenantContext(
-            tenant_id="legacy",
-            tenant_slug="legacy",
-            tenant_name="Legacy API Key",
-            plan="enterprise",  # Legacy keys get full access
-            api_key_id="legacy",
-            api_key_name="Environment API Key",
-            permissions=["*"],  # Full access
-        )
-        request.state.tenant_context = context
-        return context
+    # Legacy fallback REMOVED per AUTH_DESIGN.md
+    # AUTH-MACHINE-002: API keys are database-validated, not environment-variable matched.
+    # All API keys must be in the database with proper tenant and scope assignment.
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

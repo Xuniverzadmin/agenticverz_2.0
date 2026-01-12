@@ -102,6 +102,12 @@ def get_gateway_middleware_config() -> dict:
     Get configuration for AuthGatewayMiddleware.
 
     Returns kwargs for middleware initialization.
+
+    NOTE (PIN-391): Public paths should ultimately come from RBAC_RULES.yaml
+    via get_public_paths(). This hardcoded list exists for backward compatibility.
+
+    NOTE: Legacy/deprecated routes (410 handlers) are NOT listed here.
+    Those belong in app/api/legacy_routes.py per layer separation rules.
     """
     return {
         "public_paths": [
@@ -126,13 +132,47 @@ def get_gateway_middleware_config() -> dict:
             "/api/v1/incidents",
             "/api/v1/incidents/",
             # =================================================================
-            # FOUNDER ROUTES (PIN-336)
-            # These routes use dedicated FOPS auth via verify_fops_token.
-            # Gateway is bypassed; route handlers enforce FOPS token/key auth.
+            # SDSR Policy Proposals API (PIN-373)
+            # Used for preflight SDSR validation.
             # =================================================================
-            "/founder/",  # Contract review, evidence review
-            "/ops/",  # Ops console actions (freeze, throttle, override)
+            "/api/v1/policy-proposals/",
+            # =================================================================
+            # FOUNDER ROUTES (PIN-336, PIN-398)
+            # PIN-398: Founder routes now go through the gateway for FOPS auth.
+            # Gateway routes FOPS tokens (iss=agenticverz-fops) to FounderAuthContext.
+            # Route handlers use verify_fops_token which checks isinstance().
+            # =================================================================
+            "/founder/",  # Contract review, evidence review (FOPS auth via gateway)
+            # "/ops/",  # PIN-398: REMOVED - now goes through gateway for FOPS auth
             "/platform/",  # Platform health (founder-only)
+            # =================================================================
+            # SDK ENDPOINTS (PIN-399)
+            # Auth handled by API key gateway at route level.
+            # =================================================================
+            "/sdk/",
+            # =================================================================
+            # ONBOARDING ENDPOINTS (PIN-399)
+            # Auth handled by gateway at route level.
+            # =================================================================
+            "/api/v1/onboarding/",
+            # =================================================================
+            # HEALTHZ ENDPOINT (Kubernetes liveness probe)
+            # =================================================================
+            "/healthz",
+            # =================================================================
+            # LEGACY ROUTES (PIN-153)
+            # These routes return 410 Gone - must be public to return 410
+            # without auth. Route handlers return intentional 410 responses.
+            # =================================================================
+            "/dashboard",
+            "/operator",
+            "/operator/",
+            "/demo",
+            "/demo/",
+            "/simulation",
+            "/simulation/",
+            "/api/v1/operator",
+            "/api/v1/operator/",
         ],
         "public_patterns": [
             # Static assets
@@ -149,6 +189,10 @@ def setup_auth_middleware(app: "FastAPI") -> None:
 
     Call this during app setup, BEFORE RBAC middleware.
 
+    NOTE: Gateway is NOT passed explicitly here. The middleware will
+    look up the singleton at request time, allowing configure_auth_gateway()
+    to be called in lifespan after middleware setup.
+
     Usage:
         from app.auth.gateway_config import setup_auth_middleware
 
@@ -159,15 +203,14 @@ def setup_auth_middleware(app: "FastAPI") -> None:
         logger.info("auth_gateway_disabled", extra={"reason": "AUTH_GATEWAY_ENABLED=false"})
         return
 
-    from .gateway import get_auth_gateway
     from .gateway_middleware import AuthGatewayMiddleware
 
     config = get_gateway_middleware_config()
-    gateway = get_auth_gateway()
 
+    # Don't pass gateway - middleware will use singleton at request time
+    # This allows configure_auth_gateway() in lifespan to properly inject api_key_service
     app.add_middleware(
         AuthGatewayMiddleware,
-        gateway=gateway,
         **config,
     )
 
