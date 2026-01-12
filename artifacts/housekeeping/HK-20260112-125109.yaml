@@ -1,0 +1,26 @@
+id: HK-20260112-125109
+protocol: HK-01
+result:
+  no_active_work_disrupted: true
+  notes: Services became unhealthy after cleanup
+  services_protected: false
+  success: false
+scans:
+  disk:
+    usage_percent: 65
+  memory:
+    available_gb: 8
+schema_version: '1.0'
+services_post_check:
+  nova_agent_manager: unhealthy
+  nova_db: healthy
+  nova_worker: healthy
+services_pre_check:
+  nova_agent_manager: healthy
+  nova_db: healthy
+  nova_worker: healthy
+tier_1_actions:
+  containers_removed: 2
+  page_cache_cleared: true
+timestamp: '2026-01-12T12:51:09Z'
+triggered_by: scenario_test

@@ -1,0 +1,19 @@
+# Housekeeping Registry
+# Records all housekeeping runs with timestamps and results
+# Reference: docs/ops/HOUSEKEEPING_PROTOCOL.md
+
+schema_version: "1.0"
+
+# Registry of housekeeping runs
+# New entries are prepended (newest first)
+runs: []
+
+# Example entry:
+# - id: "HK-20260112-143000"
+#   timestamp: "2026-01-12T14:30:00Z"
+#   triggered_by: "user"
+#   tier_1_executed: true
+#   tier_2_approved: []
+#   space_reclaimed_mb: 650
+#   services_protected: true
+#   success: true

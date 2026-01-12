@@ -1,0 +1,48 @@
+schema_version: '1.0'
+type: SCENARIO_RUN
+scenario_id: S19
+run_id: 20260112-125109
+timestamp: '2026-01-12T12:51:09Z'
+mode: execute
+scenario_name: SERVICES_UNHEALTHY_POST_HK
+description: Services became unhealthy after housekeeping
+setup:
+  function: simulate_service_failure
+  result:
+    hk_artifact: /root/agenticverz2.0/artifacts/housekeeping/HK-20260112-125109.yaml
+    hk_data:
+      schema_version: '1.0'
+      protocol: HK-01
+      id: HK-20260112-125109
+      timestamp: '2026-01-12T12:51:09Z'
+      triggered_by: scenario_test
+      scans:
+        disk:
+          usage_percent: 65
+        memory:
+          available_gb: 8
+      services_pre_check:
+        nova_agent_manager: healthy
+        nova_worker: healthy
+        nova_db: healthy
+      tier_1_actions:
+        containers_removed: 2
+        page_cache_cleared: true
+      services_post_check:
+        nova_agent_manager: unhealthy
+        nova_worker: healthy
+        nova_db: healthy
+      result:
+        services_protected: false
+        no_active_work_disrupted: true
+        success: false
+        notes: Services became unhealthy after cleanup
+validation:
+  hk_artifact_valid: true
+  violations: []
+  passed: true
+result:
+  passed: true
+  expected_exit_verdict: EXIT_BLOCKED
+  expected_new_work: BLOCKED
+  violations_count: 0

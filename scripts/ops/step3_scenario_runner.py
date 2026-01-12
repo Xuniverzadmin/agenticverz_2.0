@@ -842,10 +842,10 @@ def main() -> int:
 
     total = len(results)
     print(f"\nScenarios: {total} total")
-    print(f"\n  Baseline scenarios:")
+    print("\n  Baseline scenarios:")
     print(f"    ✅ Passed: {baseline_passed}")
     print(f"    ❌ Failed: {baseline_failed}")
-    print(f"\n  Negative scenarios (expected to fail):")
+    print("\n  Negative scenarios (expected to fail):")
     print(f"    ✅ Passed: {negative_passed} {'⚠️  UNEXPECTED!' if negative_passed > 0 else ''}")
     print(f"    ❌ Failed: {negative_failed} (expected)")
 

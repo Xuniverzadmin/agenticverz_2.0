@@ -18,7 +18,7 @@ import yaml
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, List, Any
+from typing import Dict, List
 
 
 def load_yaml(path: Path) -> Dict:
@@ -193,7 +193,7 @@ def apply_affordances(spec_path: Path, projection_path: Path, dry_run: bool = Fa
 def print_results(results: Dict) -> None:
     """Print formatted results."""
     print("\n" + "=" * 60)
-    print(f"Phase-2A.1 Affordance Application Results")
+    print("Phase-2A.1 Affordance Application Results")
     print("=" * 60)
     print(f"Timestamp: {results['timestamp']}")
     print(f"Spec Version: {results['spec_version']}")
@@ -214,7 +214,7 @@ def print_results(results: Dict) -> None:
 
     print()
     print("-" * 60)
-    print(f"TOTALS:")
+    print("TOTALS:")
     print(f"  Panels Modified: {results['totals']['panels_modified']}")
     print(f"  Controls Added: {results['totals']['controls_added']}")
     print(f"  Saved: {results['saved']}")

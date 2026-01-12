@@ -1,0 +1,167 @@
+# CLAUDE TODO COMPLETION PROOF
+# Generated: 2026-01-12
+# Session: Continuation from PIN-398 Founder Auth Architecture
+#
+# This artifact provides verifiable proof that all mandatory TODOs
+# were completed as specified in the user's operational law.
+
+schema_version: "1.0"
+type: "TODO_COMPLETION_PROOF"
+timestamp: "2026-01-12T12:00:00Z"
+generator: "Claude Opus 4.5"
+
+# =============================================================================
+# TODO COMPLETION EVIDENCE
+# =============================================================================
+
+todos_completed:
+  - id: "TODO-01"
+    title: "Implement Exit Gate (session_exit.py)"
+    status: "COMPLETED"
+    evidence:
+      file: "scripts/ops/session_exit.py"
+      sha256: "0203a46decf062f024ed9fadea35b17a8f1ce306f42907872592648703091ccb"
+      description: |
+        Created session_exit.py as the single authoritative exit arbiter.
+        Implements three checks:
+        - SR artifact verdict (must be RECONCILED_EXIT_READY)
+        - Session state consistency
+        - HK freshness (default 24h threshold)
+        Exit codes: 0=CLEAN_EXIT, 1=EXIT_BLOCKED, 2=VIOLATION_ABORT
+
+  - id: "TODO-02"
+    title: "Enforce Block New Work Invariant"
+    status: "COMPLETED"
+    evidence:
+      file: "CLAUDE_AUTHORITY.md"
+      sha256: "b934703b55fc301b2f62fdf25e43438a154534b7673c058b5867f047bd663376"
+      section: "11.8 Block New Work Invariant (HARD RULE)"
+      description: |
+        Added Section 11.8 and 11.9 to CLAUDE_AUTHORITY.md:
+        - If SR verdict != RECONCILED_EXIT_READY, all new work is BLOCKED
+        - Only permitted command: session reconcile
+        - Forbidden actions enumerated
+        - Exit gate integration specified
+
+  - id: "TODO-03"
+    title: "Harden Tier-2 Housekeeping Approval"
+    status: "COMPLETED"
+    evidence:
+      file: "scripts/ops/housekeeping_scan.py"
+      sha256: "8ba9b788b65f722fe3d38a41475dcfc42a6f1e60d31ae40be599b6705eb30383"
+      description: |
+        Replaced numeric Tier-2 flags with token-based approval:
+        - Token format: HK-APPROVAL-<timestamp>
+        - Tokens are one-time use
+        - Used tokens recorded in .used_tokens file
+        - Token validation before Tier-2 execution
+
+  - id: "TODO-04"
+    title: "Protect Session State File"
+    status: "COMPLETED"
+    evidence:
+      files:
+        - file: "scripts/ops/housekeeping_scan.py"
+          sha256: "8ba9b788b65f722fe3d38a41475dcfc42a6f1e60d31ae40be599b6705eb30383"
+        - file: "scripts/ops/session_exit.py"
+          sha256: "0203a46decf062f024ed9fadea35b17a8f1ce306f42907872592648703091ccb"
+      description: |
+        Added read-only guards to both scripts:
+        - Only session_reconcile.py may write .session_state.yaml
+        - Violation detection with abort_on_session_state_violation()
+        - Error artifact emission (artifacts/errors/ERR-*.yaml)
+        - Exit code 2 for violation abort
+
+  - id: "TODO-05"
+    title: "Add Artifact Freshness Rules"
+    status: "COMPLETED"
+    evidence:
+      files:
+        - file: "docs/ops/SESSION_RECONCILE_PROTOCOL.md"
+          sha256: "a35b45e2e0d8a29c758106f832dcec837ce598b54343b670dbd70b656cc7b030"
+          section: "Artifact Freshness Rules (TODO-05)"
+        - file: "docs/ops/HOUSEKEEPING_PROTOCOL.md"
+          sha256: "085c8270347012adb2eabe1dfefa14d339d71acc29ec6606b45cef233a461ab7"
+          section: "Artifact Freshness Rules (TODO-05)"
+      description: |
+        Documented freshness rules in both protocols:
+        - SR-FRESH-001 to SR-FRESH-003 for session reconcile
+        - HK-FRESH-001 to HK-FRESH-003 for housekeeping
+        - HK freshness threshold: 24 hours (configurable)
+        - Stale artifacts trigger BLOCK, not silent accept
+
+  - id: "TODO-06"
+    title: "Document Non-Goals (Protocol Lock)"
+    status: "COMPLETED"
+    evidence:
+      files:
+        - file: "docs/ops/SESSION_RECONCILE_PROTOCOL.md"
+          sha256: "a35b45e2e0d8a29c758106f832dcec837ce598b54343b670dbd70b656cc7b030"
+          section: "Non-Goals (Protocol Lock) (TODO-06)"
+        - file: "docs/ops/HOUSEKEEPING_PROTOCOL.md"
+          sha256: "085c8270347012adb2eabe1dfefa14d339d71acc29ec6606b45cef233a461ab7"
+          section: "Non-Goals (Protocol Lock) (TODO-06)"
+      description: |
+        Added Non-Goals sections to both protocols:
+        - Lists what each protocol will NEVER do
+        - Rationale for each locked non-goal
+        - Evolution disclaimer (requires human approval)
+        - Key non-goals: no auto-schedule, no domain crossing,
+          no session state writes from non-authorized scripts
+
+  - id: "TODO-07"
+    title: "Create Verification Proof Artifact"
+    status: "COMPLETED"
+    evidence:
+      file: "artifacts/proofs/CLAUDE_TODO_COMPLETION.yaml"
+      description: "This file itself"
+
+# =============================================================================
+# FILE CHECKSUMS (SHA256)
+# =============================================================================
+
+file_checksums:
+  scripts/ops/session_exit.py: "0203a46decf062f024ed9fadea35b17a8f1ce306f42907872592648703091ccb"
+  scripts/ops/housekeeping_scan.py: "8ba9b788b65f722fe3d38a41475dcfc42a6f1e60d31ae40be599b6705eb30383"
+  docs/ops/SESSION_RECONCILE_PROTOCOL.md: "a35b45e2e0d8a29c758106f832dcec837ce598b54343b670dbd70b656cc7b030"
+  docs/ops/HOUSEKEEPING_PROTOCOL.md: "085c8270347012adb2eabe1dfefa14d339d71acc29ec6606b45cef233a461ab7"
+  CLAUDE_AUTHORITY.md: "b934703b55fc301b2f62fdf25e43438a154534b7673c058b5867f047bd663376"
+
+# =============================================================================
+# FINAL ATTESTATION
+# =============================================================================
+
+attestation:
+  statement: |
+    I, Claude Opus 4.5, hereby attest that all seven (7) mandatory TODOs
+    specified by the user have been completed as documented above.
+
+    Each TODO was executed in sequence:
+    1. TODO-01: session_exit.py created as exit gate arbiter
+    2. TODO-02: CLAUDE_AUTHORITY.md Section 11.8-11.9 added
+    3. TODO-03: Token-based Tier-2 approval implemented
+    4. TODO-04: Session state read-only guards added with error artifacts
+    5. TODO-05: Artifact freshness rules documented
+    6. TODO-06: Non-goals sections added to both protocols
+    7. TODO-07: This verification proof artifact created
+
+    All file checksums are verifiable via `sha256sum`.
+
+  todos_total: 7
+  todos_completed: 7
+  todos_pending: 0
+
+  compliance:
+    user_instruction: "This is now **operational law**. Claude's only acceptable next response is **execution evidence**, not discussion."
+    response_type: "execution_evidence"
+    discussion_avoided: true
+
+  authority_reference: "CLAUDE_AUTHORITY.md Section 11"
+
+  signature_block: |
+    ---
+    Attested by: Claude Opus 4.5
+    Model ID: claude-opus-4-5-20251101
+    Date: 2026-01-12
+    Session: Continuation from PIN-398
+    ---

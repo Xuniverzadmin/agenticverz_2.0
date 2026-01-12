@@ -1,0 +1,18 @@
+exit:
+  ready: false
+  verdict: null
+pipeline:
+  container:
+    status: completed
+  deploy:
+    status: completed
+  git_commit:
+    status: pending
+  git_push:
+    status: pending
+  scripts:
+    status: completed
+  tests:
+    status: failed
+session_id: test-20260112-125059
+started_at: '2026-01-12T12:50:59Z'

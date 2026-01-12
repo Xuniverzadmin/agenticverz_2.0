@@ -1,0 +1,20 @@
+# Session Reconcile Registry
+# Records all session reconciliation runs with verdicts
+# Reference: docs/ops/SESSION_RECONCILE_PROTOCOL.md
+
+schema_version: "1.0"
+
+# Registry of reconciliation runs
+# New entries are prepended (newest first)
+runs: []
+
+# Example entry:
+# - session_id: "a1b2c3d4"
+#   timestamp: "2026-01-12T15:00:00Z"
+#   triggered_by: "user"
+#   verdict: "RECONCILED_EXIT_READY"
+#   exit_ready: true
+#   tests_passed: 4525
+#   tests_failed: 0
+#   commit_hash: "5cf57046"
+#   pushed: true

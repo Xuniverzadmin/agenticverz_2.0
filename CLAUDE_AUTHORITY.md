@@ -173,3 +173,222 @@ No learning may remain implicit.
 
 The correct path must be the easiest path.
 Block only when guidance fails.
+
+---
+
+## 11. Claude Authority Model — Session & System Operations
+
+### 11.1 Separation of Domains (HARD RULE)
+
+Claude operates under **two mutually exclusive operational domains**:
+
+| Domain | Protocol | Trigger | Scope |
+|--------|----------|---------|-------|
+| Work State | SESSION_RECONCILE (SR-01) | `session reconcile` | Build → Deploy → Test → Git |
+| System Health | HOUSEKEEPING (HK-01) | `do housekeeping` | VPS resources only |
+
+Claude **must never cross domains** in a single invocation.
+
+**Reference:**
+- `docs/ops/SESSION_RECONCILE_PROTOCOL.md`
+- `docs/ops/HOUSEKEEPING_PROTOCOL.md`
+
+---
+
+### 11.2 Authority Boundaries
+
+#### Claude MAY:
+
+- Read state files
+- Invoke approved scripts
+- Verify execution results
+- Produce audit artifacts
+- Block exit when invariants fail
+
+#### Claude MAY NOT:
+
+- Perform undocumented actions
+- Make discretionary cleanup decisions
+- Override failures
+- Mutate system state outside declared protocol
+- Assume intent from conversation context
+
+---
+
+### 11.3 Exit Governance
+
+A session is **exitable** only if:
+
+```
+SESSION_RECONCILE verdict == RECONCILED_EXIT_READY
+```
+
+Housekeeping **does not affect exit eligibility**.
+
+Forced exit without reconciliation **MUST be recorded as DIRTY_EXIT**.
+
+---
+
+### 11.4 Failure Handling Doctrine
+
+| Condition | Claude Action |
+|-----------|---------------|
+| Missing state file | BLOCK |
+| Failed tests | STOP + REPORT |
+| Partial pipeline | RECONCILE |
+| System pressure | HOUSEKEEPING |
+| Ambiguous intent | REFUSE |
+
+Claude must prefer **blocking** over guessing.
+
+---
+
+### 11.5 Memory Discipline
+
+Claude may only write **session pins** and **protocol artifacts**.
+Claude must **re-read latest pin at session start** before reasoning.
+
+**Artifact locations:**
+- `artifacts/session_reconcile/SR-<session_id>.yaml`
+- `artifacts/housekeeping/HK-<timestamp>.yaml`
+- `memory/session_pins/<session_id>.yaml`
+
+---
+
+### 11.6 Protocol Verdicts
+
+#### SESSION_RECONCILE (SR-01)
+
+| Verdict | Meaning |
+|---------|---------|
+| `RECONCILED_EXIT_READY` | All steps passed, git pushed, safe to exit |
+| `RECONCILIATION_BLOCKED` | Missing state or precondition failed |
+| `FAILED_TESTS` | Tests failed, cannot proceed to git |
+
+#### HOUSEKEEPING (HK-01)
+
+| Result | Meaning |
+|--------|---------|
+| `services_protected: true` | All critical services verified healthy |
+| `no_active_work_disrupted: true` | No work state was affected |
+
+---
+
+### 11.7 Domain Violation Response
+
+If Claude detects a domain violation:
+
+```
+DOMAIN VIOLATION DETECTED
+
+Attempted: [action]
+Current Protocol: [SR-01 | HK-01]
+Violation: [action] belongs to [other protocol]
+
+STATUS: BLOCKED
+REQUIRED: Switch to correct protocol or request approval
+```
+
+---
+
+### 11.8 Block New Work Invariant (HARD RULE)
+
+**Effective:** 2026-01-12
+**Status:** MANDATORY
+
+If the latest SESSION_RECONCILE verdict is NOT `RECONCILED_EXIT_READY`:
+
+```
+→ All new work commands are BLOCKED
+→ Only permitted command: session reconcile
+```
+
+#### Enforcement at Session Start
+
+Claude **MUST** at the start of every session:
+
+1. Read the latest SR artifact from `artifacts/session_reconcile/`
+2. Check verdict field
+3. If verdict != `RECONCILED_EXIT_READY`:
+   - Refuse all unrelated tasks
+   - Output blocking notice
+   - Only accept `session reconcile` command
+
+#### Blocking Notice Format
+
+```
+SESSION STATE: BLOCKED
+
+Latest reconciliation verdict: [verdict]
+Session ID: [session_id]
+
+The previous session did not complete cleanly.
+All new work is BLOCKED until reconciliation succeeds.
+
+ONLY PERMITTED COMMAND: session reconcile
+
+To proceed with new work, you must first:
+1. Run: python scripts/ops/session_reconcile.py
+2. Verify verdict: RECONCILED_EXIT_READY
+```
+
+#### Forbidden Actions When Blocked
+
+| Action | Status |
+|--------|--------|
+| New builds | BLOCKED |
+| New tests | BLOCKED |
+| Code modifications | BLOCKED |
+| Agent work | BLOCKED |
+| E2E scenarios | BLOCKED |
+| SDSR pipelines | BLOCKED |
+| Feature implementation | BLOCKED |
+
+#### Only Permitted When Blocked
+
+| Action | Status |
+|--------|--------|
+| `session reconcile` | ALLOWED |
+| Read artifact status | ALLOWED |
+| Query session state | ALLOWED |
+
+---
+
+### 11.9 Exit Gate Integration
+
+The `session_exit.py` script is the **single authoritative exit arbiter**.
+
+#### Exit Requirements
+
+A session may only exit cleanly if **ALL** conditions are met:
+
+| Check | Requirement |
+|-------|-------------|
+| SR Verdict | `RECONCILED_EXIT_READY` |
+| Session State | Consistent with SR artifact |
+| HK Freshness | Latest HK artifact age ≤ 24h |
+
+#### Exit Artifact
+
+Every exit attempt produces:
+
+```
+artifacts/session_exit/EXIT-<session_id>.yaml
+```
+
+#### Exit Commands
+
+```bash
+# Check exit eligibility
+python scripts/ops/session_exit.py
+
+# With custom HK freshness threshold
+python scripts/ops/session_exit.py --hk-max-age 48
+```
+
+#### Exit Codes
+
+| Code | Verdict | Meaning |
+|------|---------|---------|
+| 0 | CLEAN_EXIT | Session may terminate |
+| 1 | EXIT_BLOCKED | Must resolve blockers first |

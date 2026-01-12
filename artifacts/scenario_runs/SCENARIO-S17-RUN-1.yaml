@@ -1,0 +1,45 @@
+schema_version: '1.0'
+type: SCENARIO_RUN
+scenario_id: S17
+run_id: 20260112-125032
+timestamp: '2026-01-12T12:50:32Z'
+mode: execute
+scenario_name: FORCED_EXIT_ATTEMPT
+description: User attempts to exit without proper reconciliation
+setup:
+  function: setup_dirty_state
+  result:
+    session_state:
+      session_id: test-20260112-125032
+      started_at: '2026-01-12T12:50:32Z'
+      pipeline:
+        scripts:
+          status: completed
+        container:
+          status: completed
+        deploy:
+          status: completed
+        tests:
+          status: failed
+        git_commit:
+          status: pending
+        git_push:
+          status: pending
+      exit:
+        ready: false
+        verdict: null
+validation:
+  exit_code: 127
+  exit_output: '/bin/sh: 1: python: not found
+
+    '
+  session_state_tests_status: failed
+  violations:
+  - 'VERDICT violation: Exit gate should report BLOCKED status'
+  - 'REASON violation: Exit gate should explain why blocked'
+  passed: false
+result:
+  passed: false
+  expected_exit_verdict: DIRTY_EXIT
+  expected_new_work: BLOCKED
+  violations_count: 2

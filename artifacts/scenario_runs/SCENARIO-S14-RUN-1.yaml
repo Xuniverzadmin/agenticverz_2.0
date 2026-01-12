@@ -1,0 +1,40 @@
+schema_version: '1.0'
+type: SCENARIO_RUN
+scenario_id: S14
+run_id: 20260112-125022
+timestamp: '2026-01-12T12:50:22Z'
+mode: execute
+scenario_name: RECONCILE_INTERRUPTED
+description: Reconciliation was interrupted mid-execution
+setup:
+  function: interrupt_reconcile
+  result:
+    sr_artifact: /root/agenticverz2.0/artifacts/session_reconcile/SR-test-interrupted-20260112-125022.yaml
+    sr_data:
+      schema_version: '1.0'
+      protocol: SR-01
+      session_id: test-20260112-125022
+      timestamp: '2026-01-12T12:50:22Z'
+      triggered_by: scenario_test
+      pipeline:
+        scripts:
+          status: completed
+        container:
+          status: completed
+        deploy:
+          status: in_progress
+      verdict: null
+      exit_ready: false
+      notes: Simulated interruption during deploy step
+validation:
+  exit_code: 127
+  exit_output: '/bin/sh: 1: python: not found
+
+    '
+  violations: []
+  passed: true
+result:
+  passed: true
+  expected_exit_verdict: EXIT_BLOCKED
+  expected_new_work: BLOCKED
+  violations_count: 0

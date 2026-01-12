@@ -1,0 +1,15 @@
+session_id: 6ef5b191
+started_at: '2026-01-12T13:04:17Z'
+ended_at: '2026-01-12T13:08:50Z'
+verdict: FAILED_TESTS
+exit_ready: false
+work_summary:
+  commits:
+  - null
+  files_changed: 0
+  tests_passed: 4524
+  pins_created: []
+next_session_context:
+  pending_work: []
+  blockers: []
+  notes: ''
