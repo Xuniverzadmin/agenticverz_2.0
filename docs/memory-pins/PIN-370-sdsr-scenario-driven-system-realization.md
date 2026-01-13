@@ -499,6 +499,63 @@ If a failed Activity run does NOT:
 
 Then **the backend is broken**, not the scenario.
 
+---
+
+## Execution Capture Contract v1.1 (PIN-407 CORRECTION)
+
+### CRITICAL SEMANTIC FIX
+
+**The system is EVENT-COMPLETE, not event-sparse.**
+
+> **Every run produces activity, incident, policy, and logs.**
+> The VALUES differ based on outcome. EXISTENCE does not vary.
+
+### Complete Governance Footprint (ALL RUNS)
+
+For **every run**, the system MUST capture and persist:
+
+#### 1. Activity
+- A run **is** an activity
+- Activity MUST be recorded for **ALL** runs
+- Activity types: `EXECUTION_SUCCESS`, `EXECUTION_FAILURE`, `EXECUTION_BLOCKED`, `EXECUTION_ABORTED`
+
+#### 2. Incident
+- Every run produces an **incident record**
+- Incident outcome MUST be explicit:
+  - `SUCCESS` - No harm, no violation (this is EVIDENCE, not absence)
+  - `FAILURE` - Something went wrong
+  - `PARTIAL` - Partial completion
+  - `BLOCKED` - Blocked by policy or auth
+
+#### 3. Policy
+- Every run produces a **policy evaluation result**
+- Policy outcome MUST be explicit:
+  - `NO_VIOLATION` - Run complied
+  - `VIOLATION` - Run violated policies
+  - `ADVISORY` - Advisory only, no enforcement
+  - `NOT_APPLICABLE` - No policies applied
+
+#### 4. Logs
+- Entry log + Exit log
+- Correlated by `run_id`
+- **Non-optional**
+
+#### 5. Traces
+- Trace created for every run
+- Steps recorded
+- Finalized as `COMPLETE` or `ABORTED`
+
+### Why This Matters
+
+If you **don't** do this:
+- "Success" becomes indistinguishable from "nothing happened"
+- Cannot learn from success patterns
+- Cannot derive preventive policies
+- Cannot show regulators WHY something was safe
+- SDSR loses half its value
+
+---
+
 ### Correct Mental Model
 
 Think of each scenario as a **single causal disturbance** injected into the system.
@@ -539,30 +596,42 @@ writes:                    # ONLY Activity domain
 expects:                   # Cross-domain ASSERTIONS
   incidents:
     - type: EXECUTION_FAILURE
+      outcome: FAILURE
       severity: HIGH
 
   logs:
     - contains: "EXEC_TIMEOUT"
 
   policies:
-    - suggestion_type: RETRY_POLICY_ADJUSTMENT
+    - outcome: NO_VIOLATION  # Even failures have policy evaluation
+```
+
+For **success scenarios** (like SDSR-E2E-006):
+```yaml
+expects:
+  incidents:
+    - outcome: SUCCESS        # Explicit success record
+  policies:
+    - outcome: NO_VIOLATION   # Explicit compliance record
+  logs:
+    - entry_log: true
+    - exit_log: true
 ```
 
 - `writes` → **only the scenario's domain**
 - `expects` → **cross-domain assertions**
 - If any `expects` fail → **backend bug, not scenario bug**
 
-### Backend Responsibility Matrix
+### Backend Responsibility Matrix (UPDATED)
 
-| Cross-Domain Effect | Owner (must be backend) | Scenario Role |
-|---------------------|-------------------------|---------------|
-| Run → Incident | Incident Engine | EXPECT only |
-| Incident → Policy | Policy Engine | EXPECT only |
-| Run → Logs | Logging / Evidence | EXPECT only |
-| Incident → Logs | Logging / Evidence | EXPECT only |
-| Policy → Memory | Memory / Learning | EXPECT only |
+| Cross-Domain Effect | Owner (must be backend) | Scenario Role | On Success |
+|---------------------|-------------------------|---------------|------------|
+| Run → Incident | Incident Engine | EXPECT only | Creates SUCCESS incident |
+| Run → Policy | Policy Engine | EXPECT only | Creates NO_VIOLATION record |
+| Run → Logs | Logging / Evidence | EXPECT only | Entry + exit logs |
+| Run → Trace | Trace Store | EXPECT only | COMPLETE trace |
 
-If any of these don't fire:
+If any of these don't fire (even on success):
 - ❌ Scenario is correct
 - ❌ UI is correct
 - ✅ **Backend capability is incomplete**
@@ -572,11 +641,11 @@ If any of these don't fire:
 ```
 Activity (cause)
     ↓
-Incidents (reactive)
+Incidents (reactive - creates SUCCESS or FAILURE)
     ↓
-Policies (reactive)
+Policies (reactive - creates NO_VIOLATION or VIOLATION)
     ↓
-Logs (evidence)
+Logs (evidence - always captured)
 ```
 
 **No parallelism. No shortcuts.**

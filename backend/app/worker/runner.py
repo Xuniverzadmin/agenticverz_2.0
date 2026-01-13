@@ -51,6 +51,10 @@ from ..skills.executor import (
 from ..traces.pg_store import PostgresTraceStore
 from ..utils.budget_tracker import deduct_budget
 
+# Evidence Architecture v1.1: ExecutionCursor structural authority
+from ..core.execution_context import ExecutionCursor, ExecutionPhase, EvidenceSource
+from ..evidence.capture import capture_integrity_evidence
+
 # Phase-2.3: Feature Intent Declaration
 # This worker executes runs with state checkpoints and must resume on crash
 FEATURE_INTENT = FeatureIntent.RECOVERABLE_OPERATION
@@ -427,29 +431,53 @@ class RunRunner:
         )
 
         try:
+            # Evidence Architecture v1.1: Initialize cursor early for exception handler access
+            cursor = None
+
             # Parse plan
             plan = json.loads(run.plan_json) if run.plan_json else {"steps": []}
             steps = plan.get("steps", [])
 
             # GAP-LOG-001 FIX: Start trace for this run (PIN-378 SDSR extension)
             # This creates aos_traces row with SDSR inheritance from run
+            # PIN-404: Capture trace context for step recording
+            trace_id: str | None = None
+            is_synthetic = getattr(run, "is_synthetic", False) or False
+            synthetic_scenario_id = getattr(run, "synthetic_scenario_id", None)
+
             try:
-                await self.trace_store.start_trace(
+                trace_id = await self.trace_store.start_trace(
                     run_id=self.run_id,
                     correlation_id=getattr(run, "correlation_id", None) or self.run_id,
                     tenant_id=run.tenant_id,
                     agent_id=run.agent_id,
                     plan=steps,
-                    is_synthetic=getattr(run, "is_synthetic", False) or False,
-                    synthetic_scenario_id=getattr(run, "synthetic_scenario_id", None),
+                    is_synthetic=is_synthetic,
+                    synthetic_scenario_id=synthetic_scenario_id,
                 )
-                logger.debug("trace_started", extra={"run_id": self.run_id})
+                logger.debug("trace_started", extra={"run_id": self.run_id, "trace_id": trace_id})
             except Exception as e:
                 # Don't fail the run if trace creation fails
                 logger.warning(
                     "trace_start_failed", extra={"run_id": self.run_id, "error": str(e), "error_type": type(e).__name__}
                 )
                 logger.warning(f"TRACE_ERROR_DETAIL: {type(e).__name__}: {e}")
+
+            # Evidence Architecture v1.1: Create ExecutionCursor for structural step authority
+            # ExecutionCursor owns step advancement; evidence writers receive read-only context
+            if trace_id:
+                try:
+                    cursor = ExecutionCursor.create(
+                        run_id=self.run_id,
+                        trace_id=trace_id,
+                        source=EvidenceSource.WORKER,
+                        is_synthetic=is_synthetic,
+                        synthetic_scenario_id=synthetic_scenario_id,
+                    )
+                    cursor.with_phase(ExecutionPhase.RUNNING)
+                    logger.debug("execution_cursor_created", extra={"run_id": self.run_id, "trace_id": trace_id})
+                except Exception as e:
+                    logger.warning("execution_cursor_creation_failed", extra={"run_id": self.run_id, "error": str(e)})
 
             if not steps:
                 # Phase R-2: L5 runner must NOT generate plans (L4 responsibility)
@@ -526,11 +554,17 @@ class RunRunner:
 
                     try:
                         # Execute through validated executor
+                        # Evidence Architecture v1.1: Advance step via cursor (structural authority)
+                        # Only the cursor can advance steps - evidence writers get read-only context
+                        if cursor:
+                            cursor.advance()
+
                         result, step_status = await executor.execute(
                             skill_name=skill_name,
                             params=interpolated_params,
                             step_id=step_id,
                             skill_config=skill_config,
+                            execution_context=cursor.context if cursor else None,
                         )
                         step_error = None  # Clear error on success
                         break  # Success - exit retry loop
@@ -567,20 +601,24 @@ class RunRunner:
                         step_duration = time.time() - step_start
                         try:
                             step_index = steps.index(step)
-                            await self.trace_store.record_step(
-                                run_id=self.run_id,
-                                step_index=step_index,
-                                skill_name=skill_name,
-                                params=interpolated_params,
-                                status="failure",
-                                outcome_category="execution",
-                                outcome_code="abort",
-                                outcome_data={"error": str(step_error)[:500]},
-                                cost_cents=0,
-                                duration_ms=step_duration * 1000,
-                                retry_count=step_attempts - 1,
-                                source="engine",
-                            )
+                            if trace_id:  # PIN-404: Only record if trace was created
+                                await self.trace_store.record_step(
+                                    trace_id=trace_id,  # PIN-404: Pass actual trace_id
+                                    run_id=self.run_id,
+                                    step_index=step_index,
+                                    skill_name=skill_name,
+                                    params=interpolated_params,
+                                    status="failure",
+                                    outcome_category="execution",
+                                    outcome_code="abort",
+                                    outcome_data={"error": str(step_error)[:500]},
+                                    cost_cents=0,
+                                    duration_ms=step_duration * 1000,
+                                    retry_count=step_attempts - 1,
+                                    source="engine",
+                                    is_synthetic=is_synthetic,  # PIN-404: Propagate SDSR context
+                                    synthetic_scenario_id=synthetic_scenario_id,
+                                )
                             logger.debug("trace_step_recorded_abort", extra={"run_id": self.run_id, "step_id": step_id})
                         except Exception as e:
                             logger.warning(
@@ -658,24 +696,29 @@ class RunRunner:
                     },
                 )
 
-                # GAP-LOG-001 FIX: Record step in trace (PIN-378 SDSR extension)
+                # GAP-LOG-001 FIX: Record step in trace (PIN-378, PIN-404 SDSR extension)
                 # This creates aos_trace_steps row with level derived from status
+                # PIN-404: Pass trace_id and SDSR context for proper linkage
                 try:
                     step_index = steps.index(step)
-                    await self.trace_store.record_step(
-                        run_id=self.run_id,
-                        step_index=step_index,
-                        skill_name=skill_name,
-                        params=interpolated_params,
-                        status=tool_call["status"],
-                        outcome_category="execution",
-                        outcome_code=tool_call["status"],
-                        outcome_data=result.get("result", {}) if result else None,
-                        cost_cents=result.get("side_effects", {}).get("cost_cents", 0) if result else 0,
-                        duration_ms=step_duration * 1000,
-                        retry_count=step_attempts - 1,  # -1 because attempts starts at 1
-                        source="engine",
-                    )
+                    if trace_id:  # PIN-404: Only record if trace was created
+                        await self.trace_store.record_step(
+                            trace_id=trace_id,  # PIN-404: Pass actual trace_id
+                            run_id=self.run_id,
+                            step_index=step_index,
+                            skill_name=skill_name,
+                            params=interpolated_params,
+                            status=tool_call["status"],
+                            outcome_category="execution",
+                            outcome_code=tool_call["status"],
+                            outcome_data=result.get("result", {}) if result else None,
+                            cost_cents=result.get("side_effects", {}).get("cost_cents", 0) if result else 0,
+                            duration_ms=step_duration * 1000,
+                            retry_count=step_attempts - 1,  # -1 because attempts starts at 1
+                            source="engine",
+                            is_synthetic=is_synthetic,  # PIN-404: Propagate SDSR context
+                            synthetic_scenario_id=synthetic_scenario_id,
+                        )
                 except Exception as e:
                     # Don't fail the run if step recording fails
                     logger.warning(
@@ -847,6 +890,7 @@ class RunRunner:
                 session.commit()
 
             # GAP-LOG-001 FIX: Complete trace on success (PIN-378 SDSR extension)
+            # PIN-406: Fail-closed trace semantics - COMPLETE or ABORTED, no dangling
             try:
                 await self.trace_store.complete_trace(
                     run_id=self.run_id,
@@ -855,7 +899,19 @@ class RunRunner:
                 )
                 logger.debug("trace_completed", extra={"run_id": self.run_id, "status": "completed"})
             except Exception as e:
-                logger.warning("trace_complete_failed", extra={"run_id": self.run_id, "error": str(e)})
+                # PIN-406: Fail-closed - mark trace ABORTED, not just logged
+                logger.error("trace_complete_failed", extra={"run_id": self.run_id, "error": str(e)})
+                try:
+                    await self.trace_store.mark_trace_aborted(
+                        run_id=self.run_id,
+                        reason=f"finalization_failed: {str(e)[:200]}",
+                    )
+                    logger.warning("trace_aborted", extra={"run_id": self.run_id, "reason": "finalization_failed"})
+                except Exception as abort_err:
+                    logger.critical(
+                        "trace_abort_failed",
+                        extra={"run_id": self.run_id, "error": str(abort_err)},
+                    )
 
             self.publisher.publish(
                 "run.completed", {"run_id": self.run_id, "status": "succeeded", "duration_ms": duration_ms}
@@ -866,6 +922,19 @@ class RunRunner:
             )
             planner_name = os.getenv("PLANNER_BACKEND", "stub")
             nova_runs_total.labels(status="succeeded", planner=planner_name).inc()
+
+            # Evidence Architecture v1.1: Mark cursor terminal and capture integrity evidence (J)
+            if cursor:
+                cursor.with_phase(ExecutionPhase.TERMINAL)
+            try:
+                capture_integrity_evidence(
+                    run_id=self.run_id,
+                    is_synthetic=run.is_synthetic if run else False,
+                    synthetic_scenario_id=run.synthetic_scenario_id if run else None,
+                )
+                logger.debug("integrity_evidence_captured", extra={"run_id": self.run_id, "status": "succeeded"})
+            except Exception as e:
+                logger.warning("integrity_evidence_capture_failed", extra={"run_id": self.run_id, "error": str(e)})
 
         except Exception as exc:
             # Failure: increment attempts and set next_attempt_at with exponential backoff
@@ -885,6 +954,7 @@ class RunRunner:
                 self._create_incident_for_failure(error_message=error_msg)
 
                 # GAP-LOG-001 FIX: Complete trace on failure (PIN-378 SDSR extension)
+                # PIN-406: Fail-closed trace semantics - COMPLETE or ABORTED, no dangling
                 try:
                     # We're inside async _execute(), so just await
                     await self.trace_store.complete_trace(
@@ -894,7 +964,19 @@ class RunRunner:
                     )
                     logger.debug("trace_completed", extra={"run_id": self.run_id, "status": "failed"})
                 except Exception as e:
-                    logger.warning("trace_complete_failed", extra={"run_id": self.run_id, "error": str(e)})
+                    # PIN-406: Fail-closed - mark trace ABORTED, not just logged
+                    logger.error("trace_complete_failed", extra={"run_id": self.run_id, "error": str(e)})
+                    try:
+                        await self.trace_store.mark_trace_aborted(
+                            run_id=self.run_id,
+                            reason=f"finalization_failed: {str(e)[:200]}",
+                        )
+                        logger.warning("trace_aborted", extra={"run_id": self.run_id, "reason": "finalization_failed"})
+                    except Exception as abort_err:
+                        logger.critical(
+                            "trace_abort_failed",
+                            extra={"run_id": self.run_id, "error": str(abort_err)},
+                        )
 
                 self.publisher.publish(
                     "run.failed", {"run_id": self.run_id, "attempts": attempts, "error": str(exc)[:200]}
@@ -903,6 +985,19 @@ class RunRunner:
                 planner_name = os.getenv("PLANNER_BACKEND", "stub")
                 nova_runs_total.labels(status="failed", planner=planner_name).inc()
                 nova_runs_failed_total.inc()
+
+                # Evidence Architecture v1.1: Mark cursor terminal and capture integrity evidence (J)
+                if cursor:
+                    cursor.with_phase(ExecutionPhase.TERMINAL)
+                try:
+                    capture_integrity_evidence(
+                        run_id=self.run_id,
+                        is_synthetic=run.is_synthetic if run else False,
+                        synthetic_scenario_id=run.synthetic_scenario_id if run else None,
+                    )
+                    logger.debug("integrity_evidence_captured", extra={"run_id": self.run_id, "status": "failed"})
+                except Exception as e:
+                    logger.warning("integrity_evidence_capture_failed", extra={"run_id": self.run_id, "error": str(e)})
             else:
                 # Schedule retry with exponential backoff (capped at 1 hour)
                 backoff_seconds = min(60 * (2 ** (attempts - 1)), 3600)

@@ -501,6 +501,171 @@ class PolicyViolationService:
         return results
 
 
+# =============================================================================
+# PIN-407: Policy Outcome Model (Success as First-Class Data)
+# =============================================================================
+# Every run produces ONE policy evaluation record with explicit outcome.
+# Outcome values: NO_VIOLATION, VIOLATION, ADVISORY, NOT_APPLICABLE
+# =============================================================================
+
+POLICY_OUTCOME_NO_VIOLATION = "no_violation"
+POLICY_OUTCOME_VIOLATION = "violation_incident"
+POLICY_OUTCOME_ADVISORY = "advisory"
+POLICY_OUTCOME_NOT_APPLICABLE = "not_applicable"
+
+
+@dataclass
+class PolicyEvaluationResult:
+    """
+    Result of policy evaluation (PIN-407: Success as First-Class Data).
+
+    Every run MUST produce exactly one policy evaluation record.
+    This is NOT limited to violations - successful evaluations also get records.
+    """
+
+    id: str = field(default_factory=generate_uuid)
+    run_id: str = ""
+    tenant_id: str = ""
+    outcome: str = POLICY_OUTCOME_NO_VIOLATION
+    policies_checked: int = 0
+    reason: str = ""
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    draft_candidate: bool = False  # For future policy learning
+
+
+async def create_policy_evaluation_record(
+    session: AsyncSession,
+    run_id: str,
+    tenant_id: str,
+    outcome: str,
+    policies_checked: int = 0,
+    reason: str = "",
+    draft_candidate: bool = False,
+    is_synthetic: bool = False,
+    synthetic_scenario_id: Optional[str] = None,
+) -> str:
+    """
+    Create a policy evaluation record for ANY run (PIN-407).
+
+    Every run MUST produce exactly one policy evaluation record.
+    This is NOT limited to violations - successful evaluations also get records.
+
+    Args:
+        session: Database session
+        run_id: Run ID
+        tenant_id: Tenant scope
+        outcome: Policy outcome (NO_VIOLATION, VIOLATION, ADVISORY, NOT_APPLICABLE)
+        policies_checked: Number of policies evaluated
+        reason: Human-readable reason
+        draft_candidate: If True, this run is a candidate for policy learning
+        is_synthetic: True if from SDSR scenario
+        synthetic_scenario_id: Scenario ID for traceability
+
+    Returns:
+        policy_evaluation_id
+    """
+    evaluation_id = generate_uuid()
+    now = datetime.now(timezone.utc)
+
+    # Use naive datetime for asyncpg compatibility
+    if now.tzinfo is not None:
+        now = now.replace(tzinfo=None)
+
+    # Store in prevention_records with outcome indicating evaluation result
+    # This reuses existing table per TODO-03 (preserve existing tables)
+    await session.execute(
+        text(
+            """
+            INSERT INTO prevention_records (
+                id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
+                tenant_id, outcome, signature_match_confidence, created_at,
+                is_synthetic, synthetic_scenario_id
+            ) VALUES (
+                :id, :policy_id, :pattern_id, :run_id, :run_id,
+                :tenant_id, :outcome, :confidence, :created_at,
+                :is_synthetic, :synthetic_scenario_id
+            )
+        """
+        ),
+        {
+            "id": evaluation_id,
+            "policy_id": f"policy_eval_{run_id[:8]}",  # Unique per run
+            "pattern_id": f"policies_checked:{policies_checked}",
+            "run_id": run_id,
+            "tenant_id": tenant_id,
+            "outcome": outcome,
+            "confidence": 1.0 if outcome == POLICY_OUTCOME_NO_VIOLATION else 0.0,
+            "created_at": now,
+            "is_synthetic": is_synthetic,
+            "synthetic_scenario_id": synthetic_scenario_id,
+        },
+    )
+    await session.commit()
+
+    logger.info(
+        f"Created policy evaluation record: id={evaluation_id}, run={run_id}, "
+        f"outcome={outcome}, policies_checked={policies_checked}, synthetic={is_synthetic}"
+    )
+
+    return evaluation_id
+
+
+async def handle_policy_evaluation_for_run(
+    session: AsyncSession,
+    run_id: str,
+    tenant_id: str,
+    run_status: str,
+    policies_checked: int = 0,
+    is_synthetic: bool = False,
+    synthetic_scenario_id: Optional[str] = None,
+) -> str:
+    """
+    Create a policy evaluation record for ANY run (PIN-407).
+
+    This is the NEW primary entry point for run → policy evaluation propagation.
+    Every run creates exactly one policy evaluation record with explicit outcome.
+
+    Args:
+        session: Database session
+        run_id: Run ID
+        tenant_id: Tenant scope
+        run_status: Run status (succeeded, failed, etc.)
+        policies_checked: Number of policies evaluated
+        is_synthetic: True if from SDSR scenario
+        synthetic_scenario_id: Scenario ID for traceability
+
+    Returns:
+        policy_evaluation_id
+    """
+    # Map run status to policy outcome
+    status_lower = run_status.lower()
+    if status_lower in ("succeeded", "completed", "success"):
+        outcome = POLICY_OUTCOME_NO_VIOLATION
+        reason = "Run completed successfully, no policy violations"
+    elif status_lower in ("failed", "failure", "error"):
+        # Note: If there was a violation, handle_policy_violation should be called
+        # This is for failures that are NOT policy violations
+        outcome = POLICY_OUTCOME_NOT_APPLICABLE
+        reason = "Run failed, policy evaluation not applicable"
+    elif status_lower in ("halted", "blocked"):
+        outcome = POLICY_OUTCOME_ADVISORY
+        reason = "Run halted, policy advisory recorded"
+    else:
+        outcome = POLICY_OUTCOME_NOT_APPLICABLE
+        reason = f"Run status '{run_status}', policy evaluation not applicable"
+
+    return await create_policy_evaluation_record(
+        session=session,
+        run_id=run_id,
+        tenant_id=tenant_id,
+        outcome=outcome,
+        policies_checked=policies_checked,
+        reason=reason,
+        is_synthetic=is_synthetic,
+        synthetic_scenario_id=synthetic_scenario_id,
+    )
+
+
 # Convenience function for use in workers.py
 async def handle_policy_violation(
     session: AsyncSession,

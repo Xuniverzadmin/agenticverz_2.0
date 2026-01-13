@@ -1,0 +1,152 @@
+{
+  "_comment": "EXPECTED OUTPUT - This is the target observation that SDSR-E2E-006 must produce upon successful execution.",
+
+  "scenario_id": "SDSR-E2E-006",
+  "status": "PASSED",
+  "observed_at": "{{TIMESTAMP}}",
+  "environment": "preflight",
+
+  "scenario_class": "SC-EX-S",
+  "observation_class": "EFFECT",
+
+  "capabilities_observed": [
+    {
+      "capability_id": "EXECUTE",
+      "ui_panel": "ACT-EX-RU-O3",
+      "ui_action": "View Execution",
+      "endpoint": "/api/v1/runs/{id}",
+      "method": "GET",
+      "response_status": 200,
+      "request_sample": {
+        "run_id": "run-e2e-006-{timestamp}"
+      },
+      "observed_effects": [
+        {
+          "entity": "run",
+          "field": "status",
+          "from": "queued",
+          "to": "completed"
+        },
+        {
+          "entity": "run",
+          "field": "run_status",
+          "from": "pending",
+          "to": "success"
+        }
+      ]
+    },
+    {
+      "capability_id": "TRACE",
+      "ui_panel": "ACT-EX-TR-O3",
+      "ui_action": "View Trace",
+      "endpoint": "/api/v1/traces/{trace_id}",
+      "method": "GET",
+      "response_status": 200,
+      "request_sample": {
+        "trace_id": "{{TRACE_ID}}"
+      },
+      "observed_effects": [
+        {
+          "entity": "aos_trace",
+          "field": "status",
+          "from": "pending",
+          "to": "completed"
+        }
+      ]
+    },
+    {
+      "capability_id": "VIEW_EXECUTION_GRAPH",
+      "ui_panel": "ACT-EX-TR-O4",
+      "ui_action": "View Execution Graph",
+      "endpoint": "/api/v1/traces/{trace_id}/steps",
+      "method": "GET",
+      "response_status": 200,
+      "request_sample": {
+        "trace_id": "{{TRACE_ID}}"
+      },
+      "observed_effects": [
+        {
+          "entity": "aos_trace_steps",
+          "field": "count",
+          "from": "0",
+          "to": ">=1"
+        }
+      ]
+    }
+  ],
+
+  "run_record": {
+    "required_fields_present": true,
+    "fields": {
+      "run_id": "run-e2e-006-{timestamp}",
+      "actor_type": "agent",
+      "timestamp_start": "{{TIMESTAMP}}",
+      "operation_type": "skill_invocation",
+      "model_provider": "echo",
+      "run_status": "success",
+      "response_expected": true,
+      "response_received": true
+    }
+  },
+
+  "observability": {
+    "logs": {
+      "entry_log_recorded": true,
+      "exit_log_recorded": true,
+      "correlation_to_run_id": true
+    },
+    "traces": {
+      "trace_expected": true,
+      "trace_received": true,
+      "single_root_trace_id": true,
+      "all_spans_linked": true,
+      "queryable_after_completion": true
+    }
+  },
+
+  "explicit_absence_assertions": {
+    "incident_created": false,
+    "policy_created": false,
+    "policy_proposal_created": false,
+    "inference_used": false
+  },
+
+  "integrity_evaluation": {
+    "expected_events": 3,
+    "observed_events": 3,
+    "missing_events": 0,
+    "integrity_score": 1.0,
+    "expectations_met": {
+      "response": true,
+      "trace": true,
+      "logs": true
+    }
+  },
+
+  "acceptance_criteria_results": {
+    "AC-001": { "criterion": "Run Record created with all required fields", "result": true },
+    "AC-002": { "criterion": "run_status = success", "result": "success" },
+    "AC-003": { "criterion": "response_expected = true AND response_received = true", "result": true },
+    "AC-004": { "criterion": "Entry and exit logs recorded", "result": true },
+    "AC-005": { "criterion": "Trace created with single root trace_id", "result": true },
+    "AC-006": { "criterion": "All trace spans linked", "result": true },
+    "AC-007": { "criterion": "policies_evaluated field exists", "result": true },
+    "AC-008": { "criterion": "policy_results = pass", "result": "pass" },
+    "AC-009": { "criterion": "incident_created explicitly = false", "result": false },
+    "AC-010": { "criterion": "policy_created explicitly = false", "result": false },
+    "AC-011": { "criterion": "policy_proposal_created explicitly = false", "result": false },
+    "AC-012": { "criterion": "integrity_score = 1.0", "result": 1.0 },
+    "AC-013": { "criterion": "missing_events = 0", "result": 0 },
+    "AC-014": { "criterion": "incidents table count for scenario = 0", "result": 0 },
+    "AC-015": { "criterion": "policy_proposals table count for scenario = 0", "result": 0 },
+    "AC-016": { "criterion": "policy_rules table count for scenario = 0", "result": 0 }
+  },
+
+  "metadata": {
+    "run_id": "{{SDSR_RUN_ID}}",
+    "runner_version": "inject_synthetic.py v1.0",
+    "foundation_contract": "AOS_EXECUTION_INTEGRITY_CONTRACT v1.0.0",
+    "principles_validated": ["P1_CAPTURE_ALL", "P2_INTEGRITY_OVER_COMPLETENESS", "P3_NO_FABRICATED_CERTAINTY"],
+    "notes": "Baseline Trust Scenario - canonical success path for all SDSR and Aurora behavior"
+  }
+}

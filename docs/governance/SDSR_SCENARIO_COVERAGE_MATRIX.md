@@ -4,6 +4,21 @@
 **Status:** LOCKED
 **Effective:** 2026-01-11
 **Authority:** Founder-ratified, immutable without explicit approval
+**Foundation:** AOS Execution Integrity Contract v1.0 (Layer 0)
+
+---
+
+## Foundation Compliance
+
+This matrix derives from and complies with the **AOS Execution Integrity Contract** (Layer 0).
+
+| Foundation Principle | Matrix Compliance |
+|----------------------|-------------------|
+| P1_CAPTURE_ALL | All scenarios require Run Records |
+| P2_INTEGRITY_OVER_COMPLETENESS | SC-TR-G explicitly tests blind-spot detection |
+| P3_NO_FABRICATED_CERTAINTY | Capabilities require forensic evidence, not inference |
+
+**Reference:** `docs/contracts/AOS_EXECUTION_INTEGRITY_CONTRACT.yaml`
 
 ---
 
@@ -219,8 +234,16 @@ def validate_capability_yield(scenario_class: str, capabilities: list[str]) -> b
 
 ## Related Documents
 
+### Foundation (Layer 0)
+
+- `docs/contracts/AOS_EXECUTION_INTEGRITY_CONTRACT.yaml` — **Foundational contract (Layer 0)**
+- PIN-403 — AOS Execution Integrity Contract PIN
+
+### SDSR Governance
+
 - `docs/governance/SDSR_SYSTEM_CONTRACT.md` — Core SDSR contract
 - `docs/governance/SDSR_PIPELINE_CONTRACT.md` — Pipeline execution contract
+- PIN-396 — SDSR Scenario Coverage Matrix (this document)
 - PIN-395 — Scenario Taxonomy
 - PIN-393 — Observation Class Discriminator
 - PIN-370 — SDSR Activity/Incident Lifecycle

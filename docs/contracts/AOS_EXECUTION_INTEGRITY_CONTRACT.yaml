@@ -1,0 +1,400 @@
+# AOS Execution Integrity Contract
+# Version: 1.0.0
+# Status: FOUNDATIONAL (Layer 0)
+# Effective: 2026-01-12
+# Authority: Founder-ratified, non-negotiable
+
+contract:
+  name: AOS Execution Integrity Contract
+  version: "1.0.0"
+  status: foundational
+  effective_date: "2026-01-12"
+  scope:
+    applies_to:
+      - llm_calls
+      - agent_runs
+      - human_initiated_runs
+      - system_initiated_runs
+
+  purpose:
+    - capture_execution_truth
+    - make_uncertainty_explicit
+    - ensure_integrity_over_completeness
+    - act_as_foundation_for_sdsr_and_aurora
+
+  guarantees:
+    promises:
+      - capture_reality_as_completely_as_possible
+      - make_uncertainty_explicit
+      - ensure_integrity_of_captured_data
+      - never_fabricate_certainty
+    does_not_promise:
+      - perfect_visibility
+      - zero_blind_spots
+      - correct_judgments_from_day_one
+
+principles:
+  - id: P1_CAPTURE_ALL
+    statement: >
+      Every execution attempt must result in a Run Record.
+      Silence is a violation.
+
+  - id: P2_INTEGRITY_OVER_COMPLETENESS
+    statement: >
+      The system must not assume complete visibility.
+      Missing data must be explicitly represented.
+
+  - id: P3_NO_FABRICATED_CERTAINTY
+    statement: >
+      Absence of evidence must never be interpreted as success.
+
+definitions:
+  run:
+    description: >
+      A Run is any attempt to invoke an LLM or LLM-backed capability
+      by a human, agent, or system, regardless of outcome.
+    atomic: true
+    includes:
+      - successful_calls
+      - failed_calls
+      - retries
+      - partial_responses
+      - blocked_or_rejected_attempts
+      - streaming_or_non_streaming_calls
+    invariant: "If something was attempted, it is a Run."
+
+  traffic_vs_run:
+    traffic: raw_network_or_api_activity
+    run: semantic_execution_attempt
+    reasoning_unit: run
+    note: "Traffic may be incomplete. Runs must still be modeled, even if partially observed."
+
+capture_mandate:
+  universal: true
+  drop_policy: forbidden
+  filter_timing: post_capture_only
+  minimum_capture:
+    must_create_run_record: true
+    must_assign_run_id: true
+    must_record_attempt_even_if_failed: true
+  invariant: "There is no concept of 'unimportant runs' at the capture layer."
+
+run_record_schema:
+  identity:
+    required:
+      - run_id
+      - actor_type  # human | agent | system
+      - timestamp_start
+    optional:
+      - parent_run_id
+      - actor_id
+      - auth_context
+      - environment  # prod, staging, etc.
+      - sdk_version
+
+  timing:
+    required:
+      - timestamp_start
+    optional:
+      - timestamp_end
+      - duration_ms
+
+  execution_intent:
+    required:
+      - operation_type  # prompt, tool_call, decision, etc.
+      - model_provider
+    optional:
+      - model_name
+      - input_schema_version
+
+  execution_outcome:
+    required:
+      - run_status  # success | failure | degraded | unknown
+      - response_expected  # bool
+    optional:
+      - response_received  # bool
+      - retry_count
+      - termination_reason
+
+  observability:
+    required:
+      - trace_expected  # bool
+    optional:
+      - trace_received  # bool
+      - trace_id
+      - span_count
+      - log_count
+
+  policy_context:
+    required:
+      - policies_evaluated  # list
+    optional:
+      - policy_results  # pass | warn | fail per policy
+      - thresholds_checked
+      - risk_level  # low | medium | high | unknown
+      - sensitivity_class  # data | action | scope
+
+  explicit_absence:
+    required:
+      - missing_fields
+    structure:
+      missing_fields:
+        type: list
+        item_schema:
+          field_name: string
+          missing_reason:
+            enum:
+              - unknown
+              - blocked
+              - dropped
+              - unsupported
+              - provider_side
+              - customer_side
+    invariant: "Missing data is first-class data."
+
+integrity_model:
+  expectations:
+    - id: EXPECT_RESPONSE
+      condition: "response_expected == true"
+      requires: "response_received == true"
+
+    - id: EXPECT_TRACE
+      condition: "trace_expected == true"
+      requires: "trace_received == true"
+
+  integrity_evaluation:
+    output:
+      - expected_events
+      - observed_events
+      - missing_events
+    integrity_score:
+      type: percentage
+      computation: "observed_events / expected_events"
+
+  assumption_prohibition:
+    never_assume:
+      - all_llm_calls_pass_through_sdk
+      - all_traffic_is_visible
+      - all_traces_are_available
+      - all_providers_behave_consistently
+    invariant: "Completeness is not a prerequisite for trust. Integrity is."
+
+integrity_events:
+  type: observability_integrity_event
+  created_when:
+    - expectation_violated
+  default_severity: informational
+  is_incident: false
+  is_policy_violation: false
+  nature: "Statement of uncertainty"
+  promotion_rules:
+    incident_creation: false
+    policy_creation: false
+
+layering_model:
+  layer_0:
+    name: runs
+    description: "Raw truth - everything captured"
+    judgment: none
+    governed_by: "This contract"
+
+  layer_1:
+    name: notability
+    description: "Hypothesis - potentially interesting runs"
+    judgment: tentative
+
+  layer_2:
+    name: incidents
+    description: "Committed memory - explicitly promoted"
+    judgment: explicit
+
+  layer_3:
+    name: policies
+    description: "Governance - human or system-approved"
+    judgment: enforceable
+
+  invariant: "This document governs Layer 0 only. Higher layers may never bypass it."
+
+forbidden_behaviors:
+  - id: FB_001
+    name: silent_run_drop
+    description: "Dropping runs silently"
+
+  - id: FB_002
+    name: infer_success_from_absence
+    description: "Inferring success from absence of failure"
+
+  - id: FB_003
+    name: treat_missing_as_clean
+    description: "Treating missing telemetry as 'clean'"
+
+  - id: FB_004
+    name: incident_without_run
+    description: "Generating incidents without Run Records"
+
+  - id: FB_005
+    name: policy_without_evidence
+    description: "Generating policies without traceable Run evidence"
+
+guarantees:
+  downstream:
+    - all_effects_traceable_to_runs
+    - uncertainty_explicit
+    - confidence_computable
+    - integrity_score_available
+  downstream_requirements:
+    - respect_uncertainty
+    - avoid_over_inference
+    - surface_integrity_gaps_honestly
+
+agent_instructions:
+  mandatory_reasoning_steps:
+    - start_from_run_records
+    - never_assume_completeness
+    - treat_missing_data_as_signal
+    - defer_judgment_if_integrity_low
+  when_integrity_uncertain:
+    correct_action: "Surface uncertainty, not confidence."
+
+canonical_statement: >
+  We capture everything we can.
+  We never pretend to capture everything.
+  We make the difference visible.
+
+# =============================================================================
+# EXECUTION CAPTURE CONTRACT (v1.1 - CORRECTED)
+# =============================================================================
+# PIN-407: Success as First-Class Data
+# Effective: 2026-01-12
+#
+# CORE CORRECTION: The system is EVENT-COMPLETE, not event-sparse.
+# Every run produces activity, incident, policy, and logs.
+# The VALUES differ based on outcome. EXISTENCE does not vary.
+# =============================================================================
+
+execution_capture_contract:
+  version: "1.1"
+  effective_date: "2026-01-12"
+
+  core_principle: >
+    Every execution produces a complete governance footprint.
+    Success is data, not silence.
+
+  mental_model:
+    wrong: "A run might produce activity/incident/policy"
+    correct: >
+      A run IS a first-class activity that ALWAYS produces:
+      - Activity record
+      - Incident outcome
+      - Policy outcome
+      - Logs
+      - Traces
+
+  capture_requirements:
+    activity:
+      description: "A run is itself an activity"
+      mandatory: true
+      capture_for: ALL_RUNS
+      activity_types:
+        - EXECUTION_SUCCESS
+        - EXECUTION_FAILURE
+        - EXECUTION_BLOCKED
+        - EXECUTION_ABORTED
+
+    incident:
+      description: "Every run produces an incident record"
+      mandatory: true
+      capture_for: ALL_RUNS
+      incident_outcomes:
+        - SUCCESS      # "No harm, no violation - this is evidence, not absence"
+        - FAILURE      # "Something went wrong"
+        - PARTIAL      # "Partial completion"
+        - BLOCKED      # "Blocked by policy or auth"
+      note: >
+        A "success incident" is still an incident.
+        It asserts NO harm, NO violation.
+        It is EVIDENCE, not absence.
+
+    policy:
+      description: "Every run produces a policy evaluation result"
+      mandatory: true
+      capture_for: ALL_RUNS
+      policy_outcomes:
+        - NO_VIOLATION  # "Run complied with all policies"
+        - VIOLATION     # "Run violated one or more policies"
+        - ADVISORY      # "Advisory - no enforcement"
+        - NOT_APPLICABLE  # "No policies applied to this run"
+      on_success_runs:
+        storage_options:
+          - affirmation  # "This run complied"
+          - policy_draft_candidate  # "Optional: for future runs"
+
+    logs:
+      description: "Entry and exit logs correlated by run_id"
+      mandatory: true
+      capture_for: ALL_RUNS
+      required_logs:
+        - entry_log
+        - exit_log
+      correlation: run_id
+      non_optional: true
+
+    traces:
+      description: "Trace created and finalized for every run"
+      mandatory: true
+      capture_for: ALL_RUNS
+      trace_steps: recorded
+      final_states:
+        - COMPLETE  # "Successful finalization"
+        - ABORTED   # "Finalization failed (PIN-406)"
+
+  orthogonality_rule:
+    statement: >
+      Evidence CONTENT varies by run type.
+      Evidence EXISTENCE does not.
+
+    pure_transform_example:
+      context: "json_transform skill (no LLM calls)"
+      activity_exists: true   # "Execution occurred"
+      incident_exists: true   # "SUCCESS outcome"
+      policy_exists: true     # "NO_VIOLATION / ADVISORY"
+      external_activity_evidence: false  # "No external effects"
+      provider_evidence: false  # "No LLM provider called"
+      logs_exist: true
+      traces_exist: true
+
+  consequences_of_violation:
+    description: "If you DON'T do this:"
+    issues:
+      - "Success becomes indistinguishable from 'nothing happened'"
+      - "Cannot learn from success patterns"
+      - "Cannot derive preventive policies"
+      - "Cannot show regulators WHY something was safe"
+      - "SDSR loses half its value"
+
+  enforcement:
+    missing_success_records: capture_failure
+    integrity_treatment: >
+      Integrity treats missing success-records as CAPTURE FAILURE,
+      not as 'nothing to capture'.
+
+sdsr_verification_mapping:
+  - sdsr_check: "No silent failures"
+    verified_by: "P1_CAPTURE_ALL"
+  - sdsr_check: "Explicit uncertainty"
+    verified_by: "explicit_absence"
+  - sdsr_check: "Observation integrity"
+    verified_by: "integrity_model"
+  - sdsr_check: "No fake inference"
+    verified_by: "P3_NO_FABRICATED_CERTAINTY"
+  - sdsr_check: "Upstream truth only"
+    verified_by: "layer_0"
+  - sdsr_check: "Aurora never assumes"
+    verified_by: "guarantees.downstream"
+
+related_documents:
+  - docs/governance/SDSR_SYSTEM_CONTRACT.md
+  - docs/governance/SDSR_SCENARIO_COVERAGE_MATRIX.md
+  - docs/governance/SDSR_E2E_TESTING_PROTOCOL.md
+  - docs/contracts/PRE_RUN_CONTRACT.md
+  - docs/contracts/OUTCOME_RECONCILIATION_CONTRACT.md

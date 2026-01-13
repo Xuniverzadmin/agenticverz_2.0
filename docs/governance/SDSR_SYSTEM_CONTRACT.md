@@ -4,6 +4,21 @@
 **Effective:** 2026-01-09
 **Authority:** Founder-approved, immutable without explicit approval
 **Reference:** PIN-370, PIN-379
+**Foundation:** AOS Execution Integrity Contract v1.0 (Layer 0)
+
+---
+
+## 0. Foundation Compliance
+
+This contract derives from and complies with the **AOS Execution Integrity Contract** (Layer 0).
+
+| Foundation Principle | SDSR Compliance |
+|----------------------|-----------------|
+| P1_CAPTURE_ALL | All runs captured via inject_synthetic.py |
+| P2_INTEGRITY_OVER_COMPLETENESS | Missing data explicit via explicit_absence |
+| P3_NO_FABRICATED_CERTAINTY | Effects come from engines, not scenarios |
+
+**Reference:** `docs/contracts/AOS_EXECUTION_INTEGRITY_CONTRACT.yaml`
 
 ---
 
@@ -213,6 +228,15 @@ Silent modifications are FORBIDDEN.
 
 ## Related Documents
 
+### Foundation (Layer 0)
+
+- [AOS_EXECUTION_INTEGRITY_CONTRACT.yaml](../contracts/AOS_EXECUTION_INTEGRITY_CONTRACT.yaml) - **Foundational contract (Layer 0)**
+- [PIN-403](../memory-pins/PIN-403-aos-execution-integrity-contract.md) - Execution Integrity Contract PIN
+
+### SDSR Governance
+
 - [PIN-370](../memory-pins/PIN-370-sdsr-scenario-driven-system-realization.md) - SDSR Foundation
 - [PIN-379](../memory-pins/PIN-379-sdsr-e2e-pipeline-gap-closure.md) - E2E Pipeline & Gap Closure
+- [PIN-396](../memory-pins/PIN-396-sdsr-scenario-coverage-matrix-locked.md) - SDSR Scenario Coverage Matrix
+- [SDSR_SCENARIO_COVERAGE_MATRIX.md](SDSR_SCENARIO_COVERAGE_MATRIX.md) - Scenario Coverage Matrix
 - [gap_registry.yaml](../../design/gaps/gap_registry.yaml) - Gap Taxonomy

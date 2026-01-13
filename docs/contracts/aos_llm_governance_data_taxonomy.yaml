@@ -1,0 +1,441 @@
+# AOS LLM Governance Data Taxonomy
+# Version: 1.0.0
+# Status: Foundational / Contractual
+# Scope: All LLM, agent, and human executions
+#
+# This taxonomy is ORTHOGONAL to scenarios and FOUNDATIONAL:
+# Activity, Incidents, Policies, Logs, and Integrity all reference this,
+# never redefine it.
+#
+# Reference: PIN-405 (LLM Governance Data Taxonomy)
+
+taxonomy:
+  name: AOS LLM Governance Data Taxonomy
+  version: "1.0.0"
+  status: foundational
+  applies_to:
+    - llm_runs
+    - agent_runs
+    - human_runs
+
+# -----------------------------------------
+# DESIGN PRINCIPLES (FROZEN)
+# -----------------------------------------
+principles:
+  - id: P1
+    name: evidence_over_description
+    rule: "Every class captures what happened or why a decision was made, not summaries"
+
+  - id: P2
+    name: governed_representation
+    rule: "Raw content is optional; fingerprints and structured surrogates are mandatory"
+
+  - id: P3
+    name: chain_of_custody
+    rule: "Data classes must connect: Intent -> Execution -> Decision -> Consequence -> Memory"
+
+  - id: P4
+    name: integrity_first
+    rule: "Missing data is explicitly represented and scored"
+
+  - id: P5
+    name: provider_semi_trusted
+    rule: "Provider signals are captured and distinguished from system decisions"
+
+# -----------------------------------------
+# CANONICAL DATA CLASSES
+# -----------------------------------------
+data_classes:
+
+  # =========================================
+  # CLASS A: Run Identity & Context
+  # =========================================
+  A_run_identity:
+    purpose: anchor_execution_truth
+    description: "Anchor all evidence to a single execution attempt"
+    used_by: all_other_classes
+    required:
+      - field: run_id
+        type: string
+        description: "Unique execution identifier"
+      - field: actor_type
+        type: enum
+        values: [human, agent, system]
+        description: "Who initiated the execution"
+      - field: timestamp_start
+        type: datetime
+        description: "When execution began"
+    optional:
+      - field: parent_run_id
+        type: string
+        description: "Parent run for hierarchical execution"
+      - field: actor_id
+        type: string
+        description: "Specific actor identifier"
+      - field: auth_context
+        type: string
+        description: "Authentication context identifier"
+      - field: environment
+        type: string
+        description: "Execution environment"
+      - field: sdk_version
+        type: string
+        description: "SDK version used"
+      - field: timestamp_end
+        type: datetime
+        description: "When execution completed"
+      - field: duration_ms
+        type: integer
+        description: "Total execution duration in milliseconds"
+
+  # =========================================
+  # CLASS B: Activity Evidence
+  # =========================================
+  B_activity_evidence:
+    purpose: governed_input_output
+    description: "What the model was asked and what it produced (governed representation)"
+    key_rule: "Raw content optional; fingerprints mandatory"
+    input:
+      required:
+        - field: prompt_fingerprint
+          type: string
+          description: "SHA-256 hash of normalized prompt"
+        - field: prompt_token_length
+          type: integer
+          description: "Token count of prompt"
+      optional:
+        - field: prompt_template_id
+          type: string
+          description: "Identifier of prompt template used"
+        - field: prompt_template_version
+          type: string
+          description: "Version of prompt template"
+        - field: sensitivity_class
+          type: enum
+          values: [public, internal, pii, regulated, code]
+          description: "Content sensitivity classification"
+        - field: redaction_status
+          type: enum
+          values: [raw, redacted, hashed]
+          description: "How content was processed before storage"
+    output:
+      required:
+        - field: response_fingerprint
+          type: string
+          description: "SHA-256 hash of response"
+        - field: response_token_length
+          type: integer
+          description: "Token count of response"
+      optional:
+        - field: completion_type
+          type: enum
+          values: [final, partial, streaming, refused]
+          description: "How response was delivered"
+        - field: provider_safety_flags
+          type: array
+          description: "Safety flags returned by provider"
+
+  # =========================================
+  # CLASS C: Execution Evidence
+  # =========================================
+  C_execution_evidence:
+    purpose: execution_behavior
+    description: "How the system executed the activity"
+    required:
+      - field: run_status
+        type: enum
+        values: [success, failure, degraded, unknown]
+        description: "Final execution status"
+      - field: response_expected
+        type: boolean
+        description: "Whether a response was expected"
+    optional:
+      - field: response_received
+        type: boolean
+        description: "Whether a response was received"
+      - field: retry_count
+        type: integer
+        description: "Number of retry attempts"
+      - field: termination_reason
+        type: string
+        description: "Why execution ended"
+      - field: latency_ms
+        type: integer
+        description: "Response latency in milliseconds"
+
+  # =========================================
+  # CLASS D: Decision Evidence
+  # =========================================
+  D_decision_evidence:
+    purpose: explain_decisions
+    description: "Why the system allowed, altered, or blocked behavior"
+    invariant: "A decision without its decision trace is not explainable"
+    policy_decisions:
+      required:
+        - field: policies_evaluated
+          type: array
+          description: "List of policy IDs that were evaluated"
+        - field: policy_results
+          type: enum
+          values: [pass, warn, fail, skip]
+          description: "Overall policy evaluation result"
+      optional:
+        - field: evaluation_order
+          type: array
+          description: "Order in which policies were evaluated"
+        - field: policy_version_hashes
+          type: object
+          description: "Hash of each policy version used"
+        - field: thresholds_used
+          type: object
+          description: "Threshold values applied during evaluation"
+    guardrails:
+      optional:
+        - field: customer_guardrail_result
+          type: object
+          description: "Pre-call guardrail decisions (customer-side)"
+        - field: provider_moderation_result
+          type: object
+          description: "Post-call moderation decisions (provider-side)"
+        - field: decision_reason_codes
+          type: array
+          description: "Reason codes for decisions made"
+
+  # =========================================
+  # CLASS E: Incident Evidence
+  # =========================================
+  E_incident_evidence:
+    purpose: notability_explanation
+    description: "Why a run (or set of runs) became notable"
+    note: "Incidents may arise from success, failure, or patterns"
+    required:
+      - field: incident_class
+        type: enum
+        values: [info, warning, violation, critical]
+        description: "Incident classification"
+      - field: triggering_condition
+        type: string
+        description: "What triggered the incident"
+    optional:
+      - field: severity
+        type: enum
+        values: [low, medium, high, critical]
+        description: "Incident severity"
+      - field: triggering_run_ids
+        type: array
+        description: "Run IDs that triggered the incident"
+      - field: escalation_path
+        type: string
+        description: "Escalation logic taken or skipped"
+
+  # =========================================
+  # CLASS F: Policy Evidence
+  # =========================================
+  F_policy_evidence:
+    purpose: governance_memory
+    description: "Governance memory and enforcement"
+    required:
+      - field: policy_id
+        type: string
+        description: "Policy identifier"
+      - field: policy_state
+        type: enum
+        values: [draft, proposed, active, inactive, deprecated]
+        description: "Current policy lifecycle state"
+    optional:
+      - field: genesis_reason
+        type: string
+        description: "Why the policy was suggested"
+      - field: supporting_run_patterns
+        type: array
+        description: "Run patterns that support the policy"
+      - field: enforcement_metrics
+        type: object
+        description: "How often policy fires, false positives, etc."
+      - field: override_history
+        type: array
+        description: "Human overrides of this policy"
+
+  # =========================================
+  # CLASS G: Provider Evidence
+  # =========================================
+  G_provider_evidence:
+    purpose: provider_behavior
+    description: "What the LLM provider did or reported"
+    required:
+      - field: provider_request_id
+        type: string
+        description: "Provider-assigned request identifier"
+      - field: model_provider
+        type: string
+        description: "LLM provider name"
+    optional:
+      - field: model_name
+        type: string
+        description: "Model name/identifier"
+      - field: model_version
+        type: string
+        description: "Model version/snapshot"
+      - field: token_usage
+        type: object
+        properties:
+          prompt_tokens: integer
+          completion_tokens: integer
+          total_tokens: integer
+        description: "Token usage breakdown"
+      - field: provider_retry_count
+        type: integer
+        description: "Retries at provider level"
+      - field: provider_safety_signals
+        type: object
+        description: "Provider moderation/safety signals"
+
+  # =========================================
+  # CLASS H: Customer Environment Evidence
+  # =========================================
+  H_customer_environment_evidence:
+    purpose: trust_boundary_context
+    description: "Explain capture gaps and trust boundaries"
+    required:
+      - field: sdk_mode
+        type: enum
+        values: [inline, async, degraded, offline]
+        description: "SDK operation mode"
+    optional:
+      - field: telemetry_delivery_status
+        type: enum
+        values: [sent, dropped, buffered, unknown]
+        description: "Whether telemetry was delivered"
+      - field: firewall_proxy_detected
+        type: boolean
+        description: "Whether firewall/proxy was detected"
+      - field: capture_confidence_score
+        type: float
+        min: 0.0
+        max: 1.0
+        description: "Confidence in capture completeness"
+
+  # =========================================
+  # CLASS I: Observability Evidence
+  # =========================================
+  I_observability_evidence:
+    purpose: logs_and_traces
+    description: "Logs and traces as first-class governed artifacts"
+    logs:
+      required:
+        - field: log_count
+          type: integer
+          description: "Number of log entries"
+      optional:
+        - field: log_class
+          type: enum
+          values: [audit, debug, security, ops]
+          description: "Log classification"
+        - field: log_source
+          type: enum
+          values: [sdk, worker, policy_engine, gateway]
+          description: "Source of logs"
+        - field: redaction_level
+          type: enum
+          values: [none, partial, full]
+          description: "How logs were redacted"
+    traces:
+      required:
+        - field: trace_id
+          type: string
+          description: "Root trace identifier"
+      optional:
+        - field: span_count
+          type: integer
+          description: "Number of spans in trace"
+        - field: spans_linked_to_run
+          type: boolean
+          description: "Whether all spans are linked to run_id"
+
+  # =========================================
+  # CLASS J: Integrity & Coverage Evidence
+  # =========================================
+  J_integrity_and_coverage:
+    purpose: evidence_about_evidence
+    description: "Evidence about the evidence (meta-evidence)"
+    required:
+      - field: expected_artifacts
+        type: array
+        description: "Artifacts expected for this execution"
+      - field: observed_artifacts
+        type: array
+        description: "Artifacts actually observed"
+      - field: integrity_score
+        type: float
+        min: 0.0
+        max: 1.0
+        description: "Ratio of observed/expected artifacts"
+    optional:
+      - field: missing_artifacts
+        type: array
+        description: "Artifacts expected but not observed"
+      - field: missing_reasons
+        type: object
+        description: "Reasons for each missing artifact"
+      - field: coverage_metrics
+        type: object
+        description: "Coverage by environment/provider"
+
+# -----------------------------------------
+# INVARIANTS (MUST HOLD)
+# -----------------------------------------
+invariants:
+  - id: INV-001
+    name: no_data_without_run_identity
+    rule: "No data class may exist without Class A (Run Identity)"
+
+  - id: INV-002
+    name: no_decision_without_decision_evidence
+    rule: "Any decision must have Class D (Decision Evidence)"
+
+  - id: INV-003
+    name: no_incident_without_incident_evidence
+    rule: "Any incident must have Class E (Incident Evidence)"
+
+  - id: INV-004
+    name: no_policy_without_policy_evidence
+    rule: "Any policy must have Class F (Policy Evidence)"
+
+  - id: INV-005
+    name: absence_must_be_explicit
+    rule: "Missing data must be explicitly represented, not silently absent"
+
+  - id: INV-006
+    name: integrity_must_be_computable
+    rule: "Integrity score must be derivable from expected vs observed"
+
+# -----------------------------------------
+# MAPPING TO SYSTEM CONCEPTS
+# -----------------------------------------
+system_concept_mapping:
+  Activity:
+    required_classes: [A, B, C, I]
+    description: "What ran / is running"
+
+  Logs:
+    required_classes: [A, I, J]
+    description: "What is the raw truth"
+
+  Incidents:
+    required_classes: [A, C, D, E, J]
+    description: "What went wrong"
+
+  Policies:
+    required_classes: [A, D, F, J]
+    description: "How is behavior defined"
+
+  Governance_UI:
+    required_classes: [A, B, C, D, E, F, G, H, I, J]
+    note: "Selective exposure based on user role and context"
+
+# -----------------------------------------
+# ONE-LINE INVARIANT (EMBED THIS)
+# -----------------------------------------
+core_invariant: >
+  If a customer asks "why did this happen?",
+  the system must answer without guessing.

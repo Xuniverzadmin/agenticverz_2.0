@@ -1,0 +1,25 @@
+schema_version: '1.0'
+protocol: SESSION_EXIT
+timestamp: '2026-01-12T13:35:19Z'
+checks:
+  sr_artifact:
+    status: found
+    path: /root/agenticverz2.0/artifacts/session_reconcile/SR-7daed10d.yaml
+    session_id: 7daed10d
+    verdict: RECONCILED_EXIT_READY
+    exit_ready: true
+  session_state:
+    status: found
+    exit_ready: false
+    verdict: null
+  hk_freshness:
+    status: found
+    path: /root/agenticverz2.0/artifacts/housekeeping/HK-20260112-125109.yaml
+    timestamp: '2026-01-12T12:51:09Z'
+    age_hours: 0.74
+    max_age_hours: 24.0
+    fresh: true
+verdict: CLEAN_EXIT
+exit_allowed: true
+blocking_reasons: []
+session_id: 7daed10d

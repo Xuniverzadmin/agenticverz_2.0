@@ -36,9 +36,8 @@ from alembic import op
 
 # revision identifiers
 revision = "081_tenant_onboarding_state"
-# NOTE: Skipping 079-080 as they reference non-existent tables (prevention_records)
-# Database is currently at 078_aos_traces_sdsr_columns
-down_revision = "078_aos_traces_sdsr_columns"
+# Correct chain: 079 → 080 → 081
+down_revision = "080_trace_archival_columns"
 branch_labels = None
 depends_on = None
 

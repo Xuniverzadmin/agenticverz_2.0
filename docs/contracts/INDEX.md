@@ -1,6 +1,7 @@
 # System Contracts Index
 
 **Created:** 2025-12-25
+**Last Updated:** 2026-01-12
 **Status:** FROZEN - `contracts-stable-v1` (2025-12-25)
 
 > **LOCK NOTICE:** All contracts are frozen as of Phase 4 completion.
@@ -8,10 +9,33 @@
 
 ---
 
+## Foundational Contract (Layer 0)
+
+| Contract | Version | Status | Purpose |
+|----------|---------|--------|---------|
+| [AOS_EXECUTION_INTEGRITY_CONTRACT.yaml](AOS_EXECUTION_INTEGRITY_CONTRACT.yaml) | 1.0.0 | **FOUNDATIONAL** | Defines minimum truth guarantees for all executions |
+
+> **All higher-level contracts (PRE-RUN, CONSTRAINT, DECISION, OUTCOME) must derive from and comply with this foundation.**
+
+### Core Principles (Layer 0)
+
+| ID | Principle |
+|----|-----------|
+| P1_CAPTURE_ALL | Every execution attempt must result in a Run Record. Silence is a violation. |
+| P2_INTEGRITY_OVER_COMPLETENESS | The system must not assume complete visibility. Missing data must be explicitly represented. |
+| P3_NO_FABRICATED_CERTAINTY | Absence of evidence must never be interpreted as success. |
+
+### Canonical Statement
+
+> **We capture everything we can. We never pretend to capture everything. We make the difference visible.**
+
+---
+
 ## Contract Execution Order
 
 | Order | Contract | Question Answered |
 |-------|----------|-------------------|
+| 0 | EXECUTION_INTEGRITY | What are the minimum truth guarantees? (Layer 0) |
 | 1 | PRE-RUN | What must the system declare before execution starts? |
 | 2 | CONSTRAINT | What constraints apply, and how are they enforced? |
 | 3 | DECISION | What decisions must be surfaced when the system chooses a path? |
@@ -23,6 +47,8 @@
 
 | File | Version | Entries Covered |
 |------|---------|-----------------|
+| [AOS_EXECUTION_INTEGRITY_CONTRACT.yaml](AOS_EXECUTION_INTEGRITY_CONTRACT.yaml) | 1.0.0 | Layer 0 foundation |
+| [AOS_EXECUTION_INTEGRITY_CONTRACT.json](AOS_EXECUTION_INTEGRITY_CONTRACT.json) | 1.0.0 | Layer 0 (derived) |
 | [PRE_RUN_CONTRACT.md](PRE_RUN_CONTRACT.md) | 0.1 | 3 |
 | [CONSTRAINT_DECLARATION_CONTRACT.md](CONSTRAINT_DECLARATION_CONTRACT.md) | 0.1 | 2 |
 | [DECISION_RECORD_CONTRACT.md](DECISION_RECORD_CONTRACT.md) | 0.2 | 4 |

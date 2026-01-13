@@ -1,0 +1,383 @@
+# SDSR Acceptance Criteria v3 (AC-v3)
+# Derived From: AOS LLM Governance Data Taxonomy v1.0
+# Applies To: SDSR-E2E-006 (Baseline Trust - Immutable)
+# Status: Authoritative
+#
+# This is NOT opinionated. It is a DERIVED enforcement layer.
+# If taxonomy changes, AC-v3 must change - not vice-versa.
+#
+# Reference: PIN-405 (LLM Governance Data Taxonomy)
+
+version: "3.0.0"
+derived_from: aos_llm_governance_data_taxonomy.yaml
+baseline_scenario: SDSR-E2E-006
+
+# -----------------------------------------
+# AC-v3 DESIGN RULES (FROZEN)
+# -----------------------------------------
+design_rules:
+  - rule: R1
+    name: taxonomy_mapping
+    description: "Every AC maps to a taxonomy class"
+
+  - rule: R2
+    name: baseline_required
+    description: "Baseline scenarios require 100% of REQUIRED fields"
+
+  - rule: R3
+    name: explicit_absence
+    description: "OPTIONAL fields must be explicitly marked missing"
+
+  - rule: R4
+    name: no_unknown
+    description: "UNKNOWN is illegal for baseline"
+
+  - rule: R5
+    name: integrity_independence
+    description: "Integrity failure != execution failure (but still FAIL)"
+
+# -----------------------------------------
+# CLASS A - RUN IDENTITY & CONTEXT
+# -----------------------------------------
+class_A_run_identity:
+
+  AC-A1:
+    name: Run Identity Exists
+    taxonomy_class: A_run_identity
+    checks:
+      - field: run_id
+        condition: present
+      - field: timestamp_start
+        condition: present
+      - field: actor_type
+        condition: "in [human, agent, system]"
+    fail_condition: "FAIL if missing"
+
+  AC-A2:
+    name: Actor & Auth Context Integrity
+    taxonomy_class: A_run_identity
+    checks:
+      - field: actor_id
+        condition: "present OR explicitly_marked_missing"
+      - field: auth_context
+        condition: "present OR explicitly_marked_missing"
+    fail_condition: "FAIL if implicit absence"
+
+  AC-A3:
+    name: Environment Provenance
+    taxonomy_class: A_run_identity
+    checks:
+      - field: environment
+        condition: present
+      - field: sdk_version
+        condition: "present OR explicitly_marked_missing"
+    fail_condition: "FAIL if unknown"
+
+  AC-A4:
+    name: Temporal Closure
+    taxonomy_class: A_run_identity
+    checks:
+      - field: timestamp_end
+        condition: present
+      - field: duration_ms
+        condition: computable
+    fail_condition: "FAIL if open-ended"
+
+# -----------------------------------------
+# CLASS B - ACTIVITY EVIDENCE (GOVERNED I/O)
+# -----------------------------------------
+class_B_activity_evidence:
+
+  AC-B1:
+    name: Prompt Evidence (Governed)
+    taxonomy_class: B_activity_evidence.input
+    checks:
+      - field: prompt_fingerprint
+        condition: present
+      - field: prompt_token_length
+        condition: present
+    note: "Raw prompt NOT required"
+    fail_condition: "FAIL if fingerprint missing"
+
+  AC-B2:
+    name: Response Evidence (Governed)
+    taxonomy_class: B_activity_evidence.output
+    checks:
+      - field: response_fingerprint
+        condition: present
+      - field: response_token_length
+        condition: present
+    fail_condition: "FAIL if fingerprint missing"
+
+  AC-B3:
+    name: Sensitivity Classification
+    taxonomy_class: B_activity_evidence
+    checks:
+      - field: sensitivity_class
+        condition: "present OR explicitly_marked_unknown"
+      - field: redaction_status
+        condition: present
+    fail_condition: "FAIL if absent"
+
+# -----------------------------------------
+# CLASS C - EXECUTION EVIDENCE
+# -----------------------------------------
+class_C_execution_evidence:
+
+  AC-C1:
+    name: Execution Outcome
+    taxonomy_class: C_execution_evidence
+    checks:
+      - field: run_status
+        condition: "= success"
+      - field: response_expected
+        condition: "= true"
+      - field: response_received
+        condition: "= true"
+    fail_condition: "FAIL if any mismatch"
+
+  AC-C2:
+    name: Retry & Termination Semantics
+    taxonomy_class: C_execution_evidence
+    checks:
+      - field: retry_count
+        condition: "present (>= 0)"
+      - field: termination_reason
+        condition: "present OR explicitly_null"
+    fail_condition: "FAIL if inferred"
+
+# -----------------------------------------
+# CLASS D - DECISION EVIDENCE
+# -----------------------------------------
+class_D_decision_evidence:
+
+  AC-D1:
+    name: Policy Evaluation Explicitness
+    taxonomy_class: D_decision_evidence.policy_decisions
+    checks:
+      - field: policies_evaluated
+        condition: "exists (may be empty)"
+      - field: policy_results
+        condition: "= pass"
+    fail_condition: "FAIL if policy silence"
+
+  AC-D2:
+    name: Threshold Awareness
+    taxonomy_class: D_decision_evidence.policy_decisions
+    checks:
+      - field: thresholds_checked
+        condition: exists
+    fail_condition: "FAIL if thresholds implicit"
+
+  AC-D3:
+    name: Guardrail & Moderation Attribution
+    taxonomy_class: D_decision_evidence.guardrails
+    checks:
+      - condition: "If provider moderation occurred: provider_moderation_result present"
+      - condition: "Else: explicitly_marked_not_applicable"
+    fail_condition: "FAIL if ambiguous"
+
+# -----------------------------------------
+# CLASS E - INCIDENT EVIDENCE (EXPLICIT ABSENCE)
+# -----------------------------------------
+class_E_incident_evidence:
+
+  AC-E1:
+    name: Incident Non-Creation Assertion
+    taxonomy_class: E_incident_evidence
+    checks:
+      - field: incident_created
+        condition: "= false (explicit flag)"
+    fail_condition: "FAIL if inferred from count"
+
+  AC-E2:
+    name: Incident Table Consistency
+    taxonomy_class: E_incident_evidence
+    checks:
+      - field: incidents_table_count
+        condition: "= 0"
+      - condition: "No dangling incident references"
+    fail_condition: "FAIL if mismatch"
+
+# -----------------------------------------
+# CLASS F - POLICY EVIDENCE (EXPLICIT ABSENCE)
+# -----------------------------------------
+class_F_policy_evidence:
+
+  AC-F1:
+    name: Policy Non-Creation Assertion
+    taxonomy_class: F_policy_evidence
+    checks:
+      - field: policy_created
+        condition: "= false"
+      - field: policy_proposal_created
+        condition: "= false"
+    fail_condition: "FAIL if inferred"
+
+  AC-F2:
+    name: Policy Table Consistency
+    taxonomy_class: F_policy_evidence
+    checks:
+      - field: policy_rules_count
+        condition: "= 0"
+      - field: policy_proposals_count
+        condition: "= 0"
+    fail_condition: "FAIL if mismatch"
+
+# -----------------------------------------
+# CLASS G - PROVIDER EVIDENCE
+# -----------------------------------------
+class_G_provider_evidence:
+
+  AC-G1:
+    name: Provider Attribution
+    taxonomy_class: G_provider_evidence
+    checks:
+      - field: provider_request_id
+        condition: present
+      - field: model_provider
+        condition: present
+      - field: model_name
+        condition: "present OR explicitly_marked_missing"
+    fail_condition: "FAIL if provider anonymous"
+
+  AC-G2:
+    name: Provider Usage Semantics
+    taxonomy_class: G_provider_evidence
+    checks:
+      - field: token_usage
+        condition: "present OR explicitly_unavailable"
+      - field: provider_retry_count
+        condition: "present OR explicitly_zero"
+    fail_condition: "FAIL if silent"
+
+# -----------------------------------------
+# CLASS H - CUSTOMER ENVIRONMENT EVIDENCE
+# -----------------------------------------
+class_H_environment_evidence:
+
+  AC-H1:
+    name: SDK Execution Mode
+    taxonomy_class: H_customer_environment_evidence
+    checks:
+      - field: sdk_mode
+        condition: "in [inline, async, degraded]"
+    fail_condition: "FAIL if unknown"
+
+  AC-H2:
+    name: Telemetry Delivery Honesty
+    taxonomy_class: H_customer_environment_evidence
+    checks:
+      - field: telemetry_delivery_status
+        condition: present
+      - condition: "If dropped/blocked: reason provided"
+    fail_condition: "FAIL if optimistic assumption"
+
+# -----------------------------------------
+# CLASS I - OBSERVABILITY EVIDENCE
+# -----------------------------------------
+class_I_observability_evidence:
+
+  AC-I1:
+    name: Log Semantics
+    taxonomy_class: I_observability_evidence.logs
+    checks:
+      - field: log_count
+        condition: ">= 2 (entry + exit)"
+      - condition: "Logs correlated to run_id"
+    fail_condition: "FAIL if UNKNOWN"
+
+  AC-I2:
+    name: Trace Existence
+    taxonomy_class: I_observability_evidence.traces
+    checks:
+      - field: trace_id
+        condition: present
+      - field: trace_expected
+        condition: "= true"
+      - field: trace_received
+        condition: "= true"
+    fail_condition: "FAIL if partial"
+
+  AC-I3:
+    name: Trace Semantic Validity
+    taxonomy_class: I_observability_evidence.traces
+    checks:
+      - field: span_count
+        condition: ">= 1"
+      - condition: "All spans linked to trace_id"
+      - condition: "All spans linked to run_id"
+      - condition: "All spans linked to synthetic_scenario_id"
+    fail_condition: "FAIL if orphaned"
+
+# -----------------------------------------
+# CLASS J - INTEGRITY & COVERAGE
+# -----------------------------------------
+class_J_integrity:
+
+  AC-J1:
+    name: Integrity Expectation Declaration
+    taxonomy_class: J_integrity_and_coverage
+    checks:
+      - field: expected_artifacts
+        condition: "list exists"
+      - condition: "Includes: response, logs, trace, trace_steps"
+    fail_condition: "FAIL if implicit"
+
+  AC-J2:
+    name: Integrity Observation Accounting
+    taxonomy_class: J_integrity_and_coverage
+    checks:
+      - field: observed_artifacts
+        condition: "list exists"
+      - field: missing_artifacts
+        condition: "list exists (may be empty)"
+    fail_condition: "FAIL if counts only"
+
+  AC-J3:
+    name: Integrity Score Strictness (Baseline Rule)
+    taxonomy_class: J_integrity_and_coverage
+    checks:
+      - field: missing_artifacts
+        condition: "= []"
+      - field: integrity_score
+        condition: "= 1.0"
+    fail_condition: "FAIL if < 1.0"
+
+# -----------------------------------------
+# GLOBAL BASELINE RULES
+# -----------------------------------------
+global_rules:
+
+  AC-GLOB-1:
+    name: UNKNOWN Is Illegal
+    rule: "Any UNKNOWN result => FAIL"
+
+  AC-GLOB-2:
+    name: Explicit > Inferred
+    rule: "Any inferred absence => FAIL"
+
+  AC-GLOB-3:
+    name: Contract Supremacy
+    rule: "Taxonomy > Scenario YAML > ACs > Code"
+    note: "Violation => FAIL even if code works"
+
+# -----------------------------------------
+# CERTIFICATION GATE LOGIC
+# -----------------------------------------
+certification_gate:
+  conditions:
+    - "All AC-A -> AC-J PASS"
+    - "All AC-GLOB PASS"
+    - "No integrity downgrade"
+    - "No inferred silence"
+  on_fail:
+    status: BLOCKED
+    rule: "Root cause must be infra, instrumentation, or propagation - never scenario weakening"
+
+# -----------------------------------------
+# CANONICAL BASELINE ENFORCEMENT STATEMENT
+# -----------------------------------------
+baseline_statement: >
+  Baseline Trust is earned only when the system proves it can
+  observe success completely and honestly.

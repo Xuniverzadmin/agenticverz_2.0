@@ -1,0 +1,636 @@
+scenario_id: SDSR-E2E-006
+name: Successful Activity → Run Record + Integrity (Baseline Trust)
+domain: CROSS_DOMAIN
+
+# -----------------------------------------
+# CERTIFICATION STATUS
+# -----------------------------------------
+# NEW: 2026-01-12
+# UPDATED: 2026-01-12 — CERTIFICATION SUSPENDED pending AC v2 evaluation
+#
+# This is the CANONICAL BASELINE for all future SDSR and Aurora behavior.
+# Conceptually supersedes SDSR-E2E-002 but does NOT modify or deprecate it.
+#
+# CERTIFICATION HISTORY:
+#   2026-01-12T15:37Z — AC v1 (16 criteria) PASSED
+#   2026-01-12T16:xx  — Certification SUSPENDED
+#                       Reason: AC v1 did not enforce metadata completeness
+#                       and integrity semantics defined in contract
+#   PENDING          — AC v2 (7 additional criteria) evaluation required
+#
+# Status: PROVISIONAL — SUSPENDED
+# Next: Re-evaluate against AC v2, re-run if needed, then reinstate
+
+# -----------------------------------------
+# SCENARIO CLASSIFICATION (MANDATORY)
+# -----------------------------------------
+scenario_class: SC-EX-S  # Execution — Success
+execution_mode: executable
+
+# This scenario validates governance-grade capture + integrity on success path.
+# Foundation: AOS Execution Integrity Contract v1.0 (PIN-403)
+
+coverage:
+  run_record_creation: true
+  integrity_evaluation: true
+  trace_generation: true
+  log_correlation: true
+  policy_evaluation_on_success: true
+  explicit_absence_assertions: true
+  worker_execution: true
+
+purpose: >
+  Prove, in production-real terms, that:
+  1. All successful executions are captured as Runs
+  2. Success produces evidence, not silence
+  3. Integrity is evaluated even when nothing goes wrong
+  4. Absence of incidents/policies is an explicit, verified outcome
+  5. Future governance can safely build on this baseline
+
+  If this scenario is invalid, NO OTHER SCENARIO IS TRUSTWORTHY.
+
+# -----------------------------------------
+# FOUNDATION COMPLIANCE
+# -----------------------------------------
+foundation:
+  contract: AOS_EXECUTION_INTEGRITY_CONTRACT
+  version: "1.0.0"
+  principles_under_test:
+    - P1_CAPTURE_ALL
+    - P2_INTEGRITY_OVER_COMPLETENESS
+    - P3_NO_FABRICATED_CERTAINTY
+
+# -----------------------------------------
+# SYNTHETIC INJECTION BOUNDARY (STRICT)
+# -----------------------------------------
+injection_boundary:
+  injected:
+    - valid_execution_intent
+    - schema_compliant_inputs
+    - policy_compliant_inputs
+    - within_threshold_inputs
+  explicitly_not_injected:
+    - logs
+    - traces
+    - incidents
+    - policies
+    - metrics
+    - integrity_results
+  invariant: "All downstream artifacts MUST be produced by real backend execution paths"
+
+# -----------------------------------------
+# PRECONDITIONS
+# -----------------------------------------
+preconditions:
+  tenant:
+    id: tenant-e2e-006
+    name: E2E-006 Baseline Trust Tenant
+    is_synthetic: true
+    synthetic_scenario_id: SDSR-E2E-006
+
+  api_key:
+    id: key-e2e-006
+    tenant_id: tenant-e2e-006
+    is_synthetic: true
+    synthetic_scenario_id: SDSR-E2E-006
+
+  agent:
+    id: agent-e2e-006
+    name: Baseline Trust Agent
+    tenant_id: tenant-e2e-006
+    is_synthetic: true
+    synthetic_scenario_id: SDSR-E2E-006
+    skills:
+      - name: echo
+        description: Simple echo skill for baseline validation
+        parameters:
+          message:
+            type: string
+            required: true
+
+# -----------------------------------------
+# EXECUTION STEPS
+# -----------------------------------------
+steps:
+  - step_id: step-001
+    action: create_run
+    description: Create a run that will succeed deterministically
+    data:
+      id: "run-e2e-006-{timestamp}"
+      tenant_id: tenant-e2e-006
+      agent_id: agent-e2e-006
+      status: queued
+      is_synthetic: true
+      synthetic_scenario_id: SDSR-E2E-006
+      # Execution intent that will succeed
+      input:
+        task: "Echo baseline message"
+        skill: echo
+        parameters:
+          message: "SDSR-E2E-006 baseline trust validation"
+
+  - step_id: step-002
+    action: trigger_worker
+    description: Worker picks up and executes the run
+    depends_on: step-001
+    expected_behavior:
+      - "Worker picks up run with status=queued"
+      - "Worker executes echo skill"
+      - "Execution completes successfully"
+      - "Run status transitions to completed"
+
+  - step_id: step-003
+    action: wait_for_completion
+    description: Wait for run to reach terminal state
+    depends_on: step-002
+    timeout_seconds: 30
+    expected_terminal_state: completed
+
+# -----------------------------------------
+# EXPECTED REAL SYSTEM EXECUTION
+# -----------------------------------------
+expected_execution:
+  terminal_state: SUCCESS
+  retry_count: 0
+  warnings: 0
+  degradations: 0
+  soft_failures: 0
+  latency_envelope: normal
+
+  failure_conditions:
+    - "Any retry escalation"
+    - "Any warning emitted"
+    - "Any latency drift"
+    - "Status != completed"
+
+# -----------------------------------------
+# RUN RECORD REQUIREMENTS (CONTRACT ENFORCEMENT)
+# -----------------------------------------
+run_record_requirements:
+  # 4.1 Required Fields (Hard Requirements)
+  required_fields:
+    - field: run_id
+      must_exist: true
+    - field: actor_type
+      must_exist: true
+      valid_values: [human, agent, system]
+    - field: timestamp_start
+      must_exist: true
+    - field: operation_type
+      must_exist: true
+    - field: model_provider
+      must_exist: true
+    - field: run_status
+      must_exist: true
+      expected_value: success
+    - field: response_expected
+      must_exist: true
+      expected_value: true
+    - field: response_received
+      must_exist: true
+      expected_value: true
+
+  # 4.2 Identity & Context Metadata
+  context_metadata:
+    fields:
+      - field: actor_id
+        capture_if_available: true
+      - field: auth_context
+        capture_if_available: true
+      - field: environment
+        capture_if_available: true
+      - field: sdk_version
+        capture_if_available: true
+    absence_rule: "If unavailable, absence MUST be explicitly marked per contract"
+
+# -----------------------------------------
+# OBSERVABILITY REQUIREMENTS
+# -----------------------------------------
+observability_requirements:
+  # 5.1 Logs
+  logs:
+    entry_log_required: true
+    exit_log_required: true
+    correlation_to_run_id: true
+    silence_is_failure: true
+
+  # 5.2 Traces
+  traces:
+    trace_expected: true
+    trace_received: true
+    single_root_trace_id: true
+    all_spans_linked: true
+    queryable_after_completion: true
+    orphaned_traces_fail: true
+
+# -----------------------------------------
+# POLICY EVALUATION ON SUCCESS
+# -----------------------------------------
+policy_evaluation:
+  description: "Even on success, policies MUST be explicitly evaluated"
+  required_fields:
+    - field: policies_evaluated
+      must_exist: true
+      note: "List; may be empty but must exist"
+    - field: policy_results
+      expected_value: pass
+    - field: thresholds_checked
+      must_exist: true
+      note: "Even if far from breach"
+  proof: >
+    "Policies were evaluated and passed"
+    NOT
+    "Policies were irrelevant"
+
+# -----------------------------------------
+# EXPLICIT OUTCOME ASSERTIONS (PIN-407 CORRECTION)
+# -----------------------------------------
+# NOTE: PIN-407 corrects the semantic model.
+# Success is DATA, not silence. Every run produces:
+# - Activity (always)
+# - Incident (with outcome: SUCCESS)
+# - Policy (with outcome: NO_VIOLATION)
+# - Logs (entry + exit)
+# - Traces (COMPLETE)
+#
+# The PREVIOUS assertion that incident_created = false was INCORRECT.
+# A success run SHOULD create an incident with outcome = SUCCESS.
+# -----------------------------------------
+explicit_outcome_assertions:
+  description: "Success produces explicit success records, not silence"
+  required_assertions:
+    - field: incident_created
+      expected_value: true       # CORRECTED: Success creates SUCCESS incident
+      outcome: SUCCESS           # Not a failure incident
+      inference_forbidden: true
+    - field: policy_evaluated
+      expected_value: true       # CORRECTED: Policies always evaluated
+      outcome: NO_VIOLATION      # Success = no violations
+      inference_forbidden: true
+    - field: policy_proposal_created
+      expected_value: false      # No proposal needed (no violation)
+      inference_forbidden: true
+  note: >
+    PIN-407 CORRECTION: The previous model implied "success = no incident".
+    This is WRONG. Success IS an incident with outcome=SUCCESS.
+    Absence of incident records for success runs = capture failure.
+
+# -----------------------------------------
+# INTEGRITY EVALUATION (CORE OF SDSR-E2E-006)
+# -----------------------------------------
+integrity_evaluation:
+  # 8.1 Integrity Expectations
+  expectations:
+    - condition: "Response expected"
+      result: "Response received"
+      status: pass
+    - condition: "Trace expected"
+      result: "Trace present"
+      status: pass
+    - condition: "Logs expected"
+      result: "Logs present"
+      status: pass
+
+  # 8.2 Integrity Computation
+  computation:
+    expected_events: 3  # response, trace, logs
+    observed_events: 3
+    missing_events: 0
+    integrity_score: 1.0
+
+  failure_condition: "If integrity_score < 1.0 → scenario FAILS"
+
+# -----------------------------------------
+# SDSR OBSERVATION OUTPUT
+# -----------------------------------------
+observation_output:
+  observation_class: EFFECT
+  reason: >
+    Real execution occurred.
+    Real system artifacts observed.
+    Integrity verified.
+
+  # 9.2 Capabilities Eligible for Inference
+  capabilities_allowed:
+    - EXECUTE
+    - TRACE
+    - VIEW_EXECUTION_GRAPH
+
+  capabilities_forbidden:
+    - ACKNOWLEDGE
+    - RESOLVE
+    - APPROVE
+    - REJECT
+    - ACTIVATE
+    - DEACTIVATE
+
+  forbidden_capability_rule: "Any forbidden capability inferred → reject observation"
+
+# -----------------------------------------
+# HARD FAILURE CONDITIONS (PIN-407 CORRECTED)
+# -----------------------------------------
+hard_failure_conditions:
+  conditions:
+    - "No Run Record exists"
+    - "Logs or traces missing"
+    - "Integrity expectations violated"
+    - "SUCCESS incident NOT created (PIN-407: success is data)"
+    - "Policy NOT evaluated (PIN-407: policies always evaluated)"
+    - "Policy proposal created (no violation occurred)"
+    - "Absence asserted implicitly"
+    - "Execution shortcuts governance layer"
+  note: "Failure here is CORRECT behavior"
+
+# -----------------------------------------
+# EXPECTATIONS (SINGLE SOURCE OF TRUTH FOR AC v2)
+# -----------------------------------------
+# This block defines what MUST be true for baseline certification.
+# AC v2 binds 1:1 to these expectations. No inference allowed.
+expectations:
+  # Run Record Metadata Completeness
+  run_record:
+    required_fields:
+      - run_id
+      - actor_type
+      - actor_id
+      - auth_context
+      - environment
+      - sdk_version
+      - operation_type
+      - model_provider
+      - model_name
+      - run_status
+      - response_expected
+      - response_received
+      - timestamp_start
+      - timestamp_end
+    absence_semantics: "Missing field MUST be explicitly marked, not silently absent"
+
+  # Observability Semantic Integrity
+  observability:
+    logs:
+      required: true
+      correlated_to_run: true
+      entry_log: true
+      exit_log: true
+    traces:
+      required: true
+      trace_id_required: true
+      min_trace_steps: 1
+      steps_linked_to_trace: true
+      steps_linked_to_run: true
+      steps_linked_to_scenario: true  # synthetic_scenario_id propagation
+
+  # Policy Context (Even on Success)
+  policy_context:
+    policies_evaluated:
+      required: true
+      note: "List; may be empty but MUST exist"
+    policy_results:
+      required: true
+      expected_value: pass
+    thresholds_checked:
+      required: true
+      note: "Even if far from breach"
+
+  # Explicit Outcome Assertions (PIN-407 CORRECTION)
+  # NOTE: Success is DATA, not silence. Success runs produce:
+  # - Incident with outcome = SUCCESS
+  # - Policy evaluation with outcome = NO_VIOLATION
+  explicit_outcome:
+    incident_created:
+      required: true
+      expected: true             # CORRECTED: Success creates incident
+      incident_outcome: SUCCESS  # With SUCCESS outcome
+      inference_forbidden: true
+    policy_evaluated:
+      required: true
+      expected: true             # CORRECTED: Policies always evaluated
+      policy_outcome: NO_VIOLATION
+      inference_forbidden: true
+    policy_proposal_created:
+      required: true
+      expected: false            # No proposal (no violation occurred)
+      inference_forbidden: true
+
+  # Integrity Computation
+  integrity:
+    expected_events:
+      - response
+      - logs
+      - trace
+      - trace_steps
+    missing_events:
+      required: true
+      expected: 0
+    integrity_score:
+      required: true
+      expected: 1.0
+    baseline_rule: "UNKNOWN ≡ FAIL — no inference, no grace"
+
+# -----------------------------------------
+# ACCEPTANCE CRITERIA (v1 - Original)
+# -----------------------------------------
+acceptance_criteria_v1:
+  # Run Record
+  - id: AC-001
+    criterion: Run Record created with all required fields
+    expected: true
+
+  - id: AC-002
+    criterion: run_status = success
+    expected: success
+
+  - id: AC-003
+    criterion: response_expected = true AND response_received = true
+    expected: true
+
+  # Observability
+  - id: AC-004
+    criterion: Entry and exit logs recorded
+    expected: true
+
+  - id: AC-005
+    criterion: Trace created with single root trace_id
+    expected: true
+
+  - id: AC-006
+    criterion: All trace spans linked
+    expected: true
+
+  # Policy Evaluation
+  - id: AC-007
+    criterion: policies_evaluated field exists
+    expected: true
+
+  - id: AC-008
+    criterion: policy_results = pass
+    expected: pass
+
+  # Explicit Outcome (PIN-407 CORRECTED)
+  # NOTE: v1 criteria are now superseded by PIN-407 model
+  # Kept for historical reference but outcomes are corrected
+  - id: AC-009
+    criterion: incident_created with SUCCESS outcome
+    expected: true  # PIN-407: Success creates SUCCESS incident
+    outcome: SUCCESS
+
+  - id: AC-010
+    criterion: policy_evaluated with NO_VIOLATION outcome
+    expected: true  # PIN-407: Policies always evaluated
+    outcome: NO_VIOLATION
+
+  - id: AC-011
+    criterion: policy_proposal_created explicitly = false
+    expected: false  # No proposal needed (no violation)
+
+  # Integrity
+  - id: AC-012
+    criterion: integrity_score = 1.0
+    expected: 1.0
+
+  - id: AC-013
+    criterion: missing_events = 0
+    expected: 0
+
+  # Non-Propagation
+  - id: AC-014
+    criterion: incidents table count for scenario = 0
+    expected: 0
+
+  - id: AC-015
+    criterion: policy_proposals table count for scenario = 0
+    expected: 0
+
+  - id: AC-016
+    criterion: policy_rules table count for scenario = 0
+    expected: 0
+
+# -----------------------------------------
+# ACCEPTANCE CRITERIA (v2 - Contract-Derived)
+# -----------------------------------------
+# These criteria bind 1:1 to the expectations block above.
+# BASELINE-ONLY: Other scenarios may weaken. Baseline may not.
+acceptance_criteria_v2:
+  # AC-020: Run Metadata Completeness
+  - id: AC-020
+    criterion: All expectations.run_record.required_fields present
+    binds_to: expectations.run_record.required_fields
+    baseline_only: true
+    expected: true
+    note: "Missing fields must NOT exist for baseline"
+
+  # AC-021: Actor & Context Integrity
+  - id: AC-021
+    criterion: Actor and context metadata complete
+    binds_to: expectations.run_record.required_fields
+    checks:
+      - "actor_type ∈ {human, agent, system}"
+      - "auth_context present OR explicitly marked absent"
+      - "environment present OR explicitly marked absent"
+      - "sdk_version present OR explicitly marked absent"
+    baseline_only: true
+    expected: true
+
+  # AC-022: Execution Intent Integrity
+  - id: AC-022
+    criterion: Execution intent metadata complete
+    binds_to: expectations.run_record.required_fields
+    checks:
+      - "operation_type present"
+      - "model_provider present"
+      - "model_name present OR explicitly marked absent"
+    baseline_only: true
+    expected: true
+
+  # AC-023: Policy Evaluation Explicitness
+  - id: AC-023
+    criterion: Policy evaluation explicitly recorded
+    binds_to: expectations.policy_context
+    checks:
+      - "policies_evaluated field exists (even if empty list)"
+      - "policy_results = pass"
+      - "thresholds_checked exists"
+    baseline_only: true
+    expected: true
+
+  # AC-024: Observability Semantic Integrity
+  - id: AC-024
+    criterion: Observability artifacts complete and linked
+    binds_to: expectations.observability
+    checks:
+      - "logs exist AND correlated to run_id"
+      - "trace exists"
+      - "trace_steps >= 1"
+      - "every step linked to same trace_id"
+      - "every step linked to same run_id"
+      - "every step linked to same synthetic_scenario_id"
+    baseline_only: true
+    expected: true
+
+  # AC-025: Explicit Outcome Assertions (PIN-407 CORRECTED)
+  - id: AC-025
+    criterion: Outcomes explicitly recorded, not inferred
+    binds_to: expectations.explicit_outcome
+    checks:
+      - "incident_created = true with outcome = SUCCESS (PIN-407)"
+      - "policy_evaluated = true with outcome = NO_VIOLATION (PIN-407)"
+      - "policy_proposal_created = false (no violation)"
+    baseline_only: true
+    expected: true
+    inference_forbidden: true
+
+  # AC-026: Integrity Strictness (Baseline Rule)
+  - id: AC-026
+    criterion: Integrity score exactly 1.0, no missing events
+    binds_to: expectations.integrity
+    checks:
+      - "UNKNOWN ≡ FAIL"
+      - "missing_events list is empty"
+      - "integrity_score = 1.0 exactly"
+    baseline_only: true
+    expected: true
+    note: "This is the BASELINE rule — no grace, no inference"
+
+# -----------------------------------------
+# CLEANUP
+# -----------------------------------------
+cleanup:
+  strategy: synthetic_scenario_id
+  tables:
+    - runs
+    - aos_traces
+    - aos_trace_steps
+    - agents
+    - api_keys
+    - tenants
+  filter: "synthetic_scenario_id = 'SDSR-E2E-006'"
+
+# -----------------------------------------
+# VALUE PROVEN
+# -----------------------------------------
+value_proven:
+  after_certification:
+    - "All executions are observed"
+    - "Success paths are governed, not ignored"
+    - "Integrity is measurable"
+    - "Governance does not interfere with normal operation"
+    - "Future incidents and policies have a trusted baseline"
+  statement: "This is the BEDROCK scenario"
+
+# -----------------------------------------
+# RELATIONSHIP TO EXISTING SCENARIOS
+# -----------------------------------------
+relationships:
+  scenarios:
+    - scenario: SDSR-E2E-005
+      relationship: "Proves worker execution + trace mechanics"
+    - scenario: SDSR-E2E-006
+      relationship: "Proves governance-grade capture + integrity on success"
+    - scenario: SDSR-E2E-001
+      relationship: "Builds meaningfully on this baseline (failure path)"
+    - scenario: SDSR-E2E-003
+      relationship: "Builds meaningfully on this baseline (threshold breach)"
+    - scenario: SDSR-E2E-004
+      relationship: "Builds meaningfully on this baseline (HITL policy)"
+  note: "No conflicts. No rewrites. Clean layering."

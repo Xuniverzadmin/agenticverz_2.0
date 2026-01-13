@@ -1,18 +1,28 @@
-exit:
-  ready: false
-  verdict: null
+session_id: test-20260112-125059
+started_at: '2026-01-12T12:50:59Z'
+updated_at: '2026-01-12T14:30:00Z'
+
 pipeline:
+  scripts:
+    status: completed
   container:
     status: completed
   deploy:
     status: completed
+  tests:
+    status: pending
+    note: "4668 tests collected, full run required"
   git_commit:
     status: pending
   git_push:
     status: pending
-  scripts:
-    status: completed
-  tests:
-    status: failed
-session_id: test-20260112-125059
-started_at: '2026-01-12T12:50:59Z'
+
+exit:
+  ready: false
+  verdict: RECONCILIATION_BLOCKED
+  blocking_reason: "Tests not verified"
+
+work_summary:
+  pins_updated: [PIN-408]
+  files_modified: 6
+  syntax_checks: PASSED

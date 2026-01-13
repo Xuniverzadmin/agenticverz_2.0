@@ -1,10 +1,31 @@
-# Skill Executor
-# Validation wrapper for skill execution at the runner boundary
+# Layer: L5 — Execution & Workers
+# Product: system-wide
+# Temporal:
+#   Trigger: worker (via runner.py)
+#   Execution: async
+# Role: Skill execution with validation and evidence capture
+# Authority: Skill invocation, validation, evidence capture (NO step advancement)
+# Callers: runner.py (passes cursor.context)
+# Allowed Imports: L6
+# Forbidden Imports: L1, L2, L3, L4
+# Reference: Evidence Architecture v1.1
 
+"""
+Skill Executor - Validation wrapper for skill execution at the runner boundary.
+
+Evidence Architecture v1.1:
+- Receives ExecutionContext from runner (via cursor.context)
+- Context is READ-ONLY - executor cannot advance steps
+- Captures Activity (B) and Provider (G) evidence using context
+- Step advancement is runner's responsibility via ExecutionCursor
+"""
+
+import hashlib
+import json
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 from pydantic import ValidationError
 
@@ -14,6 +35,11 @@ from ..observability.cost_tracker import (
 )
 from ..schemas.plan import PlanStep, StepStatus
 from .registry import get_skill_entry
+
+# Evidence Architecture v1.1: Activity and Provider evidence capture
+# ExecutionContext is received as read-only snapshot from runner's cursor.context
+if TYPE_CHECKING:
+    from ..core.execution_context import ExecutionContext
 
 logger = logging.getLogger("nova.skills.executor")
 
@@ -165,6 +191,7 @@ class SkillExecutor:
         skill_config: Optional[Dict[str, Any]] = None,
         tenant_id: Optional[str] = None,
         workflow_id: Optional[str] = None,
+        execution_context: Optional["ExecutionContext"] = None,
     ) -> Tuple[Dict[str, Any], StepStatus]:
         """Execute a skill with validation.
 
@@ -175,6 +202,9 @@ class SkillExecutor:
             skill_config: Configuration for skill
             tenant_id: Tenant ID for cost tracking (required if enforce_budget=True)
             workflow_id: Workflow ID for workflow-level budget limits
+            execution_context: Read-only ExecutionContext from cursor.context (Evidence Architecture v1.1)
+                              Used for Activity (B) and Provider (G) evidence capture.
+                              Executor MUST NOT advance steps - that's runner's responsibility.
 
         Returns:
             Tuple of (result dict, step status)
@@ -286,6 +316,41 @@ class SkillExecutor:
                 original_error=e,
             )
 
+        # Evidence Architecture v1.1: Capture B (Activity) evidence before LLM/tool call
+        # Context is read-only from cursor.context - we use it, we don't mutate it
+        prompt_fingerprint = None
+        prompt_token_estimate = 0
+        if execution_context and skill_name == "llm_invoke":
+            try:
+                from ..evidence.capture import capture_activity_evidence
+
+                # Compute prompt fingerprint for LLM calls
+                prompt_text = str(validated_params.get("prompt", ""))
+                prompt_fingerprint = hashlib.sha256(prompt_text.encode()).hexdigest()[:64]
+
+                # Estimate token count (rough: ~4 chars per token)
+                prompt_token_estimate = len(prompt_text) // 4
+
+                # Extract model from config or params
+                model_name = validated_params.get("model") or (skill_config.get("model", "unknown") if skill_config else "unknown")
+
+                capture_activity_evidence(
+                    execution_context,
+                    skill_id=skill_name,
+                    model_name=model_name,
+                    prompt_fingerprint=prompt_fingerprint,
+                    prompt_token_length=prompt_token_estimate,
+                )
+                logger.debug(
+                    "activity_evidence_captured",
+                    extra={"run_id": execution_context.run_id, "skill": skill_name},
+                )
+            except Exception as e:
+                logger.warning(
+                    "activity_evidence_capture_failed",
+                    extra={"run_id": execution_context.run_id if execution_context else None, "error": str(e)},
+                )
+
         # Execute skill
         try:
             result = await instance.execute(validated_params)
@@ -327,6 +392,43 @@ class SkillExecutor:
                 "duration": round(duration, 3),
             },
         )
+
+        # Evidence Architecture v1.1: Capture G (Provider) evidence after LLM response
+        # Context is read-only from cursor.context - we use it, we don't mutate it
+        if execution_context and skill_name == "llm_invoke":
+            try:
+                from ..evidence.capture import capture_provider_evidence
+
+                # Extract provider info from result
+                input_tokens = result.get("input_tokens", 0)
+                output_tokens = result.get("output_tokens", 0)
+                model_name = result.get("model") or validated_params.get("model", "unknown")
+                provider_latency_ms = result.get("latency_ms", int(duration * 1000))
+
+                # Determine provider from model name
+                provider_name = "anthropic" if "claude" in model_name.lower() else "openai"
+
+                capture_provider_evidence(
+                    execution_context,
+                    provider_name=provider_name,
+                    model_name=model_name,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    provider_latency_ms=provider_latency_ms,
+                )
+                logger.debug(
+                    "provider_evidence_captured",
+                    extra={
+                        "run_id": execution_context.run_id,
+                        "provider": provider_name,
+                        "tokens": input_tokens + output_tokens,
+                    },
+                )
+            except Exception as e:
+                logger.warning(
+                    "provider_evidence_capture_failed",
+                    extra={"run_id": execution_context.run_id if execution_context else None, "error": str(e)},
+                )
 
         # Add execution metadata to result
         result["_meta"] = {

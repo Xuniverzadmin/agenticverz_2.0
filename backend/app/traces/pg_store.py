@@ -106,7 +106,7 @@ class PostgresTraceStore:
         is_synthetic: bool = False,
         synthetic_scenario_id: str | None = None,
         incident_id: str | None = None,
-    ) -> None:
+    ) -> str:
         """Start a new trace record (for replay compatibility).
 
         S6 IMMUTABILITY: Traces are append-only. If a trace already exists
@@ -115,11 +115,16 @@ class PostgresTraceStore:
         SDSR Inheritance (PIN-378):
         - is_synthetic and synthetic_scenario_id should be passed from run
         - incident_id links trace to an incident for cross-domain correlation
+
+        Returns:
+            trace_id: The canonical trace identifier for this run.
+                      MUST be used for all subsequent record_step calls.
         """
         pool = await self._get_pool()
         now = datetime.now(timezone.utc)
-        # Use run_id as base for trace_id for easier correlation
-        trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith("run_") else f"trace_{run_id}"
+        # PIN-404: trace_id is derived HERE and returned for consistent use
+        # This is the ONLY place trace_id derivation should happen
+        trace_id = f"trace_{run_id}"  # Simple, predictable derivation
 
         async with pool.acquire() as conn:
             # S6: Append-only - ignore if trace already exists
@@ -149,8 +154,11 @@ class PostgresTraceStore:
                 incident_id,  # incident_id (cross-domain correlation)
             )
 
+        return trace_id  # PIN-404: Return for consistent use in record_step
+
     async def record_step(
         self,
+        trace_id: str,  # REQUIRED - never derived (PIN-404 fix)
         run_id: str,
         step_index: int,
         skill_name: str,
@@ -163,19 +171,35 @@ class PostgresTraceStore:
         duration_ms: float,
         retry_count: int,
         *,
-        # SDSR columns (PIN-378)
+        # SDSR columns (PIN-378, PIN-404)
         source: str = "engine",
+        is_synthetic: bool = False,
+        synthetic_scenario_id: str | None = None,
     ) -> None:
         """Record a step in the trace (for replay compatibility).
 
         S6 IMMUTABILITY: Steps are append-only. Duplicate inserts are ignored.
 
-        SDSR (PIN-378):
+        PIN-404 INVARIANT: trace_id is ALWAYS passed, NEVER derived.
+        Identity is propagated, not recomputed.
+
+        SDSR (PIN-378, PIN-404):
+        - trace_id: Authoritative trace identity (required)
         - source: Origin of step (engine, external, replay)
         - level: Derived from status (INFO/WARN/ERROR)
+        - is_synthetic: SDSR marker for cleanup
+        - synthetic_scenario_id: Scenario lineage for integrity
         """
         pool = await self._get_pool()
         now = datetime.now(timezone.utc)
+
+        # PIN-404 GUARDRAIL: trace_id must not be empty
+        if not trace_id:
+            raise ValueError("trace_id is required - identity must be passed, not derived")
+
+        # PIN-404 GUARDRAIL: synthetic consistency
+        if is_synthetic and not synthetic_scenario_id:
+            raise ValueError("synthetic_scenario_id required when is_synthetic=True")
 
         # Convert status if it's an enum
         status_val = status.value if hasattr(status, "value") else status
@@ -183,10 +207,15 @@ class PostgresTraceStore:
         # Derive level from status (PIN-378)
         level = _status_to_level(status_val)
 
-        # Derive trace_id from run_id
-        trace_id = f"trace_{run_id.replace('run_', '')}" if run_id.startswith("run_") else f"trace_{run_id}"
-
         async with pool.acquire() as conn:
+            # PIN-404 GUARDRAIL: Verify parent trace exists by trace_id (canonical identifier)
+            parent_exists = await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM aos_traces WHERE trace_id = $1)",
+                trace_id,
+            )
+            if not parent_exists:
+                raise ValueError(f"Parent trace {trace_id} does not exist - orphan steps forbidden")
+
             # S6: Append-only - ignore duplicates, never update
             await conn.execute(
                 """
@@ -194,11 +223,11 @@ class PostgresTraceStore:
                     trace_id, step_index, skill_id, skill_name, params,
                     status, outcome_category, outcome_code, outcome_data,
                     cost_cents, duration_ms, retry_count, replay_behavior, timestamp,
-                    source, level
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                    source, level, is_synthetic, synthetic_scenario_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                 ON CONFLICT (trace_id, step_index) DO NOTHING
                 """,
-                trace_id,  # trace_id
+                trace_id,  # trace_id (PASSED, not derived)
                 step_index,  # step_index
                 skill_name,  # skill_id (use skill_name as id)
                 skill_name,  # skill_name
@@ -214,6 +243,8 @@ class PostgresTraceStore:
                 now,  # timestamp
                 source,  # source (SDSR)
                 level,  # level (derived from status)
+                is_synthetic,  # is_synthetic (PIN-404)
+                synthetic_scenario_id,  # synthetic_scenario_id (PIN-404)
             )
 
     async def complete_trace(
@@ -236,6 +267,47 @@ class PostgresTraceStore:
                 status,
                 now,
                 json.dumps(metadata) if metadata else None,
+                run_id,
+            )
+
+    async def mark_trace_aborted(
+        self,
+        run_id: str,
+        reason: str,
+    ) -> None:
+        """
+        Mark a trace as ABORTED due to finalization failure.
+
+        FAIL-CLOSED TRACE SEMANTICS (PIN-406):
+        A trace is either COMPLETE or ABORTED. There is no "dangling".
+
+        When trace finalization fails (e.g., complete_trace() throws):
+        - The trace MUST be marked ABORTED
+        - This is a terminal state (no retry)
+        - Integrity treats ABORTED as sealed-but-failed
+
+        Args:
+            run_id: The run whose trace failed to complete
+            reason: Why finalization failed (for audit)
+        """
+        pool = await self._get_pool()
+        now = datetime.now(timezone.utc)
+
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE aos_traces
+                SET status = 'aborted',
+                    completed_at = $1,
+                    metadata = jsonb_set(
+                        COALESCE(metadata, '{}'::jsonb),
+                        '{abort_reason}',
+                        $2::jsonb
+                    )
+                WHERE run_id = $3 AND status = 'running'
+                """,
+                now,
+                json.dumps(reason),
                 run_id,
             )
 

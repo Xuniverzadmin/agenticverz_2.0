@@ -173,11 +173,80 @@ class DecisionRecordService:
 
     Emits to contracts.decision_records table.
     Non-blocking - failures are logged but don't affect callers.
+
+    Evidence Architecture v1.0: Also bridges to governance.policy_decisions for taxonomy evidence.
     """
 
     def __init__(self, db_url: Optional[str] = None):
         self._db_url = db_url or os.environ.get("DATABASE_URL")
         self._enabled = self._db_url is not None
+
+    def _bridge_to_taxonomy(self, record: DecisionRecord) -> None:
+        """
+        Evidence Architecture v1.0: Bridge decision to governance taxonomy.
+
+        Mirrors operational decisions to governance.policy_decisions table for
+        cross-domain evidence correlation. This is the D (Decision) evidence bridge.
+
+        Note: This is best-effort and non-blocking.
+        """
+        # Only bridge policy-related decisions
+        policy_types = {
+            DecisionType.POLICY,
+            DecisionType.POLICY_PRE_CHECK,
+            DecisionType.BUDGET,
+            DecisionType.BUDGET_ENFORCEMENT,
+        }
+
+        if record.decision_type not in policy_types:
+            return
+
+        try:
+            engine = create_engine(self._db_url)
+            with engine.connect() as conn:
+                # Map operational decision to taxonomy format
+                policy_type = record.decision_type.value
+                decision = "allowed" if record.decision_outcome in {
+                    DecisionOutcome.SELECTED,
+                    DecisionOutcome.NONE,
+                } else "denied"
+
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO governance.policy_decisions (
+                            id, run_id, policy_type, decision, rationale,
+                            is_synthetic, synthetic_scenario_id, capture_confidence_score, created_at
+                        ) VALUES (
+                            :id, :run_id, :policy_type, :decision, :rationale,
+                            :is_synthetic, :synthetic_scenario_id, :capture_confidence_score, :created_at
+                        ) ON CONFLICT (id) DO NOTHING
+                        """
+                    ),
+                    {
+                        "id": record.decision_id,
+                        "run_id": record.run_id,
+                        "policy_type": policy_type,
+                        "decision": decision,
+                        "rationale": record.decision_reason or "",
+                        "is_synthetic": False,  # Operational decisions are never synthetic
+                        "synthetic_scenario_id": None,
+                        "capture_confidence_score": 1.0,
+                        "created_at": record.decided_at,
+                    },
+                )
+                conn.commit()
+            engine.dispose()
+            logger.debug(
+                "decision_bridged_to_taxonomy",
+                extra={"decision_id": record.decision_id, "policy_type": policy_type},
+            )
+        except Exception as e:
+            # Non-blocking - log and continue
+            logger.debug(
+                "taxonomy_bridge_failed",
+                extra={"decision_id": record.decision_id, "error": str(e)},
+            )
 
     async def emit(self, record: DecisionRecord) -> bool:
         """
@@ -238,6 +307,10 @@ class DecisionRecordService:
                     "causal_role": record.causal_role.value,
                 },
             )
+
+            # Evidence Architecture v1.0: Bridge to governance taxonomy
+            self._bridge_to_taxonomy(record)
+
             return True
 
         except SQLAlchemyError as e:
@@ -304,6 +377,10 @@ class DecisionRecordService:
                 )
                 conn.commit()
             engine.dispose()
+
+            # Evidence Architecture v1.0: Bridge to governance taxonomy
+            self._bridge_to_taxonomy(record)
+
             return True
         except Exception as e:
             logger.warning(f"Failed to emit decision record (sync): {e}")

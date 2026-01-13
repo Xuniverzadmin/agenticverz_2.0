@@ -52,6 +52,10 @@ from app.auth.authority import AuthorityResult, emit_authority_audit, require_re
 # Phase 5B: Policy Pre-Check Integration
 from app.contracts.decisions import emit_policy_precheck_decision
 from app.db import CostBudget, get_async_session
+
+# Evidence Architecture v1.0: ExecutionContext and taxonomy evidence
+from app.core.execution_context import ExecutionContext, EvidenceSource
+from app.evidence.capture import capture_environment_evidence
 from app.models.tenant import WorkerRun
 from app.policy.engine import PolicyEngine
 from app.services.worker_write_service_async import WorkerWriteServiceAsync
@@ -957,6 +961,25 @@ async def run_worker(
             },
             tenant_id=tenant_id,
         )
+
+        # Evidence Architecture v1.0: Capture environment evidence at run creation (H)
+        # ExecutionContext is created once here and will be reconstructed in worker
+        trace_id = f"trace_{run_id}"  # Matches pg_store.start_trace() pattern
+        ctx = ExecutionContext.create(
+            run_id=run_id,
+            trace_id=trace_id,
+            source=EvidenceSource.SDK,
+            is_synthetic=False,  # Production runs
+            synthetic_scenario_id=None,
+        )
+        capture_environment_evidence(
+            ctx,
+            sdk_mode="api",
+            execution_environment=os.getenv("ENV", "prod"),
+            telemetry_delivery_status="connected",
+            capture_confidence_score=1.0,
+        )
+
         background_tasks.add_task(_execute_worker_async, run_id, request)
 
         return WorkerRunResponse(

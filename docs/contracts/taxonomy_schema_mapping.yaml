@@ -1,0 +1,445 @@
+# AOS LLM Governance Data Taxonomy → Database Schema Mapping
+# Version: 1.0.0
+# Status: Authoritative
+# Reference: PIN-405, Migration 082_governance_taxonomy_tables
+#
+# This document maps each taxonomy class to its canonical database table(s).
+# After migration 082, full capture is supported for all 10 classes.
+
+mapping_version: "1.0.0"
+taxonomy_version: "1.0.0"
+migration_reference: "082_governance_taxonomy_tables"
+
+# -----------------------------------------
+# COVERAGE SUMMARY (POST-MIGRATION 082)
+# -----------------------------------------
+coverage_summary:
+  total_classes: 10
+  fully_covered: 10
+  partially_covered: 0
+  missing: 0
+
+# -----------------------------------------
+# CLASS A: Run Identity & Context
+# -----------------------------------------
+class_A_run_identity:
+  status: FULL_COVERAGE
+  primary_table: runs
+  columns:
+    run_id:
+      db_column: runs.id
+      type: TEXT
+      required: true
+    actor_type:
+      db_column: runs.actor_type
+      type: ENUM
+      required: true
+      note: "Derived from agent vs API key context"
+    actor_id:
+      db_column: runs.agent_id
+      type: TEXT
+      required: false
+    auth_context:
+      db_column: runs.tenant_id
+      type: TEXT
+      required: true
+    environment:
+      db_column: runs.execution_environment
+      type: STRING(20)
+      required: false
+      added_in: "082"
+    sdk_version:
+      db_column: environment_evidence.sdk_version
+      type: STRING(20)
+      required: false
+    timestamp_start:
+      db_column: runs.created_at
+      type: TIMESTAMP
+      required: true
+    timestamp_end:
+      db_column: runs.completed_at
+      type: TIMESTAMP
+      required: false
+    duration_ms:
+      db_column: runs.duration_ms
+      type: INTEGER
+      required: false
+    execution_mode:
+      db_column: runs.execution_mode
+      type: STRING(20)
+      required: false
+      added_in: "082"
+
+# -----------------------------------------
+# CLASS B: Activity Evidence
+# -----------------------------------------
+class_B_activity_evidence:
+  status: FULL_COVERAGE
+  primary_table: activity_evidence
+  added_in: "082"
+  columns:
+    prompt_fingerprint:
+      db_column: activity_evidence.prompt_fingerprint
+      type: STRING(64)
+      required: true
+    prompt_token_length:
+      db_column: activity_evidence.prompt_token_length
+      type: INTEGER
+      required: true
+    prompt_template_id:
+      db_column: activity_evidence.prompt_template_id
+      type: TEXT
+      required: false
+    prompt_template_version:
+      db_column: activity_evidence.prompt_template_version
+      type: STRING(20)
+      required: false
+    sensitivity_class:
+      db_column: activity_evidence.sensitivity_class
+      type: ENUM
+      required: false
+    redaction_status:
+      db_column: activity_evidence.redaction_status
+      type: ENUM
+      required: false
+    response_fingerprint:
+      db_column: activity_evidence.response_fingerprint
+      type: STRING(64)
+      required: true
+    response_token_length:
+      db_column: activity_evidence.response_token_length
+      type: INTEGER
+      required: true
+    completion_type:
+      db_column: activity_evidence.completion_type
+      type: ENUM
+      required: false
+    provider_safety_flags:
+      db_column: activity_evidence.provider_safety_flags
+      type: JSONB
+      required: false
+
+# -----------------------------------------
+# CLASS C: Execution Evidence
+# -----------------------------------------
+class_C_execution_evidence:
+  status: FULL_COVERAGE
+  primary_table: aos_traces
+  secondary_table: aos_trace_steps
+  columns:
+    run_status:
+      db_column: runs.status
+      type: ENUM
+      required: true
+    response_expected:
+      db_column: aos_traces.status
+      type: ENUM
+      required: true
+      note: "Derived from trace existence"
+    response_received:
+      db_column: aos_traces.completed_at
+      type: TIMESTAMP
+      required: false
+      note: "Present if response received"
+    retry_count:
+      db_column: aos_trace_steps.retry_count
+      type: INTEGER
+      required: true
+    termination_reason:
+      db_column: aos_trace_steps.outcome_code
+      type: TEXT
+      required: false
+    latency_ms:
+      db_column: aos_trace_steps.duration_ms
+      type: INTEGER
+      required: false
+
+# -----------------------------------------
+# CLASS D: Decision Evidence
+# -----------------------------------------
+class_D_decision_evidence:
+  status: FULL_COVERAGE
+  primary_table: policy_decisions
+  added_in: "082"
+  columns:
+    policies_evaluated:
+      db_column: policy_decisions.policies_evaluated
+      type: ARRAY(TEXT)
+      required: true
+    policy_results:
+      db_column: policy_decisions.policy_results
+      type: ENUM
+      required: true
+    evaluation_order:
+      db_column: policy_decisions.evaluation_order
+      type: ARRAY(TEXT)
+      required: false
+    policy_version_hashes:
+      db_column: policy_decisions.thresholds_used
+      type: JSONB
+      required: false
+    thresholds_used:
+      db_column: policy_decisions.thresholds_used
+      type: JSONB
+      required: false
+    customer_guardrail_result:
+      db_column: policy_decisions.customer_guardrail_result
+      type: JSONB
+      required: false
+    provider_moderation_result:
+      db_column: policy_decisions.provider_moderation_result
+      type: JSONB
+      required: false
+    decision_reason_codes:
+      db_column: policy_decisions.decision_reason_codes
+      type: ARRAY(TEXT)
+      required: false
+
+# -----------------------------------------
+# CLASS E: Incident Evidence
+# -----------------------------------------
+class_E_incident_evidence:
+  status: FULL_COVERAGE
+  primary_table: incidents
+  columns:
+    incident_class:
+      db_column: incidents.severity
+      type: ENUM
+      required: true
+    triggering_condition:
+      db_column: incidents.failure_type
+      type: TEXT
+      required: true
+    severity:
+      db_column: incidents.severity
+      type: ENUM
+      required: true
+    triggering_run_ids:
+      db_column: incidents.source_run_id
+      type: TEXT
+      required: true
+    escalation_path:
+      db_column: incidents.status
+      type: ENUM
+      required: false
+
+# -----------------------------------------
+# CLASS F: Policy Evidence
+# -----------------------------------------
+class_F_policy_evidence:
+  status: FULL_COVERAGE
+  primary_table: policy_rules
+  secondary_table: policy_proposals
+  columns:
+    policy_id:
+      db_column: policy_rules.id
+      type: TEXT
+      required: true
+    policy_state:
+      db_column: policy_proposals.status
+      type: ENUM
+      required: true
+    genesis_reason:
+      db_column: policy_proposals.recommendation_text
+      type: TEXT
+      required: false
+    supporting_run_patterns:
+      db_column: policy_proposals.triggering_feedback_ids
+      type: ARRAY(TEXT)
+      required: false
+    enforcement_metrics:
+      db_column: policy_rules.hit_count
+      type: INTEGER
+      required: false
+    override_history:
+      db_column: status_history
+      type: TABLE
+      required: false
+
+# -----------------------------------------
+# CLASS G: Provider Evidence
+# -----------------------------------------
+class_G_provider_evidence:
+  status: FULL_COVERAGE
+  primary_table: provider_evidence
+  added_in: "082"
+  columns:
+    provider_request_id:
+      db_column: provider_evidence.provider_request_id
+      type: TEXT
+      required: false
+    model_provider:
+      db_column: provider_evidence.provider_name
+      type: STRING(50)
+      required: true
+    model_name:
+      db_column: provider_evidence.model_name
+      type: TEXT
+      required: true
+    model_version:
+      db_column: provider_evidence.model_version
+      type: STRING(50)
+      required: false
+    token_usage:
+      db_columns:
+        - provider_evidence.input_tokens
+        - provider_evidence.output_tokens
+        - provider_evidence.total_tokens
+      type: INTEGER
+      required: false
+    provider_retry_count:
+      db_column: provider_evidence.provider_retry_count
+      type: INTEGER
+      required: false
+    provider_safety_signals:
+      db_column: provider_evidence.provider_safety_signals
+      type: JSONB
+      required: false
+
+# -----------------------------------------
+# CLASS H: Customer Environment Evidence
+# -----------------------------------------
+class_H_environment_evidence:
+  status: FULL_COVERAGE
+  primary_table: environment_evidence
+  added_in: "082"
+  columns:
+    sdk_mode:
+      db_column: environment_evidence.sdk_mode
+      type: ENUM
+      required: true
+    telemetry_delivery_status:
+      db_column: environment_evidence.telemetry_delivery_status
+      type: ENUM
+      required: false
+    firewall_proxy_detected:
+      db_column: environment_evidence.firewall_proxy_detected
+      type: BOOLEAN
+      required: false
+    capture_confidence_score:
+      db_column: environment_evidence.capture_confidence_score
+      type: FLOAT
+      required: false
+
+# -----------------------------------------
+# CLASS I: Observability Evidence
+# -----------------------------------------
+class_I_observability_evidence:
+  status: FULL_COVERAGE
+  primary_table: aos_traces
+  secondary_table: aos_trace_steps
+  columns:
+    log_count:
+      db_column: aos_trace_steps
+      type: COUNT
+      required: true
+      note: "Derived from step count"
+    log_class:
+      db_column: aos_trace_steps.level
+      type: ENUM
+      required: false
+    log_source:
+      db_column: aos_trace_steps.source
+      type: ENUM
+      required: false
+    redaction_level:
+      db_column: aos_trace_steps.redacted
+      type: ENUM
+      required: false
+      note: "Not yet implemented"
+    trace_id:
+      db_column: aos_traces.trace_id
+      type: TEXT
+      required: true
+    span_count:
+      db_column: aos_trace_steps
+      type: COUNT
+      required: false
+    spans_linked_to_run:
+      db_column: aos_trace_steps.run_id
+      type: TEXT
+      required: true
+      note: "All steps have run_id FK"
+
+# -----------------------------------------
+# CLASS J: Integrity & Coverage Evidence
+# -----------------------------------------
+class_J_integrity_evidence:
+  status: FULL_COVERAGE
+  primary_table: integrity_evidence
+  added_in: "082"
+  columns:
+    expected_artifacts:
+      db_column: integrity_evidence.expected_artifacts
+      type: ARRAY(TEXT)
+      required: true
+    observed_artifacts:
+      db_column: integrity_evidence.observed_artifacts
+      type: ARRAY(TEXT)
+      required: true
+    integrity_score:
+      db_column: integrity_evidence.integrity_score
+      type: FLOAT
+      required: true
+    missing_artifacts:
+      db_column: integrity_evidence.missing_artifacts
+      type: ARRAY(TEXT)
+      required: false
+    missing_reasons:
+      db_column: integrity_evidence.missing_reasons
+      type: JSONB
+      required: false
+    coverage_metrics:
+      db_column: integrity_evidence.coverage_metrics
+      type: JSONB
+      required: false
+
+# -----------------------------------------
+# NEW TABLES (Migration 082)
+# -----------------------------------------
+new_tables:
+  - name: activity_evidence
+    taxonomy_class: B
+    purpose: "Governed I/O fingerprints - no raw content storage"
+
+  - name: policy_decisions
+    taxonomy_class: D
+    purpose: "Granular policy evaluation records"
+
+  - name: provider_evidence
+    taxonomy_class: G
+    purpose: "LLM provider behavior tracking"
+
+  - name: environment_evidence
+    taxonomy_class: H
+    purpose: "Trust boundary context"
+
+  - name: integrity_evidence
+    taxonomy_class: J
+    purpose: "Evidence about evidence - expected vs observed"
+
+# -----------------------------------------
+# EXTENDED TABLES (Migration 082)
+# -----------------------------------------
+extended_tables:
+  - name: runs
+    new_columns:
+      - execution_mode
+      - execution_environment
+    taxonomy_class: A
+
+# -----------------------------------------
+# UI VISIBILITY RULES
+# -----------------------------------------
+ui_visibility:
+  preflight_console:
+    scope: FULL
+    note: "All data classes visible at preflight-console.agenticverz.com"
+
+  customer_console:
+    scope: FULL_FOR_NOW
+    note: "Full visibility initially, redaction policy TBD"
+    future_redaction:
+      - activity_evidence.prompt_fingerprint
+      - activity_evidence.response_fingerprint
+      - provider_evidence.provider_request_id

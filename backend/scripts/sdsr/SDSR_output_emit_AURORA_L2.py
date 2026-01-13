@@ -35,12 +35,14 @@ if TYPE_CHECKING:
         ScenarioSDSROutput,
         ObservedCapability,
         ObservedEffect,
+        ACv2Evidence,
     )
 else:
     from Scenario_SDSR_output import (
         ScenarioSDSROutput,
         ObservedCapability,
         ObservedEffect,
+        ACv2Evidence,
     )
 
 
@@ -83,6 +85,75 @@ def _serialize_capability(cap: ObservedCapability) -> Dict[str, Any]:
     }
 
 
+def _serialize_ac_v2_evidence(evidence: "ACv2Evidence") -> Dict[str, Any]:
+    """Serialize ACv2Evidence to dict for baseline certification."""
+    result: Dict[str, Any] = {
+        "evaluated_at": evidence.evaluated_at,
+        "ac_v2_pass": evidence.ac_v2_pass,
+        "ac_v2_failures": evidence.ac_v2_failures,
+    }
+
+    if evidence.run_record:
+        result["run_record"] = {
+            "fields_present": evidence.run_record.fields_present,
+            "fields_missing": evidence.run_record.fields_missing,
+            "run_id": evidence.run_record.run_id,
+            "run_status": evidence.run_record.run_status,
+            "timestamp_start": evidence.run_record.timestamp_start,
+            "timestamp_end": evidence.run_record.timestamp_end,
+        }
+
+    if evidence.observability:
+        result["observability"] = {
+            "logs_exist": evidence.observability.logs_exist,
+            "logs_correlated_to_run": evidence.observability.logs_correlated_to_run,
+            "trace_exists": evidence.observability.trace_exists,
+            "trace_id": evidence.observability.trace_id,
+            "trace_steps_count": evidence.observability.trace_steps_count,
+            "steps_linked_to_trace": evidence.observability.steps_linked_to_trace,
+            "steps_linked_to_run": evidence.observability.steps_linked_to_run,
+            "steps_linked_to_scenario": evidence.observability.steps_linked_to_scenario,
+            "orphan_step_ids": evidence.observability.orphan_step_ids,
+        }
+
+    if evidence.policy_context:
+        result["policy_context"] = {
+            "policies_evaluated_exists": evidence.policy_context.policies_evaluated_exists,
+            "policy_results_value": evidence.policy_context.policy_results_value,
+            "thresholds_checked_exists": evidence.policy_context.thresholds_checked_exists,
+        }
+
+    # PIN-407: Use explicit_outcome (renamed from explicit_absence)
+    # Check both new and deprecated field names for backward compatibility
+    explicit_outcome = getattr(evidence, 'explicit_outcome', None) or getattr(evidence, 'explicit_absence', None)
+    if explicit_outcome:
+        result["explicit_outcome"] = {
+            # PIN-407: New outcome-based fields
+            "incident_created": explicit_outcome.incident_created,
+            "incident_outcome": explicit_outcome.incident_outcome,
+            "policy_evaluated": explicit_outcome.policy_evaluated,
+            "policy_outcome": explicit_outcome.policy_outcome,
+            "policy_proposal_created": explicit_outcome.policy_proposal_created,
+            "policy_proposal_needed": explicit_outcome.policy_proposal_needed,
+            # Reference counts (observational)
+            "incidents_table_count": explicit_outcome.incidents_table_count,
+            "proposals_table_count": explicit_outcome.proposals_table_count,
+            # Capture validation
+            "capture_complete": explicit_outcome.capture_complete,
+            "capture_failures": explicit_outcome.capture_failures,
+        }
+
+    if evidence.integrity:
+        result["integrity"] = {
+            "expected_events": evidence.integrity.expected_events,
+            "observed_events": evidence.integrity.observed_events,
+            "missing_events": evidence.integrity.missing_events,
+            "integrity_score": evidence.integrity.integrity_score,
+        }
+
+    return result
+
+
 def _serialize_output(scenario_output: ScenarioSDSROutput) -> Dict[str, Any]:
     """Serialize ScenarioSDSROutput to observation dict.
 
@@ -91,7 +162,7 @@ def _serialize_output(scenario_output: ScenarioSDSROutput) -> Dict[str, Any]:
     CRITICAL: observation_class is the mechanical discriminator that
     tells Aurora whether to expect capabilities or not.
     """
-    return {
+    result: Dict[str, Any] = {
         "scenario_id": scenario_output.scenario_id,
         "status": scenario_output.status,  # Required: PASSED | FAILED | HALTED
         "observation_class": scenario_output.observation_class,  # INFRASTRUCTURE | EFFECT
@@ -110,6 +181,12 @@ def _serialize_output(scenario_output: ScenarioSDSROutput) -> Dict[str, Any]:
             "notes": scenario_output.notes,
         },
     }
+
+    # AC v2 Evidence (BASELINE TRUST - SDSR-E2E-006)
+    if scenario_output.ac_v2_evidence:
+        result["ac_v2_evidence"] = _serialize_ac_v2_evidence(scenario_output.ac_v2_evidence)
+
+    return result
 
 
 # =============================================================================

@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-12 (PIN-402 Scenario Test Infrastructure - Pre-Scenario Readiness)
+**Last Updated:** 2026-01-12 (PIN-408 Aurora Projection Pipeline - PIN-407 Compliance Fix)
 
 ---
 
@@ -395,6 +395,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-398](PIN-398-auth-design-sanitization---authdesignmd-enforcement.md) | **Auth Design Sanitization - AUTH_DESIGN.md Enforcement** | Architecture / Auth | **✅ COMPLETE** | 2026-01-12 |
 | [PIN-399](PIN-399-onboarding-state-machine-v1---linear-production-grade-design.md) | **Onboarding State Machine v1 - Linear Production-Grade Design** | Architecture / Onboarding | **🏗️ APPROVED** | 2026-01-12 |
 | [PIN-402](PIN-402-scenario-test-infrastructure---pre-scenario-readiness.md) | **Scenario Test Infrastructure - Pre-Scenario Readiness** | Testing / Scenarios | **🏗️ PLANNED** | 2026-01-12 |
+| [PIN-403](PIN-403-aos-execution-integrity-contract.md) | **AOS Execution Integrity Contract** | Governance / Contracts / Layer 0 | **🔒 FOUNDATIONAL** | 2026-01-12 |
+| [PIN-404](PIN-404-sdsr-e2e-006-baseline-trust-scenario.md) | **SDSR-E2E-006 Baseline Trust Scenario** | SDSR / E2E Testing / Baseline | **📋 PROPOSED** | 2026-01-12 |
+| [PIN-405](PIN-405-evidence-architecture-v11---structural-authority-integrity-model.md) | **Evidence Architecture v1.1 - Structural Authority & Integrity Model** | Architecture / Evidence System | **✅ COMPLETE** | 2026-01-12 |
+| [PIN-407](PIN-407-success-as-first-class-data.md) | **Success as First-Class Data** | Governance / Semantic Model | **FOUNDATIONAL** | 2026-01-12 |
+| [PIN-408](PIN-408-aurora-projection-pipeline-pin407-fix.md) | **Aurora Projection Pipeline - PIN-407 Compliance Fix** | Architecture / SDSR / Aurora | **VERIFIED** | 2026-01-12 |
 
 ---
 
@@ -1164,6 +1169,10 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-12 | **PIN-408 Aurora Projection Pipeline - PIN-407 Compliance Fix** - Full implementation with backend services, SDSR evidence collection, acceptance proof artifact. |
+| 2026-01-12 | **PIN-407 Success as First-Class Data** - Foundational semantic correction: every run produces activity, incident, policy, logs. |
+| 2026-01-12 | **PIN-405 Evidence Architecture v1.1 - Structural Authority & Integrity Model** - Created via memory_trail. |
+| 2026-01-12 | **PIN-403 AOS Execution Integrity Contract** - Updated: Index Entry |
 | 2026-01-12 | **PIN-402 Scenario Test Infrastructure - Pre-Scenario Readiness** - Created via memory_trail. |
 | 2026-01-12 | **PIN-336 Auth Gateway Founder Routes Fix** - Updated: Updates |
 | 2026-01-12 | **PIN-399 Onboarding State Machine v1 - Linear Production-Grade Design** - Created via memory_trail. |

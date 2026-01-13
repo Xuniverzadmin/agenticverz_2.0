@@ -61,6 +61,23 @@ def utc_now() -> datetime:
 # legacy data, but NEW incidents created here are always uppercase.
 # =============================================================================
 
+# =============================================================================
+# PIN-407: Incident Outcome Model (SUCCESS as First-Class Data)
+# =============================================================================
+# Every run produces ONE incident record with an explicit outcome.
+# Outcome values: SUCCESS, FAILURE, BLOCKED, ABORTED
+# Severity values: NONE (for success), or existing severity for failures
+# =============================================================================
+
+# Incident outcomes (PIN-407)
+INCIDENT_OUTCOME_SUCCESS = "SUCCESS"
+INCIDENT_OUTCOME_FAILURE = "FAILURE"
+INCIDENT_OUTCOME_BLOCKED = "BLOCKED"
+INCIDENT_OUTCOME_ABORTED = "ABORTED"
+
+# Severity for success incidents
+SEVERITY_NONE = "NONE"
+
 # Severity mapping based on failure codes
 FAILURE_SEVERITY_MAP = {
     # High severity - execution failures
@@ -269,6 +286,192 @@ class IncidentEngine:
             f"Prevention record {prevention_id}: run {run_id} suppressed by policy {policy_id}"
         )
         return prevention_id
+
+    # =========================================================================
+    # PIN-407: Create incident for ANY run (SUCCESS or FAILURE)
+    # =========================================================================
+    def create_incident_for_run(
+        self,
+        run_id: str,
+        tenant_id: str,
+        run_status: str,
+        error_code: Optional[str] = None,
+        error_message: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        is_synthetic: bool = False,
+        synthetic_scenario_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Create an incident for ANY run (PIN-407: Success as First-Class Data).
+
+        Every run MUST produce exactly one incident record with an explicit outcome.
+        This is NOT limited to failures - successful runs also get incident records.
+
+        PIN-407 Correction:
+        - Success is data, not silence
+        - Every run produces an incident record
+        - Outcome is explicit: SUCCESS, FAILURE, BLOCKED, ABORTED
+
+        Args:
+            run_id: ID of the run
+            tenant_id: Tenant scope
+            run_status: Run status (succeeded, failed, halted, aborted, etc.)
+            error_code: Error code (for failures)
+            error_message: Error message (for failures)
+            agent_id: Agent that was running
+            is_synthetic: True if from SDSR scenario
+            synthetic_scenario_id: Scenario ID for traceability
+
+        Returns:
+            incident_id if created, None if failed to create
+        """
+        try:
+            # Map run_status to incident outcome
+            status_to_outcome = {
+                "succeeded": INCIDENT_OUTCOME_SUCCESS,
+                "completed": INCIDENT_OUTCOME_SUCCESS,
+                "success": INCIDENT_OUTCOME_SUCCESS,
+                "failed": INCIDENT_OUTCOME_FAILURE,
+                "failure": INCIDENT_OUTCOME_FAILURE,
+                "error": INCIDENT_OUTCOME_FAILURE,
+                "halted": INCIDENT_OUTCOME_BLOCKED,
+                "blocked": INCIDENT_OUTCOME_BLOCKED,
+                "aborted": INCIDENT_OUTCOME_ABORTED,
+                "cancelled": INCIDENT_OUTCOME_ABORTED,
+            }
+            outcome = status_to_outcome.get(run_status.lower(), INCIDENT_OUTCOME_FAILURE)
+
+            # Determine severity based on outcome
+            if outcome == INCIDENT_OUTCOME_SUCCESS:
+                severity = SEVERITY_NONE
+                category = "EXECUTION_SUCCESS"
+                title = f"Execution Complete: Run {run_id[:8]}..."
+                description = f"Run {run_id} completed successfully"
+                status = "CLOSED"  # Success incidents are immediately closed
+            else:
+                # Use existing failure logic
+                severity = FAILURE_SEVERITY_MAP.get(error_code or "UNKNOWN", "MEDIUM")
+                category = FAILURE_CATEGORY_MAP.get(error_code or "UNKNOWN", "EXECUTION_FAILURE")
+                title = self._generate_title(error_code, run_id)
+                description = f"Run {run_id} failed with error: {error_code or 'UNKNOWN'}"
+                status = "OPEN"
+
+            # For failures, check policy suppression (existing logic)
+            if outcome != INCIDENT_OUTCOME_SUCCESS:
+                suppressing_policy = self._check_policy_suppression(
+                    tenant_id=tenant_id,
+                    error_code=error_code,
+                    category=category,
+                )
+
+                if suppressing_policy:
+                    logger.info(
+                        f"Run {run_id} suppressed by policy {suppressing_policy['policy_id']} "
+                        f"(pattern: {error_code})"
+                    )
+                    self._write_prevention_record(
+                        policy_id=suppressing_policy["policy_id"],
+                        run_id=run_id,
+                        tenant_id=tenant_id,
+                        error_code=error_code,
+                        source_incident_id=suppressing_policy.get("source_incident_id"),
+                        is_synthetic=is_synthetic,
+                        synthetic_scenario_id=synthetic_scenario_id,
+                    )
+                    return None
+
+            # Generate incident ID
+            import uuid
+            incident_id = f"inc_{uuid.uuid4().hex[:16]}"
+
+            # Insert incident
+            engine = self._get_engine()
+            now = utc_now()
+
+            with engine.connect() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO incidents (
+                            id, tenant_id, title, severity, status,
+                            trigger_type, started_at, created_at, updated_at,
+                            source_run_id, source_type, category, description,
+                            error_code, error_message, impact_scope,
+                            affected_agent_id, affected_count,
+                            is_synthetic, synthetic_scenario_id
+                        ) VALUES (
+                            :id, :tenant_id, :title, :severity, :status,
+                            :trigger_type, :started_at, :created_at, :updated_at,
+                            :source_run_id, :source_type, :category, :description,
+                            :error_code, :error_message, :impact_scope,
+                            :affected_agent_id, :affected_count,
+                            :is_synthetic, :synthetic_scenario_id
+                        )
+                    """),
+                    {
+                        "id": incident_id,
+                        "tenant_id": tenant_id,
+                        "title": title,
+                        "severity": severity.upper(),
+                        "status": status,
+                        "trigger_type": "run_completion",  # Not just failure
+                        "started_at": now,
+                        "created_at": now,
+                        "updated_at": now,
+                        "source_run_id": run_id,
+                        "source_type": "run",
+                        "category": category,
+                        "description": description,
+                        "error_code": error_code if outcome != INCIDENT_OUTCOME_SUCCESS else None,
+                        "error_message": error_message if outcome != INCIDENT_OUTCOME_SUCCESS else None,
+                        "impact_scope": "single_run",
+                        "affected_agent_id": agent_id,
+                        "affected_count": 1,
+                        "is_synthetic": is_synthetic,
+                        "synthetic_scenario_id": synthetic_scenario_id,
+                    },
+                )
+                conn.commit()
+
+            logger.info(
+                f"Created incident {incident_id} for run {run_id} "
+                f"(outcome={outcome}, category={category}, severity={severity}, synthetic={is_synthetic})"
+            )
+
+            # For failures, propagate to traces and maybe create policy proposal
+            if outcome != INCIDENT_OUTCOME_SUCCESS:
+                # GAP-PROP-001 FIX: Propagate incident_id to aos_traces
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(
+                            text("""
+                                UPDATE aos_traces
+                                SET incident_id = :incident_id
+                                WHERE run_id = :run_id
+                            """),
+                            {"incident_id": incident_id, "run_id": run_id},
+                        )
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Failed to propagate incident_id to trace: {e}")
+
+                # Create policy proposal for high-severity failures
+                if severity.upper() in ("HIGH", "CRITICAL"):
+                    self._maybe_create_policy_proposal(
+                        incident_id=incident_id,
+                        tenant_id=tenant_id,
+                        severity=severity,
+                        category=category,
+                        error_code=error_code,
+                        run_id=run_id,
+                        is_synthetic=is_synthetic,
+                        synthetic_scenario_id=synthetic_scenario_id,
+                    )
+
+            return incident_id
+
+        except Exception as e:
+            logger.error(f"Failed to create incident for run {run_id}: {e}")
+            return None
 
     def create_incident_for_failed_run(
         self,
@@ -577,10 +780,10 @@ class IncidentEngine:
         """
         Check if a run status warrants an incident and create one if so.
 
-        This is a convenience method that:
-        1. Checks if status is 'failed'
-        2. Extracts error code from error message
-        3. Calls create_incident_for_failed_run
+        DEPRECATED: Use create_incident_for_all_runs() for PIN-407 compliance.
+
+        This legacy method only creates incidents for failed runs.
+        For backward compatibility with existing callers.
 
         Args:
             run_id: Run ID
@@ -594,7 +797,7 @@ class IncidentEngine:
         Returns:
             incident_id if created, None otherwise
         """
-        # Only create incidents for failed runs
+        # Only create incidents for failed runs (legacy behavior)
         if status != "failed":
             return None
 
@@ -609,6 +812,53 @@ class IncidentEngine:
         return self.create_incident_for_failed_run(
             run_id=run_id,
             tenant_id=tenant_id,
+            error_code=error_code,
+            error_message=error_message,
+            agent_id=agent_id,
+            is_synthetic=is_synthetic,
+            synthetic_scenario_id=synthetic_scenario_id,
+        )
+
+    def create_incident_for_all_runs(
+        self,
+        run_id: str,
+        status: str,
+        error_message: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        is_synthetic: bool = False,
+        synthetic_scenario_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Create an incident for ANY run (PIN-407: Success as First-Class Data).
+
+        This is the NEW preferred entry point for run → incident propagation.
+        Every run creates exactly one incident record with explicit outcome.
+
+        Args:
+            run_id: Run ID
+            status: Run status (succeeded, failed, halted, etc.)
+            error_message: Error message (for failures)
+            tenant_id: Tenant scope
+            agent_id: Agent ID
+            is_synthetic: SDSR synthetic flag
+            synthetic_scenario_id: SDSR scenario ID
+
+        Returns:
+            incident_id if created, None otherwise
+        """
+        # Extract error code from error message (for failures)
+        error_code = self._extract_error_code(error_message) if status == "failed" else None
+
+        # AUTH_DESIGN.md: AUTH-TENANT-005 - No fallback tenant.
+        if not tenant_id:
+            logger.warning("Cannot create incident for run without tenant_id", extra={"run_id": run_id})
+            return None
+
+        return self.create_incident_for_run(
+            run_id=run_id,
+            tenant_id=tenant_id,
+            run_status=status,
             error_code=error_code,
             error_message=error_message,
             agent_id=agent_id,
