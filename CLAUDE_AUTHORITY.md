@@ -392,3 +392,249 @@ python scripts/ops/session_exit.py --hk-max-age 48
 |------|---------|---------|
 | 0 | CLEAN_EXIT | Session may terminate |
 | 1 | EXIT_BLOCKED | Must resolve blockers first |
+
+---
+
+## 12. Architecture Guardrails & Prevention Contract (FINAL)
+
+**Status:** LOCKED
+**Effective:** 2026-01-13
+**Reference:** PIN-410
+
+**Purpose:**
+Prevent *silent authority leaks*, *convenience-driven drift*, and *CI-green-but-wrong fixes* **permanently**.
+
+This section defines:
+* What Claude **must never do**
+* What Claude **must always do**
+* How Claude **must reason**
+* How Claude **must respond when unsure**
+
+No options. No shortcuts.
+
+---
+
+### 12.1 Prime Directive (Non-Negotiable)
+
+> **Architecture correctness is higher priority than test pass rate, delivery speed, or convenience.**
+
+If forced to choose:
+* ❌ Green CI with workaround → **REJECT**
+* ✅ Red CI with correct design → **ACCEPT**
+
+Claude must **stop and escalate**, not patch.
+
+---
+
+### 12.2 Authority Model Guardrails
+
+#### 12.2.1 Identity vs Authority (Hard Split)
+
+Claude must enforce this split in **every decision**:
+
+| Concept   | Source                                  | Never Derived From   |
+|-----------|-----------------------------------------|----------------------|
+| Identity  | External IdP (Clerk, FOPS JWT, API key) | Frontend, env flags  |
+| Authority | Backend domain logic                    | JWT claims, frontend |
+| UX        | Frontend                                | Security assumptions |
+
+**Forbidden actions:**
+* Adding roles to JWT claims
+* Reading `publicMetadata.role` for access control
+* Assigning default roles for convenience
+
+---
+
+### 12.3 "No Workaround" Rules (ABSOLUTE)
+
+Claude is explicitly forbidden from:
+
+* Adding fallbacks like:
+  ```
+  if not roles: assign dev role
+  if preflight: bypass auth
+  if env != prod: allow
+  ```
+
+* Skipping verification:
+  * `aud`, `iss`, `exp`, `nbf`
+
+* Introducing mock contexts to "fix tests"
+* Editing tests to accept wrong behavior
+* Using environment flags to change authority
+
+If Claude encounters a failing test that **requires any of the above**, Claude must **STOP**.
+
+---
+
+### 12.4 Mandatory Stop Conditions (Escalation Rules)
+
+Claude must **halt and ask** when:
+
+* A fix requires changing authority flow
+* A fix requires adding default permissions
+* A fix relies on test-only behavior
+* A fix weakens an invariant
+* A fix changes security behavior by environment
+
+**Required response format:**
+
+```
+STOP — Architectural decision required.
+
+Invariant impacted: <INVARIANT_ID>
+Reason workaround is unsafe: <why>
+Proposed correct design change: <design>
+```
+
+No implementation until approved.
+
+---
+
+### 12.5 Design-First Enforcement
+
+Claude must follow this order **always**:
+
+1. Identify invariant(s)
+2. Validate layer boundaries
+3. Design correct abstraction
+4. Update architecture docs
+5. Implement
+6. Fix tests
+
+**Never:**
+* Implement → then rationalize
+* Patch tests → then backfill design
+
+---
+
+### 12.6 Layer Boundary Rules (Immutable)
+
+Claude must treat layers as **firewalls**, not guidelines.
+
+| Layer       | Can Import                   | Cannot Import    |
+|-------------|------------------------------|------------------|
+| Domain (L4) | Python stdlib, domain models | FastAPI, Request |
+| API (L3)    | Domain, FastAPI              | Frontend logic   |
+| Frontend    | API contracts                | Authority logic  |
+
+If a file "speaks HTTP", it **lives in app/api/**.
+No exceptions.
+
+---
+
+### 12.7 Test Integrity Rules
+
+#### Tests must:
+* Reflect real execution paths
+* Use real tokens or real providers
+* Fail loudly when architecture breaks
+
+#### Tests must NOT:
+* Mock authority
+* Patch auth contexts
+* Bypass middleware
+* Depend on execution order
+
+**If a test can't be written without a workaround → the design is incomplete.**
+
+---
+
+### 12.8 Environment Parity Rule
+
+> **Preflight changes visibility, never authority.**
+
+Claude must enforce:
+* Same auth rules
+* Same lifecycle gates
+* Same billing/protection behavior
+
+Preflight may:
+* Show debug UI
+* Enable feature flags (non-security)
+
+---
+
+### 12.9 Observability Rule
+
+Observability is:
+* Write-only
+* Non-blocking
+* Non-authoritative
+
+Claude must never:
+* Gate behavior on observability
+* Use logs/metrics to make decisions
+* Silence failures by retry loops
+
+---
+
+### 12.10 Documentation Synchronization Rule
+
+Every architectural change **must** update:
+* Relevant `docs/architecture/*.md`
+* Invariant list
+* Freeze / lock files if applicable
+
+If docs are not updated → **change is invalid**.
+
+---
+
+### 12.11 Claude Reasoning Template (MANDATORY)
+
+Claude must reason like this internally and visibly when relevant:
+
+```
+Invariant(s):
+Layer affected:
+Authority impact:
+Does this change trust direction? (Yes/No)
+If Yes → STOP
+```
+
+---
+
+## 13. Final Safety Check (One-Line Rule)
+
+> **If this code were open-sourced tomorrow, would its security still be correct without tribal knowledge?**
+
+If the answer is not an immediate **YES**, Claude must not proceed.
+
+---
+
+### Claude Architecture Contract Summary
+
+```yaml
+claude_architecture_contract:
+  priority_order:
+    - invariants
+    - architecture
+    - correctness
+    - tests
+    - speed
+
+  forbidden_actions:
+    - add_default_roles
+    - bypass_auth_for_env
+    - weaken_jwt_validation
+    - mock_authority
+    - patch_tests_to_accept_wrong_behavior
+
+  mandatory_actions:
+    - escalate_on_authority_change
+    - update_docs_on_design_change
+    - prefer_red_ci_over_wrong_fix
+
+  escalation_phrase: |
+    STOP — architectural decision required.
+```
+
+---
+
+### Result
+
+If Claude follows this:
+* You will not revisit auth again
+* No silent authority leaks can re-enter
+* Tests become trustworthy
+* Architecture stays boring and correct

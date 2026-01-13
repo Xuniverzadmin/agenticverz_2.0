@@ -39,6 +39,13 @@ from app.infra import FeatureIntent, RetryPolicy
 from ..db import Run, engine
 from ..events import get_publisher
 from ..metrics import nova_worker_pool_size
+from ..models.logs_records import (
+    SystemCausedBy,
+    SystemComponent,
+    SystemEventType,
+    SystemRecord,
+    SystemSeverity,
+)
 from .runner import RunRunner
 
 # Phase-2.3: Feature Intent Declaration
@@ -54,6 +61,47 @@ _pool_instance: Optional["WorkerPool"] = None
 POLL_INTERVAL = float(os.getenv("WORKER_POLL_INTERVAL", "2.0"))
 CONCURRENCY = int(os.getenv("WORKER_CONCURRENCY", "4"))
 MAX_BATCH = int(os.getenv("WORKER_BATCH_SIZE", "8"))
+
+
+def _create_worker_system_record(
+    event_type: str,
+    severity: str,
+    summary: str,
+    details: Optional[dict] = None,
+    caused_by: Optional[str] = None,
+):
+    """
+    Create an immutable system record for worker events (PIN-413).
+
+    Records are WRITE-ONCE (no UPDATE, no DELETE - enforced by DB trigger).
+    """
+    try:
+        record = SystemRecord(
+            tenant_id=None,  # Worker events are system-wide
+            component=SystemComponent.WORKER.value,
+            event_type=event_type,
+            severity=severity,
+            summary=summary,
+            details=details,
+            caused_by=caused_by,
+        )
+
+        with Session(engine) as session:
+            session.add(record)
+            session.commit()
+
+        logger.info(
+            "system_record_created",
+            extra={
+                "record_id": record.id,
+                "component": SystemComponent.WORKER.value,
+                "event_type": event_type,
+                "severity": severity,
+            },
+        )
+    except Exception as e:
+        # System record creation failure should not crash the worker
+        logger.error("system_record_creation_failed", extra={"error": str(e)})
 
 
 class WorkerPool:
@@ -72,6 +120,19 @@ class WorkerPool:
         logger.info("worker_pool_starting", extra={"concurrency": self.concurrency})
         self.publisher.publish("worker.pool.started", {"concurrency": self.concurrency})
         nova_worker_pool_size.set(self.concurrency)
+
+        # PIN-413: Create immutable system record for worker startup
+        _create_worker_system_record(
+            event_type=SystemEventType.STARTUP.value,
+            severity=SystemSeverity.INFO.value,
+            summary="Worker pool started",
+            details={
+                "concurrency": self.concurrency,
+                "poll_interval": POLL_INTERVAL,
+                "max_batch": MAX_BATCH,
+            },
+            caused_by=SystemCausedBy.SYSTEM.value,
+        )
 
         while not self._stop.is_set():
             try:
@@ -154,6 +215,18 @@ class WorkerPool:
 
         # Wait for executor to finish all running tasks
         self.executor.shutdown(wait=True)
+
+        # PIN-413: Create immutable system record for worker shutdown
+        _create_worker_system_record(
+            event_type=SystemEventType.SHUTDOWN.value,
+            severity=SystemSeverity.INFO.value,
+            summary="Worker pool stopped",
+            details={
+                "graceful": True,
+                "active_runs_at_shutdown": len(self._active_runs),
+            },
+            caused_by=SystemCausedBy.SYSTEM.value,
+        )
 
         self.publisher.publish(
             "worker.pool.stopped", {"graceful": True, "active_runs_at_shutdown": len(self._active_runs)}

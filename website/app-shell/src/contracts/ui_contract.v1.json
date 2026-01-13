@@ -119,7 +119,7 @@
       "panels": [
         {
           "panel_id": "ACT-EX-AR-O1",
-          "panel_name": "Active Runs Summary",
+          "panel_name": "Active LLM Runs Summary",
           "order": "O1",
           "ranking_dimension": "NONE",
           "visible": true,
@@ -150,7 +150,7 @@
         },
         {
           "panel_id": "ACT-EX-AR-O2",
-          "panel_name": "Active Runs List",
+          "panel_name": "Active LLM Runs List",
           "order": "O2",
           "ranking_dimension": "started_at",
           "visible": true,
@@ -189,7 +189,7 @@
         },
         {
           "panel_id": "ACT-EX-CR-O1",
-          "panel_name": "Completed Runs Summary",
+          "panel_name": "Completed LLM Runs Summary",
           "order": "O1",
           "ranking_dimension": "NONE",
           "visible": true,
@@ -220,7 +220,7 @@
         },
         {
           "panel_id": "ACT-EX-CR-O2",
-          "panel_name": "Completed Runs List",
+          "panel_name": "Completed LLM Runs List",
           "order": "O2",
           "ranking_dimension": "completed_at",
           "visible": true,

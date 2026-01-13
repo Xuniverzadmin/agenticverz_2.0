@@ -106,7 +106,7 @@ export function ActivityPage() {
       {/* Summary Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-navy-surface border border-navy-border rounded-lg p-4">
-          <div className="text-sm text-slate-400">Total Runs</div>
+          <div className="text-sm text-slate-400">Total LLM Runs</div>
           <div className="text-2xl font-bold text-white">{data?.total ?? 0}</div>
         </div>
         <div className="bg-navy-surface border border-navy-border rounded-lg p-4">
@@ -119,12 +119,6 @@ export function ActivityPage() {
           <div className="text-sm text-slate-400">Failed</div>
           <div className="text-2xl font-bold text-red-400">
             {executions.filter(r => r.status === 'failed').length}
-          </div>
-        </div>
-        <div className="bg-navy-surface border border-navy-border rounded-lg p-4">
-          <div className="text-sm text-slate-400">Synthetic (SDSR)</div>
-          <div className="text-2xl font-bold text-purple-400">
-            {executions.filter(r => r.is_synthetic).length}
           </div>
         </div>
       </div>
@@ -141,7 +135,6 @@ export function ActivityPage() {
                   <th className="p-4">Status</th>
                   <th className="p-4">Agent</th>
                   <th className="p-4">Created</th>
-                  <th className="p-4">Synthetic</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-navy-border">
@@ -177,15 +170,6 @@ export function ActivityPage() {
                       </td>
                       <td className="p-4 text-sm text-slate-400">
                         {formatTime(execution.created_at)}
-                      </td>
-                      <td className="p-4">
-                        {execution.is_synthetic ? (
-                          <span className="px-2 py-1 rounded border text-xs font-medium bg-purple-500/10 text-purple-400 border-purple-400/40">
-                            SDSR
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 text-xs">-</span>
-                        )}
                       </td>
                     </tr>
                   );
@@ -346,26 +330,6 @@ function ExecutionDetailsPanel({ execution, onClose }: { execution: ExecutionSum
           </div>
         )}
 
-        {/* SDSR Synthetic Marker */}
-        {execution.is_synthetic && (
-          <div className="pt-4 border-t border-navy-border">
-            <div className="text-xs text-purple-400 font-bold uppercase tracking-wide mb-2">
-              SDSR SYNTHETIC DATA
-            </div>
-            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="px-2 py-1 rounded border text-xs font-medium bg-purple-500/20 text-purple-400 border-purple-400/40">
-                  SYNTHETIC
-                </span>
-              </div>
-              {execution.synthetic_scenario_id && (
-                <p className="text-xs text-purple-300 font-mono">
-                  Scenario: {execution.synthetic_scenario_id}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Error (if failed) */}
         {execution.error_message && (

@@ -345,7 +345,16 @@ function checkGuardNavMismatch() {
 }
 
 // Allowed pages in app-shell/src/pages/ (R1-2 Page Budget)
-const ALLOWED_APP_SHELL_PAGES = ['LoginPage', 'CreditsPage'];
+// PIN-411: Domain runtime pages are allowed for /precus/* routes
+const ALLOWED_APP_SHELL_PAGES = [
+  'LoginPage',
+  'CreditsPage',
+  // Domain pages (projection-driven, L2.1 UI pipeline)
+  'DomainPage',
+  // Activity domain runtime pages (PIN-411)
+  'RunsListPage',    // O2: /precus/activity/runs
+  'RunDetailPage',   // O3: /precus/activity/runs/:id
+];
 
 function checkPageBudget() {
   // R1-2: Enforce app-shell page budget (soft guard)

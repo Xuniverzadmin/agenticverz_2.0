@@ -27,6 +27,13 @@ from .auth import verify_api_key
 from .auth.rbac_middleware import RBACMiddleware
 from .contracts.decisions import backfill_run_id_for_request
 from .db import Agent, Memory, Provenance, Run, engine, init_db
+from .models.logs_records import (
+    SystemCausedBy,
+    SystemComponent,
+    SystemEventType,
+    SystemRecord,
+    SystemSeverity,
+)
 from .logging_config import log_provenance, log_request, setup_logging
 from .metrics import (
     generate_metrics,
@@ -61,6 +68,61 @@ planner: Optional[PlannerProtocol] = None
 
 # Initialize logging (safe at import - no external resources)
 logger = setup_logging()
+
+
+# =============================================================================
+# System Record Capture Helper (PIN-413)
+# =============================================================================
+def _create_system_record(
+    component: str,
+    event_type: str,
+    severity: str,
+    summary: str,
+    details: Optional[dict] = None,
+    caused_by: Optional[str] = None,
+    correlation_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+):
+    """
+    Create an immutable system record for the Logs domain (PIN-413).
+
+    This captures system-level events that affect trust:
+    - API/Worker startup and shutdown
+    - Deployments
+    - Migrations
+    - Auth changes
+
+    Records are WRITE-ONCE (no UPDATE, no DELETE - enforced by DB trigger).
+    """
+    try:
+        record = SystemRecord(
+            tenant_id=tenant_id,  # NULL for system-wide events
+            component=component,
+            event_type=event_type,
+            severity=severity,
+            summary=summary,
+            details=details,
+            caused_by=caused_by,
+            correlation_id=correlation_id,
+        )
+
+        with Session(engine) as session:
+            session.add(record)
+            session.commit()
+
+        logger.info(
+            "system_record_created",
+            extra={
+                "record_id": record.id,
+                "component": component,
+                "event_type": event_type,
+                "severity": severity,
+            },
+        )
+    except Exception as e:
+        # System record creation failure should not crash the app
+        # This is observability, not execution-critical
+        logger.error("system_record_creation_failed", extra={"error": str(e)})
 
 
 # ---------- API Schemas ----------
@@ -219,6 +281,20 @@ async def lifespan(app: FastAPI):
 
     # Initialize database
     init_db()
+
+    # PIN-413: Create immutable system record for API startup
+    _create_system_record(
+        component=SystemComponent.API.value,
+        event_type=SystemEventType.STARTUP.value,
+        severity=SystemSeverity.INFO.value,
+        summary="API server started",
+        details={
+            "planner_backend": os.getenv("PLANNER_BACKEND", "stub"),
+            "tenant_mode": os.getenv("TENANT_MODE", "single"),
+            "skills_count": len(list_skills()),
+        },
+        caused_by=SystemCausedBy.SYSTEM.value,
+    )
 
     # Initialize planner
     planner = get_planner()
@@ -433,6 +509,16 @@ async def lifespan(app: FastAPI):
             raise
 
     yield
+
+    # PIN-413: Create immutable system record for API shutdown
+    _create_system_record(
+        component=SystemComponent.API.value,
+        event_type=SystemEventType.SHUTDOWN.value,
+        severity=SystemSeverity.INFO.value,
+        summary="API server shutting down",
+        caused_by=SystemCausedBy.SYSTEM.value,
+    )
+
     # Cleanup on shutdown
     task.cancel()
     try:
@@ -524,6 +610,9 @@ from .api.v1_proxy import router as v1_proxy_router  # Drop-in OpenAI replacemen
 from .api.workers import router as workers_router  # Business Builder Worker v0.2
 from .predictions.api import router as c2_predictions_router  # C2 Predictions (advisory only)
 
+# PIN-411: Aurora Runtime Projections (READ-ONLY O2-O5)
+from .runtime_projections import runtime_projections_router
+
 app.include_router(health_router)
 app.include_router(policy_router)
 app.include_router(runtime_router)
@@ -598,6 +687,9 @@ app.include_router(predictions_router)  # /api/v1/predictions - Predictions (rea
 from .api.discovery import router as discovery_router
 
 app.include_router(discovery_router)  # /api/v1/discovery - Discovery Ledger (read-only)
+
+# PIN-411: Aurora Runtime Projections (READ-ONLY O2-O5)
+app.include_router(runtime_projections_router)  # /api/v1/runtime/activity/runs
 
 # CORS middleware
 app.add_middleware(

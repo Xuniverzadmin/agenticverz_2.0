@@ -842,6 +842,236 @@ library:
 
       Reference: PIN-390, docs/governance/QUERY_AUTHORITY_MODEL.md
 
+  # =========================================================================
+  # BL-ARCH-001: Architecture Correctness Priority (PRIME DIRECTIVE)
+  # Incident: CI-green-but-wrong fixes passed silently, caused auth leaks
+  # Solution: Architecture correctness > test pass rate > delivery speed
+  # Principle: Red CI with correct design beats green CI with workaround
+  # Reference: PIN-410, CLAUDE_AUTHORITY.md Section 12
+  # =========================================================================
+  - id: BL-ARCH-001
+    name: Architecture Correctness Priority
+    severity: BLOCKER
+    class: architecture_prime
+    priority: 1
+
+    triggers:
+      any_of:
+        - keyword: "workaround"
+        - keyword: "quick fix"
+        - keyword: "bypass"
+        - keyword: "skip validation"
+        - keyword: "for now"
+        - keyword: "temporarily"
+        - keyword: "just make it pass"
+        - pattern: "if.*env.*!=.*prod"
+        - pattern: "if.*preflight.*bypass"
+        - pattern: "if not.*roles.*assign"
+
+    requires:
+      sections:
+        - ARCHITECTURE_CORRECTNESS_CHECK
+      assertions:
+        - "workaround_introduced == NO"
+        - "invariant_weakened == NO"
+        - "authority_flow_unchanged == YES"
+
+    forbid:
+      - "green CI with workaround"
+      - "patch to make tests pass"
+      - "bypass for convenience"
+      - "weaken invariant to proceed"
+      - "implement then rationalize"
+      - "environment-conditional authority"
+
+    evidence:
+      required_fields:
+        - change_type
+        - invariants_affected
+        - workaround_introduced
+        - design_justified
+
+    message_on_fail: |
+      BL-ARCH-001 VIOLATION: Architecture correctness compromised.
+
+      Prime Directive: Architecture correctness > test pass rate > delivery speed
+
+      If forced to choose:
+      - RED CI with correct design → ACCEPT
+      - GREEN CI with workaround → REJECT
+
+      You must STOP and escalate, not patch.
+
+  # =========================================================================
+  # BL-ARCH-002: No Workaround Rules (ABSOLUTE)
+  # Incident: Default roles added for convenience, caused privilege escalation
+  # Solution: Explicit list of forbidden patterns, hard block
+  # Principle: If a test can't pass without workaround, design is incomplete
+  # Reference: PIN-410, CLAUDE_AUTHORITY.md Section 12.3
+  # =========================================================================
+  - id: BL-ARCH-002
+    name: No Workaround Rules
+    severity: BLOCKER
+    class: workaround_prevention
+    priority: 2
+
+    triggers:
+      any_of:
+        - pattern: "if not roles"
+        - pattern: "default.*role"
+        - pattern: "assign.*role.*convenience"
+        - pattern: "bypass.*auth"
+        - pattern: "skip.*validation"
+        - pattern: "mock.*auth"
+        - pattern: "patch.*context"
+        - keyword: "publicMetadata.role"
+        - keyword: "jwt claims role"
+
+    forbidden_patterns:
+      - pattern: "if not roles: assign"
+        reason: "Default role assignment is privilege escalation"
+      - pattern: "if preflight: bypass"
+        reason: "Preflight changes visibility, never authority"
+      - pattern: "if env != prod: allow"
+        reason: "Environment must not change authority"
+      - pattern: "mock_auth_context"
+        reason: "Mock authority hides real failures"
+
+    forbid:
+      - "adding fallback roles"
+      - "skipping aud/iss/exp/nbf verification"
+      - "mock contexts to fix tests"
+      - "editing tests to accept wrong behavior"
+      - "environment flags changing authority"
+
+    message_on_fail: |
+      BL-ARCH-002 VIOLATION: Forbidden workaround pattern detected.
+
+      Claude is EXPLICITLY FORBIDDEN from:
+      - Adding fallbacks like: if not roles: assign dev role
+      - Skipping verification: aud, iss, exp, nbf
+      - Introducing mock contexts to "fix tests"
+      - Editing tests to accept wrong behavior
+      - Using environment flags to change authority
+
+      If a failing test requires any of the above → STOP.
+
+  # =========================================================================
+  # BL-ARCH-003: Design-First Enforcement
+  # Incident: Code implemented then design rationalized post-hoc
+  # Solution: Mandatory design order: invariants → layers → docs → implement
+  # Principle: Design precedes implementation, always
+  # Reference: PIN-410, CLAUDE_AUTHORITY.md Section 12.5
+  # =========================================================================
+  - id: BL-ARCH-003
+    name: Design-First Enforcement
+    severity: BLOCKER
+    class: design_discipline
+    priority: 3
+
+    requires:
+      order:
+        - "1. Identify invariant(s)"
+        - "2. Validate layer boundaries"
+        - "3. Design correct abstraction"
+        - "4. Update architecture docs"
+        - "5. Implement"
+        - "6. Fix tests"
+
+    forbid:
+      - "implement then rationalize"
+      - "patch tests then backfill design"
+      - "code first document later"
+      - "assume layer boundaries"
+
+    message_on_fail: |
+      BL-ARCH-003 VIOLATION: Design-first order violated.
+
+      Claude must follow this order ALWAYS:
+      1. Identify invariant(s)
+      2. Validate layer boundaries
+      3. Design correct abstraction
+      4. Update architecture docs
+      5. Implement
+      6. Fix tests
+
+  # =========================================================================
+  # BL-ARCH-004: Test Integrity Rules
+  # Incident: Tests mocked authority, real auth bugs passed silently
+  # Solution: Tests must reflect real execution paths, no mocking authority
+  # Principle: If test can't pass without workaround, design is incomplete
+  # Reference: PIN-410, CLAUDE_AUTHORITY.md Section 12.7
+  # =========================================================================
+  - id: BL-ARCH-004
+    name: Test Integrity Rules
+    severity: BLOCKER
+    class: test_integrity
+    priority: 4
+
+    tests_must:
+      - "Reflect real execution paths"
+      - "Use real tokens or real providers"
+      - "Fail loudly when architecture breaks"
+
+    tests_must_not:
+      - "Mock authority"
+      - "Patch auth contexts"
+      - "Bypass middleware"
+      - "Depend on execution order"
+
+    message_on_fail: |
+      BL-ARCH-004 VIOLATION: Test integrity compromised.
+
+      Tests MUST:
+      - Reflect real execution paths
+      - Use real tokens or real providers
+      - Fail loudly when architecture breaks
+
+      Tests MUST NOT:
+      - Mock authority
+      - Patch auth contexts
+      - Bypass middleware
+      - Depend on execution order
+
+  # =========================================================================
+  # BL-ARCH-005: Mandatory Escalation Stop Conditions
+  # Incident: Authority flow changed without human approval
+  # Solution: Hard stop conditions requiring explicit human decision
+  # Principle: Claude must halt and ask, never assume
+  # Reference: PIN-410, CLAUDE_AUTHORITY.md Section 12.4
+  # =========================================================================
+  - id: BL-ARCH-005
+    name: Mandatory Escalation Stop Conditions
+    severity: BLOCKER
+    class: escalation_required
+    priority: 0
+
+    stop_conditions:
+      - "fix requires changing authority flow"
+      - "fix requires adding default permissions"
+      - "fix relies on test-only behavior"
+      - "fix weakens an invariant"
+      - "fix changes security behavior by environment"
+
+    escalation_format: |
+      STOP — Architectural decision required.
+
+      Invariant impacted: <INVARIANT_ID>
+      Reason workaround is unsafe: <why>
+      Proposed correct design change: <design>
+
+    message_on_fail: |
+      BL-ARCH-005 VIOLATION: Escalation required but not performed.
+
+      Claude must HALT AND ASK when:
+      - Fix requires changing authority flow
+      - Fix requires adding default permissions
+      - Fix relies on test-only behavior
+      - Fix weakens an invariant
+      - Fix changes security behavior by environment
+
+      NO IMPLEMENTATION UNTIL APPROVED.
+
 # Section templates for Claude output
 section_templates:
   RUNTIME_SYNC: |
@@ -1011,3 +1241,25 @@ section_templates:
     - Authority check before API call: YES
 
     Truth anchor: 403 is truth, not error. Check before call, not after.
+
+  # Section templates for architecture guardrails (BL-ARCH-*)
+  ARCHITECTURE_CORRECTNESS_CHECK: |
+    ARCHITECTURE CORRECTNESS CHECK (BL-ARCH-001)
+    - Change type: <feature / bugfix / refactor>
+    - Invariants affected: <list or "none">
+    - Workaround introduced: NO (must be NO)
+    - Design justified: YES
+    - Authority flow unchanged: YES (must be YES)
+
+  ESCALATION_STOP_CHECK: |
+    ESCALATION STOP CHECK (BL-ARCH-005)
+    - Stop condition detected: <description or "none">
+    - Invariant impacted: <INVARIANT_ID or "none">
+    - Escalation required: YES / NO
+    - Human approval received: YES / NO / PENDING
+
+    If escalation required:
+      STOP — Architectural decision required.
+      Invariant impacted: <INVARIANT_ID>
+      Reason workaround is unsafe: <why>
+      Proposed correct design change: <design>

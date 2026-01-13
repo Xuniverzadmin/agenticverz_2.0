@@ -595,6 +595,91 @@ Exception: merge migrations allowed with MERGE_JUSTIFICATION section.
 
 ---
 
+## Invariant #18: FastAPI Async Session Dependencies
+
+### Rule
+
+Functions decorated with `@asynccontextmanager` are **incompatible** with FastAPI's `Depends()`. FastAPI expects async generator functions, not context manager objects.
+
+### Failure Pattern
+
+```python
+# BAD: This breaks FastAPI Depends()
+@asynccontextmanager
+async def get_async_session():
+    async with session_factory() as session:
+        yield session
+
+# When used with Depends(), FastAPI receives _AsyncGeneratorContextManager
+# instead of the yielded session
+session: AsyncSession = Depends(get_async_session)  # ❌ BROKEN
+# Error: '_AsyncGeneratorContextManager' object has no attribute 'execute'
+```
+
+### Correct Pattern
+
+```python
+# For use with `async with` in non-FastAPI code
+@asynccontextmanager
+async def get_async_session():
+    async with session_factory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+# For FastAPI Depends() - NO decorator
+async def get_async_session_dep() -> AsyncGenerator[AsyncSession, None]:
+    async with session_factory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+# Usage in endpoints
+session: AsyncSession = Depends(get_async_session_dep)  # ✅ CORRECT
+```
+
+### Canonical Location
+
+```
+backend/app/db.py
+  - get_async_session()       → for `async with` usage
+  - get_async_session_dep()   → for FastAPI Depends()
+```
+
+### CI Guard
+
+```bash
+# Warn if @asynccontextmanager is used with Depends()
+grep -r "@asynccontextmanager" backend/app | while read line; do
+    file=$(echo $line | cut -d: -f1)
+    func=$(echo $line | grep -oP 'def \K\w+')
+    if grep -q "Depends($func)" backend/app/**/*.py 2>/dev/null; then
+        echo "WARNING: $func uses @asynccontextmanager but is used with Depends()"
+    fi
+done
+```
+
+### Error Message
+
+```
+AttributeError: '_AsyncGeneratorContextManager' object has no attribute 'execute'
+```
+
+### Reference
+
+- PIN-411 (Aurora Activity Data Population)
+- Issue discovered: 2026-01-13
+
+---
+
 ## Session Start Protocol
 
 Before ANY work, these invariants should be verified:

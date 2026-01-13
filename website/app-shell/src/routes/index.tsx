@@ -60,6 +60,10 @@ const IncidentsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => 
 const PoliciesPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.PoliciesPage })));
 const LogsPage = lazy(() => import('@/pages/domains/DomainPage').then(m => ({ default: m.LogsPage })));
 const PanelView = lazy(() => import('@/pages/panels/PanelView'));
+// PIN-411: O2 Runs List Page for Activity domain navigation
+const RunsListPage = lazy(() => import('@/pages/activity/RunsListPage'));
+// PIN-411: O3 Run Detail Page for Activity domain navigation
+const RunDetailPage = lazy(() => import('@/pages/activity/RunDetailPage'));
 
 // =============================================================================
 // CUS: PRODUCTION CUSTOMER CONSOLE (/cus/*)
@@ -174,6 +178,10 @@ export function AppRoutes() {
           {/* Domain home pages */}
           <Route path="overview" element={<OverviewPage />} />
           <Route path="activity" element={<ActivityPage />} />
+          {/* PIN-411: O2 Runs List - O1 navigates here with filters */}
+          <Route path="activity/runs" element={<RunsListPage />} />
+          {/* PIN-411: O3 Run Detail - O2 navigates here with run_id */}
+          <Route path="activity/runs/:id" element={<RunDetailPage />} />
           <Route path="incidents" element={<IncidentsPage />} />
           <Route path="policies" element={<PoliciesPage />} />
           <Route path="logs" element={<LogsPage />} />

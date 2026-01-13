@@ -74,6 +74,40 @@ from app.models.tenant import (
     WorkerRegistry,
     WorkerRun,
 )
+from app.models.policy_control_plane import (
+    BreachType,
+    EnforcementAction,
+    EnforcementMode,
+    Limit,
+    LimitBreach,
+    LimitCategory,
+    LimitConsequence,
+    LimitEnforcement,
+    LimitScope,
+    LimitStatus,
+    PolicyEnforcement,
+    PolicyRule,
+    PolicyRuleStatus,
+    PolicyScope,
+    PolicySource,
+    ResetPeriod,
+)
+from app.models.audit_ledger import (
+    ActorType,
+    AuditEntityType,
+    AuditEventType,
+    AuditLedger,
+)
+from app.models.logs_records import (
+    ExecutionStatus,
+    LLMRunRecord,
+    RecordSource,
+    SystemCausedBy,
+    SystemComponent,
+    SystemEventType,
+    SystemRecord,
+    SystemSeverity,
+)
 
 __all__ = [
     "Base",
@@ -136,4 +170,35 @@ __all__ = [
     "InvalidJobTransitionError",
     "JobImmutableError",
     "OrphanJobError",
+    # Policy Control-Plane models (PIN-412)
+    "PolicyRule",
+    "PolicyRuleStatus",
+    "PolicyScope",
+    "PolicySource",
+    "EnforcementMode",
+    "EnforcementAction",
+    "PolicyEnforcement",
+    "Limit",
+    "LimitCategory",
+    "LimitScope",
+    "LimitEnforcement",
+    "LimitConsequence",
+    "LimitStatus",
+    "ResetPeriod",
+    "LimitBreach",
+    "BreachType",
+    # Audit Ledger model - Logs domain (PIN-413 CORRECTED)
+    "AuditLedger",
+    "ActorType",
+    "AuditEntityType",
+    "AuditEventType",
+    # LLM Run Records and System Records - Logs domain (PIN-413 Expansion)
+    "LLMRunRecord",
+    "ExecutionStatus",
+    "RecordSource",
+    "SystemRecord",
+    "SystemComponent",
+    "SystemEventType",
+    "SystemSeverity",
+    "SystemCausedBy",
 ]

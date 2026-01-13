@@ -290,7 +290,7 @@
       "panels": [
         {
           "panel_id": "ACT-EX-AR-O1",
-          "panel_name": "Active Runs Summary",
+          "panel_name": "Active LLM Runs Summary",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -333,7 +333,7 @@
           "control_count": 0,
           "topic": "ACTIVE_RUNS",
           "topic_id": "ACTIVITY.EXECUTIONS.ACTIVE_RUNS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 1,
           "short_description": null,
           "permissions": {
@@ -351,7 +351,7 @@
         },
         {
           "panel_id": "ACT-EX-CR-O1",
-          "panel_name": "Completed Runs Summary",
+          "panel_name": "Completed LLM Runs Summary",
           "order": "O1",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -394,7 +394,7 @@
           "control_count": 0,
           "topic": "COMPLETED_RUNS",
           "topic_id": "ACTIVITY.EXECUTIONS.COMPLETED_RUNS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 2,
           "short_description": null,
           "permissions": {
@@ -455,7 +455,7 @@
           "control_count": 0,
           "topic": "RUN_DETAILS",
           "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
@@ -473,7 +473,7 @@
         },
         {
           "panel_id": "ACT-EX-AR-O2",
-          "panel_name": "Active Runs List",
+          "panel_name": "Active LLM Runs List",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -561,7 +561,7 @@
           "control_count": 4,
           "topic": "ACTIVE_RUNS",
           "topic_id": "ACTIVITY.EXECUTIONS.ACTIVE_RUNS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
@@ -579,7 +579,7 @@
         },
         {
           "panel_id": "ACT-EX-CR-O2",
-          "panel_name": "Completed Runs List",
+          "panel_name": "Completed LLM Runs List",
           "order": "O2",
           "render_mode": "TABLE",
           "visibility": "ALWAYS",
@@ -676,7 +676,7 @@
           "control_count": 5,
           "topic": "COMPLETED_RUNS",
           "topic_id": "ACTIVITY.EXECUTIONS.COMPLETED_RUNS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
@@ -782,7 +782,7 @@
           "control_count": 4,
           "topic": "RUN_DETAILS",
           "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
@@ -871,7 +871,7 @@
           "control_count": 2,
           "topic": "COMPLETED_RUNS",
           "topic_id": "ACTIVITY.EXECUTIONS.COMPLETED_RUNS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
@@ -960,7 +960,7 @@
           "control_count": 2,
           "topic": "RUN_DETAILS",
           "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
@@ -1039,7 +1039,7 @@
           "control_count": 1,
           "topic": "RUN_DETAILS",
           "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {
@@ -1119,7 +1119,7 @@
           "control_count": 1,
           "topic": "RUN_DETAILS",
           "topic_id": "ACTIVITY.EXECUTIONS.RUN_DETAILS",
-          "subdomain": "EXECUTIONS",
+          "subdomain": "LLM_RUNS",
           "topic_display_order": 3,
           "short_description": null,
           "permissions": {

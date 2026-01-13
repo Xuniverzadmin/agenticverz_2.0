@@ -75,6 +75,20 @@ class IncidentStatus(str, Enum):
     RESOLVED = "resolved"
 
 
+class IncidentLifecycleState(str, Enum):
+    """Canonical lifecycle state for incidents (PIN-412)."""
+    ACTIVE = "ACTIVE"
+    ACKED = "ACKED"
+    RESOLVED = "RESOLVED"
+
+
+class IncidentCauseType(str, Enum):
+    """Normalized cause semantics for incidents (PIN-412)."""
+    LLM_RUN = "LLM_RUN"
+    SYSTEM = "SYSTEM"
+    HUMAN = "HUMAN"
+
+
 class GuardrailAction(str, Enum):
     BLOCK = "block"
     WARN = "warn"
@@ -289,6 +303,12 @@ class Incident(SQLModel, table=True):
     is_synthetic: bool = Field(default=False)
     synthetic_scenario_id: Optional[str] = None
 
+    # PIN-412: Canonical lifecycle and linkage fields
+    # These are the authoritative fields for UI projection
+    lifecycle_state: str = Field(default="ACTIVE", max_length=16)  # ACTIVE, ACKED, RESOLVED
+    llm_run_id: Optional[str] = Field(default=None, foreign_key="runs.id", index=True)
+    cause_type: str = Field(default="HUMAN", max_length=16)  # LLM_RUN, SYSTEM, HUMAN
+
     def add_related_call(self, call_id: str):
         """Add a related call ID."""
         ids = self.get_related_call_ids()
@@ -306,11 +326,18 @@ class Incident(SQLModel, table=True):
     def resolve(self, by: str):
         """Mark incident as resolved."""
         self.status = IncidentStatus.RESOLVED.value
+        self.lifecycle_state = IncidentLifecycleState.RESOLVED.value  # PIN-412: canonical state
         self.resolved_at = utc_now()
         self.resolved_by = by
         self.ended_at = utc_now()
         if self.started_at:
             self.duration_seconds = int((self.ended_at - self.started_at).total_seconds())
+        self.updated_at = utc_now()
+
+    def acknowledge(self, by: str):
+        """Mark incident as acknowledged (PIN-412)."""
+        self.status = IncidentStatus.ACKNOWLEDGED.value
+        self.lifecycle_state = IncidentLifecycleState.ACKED.value
         self.updated_at = utc_now()
 
 

@@ -36,6 +36,7 @@ from app.infra import FeatureIntent, RetryPolicy
 # Reference: PIN-257 Phase R-3 (L5→L4 Violation Fix)
 from ..db import Agent, Memory, Provenance, Run, engine
 from ..events import get_publisher
+from ..models.logs_records import ExecutionStatus, LLMRunRecord, RecordSource
 from ..metrics import (
     nova_runs_failed_total,
     nova_runs_total,
@@ -435,6 +436,101 @@ class RunRunner:
             logger.error(
                 "governance_records_creation_failed",
                 extra={"run_id": self.run_id, "status": run_status, "error": str(e)},
+            )
+
+    def _create_llm_run_record(
+        self,
+        run: Run,
+        tool_calls: list,
+        execution_status: ExecutionStatus,
+        started_at: datetime,
+        completed_at: datetime,
+        trace_id: Optional[str] = None,
+    ):
+        """
+        Create an immutable LLM run record for the Logs domain (PIN-413).
+
+        This is a TRUST ANCHOR for execution verification:
+        - Captures total tokens and cost from all LLM invocations in this run
+        - Records are WRITE-ONCE (no UPDATE, no DELETE - enforced by DB trigger)
+        - Source = WORKER (this is the authoritative capture point)
+
+        Called at each terminal state transition:
+        - SUCCESS: execution_status = SUCCEEDED
+        - FAILED: execution_status = FAILED
+        - HALTED: execution_status = ABORTED (budget halt)
+        """
+        try:
+            # Aggregate token counts and extract provider/model from LLM invocations
+            total_input_tokens = 0
+            total_output_tokens = 0
+            total_cost_cents = 0
+            provider = "unknown"
+            model = "unknown"
+
+            for tool_call in tool_calls:
+                skill_name = tool_call.get("skill", "")
+                if skill_name == "llm_invoke":
+                    response = tool_call.get("response", {})
+                    total_input_tokens += response.get("input_tokens", 0)
+                    total_output_tokens += response.get("output_tokens", 0)
+                    total_cost_cents += int(response.get("cost_cents", 0) * 100)  # Store as int cents
+
+                    # Extract provider/model from first successful LLM call
+                    if provider == "unknown" and response.get("model"):
+                        model = response.get("model", "unknown")
+                        # Derive provider from model name pattern
+                        if "claude" in model.lower():
+                            provider = "anthropic"
+                        elif "gpt" in model.lower():
+                            provider = "openai"
+                        elif model == "stub":
+                            provider = "stub"
+                        else:
+                            provider = "unknown"
+
+            # Create the immutable record
+            record = LLMRunRecord(
+                tenant_id=run.tenant_id or "",
+                run_id=self.run_id,
+                trace_id=trace_id,
+                provider=provider,
+                model=model,
+                prompt_hash=None,  # Would need to compute from actual prompts
+                response_hash=None,  # Would need to compute from actual responses
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                cost_cents=total_cost_cents,
+                execution_status=execution_status.value,
+                started_at=started_at,
+                completed_at=completed_at,
+                source=RecordSource.WORKER.value,
+                is_synthetic=run.is_synthetic or False,
+                synthetic_scenario_id=run.synthetic_scenario_id,
+            )
+
+            with Session(engine) as session:
+                session.add(record)
+                session.commit()
+
+            logger.info(
+                "llm_run_record_created",
+                extra={
+                    "run_id": self.run_id,
+                    "record_id": record.id,
+                    "execution_status": execution_status.value,
+                    "input_tokens": total_input_tokens,
+                    "output_tokens": total_output_tokens,
+                    "cost_cents": total_cost_cents,
+                },
+            )
+
+        except Exception as e:
+            # Don't fail the run because of record creation failure
+            # This is observability, not execution-critical
+            logger.error(
+                "llm_run_record_creation_failed",
+                extra={"run_id": self.run_id, "error": str(e)},
             )
 
     def run(self):
@@ -910,6 +1006,16 @@ class RunRunner:
                         session.add(provenance)
                         session.commit()
 
+                    # PIN-413: Create immutable LLM run record for Logs domain (halted = ABORTED)
+                    self._create_llm_run_record(
+                        run=run,
+                        tool_calls=tool_calls,
+                        execution_status=ExecutionStatus.ABORTED,
+                        started_at=run.started_at or datetime.now(timezone.utc),
+                        completed_at=completed_at,
+                        trace_id=trace_id,
+                    )
+
                     # 7. Publish halted event
                     self.publisher.publish(
                         "run.halted",
@@ -968,6 +1074,16 @@ class RunRunner:
                 )
                 session.add(provenance)
                 session.commit()
+
+            # PIN-413: Create immutable LLM run record for Logs domain
+            self._create_llm_run_record(
+                run=run,
+                tool_calls=tool_calls,
+                execution_status=ExecutionStatus.SUCCEEDED,
+                started_at=run.started_at or datetime.now(timezone.utc),
+                completed_at=completed_at,
+                trace_id=trace_id,
+            )
 
             # GAP-LOG-001 FIX: Complete trace on success (PIN-378 SDSR extension)
             # PIN-406: Fail-closed trace semantics - COMPLETE or ABORTED, no dangling
@@ -1032,6 +1148,24 @@ class RunRunner:
 
                 # SDSR: Create incident for failed run (PIN-370)
                 self._create_incident_for_failure(error_message=error_msg)
+
+                # PIN-413: Create immutable LLM run record for Logs domain (failed)
+                # Parse tool_calls from run if available (may be partial)
+                if run:
+                    failed_tool_calls = []
+                    if run.tool_calls_json:
+                        try:
+                            failed_tool_calls = json.loads(run.tool_calls_json)
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                    self._create_llm_run_record(
+                        run=run,
+                        tool_calls=failed_tool_calls,
+                        execution_status=ExecutionStatus.FAILED,
+                        started_at=run.started_at or datetime.now(timezone.utc),
+                        completed_at=datetime.now(timezone.utc),
+                        trace_id=None,  # trace_id may not be available in exception handler
+                    )
 
                 # GAP-LOG-001 FIX: Complete trace on failure (PIN-378 SDSR extension)
                 # PIN-406: Fail-closed trace semantics - COMPLETE or ABORTED, no dangling

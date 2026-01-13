@@ -16,7 +16,7 @@ from datetime import date, datetime, timezone
 from typing import AsyncGenerator, Optional
 
 from sqlalchemy import JSON, Column
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Field, Session, SQLModel, create_engine
 
@@ -138,7 +138,7 @@ def get_async_session_factory():
     """Get or create the async session factory (lazy initialization)."""
     global _async_session_local
     if _async_session_local is None:
-        _async_session_local = sessionmaker(
+        _async_session_local = async_sessionmaker(
             get_async_engine(),
             class_=AsyncSession,
             expire_on_commit=False,
@@ -168,6 +168,32 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
     Usage:
         async with get_async_session() as session:
+            result = await session.execute(...)
+
+    NOTE: This is wrapped with @asynccontextmanager for use with `async with`.
+    For FastAPI Depends(), use `get_async_session_dep()` instead.
+    """
+    session_factory = get_async_session_factory()
+    async with session_factory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+async def get_async_session_dep() -> AsyncGenerator[AsyncSession, None]:
+    """
+    FastAPI dependency for async sessions.
+
+    This is an async generator function (no @asynccontextmanager decorator)
+    that works correctly with FastAPI's Depends() system.
+
+    Usage in FastAPI:
+        @router.get("/items")
+        async def get_items(session: AsyncSession = Depends(get_async_session_dep)):
             result = await session.execute(...)
     """
     session_factory = get_async_session_factory()
@@ -314,6 +340,93 @@ class Run(SQLModel, table=True):
     authorized_by: Optional[str] = Field(
         default=None,
         description="Principal that authorized: user_id, api_key_id, system",
+    )
+
+    # =========================================================================
+    # O2 Schema Columns (PIN-411: Aurora Runtime Projections)
+    # These columns are computed UPSTREAM and stored for read-only access.
+    # /runs endpoint is READ-ONLY - no computation at query time.
+    # =========================================================================
+
+    # Lifecycle state (different from status - this is LIVE vs COMPLETED)
+    state: str = Field(
+        default="LIVE",
+        description="Run lifecycle state: LIVE or COMPLETED"
+    )
+
+    # Project scope
+    project_id: Optional[str] = Field(
+        default=None,
+        index=True,
+        description="Project scope (UUID)"
+    )
+
+    # Heartbeat for LIVE runs
+    last_seen_at: Optional[datetime] = Field(
+        default=None,
+        description="Last heartbeat timestamp for LIVE runs"
+    )
+
+    # Source and provider
+    source: str = Field(
+        default="agent",
+        description="Run initiator: agent, human, sdk"
+    )
+    provider_type: str = Field(
+        default="anthropic",
+        description="LLM provider: openai, anthropic, internal"
+    )
+
+    # Risk and health (computed upstream, stored here)
+    risk_level: str = Field(
+        default="NORMAL",
+        description="Risk classification: NORMAL, NEAR_THRESHOLD, AT_RISK, VIOLATED"
+    )
+    latency_bucket: str = Field(
+        default="OK",
+        description="Latency classification: OK, SLOW, STALLED"
+    )
+    evidence_health: str = Field(
+        default="FLOWING",
+        description="Evidence capture health: FLOWING, DEGRADED, MISSING"
+    )
+    integrity_status: str = Field(
+        default="UNKNOWN",
+        description="Integrity verification: UNKNOWN, VERIFIED, DEGRADED, FAILED"
+    )
+
+    # Impact signals
+    incident_count: int = Field(
+        default=0,
+        description="Count of incidents caused by this run"
+    )
+    policy_draft_count: int = Field(
+        default=0,
+        description="Count of policy drafts generated"
+    )
+    policy_violation: bool = Field(
+        default=False,
+        description="Whether run violated any policy"
+    )
+
+    # Cost tracking
+    input_tokens: Optional[int] = Field(
+        default=None,
+        description="Input token count"
+    )
+    output_tokens: Optional[int] = Field(
+        default=None,
+        description="Output token count"
+    )
+    estimated_cost_usd: Optional[float] = Field(
+        default=None,
+        description="Estimated cost in USD"
+    )
+
+    # Expected latency for latency_bucket computation
+    expected_latency_ms: Optional[int] = Field(
+        default=None,
+        description="Expected latency in ms (from policy/intent)"
     )
 
 
