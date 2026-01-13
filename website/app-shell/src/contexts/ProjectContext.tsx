@@ -22,7 +22,17 @@
  * NOT L2.1 — This is Global Context, not Projection
  */
 
+/**
+ * ProjectContext - Global Project Scope Selector
+ *
+ * RULE-AUTH-UI-001: Clerk is the auth store
+ * - Use useAuth() for authentication state
+ * - Keep tenantId in authStore (app-specific state)
+ *
+ * Reference: PIN-407, docs/architecture/FRONTEND_AUTH_CONTRACT.md
+ */
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 import { useAuthStore } from '@/stores/authStore';
 
 // ============================================================================
@@ -93,7 +103,9 @@ interface ProjectProviderProps {
 }
 
 export function ProjectProvider({ children }: ProjectProviderProps) {
-  const { tenantId, isAuthenticated } = useAuthStore();
+  // Use Clerk for auth status, authStore for tenantId (app-specific)
+  const { isSignedIn } = useAuth();
+  const { tenantId } = useAuthStore();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
@@ -129,14 +141,14 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
       }
     }
 
-    if (isAuthenticated) {
+    if (isSignedIn) {
       loadProjects();
     } else {
       setProjects([]);
       setCurrentProject(null);
       setIsLoading(false);
     }
-  }, [isAuthenticated, tenantId]);
+  }, [isSignedIn, tenantId]);
 
   // Select project handler
   const selectProject = useCallback((projectId: string) => {

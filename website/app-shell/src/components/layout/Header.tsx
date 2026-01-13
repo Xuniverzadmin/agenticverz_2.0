@@ -1,7 +1,16 @@
+/**
+ * Header - Application header with Clerk auth integration
+ *
+ * RULE-AUTH-UI-001: Clerk is the auth store
+ * - User info from useUser()
+ * - Sign out via useClerk().signOut()
+ *
+ * Reference: PIN-407, docs/architecture/FRONTEND_AUTH_CONTRACT.md
+ */
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Bell, User, LogOut, Settings, ChevronDown, Monitor, Beaker, Users, Wrench, Eye, Code } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useAuthStore } from '@/stores/authStore';
+import { useUser, useClerk } from '@clerk/clerk-react';
 import { useUIStore } from '@/stores/uiStore';
 import { Button } from '@/components/common/Button';
 import { cn } from '@/lib/utils';
@@ -227,7 +236,8 @@ function ConsoleSwitcher() {
 
 export function Header() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
   // PIN-323: Credits query disabled - capability quarantined
   // const { data: credits } = useQuery({
@@ -237,8 +247,8 @@ export function Header() {
   // });
   const credits = null; // Placeholder until credits capability is resolved
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/login');
   };
 
@@ -294,7 +304,7 @@ export function Header() {
                 <User size={16} />
               </div>
               <span className="text-sm font-medium text-gray-300">
-                {user?.name || 'User'}
+                {user?.firstName || user?.primaryEmailAddress?.emailAddress || 'User'}
               </span>
             </button>
           </DropdownMenu.Trigger>

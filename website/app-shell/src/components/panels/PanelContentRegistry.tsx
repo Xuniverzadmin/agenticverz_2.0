@@ -18,13 +18,21 @@
  * Panels without registration show the placeholder
  */
 
+/**
+ * Panel Content Registry - SDSR Data Binding
+ *
+ * RULE-AUTH-UI-001: Clerk is the auth store
+ * - Use useUser() for user info (audit trails)
+ *
+ * Reference: PIN-407, docs/architecture/FRONTEND_AUTH_CONTRACT.md
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUser } from '@clerk/clerk-react';
 import { fetchActivityRuns, type RunSummary } from '@/api/activity';
 import { fetchIncidents, fetchIncidentsMetrics, type IncidentSummary } from '@/api/incidents';
 import { fetchProposals, approveProposal, rejectProposal, type ProposalSummary } from '@/api/proposals';
 import { getTraces, getTrace, type Trace, type TraceStep, type LogLevel } from '@/api/traces';
 import type { NormalizedPanel } from '@/contracts/ui_projection_loader';
-import { useAuthStore } from '@/stores/authStore';
 
 // =============================================================================
 // Content Renderer Interface
@@ -883,7 +891,7 @@ function PendingProposalsSummary({ panel }: PanelContentProps) {
  */
 function ProposalsList({ panel }: PanelContentProps) {
   const queryClient = useQueryClient();
-  const user = useAuthStore((state) => state.user);
+  const { user: clerkUser } = useUser();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['proposals', 'list'],
@@ -892,8 +900,8 @@ function ProposalsList({ panel }: PanelContentProps) {
     staleTime: 5000,
   });
 
-  // Use authenticated user's email for audit trail
-  const reviewedBy = user?.email || user?.id || 'unknown';
+  // Use authenticated user's email for audit trail (Clerk user)
+  const reviewedBy = clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.id || 'unknown';
 
   const approveMutation = useMutation({
     mutationFn: (proposalId: string) => approveProposal(proposalId, { reviewed_by: reviewedBy }),

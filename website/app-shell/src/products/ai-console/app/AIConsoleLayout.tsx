@@ -15,8 +15,18 @@
  * - Meaning conveyed via text, borders, icons (not colored backgrounds)
  */
 
+/**
+ * AI Console Layout
+ *
+ * RULE-AUTH-UI-001: Clerk is the auth store
+ * - Use useAuth() for authentication state
+ * - Keep tenantId in authStore (app-specific state)
+ *
+ * Reference: PIN-407, docs/architecture/FRONTEND_AUTH_CONTRACT.md
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@clerk/clerk-react';
 import { guardApi, GuardStatus, TodaySnapshot } from '@/api/guard';
 import { HealthIndicator } from '@/components/HealthIndicator';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -84,7 +94,8 @@ interface AIConsoleLayoutProps {
 }
 
 export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, user }: AIConsoleLayoutProps) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // Use Clerk for auth status, authStore for tenantId (app-specific)
+  const { isSignedIn } = useAuth();
   const tenantId = useAuthStore((state) => state.tenantId);
 
   // Account dropdown state
@@ -107,7 +118,7 @@ export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, us
 
   // Initialize health monitoring only after authentication
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isSignedIn) return;
 
     // Small delay to ensure auth headers are ready
     const timer = setTimeout(() => {
@@ -118,7 +129,7 @@ export function AIConsoleLayout({ children, activeTab, onTabChange, onLogout, us
       clearTimeout(timer);
       healthMonitor.stopPeriodicCheck();
     };
-  }, [isAuthenticated, tenantId]);
+  }, [isSignedIn, tenantId]);
 
   // Fetch status for header display
   // staleTime prevents duplicate fetches when data is still fresh

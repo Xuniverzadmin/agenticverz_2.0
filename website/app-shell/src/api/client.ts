@@ -4,11 +4,14 @@
  * Base API Client
  * Core axios instance used by all API clients
  *
- * Enforces AUTH-001: Tenant IDs never appear in authenticated URLs
- * Reference: docs/governance/AUTH_INVARIANTS.md
+ * RULE-AUTH-UI-001: Clerk is the auth store.
+ * - Token attachment handled by ClerkAuthSync component
+ * - This client only enforces AUTH-001 (no tenant in URL)
+ * - No token storage or auth state management here
+ *
+ * Reference: docs/governance/AUTH_INVARIANTS.md, FRONTEND_AUTH_CONTRACT.md
  */
 import axios, { InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/stores/authStore';
 
 // Use relative URL in production (same origin), empty for same-origin requests
 const API_BASE = import.meta.env.VITE_API_BASE || '';
@@ -58,37 +61,22 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor - add auth headers and enforce AUTH-001
+// Request interceptor - enforce AUTH-001 only
+// Token attachment is handled by ClerkAuthSync component
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // AUTH-001: Validate no tenant-in-URL for customer endpoints
   assertAuth001Compliance(config.url);
-  const token = useAuthStore.getState().token;
-  const tenantId = useAuthStore.getState().tenantId;
-
-  if (token) {
-    // JWT tokens start with 'ey' (base64 JSON header)
-    // API keys are hex strings - always use X-API-Key header
-    if (token.startsWith('ey')) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      config.headers['X-API-Key'] = token;
-    }
-  }
-  if (tenantId) {
-    config.headers['X-Tenant-ID'] = tenantId;
-  }
-
   return config;
 });
 
-// Response interceptor
+// Response interceptor - handle 401 by redirecting to login
+// Clerk will handle re-authentication
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      const loginUrl = import.meta.env.VITE_AUTH_LOGIN_URL || '/login';
-      window.location.href = loginUrl;
+      // Redirect to login - Clerk will handle authentication
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

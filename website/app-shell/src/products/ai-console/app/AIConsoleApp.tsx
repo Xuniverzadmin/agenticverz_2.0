@@ -45,9 +45,42 @@
  * - Kill-switches, Decision timelines, Recovery classes, CARE internals
  */
 
+/**
+ * AIConsoleApp - Product Root with Clerk Integration
+ *
+ * RULE-AUTH-UI-001: Clerk is the auth store for OAuth path
+ * - Use useAuth() for authentication state
+ * - Use useUser() for user info
+ *
+ * TRANSITIONAL: API Key Fallback (PIN-409)
+ * =========================================
+ * The API key login path below is TRANSITIONAL and will be deprecated.
+ *
+ * Current state:
+ * - Primary: Clerk OAuth authentication (production path)
+ * - Fallback: API key via URL query param or login form (demo/legacy)
+ *
+ * Why it exists:
+ * 1. Demo mode: Quick access without account creation
+ * 2. Legacy support: Existing API-key-only customers
+ * 3. Developer testing: Local development without Clerk setup
+ *
+ * Deprecation plan:
+ * 1. All new customers use Clerk OAuth exclusively
+ * 2. Existing API-key customers are migrated to Clerk
+ * 3. Demo mode moves to a separate unauthenticated sandbox
+ * 4. API key fallback is removed from this component
+ *
+ * The API key path stores credentials in localStorage and authStore.
+ * This is NOT the recommended pattern - Clerk handles all auth storage.
+ * See useSessionContext() for backend-verified authorization facts.
+ *
+ * Reference: PIN-409, docs/architecture/FRONTEND_AUTH_CONTRACT.md
+ */
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useAuth, useUser, useClerk } from '@clerk/clerk-react';
 import { useAuthStore } from '@/stores/authStore';
 import { CUSTOMER_ROUTES, CUSTOMER_ROOT, PUBLIC_ROUTES } from '@/routing';
 import { BetaBanner } from '@/components/BetaBanner';
@@ -97,14 +130,13 @@ export function AIConsoleApp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Get OAuth state from main auth store
-  const {
-    isAuthenticated: oauthAuthenticated,
-    token: oauthToken,
-    tenantId: oauthTenantId,
-    user,
-    logout: oauthLogout
-  } = useAuthStore();
+  // Get Clerk auth state (RULE-AUTH-UI-001: Clerk is the auth store)
+  const { isSignedIn, isLoaded: clerkLoaded } = useAuth();
+  const { user: clerkUser } = useUser();
+  const { signOut } = useClerk();
+
+  // Keep tenantId from authStore (app-specific state)
+  const { tenantId: oauthTenantId } = useAuthStore();
 
   const [apiKey, setApiKey] = useState('');
   const [inputKey, setInputKey] = useState('');
@@ -141,8 +173,11 @@ export function AIConsoleApp() {
 
   // Check authentication on mount
   useEffect(() => {
-    // Priority 1: OAuth from main auth store (after onboarding)
-    if (oauthAuthenticated && oauthToken) {
+    // Wait for Clerk to load
+    if (!clerkLoaded) return;
+
+    // Priority 1: Clerk authentication (after onboarding)
+    if (isSignedIn) {
       setAuthMode('oauth');
       return;
     }
@@ -159,7 +194,7 @@ export function AIConsoleApp() {
     if (storedKey) {
       validateAndSetKey(storedKey);
     }
-  }, [oauthAuthenticated, oauthToken, searchParams]);
+  }, [isSignedIn, clerkLoaded, searchParams]);
 
   const validateAndSetKey = async (key: string) => {
     if (!key.trim()) return;
@@ -211,10 +246,10 @@ export function AIConsoleApp() {
   };
 
   // PIN-352: Uses routing authority for navigation
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (authMode === 'oauth') {
-      // OAuth logout - go back to login
-      oauthLogout();
+      // Clerk logout - go back to login
+      await signOut();
       navigate(PUBLIC_ROUTES.login, { replace: true });
     } else {
       // API key logout - stay on guard login
@@ -391,7 +426,12 @@ export function AIConsoleApp() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
           onLogout={handleLogout}
-          user={authMode === 'oauth' ? user : undefined}
+          user={authMode === 'oauth' && clerkUser ? {
+            id: clerkUser.id,
+            email: clerkUser.primaryEmailAddress?.emailAddress || '',
+            name: clerkUser.firstName || clerkUser.primaryEmailAddress?.emailAddress || 'User',
+            role: (clerkUser.publicMetadata?.role as string) || 'user',
+          } : undefined}
         >
           {renderRoutes()}
         </AIConsoleLayout>

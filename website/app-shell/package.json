@@ -25,6 +25,7 @@
     "guards": "npm run boundary && npm run ownership && npm run routes"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.59.3",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-tabs": "^1.0.4",
