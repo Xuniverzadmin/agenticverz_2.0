@@ -18,6 +18,13 @@
 - [ ] All new and existing tests pass locally
 - [ ] I have updated documentation if needed
 
+## v1 Semantic Governance (Required)
+
+<!-- v1 semantics are frozen per PIN-414. See docs/contracts/CUSTOMER_CONSOLE_V1_CONSTITUTION.md -->
+
+- [ ] This change does NOT alter v1 semantics (domains, orders, terms)
+- [ ] This change alters v1 semantics → **v2 PIN required:** PIN-___
+
 ---
 
 ## M10/Infrastructure Changes

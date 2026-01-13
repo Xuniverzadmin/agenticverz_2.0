@@ -1,11 +1,26 @@
 # System Contracts Index
 
 **Created:** 2025-12-25
-**Last Updated:** 2026-01-12
+**Last Updated:** 2026-01-13
 **Status:** FROZEN - `contracts-stable-v1` (2025-12-25)
 
 > **LOCK NOTICE:** All contracts are frozen as of Phase 4 completion.
 > Phase 5 implementation must not modify contracts without explicit delta proposal.
+
+---
+
+## 🔒 Customer Console v1 — FROZEN (2026-01-13)
+
+| Document | Purpose |
+|----------|---------|
+| [CUSTOMER_CONSOLE_V1_CONSTITUTION.md](CUSTOMER_CONSOLE_V1_CONSTITUTION.md) | **Source of truth** for v1 domains, orders, semantics |
+| [UX_INVARIANTS_CHECKLIST.md](UX_INVARIANTS_CHECKLIST.md) | UI behavioral invariants |
+| [PIN-414](../memory-pins/PIN-414-customer-console-v1-implementation-freeze.md) | Governance milestone + freeze evidence |
+
+**Git Tag:** `v1.0.0-customer-console`
+**Branch:** `release/v1.x` (maintenance-only)
+
+> **v2 Rule:** v2 may ADD capabilities. v2 may NOT reinterpret v1 semantics.
 
 ---
 
