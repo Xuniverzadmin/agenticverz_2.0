@@ -406,6 +406,7 @@ class IncidentEngine:
                             :affected_agent_id, :affected_count,
                             :is_synthetic, :synthetic_scenario_id
                         )
+                        ON CONFLICT (id) DO NOTHING
                     """),
                     {
                         "id": incident_id,
@@ -575,6 +576,7 @@ class IncidentEngine:
                             :affected_agent_id, :affected_count,
                             :is_synthetic, :synthetic_scenario_id
                         )
+                        ON CONFLICT (id) DO NOTHING
                     """),
                     {
                         "id": incident_id,

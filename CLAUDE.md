@@ -2076,7 +2076,13 @@ sudo systemctl reload apache2          # Apply changes
 
 **Cache-busting:** Already configured. Browsers auto-refresh after deploy (no manual cache clear).
 
-**Route Redirect:** `/guard/*` → `/cus/*` (301) already configured.
+**Console Routes:**
+| Console | URL | Route Prefix |
+|---------|-----|--------------|
+| Customer Console | console.agenticverz.com | `/cus/*` |
+| Preflight Console | preflight-console.agenticverz.com | `/precus/*` |
+
+**Route Redirect:** `/guard/*` → `/cus/*` (301) configured on customer console.
 
 ---
 

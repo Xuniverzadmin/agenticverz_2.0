@@ -702,3 +702,118 @@ async def handle_policy_violation(
     )
 
     return await service.persist_violation_and_create_incident(violation)
+
+
+# =============================================================================
+# PIN-407: Sync Policy Evaluation for Worker Use
+# =============================================================================
+
+
+def create_policy_evaluation_sync(
+    run_id: str,
+    tenant_id: str,
+    run_status: str,
+    policies_checked: int = 0,
+    is_synthetic: bool = False,
+    synthetic_scenario_id: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Create a policy evaluation record for ANY run (PIN-407) - SYNC VERSION.
+
+    This is a synchronous wrapper for use in worker contexts where we don't
+    have an async session. Uses direct psycopg2 connection.
+
+    Args:
+        run_id: Run ID
+        tenant_id: Tenant scope
+        run_status: Run status (succeeded, failed, etc.)
+        policies_checked: Number of policies evaluated
+        is_synthetic: True if from SDSR scenario
+        synthetic_scenario_id: Scenario ID for traceability
+
+    Returns:
+        policy_evaluation_id if created, None if failed
+    """
+    import psycopg2
+
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        logger.error("policy_eval_sync_no_database_url")
+        return None
+
+    # Map run status to policy outcome
+    status_lower = run_status.lower()
+    if status_lower in ("succeeded", "completed", "success"):
+        outcome = POLICY_OUTCOME_NO_VIOLATION
+        reason = "Run completed successfully, no policy violations"
+    elif status_lower in ("failed", "failure", "error"):
+        outcome = POLICY_OUTCOME_NOT_APPLICABLE
+        reason = "Run failed, policy evaluation not applicable"
+    elif status_lower in ("halted", "blocked"):
+        outcome = POLICY_OUTCOME_ADVISORY
+        reason = "Run halted, policy advisory recorded"
+    else:
+        outcome = POLICY_OUTCOME_NOT_APPLICABLE
+        reason = f"Run status '{run_status}', policy evaluation not applicable"
+
+    evaluation_id = generate_uuid()
+    now = datetime.now(timezone.utc)
+
+    try:
+        conn = psycopg2.connect(database_url)
+        try:
+            with conn.cursor() as cur:
+                # Match the async version's schema usage
+                cur.execute(
+                    """
+                    INSERT INTO prevention_records (
+                        id, policy_id, pattern_id, original_incident_id, blocked_incident_id,
+                        tenant_id, outcome, signature_match_confidence, created_at,
+                        is_synthetic, synthetic_scenario_id
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT DO NOTHING
+                    RETURNING id
+                    """,
+                    (
+                        evaluation_id,
+                        f"policy_eval_{run_id[:8]}",  # Unique per run
+                        f"policies_checked:{policies_checked}",
+                        run_id,  # original_incident_id = run_id
+                        run_id,  # blocked_incident_id = run_id
+                        tenant_id,
+                        outcome,
+                        1.0 if outcome == POLICY_OUTCOME_NO_VIOLATION else 0.0,
+                        now,
+                        is_synthetic,
+                        synthetic_scenario_id,
+                    ),
+                )
+                result = cur.fetchone()
+                conn.commit()
+
+                if result:
+                    logger.info(
+                        "policy_evaluation_created_sync",
+                        extra={
+                            "run_id": run_id,
+                            "evaluation_id": result[0],
+                            "outcome": outcome,
+                        },
+                    )
+                    return result[0]
+                else:
+                    logger.debug(
+                        "policy_evaluation_exists_sync",
+                        extra={"run_id": run_id, "outcome": outcome},
+                    )
+                    return None
+        finally:
+            conn.close()
+
+    except Exception as e:
+        logger.error(
+            "policy_evaluation_sync_failed",
+            extra={"run_id": run_id, "error": str(e)},
+        )
+        return None

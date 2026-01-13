@@ -43,6 +43,7 @@ from ..metrics import (
     nova_skill_duration_seconds,
 )
 from ..services.incident_engine import get_incident_engine
+from ..services.policy_violation_service import create_policy_evaluation_sync
 from ..skills import get_skill_config
 from ..skills.executor import (
     SkillExecutionError,
@@ -364,6 +365,76 @@ class RunRunner:
             logger.error(
                 "incident_creation_failed",
                 extra={"run_id": self.run_id, "error": str(e)},
+            )
+
+    def _create_governance_records_for_run(self, run_status: str):
+        """
+        Create incident and policy records for ANY run (PIN-407).
+
+        PIN-407: Success as First-Class Data
+        - Every run produces an incident record with explicit outcome
+        - Every run produces a policy evaluation record with explicit outcome
+        - This is NOT limited to failures - successful runs also get records
+
+        This method is called from both success and failure paths.
+        Failure path already calls _create_incident_for_failure(), but we
+        use this unified method for success to ensure both incident + policy
+        are created together.
+        """
+        try:
+            run = self._get_run()
+            if not run:
+                logger.warning("governance_records_skip_no_run", extra={"run_id": self.run_id})
+                return
+
+            # PIN-407: Create incident record (SUCCESS, FAILURE, BLOCKED, etc.)
+            incident_engine = get_incident_engine()
+            incident_id = incident_engine.create_incident_for_run(
+                run_id=self.run_id,
+                tenant_id=run.tenant_id,
+                run_status=run_status,
+                error_code=None,
+                error_message=None,
+                agent_id=run.agent_id,
+                is_synthetic=run.is_synthetic or False,
+                synthetic_scenario_id=run.synthetic_scenario_id,
+            )
+
+            if incident_id:
+                logger.info(
+                    "governance_incident_created",
+                    extra={"run_id": self.run_id, "incident_id": incident_id, "outcome": run_status},
+                )
+                self.publisher.publish(
+                    "incident.created",
+                    {"run_id": self.run_id, "incident_id": incident_id, "outcome": run_status},
+                )
+
+            # PIN-407: Create policy evaluation record
+            policy_id = create_policy_evaluation_sync(
+                run_id=self.run_id,
+                tenant_id=run.tenant_id,
+                run_status=run_status,
+                policies_checked=0,  # Can be enhanced later
+                is_synthetic=run.is_synthetic or False,
+                synthetic_scenario_id=run.synthetic_scenario_id,
+            )
+
+            if policy_id:
+                logger.info(
+                    "governance_policy_created",
+                    extra={"run_id": self.run_id, "policy_id": policy_id, "outcome": run_status},
+                )
+                self.publisher.publish(
+                    "policy.evaluated",
+                    {"run_id": self.run_id, "policy_id": policy_id, "outcome": run_status},
+                )
+
+        except Exception as e:
+            # Don't fail the run because of governance record creation failure
+            logger.error(
+                "governance_records_creation_failed",
+                extra={"run_id": self.run_id, "status": run_status, "error": str(e)},
             )
 
     def run(self):
@@ -863,6 +934,15 @@ class RunRunner:
             duration_ms = (time.time() - start_time) * 1000
             completed_at = datetime.now(timezone.utc)
 
+            # PIN-407: Create governance records (incident + policy) for SUCCESS runs
+            # CRITICAL: Must happen BEFORE _update_run(status="succeeded") because
+            # SDSR checker polls runs table and immediately queries incidents when
+            # it sees "succeeded" status. Records must exist BEFORE status change.
+            self._create_governance_records_for_run(run_status="succeeded")
+
+            # IMPORTANT: Run must not be marked terminal until incident + policy
+            # records are created. Moving this call above governance creation
+            # will break SDSR integrity checks. See PIN-407.
             self._update_run(
                 status="succeeded",
                 attempts=run.attempts,
