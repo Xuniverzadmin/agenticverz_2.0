@@ -177,22 +177,21 @@ class ClerkAdapter(IdentityAdapter):
             from app.auth.clerk_provider import get_clerk_provider
 
             provider = get_clerk_provider()
-            if provider is None:
+            if provider is None or not provider.is_configured:
+                logger.warning("Clerk provider not configured")
                 return None
 
-            # Use existing Clerk verification
-            user = await provider.verify_token(token)
-            if user is None:
-                return None
+            # verify_token is SYNC, not async - returns JWT payload dict
+            payload = provider.verify_token(token)
 
-            # Convert to claims dict
+            # payload is the decoded JWT with claims like sub, email, etc.
             return {
-                "sub": user.user_id,
-                "email": user.email,
-                "name": getattr(user, "display_name", None),
-                "org_id": getattr(user, "org_id", None),
-                "org_role": getattr(user, "org_role", None),
-                "metadata": getattr(user, "metadata", {}),
+                "sub": payload.get("sub"),
+                "email": payload.get("email"),
+                "name": payload.get("name"),
+                "org_id": payload.get("org_id"),
+                "org_role": payload.get("org_role"),
+                "metadata": payload.get("metadata", {}),
             }
         except Exception as e:
             logger.warning(f"Clerk token verification failed: {e}")

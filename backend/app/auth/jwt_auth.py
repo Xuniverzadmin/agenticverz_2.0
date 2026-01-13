@@ -68,8 +68,12 @@ class JWTConfig:
     # Validation settings
     algorithms: List[str] = field(default_factory=lambda: ["RS256", "ES256"])
     verify_exp: bool = True
-    verify_aud: bool = True
+    verify_aud: bool = True  # Always verify, but against allowlist
     verify_iss: bool = True
+    # Audience allowlist: comma-separated valid audiences
+    allowed_audiences: List[str] = field(default_factory=lambda: [
+        a.strip() for a in os.getenv("OIDC_ALLOWED_AUDIENCES", "").split(",") if a.strip()
+    ] + [os.getenv("OIDC_ISSUER_URL", "")])  # Issuer URL always allowed
 
     # Cache settings
     jwks_cache_ttl: int = 3600  # 1 hour
@@ -246,19 +250,28 @@ class JWTAuthDependency:
             # Get signing key from JWKS
             signing_key = self.jwks_cache.get_signing_key(token)
 
-            # Decode and verify
+            # Decode and verify (aud verification done manually against allowlist)
             payload = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=self.config.algorithms,
-                audience=self.config.audience if self.config.verify_aud else None,
                 issuer=self.config.issuer_url if self.config.verify_iss else None,
                 options={
                     "verify_exp": self.config.verify_exp,
-                    "verify_aud": self.config.verify_aud,
+                    "verify_aud": False,  # We verify against allowlist below
                     "verify_iss": self.config.verify_iss,
                 },
             )
+
+            # Audience allowlist verification
+            # If aud claim exists, it MUST be in our allowlist
+            if self.config.verify_aud:
+                token_aud = payload.get("aud")
+                if token_aud:
+                    audiences = [token_aud] if isinstance(token_aud, str) else token_aud
+                    valid_audiences = [a for a in self.config.allowed_audiences if a]
+                    if valid_audiences and not any(aud in valid_audiences for aud in audiences):
+                        raise jwt.InvalidAudienceError(f"Audience {token_aud} not in allowlist")
 
             return self._parse_claims(payload)
 

@@ -124,7 +124,10 @@ def get_gateway_middleware_config() -> dict:
             # SDSR Activity API (PIN-370)
             # Used for preflight SDSR validation. Route handler enforces API key.
             # =================================================================
+            "/api/v1/activity",
             "/api/v1/activity/",
+            "/api/v1/runs",
+            "/api/v1/runs/",
             # =================================================================
             # SDSR Incidents API (PIN-370)
             # Used for preflight SDSR validation. Route handler enforces API key.
@@ -132,9 +135,20 @@ def get_gateway_middleware_config() -> dict:
             "/api/v1/incidents",
             "/api/v1/incidents/",
             # =================================================================
+            # SDSR Logs/Traces API (PIN-407)
+            # REMOVED from public paths - traces MUST require authentication
+            # PIN-409: JWT proves identity, backend decides authority
+            # Auth context must be set for capability-based authorization
+            # =================================================================
+            # "/api/v1/traces",   # REMOVED - requires auth
+            # "/api/v1/traces/",  # REMOVED - requires auth
+            # "/api/v1/logs",     # REMOVED - requires auth
+            # "/api/v1/logs/",    # REMOVED - requires auth
+            # =================================================================
             # SDSR Policy Proposals API (PIN-373)
             # Used for preflight SDSR validation.
             # =================================================================
+            "/api/v1/policy-proposals",
             "/api/v1/policy-proposals/",
             # =================================================================
             # FOUNDER ROUTES (PIN-336, PIN-398)

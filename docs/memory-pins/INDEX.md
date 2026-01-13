@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-12 (PIN-408 Aurora Projection Pipeline - PIN-407 Compliance Fix)
+**Last Updated:** 2026-01-13 (PIN-409 Backend RBAC Fix - capability-based authorization)
 
 ---
 
@@ -400,6 +400,7 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-405](PIN-405-evidence-architecture-v11---structural-authority-integrity-model.md) | **Evidence Architecture v1.1 - Structural Authority & Integrity Model** | Architecture / Evidence System | **✅ COMPLETE** | 2026-01-12 |
 | [PIN-407](PIN-407-success-as-first-class-data.md) | **Success as First-Class Data** | Governance / Semantic Model | **FOUNDATIONAL** | 2026-01-12 |
 | [PIN-408](PIN-408-aurora-projection-pipeline-pin407-fix.md) | **Aurora Projection Pipeline - PIN-407 Compliance Fix** | Architecture / SDSR / Aurora | **VERIFIED** | 2026-01-12 |
+| [PIN-409](PIN-409-auth-console-contract-clerk-backend-authority.md) | **Auth Console Contract - Clerk Identity, Backend Authority** | Architecture / Auth / Frontend | **LOCKED** | 2026-01-13 |
 
 ---
 
@@ -1169,6 +1170,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-13 | **PIN-409 Backend RBAC Fix** - Capability-based authorization, removed /api/v1/traces from public paths, silent fallback guardrail. 403 errors resolved. |
+| 2026-01-13 | **PIN-409 Auth Console Contract - Clerk Identity, Backend Authority (LOCKED)** - Final auth design: Clerk=identity, Backend=authority, Consoles=UX. Capabilities-only model. Topic closed permanently. |
 | 2026-01-12 | **PIN-408 Aurora Projection Pipeline - PIN-407 Compliance Fix** - Full implementation with backend services, SDSR evidence collection, acceptance proof artifact. |
 | 2026-01-12 | **PIN-407 Success as First-Class Data** - Foundational semantic correction: every run produces activity, incident, policy, logs. |
 | 2026-01-12 | **PIN-405 Evidence Architecture v1.1 - Structural Authority & Integrity Model** - Created via memory_trail. |

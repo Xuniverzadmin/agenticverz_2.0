@@ -492,6 +492,9 @@ from .api.health import router as health_router
 # PIN-399: SDK handshake and registration endpoints
 from .api.sdk import router as sdk_router
 
+# PIN-409: Session context for frontend auth state
+from .api.session_context import router as session_context_router
+
 # M28: failures_router removed (PIN-145) - duplicates /ops/incidents/patterns
 from .api.integration import router as integration_router  # M25 Pillar Integration Loop
 
@@ -541,6 +544,7 @@ app.include_router(embedding_router, prefix="/api/v1")  # PIN-047 Embedding Quot
 app.include_router(workers_router)  # Business Builder Worker v0.2
 app.include_router(tenants_router)  # M21 - RE-ENABLED: PIN-399 Onboarding State Machine
 app.include_router(sdk_router)  # PIN-399: SDK handshake and registration
+app.include_router(session_context_router)  # PIN-409: Session context for frontend auth
 
 # M22 KillSwitch MVP - OpenAI-compatible proxy (THE FRONT DOOR)
 app.include_router(v1_proxy_router)  # /v1/chat/completions, /v1/embeddings, /v1/status

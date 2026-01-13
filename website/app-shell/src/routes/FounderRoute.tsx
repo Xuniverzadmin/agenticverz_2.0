@@ -34,8 +34,19 @@
  * they are redirected to customer console (not /login) to prevent route discovery.
  */
 
+/**
+ * FounderRoute - Backend-verified founder route protection
+ *
+ * RULE-AUTH-UI-001: Clerk is the auth store; backend is authority on actor_type
+ * - Use useAuth() for authentication state
+ * - Use useSessionContext() for verified actor_type (customer/founder)
+ * - Frontend reads authorization facts, never derives them
+ *
+ * Reference: PIN-409, docs/architecture/FRONTEND_AUTH_CONTRACT.md
+ */
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthStore, TokenAudience } from '@/stores/authStore';
+import { useAuth, useUser } from '@clerk/clerk-react';
+import { useSessionContext } from '@/hooks/useSessionContext';
 import {
   PUBLIC_ROUTES,
   ONBOARDING_ROUTES,
@@ -53,30 +64,53 @@ interface FounderRouteProps {
 }
 
 export function FounderRoute({ children, allowedRoles }: FounderRouteProps) {
-  const { isAuthenticated, onboardingComplete, audience, isFounder, user } = useAuthStore();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user: clerkUser } = useUser();
+  // PIN-409: Get verified actor_type from backend session context
+  const { isFounder, isLoading: sessionLoading } = useSessionContext();
   const location = useLocation();
 
+  // Wait for Clerk to load
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
+  }
+
   // Check 1: Must be authenticated
-  if (!isAuthenticated) {
+  if (!isSignedIn) {
     return <Navigate to={PUBLIC_ROUTES.login} state={{ from: location }} replace />;
   }
 
+  // Wait for session context to load
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-gray-400">Verifying access...</div>
+      </div>
+    );
+  }
+
   // Check 2: Must have completed onboarding
+  // Use Clerk user metadata (treat as complete if not set)
+  const onboardingComplete = clerkUser?.publicMetadata?.onboardingComplete !== false;
   if (!onboardingComplete) {
     return <Navigate to={ONBOARDING_ROUTES.connect} replace />;
   }
 
-  // Check 3: Must have founder audience (aud="fops") or be marked as founder
-  // PIN-352: Explicit audience check - customer tokens (aud="console") are denied
-  if (audience !== 'fops' && !isFounder) {
+  // Check 3: Must be a founder (verified by backend)
+  // PIN-409: actor_type from backend is the authority, not frontend-derived audience
+  if (!isFounder) {
     // Redirect to customer console, not login
     // This prevents route discovery (customer sees their console, not an error)
     return <Navigate to={CUSTOMER_ROUTES.root} replace />;
   }
 
   // Check 4: Optional role restriction
-  if (allowedRoles && user?.role) {
-    const userRole = user.role as FounderRole;
+  const userRole = (clerkUser?.publicMetadata?.role as FounderRole) || undefined;
+  if (allowedRoles && userRole) {
     if (!allowedRoles.includes(userRole)) {
       // User is founder but lacks required role
       // Redirect to main founder page (ops console)
@@ -104,31 +138,52 @@ interface CustomerRouteProps {
 }
 
 export function CustomerRoute({ children, allowedRoles }: CustomerRouteProps) {
-  const { isAuthenticated, onboardingComplete, audience, user } = useAuthStore();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user: clerkUser } = useUser();
+  // PIN-409: Get verified actor_type from backend session context
+  const { isCustomer, isFounder, isLoading: sessionLoading } = useSessionContext();
   const location = useLocation();
 
+  // Wait for Clerk to load
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
+  }
+
   // Check 1: Must be authenticated
-  if (!isAuthenticated) {
+  if (!isSignedIn) {
     return <Navigate to={PUBLIC_ROUTES.login} state={{ from: location }} replace />;
   }
 
+  // Wait for session context to load
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-gray-400">Verifying access...</div>
+      </div>
+    );
+  }
+
   // Check 2: Must have completed onboarding
+  // Use Clerk user metadata (treat as complete if not set)
+  const onboardingComplete = clerkUser?.publicMetadata?.onboardingComplete !== false;
   if (!onboardingComplete) {
     return <Navigate to={ONBOARDING_ROUTES.connect} replace />;
   }
 
-  // Check 3: Audience check
-  // Founders (aud="fops") CAN access customer routes (superuser access)
-  // Customers (aud="console") can only access customer routes
-  // This is intentional - founders may need to see customer view
-  if (audience !== 'console' && audience !== 'fops') {
-    // Unknown audience - redirect to login
+  // Check 3: Must be a customer or founder (founders have superuser access)
+  // PIN-409: actor_type from backend is the authority
+  if (!isCustomer && !isFounder) {
+    // Unknown actor type (e.g., machine) - redirect to login
     return <Navigate to={PUBLIC_ROUTES.login} replace />;
   }
 
-  // Check 4: Optional role restriction (only for customer tokens)
-  if (allowedRoles && user?.role && audience === 'console') {
-    const userRole = user.role as CustomerRole;
+  // Check 4: Optional role restriction (only for customers)
+  const userRole = (clerkUser?.publicMetadata?.role as CustomerRole) || undefined;
+  if (allowedRoles && userRole && isCustomer) {
     if (!allowedRoles.includes(userRole)) {
       // User lacks required role - redirect to overview
       return <Navigate to={CUSTOMER_ROUTES.overview} replace />;

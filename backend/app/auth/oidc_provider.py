@@ -44,6 +44,13 @@ OIDC_ISSUER_URL = os.getenv("OIDC_ISSUER_URL", "")
 OIDC_JWKS_URL = os.getenv("OIDC_JWKS_URL", "")  # Explicit JWKS URL (preferred)
 OIDC_CLIENT_ID = os.getenv("OIDC_CLIENT_ID", "aos-backend")
 OIDC_VERIFY_SSL = os.getenv("OIDC_VERIFY_SSL", "true").lower() == "true"
+# Audience allowlist: comma-separated valid audiences (issuer URL is always implicitly allowed)
+# Format: OIDC_ALLOWED_AUDIENCES=console,preflight-console,aos-backend
+_aud_env = os.getenv("OIDC_ALLOWED_AUDIENCES", "")
+OIDC_ALLOWED_AUDIENCES: set[str] = set(a.strip() for a in _aud_env.split(",") if a.strip())
+# Always allow issuer URL as audience (common Clerk pattern)
+if OIDC_ISSUER_URL:
+    OIDC_ALLOWED_AUDIENCES.add(OIDC_ISSUER_URL)
 OIDC_ENABLED = bool(OIDC_ISSUER_URL)
 
 # Cache JWKS for 1 hour
@@ -147,21 +154,33 @@ def validate_token(token: str) -> Dict[str, Any]:
         jwks_client = _get_jwks_client()
         signing_key = jwks_client.get_signing_key_from_jwt(token)
 
-        # Decode with full verification
+        # Decode with full verification (signature, exp, iat, iss)
+        # Note: aud verification is done post-decode against allowlist
         claims = jwt.decode(
             token,
             signing_key.key,
             algorithms=["RS256", "RS384", "RS512"],
-            audience=OIDC_CLIENT_ID,
             issuer=OIDC_ISSUER_URL,
             options={
                 "verify_signature": True,
                 "verify_exp": True,
                 "verify_iat": True,
-                "verify_aud": True,
+                "verify_aud": False,  # We verify against allowlist below
                 "verify_iss": True,
             },
         )
+
+        # Audience allowlist verification
+        # If aud claim exists, it MUST be in our allowlist
+        token_aud = claims.get("aud")
+        if token_aud:
+            # aud can be string or list
+            audiences = [token_aud] if isinstance(token_aud, str) else token_aud
+            if not any(aud in OIDC_ALLOWED_AUDIENCES for aud in audiences):
+                raise TokenValidationError(
+                    f"Invalid audience: {token_aud} not in allowlist",
+                    "invalid_audience"
+                )
 
         logger.debug(f"Token validated successfully for sub={claims.get('sub')}")
         return claims
