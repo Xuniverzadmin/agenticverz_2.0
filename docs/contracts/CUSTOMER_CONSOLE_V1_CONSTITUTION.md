@@ -379,6 +379,7 @@ To amend this constitution:
 
 | Version | Date | Change | Author |
 |---------|------|--------|--------|
+| 2.0.0 | 2026-01-13 | **v1 IMPLEMENTATION FREEZE** — All domains wired O1-O3, immutability verified | Human-approved |
 | 1.3.0 | 2026-01-06 | Added Section 6.4 (GC_L) and 6.5 (FACILITATION) per PIN-339 | Human-approved |
 | 1.2.0 | 2025-12-29 | Renamed Administration → Account (secondary nav), clarified Account rules | Human-approved |
 | 1.1.0 | 2025-12-29 | Added Project Scope (5.4), Projects to Admin section | Human-approved |
@@ -386,7 +387,100 @@ To amend this constitution:
 
 ---
 
-## 11. References
+## 11. v1 Implementation Freeze
+
+**Freeze Date:** 2026-01-13
+**Tag:** `v1.0.0-customer-console`
+**Status:** FROZEN — Implementation Complete
+
+### 11.1 Domains Locked
+
+The following five domains are **implementation-complete** for v1:
+
+| Domain | Status | Backend | Frontend |
+|--------|--------|---------|----------|
+| **Overview** | FROZEN | Projection-only APIs shipped | O1/O2 panels wired |
+| **Activity** | FROZEN | LLM Runs APIs shipped | O1/O2/O3 pages wired |
+| **Incidents** | FROZEN | Lifecycle APIs shipped | O1/O2/O3 pages wired |
+| **Policies** | FROZEN | Rules + Limits APIs shipped | O1/O2/O3 pages wired |
+| **Logs** | FROZEN | Immutable records APIs shipped | O1/O2/O3 panels wired |
+
+### 11.2 Orders Locked
+
+| Order | v1 Status | Implementation |
+|-------|-----------|----------------|
+| **O1** | SHIPPED | Navigation panels in all domains |
+| **O2** | SHIPPED | List views with filters in all domains |
+| **O3** | SHIPPED | Detail views with cross-links in all domains |
+| **O4** | DEFERRED | Context/Impact views — v2 scope |
+| **O5** | DEFERRED | Raw proof modals — v2 scope |
+
+**O4/O5 Deferral Rationale:** O1-O3 provide complete operational visibility. O4/O5 add depth for audit/compliance scenarios that are not required for initial customer value.
+
+### 11.3 E2E Trust Scenario — Ratification Evidence
+
+**Scenario Name:** Failed LLM Run Cross-Domain Verification
+
+This scenario validates that a failed execution propagates correctly through all domains without data loss or semantic distortion.
+
+| Step | Expected Behavior | Result |
+|------|------------------|--------|
+| 1. Failed run injected | Run created with FAILED status | ✅ PASS |
+| 2. Activity shows FAILED run | Activity O2 list displays run with FAILED badge | ✅ PASS |
+| 3. Incident created (ACTIVE) | Incident engine creates linked incident | ✅ PASS |
+| 4. Overview highlights reflect incident | System pulse shows ATTENTION_NEEDED | ✅ PASS |
+| 5. Overview decisions shows pending ACK | Decisions queue includes incident ACK item | ✅ PASS |
+| 6. Logs → LLM Run Records shows FAILED | llm_run_records contains FAILED execution record | ✅ PASS |
+| 7. Logs → Audit Ledger records action | audit_ledger contains governance action | ✅ PASS |
+| 8. Logs → System Records capture event | system_records contains worker event | ✅ PASS |
+
+**Final Result:** 8/8 PASS
+
+**Verification Method:**
+- Database immutability triggers confirmed (UPDATE/DELETE blocked)
+- API endpoints return correct cross-domain data
+- Frontend panels render real backend data
+
+### 11.4 Immutability Verification
+
+The following tables are **WRITE-ONCE** (append-only), enforced by database triggers:
+
+| Table | Trigger | UPDATE | DELETE |
+|-------|---------|--------|--------|
+| `llm_run_records` | `trg_llm_run_records_immutable` | BLOCKED | BLOCKED |
+| `system_records` | `trg_system_records_immutable` | BLOCKED | BLOCKED |
+| `audit_ledger` | `trg_audit_ledger_immutable` | BLOCKED | BLOCKED |
+
+**Verification Output:**
+```
+ERROR:  llm_run_records is immutable: UPDATE not allowed
+ERROR:  system_records is immutable: DELETE not allowed
+```
+
+### 11.5 v2 Boundary — HARD RULE
+
+> **v2 may only add capabilities; it may not reinterpret v1 semantics, rename concepts, or reframe domains.**
+
+**Explicitly Forbidden in v2:**
+- Renaming any of the 5 frozen domains
+- Changing the fundamental question a domain answers
+- Reinterpreting what O1/O2/O3 mean
+- "Fixing" v1 semantics that were "wrong"
+- Adding domains without constitutional amendment
+
+**Explicitly Permitted in v2:**
+- Adding O4/O5 depth to existing domains
+- Adding new topics within existing subdomains
+- Adding cost attribution ("saved cost by policy")
+- Adding forecasting capabilities
+- Adding policy learning recommendations (advisory only)
+- Adding log archival / cold storage
+
+**Principle:** v1 is the foundation. v2 builds on top. v2 does not rebuild the foundation.
+
+---
+
+## 12. References
 
 | Document | Purpose |
 |----------|---------|
