@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-13 (PIN-409 Backend RBAC Fix - capability-based authorization)
+**Last Updated:** 2026-01-13 (PIN-414 Customer Console v1 Implementation Freeze)
 
 ---
 
@@ -401,6 +401,11 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-407](PIN-407-success-as-first-class-data.md) | **Success as First-Class Data** | Governance / Semantic Model | **FOUNDATIONAL** | 2026-01-12 |
 | [PIN-408](PIN-408-aurora-projection-pipeline-pin407-fix.md) | **Aurora Projection Pipeline - PIN-407 Compliance Fix** | Architecture / SDSR / Aurora | **VERIFIED** | 2026-01-12 |
 | [PIN-409](PIN-409-auth-console-contract-clerk-backend-authority.md) | **Auth Console Contract - Clerk Identity, Backend Authority** | Architecture / Auth / Frontend | **LOCKED** | 2026-01-13 |
+| [PIN-410](PIN-410-architecture-guardrails-prevention-contract.md) | **Architecture Guardrails & Prevention Contract** | Governance / Architecture / Prevention | **LOCKED** | 2026-01-13 |
+| [PIN-411](PIN-411-aurora-activity-data-population-upgrade.md) | **Aurora + Activity Data Population Upgrade** | Architecture / Aurora Pipeline / Runtime Projections | **CLOSED** | 2026-01-13 |
+| [PIN-412](PIN-412-domain-design-incidents-policies.md) | **Domain Design — Incidents & Policies (O1-O5)** | Architecture / Domain Design / Aurora Runtime | **V1_FROZEN** | 2026-01-13 |
+| [PIN-413](PIN-413-overview-logs-domain-design.md) | **Domain Design — Overview & Logs (v1 Complete)** | Architecture / Domain Design / Aurora Runtime | **BACKEND_COMPLETE** | 2026-01-13 |
+| [PIN-414](PIN-414-customer-console-v1-implementation-freeze.md) | **Customer Console v1 Implementation Freeze** | Governance / Milestone | **🏗️ FROZEN** | 2026-01-13 |
 
 ---
 
@@ -1170,6 +1175,17 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-13 | **PIN-414 Customer Console v1 Implementation Freeze** - Created via memory_trail. |
+| 2026-01-13 | **PIN-413 Domain Design — Overview & Logs (BACKEND_COMPLETE)** - Migration 091 applied. decisions + audit_ledger tables created. Overview O2 APIs (highlights, costs, decisions) implemented. Logs O2 APIs (llm-runs, system, audit) implemented. SQLModel definitions complete. |
+| 2026-01-13 | **PIN-413 Domain Design — Overview & Logs** - New PIN created. Completing v1 five-domain set. New primitives: decisions table, audit_ledger table. Overview is decision-centric. Logs includes Audit Ledger for governance accountability. |
+| 2026-01-13 | **PIN-412 Domain Design — Incidents & Policies (V1_FROZEN)** - v1 freeze complete. Migrations 087-090 applied. O2 APIs implemented: INC-RT-O2, GOV-RT-O2, LIM-RT-O2. Option C integrity architecture (separate tables). ACKED as badge. Release doc created. |
+| 2026-01-13 | **PIN-412 Domain Design — Incidents & Policies (O1-O5)** - Comprehensive domain design for Incidents (Events subdomain: Active/Resolved/Historical) and Policies (Governance subdomain: Active Rules/Proposals/Retired). Terminology lock: Runs → LLM Runs. Data grounding verified. |
+| 2026-01-13 | **PIN-411 Aurora + Activity Data Population Upgrade** - Updated: Updates |
+| 2026-01-13 | **PIN-411 Aurora + Activity Data Population Upgrade (IMPLEMENTED)** - `/runs` endpoint implemented: READ-ONLY SELECT from v_runs_o2 view. Migration 086 adds O2 columns + indexes. All filters 1:1 to stored columns. Pagination mandatory. O3/O4/O5 stubs added. |
+| 2026-01-13 | **PIN-411 Aurora + Activity Data Population Upgrade (RISK RULES LOCKED)** - Deterministic risk computation rules locked: latency_bucket, evidence_health, integrity_status, risk_level. Computed upstream (finalizer/worker), stored in Neon, `/runs` is READ-ONLY. No fuzzy logic. 5 invariants. |
+| 2026-01-13 | **PIN-411 Aurora + Activity Data Population Upgrade (OPENAPI LOCKED)** - Complete OpenAPI 3.1 spec for `/runs` endpoint locked. RunSummary schema matches O2 table (18 columns). O2/O3/O4/O5 endpoints defined. Risk computation rules preview added. |
+| 2026-01-13 | **PIN-411 Aurora + Activity Data Population Upgrade (SCHEMA LOCKED)** - O2 Runs Table schema locked with 18 columns across 5 groups. 4 required indexes defined. Topic→filter mapping specified. No separate tables, no joins at O2, no topic-specific APIs. Full execution spec complete. |
+| 2026-01-13 | **PIN-410 Architecture Guardrails & Prevention Contract (LOCKED)** - Final, durable guardrail pack. BL-ARCH-001 to BL-ARCH-005 added. No workarounds, design-first, test integrity. Architecture correctness > test pass rate > speed. |
 | 2026-01-13 | **PIN-409 Backend RBAC Fix** - Capability-based authorization, removed /api/v1/traces from public paths, silent fallback guardrail. 403 errors resolved. |
 | 2026-01-13 | **PIN-409 Auth Console Contract - Clerk Identity, Backend Authority (LOCKED)** - Final auth design: Clerk=identity, Backend=authority, Consoles=UX. Capabilities-only model. Topic closed permanently. |
 | 2026-01-12 | **PIN-408 Aurora Projection Pipeline - PIN-407 Compliance Fix** - Full implementation with backend services, SDSR evidence collection, acceptance proof artifact. |
