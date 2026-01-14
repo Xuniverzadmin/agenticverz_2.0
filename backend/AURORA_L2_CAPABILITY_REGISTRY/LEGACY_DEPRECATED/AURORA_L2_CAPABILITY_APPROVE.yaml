@@ -1,0 +1,17 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+capability_id: APPROVE
+status: OBSERVED
+source_panels:
+- POL-PR-PP-O2
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-14'
+  declared_by: intent-ledger
+  declared_on: '2026-01-14'
+  observed_by: SDSR-E2E-004
+  observed_on: '2026-01-11'
+acceptance_criteria:
+- 'policy_proposal.status: PENDING → APPROVED'

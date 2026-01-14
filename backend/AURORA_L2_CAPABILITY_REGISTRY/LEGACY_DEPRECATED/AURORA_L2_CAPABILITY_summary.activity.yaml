@@ -1,0 +1,15 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+capability_id: summary.activity
+status: DECLARED
+source_panels:
+- ACT-EX-SUM-O1
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-14'
+  declared_by: intent-ledger
+  declared_on: '2026-01-14'
+acceptance_criteria:
+- Capability behavior verified

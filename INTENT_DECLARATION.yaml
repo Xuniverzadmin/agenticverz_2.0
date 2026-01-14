@@ -27,6 +27,7 @@ intent:
       - "docs/**"
       - "scripts/ops/**"
       - "scripts/ci/**"
+      - "scripts/tools/**"
       - ".pre-commit-config.yaml"
       - "*pre-commit-config.yaml"
       - "INTENT_DECLARATION.yaml"
@@ -58,6 +59,7 @@ intent:
       - "backend/alembic/**"
       - "backend/cli/**"
       - "backend/scripts/**"
+      - "backend/AURORA_L2_CAPABILITY_REGISTRY/**"
 
       # =========================================================
       # WEBSITE (UI SURFACES)

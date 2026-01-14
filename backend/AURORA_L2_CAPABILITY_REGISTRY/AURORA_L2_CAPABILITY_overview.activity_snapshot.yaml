@@ -1,0 +1,16 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+capability_id: overview.activity_snapshot
+status: OBSERVED
+source_panels:
+- OVR-SUM-HL-O1
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-14'
+  declared_by: intent-ledger
+  declared_on: '2026-01-14'
+  observed_by: observe_overview_activity_snapshot
+acceptance_criteria:
+- Capability behavior verified

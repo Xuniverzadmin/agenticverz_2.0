@@ -1,7 +1,7 @@
 # Memory PIN Index
 
 **Project:** AOS / Agenticverz 2.0
-**Last Updated:** 2026-01-14 (PIN-418 UI-as-Constraint Implementation (Priority-1 to 3A))
+**Last Updated:** 2026-01-14 (PIN-420 Intent Ledger Pipeline and First SDSR Binding)
 
 ---
 
@@ -410,6 +410,8 @@ They serve as **context anchors** for AI assistants and team members to quickly 
 | [PIN-416](PIN-416-hil-v1-phase-1-schema-extension.md) | **HIL v1 Phase 1 — Schema Extension** | UI Pipeline / Human Interpretation Layer | **✅ COMPLETE** | 2026-01-14 |
 | [PIN-417](PIN-417-hil-v1-implementation-tracker.md) | **HIL v1 Implementation Tracker** | UI Pipeline / Human Interpretation Layer | **🔄 IN_PROGRESS** | 2026-01-14 |
 | [PIN-418](PIN-418-ui-as-constraint-implementation-priority-1-to-3a.md) | **UI-as-Constraint Implementation (Priority-1 to 3A)** | Architecture / UI Governance | **✅ COMPLETE** | 2026-01-14 |
+| [PIN-419](PIN-419-intent-manifest-coherency-architecture.md) | **Intent Ledger & Coherency Gate Architecture** | Architecture / UI Pipeline | **⏳ AWAITING APPROVAL** | 2026-01-14 |
+| [PIN-420](PIN-420-intent-ledger-pipeline-and-first-sdsr-binding.md) | **Intent Ledger Pipeline and First SDSR Binding** | Architecture / UI Pipeline | **🏗️ ACTIVE** | 2026-01-14 |
 
 ---
 
@@ -1179,6 +1181,8 @@ When resuming work on this project:
 
 | Date | Change |
 |------|--------|
+| 2026-01-14 | **PIN-420 Intent Ledger Pipeline and First SDSR Binding** - Created via memory_trail. |
+| 2026-01-14 | **PIN-419 Intent Ledger & Coherency Gate Architecture** - Evolved design where human intent is expressed in natural language (INTENT_LEDGER.md), and AI/scripts generate YAMLs (ui_plan.yaml, capability registry, SDSR scenarios) as compiled artifacts. Key insight: YAMLs are machine format, not human intent format. Frontend scaffolding to be deleted. Awaiting human approval. |
 | 2026-01-14 | **PIN-418 UI-as-Constraint Implementation (Priority-1 to 3A)** - Created via memory_trail. |
 | 2026-01-14 | **PIN-417 HIL v1 Implementation Tracker** - Created. Comprehensive tracker for all 4 phases of HIL v1 implementation. Phase 1 complete (25%). |
 | 2026-01-14 | **PIN-416 HIL v1 Phase 1 Schema Extension** - Created. panel_class and provenance schema extension. Activity Summary interpretation panel spec. Domain Intent Registry created. |

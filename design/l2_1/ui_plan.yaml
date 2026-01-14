@@ -1,729 +1,605 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Topology: design/l2_1/UI_TOPOLOGY_TEMPLATE.yaml
+# Generator: scripts/tools/sync_from_intent_ledger.py
+# To modify: Edit INTENT_LEDGER.md and re-run generator
+#
 version: 1.0.0
-created_at: '2026-01-14T13:01:34Z'
-amended_at: '2026-01-14T14:30:00Z'
+created_at: '2026-01-14T21:00:29Z'
+amended_at: '2026-01-14T21:00:29Z'
 status: LOCKED_UNTIL_TERMINAL_STATE
-authority: docs/contracts/UI_AS_CONSTRAINT_V1.md
+authority: design/l2_1/INTENT_LEDGER.md
+topology: design/l2_1/UI_TOPOLOGY_TEMPLATE.yaml
+generated_by: sync_from_intent_ledger.py
 mutation_rules:
-  add_panels: ALLOWED
+  add_panels: ALLOWED (within topology)
   remove_panels: FORBIDDEN (use DEFERRED state)
   rename_panels: FORBIDDEN (panel_id is immutable)
-  reparent_panels: REQUIRES_ALL_BOUND_OR_DEFERRED
+  reparent_panels: FORBIDDEN (topology is frozen)
 panel_states:
-  EMPTY: UI planned, intent YAML missing
+  EMPTY: Slot reserved, panel not implemented
   UNBOUND: Intent exists, capability missing
   DRAFT: Capability declared, SDSR not observed
   BOUND: Capability observed (or trusted)
   DEFERRED: Explicit governance decision
 domains:
-- id: Overview
-  question: Is the system okay right now?
-  primary_object: Health
-  secondary_objects:
-  - Status
-  - Pulse
-  - Metrics
+- id: OVERVIEW
   subdomains:
-  - id: SYSTEM_HEALTH
+  - id: SUMMARY
     topics:
-    - id: CURRENT_STATUS
+    - id: COST_INTELLIGENCE
       panels:
-      - panel_id: OVW-SH-CS-O1
-        order: O1
-        panel_class: interpretation
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/OVW-SH-CS-O1.yaml
-        expected_capability: summary.overview
-    - id: HEALTH_METRICS
-      panels:
-      - panel_id: OVW-SH-HM-O1
-        order: O1
-        panel_class: interpretation
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/OVW-SH-HM-O1.yaml
-        expected_capability: summary.overview
-      - panel_id: OVW-SH-HM-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/OVW-SH-HM-O2.yaml
-        expected_capability: null
-- id: Activity
-  question: What ran / is running?
-  primary_object: Run
-  secondary_objects:
-  - Trace
-  - Job
-  - Execution
-  subdomains:
-  - id: EXECUTIONS
-    topics:
-    - id: ACTIVE_RUNS
-      panels:
-      - panel_id: ACT-EX-AR-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-AR-O1.yaml
-        expected_capability: null
-      - panel_id: ACT-EX-AR-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-AR-O2.yaml
-        expected_capability: null
-    - id: COMPLETED_RUNS
-      panels:
-      - panel_id: ACT-EX-CR-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-CR-O1.yaml
-        expected_capability: null
-      - panel_id: ACT-EX-CR-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-CR-O2.yaml
-        expected_capability: null
-      - panel_id: ACT-EX-CR-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-CR-O3.yaml
-        expected_capability: null
-    - id: RUN_DETAILS
-      panels:
-      - panel_id: ACT-EX-RD-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-RD-O1.yaml
-        expected_capability: null
-      - panel_id: ACT-EX-RD-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-RD-O2.yaml
-        expected_capability: null
-      - panel_id: ACT-EX-RD-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-RD-O3.yaml
-        expected_capability: null
-      - panel_id: ACT-EX-RD-O4
-        order: O4
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-RD-O4.yaml
-        expected_capability: null
-      - panel_id: ACT-EX-RD-O5
-        order: O5
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/ACT-EX-RD-O5.yaml
-        expected_capability: null
-    - id: LIVE_RUNS
-      panels:
-      - panel_id: ACT-EX-LR-O1
-        order: O1
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-        note: Real-time streaming panel - WebSocket/SSE
-    - id: SUMMARY
-      panels:
-      - panel_id: ACT-EX-SUM-O1
-        order: O1
+      - panel_id: OVR-SUM-CI-O1
+        slot: 1
         panel_class: interpretation
         state: EMPTY
         intent_spec: null
-        expected_capability: summary.activity
-- id: Incidents
-  question: What went wrong?
-  primary_object: Incident
-  secondary_objects:
-  - Violation
-  - Failure
-  - Alert
-  subdomains:
-  - id: ACTIVE_INCIDENTS
-    topics:
-    - id: INCIDENT_DETAILS
+        expected_capability: null
+      - panel_id: OVR-SUM-CI-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: OVR-SUM-CI-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: OVR-SUM-CI-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: DECISIONS
       panels:
-      - panel_id: INC-AI-ID-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-AI-ID-O1.yaml
+      - panel_id: OVR-SUM-DC-O1
+        slot: 1
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: INC-AI-ID-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-AI-ID-O2.yaml
+      - panel_id: OVR-SUM-DC-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: INC-AI-ID-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-AI-ID-O3.yaml
+      - panel_id: OVR-SUM-DC-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: INC-AI-ID-O4
-        order: O4
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-AI-ID-O4.yaml
+      - panel_id: OVR-SUM-DC-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-    - id: OPEN_INCIDENTS
+    - id: HIGHLIGHTS
       panels:
-      - panel_id: INC-AI-OI-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-AI-OI-O1.yaml
-        expected_capability: null
-      - panel_id: INC-AI-OI-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-AI-OI-O2.yaml
-        expected_capability: null
-    - id: SUMMARY
-      panels:
-      - panel_id: INC-AI-SUM-O1
-        order: O1
+      - panel_id: OVR-SUM-HL-O1
+        slot: 1
         panel_class: interpretation
         state: BOUND
-        intent_spec: design/l2_1/intents/INC-AI-SUM-O1.yaml
-        expected_capability: summary.incidents
-  - id: HISTORICAL_INCIDENTS
-    topics:
-    - id: RESOLVED_INCIDENTS
-      panels:
-      - panel_id: INC-HI-RI-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-HI-RI-O1.yaml
+        intent_spec: design/l2_1/intents/OVR-SUM-HL-O1.yaml
+        expected_capability: overview.activity_snapshot
+      - panel_id: OVR-SUM-HL-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: INC-HI-RI-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-HI-RI-O2.yaml
+      - panel_id: OVR-SUM-HL-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: INC-HI-RI-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-HI-RI-O3.yaml
+      - panel_id: OVR-SUM-HL-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: INC-HI-RI-O4
-        order: O4
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-HI-RI-O4.yaml
-        expected_capability: null
-      - panel_id: INC-HI-RI-O5
-        order: O5
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/INC-HI-RI-O5.yaml
-        expected_capability: null
-- id: Policies
-  question: How is behavior defined?
-  primary_object: Policy
-  secondary_objects:
-  - Rule
-  - Limit
-  - Constraint
-  - Approval
+- id: ACTIVITY
   subdomains:
-  - id: ACTIVE_POLICIES
+  - id: LLM_RUNS
     topics:
-    - id: APPROVAL_RULES
+    - id: COMPLETED
       panels:
-      - panel_id: POL-AP-AR-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-AR-O1.yaml
-        expected_capability: null
-      - panel_id: POL-AP-AR-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-AR-O2.yaml
-        expected_capability: null
-      - panel_id: POL-AP-AR-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-AR-O3.yaml
-        expected_capability: null
-      - panel_id: POL-AP-AR-O4
-        order: O4
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-AR-O4.yaml
-        expected_capability: null
-    - id: BUDGET_POLICIES
-      panels:
-      - panel_id: POL-AP-BP-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-BP-O1.yaml
-        expected_capability: null
-      - panel_id: POL-AP-BP-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-BP-O2.yaml
-        expected_capability: null
-      - panel_id: POL-AP-BP-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-BP-O3.yaml
-        expected_capability: null
-    - id: RATE_LIMITS
-      panels:
-      - panel_id: POL-AP-RL-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-RL-O1.yaml
-        expected_capability: null
-      - panel_id: POL-AP-RL-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-RL-O2.yaml
-        expected_capability: null
-      - panel_id: POL-AP-RL-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-AP-RL-O3.yaml
-        expected_capability: null
-    - id: SUMMARY
-      panels:
-      - panel_id: POL-AP-SUM-O1
-        order: O1
+      - panel_id: ACT-LLM-COMP-O1
+        slot: 1
         panel_class: interpretation
         state: EMPTY
         intent_spec: null
-        expected_capability: summary.policies
-  - id: POLICY_AUDIT
-    topics:
-    - id: POLICY_CHANGES
+        expected_capability: null
+      - panel_id: ACT-LLM-COMP-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: ACT-LLM-COMP-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: ACT-LLM-COMP-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: ACT-LLM-COMP-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: LIVE
       panels:
-      - panel_id: POL-PA-PC-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-PA-PC-O1.yaml
+      - panel_id: ACT-LLM-LIVE-O1
+        slot: 1
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: POL-PA-PC-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-PA-PC-O2.yaml
+      - panel_id: ACT-LLM-LIVE-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: POL-PA-PC-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-PA-PC-O3.yaml
+      - panel_id: ACT-LLM-LIVE-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: POL-PA-PC-O4
-        order: O4
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-PA-PC-O4.yaml
+      - panel_id: ACT-LLM-LIVE-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: POL-PA-PC-O5
-        order: O5
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-PA-PC-O5.yaml
+      - panel_id: ACT-LLM-LIVE-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-  - id: PROPOSALS
-    topics:
-    - id: PENDING_PROPOSALS
+    - id: SIGNALS
       panels:
-      - panel_id: POL-PR-PP-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-PR-PP-O1.yaml
+      - panel_id: ACT-LLM-SIG-O1
+        slot: 1
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: POL-PR-PP-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/POL-PR-PP-O2.yaml
+      - panel_id: ACT-LLM-SIG-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-- id: Logs
-  question: What is the raw truth?
-  primary_object: Trace
-  secondary_objects:
-  - Audit
-  - Proof
-  - Record
+      - panel_id: ACT-LLM-SIG-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: ACT-LLM-SIG-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: ACT-LLM-SIG-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+- id: INCIDENTS
   subdomains:
-  - id: AUDIT_LOGS
+  - id: EVENTS
     topics:
-    - id: SYSTEM_AUDIT
+    - id: ACTIVE
       panels:
-      - panel_id: LOG-AL-SA-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-SA-O1.yaml
+      - panel_id: INC-EV-ACT-O1
+        slot: 1
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
         expected_capability: null
-      - panel_id: LOG-AL-SA-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-SA-O2.yaml
-        expected_capability: null
-      - panel_id: LOG-AL-SA-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-SA-O3.yaml
-        expected_capability: null
-      - panel_id: LOG-AL-SA-O5
-        order: O5
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-SA-O5.yaml
-        expected_capability: null
-    - id: USER_AUDIT
-      panels:
-      - panel_id: LOG-AL-UA-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-UA-O1.yaml
-        expected_capability: null
-      - panel_id: LOG-AL-UA-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-UA-O2.yaml
-        expected_capability: null
-      - panel_id: LOG-AL-UA-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-UA-O3.yaml
-        expected_capability: null
-      - panel_id: LOG-AL-UA-O5
-        order: O5
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-AL-UA-O5.yaml
-        expected_capability: null
-    - id: SUMMARY
-      panels:
-      - panel_id: LOG-AL-SUM-O1
-        order: O1
+      - panel_id: INC-EV-ACT-O2
+        slot: 2
         panel_class: interpretation
         state: EMPTY
         intent_spec: null
-        expected_capability: summary.logs
-  - id: EXECUTION_TRACES
-    topics:
-    - id: TRACE_DETAILS
-      panels:
-      - panel_id: LOG-ET-TD-O1
-        order: O1
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-ET-TD-O1.yaml
         expected_capability: null
-      - panel_id: LOG-ET-TD-O2
-        order: O2
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-ET-TD-O2.yaml
-        expected_capability: null
-      - panel_id: LOG-ET-TD-O3
-        order: O3
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-ET-TD-O3.yaml
-        expected_capability: null
-      - panel_id: LOG-ET-TD-O4
-        order: O4
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-ET-TD-O4.yaml
-        expected_capability: null
-      - panel_id: LOG-ET-TD-O5
-        order: O5
-        panel_class: execution
-        state: UNBOUND
-        intent_spec: design/l2_1/intents/LOG-ET-TD-O5.yaml
-        expected_capability: null
-    - id: LIVE_STREAMS
-      panels:
-      - panel_id: LOG-ET-LS-O1
-        order: O1
-        panel_class: execution
+      - panel_id: INC-EV-ACT-O3
+        slot: 3
+        panel_class: interpretation
         state: EMPTY
         intent_spec: null
         expected_capability: null
-        note: Real-time streaming panel - WebSocket/SSE
-- id: Account
-  question: Who am I and what do I own?
-  primary_object: Account
-  secondary_objects:
-  - Profile
-  - Billing
-  - Plan
-  - Subuser
+      - panel_id: INC-EV-ACT-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-ACT-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: HISTORICAL
+      panels:
+      - panel_id: INC-EV-HIST-O1
+        slot: 1
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-HIST-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-HIST-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-HIST-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-HIST-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: RESOLVED
+      panels:
+      - panel_id: INC-EV-RES-O1
+        slot: 1
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-RES-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-RES-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-RES-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: INC-EV-RES-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+- id: POLICIES
   subdomains:
-  - id: PROFILE
+  - id: GOVERNANCE
     topics:
-    - id: ACCOUNT_INFO
+    - id: ACTIVE
       panels:
-      - panel_id: ACC-PR-AI-O1
-        order: O1
-        panel_class: execution
+      - panel_id: POL-GOV-ACT-O1
+        slot: 1
+        panel_class: evidence
         state: EMPTY
         intent_spec: null
         expected_capability: null
-      - panel_id: ACC-PR-AI-O2
-        order: O2
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-    - id: SECURITY_SETTINGS
-      panels:
-      - panel_id: ACC-PR-SS-O1
-        order: O1
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-      - panel_id: ACC-PR-SS-O2
-        order: O2
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-  - id: BILLING
-    topics:
-    - id: PAYMENT_METHODS
-      panels:
-      - panel_id: ACC-BL-PM-O1
-        order: O1
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-      - panel_id: ACC-BL-PM-O2
-        order: O2
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-    - id: INVOICES
-      panels:
-      - panel_id: ACC-BL-IV-O1
-        order: O1
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-      - panel_id: ACC-BL-IV-O2
-        order: O2
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-    - id: USAGE_SUMMARY
-      panels:
-      - panel_id: ACC-BL-US-O1
-        order: O1
+      - panel_id: POL-GOV-ACT-O2
+        slot: 2
         panel_class: interpretation
         state: EMPTY
         intent_spec: null
-        expected_capability: summary.billing
-  - id: PLANS_SUBSCRIPTIONS
+        expected_capability: null
+      - panel_id: POL-GOV-ACT-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-ACT-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-ACT-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: DRAFTS
+      panels:
+      - panel_id: POL-GOV-DFT-O1
+        slot: 1
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-DFT-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-DFT-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-DFT-O4
+        slot: 4
+        panel_class: execution
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-DFT-O5
+        slot: 5
+        panel_class: execution
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: POLICY_LIBRARY
+      panels:
+      - panel_id: POL-GOV-LIB-O1
+        slot: 1
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-LIB-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-LIB-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-LIB-O4
+        slot: 4
+        panel_class: execution
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-GOV-LIB-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+  - id: LIMITS
     topics:
-    - id: CURRENT_PLAN
+    - id: THRESHOLDS
       panels:
-      - panel_id: ACC-PS-CP-O1
-        order: O1
+      - panel_id: POL-LIM-THR-O1
+        slot: 1
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-LIM-THR-O2
+        slot: 2
         panel_class: execution
         state: EMPTY
         intent_spec: null
         expected_capability: null
-      - panel_id: ACC-PS-CP-O2
-        order: O2
+      - panel_id: POL-LIM-THR-O3
+        slot: 3
         panel_class: execution
         state: EMPTY
         intent_spec: null
         expected_capability: null
-    - id: PLAN_LIMITS
+      - panel_id: POL-LIM-THR-O4
+        slot: 4
+        panel_class: execution
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-LIM-THR-O5
+        slot: 5
+        panel_class: execution
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: USAGE
       panels:
-      - panel_id: ACC-PS-PL-O1
-        order: O1
-        panel_class: execution
+      - panel_id: POL-LIM-USG-O1
+        slot: 1
+        panel_class: interpretation
         state: EMPTY
         intent_spec: null
         expected_capability: null
-    - id: UPGRADE_OPTIONS
+      - panel_id: POL-LIM-USG-O2
+        slot: 2
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-LIM-USG-O3
+        slot: 3
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-LIM-USG-O4
+        slot: 4
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: POL-LIM-USG-O5
+        slot: 5
+        panel_class: interpretation
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: VIOLATIONS
       panels:
-      - panel_id: ACC-PS-UO-O1
-        order: O1
-        panel_class: execution
+      - panel_id: POL-LIM-VIO-O1
+        slot: 1
+        panel_class: evidence
         state: EMPTY
         intent_spec: null
         expected_capability: null
-  - id: SUBUSERS
-    topics:
-    - id: SUBUSER_LIST
-      panels:
-      - panel_id: ACC-SU-SL-O1
-        order: O1
-        panel_class: execution
+      - panel_id: POL-LIM-VIO-O2
+        slot: 2
+        panel_class: interpretation
         state: EMPTY
         intent_spec: null
         expected_capability: null
-      - panel_id: ACC-SU-SL-O2
-        order: O2
-        panel_class: execution
+      - panel_id: POL-LIM-VIO-O3
+        slot: 3
+        panel_class: interpretation
         state: EMPTY
         intent_spec: null
         expected_capability: null
-    - id: PERMISSIONS
-      panels:
-      - panel_id: ACC-SU-PM-O1
-        order: O1
-        panel_class: execution
+      - panel_id: POL-LIM-VIO-O4
+        slot: 4
+        panel_class: interpretation
         state: EMPTY
         intent_spec: null
         expected_capability: null
-    - id: INVITE_SUBUSER
-      panels:
-      - panel_id: ACC-SU-IS-O1
-        order: O1
-        panel_class: execution
+      - panel_id: POL-LIM-VIO-O5
+        slot: 5
+        panel_class: interpretation
         state: EMPTY
         intent_spec: null
         expected_capability: null
-- id: Connectivity
-  question: How does the system connect?
-  primary_object: Connection
-  secondary_objects:
-  - Integration
-  - API
-  - Webhook
-  - Credential
+- id: LOGS
   subdomains:
-  - id: INTEGRATIONS
+  - id: RECORDS
     topics:
-    - id: CONNECTED_SERVICES
+    - id: AUDIT
       panels:
-      - panel_id: CON-IN-CS-O1
-        order: O1
-        panel_class: execution
+      - panel_id: LOG-REC-AUD-O1
+        slot: 1
+        panel_class: evidence
         state: EMPTY
         intent_spec: null
         expected_capability: null
-      - panel_id: CON-IN-CS-O2
-        order: O2
-        panel_class: execution
+      - panel_id: LOG-REC-AUD-O2
+        slot: 2
+        panel_class: evidence
         state: EMPTY
         intent_spec: null
         expected_capability: null
-    - id: AVAILABLE_INTEGRATIONS
-      panels:
-      - panel_id: CON-IN-AI-O1
-        order: O1
-        panel_class: execution
+      - panel_id: LOG-REC-AUD-O3
+        slot: 3
+        panel_class: evidence
         state: EMPTY
         intent_spec: null
         expected_capability: null
-    - id: INTEGRATION_HEALTH
+      - panel_id: LOG-REC-AUD-O4
+        slot: 4
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-AUD-O5
+        slot: 5
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: LLM_RUNS
       panels:
-      - panel_id: CON-IN-IH-O1
-        order: O1
+      - panel_id: LOG-REC-LLM-O1
+        slot: 1
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-LLM-O2
+        slot: 2
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-LLM-O3
+        slot: 3
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-LLM-O4
+        slot: 4
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-LLM-O5
+        slot: 5
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+    - id: SYSTEM_LOGS
+      panels:
+      - panel_id: LOG-REC-SYS-O1
+        slot: 1
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-SYS-O2
+        slot: 2
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-SYS-O3
+        slot: 3
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-SYS-O4
+        slot: 4
+        panel_class: evidence
+        state: EMPTY
+        intent_spec: null
+        expected_capability: null
+      - panel_id: LOG-REC-SYS-O5
+        slot: 5
         panel_class: interpretation
         state: EMPTY
         intent_spec: null
-        expected_capability: summary.integrations
-  - id: API
-    topics:
-    - id: API_KEYS
-      panels:
-      - panel_id: CON-AP-AK-O1
-        order: O1
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
         expected_capability: null
-      - panel_id: CON-AP-AK-O2
-        order: O2
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-    - id: WEBHOOKS
-      panels:
-      - panel_id: CON-AP-WH-O1
-        order: O1
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-      - panel_id: CON-AP-WH-O2
-        order: O2
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-    - id: API_USAGE
-      panels:
-      - panel_id: CON-AP-AU-O1
-        order: O1
-        panel_class: execution
-        state: EMPTY
-        intent_spec: null
-        expected_capability: null
-      - panel_id: CON-AP-AU-O2
-        order: O2
-        panel_class: interpretation
-        state: EMPTY
-        intent_spec: null
-        expected_capability: summary.api
-summary:
-  total_panels: 87
-  by_state:
-    UNBOUND: 54
-    BOUND: 1
-    EMPTY: 32
-  by_domain:
-    Overview: 3
-    Activity: 12
-    Incidents: 12
-    Policies: 18
-    Logs: 15
-    Account: 17
-    Connectivity: 10
-  amended_at: '2026-01-14T16:00:00Z'
-  note: This file is now the source of truth. Edit manually after bootstrap.
-  changelog:
-  - date: '2026-01-14T16:00:00Z'
-    change: Fixed summary counts to match actual panel counts (87 total, 32 EMPTY)
-  - date: '2026-01-14T14:30:00Z'
-    change: Added Account domain (4 subdomains, 16 panels), Connectivity domain (2 subdomains, 10 panels), real-time panels (LIVE_RUNS, LIVE_STREAMS), interpretation summary panels (ACT-EX-SUM-O1, POL-AP-SUM-O1, LOG-AL-SUM-O1)

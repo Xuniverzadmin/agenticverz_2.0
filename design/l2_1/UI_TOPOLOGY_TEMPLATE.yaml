@@ -1,0 +1,155 @@
+# UI TOPOLOGY TEMPLATE
+# Status: FROZEN - DO NOT EDIT WITHOUT GOVERNANCE APPROVAL
+# Authority: Human (PIN-419)
+# Purpose: Defines the ONLY allowed UI structure. Panels must occupy slots within this topology.
+#
+# This file defines WHERE panels may exist, not WHAT they contain.
+# The Intent Ledger occupies slots. The generator validates against this template.
+#
+# Invariants:
+#   - Domains, subdomains, topics are exhaustive (no additions without governance)
+#   - panel_slots defines max panels per topic (1-4)
+#   - Slot numbers are 1-indexed (Slot 1, Slot 2, etc.)
+#   - Any panel outside this topology is rejected by coherency gate
+
+version: "1.0"
+status: FROZEN
+reference: PIN-419
+
+domains:
+
+  - id: OVERVIEW
+    description:
+      - What's happening
+      - What needs my attention
+      - What needs my decision
+    subdomains:
+      - id: SUMMARY
+        topics:
+          - id: HIGHLIGHTS
+            panel_slots: 4
+          - id: COST_INTELLIGENCE
+            panel_slots: 4
+          - id: DECISIONS
+            panel_slots: 4
+
+  - id: ACTIVITY
+    description:
+      - What are my LLM runs
+      - What happened to the runs
+      - What needs my attention
+    subdomains:
+      - id: LLM_RUNS
+        topics:
+          - id: LIVE
+            panel_slots: 5
+          - id: COMPLETED
+            panel_slots: 5
+          - id: SIGNALS
+            panel_slots: 5
+
+  - id: INCIDENTS
+    description:
+      - Active success/failure/near-threshold runs
+      - Runs prevented by governance
+      - Incident history
+    subdomains:
+      - id: EVENTS
+        topics:
+          - id: ACTIVE
+            panel_slots: 5
+          - id: RESOLVED
+            panel_slots: 5
+          - id: HISTORICAL
+            panel_slots: 5
+
+  - id: POLICIES
+    description:
+      - Active policies
+      - Policies awaiting decision
+      - Policy library
+    subdomains:
+      - id: GOVERNANCE
+        topics:
+          - id: ACTIVE
+            panel_slots: 5
+          - id: DRAFTS
+            panel_slots: 5
+          - id: POLICY_LIBRARY
+            panel_slots: 5
+      - id: LIMITS
+        topics:
+          - id: USAGE
+            panel_slots: 5
+          - id: THRESHOLDS
+            panel_slots: 5
+          - id: VIOLATIONS
+            panel_slots: 5
+
+  - id: LOGS
+    description:
+      - Logs, traces, snapshots
+      - 60s incident replay
+      - Infra logs
+      - Audit integrity
+    subdomains:
+      - id: RECORDS
+        topics:
+          - id: LLM_RUNS
+            panel_slots: 5
+          - id: SYSTEM_LOGS
+            panel_slots: 5
+          - id: AUDIT
+            panel_slots: 5
+
+  - id: ACCOUNT
+    description:
+      - Who I am as a customer
+      - How I'm billed and entitled
+      - My organization, users, and trust posture
+    subdomains:
+      - id: PROFILE
+        topics:
+          - id: OVERVIEW
+            panel_slots: 2
+      - id: BILLING
+        topics:
+          - id: USAGE
+            panel_slots: 2
+          - id: INVOICES
+            panel_slots: 2
+      - id: USERS_ACCESS
+        topics:
+          - id: MEMBERS
+            panel_slots: 2
+          - id: ROLES
+            panel_slots: 1
+      - id: TRUST_COMPLIANCE
+        topics:
+          - id: COMPLIANCE
+            panel_slots: 2
+
+  - id: CONNECTIVITY
+    description:
+      - How Aurora connects to models and infrastructure
+      - Health, limits, and failures of those connections
+      - Trust boundaries across providers and networks
+    subdomains:
+      - id: PROVIDERS
+        topics:
+          - id: STATUS
+            panel_slots: 2
+          - id: LIMITS
+            panel_slots: 1
+      - id: NETWORK
+        topics:
+          - id: PATHS
+            panel_slots: 2
+      - id: CREDENTIALS_SECRETS
+        topics:
+          - id: KEYS
+            panel_slots: 2
+      - id: HEALTH_DIAGNOSTICS
+        topics:
+          - id: ERRORS
+            panel_slots: 2

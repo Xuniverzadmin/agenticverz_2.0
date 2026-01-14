@@ -1,0 +1,123 @@
+# SDSR VERIFICATION SCENARIO
+# ==========================
+# Capability: overview.activity_snapshot
+# Panel: OVR-SUM-HL-O1
+# Purpose: Verify backend exhibits assumed behavior
+#
+# This scenario tests whether the ASSUMPTION in the capability intent
+# is actually true. If it passes, the assumption becomes OBSERVED fact.
+
+scenario_id: observe_overview_activity_snapshot
+version: "1.0"
+status: READY
+
+# =============================================================================
+# WHAT WE ARE VERIFYING
+# =============================================================================
+
+verifies:
+  capability_id: overview.activity_snapshot
+  panel_id: OVR-SUM-HL-O1
+  assumption: |
+    Backend provides GET /api/v1/overview/activity-snapshot
+    returning real-time counts of system activity.
+
+# =============================================================================
+# PRECONDITIONS
+# =============================================================================
+
+preconditions:
+  - "Backend is running and healthy"
+  - "Database is accessible"
+  - "Auth context is valid (viewer, operator, or admin)"
+
+# =============================================================================
+# VERIFICATION STEPS
+# =============================================================================
+
+steps:
+  - step: 1
+    name: "Verify endpoint exists"
+    action: http_get
+    endpoint: /api/v1/overview/activity-snapshot
+    expect:
+      status_code: [200, 404]
+    on_404:
+      verdict: FAIL
+      reason: "Endpoint does not exist - backend must implement"
+
+  - step: 2
+    name: "Verify response schema"
+    action: validate_schema
+    expect:
+      has_fields:
+        - count_running
+        - count_completed_window
+        - count_near_threshold
+        - last_observed_at
+    on_missing:
+      verdict: FAIL
+      reason: "Response missing required fields"
+
+  - step: 3
+    name: "Verify data is real (not hardcoded)"
+    action: inject_then_verify
+    inject:
+      type: synthetic_run
+      status: running
+    then:
+      endpoint: /api/v1/overview/activity-snapshot
+      expect: count_running >= 1
+    on_mismatch:
+      verdict: FAIL
+      reason: "Counts do not reflect injected run - data may be mocked"
+
+  - step: 4
+    name: "Verify latency"
+    action: measure_latency
+    endpoint: /api/v1/overview/activity-snapshot
+    expect:
+      p95: < 500ms
+    on_slow:
+      verdict: WARN
+      reason: "Latency exceeds bound but not blocking"
+
+# =============================================================================
+# CLEANUP
+# =============================================================================
+
+cleanup:
+  - action: remove_synthetic_run
+    on_failure: warn
+
+# =============================================================================
+# ACCEPTANCE CRITERIA
+# =============================================================================
+
+acceptance_criteria:
+  must_pass:
+    - "Endpoint returns 200"
+    - "All four fields present"
+    - "Counts reflect reality"
+  should_pass:
+    - "Latency < 500ms"
+
+# =============================================================================
+# OUTCOME
+# =============================================================================
+
+on_pass:
+  emit_observation:
+    capability_id: overview.activity_snapshot
+    panel_id: OVR-SUM-HL-O1
+    status: OBSERVED
+    observed_effects:
+      - "Endpoint exists and responds"
+      - "Schema matches contract"
+      - "Data reflects system state"
+
+on_fail:
+  report:
+    capability_id: overview.activity_snapshot
+    status: ASSUMED (unverified)
+    action_required: "Backend team must implement/fix endpoint"

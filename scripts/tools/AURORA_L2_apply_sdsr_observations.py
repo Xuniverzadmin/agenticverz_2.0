@@ -73,6 +73,7 @@ ALLOWED_TRANSITIONS = {
 # HELPERS
 # =============================================================================
 
+
 def load_yaml(path: Path) -> dict:
     """Load YAML file."""
     with path.open("r", encoding="utf-8") as f:
@@ -82,7 +83,9 @@ def load_yaml(path: Path) -> dict:
 def write_yaml(path: Path, data: dict):
     """Write YAML file preserving structure."""
     with path.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False, allow_unicode=True)
+        yaml.safe_dump(
+            data, f, sort_keys=False, default_flow_style=False, allow_unicode=True
+        )
 
 
 def fatal(msg: str):
@@ -107,8 +110,90 @@ def success(msg: str):
 
 
 # =============================================================================
+# INTENT LEDGER UPDATE (PIN-419)
+# =============================================================================
+
+LEDGER_PATH = REPO_ROOT / "design/l2_1/INTENT_LEDGER.md"
+
+
+def update_ledger_capability_status(
+    capability_id: str,
+    scenario_id: str,
+    observed_on: str,
+    dry_run: bool = False,
+) -> bool:
+    """
+    Update capability status in INTENT_LEDGER.md.
+
+    This keeps the ledger as the source of truth for capability status.
+    When an observation advances a capability to OBSERVED, the ledger
+    must be updated to reflect this.
+
+    Returns True if ledger was updated, False otherwise.
+    """
+    import re
+
+    if not LEDGER_PATH.exists():
+        warn(f"Ledger not found: {LEDGER_PATH}")
+        return False
+
+    with LEDGER_PATH.open("r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Find the capability entry
+    # Pattern: ### Capability: {id}\n...Status: ...\n...Scenario: ...\n...Observed: ...
+    pattern = rf"(### Capability: {re.escape(capability_id)}\n)(.*?)((?=\n### )|$)"
+    match = re.search(pattern, content, re.DOTALL)
+
+    if not match:
+        warn(f"Capability {capability_id} not found in ledger")
+        return False
+
+    header = match.group(1)
+    body = match.group(2)
+    rest = match.group(3)
+
+    # Check current status
+    status_match = re.search(r"^Status: (\w+)", body, re.MULTILINE)
+    if status_match and status_match.group(1) == "OBSERVED":
+        info(f"Ledger: {capability_id} already OBSERVED")
+        return False
+
+    # Update Status line
+    body = re.sub(r"^Status: \w+", "Status: OBSERVED", body, flags=re.MULTILINE)
+
+    # Update Scenario line (if present)
+    if re.search(r"^Scenario:", body, re.MULTILINE):
+        body = re.sub(
+            r"^Scenario: .*", f"Scenario: {scenario_id}", body, flags=re.MULTILINE
+        )
+
+    # Update Observed line (if present)
+    observed_date = observed_on.split("T")[0] if "T" in observed_on else observed_on
+    if re.search(r"^Observed:", body, re.MULTILINE):
+        body = re.sub(
+            r"^Observed: .*", f"Observed: {observed_date}", body, flags=re.MULTILINE
+        )
+
+    # Reconstruct
+    new_content = (
+        content[: match.start()] + header + body + rest + content[match.end() :]
+    )
+
+    if not dry_run:
+        with LEDGER_PATH.open("w", encoding="utf-8") as f:
+            f.write(new_content)
+        info(f"Ledger: Updated {capability_id} to OBSERVED")
+    else:
+        info(f"[DRY RUN] Would update ledger {capability_id} to OBSERVED")
+
+    return True
+
+
+# =============================================================================
 # INTENT TRACE (APPEND-ONLY)
 # =============================================================================
+
 
 def find_intents_using_capability(capability_id: str) -> list[Path]:
     """
@@ -183,7 +268,9 @@ def append_intent_observation_trace(
             entry.get("scenario_id") == scenario_id
             and entry.get("capability_id") == capability_id
         ):
-            info(f"Intent {intent_yaml_path.name}: trace already exists for {scenario_id}/{capability_id}")
+            info(
+                f"Intent {intent_yaml_path.name}: trace already exists for {scenario_id}/{capability_id}"
+            )
             return False  # already recorded
 
     # Build trace entry
@@ -209,6 +296,7 @@ def append_intent_observation_trace(
 # VALIDATION
 # =============================================================================
 
+
 def validate_observation(obs: dict) -> list[str]:
     """
     Validate observation structure.
@@ -224,7 +312,9 @@ def validate_observation(obs: dict) -> list[str]:
         errors.append("Missing scenario_id")
 
     if obs.get("status") != REQUIRED_SCENARIO_STATUS:
-        errors.append(f"Scenario status is '{obs.get('status')}', must be '{REQUIRED_SCENARIO_STATUS}'")
+        errors.append(
+            f"Scenario status is '{obs.get('status')}', must be '{REQUIRED_SCENARIO_STATUS}'"
+        )
 
     if not obs.get("observed_at"):
         errors.append("Missing observed_at timestamp")
@@ -232,7 +322,9 @@ def validate_observation(obs: dict) -> list[str]:
     # Validate observation_class (CRITICAL mechanical discriminator)
     observation_class = obs.get("observation_class")
     if observation_class not in ("INFRASTRUCTURE", "EFFECT"):
-        errors.append(f"Invalid or missing observation_class: '{observation_class}'. Must be INFRASTRUCTURE or EFFECT")
+        errors.append(
+            f"Invalid or missing observation_class: '{observation_class}'. Must be INFRASTRUCTURE or EFFECT"
+        )
         return errors  # Can't continue validation without class
 
     capabilities = obs.get("capabilities_observed", [])
@@ -246,7 +338,9 @@ def validate_observation(obs: dict) -> list[str]:
     # EFFECT: Non-empty capabilities is REQUIRED
     if observation_class == "EFFECT":
         if not capabilities:
-            errors.append("EFFECT observation must have at least one capability_observed")
+            errors.append(
+                "EFFECT observation must have at least one capability_observed"
+            )
 
         for i, cap in enumerate(capabilities):
             if not cap.get("capability_id"):
@@ -260,6 +354,7 @@ def validate_observation(obs: dict) -> list[str]:
 # =============================================================================
 # CORE LOGIC
 # =============================================================================
+
 
 def load_observation(observation_path: Path) -> dict | None:
     """Load and validate observation file. Returns None on error."""
@@ -394,7 +489,7 @@ def apply_capability_observation(
 
     if current_status not in ALLOWED_TRANSITIONS:
         warn(f"Capability {capability_id}: Cannot transition from {current_status}")
-        warn(f"  Only DECLARED → OBSERVED is allowed")
+        warn("  Only DECLARED → OBSERVED is allowed")
         warn(f"  Current status: {current_status}")
         return "failed"
 
@@ -415,7 +510,9 @@ def apply_capability_observation(
     # Add observed effects
     observed_effects = []
     for effect in cap_obs.get("observed_effects", []):
-        effect_str = f"{effect['entity']}.{effect['field']}: {effect['from']} → {effect['to']}"
+        effect_str = (
+            f"{effect['entity']}.{effect['field']}: {effect['from']} → {effect['to']}"
+        )
         observed_effects.append(effect_str)
     metadata["observed_effects"] = observed_effects
 
@@ -445,6 +542,14 @@ def apply_capability_observation(
                 observed_effects=cap_obs.get("observed_effects", []),
                 dry_run=dry_run,
             )
+
+    # Update INTENT_LEDGER.md (PIN-419: ledger as source of truth)
+    update_ledger_capability_status(
+        capability_id=capability_id,
+        scenario_id=scenario_id,
+        observed_on=observed_at,
+        dry_run=dry_run,
+    )
 
     return "promoted"
 
@@ -477,6 +582,7 @@ def apply_all_observations(dry_run: bool):
 # CLI
 # =============================================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Apply SDSR observations to AURORA_L2 capability state",
@@ -500,7 +606,7 @@ Core Invariant:
 
   This script is the ONLY allowed writer that may advance:
       DECLARED → OBSERVED
-        """
+        """,
     )
 
     parser.add_argument(
@@ -562,7 +668,9 @@ Core Invariant:
             info("      (will auto-detect signal and recompile)")
         except Exception as e:
             warn(f"Failed to create signal file: {e}")
-            info("Next: Run ./scripts/tools/run_aurora_l2_pipeline.sh to recompute bindings")
+            info(
+                "Next: Run ./scripts/tools/run_aurora_l2_pipeline.sh to recompute bindings"
+            )
 
 
 if __name__ == "__main__":

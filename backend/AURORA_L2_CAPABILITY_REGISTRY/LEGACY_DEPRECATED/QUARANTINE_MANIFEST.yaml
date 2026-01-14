@@ -1,0 +1,70 @@
+# LEGACY DEPRECATED CAPABILITIES
+# Status: QUARANTINED - DO NOT USE
+# Date: 2026-01-14
+# Reference: PIN-419 (Intent Ledger Architecture)
+#
+# These capabilities were part of the legacy ui_plan structure that was
+# superseded by the frozen UI_TOPOLOGY_TEMPLATE.yaml.
+#
+# They are preserved here for reference only.
+# They are NOT included in compiler inputs.
+# They are NOT bound to any ledger panels.
+#
+# To resurrect a capability:
+#   1. Create a new panel entry in INTENT_LEDGER.md
+#   2. Create a new capability file in the parent directory
+#   3. Run SDSR scenario to observe the capability
+#   4. DO NOT copy from this quarantine - re-declare intent fresh
+
+quarantine_reason: "Legacy capabilities not aligned with frozen topology"
+quarantine_date: "2026-01-14"
+quarantine_reference: "PIN-419"
+
+capabilities:
+  - capability_id: ACKNOWLEDGE
+    original_panel: INC-EV-AD-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: ACTIVATE
+    original_panel: POL-GL-AP-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: ADD_NOTE
+    original_panel: INC-EV-ID-O4
+    reason: Panel location not in frozen topology
+
+  - capability_id: APPROVE
+    original_panel: POL-PR-PP-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: DEACTIVATE
+    original_panel: POL-GL-AP-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: REJECT
+    original_panel: POL-PR-PP-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: RESOLVE
+    original_panel: INC-EV-AD-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: summary.activity
+    original_panel: ACT-EX-SUM-O1
+    reason: Panel location not in frozen topology
+
+  - capability_id: summary.incidents
+    original_panel: INC-EV-SUM-O1
+    reason: Panel location not in frozen topology
+
+  - capability_id: UPDATE_LIMIT
+    original_panel: POL-LM-UL-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: UPDATE_RULE
+    original_panel: POL-GL-AP-O2
+    reason: Panel location not in frozen topology
+
+  - capability_id: UPDATE_THRESHOLD
+    original_panel: POL-LM-TH-O2
+    reason: Panel location not in frozen topology

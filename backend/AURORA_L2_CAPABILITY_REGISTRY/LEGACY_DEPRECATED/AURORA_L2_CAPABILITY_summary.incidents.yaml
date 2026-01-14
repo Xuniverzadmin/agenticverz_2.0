@@ -1,0 +1,17 @@
+# GENERATED FILE - DO NOT EDIT MANUALLY
+# Source: design/l2_1/INTENT_LEDGER.md
+# Generator: scripts/tools/sync_from_intent_ledger.py
+#
+capability_id: summary.incidents
+status: OBSERVED
+source_panels:
+- INC-AI-SUM-O1
+metadata:
+  generated_by: sync_from_intent_ledger.py
+  generated_on: '2026-01-14'
+  declared_by: intent-ledger
+  declared_on: '2026-01-14'
+  observed_by: SDSR-HIL-INC-SUM-001
+  observed_on: '2026-01-14'
+acceptance_criteria:
+- 'http_response.invariants_validation: None → ALL_PASSED'
